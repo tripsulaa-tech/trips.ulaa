@@ -1,0 +1,102 @@
+import { motion } from 'framer-motion';
+import { MapPin, Calendar, Clock, Users, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import type { UpcomingTrip } from '../../types';
+import { formatDateRange, seatsLeft, PLACEHOLDER_IMAGE } from '../../utils';
+import Button from './Button';
+
+interface TripCardProps {
+  trip: UpcomingTrip;
+  index?: number;
+}
+
+export default function TripCard({ trip, index = 0 }: TripCardProps) {
+  const remaining = seatsLeft(trip.total_seats, trip.seats_booked);
+  const isAlmostFull = remaining <= 5 && remaining > 0;
+  const isFull = remaining === 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.1, duration: 0.5 }}
+      className="group bg-white rounded-3xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300"
+    >
+      {/* Image */}
+      <div className="relative h-56 md:h-64 overflow-hidden">
+        <img
+          src={trip.cover_image || PLACEHOLDER_IMAGE}
+          alt={trip.destination}
+          loading="lazy"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent" />
+
+        {/* Badges */}
+        <div className="absolute top-4 left-4 flex gap-2">
+          {isFull ? (
+            <span className="bg-red-500 text-white text-xs font-button font-semibold px-3 py-1 rounded-full">
+              Sold Out
+            </span>
+          ) : isAlmostFull ? (
+            <span className="bg-amber-500 text-white text-xs font-button font-semibold px-3 py-1 rounded-full">
+              Only {remaining} left!
+            </span>
+          ) : null}
+        </div>
+
+        {/* Destination overlay */}
+        <div className="absolute bottom-4 left-4">
+          <div className="flex items-center gap-1 text-white">
+            <MapPin size={14} />
+            <span className="text-sm font-medium">{trip.destination}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-6">
+        <h3 className="font-display text-xl font-bold text-dark mb-3 line-clamp-2">
+          {trip.title}
+        </h3>
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="flex items-center gap-2 text-dark-muted text-sm">
+            <Calendar size={14} className="text-primary shrink-0" />
+            <span>{formatDateRange(trip.start_date, trip.end_date)}</span>
+          </div>
+          <div className="flex items-center gap-2 text-dark-muted text-sm">
+            <Clock size={14} className="text-primary shrink-0" />
+            <span>{trip.duration}</span>
+          </div>
+          <div className="flex items-center gap-2 text-dark-muted text-sm col-span-2">
+            <Users size={14} className="text-primary shrink-0" />
+            <span>
+              {isFull
+                ? 'No seats available'
+                : `${remaining} of ${trip.total_seats} seats left`}
+            </span>
+          </div>
+        </div>
+
+        <p className="text-dark-muted text-sm leading-relaxed mb-5 line-clamp-2">
+          {trip.description}
+        </p>
+
+        <Link to={`/trips/${trip.slug}`}>
+          <Button
+            variant={isFull ? 'ghost' : 'primary'}
+            size="sm"
+            fullWidth
+            disabled={isFull}
+            className="group/btn"
+          >
+            {isFull ? 'Join Waitlist' : 'View Details'}
+            <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
+          </Button>
+        </Link>
+      </div>
+    </motion.div>
+  );
+}

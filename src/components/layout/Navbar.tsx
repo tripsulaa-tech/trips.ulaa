@@ -1,0 +1,114 @@
+﻿import { useState, useEffect } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X } from 'lucide-react';
+import Button from '../ui/Button';
+
+const navLinks = [
+  { label: 'Home', to: '/' },
+  { label: 'Upcoming Trips', to: '/trips' },
+  { label: 'Completed Trips', to: '/completed-trips' },
+  { label: 'About', to: '/about' },
+  { label: 'Contact', to: '/contact' },
+];
+
+export default function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location]);
+
+  return (
+    <motion.header
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+      className="fixed top-0 left-0 right-0 z-40 transition-all duration-400 bg-white/95 backdrop-blur-md border-b border-background-warm shadow-card"
+    >
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-18 py-3">
+          <Link to="/" className="flex items-center gap-3 group">
+            <img
+              src="/ULAA-logo.png"
+              alt="ULAA Logo"
+              className="h-11 w-auto transition-transform duration-300 group-hover:scale-105"
+            />
+          </Link>
+
+          <div className="hidden lg:flex items-center gap-8">
+            {navLinks.map(({ label, to }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === '/'}
+                className={({ isActive }) => `
+                  relative font-body text-sm font-medium transition-colors duration-200
+                  ${isActive ? 'text-primary' : 'text-dark hover:text-primary'}
+                  after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-0.5
+                  after:bg-primary after:transition-all after:duration-200
+                  hover:after:w-full
+                  ${isActive ? 'after:w-full' : ''}
+                `}
+              >
+                {label}
+              </NavLink>
+            ))}
+          </div>
+
+          <div className="hidden lg:block">
+            <Link to="/trips">
+              <Button variant="primary" size="sm">
+                Book Now
+              </Button>
+            </Link>
+          </div>
+
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="lg:hidden p-2 rounded-xl transition-colors text-dark hover:bg-background"
+            aria-label={isOpen ? 'Close menu' : 'Open menu'}
+          >
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </nav>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="lg:hidden bg-white border-t border-background-warm overflow-hidden"
+          >
+            <div className="px-4 py-6 space-y-1">
+              {navLinks.map(({ label, to }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  className={({ isActive }) => `
+                    block px-4 py-3 rounded-xl font-body font-medium text-base transition-colors
+                    ${isActive ? 'text-primary bg-background-warm' : 'text-dark hover:bg-background-warm hover:text-primary'}
+                  `}
+                >
+                  {label}
+                </NavLink>
+              ))}
+              <div className="pt-2">
+                <Link to="/trips" className="block">
+                  <Button variant="primary" size="md" fullWidth>
+                    Book Now
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.header>
+  );
+}
