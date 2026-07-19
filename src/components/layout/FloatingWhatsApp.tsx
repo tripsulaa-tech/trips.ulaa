@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { getWhatsAppLink } from '../../utils';
 
-const WHATSAPP_NUMBER = '919876543210';
+const WHATSAPP_NUMBER = '916381336772';
 
 export default function FloatingWhatsApp() {
   const [hovered, setHovered] = useState(false);

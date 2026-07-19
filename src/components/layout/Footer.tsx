@@ -2,7 +2,7 @@
 import { Mail, MapPin, Heart } from 'lucide-react';
 import { getWhatsAppLink } from '../../utils';
 
-const WHATSAPP_NUMBER = '919876543210'; // Replace with actual number
+const WHATSAPP_NUMBER = '916381336772'; // Replace with actual number
 
 export default function Footer() {
   const year = new Date().getFullYear();
