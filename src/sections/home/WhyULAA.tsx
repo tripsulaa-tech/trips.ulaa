@@ -47,8 +47,18 @@ export default function WhyULAA() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/0" />
               <div className="relative h-full flex flex-col justify-end p-3 sm:p-4">
-                <h3 className="font-display text-sm sm:text-base font-bold text-white mb-1">{title}</h3>
-                <p className="text-white/85 text-xs leading-snug">{description}</p>
+                <h3
+                  className="font-display text-sm sm:text-base font-bold text-white mb-1"
+                  style={{ textShadow: '0 2px 6px rgba(45, 33, 24, 0.85), 0 1px 2px rgba(45, 33, 24, 0.9)' }}
+                >
+                  {title}
+                </h3>
+                <p
+                  className="text-white/90 text-xs leading-snug"
+                  style={{ textShadow: '0 1px 4px rgba(45, 33, 24, 0.8)' }}
+                >
+                  {description}
+                </p>
               </div>
             </motion.div>
           ))}
