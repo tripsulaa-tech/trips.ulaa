@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ZoomIn } from 'lucide-react';
 import SectionTitle from '../../components/ui/SectionTitle';
 import Lightbox from '../../components/ui/Lightbox';
+import { getGalleryImages } from '../../services/api';
 
-const GALLERY_IMAGES = [
+const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=500&q=80',
   'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=400&q=80',
   'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?w=500&q=80',
@@ -19,6 +20,17 @@ const GALLERY_IMAGES = [
 export default function GalleryPreview() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [images, setImages] = useState<string[]>(FALLBACK_IMAGES);
+
+  useEffect(() => {
+    getGalleryImages()
+      .then(data => {
+        if (data.length > 0) {
+          setImages(data.map(img => img.image_url).slice(0, 9));
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const open = (i: number) => {
     setSelectedIndex(i);
@@ -39,7 +51,7 @@ export default function GalleryPreview() {
 
         {/* Masonry-style grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-4">
-          {GALLERY_IMAGES.map((img, i) => (
+          {images.map((img, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, scale: 0.95 }}
@@ -68,7 +80,7 @@ export default function GalleryPreview() {
         </div>
 
         <Lightbox
-          images={GALLERY_IMAGES}
+          images={images}
           initialIndex={selectedIndex}
           isOpen={lightboxOpen}
           onClose={() => setLightboxOpen(false)}

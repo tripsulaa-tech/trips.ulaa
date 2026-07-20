@@ -26,12 +26,12 @@ export default function AdminGallery() {
       setUploading(true);
       for (const file of files) {
         const path = `gallery/${Date.now()}-${file.name}`;
-        const url = await uploadImage('gallery', file, path);
+        const url = await uploadImage('ulaa', file, path);
         await supabase.from('gallery').insert({ image_url: url, sort_order: 0 });
       }
       load();
     } catch (err) {
-      alert('Failed to upload. Make sure the Supabase storage bucket "gallery" exists and is public.');
+      alert('Failed to upload. Make sure the Supabase storage bucket "ulaa" exists and is public.');
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -41,7 +41,7 @@ export default function AdminGallery() {
   const handleDelete = async (img: GalleryImage) => {
     if (!confirm('Delete this image?')) return;
     const path = img.image_url.split('/').slice(-2).join('/');
-    await deleteImage('gallery', path).catch(() => {});
+    await deleteImage('ulaa', path).catch(() => {});
     await supabase.from('gallery').delete().eq('id', img.id);
     load();
   };
@@ -61,12 +61,17 @@ export default function AdminGallery() {
             <p className="font-display text-lg font-bold text-dark mb-1">Upload Images</p>
             <p className="text-dark-muted text-sm mb-4">PNG, JPG, WEBP up to 10MB each. Select multiple files at once.</p>
             <input ref={fileRef} type="file" multiple accept="image/*" onChange={handleUpload} className="hidden" id="gallery-upload" />
-            <label htmlFor="gallery-upload">
-              <Button variant="primary" size="md" loading={uploading} className="cursor-pointer" onClick={() => {}}>
-                <Upload size={16} />
-                {uploading ? 'Uploading...' : 'Choose Files'}
-              </Button>
-            </label>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              loading={uploading}
+              className="cursor-pointer"
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload size={16} />
+              {uploading ? 'Uploading...' : 'Choose Files'}
+            </Button>
           </div>
         </div>
 

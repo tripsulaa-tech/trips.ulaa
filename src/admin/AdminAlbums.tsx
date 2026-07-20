@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import ImageUploadField from '../components/ui/ImageUploadField';
 import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTrip } from '../services/api';
 
 import type { CompletedTrip } from '../types';
@@ -145,8 +146,13 @@ export default function AdminAlbums() {
             <input type="number" value={form.participants} onChange={e => setForm(f => ({ ...f, participants: +e.target.value }))} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Cover Image URL</label>
-            <input value={form.cover_image} onChange={e => setForm(f => ({ ...f, cover_image: e.target.value }))} className={inputClass} placeholder="https://..." />
+            <ImageUploadField
+              label="Cover Image"
+              value={form.cover_image}
+              onChange={url => setForm(f => ({ ...f, cover_image: url }))}
+              bucket="ulaa"
+              pathPrefix="album-covers"
+            />
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Description *</label>
