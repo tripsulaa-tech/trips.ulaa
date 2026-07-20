@@ -160,19 +160,6 @@ export interface AboutContent {
   timeline: AboutTimelineItem[];
 }
 
-// =============================================
-// Why ULAA / "Why Choose Us" cards (editable via Admin)
-// =============================================
-export interface WhyUlaaFeature {
-  image: string;
-  title: string;
-  description: string;
-}
-
-export interface WhyUlaaContent {
-  features: WhyUlaaFeature[];
-}
-
 export interface AdminUser {
   id: string;
   email: string;

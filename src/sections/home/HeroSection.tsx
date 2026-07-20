@@ -35,7 +35,7 @@ export default function HeroSection() {
   return (
     <section
       ref={containerRef}
-      className="relative min-h-[78vh] sm:min-h-[82vh] lg:min-h-[85vh]"
+      className="relative min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
     >
       {/* Parallax Background - clipped in its own layer so it doesn't cut off the floating stats card below */}
       <div className="absolute inset-0 overflow-hidden">
@@ -78,7 +78,7 @@ export default function HeroSection() {
             initial="hidden"
             animate="visible"
             variants={textVariants}
-            className="text-base sm:text-lg text-white/85 leading-relaxed mb-8 max-w-xl"
+            className="text-base sm:text-lg text-white/85 leading-relaxed mb-3 sm:mb-8 max-w-xl"
           >
             Discover hidden destinations. Travel safely.
             Create unforgettable memories with like-minded women.
@@ -90,21 +90,25 @@ export default function HeroSection() {
             initial="hidden"
             animate="visible"
             variants={textVariants}
-            className="flex flex-col sm:flex-row gap-4"
+            className="flex flex-row flex-wrap gap-3 sm:gap-4"
           >
             <Link to="/trips">
-              <Button variant="primary" size="lg" className="group/btn">
+              <Button
+                variant="primary"
+                size="sm"
+                className="group/btn whitespace-nowrap sm:px-8 sm:py-4 sm:text-lg sm:rounded-xl"
+              >
                 Explore Trips
-                <ArrowRight size={18} className="transition-transform group-hover/btn:translate-x-1" />
+                <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />
               </Button>
             </Link>
             <Link to="/completed-trips">
               <Button
                 variant="ghost"
-                size="lg"
-                className="text-white border-white/40 hover:border-white hover:bg-white/10"
+                size="sm"
+                className="whitespace-nowrap text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-lg sm:rounded-xl"
               >
-                <Play size={16} className="fill-white" />
+                <Play size={14} className="fill-white sm:w-4 sm:h-4" />
                 View Gallery
               </Button>
             </Link>
@@ -121,21 +125,21 @@ export default function HeroSection() {
         transition={{ delay: 0.7, duration: 0.6, ease: 'easeOut' }}
         className="absolute left-0 right-0 bottom-0 translate-y-1/2 z-30 px-4 sm:px-6 lg:px-8"
       >
-        <div className="max-w-[1216px] mx-auto bg-white rounded-xl shadow-card-hover p-[18px]">
-          <div className="flex gap-6 overflow-x-auto sm:overflow-visible sm:grid sm:grid-cols-5 sm:gap-0 sm:divide-x sm:divide-background-warm scrollbar-hide">
+        <div className="max-w-[1216px] mx-auto bg-white rounded-xl shadow-card-hover p-3 sm:p-[18px]">
+          <div className="flex gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible sm:grid sm:grid-cols-5 sm:gap-0 sm:divide-x sm:divide-background-warm scrollbar-hide">
             {stats.map(({ icon: Icon, title, subtitle }) => (
               <div
                 key={title}
-                className="flex items-center gap-3 shrink-0 sm:shrink sm:justify-self-start min-w-[210px] sm:min-w-0 sm:px-4 first:sm:pl-0"
+                className="flex items-center gap-2 sm:gap-3 shrink-0 sm:shrink sm:justify-self-start min-w-[160px] sm:min-w-0 sm:px-4 first:sm:pl-0"
               >
-                <div className="w-10 h-10 rounded-lg bg-background-warm text-primary flex items-center justify-center shrink-0">
-                  <Icon size={18} strokeWidth={1.75} />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-background-warm text-primary flex items-center justify-center shrink-0">
+                  <Icon size={15} strokeWidth={1.75} className="sm:w-[18px] sm:h-[18px]" />
                 </div>
                 <div>
-                  <p className="font-display font-bold text-dark text-sm sm:text-[15px] leading-tight">
+                  <p className="font-display font-bold text-dark text-xs sm:text-[15px] leading-tight">
                     {title}
                   </p>
-                  <p className="text-dark-muted text-xs leading-tight mt-0.5">{subtitle}</p>
+                  <p className="text-dark-muted text-[11px] sm:text-xs leading-tight mt-0.5">{subtitle}</p>
                 </div>
               </div>
             ))}
