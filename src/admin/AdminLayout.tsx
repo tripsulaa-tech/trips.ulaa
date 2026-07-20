@@ -33,7 +33,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     <div className="flex flex-col h-full">
       <div className="p-6 border-b border-background-warm">
         <Link to="/" className="inline-block">
-          <img src="/ULAA.svg" alt="ULAA" className="h-10" />
+          <img src="/ULAA.svg" alt="ULAA" className="h-16" />
         </Link>
         <p className="text-xs text-dark-muted mt-2">Admin Panel</p>
       </div>
