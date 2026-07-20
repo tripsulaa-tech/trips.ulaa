@@ -13,7 +13,7 @@ import BookingForm from '../components/ui/BookingForm';
 import { GalleryGrid } from '../components/ui/Lightbox';
 import { getUpcomingTripBySlug } from '../services/api';
 import type { UpcomingTrip } from '../types';
-import { formatDateRange, seatsLeft, PLACEHOLDER_IMAGE } from '../utils';
+import { formatDateRange, formatDate, seatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
 
 const DEMO_TRIP: UpcomingTrip = {
   id: '1', title: 'Spiti Valley Winter Expedition',
@@ -57,6 +57,7 @@ export default function TripDetailPage() {
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('overview');
 
   useEffect(() => {
     if (!slug) return;
@@ -65,6 +66,30 @@ export default function TripDetailPage() {
       .catch(() => setTrip(DEMO_TRIP))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Highlight the quick-jump tab for whichever section is currently in view.
+  useEffect(() => {
+    if (!trip) return;
+    const ids = ['overview', 'itinerary', 'inclusions', 'gallery', 'faqs'];
+    const sections = ids
+      .map(id => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries.filter(e => e.isIntersecting);
+        if (visible.length === 0) return;
+        // Prefer the section closest to the top of the viewport among those visible.
+        const top = visible.reduce((a, b) => (a.boundingClientRect.top < b.boundingClientRect.top ? a : b));
+        setActiveSection(top.target.id);
+      },
+      { rootMargin: '-150px 0px -60% 0px', threshold: 0 }
+    );
+
+    sections.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, [trip]);
 
   if (loading) {
     return (
@@ -89,6 +114,7 @@ export default function TripDetailPage() {
 
   const remaining = seatsLeft(trip.total_seats, trip.seats_booked);
   const isFull = remaining === 0;
+  const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
 
   return (
     <Layout>
@@ -105,24 +131,75 @@ export default function TripDetailPage() {
               <MapPin size={14} /> {trip.destination}
             </div>
             <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">{trip.title}</h1>
-            <div className="flex flex-wrap gap-4 text-white/80 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm">
               <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
               <span className="flex items-center gap-2"><Clock size={14} /> {trip.duration}</span>
               <span className="flex items-center gap-2"><Users size={14} />
                 {isFull ? 'Sold out' : `${remaining} seats left`}
               </span>
+              <button
+                onClick={() => setBookingOpen(true)}
+                disabled={isFull}
+                className="ml-0 sm:ml-2 px-4 py-1.5 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-button font-semibold transition-colors"
+              >
+                {isFull ? 'Join Waitlist' : 'Book Now'}
+              </button>
             </div>
           </motion.div>
         </div>
       </div>
 
+      {/* Quick jump nav */}
+      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex gap-1 overflow-x-auto no-scrollbar py-3">
+            <a
+              href="#overview"
+              className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'overview' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+            >
+              Overview
+            </a>
+            {trip.itinerary.length > 0 && (
+              <a
+                href="#itinerary"
+                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'itinerary' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+              >
+                Itinerary
+              </a>
+            )}
+            <a
+              href="#inclusions"
+              className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'inclusions' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+            >
+              Inclusions
+            </a>
+            {trip.gallery_images.length > 0 && (
+              <a
+                href="#gallery"
+                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'gallery' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+              >
+                Gallery
+              </a>
+            )}
+            {trip.faqs.length > 0 && (
+              <a
+                href="#faqs"
+                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'faqs' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+              >
+                FAQs
+              </a>
+            )}
+          </nav>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pb-28 lg:pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-12">
             {/* Overview */}
-            <section>
+            <section id="overview" className="scroll-mt-36">
               <h2 className="font-display text-3xl font-bold text-dark mb-4">Trip Overview</h2>
               <p className="text-dark-muted leading-relaxed text-lg">{trip.description}</p>
             </section>
@@ -144,7 +221,7 @@ export default function TripDetailPage() {
 
             {/* Itinerary */}
             {trip.itinerary.length > 0 && (
-              <section>
+              <section id="itinerary" className="scroll-mt-36">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Detailed Itinerary</h2>
                 <div className="space-y-4">
                   {trip.itinerary.map((day) => (
@@ -164,31 +241,31 @@ export default function TripDetailPage() {
             )}
 
             {/* Included / Not Included */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <section id="inclusions" className="scroll-mt-36 grid grid-cols-1 sm:grid-cols-2 gap-6">
               {trip.included.length > 0 && (
                 <div>
                   <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
-                  <ul className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
                     {trip.included.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-dark-muted">
-                        <CheckCircle size={16} className="text-green-500 shrink-0 mt-0.5" />
+                      <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-xl px-4 py-2 text-sm text-dark">
+                        <CheckCircle size={14} className="text-green-500 shrink-0" />
                         {item}
-                      </li>
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
               {trip.not_included.length > 0 && (
                 <div>
                   <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Not Included</h2>
-                  <ul className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
                     {trip.not_included.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-dark-muted">
-                        <XCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                      <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-xl px-4 py-2 text-sm text-dark">
+                        <XCircle size={14} className="text-red-400 shrink-0" />
                         {item}
-                      </li>
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
             </section>
@@ -199,11 +276,11 @@ export default function TripDetailPage() {
                 <h2 className="font-display text-2xl font-bold text-dark mb-4 flex items-center gap-2">
                   <Backpack size={24} className="text-primary" /> Things to Carry
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {trip.things_to_carry.map((item, i) => (
-                    <div key={i} className="bg-background-warm rounded-xl px-4 py-2 text-sm text-dark text-center">
+                    <span key={i} className="bg-background-warm rounded-xl px-4 py-2 text-sm text-dark">
                       {item}
-                    </div>
+                    </span>
                   ))}
                 </div>
               </section>
@@ -215,13 +292,21 @@ export default function TripDetailPage() {
                 <h2 className="font-display text-2xl font-bold text-dark mb-3 flex items-center gap-2">
                   <Navigation size={22} className="text-primary" /> Meeting Point
                 </h2>
-                <p className="text-dark-muted">{trip.meeting_point}</p>
+                <p className="text-dark-muted mb-3">{trip.meeting_point}</p>
+                <a
+                  href={trip.meeting_point_map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.meeting_point)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+                >
+                  <MapPin size={15} /> View on map
+                </a>
               </section>
             )}
 
             {/* Gallery */}
             {trip.gallery_images.length > 0 && (
-              <section>
+              <section id="gallery" className="scroll-mt-36">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Photo Gallery</h2>
                 <GalleryGrid images={trip.gallery_images} />
               </section>
@@ -229,7 +314,7 @@ export default function TripDetailPage() {
 
             {/* FAQs */}
             {trip.faqs.length > 0 && (
-              <section>
+              <section id="faqs" className="scroll-mt-36">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">FAQs</h2>
                 <FAQAccordion faqs={trip.faqs} />
               </section>
@@ -238,8 +323,32 @@ export default function TripDetailPage() {
 
           {/* Right sticky panel */}
           <div className="lg:col-span-1">
-            <div className="sticky top-28">
+            <div className="sticky top-40">
               <div className="bg-white rounded-3xl shadow-warm-lg p-8 border border-background-warm">
+                {activePrice != null && (
+                  <div className="text-center mb-5 pb-5 border-b border-background-warm">
+                    {isEarlyBird && trip.price ? (
+                      <>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="font-display text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
+                          <span className="text-dark-muted line-through text-lg">{formatPrice(trip.price)}</span>
+                        </div>
+                        <p className="text-dark-muted text-xs mt-1">per person</p>
+                        <span className="inline-block mt-2 bg-secondary/15 text-secondary text-xs font-button font-semibold px-3 py-1 rounded-full">
+                          Early Bird — book by {formatDate(trip.early_bird_deadline!, { day: 'numeric', month: 'long' })}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-display text-3xl font-bold text-dark">{formatPrice(activePrice)}</span>
+                        <p className="text-dark-muted text-xs mt-1">per person</p>
+                        {deadlinePassed && (
+                          <p className="text-dark-muted text-xs mt-1">Early-bird offer has ended</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
                 <div className="text-center mb-6">
                   {!isFull ? (
                     <span className="inline-block bg-green-50 text-green-700 text-sm font-button font-semibold px-4 py-2 rounded-full mb-3">
@@ -297,6 +406,34 @@ export default function TripDetailPage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Sticky mobile booking bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-background-warm shadow-warm-lg px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            {activePrice != null ? (
+              <div className="flex items-center gap-2">
+                <span className="font-display text-xl font-bold text-dark">{formatPrice(activePrice)}</span>
+                {isEarlyBird && trip.price && (
+                  <span className="text-dark-muted line-through text-sm">{formatPrice(trip.price)}</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-sm text-dark-muted">Enquire for pricing</span>
+            )}
+            <p className="text-xs text-dark-muted">{isFull ? 'Sold out' : `${remaining} seats left`}</p>
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            disabled={isFull}
+            onClick={() => setBookingOpen(true)}
+            className="shrink-0"
+          >
+            {isFull ? 'Join Waitlist' : 'Book Your Seat'}
+          </Button>
         </div>
       </div>
 

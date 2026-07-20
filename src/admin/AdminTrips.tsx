@@ -5,9 +5,13 @@ import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ImageUploadField from '../components/ui/ImageUploadField';
+import MultiImageUploadField from '../components/ui/MultiImageUploadField';
+import TagListEditor from '../components/ui/TagListEditor';
+import ItineraryEditor from '../components/ui/ItineraryEditor';
+import FAQEditor from '../components/ui/FAQEditor';
 import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip } from '../services/api';
 
-import type { UpcomingTrip } from '../types';
+import type { UpcomingTrip, ItineraryDay, FAQ } from '../types';
 import { formatDate, slugify } from '../utils';
 
 interface TripForm {
@@ -17,10 +21,30 @@ interface TripForm {
   end_date: string;
   duration: string;
   description: string;
+  highlights: string[];
+  itinerary: ItineraryDay[];
+  included: string[];
+  not_included: string[];
+  things_to_carry: string[];
+  meeting_point: string;
+  meeting_point_map_url: string;
+  faqs: FAQ[];
   total_seats: number;
+  price: number | '';
+  early_bird_price: number | '';
+  early_bird_deadline: string;
   cover_image: string;
+  gallery_images: string[];
   is_published: boolean;
 }
+
+const emptyForm: TripForm = {
+  title: '', destination: '', start_date: '', end_date: '', duration: '',
+  description: '', highlights: [], itinerary: [], included: [], not_included: [],
+  things_to_carry: [], meeting_point: '', meeting_point_map_url: '', faqs: [], total_seats: 15, price: '',
+  early_bird_price: '', early_bird_deadline: '',
+  cover_image: '', gallery_images: [], is_published: false,
+};
 
 export default function AdminTrips() {
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
@@ -28,10 +52,7 @@ export default function AdminTrips() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState<UpcomingTrip | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<TripForm>({
-    title: '', destination: '', start_date: '', end_date: '',
-    duration: '', description: '', total_seats: 15, cover_image: '', is_published: false,
-  });
+  const [form, setForm] = useState<TripForm>(emptyForm);
 
   const load = () => {
     getAllUpcomingTripsAdmin().then(setTrips).catch(console.error).finally(() => setLoading(false));
@@ -41,7 +62,7 @@ export default function AdminTrips() {
 
   const openCreate = () => {
     setEditingTrip(null);
-    setForm({ title: '', destination: '', start_date: '', end_date: '', duration: '', description: '', total_seats: 15, cover_image: '', is_published: false });
+    setForm(emptyForm);
     setModalOpen(true);
   };
 
@@ -51,8 +72,15 @@ export default function AdminTrips() {
       title: trip.title, destination: trip.destination,
       start_date: trip.start_date, end_date: trip.end_date,
       duration: trip.duration, description: trip.description,
-      total_seats: trip.total_seats, cover_image: trip.cover_image || '',
-      is_published: trip.is_published,
+      highlights: trip.highlights || [], itinerary: trip.itinerary || [],
+      included: trip.included || [], not_included: trip.not_included || [],
+      things_to_carry: trip.things_to_carry || [], meeting_point: trip.meeting_point || '',
+      meeting_point_map_url: trip.meeting_point_map_url || '',
+      faqs: trip.faqs || [], total_seats: trip.total_seats,
+      price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
+      early_bird_deadline: trip.early_bird_deadline || '',
+      cover_image: trip.cover_image || '',
+      gallery_images: trip.gallery_images || [], is_published: trip.is_published,
     });
     setModalOpen(true);
   };
@@ -60,7 +88,14 @@ export default function AdminTrips() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const data = { ...form, slug: slugify(form.title), highlights: [], itinerary: [], included: [], not_included: [], things_to_carry: [], faqs: [], gallery_images: [], seats_booked: editingTrip?.seats_booked || 0 };
+      const data = {
+        ...form,
+        slug: slugify(form.title),
+        price: form.price === '' ? undefined : form.price,
+        early_bird_price: form.early_bird_price === '' ? undefined : form.early_bird_price,
+        early_bird_deadline: form.early_bird_deadline || undefined,
+        seats_booked: editingTrip?.seats_booked || 0,
+      };
       if (editingTrip) {
         await updateUpcomingTrip(editingTrip.id, data);
       } else {
@@ -154,7 +189,7 @@ export default function AdminTrips() {
       </div>
 
       {/* Create/Edit Modal */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingTrip ? 'Edit Trip' : 'Add Trip'} size="lg">
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingTrip ? 'Edit Trip' : 'Add Trip'} size="xl">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
@@ -181,6 +216,36 @@ export default function AdminTrips() {
             <input type="number" value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
           </div>
           <div>
+            <label className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹)</label>
+            <input
+              type="number"
+              value={form.price}
+              onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : +e.target.value }))}
+              className={inputClass}
+              placeholder="e.g. 42999"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Early-Bird Price per person (₹)</label>
+            <input
+              type="number"
+              value={form.early_bird_price}
+              onChange={e => setForm(f => ({ ...f, early_bird_price: e.target.value === '' ? '' : +e.target.value }))}
+              className={inputClass}
+              placeholder="e.g. 39999 (optional)"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Early-Bird Deadline</label>
+            <input
+              type="date"
+              value={form.early_bird_deadline}
+              onChange={e => setForm(f => ({ ...f, early_bird_deadline: e.target.value }))}
+              className={inputClass}
+            />
+            <p className="text-xs text-dark-muted mt-1">The early-bird price shows automatically until this date, then the page switches to the regular price on its own.</p>
+          </div>
+          <div>
             <ImageUploadField
               label="Cover Image"
               value={form.cover_image}
@@ -191,9 +256,119 @@ export default function AdminTrips() {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Description *</label>
+            <p className="text-xs text-dark-muted mb-1">Short overview only — put the day-by-day plan in Itinerary below, not here.</p>
             <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
           </div>
-          <div className="md:col-span-2 flex items-center gap-3">
+
+          <div className="md:col-span-2 border-t border-background-warm pt-4">
+            <TagListEditor
+              label="Trip Highlights"
+              value={form.highlights}
+              onChange={items => setForm(f => ({ ...f, highlights: items }))}
+              placeholder="e.g. Chandratal Lake at dawn"
+            />
+          </div>
+
+          <div className="md:col-span-2 border-t border-background-warm pt-4">
+            <ItineraryEditor
+              value={form.itinerary}
+              onChange={days => setForm(f => ({ ...f, itinerary: days }))}
+            />
+          </div>
+
+          <div className="border-t border-background-warm pt-4">
+            <TagListEditor
+              label="What's Included"
+              value={form.included}
+              onChange={items => setForm(f => ({ ...f, included: items }))}
+              placeholder="e.g. All meals"
+            />
+          </div>
+          <div className="border-t border-background-warm pt-4">
+            <TagListEditor
+              label="What's Not Included"
+              value={form.not_included}
+              onChange={items => setForm(f => ({ ...f, not_included: items }))}
+              placeholder="e.g. Flights"
+            />
+          </div>
+
+          <div className="md:col-span-2 border-t border-background-warm pt-4">
+            <TagListEditor
+              label="Things to Carry"
+              value={form.things_to_carry}
+              onChange={items => setForm(f => ({ ...f, things_to_carry: items }))}
+              placeholder="e.g. Warm jacket"
+            />
+          </div>
+
+          <div className="md:col-span-2 border-t border-background-warm pt-4">
+            <label className="block text-sm font-medium text-dark mb-1">Meeting Point</label>
+            <div className="flex gap-2">
+              <input
+                value={form.meeting_point}
+                onChange={e => setForm(f => ({ ...f, meeting_point: e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. Shimla Bus Stand, Himachal Pradesh — 7:00 AM on Day 1"
+              />
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.meeting_point || form.destination)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => { if (!form.meeting_point.trim() && !form.destination.trim()) e.preventDefault(); }}
+                className="shrink-0 flex items-center gap-1.5 px-3 rounded-xl border-2 border-background-warm bg-background text-dark text-sm font-medium hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+                title="Opens Google Maps in a new tab, already searching for this"
+              >
+                Find on Maps ↗
+              </a>
+            </div>
+            <p className="text-xs text-dark-muted mt-1.5">Shown as plain text on the trip page. Click "Find on Maps" to jump straight to a search for it.</p>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-dark mb-1">Meeting Point — Google Maps Link</label>
+            <input
+              value={form.meeting_point_map_url}
+              onChange={e => setForm(f => ({ ...f, meeting_point_map_url: e.target.value }))}
+              className={inputClass}
+              placeholder="Paste the link here"
+            />
+            <p className="text-xs text-dark-muted mt-1.5">
+              In the Maps tab that opened: confirm the pin is on the right spot (search again if not) → tap <span className="font-medium text-dark">Share</span> → <span className="font-medium text-dark">Copy link</span> → paste it above.
+              {form.meeting_point_map_url.trim() && (
+                <>
+                  {' '}
+                  <a
+                    href={form.meeting_point_map_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Open this link ↗
+                  </a>
+                </>
+              )}
+            </p>
+          </div>
+
+          <div className="md:col-span-2 border-t border-background-warm pt-4">
+            <MultiImageUploadField
+              label="Photo Gallery"
+              value={form.gallery_images}
+              onChange={urls => setForm(f => ({ ...f, gallery_images: urls }))}
+              bucket="ulaa"
+              pathPrefix={`trips/${editingTrip ? editingTrip.id : 'new'}`}
+            />
+          </div>
+
+          <div className="md:col-span-2 border-t border-background-warm pt-4">
+            <FAQEditor
+              value={form.faqs}
+              onChange={faqs => setForm(f => ({ ...f, faqs }))}
+            />
+          </div>
+
+          <div className="md:col-span-2 flex items-center gap-3 border-t border-background-warm pt-4">
             <input type="checkbox" id="is_published" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
             <label htmlFor="is_published" className="text-sm font-medium text-dark">Publish immediately</label>
           </div>

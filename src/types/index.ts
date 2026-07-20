@@ -17,10 +17,13 @@ export interface UpcomingTrip {
   not_included: string[];
   things_to_carry: string[];
   meeting_point?: string;
+  meeting_point_map_url?: string;
   faqs: FAQ[];
   total_seats: number;
   seats_booked: number;
   price?: number;
+  early_bird_price?: number;
+  early_bird_deadline?: string;
   cover_image?: string;
   gallery_images: string[];
   is_published: boolean;

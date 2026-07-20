@@ -2,6 +2,34 @@
 // ULAA - Utility Functions
 // =============================================
 
+/** Format a number as Indian Rupees, e.g. 39999 -> "₹39,999" */
+export function formatPrice(amount: number): string {
+  return `₹${amount.toLocaleString('en-IN')}`;
+}
+
+/**
+ * Given a regular price and an optional early-bird price/deadline, work out
+ * which price is currently active. The early-bird price applies up to and
+ * including the deadline date; after that it automatically falls back to
+ * the regular price.
+ */
+export function getActivePrice(
+  price?: number,
+  earlyBirdPrice?: number,
+  earlyBirdDeadline?: string
+): { activePrice?: number; isEarlyBird: boolean; deadlinePassed: boolean } {
+  if (earlyBirdPrice && earlyBirdDeadline) {
+    const deadline = new Date(earlyBirdDeadline);
+    deadline.setHours(23, 59, 59, 999);
+    const isActive = new Date() <= deadline;
+    if (isActive) {
+      return { activePrice: earlyBirdPrice, isEarlyBird: true, deadlinePassed: false };
+    }
+    return { activePrice: price, isEarlyBird: false, deadlinePassed: true };
+  }
+  return { activePrice: price, isEarlyBird: false, deadlinePassed: false };
+}
+
 /** Format a date string to a readable format */
 export function formatDate(dateStr: string, options?: Intl.DateTimeFormatOptions): string {
   const date = new Date(dateStr);
