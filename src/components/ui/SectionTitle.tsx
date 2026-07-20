@@ -45,7 +45,7 @@ export default function SectionTitle({
         viewport={{ once: true }}
         transition={{ delay: 0.1 }}
         className={`
-          font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight
+          font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight
           ${light ? 'text-white' : 'text-dark'}
         `}
       >
@@ -58,7 +58,7 @@ export default function SectionTitle({
           viewport={{ once: true }}
           transition={{ delay: 0.2 }}
           className={`
-            text-lg md:text-xl max-w-2xl leading-relaxed
+            text-base sm:text-lg md:text-xl max-w-2xl leading-relaxed
             ${light ? 'text-white/80' : 'text-dark-muted'}
           `}
         >

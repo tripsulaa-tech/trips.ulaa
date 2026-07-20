@@ -47,9 +47,9 @@ export default function Testimonials() {
   const next = () => setCurrent(c => Math.min(testimonials.length - 1, c + 1));
 
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-dark overflow-hidden">
+    <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-dark overflow-hidden">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="text-center mb-8 sm:mb-16">
           <SectionTitle
             label="Real Stories"
             title="What our travelers say."

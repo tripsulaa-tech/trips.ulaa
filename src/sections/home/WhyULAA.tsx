@@ -43,9 +43,9 @@ const features = [
 
 export default function WhyULAA() {
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-cream">
+    <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-cream">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-16 flex justify-center">
+        <div className="mb-8 sm:mb-16 flex justify-center">
           <SectionTitle
             label="Why Choose Us"
             title="Travel differently."
@@ -54,7 +54,7 @@ export default function WhyULAA() {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
           {features.map(({ icon: Icon, title, description, color }, index) => (
             <motion.div
               key={title}
@@ -63,13 +63,14 @@ export default function WhyULAA() {
               viewport={{ once: true }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
               whileHover={{ y: -4 }}
-              className="bg-white rounded-3xl p-8 shadow-card hover:shadow-card-hover transition-all duration-300 group"
+              className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-card hover:shadow-card-hover transition-all duration-300 group"
             >
-              <div className={`w-14 h-14 rounded-2xl ${color} flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-110`}>
-                <Icon size={26} strokeWidth={1.5} />
+              <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${color} flex items-center justify-center mb-3 sm:mb-5 transition-transform duration-300 group-hover:scale-110`}>
+                <Icon size={18} strokeWidth={1.5} className="sm:hidden" />
+                <Icon size={26} strokeWidth={1.5} className="hidden sm:block" />
               </div>
-              <h3 className="font-display text-xl font-bold text-dark mb-3">{title}</h3>
-              <p className="text-dark-muted text-sm leading-relaxed">{description}</p>
+              <h3 className="font-display text-sm sm:text-xl font-bold text-dark mb-1.5 sm:mb-3">{title}</h3>
+              <p className="text-dark-muted text-xs sm:text-sm leading-relaxed">{description}</p>
             </motion.div>
           ))}
         </div>
