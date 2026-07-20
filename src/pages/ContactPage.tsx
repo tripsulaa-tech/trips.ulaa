@@ -67,7 +67,7 @@ export default function ContactPage() {
 
             <div className="space-y-4">
               <a
-                href={`mailto:hello@ulaa.travel`}
+                href={`mailto:trips.ulaa@gmail.com`}
                 className="flex items-center gap-4 bg-white rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all group"
               >
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
@@ -75,7 +75,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-dark">Email Us</p>
-                  <p className="text-dark-muted text-sm group-hover:text-primary transition-colors">hello@ulaa.travel</p>
+                  <p className="text-dark-muted text-sm group-hover:text-primary transition-colors">trips.ulaa@gmail.com</p>
                 </div>
               </a>
 
@@ -92,12 +92,12 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-dark">WhatsApp</p>
-                  <p className="text-dark-muted text-sm group-hover:text-primary transition-colors">+91 98765 43210</p>
+                  <p className="text-dark-muted text-sm group-hover:text-primary transition-colors">+91 63813 36772</p>
                 </div>
               </a>
 
               <a
-                href="https://instagram.com/ulaatravel"
+                href="https://www.instagram.com/ulaa.trips?igsh=MXhpbHdwOXhmamZsZw=="
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-4 bg-white rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all group"
@@ -107,7 +107,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-dark">Instagram</p>
-                  <p className="text-dark-muted text-sm group-hover:text-primary transition-colors">@ulaatravel</p>
+                  <p className="text-dark-muted text-sm group-hover:text-primary transition-colors">@ulaa.trips</p>
                 </div>
               </a>
 
@@ -156,7 +156,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-dark mb-1">Phone (Optional)</label>
-                  <input type="tel" {...register('phone')} placeholder="+91 98765 43210" className={inputClass} />
+                  <input type="tel" {...register('phone')} placeholder="+91 63813 36772" className={inputClass} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-dark mb-1">Message *</label>

@@ -109,7 +109,7 @@ export default function BookingForm({ tripId, tripTitle, onSuccess }: BookingFor
               required: 'Phone number is required',
               pattern: { value: /^[+\d\s\-()]{8,15}$/, message: 'Invalid phone number' },
             })}
-            placeholder="+91 98765 43210"
+            placeholder="+91 63813 36772"
             className={inputClass}
           />
           {errors.phone && <p className={errorClass}>{errors.phone.message}</p>}

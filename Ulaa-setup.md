@@ -70,7 +70,7 @@ GitHub repo → Settings → Webhooks → should show a vercel.com webhook with 
 Whenever you make code changes:
 powershellcd C:\Users\bxe1cob\Desktop\ULAA
 git add .
-git commit -m "describe your change"
+git commit -m "Whatsapp number added"
 git push origin main
 That's it — Vercel picks it up and redeploys automatically. Check the Deployments tab on Vercel to confirm it went green.
 If you ever add/change a Supabase env var, update it in both places: your local .env and Vercel → Settings → Environment Variables (then redeploy — Vercel doesn't auto-pick-up env var changes, you need to trigger a redeploy from the dashboard after saving new vars).
