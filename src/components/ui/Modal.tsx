@@ -59,7 +59,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
                 <h3 className="font-display text-2xl font-bold text-dark">{title}</h3>
                 <button
                   onClick={onClose}
-                  className="text-dark-muted hover:text-dark bg-background rounded-full p-2 transition-colors"
+                  className="text-dark-muted hover:text-dark bg-background rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
                   aria-label="Close"
                 >
                   <X size={20} />
@@ -69,7 +69,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
             {!title && (
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 text-dark-muted hover:text-dark bg-background rounded-full p-2 transition-colors z-10"
+                className="absolute top-4 right-4 text-dark-muted hover:text-dark bg-background rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors z-10"
                 aria-label="Close"
               >
                 <X size={20} />

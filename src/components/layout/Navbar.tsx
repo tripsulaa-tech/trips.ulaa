@@ -67,7 +67,7 @@ export default function Navbar() {
 
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden p-2 rounded-xl transition-colors text-dark hover:bg-background"
+            className="lg:hidden p-2.5 rounded-xl transition-colors text-dark hover:bg-background min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label={isOpen ? 'Close menu' : 'Open menu'}
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -91,7 +91,7 @@ export default function Navbar() {
                   to={to}
                   end={to === '/'}
                   className={({ isActive }) => `
-                    block px-4 py-3 rounded-xl font-body font-medium text-base transition-colors
+                    block px-4 py-3.5 min-h-[44px] flex items-center rounded-xl font-body font-medium text-base transition-colors
                     ${isActive ? 'text-primary bg-background-warm' : 'text-dark hover:bg-background-warm hover:text-primary'}
                   `}
                 >

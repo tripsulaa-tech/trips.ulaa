@@ -17,10 +17,10 @@ const variants = {
 };
 
 const sizes = {
-  sm: 'px-4 py-2 text-sm rounded-lg',
-  md: 'px-6 py-3 text-base rounded-xl',
-  lg: 'px-8 py-4 text-lg rounded-xl',
-  xl: 'px-10 py-5 text-xl rounded-2xl',
+  sm: 'px-4 py-2.5 text-sm rounded-lg min-h-[44px]',
+  md: 'px-6 py-3 text-base rounded-xl min-h-[48px]',
+  lg: 'px-6 py-3.5 text-base rounded-xl min-h-[48px] sm:px-8 sm:py-4 sm:text-lg sm:min-h-[56px]',
+  xl: 'px-6 py-3.5 text-base rounded-xl min-h-[48px] sm:px-10 sm:py-5 sm:text-xl sm:rounded-2xl sm:min-h-[64px]',
 };
 
 export default function Button({

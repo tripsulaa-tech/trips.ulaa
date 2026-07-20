@@ -45,18 +45,17 @@ export default function WhyULAA() {
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/0" />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.4)',
+                }}
+              />
               <div className="relative h-full flex flex-col justify-end p-3 sm:p-4">
-                <h3
-                  className="font-display text-sm sm:text-base font-bold text-white mb-1"
-                  style={{ textShadow: '0 2px 6px rgba(45, 33, 24, 0.85), 0 1px 2px rgba(45, 33, 24, 0.9)' }}
-                >
+                <h3 className="font-display text-sm sm:text-base font-bold text-white mb-1">
                   {title}
                 </h3>
-                <p
-                  className="text-white/90 text-xs leading-snug"
-                  style={{ textShadow: '0 1px 4px rgba(45, 33, 24, 0.8)' }}
-                >
+                <p className="text-white/90 text-xs leading-snug">
                   {description}
                 </p>
               </div>

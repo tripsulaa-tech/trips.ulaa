@@ -7,7 +7,7 @@ const CTA_IMAGE = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1
 
 export default function CTASection() {
   return (
-    <section className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <section className="relative py-20 sm:py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <img src={CTA_IMAGE} alt="Adventure awaits" className="w-full h-full object-cover" />
@@ -19,36 +19,36 @@ export default function CTASection() {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="space-y-6"
+          className="space-y-4 sm:space-y-6"
         >
-          <span className="inline-flex items-center gap-2 text-secondary text-sm font-button font-semibold tracking-[0.2em] uppercase">
+          <span className="inline-flex items-center gap-2 text-secondary text-xs sm:text-sm font-button font-semibold tracking-[0.2em] uppercase">
             <span className="w-6 h-px bg-secondary" />
             Your Adventure Awaits
             <span className="w-6 h-px bg-secondary" />
           </span>
 
-          <h2 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
+          <h2 className="font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
             Ready for your
             <br />
             <span className="text-secondary italic">next adventure?</span>
           </h2>
 
-          <p className="text-white/80 text-lg md:text-xl max-w-xl mx-auto leading-relaxed">
+          <p className="text-white/80 text-base sm:text-lg md:text-xl max-w-xl mx-auto leading-relaxed">
             Book your seat today. No payment needed — just your passion to explore.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+          <div className="flex flex-row gap-3 sm:gap-4 justify-center pt-4">
             <Link to="/trips">
-              <Button variant="primary" size="xl" className="group/btn">
+              <Button variant="primary" size="sm" className="group/btn sm:px-8 sm:py-4 sm:text-base">
                 Book Your Seat
-                <ArrowRight size={20} className="transition-transform group-hover/btn:translate-x-1" />
+                <ArrowRight size={18} className="transition-transform group-hover/btn:translate-x-1" />
               </Button>
             </Link>
             <Link to="/contact">
               <Button
                 variant="ghost"
-                size="xl"
-                className="text-white border-white/40 hover:border-white hover:bg-white/10"
+                size="sm"
+                className="text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-base"
               >
                 Talk to Us
               </Button>
