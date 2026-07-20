@@ -1,4 +1,4 @@
-﻿import { useRef } from 'react';
+import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Play, Users, ShieldCheck, MapPin, Leaf } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -111,6 +111,8 @@ export default function HeroSection() {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Decorative flight-route doodle, sits just above the floating stats strip */}
 
       {/* Floating stats strip — aligned with the page container (Explore Trips to Book Now width) */}
       <motion.div

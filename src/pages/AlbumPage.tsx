@@ -89,7 +89,7 @@ export default function AlbumPage() {
             <Link to="/completed-trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Albums
             </Link>
-            <div className="flex items-center gap-2 text-secondary text-sm mb-3">
+            <div className="flex w-fit items-center gap-2 bg-primary text-white text-sm font-button font-semibold px-4 py-1.5 rounded-full mb-3">
               <MapPin size={14} /> {album.destination}
             </div>
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4">{album.title}</h1>
@@ -102,7 +102,7 @@ export default function AlbumPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16">
+      <div className="relative isolate max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16">
         {/* Trip Story */}
         {album.story && (
           <section>

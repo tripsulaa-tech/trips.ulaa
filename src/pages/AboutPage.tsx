@@ -88,7 +88,7 @@ export default function AboutPage() {
       </section>
 
       {/* Values */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-cream">
+      <section className="relative isolate py-24 px-4 sm:px-6 lg:px-8 bg-cream">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <SectionTitle

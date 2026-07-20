@@ -187,7 +187,7 @@ export default function TripDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pb-28 lg:pb-16">
+      <div className="relative isolate max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pb-28 lg:pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-12">
