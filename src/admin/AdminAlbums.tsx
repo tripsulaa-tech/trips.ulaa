@@ -5,6 +5,7 @@ import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ImageUploadField from '../components/ui/ImageUploadField';
+import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTrip } from '../services/api';
 
 import type { CompletedTrip } from '../types';
@@ -17,6 +18,7 @@ interface AlbumForm {
   description: string;
   participants: number;
   cover_image: string;
+  gallery_images: string[];
   is_published: boolean;
 }
 
@@ -27,7 +29,7 @@ export default function AdminAlbums() {
   const [editing, setEditing] = useState<CompletedTrip | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<AlbumForm>({
-    title: '', destination: '', trip_date: '', description: '', participants: 10, cover_image: '', is_published: false,
+    title: '', destination: '', trip_date: '', description: '', participants: 10, cover_image: '', gallery_images: [], is_published: false,
   });
 
   const load = () => {
@@ -38,20 +40,20 @@ export default function AdminAlbums() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ title: '', destination: '', trip_date: '', description: '', participants: 10, cover_image: '', is_published: false });
+    setForm({ title: '', destination: '', trip_date: '', description: '', participants: 10, cover_image: '', gallery_images: [], is_published: false });
     setModalOpen(true);
   };
 
   const openEdit = (album: CompletedTrip) => {
     setEditing(album);
-    setForm({ title: album.title, destination: album.destination, trip_date: album.trip_date, description: album.description, participants: album.participants, cover_image: album.cover_image || '', is_published: album.is_published });
+    setForm({ title: album.title, destination: album.destination, trip_date: album.trip_date, description: album.description, participants: album.participants, cover_image: album.cover_image || '', gallery_images: album.gallery_images || [], is_published: album.is_published });
     setModalOpen(true);
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
-      const data = { ...form, slug: slugify(form.title), gallery_images: editing?.gallery_images || [] };
+      const data = { ...form, slug: slugify(form.title) };
       if (editing) await updateCompletedTrip(editing.id, data);
       else await createCompletedTrip(data);
       setModalOpen(false);
@@ -93,6 +95,7 @@ export default function AdminAlbums() {
                     <th className="px-4 py-3 text-left hidden md:table-cell">Destination</th>
                     <th className="px-4 py-3 text-left hidden md:table-cell">Date</th>
                     <th className="px-4 py-3 text-left hidden lg:table-cell">Participants</th>
+                    <th className="px-4 py-3 text-left hidden lg:table-cell">Photos</th>
                     <th className="px-4 py-3 text-center">Status</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
@@ -104,6 +107,7 @@ export default function AdminAlbums() {
                       <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{album.destination}</td>
                       <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</td>
                       <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{album.participants}</td>
+                      <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{album.gallery_images?.length || 0}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`text-xs font-button font-semibold px-3 py-1 rounded-full ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                           {album.is_published ? 'Published' : 'Draft'}
@@ -152,6 +156,15 @@ export default function AdminAlbums() {
               onChange={url => setForm(f => ({ ...f, cover_image: url }))}
               bucket="ulaa"
               pathPrefix="album-covers"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <MultiImageUploadField
+              label="Album Photos"
+              value={form.gallery_images}
+              onChange={urls => setForm(f => ({ ...f, gallery_images: urls }))}
+              bucket="ulaa"
+              pathPrefix={`albums/${editing ? editing.id : 'new'}`}
             />
           </div>
           <div className="md:col-span-2">
