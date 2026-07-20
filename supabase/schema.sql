@@ -118,6 +118,15 @@ CREATE TABLE IF NOT EXISTS testimonials (
 );
 
 -- =============================================
+-- Site Content (editable copy, e.g. About page)
+-- =============================================
+CREATE TABLE IF NOT EXISTS site_content (
+  key TEXT PRIMARY KEY,
+  content JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================
 -- Row Level Security Policies
 -- =============================================
 
@@ -128,6 +137,7 @@ ALTER TABLE trip_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gallery ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE site_content ENABLE ROW LEVEL SECURITY;
 
 -- Public read for published trips
 CREATE POLICY "Public read upcoming trips" ON upcoming_trips
@@ -169,6 +179,12 @@ CREATE POLICY "Public read testimonials" ON testimonials
 CREATE POLICY "Admin all testimonials" ON testimonials
   FOR ALL USING (auth.role() = 'authenticated');
 
+CREATE POLICY "Public read site content" ON site_content
+  FOR SELECT USING (TRUE);
+
+CREATE POLICY "Admin all site content" ON site_content
+  FOR ALL USING (auth.role() = 'authenticated');
+
 -- =============================================
 -- Updated At Trigger
 -- =============================================
@@ -190,6 +206,10 @@ CREATE TRIGGER update_completed_trips_updated_at
 
 CREATE TRIGGER update_enquiries_updated_at
   BEFORE UPDATE ON enquiries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER update_site_content_updated_at
+  BEFORE UPDATE ON site_content
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- =============================================

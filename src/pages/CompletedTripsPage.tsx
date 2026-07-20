@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -71,6 +71,20 @@ export default function CompletedTripsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Derived live from the fetched trips — no more hardcoded numbers.
+  const stats = useMemo(() => {
+    const tripsCompleted = trips.length;
+    const womenTraveled = trips.reduce((sum, t) => sum + (t.participants || 0), 0);
+    const destinations = new Set(
+      trips.flatMap(t => t.destination.split(',').map(d => d.trim().toLowerCase()))
+    ).size;
+    return [
+      { value: `${tripsCompleted}+`, label: 'Trips Completed' },
+      { value: `${womenTraveled}+`, label: 'Women Traveled' },
+      { value: `${destinations}+`, label: 'Destinations' },
+    ];
+  }, [trips]);
+
   return (
     <Layout>
       {/* Hero */}
@@ -91,13 +105,11 @@ export default function CompletedTripsPage() {
       {/* Stats */}
       <div className="bg-white border-b border-background-warm py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-3 gap-6 text-center">
-          {[
-            { value: '50+', label: 'Trips Completed' },
-            { value: '500+', label: 'Women Traveled' },
-            { value: '20+', label: 'Destinations' },
-          ].map(({ value, label }) => (
+          {stats.map(({ value, label }) => (
             <div key={label}>
-              <p className="font-display text-3xl md:text-4xl font-bold text-primary">{value}</p>
+              <p className="font-display text-3xl md:text-4xl font-bold text-primary">
+                {loading ? '—' : value}
+              </p>
               <p className="text-dark-muted text-sm md:text-base mt-1">{label}</p>
             </div>
           ))}

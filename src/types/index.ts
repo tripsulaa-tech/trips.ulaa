@@ -119,6 +119,47 @@ export interface BookingFormData {
   trip_title?: string;
 }
 
+// =============================================
+// About Page (editable via Admin)
+// =============================================
+export interface AboutValue {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+export interface AboutTimelineItem {
+  year: string;
+  title: string;
+  description: string;
+}
+
+export interface AboutContent {
+  hero: {
+    label: string;
+    title: string;
+    subtitle: string;
+  };
+  mission: {
+    label: string;
+    title: string;
+    text: string;
+  };
+  vision: {
+    label: string;
+    title: string;
+    text: string;
+  };
+  philosophy: {
+    label: string;
+    quote_line1: string;
+    quote_line2: string;
+    text: string;
+  };
+  values: AboutValue[];
+  timeline: AboutTimelineItem[];
+}
+
 export interface AdminUser {
   id: string;
   email: string;

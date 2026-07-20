@@ -127,7 +127,7 @@ export default function TripDetailPage() {
             <Link to="/trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
             </Link>
-            <div className="flex items-center gap-2 text-secondary text-sm mb-3">
+            <div className="flex w-fit items-center gap-2 bg-primary text-white text-sm font-button font-semibold px-4 py-1.5 rounded-full mb-3">
               <MapPin size={14} /> {trip.destination}
             </div>
             <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">{trip.title}</h1>
@@ -137,13 +137,6 @@ export default function TripDetailPage() {
               <span className="flex items-center gap-2"><Users size={14} />
                 {isFull ? 'Sold out' : `${remaining} seats left`}
               </span>
-              <button
-                onClick={() => setBookingOpen(true)}
-                disabled={isFull}
-                className="ml-0 sm:ml-2 px-4 py-1.5 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-button font-semibold transition-colors"
-              >
-                {isFull ? 'Join Waitlist' : 'Book Now'}
-              </button>
             </div>
           </motion.div>
         </div>
@@ -423,7 +416,14 @@ export default function TripDetailPage() {
             ) : (
               <span className="text-sm text-dark-muted">Enquire for pricing</span>
             )}
-            <p className="text-xs text-dark-muted">{isFull ? 'Sold out' : `${remaining} seats left`}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              {isEarlyBird && (
+                <span className="bg-secondary/15 text-secondary text-[10px] font-button font-semibold px-2 py-0.5 rounded-full">
+                  Early Bird
+                </span>
+              )}
+              <p className="text-xs text-dark-muted">{isFull ? 'Sold out' : `${remaining} seats left`}</p>
+            </div>
           </div>
           <Button
             variant="primary"

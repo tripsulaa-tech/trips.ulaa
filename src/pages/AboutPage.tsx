@@ -1,26 +1,25 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
-import { Heart, Globe, Shield, Compass } from 'lucide-react';
+import { Heart } from 'lucide-react';
+import { getSiteContent } from '../services/api';
+import { DEFAULT_ABOUT, ABOUT_VALUE_ICONS } from '../constants/about';
+import type { AboutContent } from '../types';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1600&q=80';
 
-const timeline = [
-  { year: '2020', title: 'The Idea', description: 'Three friends frustrated with unsafe solo travel experiences decided to create something better — a space designed entirely for women.' },
-  { year: '2021', title: 'First Trip', description: 'Our first ever ULAA trip: 8 women, 6 days in Coorg. Zero WiFi. Infinite memories. The idea became a movement.' },
-  { year: '2022', title: 'Growing Community', description: 'Word spread. 100+ women traveled with us across 10+ destinations. We realized ULAA was more than travel — it was sisterhood.' },
-  { year: '2023', title: 'Hidden India', description: 'We committed to exploring only hidden, underrated destinations — places that Instagram hadn\'t found yet. Meghalaya. Spiti. Kutch. The Northeast.' },
-  { year: '2024', title: 'ULAA Today', description: '500+ women. 50+ trips. 20+ destinations. And a community of fearless explorers who refuse to let the world limit their adventures.' },
-];
-
-const values = [
-  { icon: Heart, title: 'Safety First', description: 'Every destination, every accommodation, every guide is vetted with safety as the first criteria.' },
-  { icon: Globe, title: 'Sustainable Travel', description: 'We support local businesses, minimize environmental impact, and leave every place better than we found it.' },
-  { icon: Shield, title: 'Empowerment', description: 'We believe travel transforms women. Every ULAA trip is designed to push comfort zones and build confidence.' },
-  { icon: Compass, title: 'Authenticity', description: 'No tourist traps. No generic itineraries. Only real, raw, soulful experiences that stay with you forever.' },
-];
-
 export default function AboutPage() {
+  const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
+
+  useEffect(() => {
+    getSiteContent<AboutContent>('about')
+      .then(data => { if (data) setContent(data); })
+      .catch(() => {});
+  }, []);
+
+  const { hero, mission, vision, philosophy, values, timeline } = content;
+
   return (
     <Layout>
       {/* Hero */}
@@ -29,10 +28,10 @@ export default function AboutPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-dark/50 to-dark/85" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <span className="text-secondary text-sm font-button font-semibold tracking-[0.2em] uppercase">Our Story</span>
-            <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">About ULAA</h1>
+            <span className="text-secondary text-sm font-button font-semibold tracking-[0.2em] uppercase">{hero.label}</span>
+            <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">{hero.title}</h1>
             <p className="text-white/80 mt-3 text-lg max-w-xl">
-              Unseen. Local. Adventures. Activities. — A girls-only travel revolution.
+              {hero.subtitle}
             </p>
           </motion.div>
         </div>
@@ -50,21 +49,21 @@ export default function AboutPage() {
           </motion.div>
           <div className="space-y-8">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <span className="text-primary text-sm font-button font-semibold tracking-widest uppercase">Our Mission</span>
+              <span className="text-primary text-sm font-button font-semibold tracking-widest uppercase">{mission.label}</span>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-dark mt-2 mb-4">
-                To make safe, meaningful travel accessible to every Indian woman.
+                {mission.title}
               </h2>
               <p className="text-dark-muted leading-relaxed">
-                We believe the open road should be available to every woman who dreams of it. ULAA exists to remove the barriers — safety concerns, solo travel anxiety, lack of like-minded company — that stop women from exploring India and the world.
+                {mission.text}
               </p>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
-              <span className="text-primary text-sm font-button font-semibold tracking-widest uppercase">Our Vision</span>
+              <span className="text-primary text-sm font-button font-semibold tracking-widest uppercase">{vision.label}</span>
               <h2 className="font-display text-3xl font-bold text-dark mt-2 mb-4">
-                A world where women explore fearlessly.
+                {vision.title}
               </h2>
               <p className="text-dark-muted leading-relaxed">
-                We envision a future where no woman says "I wish I could travel" — because she knows ULAA has her back, her safety, and her spirit of adventure fully supported.
+                {vision.text}
               </p>
             </motion.div>
           </div>
@@ -75,14 +74,14 @@ export default function AboutPage() {
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-dark">
         <div className="max-w-5xl mx-auto text-center text-white">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-secondary text-sm font-button font-semibold tracking-widest uppercase">Travel Philosophy</span>
+            <span className="text-secondary text-sm font-button font-semibold tracking-widest uppercase">{philosophy.label}</span>
             <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mt-4 mb-8 leading-tight">
-              "Travel is not about the destination.
+              {philosophy.quote_line1}
               <br />
-              <span className="text-secondary italic">It's about who you become."</span>
+              <span className="text-secondary italic">"{philosophy.quote_line2}"</span>
             </h2>
             <p className="text-white/70 text-lg leading-relaxed max-w-3xl mx-auto">
-              We don't sell holidays. We create transformations. Every ULAA trip is designed to challenge, inspire, and grow the women who take it. When you return home, you return different — braver, more connected to yourself and to the world.
+              {philosophy.text}
             </p>
           </motion.div>
         </div>
@@ -100,24 +99,27 @@ export default function AboutPage() {
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {values.map(({ icon: Icon, title, description }, i) => (
-              <motion.div
-                key={title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-3xl p-8 shadow-card flex gap-6"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Icon size={26} strokeWidth={1.5} />
-                </div>
-                <div>
-                  <h3 className="font-display text-xl font-bold text-dark mb-2">{title}</h3>
-                  <p className="text-dark-muted text-sm leading-relaxed">{description}</p>
-                </div>
-              </motion.div>
-            ))}
+            {values.map(({ icon, title, description }, i) => {
+              const Icon = ABOUT_VALUE_ICONS[icon] || Heart;
+              return (
+                <motion.div
+                  key={title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="bg-white rounded-3xl p-8 shadow-card flex gap-6"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Icon size={26} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-dark mb-2">{title}</h3>
+                    <p className="text-dark-muted text-sm leading-relaxed">{description}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -137,7 +139,7 @@ export default function AboutPage() {
             <div className="space-y-12">
               {timeline.map((item, i) => (
                 <motion.div
-                  key={item.year}
+                  key={`${item.year}-${i}`}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
