@@ -1,8 +1,9 @@
-﻿import { useState, useEffect } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+﻿import { useState, useEffect, type MouseEvent } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import Button from '../ui/Button';
+import { useAuth } from '../../context/AuthContext';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -15,10 +16,23 @@ const navLinks = [
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     setIsOpen(false);
   }, [location]);
+
+  const handleLogoClick = (e: MouseEvent) => {
+    // Admin-only: toggle logo between the public home page and the admin dashboard.
+    if (!user) return;
+    e.preventDefault();
+    if (location.pathname === '/') {
+      navigate('/admin');
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <motion.header
@@ -29,7 +43,7 @@ export default function Navbar() {
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 py-2">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/" onClick={handleLogoClick} className="flex items-center gap-3 group">
             <img
               src="/ULAA-logo.png"
               alt="ULAA Logo"

@@ -345,7 +345,7 @@ export default function TripDetailPage() {
                         {trip.early_bird_deadline && (
                           <p className="flex items-center justify-center gap-1 text-orange-600 text-xs font-medium mt-2">
                             <Clock size={12} className="shrink-0" />
-                            Ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long' })}
+                            Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}
                           </p>
                         )}
                       </>
@@ -454,7 +454,7 @@ export default function TripDetailPage() {
               {isEarlyBird && trip.early_bird_deadline && (
                 <span className="flex items-center gap-0.5 text-orange-600 text-[10px] font-medium shrink-0 whitespace-nowrap">
                   <Clock size={10} className="shrink-0" />
-                  Ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short' })}
+                  Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
               )}
             </div>
