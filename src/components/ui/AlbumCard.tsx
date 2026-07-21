@@ -39,8 +39,8 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
 
       {/* Content */}
       <div className="p-5 sm:p-6 flex-1 flex flex-col">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <h3 className="font-display text-xl sm:text-2xl font-bold text-dark line-clamp-1 text-center">
+        <div className="flex items-center justify-start gap-2 mb-2">
+          <h3 className="font-display text-xl sm:text-2xl font-bold text-dark line-clamp-1">
             {trip.title}
           </h3>
           {trip.batch && (
@@ -52,14 +52,11 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
 
         <div className="border-t border-dashed border-background-warm mb-4" />
 
-        <div className="flex items-center mb-5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-5">
           {stats.map(({ icon: Icon, label }, i) => (
-            <div key={i} className="flex flex-1 items-center justify-center">
-              {i > 0 && <div className="w-px self-stretch bg-background-warm mx-1" />}
-              <div className="flex flex-1 items-center justify-center gap-1.5">
-                <Icon size={15} className="text-primary shrink-0" />
-                <span className="text-xs text-dark font-medium whitespace-nowrap">{label}</span>
-              </div>
+            <div key={i} className="flex items-center gap-1.5">
+              <Icon size={15} className="text-primary shrink-0" />
+              <span className="text-xs text-dark font-medium whitespace-nowrap">{label}</span>
             </div>
           ))}
         </div>
