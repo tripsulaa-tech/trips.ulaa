@@ -1,7 +1,20 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
+
+// Scrolls the window to the top whenever the route changes, so navigating
+// (e.g. via the footer's Upcoming Trips / Completed Trips / About / Contact
+// links) always lands the user at the top of the destination page.
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 
 // Public Pages
 const HomePage = lazy(() => import('../pages/HomePage'));
@@ -51,6 +64,7 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ScrollToTop />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public Routes */}

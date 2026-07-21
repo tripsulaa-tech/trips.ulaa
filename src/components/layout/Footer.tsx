@@ -121,24 +121,26 @@ export default function Footer() {
         </div>
 
         {/* Contact box */}
-        <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] py-4 px-2 grid grid-cols-3 items-center">
+        <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] py-3.5 px-3 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
           <a
             href="mailto:trips.ulaa@gmail.com"
-            className="flex items-center justify-center gap-1.5 text-[11px] sm:text-[12px] text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors"
+            className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors whitespace-nowrap shrink-0"
           >
-            <Mail className="w-4 h-4 text-[#e4782f] shrink-0" strokeWidth={1.75} />
-            <span className="break-all">trips.ulaa@gmail.com</span>
+            <Mail className="w-3.5 h-3.5 text-[#e4782f] shrink-0" strokeWidth={1.75} />
+            trips.ulaa@gmail.com
           </a>
+          <span className="h-6 w-px bg-white/10 shrink-0" />
           <a
             href="tel:+916381336772"
-            className="flex items-center justify-center gap-1.5 text-[11px] sm:text-[12px] text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors border-l border-white/10"
+            className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors whitespace-nowrap shrink-0"
           >
-            <Phone className="w-4 h-4 text-[#e4782f] shrink-0" strokeWidth={1.75} />
-            <span className="whitespace-nowrap">+91 63813 36772</span>
+            <Phone className="w-3.5 h-3.5 text-[#e4782f] shrink-0" strokeWidth={1.75} />
+            +91 63813 36772
           </a>
-          <div className="flex items-center justify-center gap-1.5 text-[11px] sm:text-[12px] text-[#fdfcf6]/95 border-l border-white/10">
-            <MapPin className="w-4 h-4 text-[#e4782f] shrink-0" strokeWidth={1.75} />
-            <span>India</span>
+          <span className="h-6 w-px bg-white/10 shrink-0" />
+          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#fdfcf6]/95 whitespace-nowrap shrink-0">
+            <MapPin className="w-3.5 h-3.5 text-[#e4782f] shrink-0" strokeWidth={1.75} />
+            India
           </div>
         </div>
 
