@@ -68,30 +68,38 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         </h3>
 
         {activePrice != null && (
-          <div className="flex items-center gap-2 mb-3">
-            <span className="font-display text-lg font-bold text-primary">{formatPrice(activePrice)}</span>
-            {isEarlyBird && trip.price != null && (
-              <span className="text-dark-muted line-through text-sm">{formatPrice(trip.price)}</span>
-            )}
+          <div className="mb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-display text-lg font-bold text-primary">{formatPrice(activePrice)}</span>
+              {isEarlyBird && trip.price != null && (
+                <>
+                  <span className="text-dark-muted line-through text-sm">{formatPrice(trip.price)}</span>
+                  <span className="bg-green-50 border border-green-200 text-green-700 text-[11px] font-button font-medium px-2 py-0.5 rounded-full whitespace-nowrap">
+                    Save {formatPrice(trip.price - activePrice)}
+                  </span>
+                </>
+              )}
+            </div>
             {isEarlyBird && trip.early_bird_deadline && (
-              <span className="text-secondary text-xs font-button font-semibold">
-                Book by {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short' })}
-              </span>
+              <p className="text-secondary text-xs font-button font-semibold mt-1">
+                Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
             )}
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="flex items-center gap-2 text-dark-muted text-sm">
-            <Calendar size={14} className="text-primary shrink-0" />
+        {/* Meta row: date + duration stay on one line even on mobile, seats wraps to its own line */}
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5 mb-5 text-xs sm:text-sm">
+          <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
+            <Calendar size={13} className="text-primary shrink-0" />
             <span>{formatDateRange(trip.start_date, trip.end_date)}</span>
           </div>
-          <div className="flex items-center gap-2 text-dark-muted text-sm">
-            <Clock size={14} className="text-primary shrink-0" />
+          <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
+            <Clock size={13} className="text-primary shrink-0" />
             <span>{trip.duration}</span>
           </div>
-          <div className="flex items-center gap-2 text-dark-muted text-sm col-span-2">
-            <Users size={14} className="text-primary shrink-0" />
+          <div className="flex items-center gap-1.5 text-dark-muted w-full">
+            <Users size={13} className="text-primary shrink-0" />
             <span>
               {isFull
                 ? 'No seats available'
@@ -99,10 +107,6 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             </span>
           </div>
         </div>
-
-        <p className="text-dark-muted text-sm leading-relaxed mb-5 line-clamp-2">
-          {trip.description}
-        </p>
 
         <Link to={`/trips/${trip.slug}`}>
           <Button

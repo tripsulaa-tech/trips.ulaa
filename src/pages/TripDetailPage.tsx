@@ -12,7 +12,7 @@ import type { UpcomingTrip } from '../types';
 import { formatDateRange, formatDate, seatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
 import {
   MapPin, Calendar, Clock, Users, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2, Flame
+  Backpack, Navigation, ArrowLeft, Share2,
 } from 'lucide-react';
 
 const DEMO_TRIP: UpcomingTrip = {
@@ -137,6 +137,11 @@ export default function TripDetailPage() {
               <span className="flex items-center gap-2"><Users size={14} />
                 {isFull ? 'Sold out' : `${remaining} seats left`}
               </span>
+			  {isEarlyBird && (
+				<span className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/30 text-white text-xs font-button font-semibold px-3 py-1.5 rounded-full">
+				Early Bird
+				</span>
+			  )}
             </div>
           </motion.div>
         </div>
@@ -327,9 +332,22 @@ export default function TripDetailPage() {
                           <span className="text-dark-muted line-through text-lg">{formatPrice(trip.price)}</span>
                         </div>
                         <p className="text-dark-muted text-xs mt-1">per person</p>
-                        <span className="inline-block mt-2 bg-secondary/15 text-secondary text-xs font-button font-semibold px-3 py-1 rounded-full">
-                          Early Bird — book by {formatDate(trip.early_bird_deadline!, { day: 'numeric', month: 'long' })}
-                        </span>
+
+                        <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                          <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-button font-medium px-2.5 py-1 rounded-full">
+                            Save {formatPrice(trip.price - activePrice)}
+                          </span>
+                          <span className="bg-orange-50 border border-orange-200 text-orange-600 text-xs font-button font-medium px-2.5 py-1 rounded-full">
+                            Early Bird
+                          </span>
+                        </div>
+
+                        {trip.early_bird_deadline && (
+                          <p className="flex items-center justify-center gap-1 text-orange-600 text-xs font-medium mt-2">
+                            <Clock size={12} className="shrink-0" />
+                            Ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long' })}
+                          </p>
+                        )}
                       </>
                     ) : (
                       <>
@@ -403,16 +421,22 @@ export default function TripDetailPage() {
       </div>
 
             {/* Sticky mobile booking bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-background-warm shadow-warm-lg px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-background-warm shadow-warm-lg px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
           {/* Left: price + meta */}
-          <div className="min-w-0">
-            <div className="flex items-baseline gap-2">
+          <div className="min-w-0 flex-1">
+            {/* Row 1: discounted price + original price + Save */}
+            <div className="flex items-center gap-1.5">
               {activePrice != null ? (
                 <>
-                  <span className="font-display text-xl font-bold text-dark">{formatPrice(activePrice)}</span>
+                  <span className="font-display text-base font-bold text-dark shrink-0">{formatPrice(activePrice)}</span>
                   {isEarlyBird && trip.price != null && (
-                    <span className="text-dark-muted line-through text-sm">{formatPrice(trip.price)}</span>
+                    <>
+                      <span className="text-dark-muted line-through text-xs shrink-0">{formatPrice(trip.price)}</span>
+                      <span className="bg-green-50 border border-green-200 text-green-700 text-[10px] font-button font-medium px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                        Save {formatPrice(trip.price - activePrice)}
+                      </span>
+                    </>
                   )}
                 </>
               ) : (
@@ -420,36 +444,38 @@ export default function TripDetailPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {isEarlyBird && trip.price != null && activePrice != null && (
-                <span className="text-green-600 text-[11px] font-button font-bold">
-                  Save {formatPrice(trip.price - activePrice)}
+            {/* Row 2: Early Bird + Ends date */}
+            <div className="flex items-center gap-1.5 mt-1 overflow-x-auto no-scrollbar">
+              {isEarlyBird && (
+                <span className="bg-orange-50 border border-orange-200 text-orange-600 text-[10px] font-button font-medium px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                  Early Bird
                 </span>
               )}
               {isEarlyBird && trip.early_bird_deadline && (
-                <span className="flex items-center gap-1 text-secondary text-[11px] font-medium">
-                  <Clock size={11} className="shrink-0" />
-                  Ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
-                </span>
-              )}
-              {!isFull && (
-                <span className="flex items-center gap-1 text-primary text-[11px] font-semibold">
-                  <Flame size={11} className="shrink-0" />
-                  {remaining} seats left
+                <span className="flex items-center gap-0.5 text-orange-600 text-[10px] font-medium shrink-0 whitespace-nowrap">
+                  <Clock size={10} className="shrink-0" />
+                  Ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short' })}
                 </span>
               )}
             </div>
           </div>
 
-          {/* Right: CTA */}
+          {/* Right: CTA with seats-left inside */}
           <Button
             variant="primary"
-            size="lg"
+            size="sm"
             disabled={isFull}
             onClick={() => setBookingOpen(true)}
-            className="shrink-0 !rounded-full !px-6"
+            className="!rounded-xl !px-4 !py-2 shrink-0 flex flex-col items-center !gap-0 leading-tight"
           >
-            {isFull ? 'Join Waitlist' : 'Book Your Seat'}
+            <span className="text-sm font-bold whitespace-nowrap">
+              {isFull ? 'Join Waitlist' : 'Book Your Seat'}
+            </span>
+            {!isFull && (
+              <span className="text-[9px] font-normal text-white/85 mt-0.5">
+                {remaining} seats left
+              </span>
+            )}
           </Button>
         </div>
       </div>
