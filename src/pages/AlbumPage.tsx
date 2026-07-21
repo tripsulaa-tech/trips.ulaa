@@ -131,7 +131,7 @@ export default function AlbumPage() {
               <h2 className="font-display text-3xl font-bold text-dark">Photo Gallery</h2>
               <button
                 onClick={() => navigator.share?.({ title: album.title, url: window.location.href })}
-                className="flex items-center gap-2 text-sm text-dark-muted hover:text-primary transition-colors"
+                className="flex items-center gap-2 text-sm text-dark-muted hover:text-primary transition-colors cursor-pointer"
               >
                 <Share2 size={16} /> Share
               </button>

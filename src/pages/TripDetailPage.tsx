@@ -1,10 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  MapPin, Calendar, Clock, Users, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2
-} from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import FAQAccordion from '../components/ui/FAQAccordion';
@@ -14,6 +10,10 @@ import { GalleryGrid } from '../components/ui/Lightbox';
 import { getUpcomingTripBySlug } from '../services/api';
 import type { UpcomingTrip } from '../types';
 import { formatDateRange, formatDate, seatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
+import {
+  MapPin, Calendar, Clock, Users, CheckCircle, XCircle,
+  Backpack, Navigation, ArrowLeft, Share2, Flame
+} from 'lucide-react';
 
 const DEMO_TRIP: UpcomingTrip = {
   id: '1', title: 'Spiti Valley Winter Expedition',
@@ -402,35 +402,52 @@ export default function TripDetailPage() {
         </div>
       </div>
 
-      {/* Sticky mobile booking bar */}
+            {/* Sticky mobile booking bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-background-warm shadow-warm-lg px-4 py-3">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            {activePrice != null ? (
-              <div className="flex items-center gap-2">
-                <span className="font-display text-xl font-bold text-dark">{formatPrice(activePrice)}</span>
-                {isEarlyBird && trip.price && (
-                  <span className="text-dark-muted line-through text-sm">{formatPrice(trip.price)}</span>
-                )}
-              </div>
-            ) : (
-              <span className="text-sm text-dark-muted">Enquire for pricing</span>
-            )}
-            <div className="flex items-center gap-2 mt-0.5">
-              {isEarlyBird && (
-                <span className="bg-secondary/15 text-secondary text-[10px] font-button font-semibold px-2 py-0.5 rounded-full">
-                  Early Bird
+        <div className="flex items-center justify-between gap-3">
+          {/* Left: price + meta */}
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-2">
+              {activePrice != null ? (
+                <>
+                  <span className="font-display text-xl font-bold text-dark">{formatPrice(activePrice)}</span>
+                  {isEarlyBird && trip.price != null && (
+                    <span className="text-dark-muted line-through text-sm">{formatPrice(trip.price)}</span>
+                  )}
+                </>
+              ) : (
+                <span className="text-sm text-dark-muted">Enquire for pricing</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              {isEarlyBird && trip.price != null && activePrice != null && (
+                <span className="text-green-600 text-[11px] font-button font-bold">
+                  Save {formatPrice(trip.price - activePrice)}
                 </span>
               )}
-              <p className="text-xs text-dark-muted">{isFull ? 'Sold out' : `${remaining} seats left`}</p>
+              {isEarlyBird && trip.early_bird_deadline && (
+                <span className="flex items-center gap-1 text-secondary text-[11px] font-medium">
+                  <Clock size={11} className="shrink-0" />
+                  Ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+              {!isFull && (
+                <span className="flex items-center gap-1 text-primary text-[11px] font-semibold">
+                  <Flame size={11} className="shrink-0" />
+                  {remaining} seats left
+                </span>
+              )}
             </div>
           </div>
+
+          {/* Right: CTA */}
           <Button
             variant="primary"
-            size="md"
+            size="lg"
             disabled={isFull}
             onClick={() => setBookingOpen(true)}
-            className="shrink-0"
+            className="shrink-0 !rounded-full !px-6"
           >
             {isFull ? 'Join Waitlist' : 'Book Your Seat'}
           </Button>

@@ -15,7 +15,7 @@ interface ContactForm {
 }
 
 const WHATSAPP_NUMBER = '916381336772';
-const HERO_IMAGE = 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=1400&q=80';
+const HERO_IMAGE = 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1400&q=80';
 
 export default function ContactPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');

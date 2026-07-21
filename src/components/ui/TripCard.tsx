@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { MapPin, Calendar, Clock, Users, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip } from '../../types';
-import { formatDateRange, seatsLeft, PLACEHOLDER_IMAGE } from '../../utils';
+import { formatDateRange, formatDate, formatPrice, getActivePrice, seatsLeft, PLACEHOLDER_IMAGE } from '../../utils';
 import Button from './Button';
 
 interface TripCardProps {
@@ -14,6 +14,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   const remaining = seatsLeft(trip.total_seats, trip.seats_booked);
   const isAlmostFull = remaining <= 5 && remaining > 0;
   const isFull = remaining === 0;
+  const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
 
   return (
     <motion.div
@@ -44,6 +45,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               Only {remaining} left!
             </span>
           ) : null}
+          {isEarlyBird && (
+            <span className="bg-secondary text-white text-xs font-button font-semibold px-3 py-1 rounded-full">
+              Early Bird
+            </span>
+          )}
         </div>
 
         {/* Destination overlay */}
@@ -60,6 +66,20 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         <h3 className="font-display text-xl font-bold text-dark mb-3 line-clamp-2">
           {trip.title}
         </h3>
+
+        {activePrice != null && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="font-display text-lg font-bold text-primary">{formatPrice(activePrice)}</span>
+            {isEarlyBird && trip.price != null && (
+              <span className="text-dark-muted line-through text-sm">{formatPrice(trip.price)}</span>
+            )}
+            {isEarlyBird && trip.early_bird_deadline && (
+              <span className="text-secondary text-xs font-button font-semibold">
+                Book by {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short' })}
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="flex items-center gap-2 text-dark-muted text-sm">
