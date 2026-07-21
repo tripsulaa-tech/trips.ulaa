@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Users, ArrowLeft, Share2 } from 'lucide-react';
+import { MapPin, Calendar, Users, Images, ArrowLeft, Share2 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import { GalleryGrid } from '../components/ui/Lightbox';
 import { getCompletedTripBySlug } from '../services/api';
 import type { CompletedTrip } from '../types';
-import { formatDate, PLACEHOLDER_IMAGE } from '../utils';
+import { formatDate, formatBatchLabel, PLACEHOLDER_IMAGE } from '../utils';
 
 const DEMO_ALBUM: CompletedTrip = {
   id: '1', title: 'Magical Meghalaya',
@@ -84,25 +84,43 @@ export default function AlbumPage() {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/30 via-dark/20 to-dark/90" />
-        <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-16 max-w-5xl mx-auto left-0 right-0">
+        <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-16 max-w-7xl mx-auto left-0 right-0">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <Link to="/completed-trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Albums
             </Link>
-            <div className="flex w-fit items-center gap-2 bg-primary text-white text-sm font-button font-semibold px-4 py-1.5 rounded-full mb-3">
+            <a
+              href={album.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(album.destination)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-fit items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-4 py-1.5 rounded-full mb-3 hover:bg-white/25 transition-colors"
+            >
               <MapPin size={14} /> {album.destination}
+            </a>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white">{album.title}</h1>
+              {album.batch && (
+                <span className="shrink-0 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-3 py-1.5 rounded-full">
+                  {formatBatchLabel(album.batch)}
+                </span>
+              )}
             </div>
-            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4">{album.title}</h1>
-            <div className="flex flex-wrap gap-5 text-white/80 text-sm">
-              <span className="flex items-center gap-2"><Calendar size={14} /> {formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</span>
-              <span className="flex items-center gap-2"><Users size={14} /> {album.participants} travelers</span>
-              <span>{album.gallery_images.length} photos</span>
+            <div className="flex flex-wrap items-center gap-3 text-white/80 text-sm">
+              <span className="flex items-center gap-1.5"><Calendar size={14} /> {formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</span>
+              <span className="w-px h-4 bg-white/30" />
+              <span className="flex items-center gap-1.5"><Users size={14} /> {album.participants} travelers</span>
+              {album.gallery_images.length > 0 && (
+                <>
+                  <span className="w-px h-4 bg-white/30" />
+                  <span className="flex items-center gap-1.5"><Images size={14} /> {album.gallery_images.length} photos</span>
+                </>
+              )}
             </div>
           </motion.div>
         </div>
       </div>
 
-      <div className="relative isolate max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16">
+      <div className="relative isolate max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16">
         {/* Trip Story */}
         {album.story && (
           <section>

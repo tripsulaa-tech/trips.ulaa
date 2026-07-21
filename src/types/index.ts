@@ -35,10 +35,12 @@ export interface CompletedTrip {
   id: string;
   title: string;
   destination: string;
+  map_url?: string;
   slug: string;
   trip_date: string;
   description: string;
   story?: string;
+  batch?: string;
   participants: number;
   cover_image?: string;
   gallery_images: string[];

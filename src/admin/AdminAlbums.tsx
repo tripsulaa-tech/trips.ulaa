@@ -9,13 +9,15 @@ import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTrip } from '../services/api';
 
 import type { CompletedTrip } from '../types';
-import { formatDate, slugify } from '../utils';
+import { formatDate, slugify, formatBatchLabel } from '../utils';
 
 interface AlbumForm {
   title: string;
   destination: string;
+  map_url: string;
   trip_date: string;
   description: string;
+  batch: string;
   participants: number;
   cover_image: string;
   gallery_images: string[];
@@ -29,7 +31,7 @@ export default function AdminAlbums() {
   const [editing, setEditing] = useState<CompletedTrip | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<AlbumForm>({
-    title: '', destination: '', trip_date: '', description: '', participants: 10, cover_image: '', gallery_images: [], is_published: false,
+    title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false,
   });
 
   const load = () => {
@@ -40,20 +42,34 @@ export default function AdminAlbums() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ title: '', destination: '', trip_date: '', description: '', participants: 10, cover_image: '', gallery_images: [], is_published: false });
+    setForm({ title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false });
     setModalOpen(true);
   };
 
   const openEdit = (album: CompletedTrip) => {
     setEditing(album);
-    setForm({ title: album.title, destination: album.destination, trip_date: album.trip_date, description: album.description, participants: album.participants, cover_image: album.cover_image || '', gallery_images: album.gallery_images || [], is_published: album.is_published });
+    setForm({ title: album.title, destination: album.destination, map_url: album.map_url || '', trip_date: album.trip_date, description: album.description, batch: album.batch || '', participants: album.participants, cover_image: album.cover_image || '', gallery_images: album.gallery_images || [], is_published: album.is_published });
     setModalOpen(true);
   };
 
   const handleSave = async () => {
+    const batch = form.batch.trim() || undefined;
+    const titleNorm = form.title.trim().toLowerCase();
+    const batchNorm = (batch || '').trim().toLowerCase();
+    const duplicate = albums.some(a =>
+      a.id !== editing?.id &&
+      a.title.trim().toLowerCase() === titleNorm &&
+      (a.batch || '').trim().toLowerCase() === batchNorm
+    );
+    if (duplicate) {
+      alert('An album with this title already exists' + (batch ? ' for this batch' : '') + '. Use a different batch, or change the title.');
+      return;
+    }
+
     try {
       setSaving(true);
-      const data = { ...form, slug: slugify(form.title) };
+      const slugSource = batch ? `${form.title} ${batch}` : form.title;
+      const data = { ...form, batch, slug: slugify(slugSource) };
       if (editing) await updateCompletedTrip(editing.id, data);
       else await createCompletedTrip(data);
       setModalOpen(false);
@@ -103,7 +119,14 @@ export default function AdminAlbums() {
                 <tbody className="divide-y divide-background-warm">
                   {albums.map(album => (
                     <motion.tr key={album.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-3 font-medium text-dark max-w-[200px] truncate">{album.title}</td>
+                      <td className="px-4 py-3 font-medium text-dark max-w-[200px] truncate">
+                        {album.title}
+                        {album.batch && (
+                          <span className="ml-2 text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
+                            {formatBatchLabel(album.batch)}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{album.destination}</td>
                       <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</td>
                       <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{album.participants}</td>
@@ -139,7 +162,43 @@ export default function AdminAlbums() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Destination *</label>
-            <input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} />
+            <div className="flex gap-2">
+              <input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} />
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.destination)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => { if (!form.destination.trim()) e.preventDefault(); }}
+                className="shrink-0 flex items-center gap-1.5 px-3 rounded-xl border-2 border-background-warm bg-background text-dark text-sm font-medium hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+                title="Opens Google Maps in a new tab, already searching for this"
+              >
+                Find on Maps ↗
+              </a>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Destination — Google Maps Link</label>
+            <input
+              value={form.map_url}
+              onChange={e => setForm(f => ({ ...f, map_url: e.target.value }))}
+              className={inputClass}
+              placeholder="Paste the link here"
+            />
+            <p className="text-xs text-dark-muted mt-1.5">
+              Optional. In the Maps tab: confirm the pin is right → <span className="font-medium text-dark">Share</span> → <span className="font-medium text-dark">Copy link</span> → paste here. Without this, the album page falls back to a text search for the destination.
+              {form.map_url.trim() && (
+                <>
+                  {' '}
+                  <a href={form.map_url} target="_blank" rel="noopener noreferrer" className="text-primary font-medium hover:underline">
+                    Open this link ↗
+                  </a>
+                </>
+              )}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Batch (optional)</label>
+            <input value={form.batch} onChange={e => setForm(f => ({ ...f, batch: e.target.value }))} className={inputClass} placeholder="e.g. 1 (shows as 'Batch 1')" />
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Trip Date *</label>

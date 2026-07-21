@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS completed_trips (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title TEXT NOT NULL,
   destination TEXT NOT NULL,
+  map_url TEXT,
   slug TEXT UNIQUE NOT NULL,
   trip_date DATE NOT NULL,
   description TEXT NOT NULL,

@@ -71,6 +71,12 @@ export function slugify(str: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+/** Normalize a batch label: a plain number becomes "Batch N"; any other text is left as-is */
+export function formatBatchLabel(batch: string): string {
+  const trimmed = batch.trim();
+  return /^\d+$/.test(trimmed) ? `Batch ${trimmed}` : trimmed;
+}
+
 /** Delay utility */
 export function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
