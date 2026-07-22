@@ -34,6 +34,7 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
           loading="lazy"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
+        <div className="absolute inset-0 bg-dark/12" />
         <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent" />
       </div>
 
