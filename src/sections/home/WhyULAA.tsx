@@ -18,7 +18,7 @@ export default function WhyULAA() {
 
   return (
     <section className="relative isolate py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-cream">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1344px] mx-auto">
         <div className="mb-8 sm:mb-16 flex justify-center">
           <SectionTitle
             label="Why Choose Us"
@@ -33,8 +33,7 @@ export default function WhyULAA() {
             <motion.div
               key={title}
               initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
               whileHover={{ y: -4 }}
               className="relative aspect-[4/3] rounded-2xl sm:rounded-3xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 group"

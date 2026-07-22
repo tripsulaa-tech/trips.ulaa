@@ -17,8 +17,7 @@ export default function CTASection() {
       <div className="relative z-10 max-w-4xl mx-auto text-center text-white">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
           className="space-y-4 sm:space-y-6"
         >
           <span className="inline-flex items-center gap-2 text-secondary text-xs sm:text-sm font-button font-semibold tracking-[0.2em] uppercase">

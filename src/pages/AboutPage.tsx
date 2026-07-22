@@ -26,7 +26,7 @@ export default function AboutPage() {
       <div className="relative h-96 md:h-[500px] overflow-hidden">
         <img src={HERO_IMAGE} alt="About ULAA" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/50 to-dark/85" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 pt-16">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <span className="text-secondary text-sm font-button font-semibold tracking-[0.2em] uppercase">{hero.label}</span>
             <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">{hero.title}</h1>
@@ -39,8 +39,8 @@ export default function AboutPage() {
 
       {/* Mission & Vision */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+        <div className="max-w-[1344px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}>
             <img
               src="https://images.unsplash.com/photo-1502781252888-9143ba7f074e?w=800&q=80"
               alt="Women traveling"
@@ -48,7 +48,7 @@ export default function AboutPage() {
             />
           </motion.div>
           <div className="space-y-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <span className="text-primary text-sm font-button font-semibold tracking-widest uppercase">{mission.label}</span>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-dark mt-2 mb-4">
                 {mission.title}
@@ -57,7 +57,7 @@ export default function AboutPage() {
                 {mission.text}
               </p>
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
               <span className="text-primary text-sm font-button font-semibold tracking-widest uppercase">{vision.label}</span>
               <h2 className="font-display text-3xl font-bold text-dark mt-2 mb-4">
                 {vision.title}
@@ -73,7 +73,7 @@ export default function AboutPage() {
       {/* Philosophy */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-dark">
         <div className="max-w-5xl mx-auto text-center text-white">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <span className="text-secondary text-sm font-button font-semibold tracking-widest uppercase">{philosophy.label}</span>
             <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mt-4 mb-8 leading-tight">
               {philosophy.quote_line1}
@@ -89,7 +89,7 @@ export default function AboutPage() {
 
       {/* Values */}
       <section className="relative isolate py-24 px-4 sm:px-6 lg:px-8 bg-cream">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1344px] mx-auto">
           <div className="text-center mb-16">
             <SectionTitle
               label="What We Stand For"
@@ -105,8 +105,7 @@ export default function AboutPage() {
                 <motion.div
                   key={title}
                   initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
                   className="bg-white rounded-3xl p-8 shadow-card flex gap-6"
                 >
@@ -141,8 +140,7 @@ export default function AboutPage() {
                 <motion.div
                   key={`${item.year}-${i}`}
                   initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
                   className={`relative flex items-start gap-6 md:gap-0 ${
                     i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'

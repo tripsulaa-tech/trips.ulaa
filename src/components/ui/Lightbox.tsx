@@ -197,9 +197,8 @@ export function GalleryGrid({ images }: GalleryGridProps) {
           <motion.div
             key={i}
             initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.04 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: Math.min(i, 20) * 0.04 }}
             className="masonry-item group relative cursor-pointer rounded-2xl overflow-hidden"
             onClick={() => open(i)}
           >

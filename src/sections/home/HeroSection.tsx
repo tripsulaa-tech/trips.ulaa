@@ -48,8 +48,9 @@ export default function HeroSection() {
       {/* Content */}
       <motion.div
         style={{ opacity }}
-        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 sm:pt-32 lg:pt-36 pb-12 text-white"
+        className="relative z-10 px-4 sm:px-6 lg:px-8 pt-28 sm:pt-32 lg:pt-36 pb-12 text-white"
       >
+        <div className="max-w-[1344px] mx-auto">
         <div className="max-w-3xl">
           {/* Headline */}
           <motion.h1
@@ -105,6 +106,7 @@ export default function HeroSection() {
               </Button>
             </Link>
           </motion.div>
+        </div>
         </div>
       </motion.div>
 

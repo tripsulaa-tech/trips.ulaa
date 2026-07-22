@@ -156,7 +156,7 @@ export default function Footer() {
 
       {/* ===================== DESKTOP ===================== */}
       <div className="hidden lg:block relative px-6 xl:px-10 py-10">
-        <div className="relative max-w-7xl mx-auto grid grid-cols-[1.3fr_1fr_1fr_1fr] gap-x-10 xl:gap-x-16">
+        <div className="relative max-w-[1344px] mx-auto grid grid-cols-[1.3fr_1fr_1fr_1fr] gap-x-10 xl:gap-x-16">
           {/* Logo + description */}
           <div>
             <Link to="/" className="inline-block">
@@ -251,7 +251,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="relative max-w-7xl mx-auto mt-8 pt-5 border-t border-white/10 flex items-center justify-center gap-3 text-[13px] text-[#a89a8a]">
+        <div className="relative max-w-[1344px] mx-auto mt-8 pt-5 border-t border-white/10 flex items-center justify-center gap-3 text-[13px] text-[#a89a8a]">
           <span className="flex items-center gap-1.5">
             Made with <Heart className="w-3.5 h-3.5 text-[#e4782f] fill-[#e4782f]" /> for the fearless women of India.
           </span>

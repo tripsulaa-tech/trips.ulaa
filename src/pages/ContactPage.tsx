@@ -45,7 +45,7 @@ export default function ContactPage() {
       <div className="relative h-72 md:h-96 overflow-hidden">
         <img src={HERO_IMAGE} alt="Contact ULAA" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/50 to-dark/85" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 pt-16">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <span className="text-secondary text-sm font-button font-semibold tracking-[0.2em] uppercase">Get in Touch</span>
             <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">Contact Us</h1>
@@ -54,7 +54,8 @@ export default function ContactPage() {
         </div>
       </div>
 
-      <div className="relative isolate max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-16">
+        <div className="max-w-[1344px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Info */}
           <div className="space-y-8">
@@ -177,6 +178,7 @@ export default function ContactPage() {
               </form>
             )}
           </div>
+        </div>
         </div>
       </div>
     </Layout>

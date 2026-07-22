@@ -48,7 +48,7 @@ export default function CompletedTripsPreview() {
 
   return (
     <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-cream">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1344px] mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-12">
           <SectionTitle
             label="Travel Journal"

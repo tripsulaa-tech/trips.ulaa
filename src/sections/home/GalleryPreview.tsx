@@ -39,7 +39,7 @@ export default function GalleryPreview() {
 
   return (
     <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-background">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1344px] mx-auto">
         <div className="flex flex-col items-center mb-8 sm:mb-16">
           <SectionTitle
             label="Instagram Moments"
@@ -55,8 +55,7 @@ export default function GalleryPreview() {
             <motion.div
               key={i}
               initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.06 }}
               onClick={() => open(i)}
               className={`group relative overflow-hidden rounded-2xl cursor-pointer ${

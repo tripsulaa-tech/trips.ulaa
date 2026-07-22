@@ -91,7 +91,7 @@ export default function CompletedTripsPage() {
       <div className="relative h-80 md:h-96 overflow-hidden">
         <img src={HERO_IMAGE} alt="Completed Trips" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/50 to-dark/85" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 pt-16">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <span className="text-secondary text-sm font-button font-semibold tracking-[0.2em] uppercase">Travel Journal</span>
             <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">Our Travel Albums</h1>
@@ -104,7 +104,7 @@ export default function CompletedTripsPage() {
 
       {/* Stats */}
       <div className="bg-white border-b border-background-warm py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-3 gap-6 text-center">
+        <div className="max-w-[1344px] mx-auto grid grid-cols-3 gap-6 text-center">
           {stats.map(({ value, label }) => (
             <div key={label}>
               <p className="font-display text-3xl md:text-4xl font-bold text-primary">
@@ -117,7 +117,8 @@ export default function CompletedTripsPage() {
       </div>
 
       {/* Albums Grid */}
-      <div className="relative isolate max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-16">
+        <div className="max-w-[1344px] mx-auto">
         <div className="mb-12 flex justify-center">
           <SectionTitle
             label="Our Stories"
@@ -136,6 +137,7 @@ export default function CompletedTripsPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </Layout>
   );

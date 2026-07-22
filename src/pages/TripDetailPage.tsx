@@ -122,7 +122,7 @@ export default function TripDetailPage() {
       <div className="relative h-[60vh] md:h-[70vh] overflow-hidden">
         <img src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/40 via-dark/30 to-dark/90" />
-        <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-12 max-w-7xl mx-auto left-0 right-0">
+        <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-12 max-w-[1344px] mx-auto left-0 right-0">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <Link to="/trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
@@ -148,8 +148,8 @@ export default function TripDetailPage() {
       </div>
 
       {/* Quick jump nav */}
-      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1344px] mx-auto">
           <nav className="flex gap-1 overflow-x-auto no-scrollbar py-3">
             <a
               href="#overview"
@@ -192,7 +192,8 @@ export default function TripDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="relative isolate max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pb-28 lg:pb-16">
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-16 pb-28 lg:pb-16">
+        <div className="max-w-[1344px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-12">
@@ -417,6 +418,7 @@ export default function TripDetailPage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 

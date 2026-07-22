@@ -12,8 +12,7 @@ export default function TestimonialCard({ testimonial, index = 0 }: TestimonialC
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.5 }}
       className="bg-white rounded-3xl p-8 shadow-card hover:shadow-card-hover transition-all duration-300 border border-background-warm"
     >

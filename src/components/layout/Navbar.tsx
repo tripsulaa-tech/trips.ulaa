@@ -39,9 +39,9 @@ export default function Navbar() {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="fixed top-0 left-0 right-0 z-40 transition-all duration-400 bg-white/95 backdrop-blur-md border-b border-background-warm shadow-card"
+      className="fixed top-0 left-0 right-0 z-40 transition-all duration-400 bg-white/95 backdrop-blur-md border-b border-background-warm shadow-card px-4 sm:px-6 lg:px-8"
     >
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="max-w-[1344px] mx-auto">
         <div className="flex items-center justify-between h-20 py-2">
           <Link to="/" onClick={handleLogoClick} className="flex items-center gap-3 group">
             <img

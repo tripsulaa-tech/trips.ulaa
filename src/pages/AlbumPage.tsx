@@ -84,7 +84,7 @@ export default function AlbumPage() {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/30 via-dark/20 to-dark/90" />
-        <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-16 max-w-7xl mx-auto left-0 right-0">
+        <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-16 max-w-[1344px] mx-auto left-0 right-0">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <Link to="/completed-trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Albums
@@ -120,7 +120,8 @@ export default function AlbumPage() {
         </div>
       </div>
 
-      <div className="relative isolate max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16">
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-16">
+        <div className="max-w-[1344px] mx-auto space-y-16">
         {/* Trip Story */}
         {album.story && (
           <section>
@@ -130,8 +131,7 @@ export default function AlbumPage() {
                 <motion.p
                   key={i}
                   initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   className="text-dark-muted text-lg leading-relaxed mb-6 font-body"
                 >
@@ -157,6 +157,7 @@ export default function AlbumPage() {
             <GalleryGrid images={album.gallery_images} />
           </section>
         )}
+        </div>
       </div>
     </Layout>
   );

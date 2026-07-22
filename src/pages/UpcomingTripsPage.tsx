@@ -99,7 +99,7 @@ export default function UpcomingTripsPage() {
       <div className="relative h-80 md:h-96 overflow-hidden">
         <img src={HERO_IMAGE} alt="Upcoming Trips" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/60 to-dark/80" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 pt-16">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <span className="text-secondary text-sm font-button font-semibold tracking-[0.2em] uppercase">Plan Your Journey</span>
             <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">Upcoming Trips</h1>
@@ -111,8 +111,8 @@ export default function UpcomingTripsPage() {
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-white border-b border-background-warm sticky top-[72px] z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="bg-white border-b border-background-warm sticky top-[72px] z-30 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1344px] mx-auto py-4">
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Search */}
             <div className="relative flex-1">
@@ -170,7 +170,8 @@ export default function UpcomingTripsPage() {
       </div>
 
       {/* Trips */}
-      <div className="relative isolate max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-16">
+        <div className="max-w-[1344px] mx-auto">
         {loading ? (
           <SkeletonGrid count={6} type="trip" />
         ) : filtered.length === 0 ? (
@@ -190,6 +191,7 @@ export default function UpcomingTripsPage() {
             </div>
           </>
         )}
+        </div>
       </div>
     </Layout>
   );
