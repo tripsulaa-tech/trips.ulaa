@@ -9,63 +9,6 @@ import type { UpcomingTrip } from '../types';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1600&q=80';
 
-const DEMO_TRIPS: UpcomingTrip[] = [
-  {
-    id: '1', title: 'Spiti Valley Winter Expedition', destination: 'Spiti, Himachal Pradesh',
-    slug: 'spiti-valley-winter', start_date: '2025-02-15', end_date: '2025-02-22',
-    duration: '7 Days / 6 Nights', description: 'A magical winter journey through the snow-clad valleys of Spiti.',
-    highlights: [], itinerary: [], included: [], not_included: [], things_to_carry: [], faqs: [],
-    total_seats: 15, seats_booked: 11,
-    cover_image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80',
-    gallery_images: [], is_published: true, created_at: '', updated_at: '',
-  },
-  {
-    id: '2', title: 'Kerala Backwaters & Tea Trails', destination: 'Munnar & Alleppey, Kerala',
-    slug: 'kerala-backwaters', start_date: '2025-03-08', end_date: '2025-03-14',
-    duration: '6 Days / 5 Nights', description: 'Glide through Kerala\'s serene backwaters on a houseboat.',
-    highlights: [], itinerary: [], included: [], not_included: [], things_to_carry: [], faqs: [],
-    total_seats: 12, seats_booked: 7,
-    cover_image: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=600&q=80',
-    gallery_images: [], is_published: true, created_at: '', updated_at: '',
-  },
-  {
-    id: '3', title: 'Rann of Kutch Sunrise Trek', destination: 'Kutch, Gujarat',
-    slug: 'rann-of-kutch', start_date: '2025-03-22', end_date: '2025-03-26',
-    duration: '4 Days / 3 Nights', description: 'Witness the surreal white salt desert of Kutch bathed in golden light.',
-    highlights: [], itinerary: [], included: [], not_included: [], things_to_carry: [], faqs: [],
-    total_seats: 18, seats_booked: 18,
-    cover_image: 'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?w=600&q=80',
-    gallery_images: [], is_published: true, created_at: '', updated_at: '',
-  },
-  {
-    id: '4', title: 'Coorg Coffee Trail', destination: 'Coorg, Karnataka',
-    slug: 'coorg-coffee-trail', start_date: '2025-04-05', end_date: '2025-04-09',
-    duration: '4 Days / 3 Nights', description: 'Breathe in the misty hills of Coorg, stroll through coffee estates and waterfalls.',
-    highlights: [], itinerary: [], included: [], not_included: [], things_to_carry: [], faqs: [],
-    total_seats: 14, seats_booked: 6,
-    cover_image: 'https://images.unsplash.com/photo-1563911302283-d2bc129e7570?w=600&q=80',
-    gallery_images: [], is_published: true, created_at: '', updated_at: '',
-  },
-  {
-    id: '5', title: 'Valley of Flowers Trek', destination: 'Uttarakhand',
-    slug: 'valley-of-flowers', start_date: '2025-07-20', end_date: '2025-07-27',
-    duration: '7 Days / 6 Nights', description: 'Trek through the UNESCO-listed Valley of Flowers at the peak of bloom.',
-    highlights: [], itinerary: [], included: [], not_included: [], things_to_carry: [], faqs: [],
-    total_seats: 12, seats_booked: 3,
-    cover_image: 'https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?w=600&q=80',
-    gallery_images: [], is_published: true, created_at: '', updated_at: '',
-  },
-  {
-    id: '6', title: 'Hampi Heritage Escape', destination: 'Hampi, Karnataka',
-    slug: 'hampi-heritage', start_date: '2025-05-15', end_date: '2025-05-19',
-    duration: '4 Days / 3 Nights', description: 'Explore the ruins of the Vijayanagara Empire among giant boulders and river banks.',
-    highlights: [], itinerary: [], included: [], not_included: [], things_to_carry: [], faqs: [],
-    total_seats: 16, seats_booked: 9,
-    cover_image: 'https://images.unsplash.com/photo-1586500036706-41963de24d8b?w=600&q=80',
-    gallery_images: [], is_published: true, created_at: '', updated_at: '',
-  },
-];
-
 const MONTHS = ['All', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export default function UpcomingTripsPage() {
@@ -77,8 +20,8 @@ export default function UpcomingTripsPage() {
 
   useEffect(() => {
     getUpcomingTrips()
-      .then(data => setTrips(data.length > 0 ? data : DEMO_TRIPS))
-      .catch(() => setTrips(DEMO_TRIPS))
+      .then(data => setTrips(data))
+      .catch(() => setTrips([]))
       .finally(() => setLoading(false));
   }, []);
 
@@ -174,6 +117,11 @@ export default function UpcomingTripsPage() {
         <div className="max-w-[1344px] mx-auto">
         {loading ? (
           <SkeletonGrid count={6} type="trip" />
+        ) : trips.length === 0 ? (
+          <div className="text-center py-24">
+            <p className="font-display text-2xl text-dark-muted">No upcoming trips yet.</p>
+            <p className="text-sm text-dark-muted mt-2">Check back soon — new adventures are on the way.</p>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-24">
             <p className="font-display text-2xl text-dark-muted">No trips found.</p>

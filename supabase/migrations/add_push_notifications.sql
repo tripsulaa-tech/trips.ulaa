@@ -47,11 +47,19 @@ BEGIN
   );
 
   -- Fire-and-forget HTTP call to the send-push edge function.
+  -- The shared secret is pulled from Supabase Vault at call time — it is
+  -- NEVER hardcoded here. Before running this migration, store it once via:
+  --   select vault.create_secret('<your-new-rotated-secret>', 'edge_function_secret');
+  -- (Do this in the SQL editor directly — not committed to this file or git.)
   PERFORM extensions.net.http_post(
     url := 'https://wephglgonrmtcmhfbjqe.supabase.co/functions/v1/send-push',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer 06ba7da1e1b3378bc6d38d26ed45e196e4b716e2f1694cf10935a12d9a446eaf'
+      'Authorization', 'Bearer ' || (
+        select decrypted_secret from vault.decrypted_secrets
+        where name = 'edge_function_secret'
+        limit 1
+      )
     ),
     body := jsonb_build_object(
       'title', 'New enquiry from ' || NEW.full_name,

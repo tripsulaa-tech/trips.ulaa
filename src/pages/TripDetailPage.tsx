@@ -15,43 +15,6 @@ import {
   Backpack, Navigation, ArrowLeft, Share2,
 } from 'lucide-react';
 
-const DEMO_TRIP: UpcomingTrip = {
-  id: '1', title: 'Spiti Valley Winter Expedition',
-  destination: 'Spiti, Himachal Pradesh', slug: 'spiti-valley-winter',
-  start_date: '2025-02-15', end_date: '2025-02-22',
-  duration: '7 Days / 6 Nights',
-  description: 'A magical winter journey through the snow-clad valleys of Spiti — frozen lakes, ancient monasteries, and starlit skies. Spiti in winter is one of India\'s best kept secrets, accessible only to those who dare.',
-  highlights: ['Chandratal Lake at dawn', 'Key Monastery (12,500 ft)', 'Kibber Village trek', 'Local homestay experience', 'Star gazing session', 'Snow photography walks'],
-  itinerary: [
-    { day: 1, title: 'Shimla → Kaza', description: 'Early morning departure from Shimla. Scenic drive through Kinnaur valley. Arrive in Kaza by evening. Acclimatization walk.' },
-    { day: 2, title: 'Kaza Exploration', description: 'Visit Key Monastery and Kibber Village. Afternoon at leisure. Evening bonfire and cultural exchange with locals.' },
-    { day: 3, title: 'Langza & Komic', description: 'Drive to the world\'s highest inhabited village. Visit the giant Buddha statue. Photography walk in the snow.' },
-    { day: 4, title: 'Chandratal Trek', description: 'Trek to the frozen Chandratal Lake. One of the most surreal experiences in the Himalayas. Overnight near the lake.' },
-    { day: 5, title: 'Rest Day / Wellness', description: 'Rest and recover. Optional yoga session. Interaction with local women artisans. Explore Kaza market.' },
-    { day: 6, title: 'Return Journey', description: 'Begin return journey through Pin Valley. Stop at waterfalls and scenic viewpoints.' },
-    { day: 7, title: 'Shimla Drop', description: 'Arrive in Shimla by noon. Trip ends. Lifetime memories begin.' },
-  ],
-  included: ['Accommodation (homestays/guesthouses)', 'All meals (vegetarian)', 'Transportation (Innova/Tempo Traveller)', 'Experienced female trip leader', 'First aid kit', 'Permits and entry fees'],
-  not_included: ['Personal expenses', 'Travel insurance', 'Flights to Shimla', 'Tips and gratuity'],
-  things_to_carry: ['Warm thermal layers (at least 3)', 'Windproof jacket', 'Trekking shoes', 'Sunscreen SPF 50+', 'Sunglasses', 'Personal medications', 'Power bank', 'Water bottle'],
-  meeting_point: 'Shimla Bus Stand, Himachal Pradesh — 7:00 AM on Day 1',
-  faqs: [
-    { question: 'Is prior trekking experience required?', answer: 'No prior trekking experience needed. The walks are moderate and our leader ensures everyone is comfortable.' },
-    { question: 'Is Spiti safe in winter?', answer: 'Spiti is safe year-round when traveled with experienced guides. We take all necessary precautions including acclimatization days and weather monitoring.' },
-    { question: 'What is the payment process?', answer: 'No online payment is required. Once your enquiry is received, our team will contact you within 24 hours to confirm your seat and guide you through the booking process.' },
-    { question: 'Can I join alone?', answer: 'Absolutely! Most ULAA travelers join solo and leave with a group of amazing friends.' },
-  ],
-  total_seats: 15, seats_booked: 11,
-  cover_image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80',
-  gallery_images: [
-    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
-    'https://images.unsplash.com/photo-1598091381862-6a65b2a36ab4?w=800&q=80',
-    'https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?w=800&q=80',
-    'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=800&q=80',
-  ],
-  is_published: true, created_at: '', updated_at: '',
-};
-
 export default function TripDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
@@ -62,8 +25,8 @@ export default function TripDetailPage() {
   useEffect(() => {
     if (!slug) return;
     getUpcomingTripBySlug(slug)
-      .then(data => setTrip(data || DEMO_TRIP))
-      .catch(() => setTrip(DEMO_TRIP))
+      .then(data => setTrip(data ?? null))
+      .catch(() => setTrip(null))
       .finally(() => setLoading(false));
   }, [slug]);
 
