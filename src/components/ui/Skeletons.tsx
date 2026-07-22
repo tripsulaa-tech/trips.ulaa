@@ -21,7 +21,7 @@ export function TripCardSkeleton() {
 export function AlbumCardSkeleton() {
   return (
     <div className="bg-white rounded-3xl shadow-card">
-      <div className={`h-72 bg-background-warm rounded-t-3xl ${shimmer}`} />
+      <div className={`h-56 md:h-64 bg-background-warm rounded-t-3xl ${shimmer}`} />
       <div className="p-6 space-y-3">
         <div className={`h-4 bg-background-warm rounded-lg w-full ${shimmer}`} />
         <div className={`h-4 bg-background-warm rounded-lg w-4/5 ${shimmer}`} />

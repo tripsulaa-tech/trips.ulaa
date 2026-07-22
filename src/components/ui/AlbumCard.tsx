@@ -24,10 +24,10 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="group bg-white rounded-2xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
+      className="group bg-white rounded-3xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
-      <div className="relative h-52 sm:h-56 overflow-hidden rounded-t-2xl">
+      <div className="relative h-56 md:h-64 overflow-hidden rounded-t-3xl">
         <img
           src={trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.destination}
@@ -38,9 +38,9 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
       </div>
 
       {/* Content */}
-      <div className="p-5 sm:p-6 flex-1 flex flex-col">
+      <div className="p-6 flex-1 flex flex-col">
         <div className="flex items-center justify-start gap-2 mb-2">
-          <h3 className="font-display text-xl sm:text-2xl font-bold text-dark line-clamp-1">
+          <h3 className="font-display text-xl font-bold text-dark line-clamp-2">
             {trip.title}
           </h3>
           {trip.batch && (
@@ -52,11 +52,11 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
 
         <div className="border-t border-dashed border-background-warm mb-4" />
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-5 text-xs sm:text-sm">
           {stats.map(({ icon: Icon, label }, i) => (
             <div key={i} className="flex items-center gap-1.5">
               <Icon size={15} className="text-primary shrink-0" />
-              <span className="text-xs text-dark font-medium whitespace-nowrap">{label}</span>
+              <span className="text-dark font-medium whitespace-nowrap">{label}</span>
             </div>
           ))}
         </div>
