@@ -9,21 +9,30 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// Keep the admin panel out of the installable PWA.
-// Chrome's "Install app" prompt and iOS's app-like "Add to Home Screen"
-// branding both depend on this page having a linked manifest (and, for
-// Chrome, an active service worker in scope). On /admin we strip the
-// manifest link and turn off the iOS "standalone app" meta tag, and we
-// skip the blanket service worker registration below — so a fresh load
-// of /admin is not offered as an installable app. (Push notifications
-// still work: the admin dashboard registers /sw.js itself, on demand,
-// when an admin explicitly turns on push alerts — see src/services/push.ts.)
+// Give the admin panel its own installable identity, separate from the
+// public site's "ULAA" home-screen app.
+//
+// Chrome's "Install app" prompt and iOS's "Add to Home Screen" branding
+// both read whichever manifest/meta tags are linked on the page at load
+// time. On /admin we swap in a dedicated manifest (manifest-admin.json)
+// and dedicated iOS meta tags, so an admin who visits /admin and installs
+// it gets a separate "ULAA Admin" icon that opens straight into the
+// dashboard — instead of being blocked from installing (the old behavior)
+// or installing something branded/scoped like the public site.
 const isAdminRoute = window.location.pathname.startsWith('/admin')
 
 if (isAdminRoute) {
-  document.querySelector('link[rel="manifest"]')?.remove()
-  document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.setAttribute('content', 'no')
-} else if ('serviceWorker' in navigator) {
+  document.querySelector('link[rel="manifest"]')?.setAttribute('href', '/manifest-admin.json')
+  document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.setAttribute('content', 'yes')
+  document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', 'ULAA Admin')
+  document.title = 'ULAA Admin'
+}
+
+// Register the service worker for both the public site and /admin. Chrome
+// requires an active, controlling service worker before it will offer the
+// "Install app" prompt — this used to only run for non-admin routes, which
+// was the other half of why /admin wasn't installable.
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((err) => {
       console.error('Service worker registration failed:', err)

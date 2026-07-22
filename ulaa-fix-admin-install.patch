@@ -1,0 +1,53 @@
+diff --git a/manifest.json b/manifest.json
+index 5b50da4..290b2a7 100644
+--- a/manifest.json
++++ b/manifest.json
+@@ -2,7 +2,7 @@
+   "name": "ULAA — Unseen. Local. Adventures. Activities.",
+   "short_name": "ULAA",
+   "description": "Girls-only travel community organizing curated trips to India's hidden destinations.",
+-  "start_url": "/admin",
++  "start_url": "/",
+   "scope": "/",
+   "display": "standalone",
+   "background_color": "#ffffff",
+diff --git a/public/manifest.json b/public/manifest.json
+index dc4dea9..22fdce1 100644
+--- a/public/manifest.json
++++ b/public/manifest.json
+@@ -2,7 +2,7 @@
+   "name": "ULAA — Unseen. Local. Adventures. Activities.",
+   "short_name": "ULAA",
+   "description": "Girls-only travel community organizing curated trips to India's hidden destinations.",
+-  "start_url": "/admin",
++  "start_url": "/",
+   "scope": "/",
+   "display": "standalone",
+   "background_color": "#ffffff",
+diff --git a/src/main.tsx b/src/main.tsx
+index 60e365b..f486486 100644
+--- a/src/main.tsx
++++ b/src/main.tsx
+@@ -9,7 +9,21 @@ createRoot(document.getElementById('root')!).render(
+   </StrictMode>,
+ )
+ 
+-if ('serviceWorker' in navigator) {
++// Keep the admin panel out of the installable PWA.
++// Chrome's "Install app" prompt and iOS's app-like "Add to Home Screen"
++// branding both depend on this page having a linked manifest (and, for
++// Chrome, an active service worker in scope). On /admin we strip the
++// manifest link and turn off the iOS "standalone app" meta tag, and we
++// skip the blanket service worker registration below — so a fresh load
++// of /admin is not offered as an installable app. (Push notifications
++// still work: the admin dashboard registers /sw.js itself, on demand,
++// when an admin explicitly turns on push alerts — see src/services/push.ts.)
++const isAdminRoute = window.location.pathname.startsWith('/admin')
++
++if (isAdminRoute) {
++  document.querySelector('link[rel="manifest"]')?.remove()
++  document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.setAttribute('content', 'no')
++} else if ('serviceWorker' in navigator) {
+   window.addEventListener('load', () => {
+     navigator.serviceWorker.register('/sw.js').catch((err) => {
+       console.error('Service worker registration failed:', err)
