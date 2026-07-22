@@ -27,6 +27,7 @@ export default function SectionTitle({
         <motion.span
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
           className={`
             inline-flex items-center gap-2 text-sm font-button font-semibold
             tracking-[0.2em] uppercase
@@ -41,7 +42,7 @@ export default function SectionTitle({
       <motion.h2
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.05, duration: 0.25 }}
         className={`
           font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight
           ${light ? 'text-white' : 'text-dark'}
@@ -53,7 +54,7 @@ export default function SectionTitle({
         <motion.p
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.1, duration: 0.25 }}
           className={`
             text-base sm:text-lg md:text-xl max-w-2xl leading-relaxed
             ${light ? 'text-white/80' : 'text-dark-muted'}

@@ -20,7 +20,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.5 }}
+      transition={{ delay: index * 0.05, duration: 0.3 }}
       className="group bg-white rounded-3xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
