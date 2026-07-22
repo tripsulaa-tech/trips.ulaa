@@ -1,64 +1,56 @@
 // public/sw.js
 //
-// Handles incoming Web Push events and notification clicks.
-// Payload shape sent by supabase/functions/send-push/index.ts:
-//   { "title": "...", "body": "...", "link": "/admin/enquiries" }
+// Handles incoming Web Push events and notification clicks for ULAA admin alerts.
+// If you already have a service worker registered for PWA/offline caching,
+// merge these two event listeners into that file instead of replacing it —
+// a page can only have one active service worker at a time.
 
-self.addEventListener('install', (event) => {
-  // Activate this service worker as soon as it's finished installing,
-  // instead of waiting for the old one to be closed in every tab.
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  // Take control of any already-open pages immediately.
-  event.waitUntil(self.clients.claim());
-});
+const DEFAULT_ICON = '/icons/ulaa-logo-192.png';   // full-color logo, 192x192
+const DEFAULT_BADGE = '/icons/ulaa-badge-96.png';  // monochrome silhouette, 96x96 (Android status bar)
 
 self.addEventListener('push', (event) => {
-  let payload = { title: 'ULAA Admin', body: 'You have a new notification.', link: '/admin' };
-
+  let data = {};
   try {
-    if (event.data) {
-      payload = { ...payload, ...event.data.json() };
-    }
+    data = event.data ? event.data.json() : {};
   } catch {
-    // If the payload isn't valid JSON, fall back to the defaults above.
+    data = { title: 'ULAA', body: event.data ? event.data.text() : '' };
   }
 
+  const title = data.title || 'ULAA';
   const options = {
-    body: payload.body,
-    icon: '/favicon.svg',
-    badge: '/favicon.svg',
-    data: { link: payload.link || '/admin' },
-    // Keeps the notification visible until the admin interacts with it,
-    // rather than auto-dismissing after a few seconds.
-    requireInteraction: true,
+    body: data.body || '',
+    icon: data.icon || DEFAULT_ICON,
+    badge: data.badge || DEFAULT_BADGE,
+    tag: data.tag || 'ulaa-notification', // replaces older notifications with the same tag instead of stacking
+    renotify: true,
+    data: {
+      link: data.link || '/admin',
+    },
   };
 
-  event.waitUntil(self.registration.showNotification(payload.title, options));
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetPath = event.notification.data?.link || '/admin';
+  const targetUrl = event.notification.data?.link || '/admin';
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If a tab for this app is already open, focus it and navigate.
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If ULAA admin is already open in a tab, focus it and navigate there
       for (const client of clientList) {
         if ('focus' in client) {
           client.focus();
           if ('navigate' in client) {
-            client.navigate(targetPath);
+            client.navigate(targetUrl);
           }
           return;
         }
       }
-      // Otherwise open a new tab/window at the target path.
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(targetPath);
+      // Otherwise open a new tab
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
       }
     })
   );
