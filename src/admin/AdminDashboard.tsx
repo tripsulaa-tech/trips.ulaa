@@ -69,16 +69,16 @@ export default function AdminDashboard() {
   const newTodayPct = enquiries.length ? Math.round((newToday / enquiries.length) * 100) : 0;
 
   const statCards = [
-    { label: 'Upcoming Trips', value: upcoming.length, icon: Briefcase, color: 'bg-orange-50 text-primary', to: '/admin/trips', cta: 'View all trips' },
-    { label: 'Completed Albums', value: completedCount, icon: BookOpen, color: 'bg-green-50 text-green-600', to: '/admin/albums', cta: 'View all albums' },
-    { label: 'Total Enquiries', value: enquiries.length, icon: Users, color: 'bg-purple-50 text-purple-600', to: '/admin/enquiries', cta: 'View enquiries' },
+    { label: 'Upcoming Trips', value: upcoming.length, icon: Briefcase, color: 'text-primary', to: '/admin/trips', cta: 'View all trips' },
+    { label: 'Completed Albums', value: completedCount, icon: BookOpen, color: 'text-primary', to: '/admin/albums', cta: 'View all albums' },
+    { label: 'Total Enquiries', value: enquiries.length, icon: Users, color: 'text-primary', to: '/admin/enquiries', cta: 'View enquiries' },
   ];
 
   const quickActions = [
-    { label: 'Add New Trip', desc: 'Create and publish a new trip', icon: PlusCircle, color: 'bg-orange-50 text-primary', to: '/admin/trips' },
-    { label: 'Create Album', desc: 'Add a new completed trip album', icon: FolderPlus, color: 'bg-green-50 text-green-600', to: '/admin/albums' },
-    { label: 'Upload Photos', desc: 'Add photos to gallery', icon: ImagePlus, color: 'bg-purple-50 text-purple-600', to: '/admin/gallery' },
-    { label: 'View Enquiries', desc: 'Manage booking requests', icon: Users, color: 'bg-amber-50 text-amber-600', to: '/admin/enquiries' },
+    { label: 'Add New Trip', desc: 'Create and publish a new trip', icon: PlusCircle, color: 'text-primary', to: '/admin/trips' },
+    { label: 'Create Album', desc: 'Add a new completed trip album', icon: FolderPlus, color: 'text-primary', to: '/admin/albums' },
+    { label: 'Upload Photos', desc: 'Add photos to Instagram Moments', icon: ImagePlus, color: 'text-primary', to: '/admin/instagram-moments' },
+    { label: 'View Enquiries', desc: 'Manage booking requests', icon: Users, color: 'text-primary', to: '/admin/enquiries' },
   ];
 
   const recentEnquiries = enquiries.slice(0, 5);
@@ -113,62 +113,62 @@ export default function AdminDashboard() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-          {statCards.map(({ label, value, icon: Icon, color, to, cta }) => (
-            <div key={label} className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all">
-              <div className="flex items-center justify-between">
-                <p className="font-display text-xl sm:text-3xl font-bold text-dark">
-                  {loading ? '—' : value}
-                </p>
-                <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${color} flex items-center justify-center flex-shrink-0`}>
-                  <Icon size={16} className="sm:w-[22px] sm:h-[22px]" />
+          {statCards.map(({ label, value, icon: Icon, color, to }) => (
+            <Link
+              key={label}
+              to={to}
+              className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className={`w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 ${color}`}>
+                    <Icon size={20} className="sm:w-7 sm:h-7" />
+                  </div>
+                  <p className="font-display text-xl sm:text-3xl font-bold text-dark">
+                    {loading ? '—' : value}
+                  </p>
                 </div>
+                <p className="text-dark-muted text-xs sm:text-sm mt-1">{label}</p>
               </div>
-              <p className="text-dark-muted text-xs sm:text-sm mt-1 mb-1.5 sm:mb-2">{label}</p>
-              <Link to={to} className="text-primary text-xs sm:text-sm font-medium inline-flex items-center gap-1 hover:gap-1.5 transition-all">
-                {cta} <ChevronRight size={12} className="sm:w-[14px] sm:h-[14px]" />
-              </Link>
-            </div>
+              <ChevronRight size={18} className="sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+            </Link>
           ))}
 
-          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all">
-            <div className="flex items-center justify-between">
-              <p className="font-display text-xl sm:text-3xl font-bold text-dark">
-                {loading ? '—' : newToday}
-              </p>
-              <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-                <TrendingUp size={16} className="sm:w-[22px] sm:h-[22px]" />
+          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 text-primary">
+                  <TrendingUp size={20} className="sm:w-7 sm:h-7" />
+                </div>
+                <p className="font-display text-xl sm:text-3xl font-bold text-dark">
+                  {loading ? '—' : newToday}
+                </p>
               </div>
+              <p className="text-dark-muted text-xs sm:text-sm mt-1">New Enquiries</p>
+              <p className="text-dark-muted text-[11px] sm:text-xs">Today</p>
             </div>
-            <p className="text-dark-muted text-xs sm:text-sm mt-1 mb-1.5 sm:mb-2">New Enquiries</p>
-            <div className="flex items-center gap-2">
-              <span className="text-dark-muted text-[11px] sm:text-xs">Today</span>
-              {newTodayPct > 0 && (
-                <span className="text-[11px] sm:text-xs font-semibold text-green-600 bg-green-50 px-1.5 sm:px-2 py-0.5 rounded-full">
-                  ↑ {newTodayPct}%
-                </span>
-              )}
-            </div>
+            <ChevronRight size={18} className="sm:w-6 sm:h-6 text-primary flex-shrink-0" />
           </div>
         </div>
 
         {/* Quick Actions */}
         <div>
           <h3 className="font-display text-base sm:text-lg font-bold text-dark mb-3 sm:mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-5">
             {quickActions.map(({ label, desc, icon: Icon, color, to }) => (
               <Link
                 key={label}
                 to={to}
-                className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-card hover:shadow-card-hover transition-all flex items-center gap-3 sm:gap-4 group"
+                className="bg-white rounded-lg sm:rounded-2xl p-1.5 sm:p-6 shadow-card hover:shadow-card-hover transition-all flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-4 group text-center sm:text-left"
               >
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${color} flex items-center justify-center flex-shrink-0`}>
-                  <Icon size={18} className="sm:w-[22px] sm:h-[22px]" />
+                <div className={`w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 ${color}`}>
+                  <Icon size={18} className="sm:w-7 sm:h-7" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-dark text-sm sm:text-base">{label}</p>
-                  <p className="text-dark-muted text-xs sm:text-sm">{desc}</p>
+                  <p className="font-semibold text-dark text-[10px] leading-tight sm:text-base">{label}</p>
+                  <p className="hidden sm:block text-dark-muted text-xs sm:text-sm">{desc}</p>
                 </div>
-                <ChevronRight size={16} className="sm:w-[18px] sm:h-[18px] text-dark-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                <ChevronRight size={16} className="hidden sm:block sm:w-[18px] sm:h-[18px] text-dark-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
               </Link>
             ))}
           </div>

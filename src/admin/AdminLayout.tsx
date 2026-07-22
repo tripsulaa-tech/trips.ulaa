@@ -2,16 +2,17 @@ import type { ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Home, Briefcase, BookOpen, Image, MessageCircle,
-  LogOut, Menu, X, Bell, ChevronDown, ExternalLink, FileText, Star, Sparkles
+  LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import NotificationsPanel from './NotificationsPanel';
 
 const adminNav = [
   { label: 'Dashboard', to: '/admin', icon: Home },
   { label: 'Upcoming Trips', to: '/admin/trips', icon: Briefcase },
   { label: 'Completed Trips', to: '/admin/albums', icon: BookOpen },
-  { label: 'Gallery', to: '/admin/gallery', icon: Image },
+  { label: 'Instagram Moments', to: '/admin/instagram-moments', icon: Image },
   { label: 'Testimonials', to: '/admin/testimonials', icon: Star },
   { label: 'About Page', to: '/admin/about', icon: FileText },
   { label: 'Why ULAA', to: '/admin/why-us', icon: Sparkles },
@@ -133,10 +134,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0">
-            <button className="relative p-2.5 rounded-full bg-background-warm text-dark hover:bg-background transition-colors">
-              <Bell size={18} />
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
-            </button>
+            <NotificationsPanel />
 
             <div className="relative">
               <button

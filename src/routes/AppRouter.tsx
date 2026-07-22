@@ -89,7 +89,7 @@ export default function AppRouter() {
             <Route path="/admin/albums" element={
               <ProtectedRoute><AdminAlbums /></ProtectedRoute>
             } />
-            <Route path="/admin/gallery" element={
+            <Route path="/admin/instagram-moments" element={
               <ProtectedRoute><AdminGallery /></ProtectedRoute>
             } />
             <Route path="/admin/enquiries" element={

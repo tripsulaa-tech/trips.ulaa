@@ -52,7 +52,7 @@ export default function AdminGallery() {
   };
 
   return (
-    <AdminLayout title="Gallery">
+    <AdminLayout title="Instagram Moments" subtitle="Photos shown in the 'Instagram Moments' section on the homepage.">
       <div className="space-y-6">
         {/* Upload */}
         <div className="bg-white rounded-2xl shadow-card p-6 border-2 border-dashed border-background-warm hover:border-primary transition-colors">
