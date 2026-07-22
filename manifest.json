@@ -2,7 +2,7 @@
   "name": "ULAA — Unseen. Local. Adventures. Activities.",
   "short_name": "ULAA",
   "description": "Girls-only travel community organizing curated trips to India's hidden destinations.",
-  "start_url": "/admin",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
