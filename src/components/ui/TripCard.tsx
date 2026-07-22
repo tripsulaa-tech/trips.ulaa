@@ -21,10 +21,10 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.5 }}
-      className="group bg-white rounded-3xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
+      className="group bg-white rounded-3xl shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
-      <div className="relative h-56 md:h-64 overflow-hidden">
+      <div className="relative h-56 md:h-64 overflow-hidden rounded-t-3xl">
         <img
           src={trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.destination}

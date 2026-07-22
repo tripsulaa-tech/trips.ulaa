@@ -24,10 +24,10 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.5 }}
-      className="group bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
+      className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
-      <div className="relative h-52 sm:h-56 overflow-hidden">
+      <div className="relative h-52 sm:h-56 overflow-hidden rounded-t-2xl">
         <img
           src={trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.destination}
