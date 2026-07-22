@@ -112,15 +112,15 @@ export default function AdminAlbums() {
                     <th className="px-4 py-3 text-left hidden md:table-cell">Date</th>
                     <th className="px-4 py-3 text-left hidden lg:table-cell">Participants</th>
                     <th className="px-4 py-3 text-left hidden lg:table-cell">Photos</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="px-3 py-3 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-background-warm">
                   {albums.map(album => (
                     <motion.tr key={album.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-3 font-medium text-dark">
-                        <div className="flex items-center gap-1.5 max-w-[160px] sm:max-w-[200px]">
+                      <td className="px-4 py-3 font-medium text-dark max-w-[150px] sm:max-w-none">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <span className="truncate">{album.title}</span>
                           {album.batch && (
                             <span className="shrink-0 text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
@@ -130,22 +130,22 @@ export default function AdminAlbums() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{album.destination}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</td>
+                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{album.destination}</td>
+                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</td>
                       <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{album.participants}</td>
                       <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{album.gallery_images?.length || 0}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-xs font-button font-semibold px-3 py-1 rounded-full ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                      <td className="px-2 py-3 text-center">
+                        <span className={`text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                           {album.is_published ? 'Published' : 'Draft'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => togglePublish(album)} className="p-2 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors">
-                            {album.is_published ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <td className="pl-4 pr-3 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => togglePublish(album)} className="p-1.5 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                            {album.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
                           </button>
-                          <button onClick={() => openEdit(album)} className="p-2 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDelete(album.id)} className="p-2 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
+                          <button onClick={() => openEdit(album)} className="p-1.5 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={15} /></button>
+                          <button onClick={() => handleDelete(album.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
                         </div>
                       </td>
                     </motion.tr>

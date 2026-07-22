@@ -150,32 +150,32 @@ export default function AdminTrips() {
                     <th className="px-4 py-3 text-left hidden md:table-cell">Destination</th>
                     <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
                     <th className="px-4 py-3 text-left hidden md:table-cell">Seats</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="px-3 py-3 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-background-warm">
                   {trips.map(trip => (
                     <motion.tr key={trip.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-3 font-medium text-dark max-w-[200px] truncate">{trip.title}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{trip.destination}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{formatDate(trip.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{trip.seats_booked}/{trip.total_seats}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`inline-block text-xs font-button font-semibold px-3 py-1 rounded-full ${trip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                      <td className="px-4 py-3 font-medium text-dark truncate max-w-[150px] sm:max-w-none">{trip.title}</td>
+                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{trip.destination}</td>
+                      <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(trip.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">{trip.seats_booked}/{trip.total_seats}</td>
+                      <td className="px-2 py-3 text-center">
+                        <span className={`inline-block text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${trip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                           {trip.is_published ? 'Published' : 'Draft'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => togglePublish(trip)} className="p-2 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.is_published ? 'Unpublish' : 'Publish'}>
-                            {trip.is_published ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <td className="pl-4 pr-3 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => togglePublish(trip)} className="p-1.5 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.is_published ? 'Unpublish' : 'Publish'}>
+                            {trip.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
                           </button>
-                          <button onClick={() => openEdit(trip)} className="p-2 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors">
-                            <Edit2 size={16} />
+                          <button onClick={() => openEdit(trip)} className="p-1.5 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                            <Edit2 size={15} />
                           </button>
-                          <button onClick={() => handleDelete(trip.id)} className="p-2 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors">
-                            <Trash2 size={16} />
+                          <button onClick={() => handleDelete(trip.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors">
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
@@ -187,6 +187,7 @@ export default function AdminTrips() {
           </div>
         )}
       </div>
+
 
       {/* Create/Edit Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingTrip ? 'Edit Trip' : 'Add Trip'} size="xl">

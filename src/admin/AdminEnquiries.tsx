@@ -73,8 +73,8 @@ export default function AdminEnquiries() {
                     <th className="px-4 py-3 text-left hidden md:table-cell">Trip</th>
                     <th className="px-4 py-3 text-left hidden lg:table-cell">City</th>
                     <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Update</th>
+                    <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
+                    <th className="px-2 py-3 text-right whitespace-nowrap">Update</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-background-warm">
@@ -82,26 +82,26 @@ export default function AdminEnquiries() {
                     const cfg = STATUS_CONFIG[e.status];
                     return (
                       <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-dark">{e.full_name}</p>
-                          <p className="text-dark-muted text-xs">{e.email}</p>
+                        <td className="px-4 py-3 max-w-[150px] sm:max-w-none">
+                          <p className="font-medium text-dark truncate">{e.full_name}</p>
+                          <p className="text-dark-muted text-xs truncate">{e.email}</p>
                         </td>
-                        <td className="px-4 py-3 text-dark-muted hidden sm:table-cell">{e.phone}</td>
-                        <td className="px-4 py-3 text-dark-muted hidden md:table-cell max-w-[180px] truncate">{e.trip_title || '—'}</td>
-                        <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{e.city || '—'}</td>
-                        <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold px-3 py-1 rounded-full ${cfg.color}`}>
-                            <cfg.icon size={12} />
+                        <td className="px-4 py-3 text-dark-muted hidden sm:table-cell truncate">{e.phone}</td>
+                        <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{e.trip_title || '—'}</td>
+                        <td className="px-4 py-3 text-dark-muted hidden lg:table-cell truncate">{e.city || '—'}</td>
+                        <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</td>
+                        <td className="px-2 py-3 text-center">
+                          <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
+                            <cfg.icon size={12} className="shrink-0" />
                             {cfg.label}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-2 py-3 text-right">
                           <select
                             value={e.status}
                             disabled={updating === e.id}
                             onChange={ev => handleStatusChange(e.id, ev.target.value as Enquiry['status'])}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-background-warm bg-background text-dark cursor-pointer outline-none focus:border-primary"
+                            className="w-full text-xs px-1.5 py-1.5 rounded-lg border border-background-warm bg-background text-dark cursor-pointer outline-none focus:border-primary"
                           >
                             <option value="new">New</option>
                             <option value="contacted">Contacted</option>
