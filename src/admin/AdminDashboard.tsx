@@ -66,7 +66,6 @@ export default function AdminDashboard() {
 
   const todayStr = new Date().toDateString();
   const newToday = enquiries.filter(e => new Date(e.created_at).toDateString() === todayStr).length;
-  const newTodayPct = enquiries.length ? Math.round((newToday / enquiries.length) * 100) : 0;
 
   const statCards = [
     { label: 'Upcoming Trips', value: upcoming.length, icon: Briefcase, color: 'text-primary', to: '/admin/trips', cta: 'View all trips' },

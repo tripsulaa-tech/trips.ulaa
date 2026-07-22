@@ -86,6 +86,16 @@ export interface Enquiry {
   updated_at: string;
 }
 
+export interface AdminNotification {
+  id: string;
+  type: string;
+  title: string;
+  body?: string;
+  link?: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export interface Testimonial {
   id: string;
   name: string;
