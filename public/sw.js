@@ -8,6 +8,11 @@
 const DEFAULT_ICON = '/icons/ulaa-logo-192.png';   // full-color logo, 192x192
 const DEFAULT_BADGE = '/icons/ulaa-badge-96.png';  // monochrome silhouette, 96x96 (Android status bar)
 
+// A no-op fetch handler is required for Chrome/Android to treat this as an
+// installable PWA (full "Install app" prompt) rather than a plain shortcut.
+// It doesn't intercept anything — requests just fall through to the network.
+self.addEventListener('fetch', () => {});
+
 self.addEventListener('push', (event) => {
   let data = {};
   try {
