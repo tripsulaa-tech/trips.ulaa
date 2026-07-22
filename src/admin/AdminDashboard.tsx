@@ -192,7 +192,7 @@ export default function AdminDashboard() {
                 {loading ? 'Loading…' : 'No enquiries yet.'}
               </p>
             ) : (
-              <div className="overflow-x-auto -mx-2">
+              <div className="overflow-x-auto -mx-2 scrollbar-hide">
                 <table className="w-full text-xs sm:text-sm">
                   <thead>
                     <tr className="text-left text-dark-muted border-b border-background-warm">

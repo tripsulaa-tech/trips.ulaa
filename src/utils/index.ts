@@ -77,6 +77,12 @@ export function formatBatchLabel(batch: string): string {
   return /^\d+$/.test(trimmed) ? `Batch ${trimmed}` : trimmed;
 }
 
+/** Compact form of the batch label for tight spaces (mobile): a plain number becomes just "N" */
+export function formatBatchShortLabel(batch: string): string {
+  const trimmed = batch.trim();
+  return /^\d+$/.test(trimmed) ? trimmed : trimmed.slice(0, 3);
+}
+
 /** Delay utility */
 export function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));

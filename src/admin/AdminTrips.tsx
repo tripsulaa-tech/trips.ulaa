@@ -142,7 +142,7 @@ export default function AdminTrips() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-hide">
               <table className="w-full text-sm">
                 <thead className="bg-background-warm text-dark font-medium">
                   <tr>

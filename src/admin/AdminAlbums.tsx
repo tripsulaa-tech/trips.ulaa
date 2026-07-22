@@ -9,7 +9,7 @@ import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTrip } from '../services/api';
 
 import type { CompletedTrip } from '../types';
-import { formatDate, slugify, formatBatchLabel } from '../utils';
+import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils';
 
 interface AlbumForm {
   title: string;
@@ -103,7 +103,7 @@ export default function AdminAlbums() {
           <div className="text-center py-16 text-dark-muted">Loading...</div>
         ) : (
           <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-hide">
               <table className="w-full text-sm">
                 <thead className="bg-background-warm text-dark font-medium">
                   <tr>
@@ -119,13 +119,16 @@ export default function AdminAlbums() {
                 <tbody className="divide-y divide-background-warm">
                   {albums.map(album => (
                     <motion.tr key={album.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-3 font-medium text-dark max-w-[200px] truncate">
-                        {album.title}
-                        {album.batch && (
-                          <span className="ml-2 text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
-                            {formatBatchLabel(album.batch)}
-                          </span>
-                        )}
+                      <td className="px-4 py-3 font-medium text-dark">
+                        <div className="flex items-center gap-1.5 max-w-[160px] sm:max-w-[200px]">
+                          <span className="truncate">{album.title}</span>
+                          {album.batch && (
+                            <span className="shrink-0 text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
+                              <span className="sm:hidden">{formatBatchShortLabel(album.batch)}</span>
+                              <span className="hidden sm:inline">{formatBatchLabel(album.batch)}</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{album.destination}</td>
                       <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</td>
