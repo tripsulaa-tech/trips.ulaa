@@ -21,8 +21,8 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ y: 30 }}
+      animate={{ y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
       className="group bg-white rounded-2xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
