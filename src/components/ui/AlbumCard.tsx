@@ -27,13 +27,16 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
       className="group bg-white rounded-2xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
-      <div className="relative h-52 sm:h-56 overflow-hidden rounded-t-2xl">
+      <div className="relative h-52 sm:h-56 overflow-hidden rounded-t-2xl shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.06)]">
         <img
           src={trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.destination}
           loading="lazy"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
+        {/* Bottom fade so bright photos get a clean, defined edge against the white card body
+            instead of washing into it (simultaneous-contrast makes the white look grey otherwise) */}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-dark/25 to-transparent pointer-events-none" />
       </div>
 
       {/* Content */}
