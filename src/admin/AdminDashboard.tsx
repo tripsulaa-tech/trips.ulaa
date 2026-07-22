@@ -111,12 +111,12 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 items-stretch">
           {statCards.map(({ label, value, icon: Icon, color, to }) => (
             <Link
               key={label}
               to={to}
-              className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2"
+              className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2 h-full"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -133,7 +133,7 @@ export default function AdminDashboard() {
             </Link>
           ))}
 
-          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2">
+          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2 h-full">
             <div className="min-w-0">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 text-primary">

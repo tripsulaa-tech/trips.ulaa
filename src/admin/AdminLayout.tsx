@@ -7,6 +7,7 @@ import {
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import NotificationsPanel from './NotificationsPanel';
+import PushNotificationToggle from './PushNotificationToggle';
 
 const adminNav = [
   { label: 'Dashboard', to: '/admin', icon: Home },
@@ -134,6 +135,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0">
+            <PushNotificationToggle />
             <NotificationsPanel />
 
             <div className="relative">
