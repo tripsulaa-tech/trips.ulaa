@@ -30,7 +30,7 @@
 }
 
 html {
-  color-scheme: light;
+  color-scheme: only light;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
