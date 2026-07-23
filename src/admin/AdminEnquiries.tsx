@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap } from 'lucide-react';
 import AdminLayout from './AdminLayout';
@@ -18,6 +19,13 @@ function paymentStatus(e: Enquiry): { label: string; color: string } {
   if (e.amount_paid <= 0) return { label: 'Unpaid', color: 'bg-red-100 text-red-700' };
   if (e.amount_paid >= e.total_amount) return { label: 'Paid in full', color: 'bg-green-100 text-green-700' };
   return { label: 'Partial', color: 'bg-amber-100 text-amber-700' };
+}
+
+function paymentFilterKey(e: Enquiry): 'paid' | 'partial' | 'unpaid' | 'not_set' {
+  if (!e.total_amount) return 'not_set';
+  if (e.amount_paid <= 0) return 'unpaid';
+  if (e.amount_paid >= e.total_amount) return 'paid';
+  return 'partial';
 }
 
 const STATUS_CONFIG = {
@@ -64,6 +72,8 @@ export default function AdminEnquiries() {
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | Enquiry['status']>('all');
+  const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
+  const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [payUpdating, setPayUpdating] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -114,13 +124,20 @@ export default function AdminEnquiries() {
     setModalOpen(true);
   };
 
+  // Looks up what a trip actually charges for a given package (early-bird or
+  // normal). Returns undefined if the trip or that price isn't set.
+  const getTripPrice = (tripId: string | undefined, packageType: Enquiry['package_type']): number | undefined => {
+    const trip = trips.find(t => t.id === tripId);
+    if (!trip) return undefined;
+    const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
+    return price ?? undefined;
+  };
+
   // Suggests the trip's active price (early-bird or normal) as a starting
   // point for total_amount whenever the trip or package changes. The admin
   // can still type over it — this is just to save a lookup.
   const applySuggestedAmount = (tripId: string, packageType: Enquiry['package_type']) => {
-    const trip = trips.find(t => t.id === tripId);
-    if (!trip) return;
-    const suggested = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
+    const suggested = getTripPrice(tripId, packageType);
     if (suggested != null) {
       setForm(f => ({ ...f, total_amount: suggested }));
     }
@@ -128,9 +145,13 @@ export default function AdminEnquiries() {
 
   const openPayment = (enquiry: Enquiry) => {
     setPaymentTarget(enquiry);
+    const packageType = enquiry.package_type || 'normal';
+    // If no amount has been recorded yet, pull the trip's price for whichever
+    // package this booking is under so the admin isn't starting from blank.
+    const suggested = enquiry.total_amount ?? getTripPrice(enquiry.trip_id, packageType);
     setPaymentForm({
-      package_type: enquiry.package_type || 'normal',
-      total_amount: enquiry.total_amount ?? '',
+      package_type: packageType,
+      total_amount: suggested ?? '',
       amount_paid: enquiry.amount_paid ?? 0,
     });
   };
@@ -192,13 +213,64 @@ export default function AdminEnquiries() {
     }
   };
 
-  const filtered = filter === 'all' ? enquiries : enquiries.filter(e => e.status === filter);
-  const counts = {
-    all: enquiries.length,
-    new: enquiries.filter(e => e.status === 'new').length,
-    contacted: enquiries.filter(e => e.status === 'contacted').length,
-    closed: enquiries.filter(e => e.status === 'closed').length,
+  // Group enquiries by trip so the admin can see, per trip, how many people
+  // enquired/contacted/closed and how much has been collected vs is pending —
+  // instead of one long undifferentiated list.
+  type TripGroup = {
+    key: string;
+    title: string;
+    trip?: UpcomingTrip;
+    enquiries: Enquiry[];
   };
+
+  const tripGroups: TripGroup[] = (() => {
+    const map = new Map<string, TripGroup>();
+    enquiries.forEach(e => {
+      const key = e.trip_id || 'unlinked';
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          title: e.trip_title || 'No Trip Linked',
+          trip: e.trip_id ? trips.find(t => t.id === e.trip_id) : undefined,
+          enquiries: [],
+        });
+      }
+      map.get(key)!.enquiries.push(e);
+    });
+    return Array.from(map.values()).sort((a, b) => b.enquiries.length - a.enquiries.length);
+  })();
+
+  const activeGroup = tripGroups.find(g => g.key === selectedTripKey) || null;
+  const scopedEnquiries = activeGroup ? activeGroup.enquiries : enquiries;
+
+  const filtered = scopedEnquiries
+    .filter(e => filter === 'all' || e.status === filter)
+    .filter(e => payFilter === 'all' || paymentFilterKey(e) === payFilter);
+  const counts = {
+    all: scopedEnquiries.length,
+    new: scopedEnquiries.filter(e => e.status === 'new').length,
+    contacted: scopedEnquiries.filter(e => e.status === 'contacted').length,
+    closed: scopedEnquiries.filter(e => e.status === 'closed').length,
+  };
+  const payCounts = {
+    all: scopedEnquiries.length,
+    paid: scopedEnquiries.filter(e => paymentFilterKey(e) === 'paid').length,
+    partial: scopedEnquiries.filter(e => paymentFilterKey(e) === 'partial').length,
+    unpaid: scopedEnquiries.filter(e => paymentFilterKey(e) === 'unpaid').length,
+    not_set: scopedEnquiries.filter(e => paymentFilterKey(e) === 'not_set').length,
+  };
+
+  const paymentTotals = (list: Enquiry[]) => ({
+    collected: list.reduce((sum, e) => sum + (e.amount_paid || 0), 0),
+    pending: list.reduce((sum, e) => {
+      if (!e.total_amount) return sum;
+      return sum + Math.max(0, e.total_amount - (e.amount_paid || 0));
+    }, 0),
+    paidFull: list.filter(e => e.total_amount && e.amount_paid >= e.total_amount).length,
+    partial: list.filter(e => e.total_amount && e.amount_paid > 0 && e.amount_paid < e.total_amount).length,
+    unpaid: list.filter(e => e.total_amount && e.amount_paid <= 0).length,
+    notSet: list.filter(e => !e.total_amount).length,
+  });
 
   const totalCollected = enquiries.reduce((sum, e) => sum + (e.amount_paid || 0), 0);
   const totalPending = enquiries.reduce((sum, e) => {
@@ -218,33 +290,142 @@ export default function AdminEnquiries() {
           </Button>
         </div>
 
-        {/* Payment summary */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl p-4 shadow-card">
-            <p className="text-dark-muted text-sm">Total Collected</p>
-            <p className="font-display text-2xl font-bold text-green-700">{formatPrice(totalCollected)}</p>
+        {/* Payment summary (business-wide — hidden once drilled into a single trip, which shows its own) */}
+        {!activeGroup && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl p-4 shadow-card">
+              <p className="text-dark-muted text-sm">Total Collected</p>
+              <p className="font-display text-2xl font-bold text-green-700">{formatPrice(totalCollected)}</p>
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-card">
+              <p className="text-dark-muted text-sm">Pending Balance</p>
+              <p className="font-display text-2xl font-bold text-amber-600">{formatPrice(totalPending)}</p>
+            </div>
           </div>
-          <div className="bg-white rounded-2xl p-4 shadow-card">
-            <p className="text-dark-muted text-sm">Pending Balance</p>
-            <p className="font-display text-2xl font-bold text-amber-600">{formatPrice(totalPending)}</p>
-          </div>
-        </div>
+        )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {([['all', 'All'], ['new', 'New'], ['contacted', 'Contacted'], ['closed', 'Closed']] as const).map(([key, label]) => (
+        {/* Trip overview: pick a trip to see its enquiries, or "All Trips" to see everything */}
+        {!activeGroup ? (
+          <div>
+            <p className="text-dark-muted text-sm mb-3">Tap a trip to see who's coming, who's paid, and who's still owed.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tripGroups.map(g => {
+                const c = {
+                  new: g.enquiries.filter(e => e.status === 'new').length,
+                  contacted: g.enquiries.filter(e => e.status === 'contacted').length,
+                  closed: g.enquiries.filter(e => e.status === 'closed').length,
+                };
+                const pay = paymentTotals(g.enquiries);
+                return (
+                  <button
+                    key={g.key}
+                    onClick={() => { setSelectedTripKey(g.key); setFilter('all'); setPayFilter('all'); }}
+                    className="bg-white rounded-2xl p-5 text-left shadow-card hover:shadow-card-hover transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-display font-bold text-dark leading-tight">{g.title}</p>
+                      {g.trip && (
+                        <span className="shrink-0 text-xs font-button font-semibold text-dark-muted whitespace-nowrap">
+                          {g.trip.seats_booked}/{g.trip.total_seats} seats
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-dark-muted text-xs mt-0.5">{g.enquiries.length} {g.enquiries.length === 1 ? 'enquiry' : 'enquiries'}</p>
+
+                    <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700"><Clock size={10} /> {c.new} new</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700"><RefreshCw size={10} /> {c.contacted} contacted</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700"><CheckCircle size={10} /> {c.closed} closed</span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      {pay.paidFull > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">{pay.paidFull} paid in full</span>}
+                      {pay.partial > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{pay.partial} partial</span>}
+                      {pay.unpaid > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">{pay.unpaid} unpaid</span>}
+                      {pay.notSet > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted">{pay.notSet} amount not set</span>}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-background-warm">
+                      <div>
+                        <p className="text-[10px] text-dark-muted">Collected</p>
+                        <p className="font-semibold text-green-700 text-sm">{formatPrice(pay.collected)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-dark-muted">Pending</p>
+                        <p className="font-semibold text-amber-600 text-sm">{formatPrice(pay.pending)}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <>
             <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`bg-white rounded-2xl p-4 text-left shadow-card transition-all ${filter === key ? 'ring-2 ring-primary' : 'hover:shadow-card-hover'}`}
+              onClick={() => { setSelectedTripKey(null); setFilter('all'); setPayFilter('all'); }}
+              className="inline-flex items-center gap-1 text-sm font-button font-semibold text-primary hover:underline"
             >
-              <p className="font-display text-2xl font-bold text-dark">{counts[key]}</p>
-              <p className="text-dark-muted text-sm">{label}</p>
+              ← All Trips
             </button>
-          ))}
-        </div>
 
-        {loading ? (
+            {/* Trip header: name, seats, and money — all in one compact card */}
+            <div className="bg-white rounded-2xl p-4 shadow-card flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="font-display font-bold text-dark">{activeGroup.title}</p>
+                {activeGroup.trip && (
+                  <p className="text-dark-muted text-xs">{activeGroup.trip.seats_booked}/{activeGroup.trip.total_seats} seats booked</p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-dark-muted text-xs">Collected · Pending</p>
+                <p className="text-sm font-semibold whitespace-nowrap">
+                  <span className="text-green-700">{formatPrice(paymentTotals(activeGroup.enquiries).collected)}</span>
+                  {' · '}
+                  <span className="text-amber-600">{formatPrice(paymentTotals(activeGroup.enquiries).pending)}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Filters — compact pill rows instead of big cards, so the actual people below are what you see first */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+                {([['all', 'All'], ['new', 'New'], ['contacted', 'Contacted'], ['closed', 'Closed']] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setFilter(key)}
+                    className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                      filter === key ? 'bg-primary text-white border-primary' : 'bg-white text-dark-muted border-background-warm hover:border-primary/50'
+                    }`}
+                  >
+                    {label} <span className="opacity-70">{counts[key]}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+                {([
+                  ['all', 'All'],
+                  ['paid', 'Paid in full'],
+                  ['partial', 'Partial'],
+                  ['unpaid', 'Unpaid'],
+                  ['not_set', 'Price not set'],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setPayFilter(key)}
+                    className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                      payFilter === key ? 'bg-primary text-white border-primary' : 'bg-white text-dark-muted border-background-warm hover:border-primary/50'
+                    }`}
+                  >
+                    {label} <span className="opacity-70">{payCounts[key]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeGroup && (loading ? (
           <div className="text-center py-16 text-dark-muted">Loading enquiries...</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl shadow-card">
@@ -357,8 +538,15 @@ export default function AdminEnquiries() {
                       className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
                     >
                       <div className="min-w-0">
-                        <p className="font-medium text-dark truncate">{e.full_name}</p>
-                        <p className="text-dark-muted text-xs truncate">{e.trip_title || 'No trip linked'}</p>
+                        <p className="font-medium text-dark truncate flex items-center gap-1.5">
+                          {e.full_name}
+                          {e.package_type === 'early_bird' && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 shrink-0">
+                              <Zap size={9} /> Early Bird
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-dark-muted text-xs truncate">{e.phone}</p>
                         <span className={`inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap mt-1 ${paymentStatus(e).color}`}>
                           {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''} · {paymentStatus(e).label}
                         </span>
@@ -450,7 +638,7 @@ export default function AdminEnquiries() {
               })}
             </div>
           </>
-        )}
+        ))}
       </div>
 
       {/* Manual Add Enquiry Modal */}
@@ -553,12 +741,52 @@ export default function AdminEnquiries() {
               <label className="block text-sm font-medium text-dark mb-1">Package</label>
               <select
                 value={paymentForm.package_type}
-                onChange={e => setPaymentForm(f => ({ ...f, package_type: e.target.value as Enquiry['package_type'] }))}
+                onChange={e => {
+                  const packageType = e.target.value as Enquiry['package_type'];
+                  const suggested = getTripPrice(paymentTarget.trip_id, packageType);
+                  setPaymentForm(f => ({ ...f, package_type: packageType, total_amount: suggested ?? f.total_amount }));
+                }}
                 className={inputClass}
               >
                 <option value="normal">Normal Price</option>
                 <option value="early_bird">Early Bird</option>
               </select>
+              {paymentTarget.trip_id && (
+                <div className="text-xs mt-1">
+                  {(() => {
+                    const normal = getTripPrice(paymentTarget.trip_id, 'normal');
+                    const earlyBird = getTripPrice(paymentTarget.trip_id, 'early_bird');
+                    const parts = [];
+                    if (normal != null) parts.push(`Normal ${formatPrice(normal)}`);
+                    if (earlyBird != null) parts.push(`Early Bird ${formatPrice(earlyBird)}`);
+                    const missingOne = normal == null || earlyBird == null;
+                    const missingField = normal == null && earlyBird == null
+                      ? 'Regular Price per person and Early-Bird Price per person'
+                      : normal == null
+                        ? 'Regular Price per person'
+                        : 'Early-Bird Price per person';
+
+                    return (
+                      <>
+                        {parts.length > 0 && (
+                          <p className="text-dark-muted">Trip price — {parts.join(' · ')}</p>
+                        )}
+                        {missingOne && (
+                          <p className="text-amber-600 mt-0.5">
+                            {parts.length === 0
+                              ? "This trip has no price set, so we can't suggest an amount. "
+                              : `This trip's ${missingField} isn't set yet. `}
+                            Add it under{' '}
+                            <Link to="/admin/trips" className="underline font-medium" onClick={() => setPaymentTarget(null)}>
+                              Upcoming Trips → edit this trip → {missingField}
+                            </Link>.
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
