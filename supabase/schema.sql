@@ -100,9 +100,18 @@ CREATE TABLE IF NOT EXISTS enquiries (
   trip_id UUID,
   trip_title TEXT,
   status TEXT DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'closed')),
+  source TEXT NOT NULL DEFAULT 'website'
+    CHECK (source IN ('website', 'whatsapp', 'phone', 'instagram', 'walk_in', 'other')),
+  is_paid BOOLEAN NOT NULL DEFAULT FALSE,
+  package_type TEXT NOT NULL DEFAULT 'normal' CHECK (package_type IN ('early_bird', 'normal')),
+  total_amount DECIMAL(10,2),
+  amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS enquiries_source_idx ON enquiries (source);
+CREATE INDEX IF NOT EXISTS enquiries_is_paid_idx ON enquiries (is_paid);
 
 -- =============================================
 -- Testimonials
@@ -146,6 +155,21 @@ CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON notifications (create
 CREATE INDEX IF NOT EXISTS notifications_is_read_idx ON notifications (is_read) WHERE is_read = FALSE;
 
 -- =============================================
+-- Push Subscriptions (Web Push, one row per admin device/browser)
+-- =============================================
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- pg_net lets Postgres call the send-push edge function over HTTP
+CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
+
+-- =============================================
 -- Row Level Security Policies
 -- =============================================
 
@@ -158,6 +182,7 @@ ALTER TABLE enquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Public read for published trips
 CREATE POLICY "Public read upcoming trips" ON upcoming_trips
@@ -211,6 +236,11 @@ CREATE POLICY "Admin read notifications" ON notifications
 CREATE POLICY "Admin update notifications" ON notifications
   FOR UPDATE USING (auth.role() = 'authenticated');
 
+CREATE POLICY "Admin manage own push subscriptions" ON push_subscriptions
+  FOR ALL
+  USING (auth.uid() = admin_id)
+  WITH CHECK (auth.uid() = admin_id);
+
 -- =============================================
 -- Updated At Trigger
 -- =============================================
@@ -234,15 +264,21 @@ CREATE TRIGGER update_enquiries_updated_at
   BEFORE UPDATE ON enquiries
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER update_site_content_updated_at
+CREATE TRIGGER site_content_updated_at
   BEFORE UPDATE ON site_content
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- =============================================
 -- Notifications Trigger
--- Auto-creates a notification whenever a new enquiry comes in.
+-- Auto-creates a notification whenever a new enquiry comes in, and
+-- also fires a Web Push notification via the send-push edge function.
 -- SECURITY DEFINER so it can insert into `notifications` even though
 -- the enquiry itself was inserted by an anonymous public visitor.
+--
+-- One-time setup required before this works: store the edge function's
+-- shared secret in Supabase Vault (do this in the SQL editor directly,
+-- never commit it):
+--   select vault.create_secret('<your-rotated-secret>', 'edge_function_secret');
 -- =============================================
 CREATE OR REPLACE FUNCTION notify_new_enquiry()
 RETURNS TRIGGER AS $$
@@ -254,9 +290,28 @@ BEGIN
     COALESCE(NEW.trip_title, 'General enquiry') || ' · ' || NEW.email,
     '/admin/enquiries'
   );
+
+  -- Fire-and-forget HTTP call to the send-push edge function.
+  PERFORM extensions.net.http_post(
+    url := 'https://wephglgonrmtcmhfbjqe.supabase.co/functions/v1/send-push',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (
+        select decrypted_secret from vault.decrypted_secrets
+        where name = 'edge_function_secret'
+        limit 1
+      )
+    ),
+    body := jsonb_build_object(
+      'title', 'New enquiry from ' || NEW.full_name,
+      'body', COALESCE(NEW.trip_title, 'General enquiry') || ' · ' || NEW.email,
+      'link', '/admin/enquiries'
+    )
+  );
+
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
 
 DROP TRIGGER IF EXISTS on_enquiry_created ON enquiries;
 CREATE TRIGGER on_enquiry_created
@@ -276,7 +331,9 @@ END $$;
 
 -- =============================================
 -- Storage Buckets (run in Supabase dashboard)
+-- All uploads (trip covers, gallery, albums, testimonial photos) go
+-- through a single public bucket. Paths are organized by folder
+-- prefix (e.g. "trip-covers/...", "albums/<id>/...") rather than by
+-- separate buckets.
 -- =============================================
--- INSERT INTO storage.buckets (id, name, public) VALUES ('trip-images', 'trip-images', true);
--- INSERT INTO storage.buckets (id, name, public) VALUES ('gallery', 'gallery', true);
--- INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('ulaa', 'ulaa', true);

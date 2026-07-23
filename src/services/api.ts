@@ -166,51 +166,81 @@ export async function updateEnquiryStatus(id: string, status: Enquiry['status'])
 }
 
 // Manual enquiry entry — for walk-ins, phone calls, WhatsApp messages, etc.
-// that never came through the website's booking form.
+// that never came through the website's booking form. If an amount is paid
+// up front, this books a seat and sets status/is_paid the same way
+// recordPayment does below.
 export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<Enquiry> {
-  const { data, error } = await supabase.from('enquiries').insert(enquiry).select().single();
+  const amountPaid = enquiry.amount_paid || 0;
+  const totalAmount = enquiry.total_amount ?? null;
+  const isPaidFull = !!totalAmount && amountPaid >= totalAmount;
+  const status = computeAutoStatus(amountPaid, totalAmount, enquiry.status || 'new');
+
+  const { data, error } = await supabase
+    .from('enquiries')
+    .insert({ ...enquiry, amount_paid: amountPaid, is_paid: isPaidFull, status })
+    .select()
+    .single();
   if (error) throw error;
+
+  if (enquiry.trip_id && amountPaid > 0) {
+    await adjustTripSeats(enquiry.trip_id, 1);
+  }
+
   return data;
 }
 
-// Marks an enquiry paid/unpaid and keeps the linked trip's seats_booked in
-// sync (+1 seat when marking paid, -1 when undoing), clamped to [0, total_seats].
-export async function setEnquiryPaid(enquiry: Enquiry, isPaid: boolean): Promise<void> {
-  if (isPaid === enquiry.is_paid) return;
+// Any payment — full or partial — reserves a seat, since a deposit is a
+// booking in practice. Status auto-advances: fully paid -> closed,
+// partially paid -> contacted. Unpaid (0) never auto-downgrades status,
+// so an admin's manual "closed"/"contacted" note isn't silently undone.
+function computeAutoStatus(
+  amountPaid: number,
+  totalAmount: number | null | undefined,
+  currentStatus: Enquiry['status']
+): Enquiry['status'] {
+  if (totalAmount && totalAmount > 0 && amountPaid >= totalAmount) return 'closed';
+  if (amountPaid > 0) return 'contacted';
+  return currentStatus;
+}
 
-  if (enquiry.trip_id) {
-    const { data: trip, error: tripError } = await supabase
-      .from('upcoming_trips')
-      .select('seats_booked, total_seats')
-      .eq('id', enquiry.trip_id)
-      .single();
-    if (tripError) throw tripError;
+async function adjustTripSeats(tripId: string, delta: 1 | -1): Promise<void> {
+  const { data: trip, error: tripError } = await supabase
+    .from('upcoming_trips')
+    .select('seats_booked, total_seats')
+    .eq('id', tripId)
+    .single();
+  if (tripError) throw tripError;
 
-    const delta = isPaid ? 1 : -1;
-    const newSeatsBooked = Math.max(0, Math.min(trip.seats_booked + delta, trip.total_seats));
-
-    const { error: seatsError } = await supabase
-      .from('upcoming_trips')
-      .update({ seats_booked: newSeatsBooked })
-      .eq('id', enquiry.trip_id);
-    if (seatsError) throw seatsError;
-  }
-
-  const { error } = await supabase.from('enquiries').update({ is_paid: isPaid }).eq('id', enquiry.id);
-  if (error) throw error;
+  const newSeatsBooked = Math.max(0, Math.min(trip.seats_booked + delta, trip.total_seats));
+  const { error: seatsError } = await supabase
+    .from('upcoming_trips')
+    .update({ seats_booked: newSeatsBooked })
+    .eq('id', tripId);
+  if (seatsError) throw seatsError;
 }
 
 // Updates how much has actually been paid so far (and, optionally, the total
-// amount owed / which package they booked). Used for tracking advances and
-// partial/installment payments, separate from the is_paid seat-booking toggle.
+// amount owed / which package they booked). Any amount > 0 books a seat if
+// one wasn't already booked (going from 0 -> some amount); dropping back to
+// 0 frees the seat again. Status auto-advances per computeAutoStatus above.
 export async function recordPayment(
-  id: string,
+  current: Enquiry,
   payment: { amount_paid: number; total_amount?: number | null; package_type?: Enquiry['package_type'] }
 ): Promise<Enquiry> {
+  const newTotal = payment.total_amount !== undefined ? payment.total_amount : current.total_amount;
+  const wasBooked = (current.amount_paid || 0) > 0;
+  const willBeBooked = payment.amount_paid > 0;
+  const isPaidFull = !!newTotal && newTotal > 0 && payment.amount_paid >= newTotal;
+  const status = computeAutoStatus(payment.amount_paid, newTotal, current.status);
+
+  if (current.trip_id && wasBooked !== willBeBooked) {
+    await adjustTripSeats(current.trip_id, willBeBooked ? 1 : -1);
+  }
+
   const { data, error } = await supabase
     .from('enquiries')
-    .update(payment)
-    .eq('id', id)
+    .update({ ...payment, is_paid: isPaidFull, status })
+    .eq('id', current.id)
     .select()
     .single();
   if (error) throw error;

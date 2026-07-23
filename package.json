@@ -19,6 +19,7 @@
     "react-hook-form": "^7.82.0",
     "react-router-dom": "^7.18.1",
     "tailwindcss": "^4.3.3",
+    "undici": "^8.8.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

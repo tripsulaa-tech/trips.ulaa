@@ -5,7 +5,7 @@ import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircl
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, setEnquiryPaid, recordPayment, getAllUpcomingTripsAdmin } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
 import { formatDate, formatPrice } from '../utils';
 
@@ -19,6 +19,11 @@ function paymentStatus(e: Enquiry): { label: string; color: string } {
   if (e.amount_paid <= 0) return { label: 'Unpaid', color: 'bg-red-100 text-red-700' };
   if (e.amount_paid >= e.total_amount) return { label: 'Paid in full', color: 'bg-green-100 text-green-700' };
   return { label: 'Partial', color: 'bg-amber-100 text-amber-700' };
+}
+
+function paymentBalance(e: Enquiry): number | null {
+  if (!e.total_amount) return null;
+  return Math.max(0, e.total_amount - (e.amount_paid || 0));
 }
 
 function paymentFilterKey(e: Enquiry): 'paid' | 'partial' | 'unpaid' | 'not_set' {
@@ -54,11 +59,12 @@ type EnquiryForm = {
   message: string;
   package_type: Enquiry['package_type'];
   total_amount: number | '';
+  amount_paid: number | '';
 };
 
 const emptyForm: EnquiryForm = {
   full_name: '', phone: '', email: '', age: '', city: '', trip_id: '', source: 'whatsapp', message: '',
-  package_type: 'normal', total_amount: '',
+  package_type: 'normal', total_amount: '', amount_paid: '',
 };
 
 type PaymentForm = {
@@ -75,7 +81,6 @@ export default function AdminEnquiries() {
   const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
   const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [payUpdating, setPayUpdating] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -98,25 +103,6 @@ export default function AdminEnquiries() {
     await updateEnquiryStatus(id, status).catch(console.error);
     load();
     setUpdating(null);
-  };
-
-  const handleTogglePaid = async (enquiry: Enquiry) => {
-    const nextPaid = !enquiry.is_paid;
-    if (nextPaid && !enquiry.trip_id) {
-      alert("This enquiry has no trip attached, so seats can't be updated automatically. You can still mark it paid, but link it to a trip to auto-fill seats.");
-    }
-    setPayUpdating(enquiry.id);
-    try {
-      await setEnquiryPaid(enquiry, nextPaid);
-      const freshTrips = await getAllUpcomingTripsAdmin();
-      setTrips(freshTrips);
-      load();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to update paid status.');
-    } finally {
-      setPayUpdating(null);
-    }
   };
 
   const openAdd = () => {
@@ -166,12 +152,14 @@ export default function AdminEnquiries() {
     }
     try {
       setSavingPayment(true);
-      await recordPayment(paymentTarget.id, {
+      await recordPayment(paymentTarget, {
         amount_paid: amountPaid,
         total_amount: totalAmount,
         package_type: paymentForm.package_type,
       });
       setPaymentTarget(null);
+      const freshTrips = await getAllUpcomingTripsAdmin();
+      setTrips(freshTrips);
       load();
     } catch (err) {
       console.error(err);
@@ -184,6 +172,12 @@ export default function AdminEnquiries() {
   const handleSave = async () => {
     if (!form.full_name.trim() || !form.phone.trim()) {
       alert('Name and phone are required.');
+      return;
+    }
+    const totalAmount = form.total_amount === '' ? undefined : Number(form.total_amount);
+    const amountPaid = form.amount_paid === '' ? 0 : Number(form.amount_paid);
+    if (totalAmount != null && amountPaid > totalAmount) {
+      alert("Amount paid can't be more than the total amount.");
       return;
     }
     try {
@@ -201,9 +195,12 @@ export default function AdminEnquiries() {
         message: form.message.trim() || undefined,
         status: 'new',
         package_type: form.package_type,
-        total_amount: form.total_amount === '' ? undefined : Number(form.total_amount),
+        total_amount: totalAmount,
+        amount_paid: amountPaid,
       });
       setModalOpen(false);
+      const freshTrips = await getAllUpcomingTripsAdmin();
+      setTrips(freshTrips);
       load();
     } catch (err) {
       console.error(err);
@@ -387,39 +384,61 @@ export default function AdminEnquiries() {
               </div>
             </div>
 
-            {/* Filters — compact pill rows instead of big cards, so the actual people below are what you see first */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
-                {([['all', 'All'], ['new', 'New'], ['contacted', 'Contacted'], ['closed', 'Closed']] as const).map(([key, label]) => (
+            {/* Filters — grouped into two clearly labeled rows so it's obvious
+                these are two independent filters (query stage vs. payment),
+                not one combined list. Works the same on mobile (horizontal
+                scroll) and desktop (wraps if there's room). */}
+            <div className="bg-white rounded-2xl shadow-card p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-button font-semibold text-dark-muted uppercase tracking-wide">Filters</p>
+                {(filter !== 'all' || payFilter !== 'all') && (
                   <button
-                    key={key}
-                    onClick={() => setFilter(key)}
-                    className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                      filter === key ? 'bg-primary text-white border-primary' : 'bg-white text-dark-muted border-background-warm hover:border-primary/50'
-                    }`}
+                    onClick={() => { setFilter('all'); setPayFilter('all'); }}
+                    className="text-[11px] font-button font-semibold text-primary hover:underline"
                   >
-                    {label} <span className="opacity-70">{counts[key]}</span>
+                    Clear filters
                   </button>
-                ))}
+                )}
               </div>
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
-                {([
-                  ['all', 'All'],
-                  ['paid', 'Paid in full'],
-                  ['partial', 'Partial'],
-                  ['unpaid', 'Unpaid'],
-                  ['not_set', 'Price not set'],
-                ] as const).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setPayFilter(key)}
-                    className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                      payFilter === key ? 'bg-primary text-white border-primary' : 'bg-white text-dark-muted border-background-warm hover:border-primary/50'
-                    }`}
-                  >
-                    {label} <span className="opacity-70">{payCounts[key]}</span>
-                  </button>
-                ))}
+
+              <div>
+                <p className="text-[10px] font-button font-semibold text-dark-muted mb-1.5">Query Status</p>
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+                  {([['all', 'All'], ['new', 'New'], ['contacted', 'Contacted'], ['closed', 'Closed']] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setFilter(key)}
+                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                        filter === key ? 'bg-primary text-white border-primary' : 'bg-background text-dark-muted border-background-warm hover:border-primary/50'
+                      }`}
+                    >
+                      {label} <span className="opacity-70">{counts[key]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-button font-semibold text-dark-muted mb-1.5">Payment Status</p>
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+                  {([
+                    ['all', 'All'],
+                    ['paid', 'Paid in full'],
+                    ['partial', 'Partial'],
+                    ['unpaid', 'Unpaid'],
+                    ['not_set', 'Price not set'],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setPayFilter(key)}
+                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                        payFilter === key ? 'bg-primary text-white border-primary' : 'bg-background text-dark-muted border-background-warm hover:border-primary/50'
+                      }`}
+                    >
+                      {label} <span className="opacity-70">{payCounts[key]}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </>
@@ -441,13 +460,12 @@ export default function AdminEnquiries() {
                     <tr>
                       <th className="px-4 py-3 text-left">Name</th>
                       <th className="px-4 py-3 text-left hidden sm:table-cell">Phone</th>
-                      <th className="px-4 py-3 text-left hidden md:table-cell">Trip</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Source</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
                       <th className="px-2 py-3 text-center whitespace-nowrap">Package</th>
                       <th className="px-2 py-3 text-left whitespace-nowrap">Payment</th>
                       <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
-                      <th className="px-2 py-3 text-center whitespace-nowrap">Paid</th>
+                      <th className="px-2 py-3 text-center whitespace-nowrap">Seat</th>
                       <th className="px-2 py-3 text-right whitespace-nowrap">Update</th>
                     </tr>
                   </thead>
@@ -462,7 +480,6 @@ export default function AdminEnquiries() {
                             <p className="text-dark-muted text-xs truncate">{e.email}</p>
                           </td>
                           <td className="px-4 py-3 text-dark-muted hidden sm:table-cell truncate">{e.phone}</td>
-                          <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{e.trip_title || '—'}</td>
                           <td className="px-4 py-3 text-dark-muted hidden lg:table-cell truncate">
                             <span className="inline-flex items-center gap-1 text-xs">
                               <srcCfg.icon size={12} className="shrink-0" />
@@ -484,6 +501,11 @@ export default function AdminEnquiries() {
                               <span className={`inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${paymentStatus(e).color}`}>
                                 {paymentStatus(e).label}
                               </span>
+                              {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
+                                <p className="text-amber-600 text-[10px] font-medium mt-0.5">
+                                  Balance {formatPrice(paymentBalance(e)!)}
+                                </p>
+                              )}
                             </button>
                           </td>
                           <td className="px-2 py-3 text-center">
@@ -493,17 +515,15 @@ export default function AdminEnquiries() {
                             </span>
                           </td>
                           <td className="px-2 py-3 text-center">
-                            <button
-                              onClick={() => handleTogglePaid(e)}
-                              disabled={payUpdating === e.id}
-                              title={e.is_paid ? 'Paid — click to undo' : 'Mark as paid (adds 1 seat to the trip)'}
-                              className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap transition-colors ${
-                                e.is_paid ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-background-warm text-dark-muted hover:bg-background'
+                            <span
+                              title={e.amount_paid > 0 ? 'Seat booked automatically from payment' : 'No payment recorded yet, so no seat is held'}
+                              className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
+                                e.amount_paid > 0 ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'
                               }`}
                             >
-                              {e.is_paid ? <CheckCircle2 size={12} /> : <Circle size={12} />}
-                              {e.is_paid ? 'Paid' : 'Mark Paid'}
-                            </button>
+                              {e.amount_paid > 0 ? <CheckCircle2 size={12} /> : <Circle size={12} />}
+                              {e.amount_paid > 0 ? 'Booked' : 'Not booked'}
+                            </span>
                           </td>
                           <td className="px-2 py-3 text-right">
                             <select
@@ -547,9 +567,16 @@ export default function AdminEnquiries() {
                           )}
                         </p>
                         <p className="text-dark-muted text-xs truncate">{e.phone}</p>
-                        <span className={`inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap mt-1 ${paymentStatus(e).color}`}>
-                          {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''} · {paymentStatus(e).label}
-                        </span>
+                        <div className="flex items-center flex-wrap gap-1 mt-1">
+                          <span className={`inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${paymentStatus(e).color}`}>
+                            {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''} · {paymentStatus(e).label}
+                          </span>
+                          {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
+                            <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap bg-amber-50 text-amber-700">
+                              Balance {formatPrice(paymentBalance(e)!)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
@@ -602,6 +629,12 @@ export default function AdminEnquiries() {
                           </div>
                         )}
 
+                        {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
+                          <div className="bg-amber-50 rounded-xl px-3 py-2">
+                            <p className="text-amber-700 text-xs font-medium">Balance due: {formatPrice(paymentBalance(e)!)}</p>
+                          </div>
+                        )}
+
                         <div className="flex items-center flex-wrap gap-2 pt-1">
                           <button
                             onClick={() => openPayment(e)}
@@ -609,17 +642,15 @@ export default function AdminEnquiries() {
                           >
                             <IndianRupee size={14} /> Payment
                           </button>
-                          <button
-                            onClick={() => handleTogglePaid(e)}
-                            disabled={payUpdating === e.id}
-                            title={e.is_paid ? 'Paid — tap to undo' : 'Mark as paid (adds 1 seat to the trip)'}
-                            className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl whitespace-nowrap transition-colors ${
-                              e.is_paid ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'
+                          <span
+                            title={e.amount_paid > 0 ? 'Seat booked automatically from payment' : 'No payment recorded yet, so no seat is held'}
+                            className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl whitespace-nowrap ${
+                              e.amount_paid > 0 ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'
                             }`}
                           >
-                            {e.is_paid ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                            {e.is_paid ? 'Paid' : 'Mark Paid'}
-                          </button>
+                            {e.amount_paid > 0 ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                            {e.amount_paid > 0 ? 'Booked' : 'Not booked'}
+                          </span>
                           <select
                             value={e.status}
                             disabled={updating === e.id}
@@ -716,6 +747,18 @@ export default function AdminEnquiries() {
               className={inputClass}
               placeholder="e.g. 15000"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
+            <input
+              type="number"
+              min={0}
+              value={form.amount_paid}
+              onChange={e => setForm(f => ({ ...f, amount_paid: e.target.value === '' ? '' : +e.target.value }))}
+              className={inputClass}
+              placeholder="e.g. 5000 (advance) — leave blank if unpaid"
+            />
+            <p className="text-[11px] text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Notes</label>
