@@ -15,14 +15,15 @@ createRoot(document.getElementById('root')!).render(
 // Chrome's "Install app" prompt and iOS's "Add to Home Screen" branding
 // both read whichever manifest/meta tags are linked on the page at load
 // time. On /admin we swap in a dedicated manifest (manifest-admin.json)
-// and dedicated iOS meta tags, so an admin who visits /admin and installs
-// it gets a separate "ULAA Admin" icon that opens straight into the
-// dashboard — instead of being blocked from installing (the old behavior)
-// or installing something branded/scoped like the public site.
+// and dedicated iOS meta tags/icons — pulled from /icons/admin/ instead
+// of /icons/user/ — so an admin who visits /admin and installs it gets a
+// separate "ULAA Admin" icon that opens straight into the dashboard,
+// fully isolated from the public site's icon set.
 const isAdminRoute = window.location.pathname.startsWith('/admin')
 
 if (isAdminRoute) {
   document.querySelector('link[rel="manifest"]')?.setAttribute('href', '/manifest-admin.json')
+  document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', '/icons/admin/apple-touch-icon.png')
   document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.setAttribute('content', 'yes')
   document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', 'ULAA Admin')
   document.title = 'ULAA Admin'
