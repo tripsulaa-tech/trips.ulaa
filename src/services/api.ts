@@ -200,6 +200,23 @@ export async function setEnquiryPaid(enquiry: Enquiry, isPaid: boolean): Promise
   if (error) throw error;
 }
 
+// Updates how much has actually been paid so far (and, optionally, the total
+// amount owed / which package they booked). Used for tracking advances and
+// partial/installment payments, separate from the is_paid seat-booking toggle.
+export async function recordPayment(
+  id: string,
+  payment: { amount_paid: number; total_amount?: number | null; package_type?: Enquiry['package_type'] }
+): Promise<Enquiry> {
+  const { data, error } = await supabase
+    .from('enquiries')
+    .update(payment)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // =============================================
 // Testimonials
 // =============================================

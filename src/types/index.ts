@@ -84,6 +84,9 @@ export interface Enquiry {
   status: 'new' | 'contacted' | 'closed';
   source: 'website' | 'whatsapp' | 'phone' | 'instagram' | 'walk_in' | 'other';
   is_paid: boolean;
+  package_type: 'early_bird' | 'normal';
+  total_amount?: number;
+  amount_paid: number;
   created_at: string;
   updated_at: string;
 }

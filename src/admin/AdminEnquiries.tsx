@@ -1,12 +1,24 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, setEnquiryPaid, getAllUpcomingTripsAdmin } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, setEnquiryPaid, recordPayment, getAllUpcomingTripsAdmin } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
-import { formatDate } from '../utils';
+import { formatDate, formatPrice } from '../utils';
+
+const PACKAGE_CONFIG = {
+  early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
+  normal: { label: 'Normal', color: 'bg-slate-100 text-slate-700' },
+} as const;
+
+function paymentStatus(e: Enquiry): { label: string; color: string } {
+  if (!e.total_amount) return { label: 'Not set', color: 'bg-slate-100 text-dark-muted' };
+  if (e.amount_paid <= 0) return { label: 'Unpaid', color: 'bg-red-100 text-red-700' };
+  if (e.amount_paid >= e.total_amount) return { label: 'Paid in full', color: 'bg-green-100 text-green-700' };
+  return { label: 'Partial', color: 'bg-amber-100 text-amber-700' };
+}
 
 const STATUS_CONFIG = {
   new: { label: 'New', color: 'bg-blue-100 text-blue-700', icon: Clock },
@@ -32,10 +44,19 @@ type EnquiryForm = {
   trip_id: string;
   source: Enquiry['source'];
   message: string;
+  package_type: Enquiry['package_type'];
+  total_amount: number | '';
 };
 
 const emptyForm: EnquiryForm = {
   full_name: '', phone: '', email: '', age: '', city: '', trip_id: '', source: 'whatsapp', message: '',
+  package_type: 'normal', total_amount: '',
+};
+
+type PaymentForm = {
+  package_type: Enquiry['package_type'];
+  total_amount: number | '';
+  amount_paid: number | '';
 };
 
 export default function AdminEnquiries() {
@@ -49,6 +70,9 @@ export default function AdminEnquiries() {
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '' });
+  const [savingPayment, setSavingPayment] = useState(false);
 
   const load = () => {
     getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
@@ -90,6 +114,52 @@ export default function AdminEnquiries() {
     setModalOpen(true);
   };
 
+  // Suggests the trip's active price (early-bird or normal) as a starting
+  // point for total_amount whenever the trip or package changes. The admin
+  // can still type over it — this is just to save a lookup.
+  const applySuggestedAmount = (tripId: string, packageType: Enquiry['package_type']) => {
+    const trip = trips.find(t => t.id === tripId);
+    if (!trip) return;
+    const suggested = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
+    if (suggested != null) {
+      setForm(f => ({ ...f, total_amount: suggested }));
+    }
+  };
+
+  const openPayment = (enquiry: Enquiry) => {
+    setPaymentTarget(enquiry);
+    setPaymentForm({
+      package_type: enquiry.package_type || 'normal',
+      total_amount: enquiry.total_amount ?? '',
+      amount_paid: enquiry.amount_paid ?? 0,
+    });
+  };
+
+  const handleSavePayment = async () => {
+    if (!paymentTarget) return;
+    const totalAmount = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
+    const amountPaid = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
+    if (totalAmount != null && amountPaid > totalAmount) {
+      alert("Amount paid can't be more than the total amount.");
+      return;
+    }
+    try {
+      setSavingPayment(true);
+      await recordPayment(paymentTarget.id, {
+        amount_paid: amountPaid,
+        total_amount: totalAmount,
+        package_type: paymentForm.package_type,
+      });
+      setPaymentTarget(null);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save payment details.');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!form.full_name.trim() || !form.phone.trim()) {
       alert('Name and phone are required.');
@@ -109,6 +179,8 @@ export default function AdminEnquiries() {
         source: form.source,
         message: form.message.trim() || undefined,
         status: 'new',
+        package_type: form.package_type,
+        total_amount: form.total_amount === '' ? undefined : Number(form.total_amount),
       });
       setModalOpen(false);
       load();
@@ -128,6 +200,12 @@ export default function AdminEnquiries() {
     closed: enquiries.filter(e => e.status === 'closed').length,
   };
 
+  const totalCollected = enquiries.reduce((sum, e) => sum + (e.amount_paid || 0), 0);
+  const totalPending = enquiries.reduce((sum, e) => {
+    if (!e.total_amount) return sum;
+    return sum + Math.max(0, e.total_amount - (e.amount_paid || 0));
+  }, 0);
+
   const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   return (
@@ -138,6 +216,18 @@ export default function AdminEnquiries() {
           <Button variant="primary" size="sm" onClick={openAdd} className="ml-auto">
             <Plus size={16} /> Add Enquiry
           </Button>
+        </div>
+
+        {/* Payment summary */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl p-4 shadow-card">
+            <p className="text-dark-muted text-sm">Total Collected</p>
+            <p className="font-display text-2xl font-bold text-green-700">{formatPrice(totalCollected)}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 shadow-card">
+            <p className="text-dark-muted text-sm">Pending Balance</p>
+            <p className="font-display text-2xl font-bold text-amber-600">{formatPrice(totalPending)}</p>
+          </div>
         </div>
 
         {/* Stats */}
@@ -173,6 +263,8 @@ export default function AdminEnquiries() {
                       <th className="px-4 py-3 text-left hidden md:table-cell">Trip</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Source</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
+                      <th className="px-2 py-3 text-center whitespace-nowrap">Package</th>
+                      <th className="px-2 py-3 text-left whitespace-nowrap">Payment</th>
                       <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
                       <th className="px-2 py-3 text-center whitespace-nowrap">Paid</th>
                       <th className="px-2 py-3 text-right whitespace-nowrap">Update</th>
@@ -197,6 +289,22 @@ export default function AdminEnquiries() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</td>
+                          <td className="px-2 py-3 text-center">
+                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${PACKAGE_CONFIG[e.package_type || 'normal'].color}`}>
+                              {e.package_type === 'early_bird' && <Zap size={12} className="shrink-0" />}
+                              {PACKAGE_CONFIG[e.package_type || 'normal'].label}
+                            </span>
+                          </td>
+                          <td className="px-2 py-3 text-left whitespace-nowrap">
+                            <button onClick={() => openPayment(e)} className="text-left hover:opacity-75 transition-opacity">
+                              <p className="text-dark font-medium text-xs">
+                                {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}
+                              </p>
+                              <span className={`inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${paymentStatus(e).color}`}>
+                                {paymentStatus(e).label}
+                              </span>
+                            </button>
+                          </td>
                           <td className="px-2 py-3 text-center">
                             <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
                               <cfg.icon size={12} className="shrink-0" />
@@ -251,6 +359,9 @@ export default function AdminEnquiries() {
                       <div className="min-w-0">
                         <p className="font-medium text-dark truncate">{e.full_name}</p>
                         <p className="text-dark-muted text-xs truncate">{e.trip_title || 'No trip linked'}</p>
+                        <span className={`inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap mt-1 ${paymentStatus(e).color}`}>
+                          {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''} · {paymentStatus(e).label}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
@@ -290,6 +401,10 @@ export default function AdminEnquiries() {
                             <p className="text-dark-muted text-xs">Date</p>
                             <p className="text-dark truncate">{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                           </div>
+                          <div>
+                            <p className="text-dark-muted text-xs">Package</p>
+                            <p className="text-dark truncate">{PACKAGE_CONFIG[e.package_type || 'normal'].label}</p>
+                          </div>
                         </div>
 
                         {e.message && (
@@ -299,7 +414,13 @@ export default function AdminEnquiries() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-2 pt-1">
+                        <div className="flex items-center flex-wrap gap-2 pt-1">
+                          <button
+                            onClick={() => openPayment(e)}
+                            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl whitespace-nowrap bg-background-warm text-dark-muted"
+                          >
+                            <IndianRupee size={14} /> Payment
+                          </button>
                           <button
                             onClick={() => handleTogglePaid(e)}
                             disabled={payUpdating === e.id}
@@ -367,12 +488,46 @@ export default function AdminEnquiries() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Trip</label>
-            <select value={form.trip_id} onChange={e => setForm(f => ({ ...f, trip_id: e.target.value }))} className={inputClass}>
+            <select
+              value={form.trip_id}
+              onChange={e => {
+                const tripId = e.target.value;
+                setForm(f => ({ ...f, trip_id: tripId }));
+                applySuggestedAmount(tripId, form.package_type);
+              }}
+              className={inputClass}
+            >
               <option value="">— No specific trip —</option>
               {trips.map(t => (
                 <option key={t.id} value={t.id}>{t.title}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Package</label>
+            <select
+              value={form.package_type}
+              onChange={e => {
+                const packageType = e.target.value as Enquiry['package_type'];
+                setForm(f => ({ ...f, package_type: packageType }));
+                applySuggestedAmount(form.trip_id, packageType);
+              }}
+              className={inputClass}
+            >
+              <option value="normal">Normal Price</option>
+              <option value="early_bird">Early Bird</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
+            <input
+              type="number"
+              min={0}
+              value={form.total_amount}
+              onChange={e => setForm(f => ({ ...f, total_amount: e.target.value === '' ? '' : +e.target.value }))}
+              className={inputClass}
+              placeholder="e.g. 15000"
+            />
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Notes</label>
@@ -383,6 +538,66 @@ export default function AdminEnquiries() {
           <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>Cancel</Button>
           <Button variant="primary" size="md" onClick={handleSave} loading={saving}>Save Enquiry</Button>
         </div>
+      </Modal>
+
+      {/* Record Payment Modal */}
+      <Modal isOpen={!!paymentTarget} onClose={() => setPaymentTarget(null)} title="Track Payment" size="sm">
+        {paymentTarget && (
+          <div className="space-y-4">
+            <div className="bg-background-warm rounded-xl px-4 py-3">
+              <p className="font-medium text-dark">{paymentTarget.full_name}</p>
+              <p className="text-dark-muted text-xs">{paymentTarget.trip_title || 'No trip linked'}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Package</label>
+              <select
+                value={paymentForm.package_type}
+                onChange={e => setPaymentForm(f => ({ ...f, package_type: e.target.value as Enquiry['package_type'] }))}
+                className={inputClass}
+              >
+                <option value="normal">Normal Price</option>
+                <option value="early_bird">Early Bird</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={paymentForm.total_amount}
+                  onChange={e => setPaymentForm(f => ({ ...f, total_amount: e.target.value === '' ? '' : +e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 15000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={paymentForm.amount_paid}
+                  onChange={e => setPaymentForm(f => ({ ...f, amount_paid: e.target.value === '' ? '' : +e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 5000 (advance)"
+                />
+              </div>
+            </div>
+
+            {paymentForm.total_amount !== '' && paymentForm.amount_paid !== '' && (
+              <p className="text-sm text-dark-muted">
+                Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, Number(paymentForm.total_amount) - Number(paymentForm.amount_paid)))}</span>
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" size="md" onClick={() => setPaymentTarget(null)}>Cancel</Button>
+              <Button variant="primary" size="md" onClick={handleSavePayment} loading={savingPayment}>Save Payment</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </AdminLayout>
   );
