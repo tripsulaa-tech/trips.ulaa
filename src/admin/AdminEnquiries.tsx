@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -38,6 +38,14 @@ const STATUS_CONFIG = {
   contacted: { label: 'Contacted', color: 'bg-amber-100 text-amber-700', icon: RefreshCw },
   closed: { label: 'Closed', color: 'bg-green-100 text-green-700', icon: CheckCircle },
 };
+
+const PAY_FILTER_LABELS = {
+  all: 'All',
+  paid: 'Paid in full',
+  partial: 'Partial',
+  unpaid: 'Unpaid',
+  not_set: 'Price not set',
+} as const;
 
 const SOURCE_CONFIG = {
   website: { label: 'Website', icon: Globe },
@@ -79,12 +87,17 @@ export default function AdminEnquiries() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | Enquiry['status']>('all');
   const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
+  const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked'>('all');
+  const [showQueryFilter, setShowQueryFilter] = useState(false);
+  const [showPayFilter, setShowPayFilter] = useState(false);
+  const [showBookedFilter, setShowBookedFilter] = useState(false);
   const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '' });
   const [savingPayment, setSavingPayment] = useState(false);
@@ -97,6 +110,19 @@ export default function AdminEnquiries() {
     load();
     getAllUpcomingTripsAdmin().then(setTrips).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (!expandedId) return;
+    const el = cardRefs.current[expandedId];
+    if (!el) return;
+    // Wait a beat for the expand animation/layout to settle, then bring the
+    // card's header to the top of the viewport so the revealed details
+    // (which push the card taller) are visible without hunting/scrolling.
+    const t = setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [expandedId]);
 
   const handleStatusChange = async (id: string, status: Enquiry['status']) => {
     setUpdating(id);
@@ -242,7 +268,8 @@ export default function AdminEnquiries() {
 
   const filtered = scopedEnquiries
     .filter(e => filter === 'all' || e.status === filter)
-    .filter(e => payFilter === 'all' || paymentFilterKey(e) === payFilter);
+    .filter(e => payFilter === 'all' || paymentFilterKey(e) === payFilter)
+    .filter(e => bookedFilter === 'all' || (bookedFilter === 'booked' ? e.amount_paid > 0 : e.amount_paid <= 0));
   const counts = {
     all: scopedEnquiries.length,
     new: scopedEnquiries.filter(e => e.status === 'new').length,
@@ -256,6 +283,12 @@ export default function AdminEnquiries() {
     unpaid: scopedEnquiries.filter(e => paymentFilterKey(e) === 'unpaid').length,
     not_set: scopedEnquiries.filter(e => paymentFilterKey(e) === 'not_set').length,
   };
+  const bookedCounts = {
+    all: scopedEnquiries.length,
+    booked: scopedEnquiries.filter(e => e.amount_paid > 0).length,
+    not_booked: scopedEnquiries.filter(e => e.amount_paid <= 0).length,
+  };
+  const activeFilterCount = (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0);
 
   const paymentTotals = (list: Enquiry[]) => ({
     collected: list.reduce((sum, e) => sum + (e.amount_paid || 0), 0),
@@ -316,7 +349,7 @@ export default function AdminEnquiries() {
                 return (
                   <button
                     key={g.key}
-                    onClick={() => { setSelectedTripKey(g.key); setFilter('all'); setPayFilter('all'); }}
+                    onClick={() => { setSelectedTripKey(g.key); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); }}
                     className="bg-white rounded-2xl p-5 text-left shadow-card hover:shadow-card-hover transition-all"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -360,7 +393,7 @@ export default function AdminEnquiries() {
         ) : (
           <>
             <button
-              onClick={() => { setSelectedTripKey(null); setFilter('all'); setPayFilter('all'); }}
+              onClick={() => { setSelectedTripKey(null); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); }}
               className="inline-flex items-center gap-1 text-sm font-button font-semibold text-primary hover:underline"
             >
               ← All Trips
@@ -384,26 +417,60 @@ export default function AdminEnquiries() {
               </div>
             </div>
 
-            {/* Filters — grouped into two clearly labeled rows so it's obvious
-                these are two independent filters (query stage vs. payment),
-                not one combined list. Works the same on mobile (horizontal
-                scroll) and desktop (wraps if there's room). */}
-            <div className="bg-white rounded-2xl shadow-card p-3 space-y-3">
-              <div className="flex items-center justify-between gap-2">
+            {/* Filters — collapsed by default into two tappable toggles
+                (Query Status / Payment), each expanding its own pill row
+                on demand, so the card stays compact until you need it. */}
+            <div className="bg-white rounded-2xl shadow-card p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal size={13} className="text-dark-muted shrink-0" />
                 <p className="text-[11px] font-button font-semibold text-dark-muted uppercase tracking-wide">Filters</p>
-                {(filter !== 'all' || payFilter !== 'all') && (
+                <span className={`inline-flex items-center text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                  activeFilterCount > 0 ? 'bg-primary/10 text-primary' : 'bg-background-warm text-dark-muted'
+                }`}>
+                  {activeFilterCount} Active
+                </span>
+                {activeFilterCount > 0 && (
                   <button
-                    onClick={() => { setFilter('all'); setPayFilter('all'); }}
-                    className="text-[11px] font-button font-semibold text-primary hover:underline"
+                    onClick={() => { setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setShowQueryFilter(false); setShowPayFilter(false); setShowBookedFilter(false); }}
+                    className="ml-auto text-[11px] font-button font-semibold text-primary hover:underline shrink-0"
                   >
-                    Clear filters
+                    Clear
                   </button>
                 )}
               </div>
 
-              <div>
-                <p className="text-[10px] font-button font-semibold text-dark-muted mb-1.5">Query Status</p>
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+                <button
+                  onClick={() => { setShowQueryFilter(v => !v); setShowPayFilter(false); setShowBookedFilter(false); }}
+                  className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                    showQueryFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
+                  }`}
+                >
+                  Query Status{filter !== 'all' && <span className="text-primary">· {STATUS_CONFIG[filter].label}</span>}
+                  <ChevronDown size={12} className={`transition-transform ${showQueryFilter ? 'rotate-180' : ''}`} />
+                </button>
+                <button
+                  onClick={() => { setShowPayFilter(v => !v); setShowQueryFilter(false); setShowBookedFilter(false); }}
+                  className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                    showPayFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
+                  }`}
+                >
+                  Payment{payFilter !== 'all' && <span className="text-primary">· {PAY_FILTER_LABELS[payFilter]}</span>}
+                  <ChevronDown size={12} className={`transition-transform ${showPayFilter ? 'rotate-180' : ''}`} />
+                </button>
+                <button
+                  onClick={() => { setShowBookedFilter(v => !v); setShowQueryFilter(false); setShowPayFilter(false); }}
+                  className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                    showBookedFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
+                  }`}
+                >
+                  Booking{bookedFilter !== 'all' && <span className="text-primary">· {bookedFilter === 'booked' ? 'Booked' : 'Not booked'}</span>}
+                  <ChevronDown size={12} className={`transition-transform ${showBookedFilter ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+
+              {showQueryFilter && (
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pt-1">
                   {([['all', 'All'], ['new', 'New'], ['contacted', 'Contacted'], ['closed', 'Closed']] as const).map(([key, label]) => (
                     <button
                       key={key}
@@ -416,11 +483,10 @@ export default function AdminEnquiries() {
                     </button>
                   ))}
                 </div>
-              </div>
+              )}
 
-              <div>
-                <p className="text-[10px] font-button font-semibold text-dark-muted mb-1.5">Payment Status</p>
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+              {showPayFilter && (
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pt-1">
                   {([
                     ['all', 'All'],
                     ['paid', 'Paid in full'],
@@ -439,7 +505,27 @@ export default function AdminEnquiries() {
                     </button>
                   ))}
                 </div>
-              </div>
+              )}
+
+              {showBookedFilter && (
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pt-1">
+                  {([
+                    ['all', 'All'],
+                    ['booked', 'Booked'],
+                    ['not_booked', 'Not booked'],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setBookedFilter(key)}
+                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                        bookedFilter === key ? 'bg-primary text-white border-primary' : 'bg-background text-dark-muted border-background-warm hover:border-primary/50'
+                      }`}
+                    >
+                      {label} <span className="opacity-70">{bookedCounts[key]}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -552,7 +638,13 @@ export default function AdminEnquiries() {
                 const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                 const isOpen = expandedId === e.id;
                 return (
-                  <motion.div key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-card overflow-hidden">
+                  <motion.div
+                    key={e.id}
+                    ref={(el) => { cardRefs.current[e.id] = el; }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="bg-white rounded-2xl shadow-card overflow-hidden"
+                  >
                     <button
                       onClick={() => setExpandedId(isOpen ? null : e.id)}
                       className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
