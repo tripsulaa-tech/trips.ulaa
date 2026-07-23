@@ -9,11 +9,14 @@ import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import TagListEditor from '../components/ui/TagListEditor';
 import ItineraryEditor from '../components/ui/ItineraryEditor';
 import FAQEditor from '../components/ui/FAQEditor';
+import CancellationPolicyEditor from '../components/ui/CancellationPolicyEditor';
+import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDisplay';
 import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip } from '../services/api';
 
-import type { UpcomingTrip, ItineraryDay, FAQ } from '../types';
+import type { UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy } from '../types';
 import { formatDate, slugify } from '../utils';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../constants/terms';
+import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 
 interface TripForm {
   title: string;
@@ -38,6 +41,7 @@ interface TripForm {
   cover_image: string;
   gallery_images: string[];
   terms_and_conditions: string;
+  cancellation_policy: CancellationPolicy;
   is_published: boolean;
 }
 
@@ -46,7 +50,8 @@ const emptyForm: TripForm = {
   description: '', highlights: [], itinerary: [], included: [], not_included: [],
   things_to_carry: [], meeting_point: '', meeting_point_map_url: '', faqs: [], total_seats: 15, seats_booked: 0, price: '',
   early_bird_price: '', early_bird_deadline: '',
-  cover_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS, is_published: false,
+  cover_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
+  cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
 };
 
 export default function AdminTrips() {
@@ -86,6 +91,7 @@ export default function AdminTrips() {
       cover_image: trip.cover_image || '',
       gallery_images: trip.gallery_images || [], is_published: trip.is_published,
       terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
+      cancellation_policy: trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY,
     });
     setModalOpen(true);
   };
@@ -414,6 +420,13 @@ export default function AdminTrips() {
             />
           </div>
 
+          <div className="md:col-span-2 border-t border-background-warm pt-4">
+            <CancellationPolicyEditor
+              value={form.cancellation_policy}
+              onChange={cancellation_policy => setForm(f => ({ ...f, cancellation_policy }))}
+            />
+          </div>
+
           <div className="md:col-span-2 flex items-center gap-3 border-t border-background-warm pt-4">
             <input type="checkbox" id="is_published" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
             <label htmlFor="is_published" className="text-sm font-medium text-dark">Publish immediately</label>
@@ -561,6 +574,15 @@ export default function AdminTrips() {
                 </p>
               </details>
             )}
+
+            <details className="group">
+              <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
+                <span className="transition-transform group-open:rotate-90">▶</span> Cancellation Policy
+              </summary>
+              <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto">
+                <CancellationPolicyDisplay policy={viewingTrip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
+              </div>
+            </details>
 
             <div className="flex gap-3 pt-2 border-t border-background-warm">
               <Button

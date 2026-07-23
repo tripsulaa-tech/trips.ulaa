@@ -4,12 +4,14 @@ import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import FAQAccordion from '../components/ui/FAQAccordion';
+import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDisplay';
 import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
 import { GalleryGrid } from '../components/ui/Lightbox';
 import { getUpcomingTripBySlug } from '../services/api';
 import type { UpcomingTrip } from '../types';
 import { formatDateRange, formatDate, seatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
+import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
   MapPin, Calendar, Clock, Users, CheckCircle, XCircle,
   Backpack, Navigation, ArrowLeft, Share2,
@@ -33,7 +35,7 @@ export default function TripDetailPage() {
   // Highlight the quick-jump tab for whichever section is currently in view.
   useEffect(() => {
     if (!trip) return;
-    const ids = ['overview', 'itinerary', 'inclusions', 'gallery', 'faqs'];
+    const ids = ['overview', 'itinerary', 'inclusions', 'gallery', 'faqs', 'cancellation'];
     const sections = ids
       .map(id => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -151,6 +153,12 @@ export default function TripDetailPage() {
                 FAQs
               </a>
             )}
+            <a
+              href="#cancellation"
+              className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'cancellation' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+            >
+              Cancellation
+            </a>
           </nav>
         </div>
       </div>
@@ -282,6 +290,12 @@ export default function TripDetailPage() {
                 <FAQAccordion faqs={trip.faqs} />
               </section>
             )}
+
+            {/* Cancellation Policy */}
+            <section id="cancellation" className="scroll-mt-36">
+              <h2 className="font-display text-3xl font-bold text-dark mb-6">Cancellation Policy</h2>
+              <CancellationPolicyDisplay policy={trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
+            </section>
           </div>
 
           {/* Right sticky panel */}

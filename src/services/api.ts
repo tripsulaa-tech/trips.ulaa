@@ -5,10 +5,12 @@ import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, B
 // Upcoming Trips
 // =============================================
 export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
+  const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('upcoming_trips')
     .select('*')
     .eq('is_published', true)
+    .gte('start_date', today)
     .order('start_date', { ascending: true });
   if (error) throw error;
   return data || [];

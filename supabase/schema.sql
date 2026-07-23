@@ -85,6 +85,7 @@ create table public.upcoming_trips (
   early_bird_deadline date,
   meeting_point_map_url text,
   terms_and_conditions text,
+  cancellation_policy jsonb,
   trip_type text check (trip_type is null or trip_type in ('domestic', 'international')),
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug)

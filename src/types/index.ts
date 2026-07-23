@@ -27,6 +27,7 @@ export interface UpcomingTrip {
   cover_image?: string;
   gallery_images: string[];
   terms_and_conditions?: string;
+  cancellation_policy?: CancellationPolicy;
   is_published: boolean;
   created_at: string;
   updated_at: string;
@@ -153,6 +154,37 @@ export interface ItineraryDay {
 export interface FAQ {
   question: string;
   answer: string;
+}
+
+// =============================================
+// Cancellation Policy (editable per-trip via Admin)
+// The day thresholds below are what typically change from trip to trip
+// (domestic vs international, different vendors, etc). Each tier describes
+// the refund treatment for cancellations made in a given window before
+// departure. Tiers should be ordered from the most days-before-departure to
+// the fewest — the editor and display both assume that order.
+// =============================================
+export interface CancellationTier {
+  // Minimum days-before-departure required to fall in this tier (inclusive).
+  // null = no lower bound, i.e. this is the closest-to-departure tier
+  // ("Within X days of departure").
+  min_days: number | null;
+  // Maximum days-before-departure for this tier (inclusive).
+  // null = no upper bound, i.e. this is the furthest-out tier
+  // ("More than X days before departure").
+  max_days: number | null;
+  description: string;
+}
+
+export interface CancellationPolicy {
+  // Days before departure the remaining balance is due.
+  payment_due_days: number;
+  // Refund windows for participant-initiated cancellations, ordered furthest
+  // to nearest departure.
+  tiers: CancellationTier[];
+  // Approved refunds are processed within this many working days.
+  refund_min_days: number;
+  refund_max_days: number;
 }
 
 export interface BookingFormData {
