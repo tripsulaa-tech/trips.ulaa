@@ -104,7 +104,7 @@ export default function TripDetailPage() {
                 {isFull ? 'Sold out' : isAlmostFull ? 'Almost full — hurry!' : `Group of ${trip.total_seats}`}
               </span>
 			  {isEarlyBird && (
-				<span className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/30 text-white text-xs font-button font-semibold px-3 py-1.5 rounded-full">
+				<span className="flex items-center gap-1.5 bg-secondary text-white text-xs font-button font-semibold px-3 py-1.5 rounded-full">
 				Early Bird
 				</span>
 			  )}
@@ -316,7 +316,7 @@ export default function TripDetailPage() {
                           <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-button font-medium px-2.5 py-1 rounded-full">
                             Save {formatPrice(trip.price - activePrice)}
                           </span>
-                          <span className="bg-orange-50 border border-orange-200 text-orange-600 text-xs font-button font-medium px-2.5 py-1 rounded-full">
+                          <span className="bg-secondary text-white text-xs font-button font-semibold px-2.5 py-1 rounded-full">
                             Early Bird
                           </span>
                         </div>
@@ -424,7 +424,7 @@ export default function TripDetailPage() {
             {/* Row 2: Early Bird + Ends date */}
             <div className="flex items-center gap-1.5 mt-1 overflow-x-auto no-scrollbar">
               {isEarlyBird && (
-                <span className="bg-orange-50 border border-orange-200 text-orange-600 text-[10px] font-button font-medium px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                <span className="bg-secondary text-white text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
                   Early Bird
                 </span>
               )}
