@@ -5,8 +5,8 @@
 // merge these two event listeners into that file instead of replacing it —
 // a page can only have one active service worker at a time.
 
-const DEFAULT_ICON = '/icons/ulaa-logo-192.png';   // full-color logo, 192x192
-const DEFAULT_BADGE = '/icons/ulaa-badge-96.png';  // monochrome silhouette, 96x96 (Android status bar)
+const DEFAULT_ICON = '/icons/admin/icon-192.png';   // full-color logo, 192x192
+const DEFAULT_BADGE = '/icons/admin/icon-192.png';  // monochrome silhouette, 96x96 (Android status bar)
 
 // A no-op fetch handler is required for Chrome/Android to treat this as an
 // installable PWA (full "Install app" prompt) rather than a plain shortcut.

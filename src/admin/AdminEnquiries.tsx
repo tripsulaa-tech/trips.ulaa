@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal } from 'lucide-react';
 import AdminLayout from './AdminLayout';
@@ -82,6 +82,7 @@ type PaymentForm = {
 };
 
 export default function AdminEnquiries() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,6 +111,15 @@ export default function AdminEnquiries() {
     load();
     getAllUpcomingTripsAdmin().then(setTrips).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (enquiries.length === 0) return;
+    const tripParam = searchParams.get('trip');
+    const enquiryParam = searchParams.get('enquiry');
+    if (tripParam) setSelectedTripKey(tripParam);
+    if (enquiryParam) setExpandedId(enquiryParam);
+    if (tripParam || enquiryParam) setSearchParams({}, { replace: true });
+  }, [enquiries]);
 
   useEffect(() => {
     if (!expandedId) return;
