@@ -77,6 +77,7 @@ export default function TripDetailPage() {
 
   const remaining = seatsLeft(trip.total_seats, trip.seats_booked);
   const isFull = remaining === 0;
+  const isAlmostFull = remaining > 0 && remaining <= 5;
   const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
 
   return (
@@ -98,7 +99,7 @@ export default function TripDetailPage() {
               <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
               <span className="flex items-center gap-2"><Clock size={14} /> {trip.duration}</span>
               <span className="flex items-center gap-2"><Users size={14} />
-                {isFull ? 'Sold out' : `${remaining} seats left`}
+                {isFull ? 'Sold out' : isAlmostFull ? 'Almost full — hurry!' : `Group of ${trip.total_seats}`}
               </span>
 			  {isEarlyBird && (
 				<span className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/30 text-white text-xs font-button font-semibold px-3 py-1.5 rounded-full">
@@ -325,22 +326,19 @@ export default function TripDetailPage() {
                   </div>
                 )}
                 <div className="text-center mb-6">
-                  {!isFull ? (
-                    <span className="inline-block bg-green-50 text-green-700 text-sm font-button font-semibold px-4 py-2 rounded-full mb-3">
-                      {remaining} seats available
-                    </span>
-                  ) : (
-                    <span className="inline-block bg-red-50 text-red-600 text-sm font-button font-semibold px-4 py-2 rounded-full mb-3">
+                  {isFull ? (
+                    <span className="inline-block bg-red-50 text-red-600 text-sm font-button font-semibold px-4 py-2 rounded-full">
                       Sold Out
                     </span>
+                  ) : isAlmostFull ? (
+                    <span className="inline-block bg-amber-50 text-amber-700 text-sm font-button font-semibold px-4 py-2 rounded-full">
+                      Only {remaining} seats left — almost full!
+                    </span>
+                  ) : (
+                    <span className="inline-block bg-green-50 text-green-700 text-sm font-button font-semibold px-4 py-2 rounded-full">
+                      Seats available
+                    </span>
                   )}
-                  <div className="w-full bg-background-warm rounded-full h-2 mb-2">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${(trip.seats_booked / trip.total_seats) * 100}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-dark-muted">{trip.seats_booked} of {trip.total_seats} seats booked</p>
                 </div>
 
                 <div className="space-y-3 mb-6">
@@ -436,9 +434,9 @@ export default function TripDetailPage() {
             <span className="text-sm font-bold whitespace-nowrap">
               {isFull ? 'Join Waitlist' : 'Book Your Seat'}
             </span>
-            {!isFull && (
+            {isAlmostFull && (
               <span className="text-[9px] font-normal text-white/85 mt-0.5">
-                {remaining} seats left
+                Only {remaining} left!
               </span>
             )}
           </Button>

@@ -103,7 +103,9 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               <span>
                 {isFull
                   ? 'No seats available'
-                  : `${remaining} of ${trip.total_seats} seats left`}
+                  : isAlmostFull
+                    ? 'Filling up fast — almost full!'
+                    : `Group of ${trip.total_seats}`}
               </span>
             </div>
           </div>
