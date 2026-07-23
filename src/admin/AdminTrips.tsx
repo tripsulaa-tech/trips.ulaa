@@ -52,6 +52,7 @@ export default function AdminTrips() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState<UpcomingTrip | null>(null);
+  const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<TripForm>(emptyForm);
 
@@ -158,7 +159,15 @@ export default function AdminTrips() {
                 <tbody className="divide-y divide-background-warm">
                   {trips.map(trip => (
                     <motion.tr key={trip.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-3 font-medium text-dark truncate max-w-[150px] sm:max-w-none">{trip.title}</td>
+                      <td className="px-4 py-3 font-medium text-dark truncate max-w-[150px] sm:max-w-none">
+                        <button
+                          onClick={() => setViewingTrip(trip)}
+                          className="text-left hover:text-primary hover:underline underline-offset-2 truncate"
+                          title="View details"
+                        >
+                          {trip.title}
+                        </button>
+                      </td>
                       <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{trip.destination}</td>
                       <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(trip.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                       <td className="px-4 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">
@@ -400,6 +409,144 @@ export default function AdminTrips() {
             {editingTrip ? 'Save Changes' : 'Create Trip'}
           </Button>
         </div>
+      </Modal>
+
+      {/* View-only details popup — no editable fields, just a clean read-out */}
+      <Modal isOpen={!!viewingTrip} onClose={() => setViewingTrip(null)} title={viewingTrip?.title || 'Trip Details'} size="lg">
+        {viewingTrip && (
+          <div className="space-y-5">
+            {viewingTrip.cover_image && (
+              <img src={viewingTrip.cover_image} alt={viewingTrip.title} className="w-full h-48 object-cover rounded-xl" />
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${viewingTrip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                {viewingTrip.is_published ? 'Published' : 'Draft'}
+              </span>
+              <span className="text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap bg-background-warm text-dark-muted">
+                {viewingTrip.seats_booked}/{viewingTrip.total_seats} seats booked
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-0.5">Destination</p>
+                <p className="text-dark">{viewingTrip.destination}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-0.5">Duration</p>
+                <p className="text-dark">{viewingTrip.duration}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-0.5">Dates</p>
+                <p className="text-dark">
+                  {formatDate(viewingTrip.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {' – '}
+                  {formatDate(viewingTrip.end_date, { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-0.5">Price</p>
+                <p className="text-dark">
+                  {viewingTrip.price ? `₹${viewingTrip.price.toLocaleString('en-IN')}` : '—'}
+                  {viewingTrip.early_bird_price ? ` (Early-bird ₹${viewingTrip.early_bird_price.toLocaleString('en-IN')})` : ''}
+                </p>
+              </div>
+              {viewingTrip.meeting_point && (
+                <div className="col-span-2">
+                  <p className="text-xs font-medium text-dark-muted mb-0.5">Meeting Point</p>
+                  <p className="text-dark">{viewingTrip.meeting_point}</p>
+                </div>
+              )}
+            </div>
+
+            {viewingTrip.description && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Description</p>
+                <p className="text-sm text-dark whitespace-pre-line">{viewingTrip.description}</p>
+              </div>
+            )}
+
+            {viewingTrip.highlights?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Highlights</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {viewingTrip.highlights.map((h, i) => (
+                    <span key={i} className="text-xs bg-background-warm text-dark px-2 py-1 rounded-full">{h}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {viewingTrip.itinerary?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Itinerary</p>
+                <div className="space-y-2">
+                  {viewingTrip.itinerary.map((d, i) => (
+                    <div key={i} className="text-sm">
+                      <p className="font-medium text-dark">Day {d.day || i + 1}: {d.title}</p>
+                      {d.description && <p className="text-dark-muted text-xs mt-0.5">{d.description}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(viewingTrip.included?.length > 0 || viewingTrip.not_included?.length > 0) && (
+              <div className="grid grid-cols-2 gap-4">
+                {viewingTrip.included?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-dark-muted mb-1">What's Included</p>
+                    <ul className="text-sm text-dark list-disc list-inside space-y-0.5">
+                      {viewingTrip.included.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {viewingTrip.not_included?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-dark-muted mb-1">Not Included</p>
+                    <ul className="text-sm text-dark list-disc list-inside space-y-0.5">
+                      {viewingTrip.not_included.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {viewingTrip.things_to_carry?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Things to Carry</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {viewingTrip.things_to_carry.map((t, i) => (
+                    <span key={i} className="text-xs bg-background-warm text-dark px-2 py-1 rounded-full">{t}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {viewingTrip.gallery_images?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Gallery ({viewingTrip.gallery_images.length})</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {viewingTrip.gallery_images.slice(0, 8).map((url, i) => (
+                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded-lg" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2 border-t border-background-warm">
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => { const t = viewingTrip; setViewingTrip(null); openEdit(t); }}
+              >
+                Edit Trip
+              </Button>
+              <Button variant="outline" size="md" onClick={() => setViewingTrip(null)}>Close</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </AdminLayout>
   );

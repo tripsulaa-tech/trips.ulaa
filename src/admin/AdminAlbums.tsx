@@ -29,6 +29,7 @@ export default function AdminAlbums() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CompletedTrip | null>(null);
+  const [viewing, setViewing] = useState<CompletedTrip | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<AlbumForm>({
     title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false,
@@ -121,7 +122,13 @@ export default function AdminAlbums() {
                     <motion.tr key={album.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
                       <td className="px-4 py-3 font-medium text-dark max-w-[150px] sm:max-w-none">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="truncate">{album.title}</span>
+                          <button
+                            onClick={() => setViewing(album)}
+                            className="truncate text-left hover:text-primary hover:underline underline-offset-2"
+                            title="View details"
+                          >
+                            {album.title}
+                          </button>
                           {album.batch && (
                             <span className="shrink-0 text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
                               <span className="sm:hidden">{formatBatchShortLabel(album.batch)}</span>
@@ -244,6 +251,76 @@ export default function AdminAlbums() {
             {editing ? 'Save Changes' : 'Create Album'}
           </Button>
         </div>
+      </Modal>
+
+      {/* View-only details popup — no editable fields, just a clean read-out */}
+      <Modal isOpen={!!viewing} onClose={() => setViewing(null)} title={viewing?.title || 'Album Details'} size="lg">
+        {viewing && (
+          <div className="space-y-5">
+            {viewing.cover_image && (
+              <img src={viewing.cover_image} alt={viewing.title} className="w-full h-48 object-cover rounded-xl" />
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${viewing.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                {viewing.is_published ? 'Published' : 'Draft'}
+              </span>
+              {viewing.batch && (
+                <span className="text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap bg-background-warm text-dark-muted">
+                  {formatBatchLabel(viewing.batch)}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-0.5">Destination</p>
+                <p className="text-dark">{viewing.destination}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-0.5">Trip Date</p>
+                <p className="text-dark">{formatDate(viewing.trip_date, { month: 'long', year: 'numeric' })}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-0.5">Participants</p>
+                <p className="text-dark">{viewing.participants}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-0.5">Photos</p>
+                <p className="text-dark">{viewing.gallery_images?.length || 0}</p>
+              </div>
+            </div>
+
+            {viewing.description && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Description</p>
+                <p className="text-sm text-dark whitespace-pre-line">{viewing.description}</p>
+              </div>
+            )}
+
+            {viewing.gallery_images?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Gallery ({viewing.gallery_images.length})</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {viewing.gallery_images.slice(0, 8).map((url, i) => (
+                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded-lg" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2 border-t border-background-warm">
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => { const a = viewing; setViewing(null); openEdit(a); }}
+              >
+                Edit Album
+              </Button>
+              <Button variant="outline" size="md" onClick={() => setViewing(null)}>Close</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </AdminLayout>
   );

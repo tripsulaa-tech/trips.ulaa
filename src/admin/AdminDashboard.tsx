@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Briefcase, BookOpen, Users, TrendingUp, ChevronRight,
-  PlusCircle, FolderPlus, ImagePlus, Calendar, MessageCircle,
+  PlusCircle, FolderPlus, ImagePlus,
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import {
@@ -36,14 +36,19 @@ function formatDateRange(start?: string, end?: string) {
   if (Number.isNaN(s.getTime())) return '—';
   const e = end ? new Date(end) : null;
   const sameMonth = e && s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
-  const monthYear = s.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const monthYear = s.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
   if (!e || Number.isNaN(e.getTime())) {
-    return s.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    return s.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
   if (sameMonth) {
     return `${s.getDate()} – ${e.getDate()} ${monthYear}`;
   }
   return `${formatDate(start)} – ${formatDate(end)}`;
+}
+
+function truncateText(text: string, maxLen: number) {
+  if (!text) return text;
+  return text.length > maxLen ? `${text.slice(0, maxLen)}...` : text;
 }
 
 export default function AdminDashboard() {
@@ -143,8 +148,7 @@ export default function AdminDashboard() {
                   {loading ? '—' : newToday}
                 </p>
               </div>
-              <p className="text-dark-muted text-xs sm:text-sm mt-1">New Enquiries</p>
-              <p className="text-dark-muted text-[11px] sm:text-xs">Today</p>
+              <p className="text-dark-muted text-xs sm:text-sm mt-1">New Enquiries Today</p>
             </div>
             <ChevronRight size={18} className="sm:w-6 sm:h-6 text-primary flex-shrink-0" />
           </div>
@@ -153,21 +157,20 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         <div>
           <h3 className="font-display text-base sm:text-lg font-bold text-dark mb-3 sm:mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-5">
             {quickActions.map(({ label, desc, icon: Icon, color, to }) => (
               <Link
                 key={label}
                 to={to}
-                className="bg-white rounded-lg sm:rounded-2xl p-1.5 sm:p-6 shadow-card hover:shadow-card-hover transition-all flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-4 group text-center sm:text-left"
+                className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center gap-2 sm:gap-3 group"
               >
                 <div className={`w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 ${color}`}>
-                  <Icon size={18} className="sm:w-7 sm:h-7" />
+                  <Icon size={20} className="sm:w-7 sm:h-7" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-dark text-[10px] leading-tight sm:text-base">{label}</p>
-                  <p className="hidden sm:block text-dark-muted text-xs sm:text-sm">{desc}</p>
+                  <p className="font-semibold text-dark text-xs sm:text-base truncate">{label}</p>
+                  <p className="hidden sm:block text-dark-muted text-sm truncate">{desc}</p>
                 </div>
-                <ChevronRight size={16} className="hidden sm:block sm:w-[18px] sm:h-[18px] text-dark-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
               </Link>
             ))}
           </div>
@@ -178,7 +181,6 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="flex items-center gap-2">
-                <MessageCircle size={16} className="sm:w-[18px] sm:h-[18px] text-primary" />
                 <h3 className="font-display text-base sm:text-lg font-bold text-dark">Recent Enquiries</h3>
               </div>
               <Link to="/admin/enquiries" className="text-primary text-xs sm:text-sm font-medium hover:underline">
@@ -191,24 +193,24 @@ export default function AdminDashboard() {
                 {loading ? 'Loading…' : 'No enquiries yet.'}
               </p>
             ) : (
-              <div className="overflow-x-auto -mx-2 scrollbar-hide">
-                <table className="w-full text-xs sm:text-sm">
+              <div className="-mx-1">
+                <table className="w-full table-fixed text-xs sm:text-sm">
                   <thead>
                     <tr className="text-left text-dark-muted border-b border-background-warm">
-                      <th className="font-medium py-2 px-2">Name</th>
-                      <th className="font-medium py-2 px-2">Trip</th>
-                      <th className="font-medium py-2 px-2">Date</th>
-                      <th className="font-medium py-2 px-2">Status</th>
+                      <th className="font-medium py-2 px-1 w-[24%]">Name</th>
+                      <th className="font-medium py-2 px-1 w-[30%]">Trip</th>
+                      <th className="font-medium py-2 px-1 w-[26%]">Date</th>
+                      <th className="font-medium py-2 px-1 w-[20%] text-right">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {recentEnquiries.map(e => (
                       <tr key={e.id} className="border-b border-background-warm last:border-0">
-                        <td className="py-2 sm:py-3 px-2 font-medium text-dark whitespace-nowrap">{e.full_name}</td>
-                        <td className="py-2 sm:py-3 px-2 text-dark-muted whitespace-nowrap">{e.trip_title || '—'}</td>
-                        <td className="py-2 sm:py-3 px-2 text-dark-muted whitespace-nowrap">{formatDate(e.created_at)}</td>
-                        <td className="py-2 sm:py-3 px-2">
-                          <span className={`text-[10px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full ${STATUS_STYLES[e.status]}`}>
+                        <td className="py-2 sm:py-3 px-1 font-medium text-dark truncate" title={e.full_name}>{truncateText(e.full_name, 10)}</td>
+                        <td className="py-2 sm:py-3 px-1 text-dark-muted truncate" title={e.trip_title || undefined}>{truncateText(e.trip_title || '—', 10)}</td>
+                        <td className="py-2 sm:py-3 px-1 text-dark-muted whitespace-nowrap">{formatDate(e.created_at)}</td>
+                        <td className="py-2 sm:py-3 px-1 text-right">
+                          <span className={`inline-block text-[10px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full whitespace-nowrap ${STATUS_STYLES[e.status]}`}>
                             {STATUS_LABELS[e.status]}
                           </span>
                         </td>
@@ -223,7 +225,6 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="flex items-center gap-2">
-                <Calendar size={16} className="sm:w-[18px] sm:h-[18px] text-primary" />
                 <h3 className="font-display text-base sm:text-lg font-bold text-dark">Upcoming Trips</h3>
               </div>
               <Link to="/admin/trips" className="text-primary text-xs sm:text-sm font-medium hover:underline">
@@ -236,14 +237,14 @@ export default function AdminDashboard() {
                 {loading ? 'Loading…' : 'No upcoming trips yet.'}
               </p>
             ) : (
-              <div className="space-y-2.5 sm:space-y-3">
+              <div className="space-y-2.5 sm:space-y-3 pb-1 sm:pb-2">
                 {nextTrips.map(trip => {
                   const seatsLeft = Math.max(0, (trip.total_seats || 0) - (trip.seats_booked || 0));
                   return (
                     <Link
                       key={trip.id}
                       to="/admin/trips"
-                      className="flex items-center gap-3 sm:gap-4 group"
+                      className="flex items-start gap-3 sm:gap-4 group"
                     >
                       <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl overflow-hidden bg-background-warm flex-shrink-0">
                         {trip.cover_image && (
@@ -252,14 +253,16 @@ export default function AdminDashboard() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-dark text-sm sm:text-base truncate group-hover:text-primary transition-colors">{trip.title}</p>
-                        <p className="text-dark-muted text-[11px] sm:text-xs mt-0.5">
-                          {formatDateRange(trip.start_date, trip.end_date)}
-                          {trip.duration ? ` • ${trip.duration}` : ''}
-                        </p>
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <p className="text-dark-muted text-[11px] sm:text-xs truncate">
+                            {formatDateRange(trip.start_date, trip.end_date)}
+                            {trip.duration ? ` • ${trip.duration}` : ''}
+                          </p>
+                          <span className="flex-shrink-0 text-[10px] sm:text-xs font-semibold text-primary bg-orange-50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
+                            {seatsLeft} Seats Left
+                          </span>
+                        </div>
                       </div>
-                      <span className="flex-shrink-0 text-[10px] sm:text-xs font-semibold text-primary bg-orange-50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
-                        {seatsLeft} Seats Left
-                      </span>
                     </Link>
                   );
                 })}
