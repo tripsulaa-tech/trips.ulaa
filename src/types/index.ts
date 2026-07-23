@@ -82,6 +82,8 @@ export interface Enquiry {
   trip_id?: string;
   trip_title?: string;
   status: 'new' | 'contacted' | 'closed';
+  source: 'website' | 'whatsapp' | 'phone' | 'instagram' | 'walk_in' | 'other';
+  is_paid: boolean;
   created_at: string;
   updated_at: string;
 }

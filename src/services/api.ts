@@ -165,6 +165,41 @@ export async function updateEnquiryStatus(id: string, status: Enquiry['status'])
   if (error) throw error;
 }
 
+// Manual enquiry entry — for walk-ins, phone calls, WhatsApp messages, etc.
+// that never came through the website's booking form.
+export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<Enquiry> {
+  const { data, error } = await supabase.from('enquiries').insert(enquiry).select().single();
+  if (error) throw error;
+  return data;
+}
+
+// Marks an enquiry paid/unpaid and keeps the linked trip's seats_booked in
+// sync (+1 seat when marking paid, -1 when undoing), clamped to [0, total_seats].
+export async function setEnquiryPaid(enquiry: Enquiry, isPaid: boolean): Promise<void> {
+  if (isPaid === enquiry.is_paid) return;
+
+  if (enquiry.trip_id) {
+    const { data: trip, error: tripError } = await supabase
+      .from('upcoming_trips')
+      .select('seats_booked, total_seats')
+      .eq('id', enquiry.trip_id)
+      .single();
+    if (tripError) throw tripError;
+
+    const delta = isPaid ? 1 : -1;
+    const newSeatsBooked = Math.max(0, Math.min(trip.seats_booked + delta, trip.total_seats));
+
+    const { error: seatsError } = await supabase
+      .from('upcoming_trips')
+      .update({ seats_booked: newSeatsBooked })
+      .eq('id', enquiry.trip_id);
+    if (seatsError) throw seatsError;
+  }
+
+  const { error } = await supabase.from('enquiries').update({ is_paid: isPaid }).eq('id', enquiry.id);
+  if (error) throw error;
+}
+
 // =============================================
 // Testimonials
 // =============================================
