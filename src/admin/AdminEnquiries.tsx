@@ -119,7 +119,7 @@ export default function AdminEnquiries() {
     if (tripParam) setSelectedTripKey(tripParam);
     if (enquiryParam) setExpandedId(enquiryParam);
     if (tripParam || enquiryParam) setSearchParams({}, { replace: true });
-  }, [enquiries]);
+  }, [enquiries, searchParams]);
 
   useEffect(() => {
     if (!expandedId) return;
