@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -48,6 +48,7 @@ export default function AdminEnquiries() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = () => {
     getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
@@ -160,78 +161,174 @@ export default function AdminEnquiries() {
             <p className="font-display text-xl text-dark-muted">No enquiries found.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-            <div className="overflow-x-auto scrollbar-hide">
-              <table className="w-full text-sm">
-                <thead className="bg-background-warm text-dark font-medium">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Name</th>
-                    <th className="px-4 py-3 text-left hidden sm:table-cell">Phone</th>
-                    <th className="px-4 py-3 text-left hidden md:table-cell">Trip</th>
-                    <th className="px-4 py-3 text-left hidden lg:table-cell">Source</th>
-                    <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
-                    <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
-                    <th className="px-2 py-3 text-center whitespace-nowrap">Paid</th>
-                    <th className="px-2 py-3 text-right whitespace-nowrap">Update</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-background-warm">
-                  {filtered.map(e => {
-                    const cfg = STATUS_CONFIG[e.status];
-                    const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
-                    return (
-                      <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                        <td className="px-4 py-3 max-w-[150px] sm:max-w-none">
-                          <p className="font-medium text-dark truncate">{e.full_name}</p>
-                          <p className="text-dark-muted text-xs truncate">{e.email}</p>
-                        </td>
-                        <td className="px-4 py-3 text-dark-muted hidden sm:table-cell truncate">{e.phone}</td>
-                        <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{e.trip_title || '—'}</td>
-                        <td className="px-4 py-3 text-dark-muted hidden lg:table-cell truncate">
-                          <span className="inline-flex items-center gap-1 text-xs">
-                            <srcCfg.icon size={12} className="shrink-0" />
-                            {srcCfg.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</td>
-                        <td className="px-2 py-3 text-center">
-                          <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
-                            <cfg.icon size={12} className="shrink-0" />
-                            {cfg.label}
-                          </span>
-                        </td>
-                        <td className="px-2 py-3 text-center">
+          <>
+            {/* Desktop / tablet table */}
+            <div className="hidden sm:block bg-white rounded-2xl shadow-card overflow-hidden">
+              <div className="overflow-x-auto scrollbar-hide">
+                <table className="w-full text-sm">
+                  <thead className="bg-background-warm text-dark font-medium">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Name</th>
+                      <th className="px-4 py-3 text-left hidden sm:table-cell">Phone</th>
+                      <th className="px-4 py-3 text-left hidden md:table-cell">Trip</th>
+                      <th className="px-4 py-3 text-left hidden lg:table-cell">Source</th>
+                      <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
+                      <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
+                      <th className="px-2 py-3 text-center whitespace-nowrap">Paid</th>
+                      <th className="px-2 py-3 text-right whitespace-nowrap">Update</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-background-warm">
+                    {filtered.map(e => {
+                      const cfg = STATUS_CONFIG[e.status];
+                      const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
+                      return (
+                        <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
+                          <td className="px-4 py-3 max-w-[150px] sm:max-w-none">
+                            <p className="font-medium text-dark truncate">{e.full_name}</p>
+                            <p className="text-dark-muted text-xs truncate">{e.email}</p>
+                          </td>
+                          <td className="px-4 py-3 text-dark-muted hidden sm:table-cell truncate">{e.phone}</td>
+                          <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{e.trip_title || '—'}</td>
+                          <td className="px-4 py-3 text-dark-muted hidden lg:table-cell truncate">
+                            <span className="inline-flex items-center gap-1 text-xs">
+                              <srcCfg.icon size={12} className="shrink-0" />
+                              {srcCfg.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</td>
+                          <td className="px-2 py-3 text-center">
+                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
+                              <cfg.icon size={12} className="shrink-0" />
+                              {cfg.label}
+                            </span>
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            <button
+                              onClick={() => handleTogglePaid(e)}
+                              disabled={payUpdating === e.id}
+                              title={e.is_paid ? 'Paid — click to undo' : 'Mark as paid (adds 1 seat to the trip)'}
+                              className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap transition-colors ${
+                                e.is_paid ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-background-warm text-dark-muted hover:bg-background'
+                              }`}
+                            >
+                              {e.is_paid ? <CheckCircle2 size={12} /> : <Circle size={12} />}
+                              {e.is_paid ? 'Paid' : 'Mark Paid'}
+                            </button>
+                          </td>
+                          <td className="px-2 py-3 text-right">
+                            <select
+                              value={e.status}
+                              disabled={updating === e.id}
+                              onChange={ev => handleStatusChange(e.id, ev.target.value as Enquiry['status'])}
+                              className="w-full text-xs px-1.5 py-1.5 rounded-lg border border-background-warm bg-background text-dark cursor-pointer outline-none focus:border-primary"
+                            >
+                              <option value="new">New</option>
+                              <option value="contacted">Contacted</option>
+                              <option value="closed">Closed</option>
+                            </select>
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile: tap a card to expand full details */}
+            <div className="sm:hidden space-y-3">
+              {filtered.map(e => {
+                const cfg = STATUS_CONFIG[e.status];
+                const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
+                const isOpen = expandedId === e.id;
+                return (
+                  <motion.div key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-card overflow-hidden">
+                    <button
+                      onClick={() => setExpandedId(isOpen ? null : e.id)}
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-dark truncate">{e.full_name}</p>
+                        <p className="text-dark-muted text-xs truncate">{e.trip_title || 'No trip linked'}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
+                          <cfg.icon size={12} className="shrink-0" />
+                          {cfg.label}
+                        </span>
+                        <ChevronDown size={16} className={`text-dark-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                    </button>
+
+                    {isOpen && (
+                      <div className="px-4 pb-4 pt-1 border-t border-background-warm space-y-3">
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm pt-2">
+                          <div>
+                            <p className="text-dark-muted text-xs">Phone</p>
+                            <p className="text-dark truncate">{e.phone}</p>
+                          </div>
+                          <div>
+                            <p className="text-dark-muted text-xs">Email</p>
+                            <p className="text-dark truncate">{e.email}</p>
+                          </div>
+                          <div>
+                            <p className="text-dark-muted text-xs">City</p>
+                            <p className="text-dark truncate">{e.city || '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-dark-muted text-xs">Age</p>
+                            <p className="text-dark truncate">{e.age ?? '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-dark-muted text-xs">Source</p>
+                            <p className="text-dark truncate inline-flex items-center gap-1">
+                              <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-dark-muted text-xs">Date</p>
+                            <p className="text-dark truncate">{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                          </div>
+                        </div>
+
+                        {e.message && (
+                          <div>
+                            <p className="text-dark-muted text-xs">Notes</p>
+                            <p className="text-dark text-sm">{e.message}</p>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 pt-1">
                           <button
                             onClick={() => handleTogglePaid(e)}
                             disabled={payUpdating === e.id}
-                            title={e.is_paid ? 'Paid — click to undo' : 'Mark as paid (adds 1 seat to the trip)'}
-                            className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap transition-colors ${
-                              e.is_paid ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-background-warm text-dark-muted hover:bg-background'
+                            title={e.is_paid ? 'Paid — tap to undo' : 'Mark as paid (adds 1 seat to the trip)'}
+                            className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl whitespace-nowrap transition-colors ${
+                              e.is_paid ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'
                             }`}
                           >
-                            {e.is_paid ? <CheckCircle2 size={12} /> : <Circle size={12} />}
+                            {e.is_paid ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                             {e.is_paid ? 'Paid' : 'Mark Paid'}
                           </button>
-                        </td>
-                        <td className="px-2 py-3 text-right">
                           <select
                             value={e.status}
                             disabled={updating === e.id}
                             onChange={ev => handleStatusChange(e.id, ev.target.value as Enquiry['status'])}
-                            className="w-full text-xs px-1.5 py-1.5 rounded-lg border border-background-warm bg-background text-dark cursor-pointer outline-none focus:border-primary"
+                            className="flex-1 text-xs px-2 py-2 rounded-xl border border-background-warm bg-background text-dark cursor-pointer outline-none focus:border-primary"
                           >
                             <option value="new">New</option>
                             <option value="contacted">Contacted</option>
                             <option value="closed">Closed</option>
                           </select>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
+          </>
         )}
       </div>
 
