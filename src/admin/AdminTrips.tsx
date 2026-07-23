@@ -15,8 +15,24 @@ import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, delet
 
 import type { UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy } from '../types';
 import { formatDate, slugify } from '../utils';
+
+// Computes a "X Days / Y Nights" string from two yyyy-mm-dd date strings.
+// Falls back to '' if either date is missing/invalid, and never returns a negative duration.
+const computeDuration = (startDate: string, endDate: string): string => {
+  if (!startDate || !endDate) return '';
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return '';
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const nights = Math.round((end.getTime() - start.getTime()) / msPerDay);
+  if (nights < 0) return '';
+  const days = nights + 1;
+  return `${days} Day${days !== 1 ? 's' : ''} / ${nights} Night${nights !== 1 ? 's' : ''}`;
+};
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
+import { parseTerms } from '../utils/parseTerms';
+import TermsBlocks from '../components/ui/TermsBlocks';
 
 interface TripForm {
   title: string;
@@ -80,7 +96,7 @@ export default function AdminTrips() {
     setForm({
       title: trip.title, destination: trip.destination,
       start_date: trip.start_date, end_date: trip.end_date,
-      duration: trip.duration, description: trip.description,
+      duration: computeDuration(trip.start_date, trip.end_date) || trip.duration, description: trip.description,
       highlights: trip.highlights || [], itinerary: trip.itinerary || [],
       included: trip.included || [], not_included: trip.not_included || [],
       things_to_carry: trip.things_to_carry || [], meeting_point: trip.meeting_point || '',
@@ -226,15 +242,37 @@ export default function AdminTrips() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Duration *</label>
-            <input value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} className={inputClass} placeholder="e.g. 7 Days / 6 Nights" />
+            <input
+              value={form.duration}
+              readOnly
+              className={`${inputClass} bg-background-warm/60 cursor-not-allowed`}
+              placeholder="Auto-filled from Start/End Date"
+            />
+            <p className="text-xs text-dark-muted mt-1">Calculated automatically from the Start and End Date fields.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Start Date *</label>
-            <input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} className={inputClass} />
+            <input
+              type="date"
+              value={form.start_date}
+              onChange={e => setForm(f => {
+                const start_date = e.target.value;
+                return { ...f, start_date, duration: computeDuration(start_date, f.end_date) || f.duration };
+              })}
+              className={inputClass}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">End Date *</label>
-            <input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} className={inputClass} />
+            <input
+              type="date"
+              value={form.end_date}
+              onChange={e => setForm(f => {
+                const end_date = e.target.value;
+                return { ...f, end_date, duration: computeDuration(f.start_date, end_date) || f.duration };
+              })}
+              className={inputClass}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Total Seats</label>
@@ -569,9 +607,16 @@ export default function AdminTrips() {
                 <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
                   <span className="transition-transform group-open:rotate-90">▶</span> Terms & Conditions
                 </summary>
-                <p className="text-xs text-dark-muted whitespace-pre-line mt-2 bg-background rounded-xl p-3 max-h-64 overflow-y-auto">
-                  {viewingTrip.terms_and_conditions}
-                </p>
+                <div className="mt-2 bg-background rounded-xl p-3 max-h-64 overflow-y-auto space-y-4">
+                  {parseTerms(viewingTrip.terms_and_conditions).map(section => (
+                    <div key={section.number}>
+                      <p className="text-xs font-bold text-dark mb-1">
+                        {section.number}. {section.title}
+                      </p>
+                      <TermsBlocks blocks={section.blocks} />
+                    </div>
+                  ))}
+                </div>
               </details>
             )}
 

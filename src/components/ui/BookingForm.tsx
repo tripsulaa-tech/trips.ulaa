@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, FileText } from 'lucide-react';
 import type { BookingFormData } from '../../types';
 import { submitEnquiry } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
+import { parseTerms } from '../../utils/parseTerms';
 import Button from './Button';
 import Modal from './Modal';
+import TermsBlocks from './TermsBlocks';
 
 interface BookingFormProps {
   tripId?: string;
@@ -21,6 +23,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
   const [termsOpen, setTermsOpen] = useState(false);
 
   const termsText = (terms || '').trim() || DEFAULT_TERMS_AND_CONDITIONS;
+  const termsSections = useMemo(() => parseTerms(termsText), [termsText]);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const {
     register,
@@ -216,10 +220,58 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
       </p>
     </form>
 
-    <Modal isOpen={termsOpen} onClose={() => setTermsOpen(false)} title="Terms & Conditions" size="lg">
-      <p className="text-sm text-dark whitespace-pre-line max-h-[60vh] overflow-y-auto pr-1">
-        {termsText}
-      </p>
+    <Modal isOpen={termsOpen} onClose={() => setTermsOpen(false)} title="Terms & Conditions" size="xl">
+      <div className="flex items-start gap-2 -mt-1 mb-4 text-dark-muted">
+        <FileText size={16} className="shrink-0 mt-0.5 text-primary" />
+        <p className="text-xs leading-relaxed">
+          Please read the full policy below before confirming your booking. Tap a number to jump to that section.
+        </p>
+      </div>
+
+      {/* Quick-jump section chips */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-3 mb-3 border-b border-background-warm">
+        {termsSections.map(section => (
+          <button
+            key={section.number}
+            type="button"
+            onClick={() => sectionRefs.current[section.number]?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            title={section.title}
+            className="shrink-0 text-xs font-semibold w-7 h-7 rounded-full bg-background-warm text-dark-muted hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
+          >
+            {section.number}
+          </button>
+        ))}
+      </div>
+
+      <div className="relative">
+        <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-5 scroll-smooth">
+          {termsSections.length > 0 ? termsSections.map(section => (
+            <div
+              key={section.number}
+              ref={el => { sectionRefs.current[section.number] = el; }}
+              className="scroll-mt-1"
+            >
+              <div className="flex items-start gap-3">
+                <span className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-0.5">
+                  {section.number}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-bold text-dark mb-1.5">{section.title}</h4>
+                  <TermsBlocks blocks={section.blocks} />
+                </div>
+              </div>
+              {section.number !== termsSections[termsSections.length - 1].number && (
+                <div className="h-px bg-background-warm mt-5 ml-10" />
+              )}
+            </div>
+          )) : (
+            <p className="text-sm text-dark whitespace-pre-line">{termsText}</p>
+          )}
+        </div>
+        {/* Fade hint so it's clear the panel scrolls */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-2 h-8 bg-gradient-to-t from-white to-transparent" />
+      </div>
+
       <div className="flex justify-end mt-4 pt-4 border-t border-background-warm">
         <Button variant="primary" size="md" onClick={() => setTermsOpen(false)}>Close</Button>
       </div>
