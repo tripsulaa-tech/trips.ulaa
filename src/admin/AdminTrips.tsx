@@ -30,6 +30,7 @@ interface TripForm {
   meeting_point_map_url: string;
   faqs: FAQ[];
   total_seats: number;
+  seats_booked: number;
   price: number | '';
   early_bird_price: number | '';
   early_bird_deadline: string;
@@ -41,7 +42,7 @@ interface TripForm {
 const emptyForm: TripForm = {
   title: '', destination: '', start_date: '', end_date: '', duration: '',
   description: '', highlights: [], itinerary: [], included: [], not_included: [],
-  things_to_carry: [], meeting_point: '', meeting_point_map_url: '', faqs: [], total_seats: 15, price: '',
+  things_to_carry: [], meeting_point: '', meeting_point_map_url: '', faqs: [], total_seats: 15, seats_booked: 0, price: '',
   early_bird_price: '', early_bird_deadline: '',
   cover_image: '', gallery_images: [], is_published: false,
 };
@@ -76,7 +77,7 @@ export default function AdminTrips() {
       included: trip.included || [], not_included: trip.not_included || [],
       things_to_carry: trip.things_to_carry || [], meeting_point: trip.meeting_point || '',
       meeting_point_map_url: trip.meeting_point_map_url || '',
-      faqs: trip.faqs || [], total_seats: trip.total_seats,
+      faqs: trip.faqs || [], total_seats: trip.total_seats, seats_booked: trip.seats_booked || 0,
       price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
       early_bird_deadline: trip.early_bird_deadline || '',
       cover_image: trip.cover_image || '',
@@ -94,7 +95,7 @@ export default function AdminTrips() {
         price: form.price === '' ? undefined : form.price,
         early_bird_price: form.early_bird_price === '' ? undefined : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || undefined,
-        seats_booked: editingTrip?.seats_booked || 0,
+        seats_booked: Math.max(0, Math.min(form.seats_booked, form.total_seats)),
       };
       if (editingTrip) {
         await updateUpcomingTrip(editingTrip.id, data);
@@ -160,7 +161,12 @@ export default function AdminTrips() {
                       <td className="px-4 py-3 font-medium text-dark truncate max-w-[150px] sm:max-w-none">{trip.title}</td>
                       <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{trip.destination}</td>
                       <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(trip.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">{trip.seats_booked}/{trip.total_seats}</td>
+                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">
+                        {trip.seats_booked}/{trip.total_seats}
+                        <span className="text-xs text-dark-muted/70 ml-1">
+                          ({Math.max(0, trip.total_seats - trip.seats_booked)} left)
+                        </span>
+                      </td>
                       <td className="px-2 py-3 text-center">
                         <span className={`inline-block text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${trip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                           {trip.is_published ? 'Published' : 'Draft'}
@@ -214,7 +220,21 @@ export default function AdminTrips() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Total Seats</label>
-            <input type="number" value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
+            <input type="number" min={0} value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Seats Filled</label>
+            <input
+              type="number"
+              min={0}
+              max={form.total_seats}
+              value={form.seats_booked}
+              onChange={e => setForm(f => ({ ...f, seats_booked: Math.max(0, Math.min(+e.target.value, f.total_seats)) }))}
+              className={inputClass}
+            />
+            <p className="text-xs text-dark-muted mt-1">
+              {Math.max(0, form.total_seats - form.seats_booked)} of {form.total_seats} seats left
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹)</label>
