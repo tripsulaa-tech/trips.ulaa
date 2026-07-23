@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS upcoming_trips (
   early_bird_deadline DATE,
   cover_image TEXT,
   gallery_images TEXT[] DEFAULT '{}',
+  terms_and_conditions TEXT,
   is_published BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -106,6 +107,7 @@ CREATE TABLE IF NOT EXISTS enquiries (
   package_type TEXT NOT NULL DEFAULT 'normal' CHECK (package_type IN ('early_bird', 'normal')),
   total_amount DECIMAL(10,2),
   amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0,
+  terms_accepted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -455,6 +455,7 @@ export default function TripDetailPage() {
         <BookingForm
           tripId={trip.id}
           tripTitle={trip.title}
+          terms={trip.terms_and_conditions}
           onSuccess={() => setTimeout(() => setBookingOpen(false), 3000)}
         />
       </Modal>

@@ -26,6 +26,7 @@ export interface UpcomingTrip {
   early_bird_deadline?: string;
   cover_image?: string;
   gallery_images: string[];
+  terms_and_conditions?: string;
   is_published: boolean;
   created_at: string;
   updated_at: string;
@@ -87,6 +88,7 @@ export interface Enquiry {
   package_type: 'early_bird' | 'normal';
   total_amount?: number;
   amount_paid: number;
+  terms_accepted?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -134,6 +136,7 @@ export interface BookingFormData {
   message?: string;
   trip_id?: string;
   trip_title?: string;
+  terms_accepted: boolean;
 }
 
 // =============================================

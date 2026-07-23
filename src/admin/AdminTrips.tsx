@@ -13,6 +13,7 @@ import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, delet
 
 import type { UpcomingTrip, ItineraryDay, FAQ } from '../types';
 import { formatDate, slugify } from '../utils';
+import { DEFAULT_TERMS_AND_CONDITIONS } from '../constants/terms';
 
 interface TripForm {
   title: string;
@@ -36,6 +37,7 @@ interface TripForm {
   early_bird_deadline: string;
   cover_image: string;
   gallery_images: string[];
+  terms_and_conditions: string;
   is_published: boolean;
 }
 
@@ -44,7 +46,7 @@ const emptyForm: TripForm = {
   description: '', highlights: [], itinerary: [], included: [], not_included: [],
   things_to_carry: [], meeting_point: '', meeting_point_map_url: '', faqs: [], total_seats: 15, seats_booked: 0, price: '',
   early_bird_price: '', early_bird_deadline: '',
-  cover_image: '', gallery_images: [], is_published: false,
+  cover_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS, is_published: false,
 };
 
 export default function AdminTrips() {
@@ -83,6 +85,7 @@ export default function AdminTrips() {
       early_bird_deadline: trip.early_bird_deadline || '',
       cover_image: trip.cover_image || '',
       gallery_images: trip.gallery_images || [], is_published: trip.is_published,
+      terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
     });
     setModalOpen(true);
   };
@@ -398,6 +401,19 @@ export default function AdminTrips() {
             />
           </div>
 
+          <div className="md:col-span-2 border-t border-background-warm pt-4">
+            <label className="block text-sm font-medium text-dark mb-1">Terms & Conditions</label>
+            <p className="text-xs text-dark-muted mb-1.5">
+              Shown to participants on the booking form for this trip — they must tick a checkbox agreeing to these before they can submit an enquiry. Pre-filled with the standard terms; edit freely for this trip.
+            </p>
+            <textarea
+              value={form.terms_and_conditions}
+              onChange={e => setForm(f => ({ ...f, terms_and_conditions: e.target.value }))}
+              rows={10}
+              className={`${inputClass} resize-y font-mono text-xs leading-relaxed`}
+            />
+          </div>
+
           <div className="md:col-span-2 flex items-center gap-3 border-t border-background-warm pt-4">
             <input type="checkbox" id="is_published" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
             <label htmlFor="is_published" className="text-sm font-medium text-dark">Publish immediately</label>
@@ -533,6 +549,17 @@ export default function AdminTrips() {
                   ))}
                 </div>
               </div>
+            )}
+
+            {(viewingTrip.terms_and_conditions || '').trim() && (
+              <details className="group">
+                <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
+                  <span className="transition-transform group-open:rotate-90">▶</span> Terms & Conditions
+                </summary>
+                <p className="text-xs text-dark-muted whitespace-pre-line mt-2 bg-background rounded-xl p-3 max-h-64 overflow-y-auto">
+                  {viewingTrip.terms_and_conditions}
+                </p>
+              </details>
             )}
 
             <div className="flex gap-3 pt-2 border-t border-background-warm">

@@ -4,17 +4,23 @@ import { motion } from 'framer-motion';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import type { BookingFormData } from '../../types';
 import { submitEnquiry } from '../../services/api';
+import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import Button from './Button';
+import Modal from './Modal';
 
 interface BookingFormProps {
   tripId?: string;
   tripTitle?: string;
+  terms?: string;
   onSuccess?: () => void;
 }
 
-export default function BookingForm({ tripId, tripTitle, onSuccess }: BookingFormProps) {
+export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: BookingFormProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [termsOpen, setTermsOpen] = useState(false);
+
+  const termsText = (terms || '').trim() || DEFAULT_TERMS_AND_CONDITIONS;
 
   const {
     register,
@@ -63,6 +69,7 @@ export default function BookingForm({ tripId, tripTitle, onSuccess }: BookingFor
   const errorClass = 'text-red-500 text-xs mt-1';
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       {tripTitle && (
         <div className="bg-background-warm rounded-xl px-4 py-3 mb-2">
@@ -163,6 +170,28 @@ export default function BookingForm({ tripId, tripTitle, onSuccess }: BookingFor
         />
       </div>
 
+      {/* Terms & Conditions */}
+      <div className="bg-background-warm rounded-xl p-3">
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            {...register('terms_accepted', { required: 'You must agree to the Terms & Conditions to continue' })}
+            className="w-4 h-4 mt-0.5 accent-primary shrink-0"
+          />
+          <span className="text-sm text-dark">
+            I have read and agree to the{' '}
+            <button
+              type="button"
+              onClick={() => setTermsOpen(true)}
+              className="text-primary font-medium hover:underline"
+            >
+              Terms & Conditions
+            </button>
+          </span>
+        </label>
+        {errors.terms_accepted && <p className={errorClass}>{errors.terms_accepted.message}</p>}
+      </div>
+
       {/* Error */}
       {status === 'error' && (
         <div className="flex items-start gap-2 text-red-600 bg-red-50 rounded-xl p-3">
@@ -186,5 +215,15 @@ export default function BookingForm({ tripId, tripTitle, onSuccess }: BookingFor
         No payment required. We'll contact you to confirm your spot.
       </p>
     </form>
+
+    <Modal isOpen={termsOpen} onClose={() => setTermsOpen(false)} title="Terms & Conditions" size="lg">
+      <p className="text-sm text-dark whitespace-pre-line max-h-[60vh] overflow-y-auto pr-1">
+        {termsText}
+      </p>
+      <div className="flex justify-end mt-4 pt-4 border-t border-background-warm">
+        <Button variant="primary" size="md" onClick={() => setTermsOpen(false)}>Close</Button>
+      </div>
+    </Modal>
+    </>
   );
 }
