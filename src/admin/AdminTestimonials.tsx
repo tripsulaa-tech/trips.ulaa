@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, Eye, EyeOff, Star, ChevronUp, ChevronDown } from '
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import Select from '../components/ui/Select';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import {
   getAllTestimonialsAdmin, createTestimonial, updateTestimonial, deleteTestimonial,
@@ -175,9 +176,11 @@ export default function AdminTestimonials() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Rating</label>
-            <select value={form.rating} onChange={e => setForm(f => ({ ...f, rating: +e.target.value }))} className={inputClass}>
-              {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n} star{n > 1 ? 's' : ''}</option>)}
-            </select>
+            <Select
+              value={form.rating}
+              onChange={val => setForm(f => ({ ...f, rating: val }))}
+              options={[5, 4, 3, 2, 1].map(n => ({ value: n, label: `${n} star${n > 1 ? 's' : ''}` }))}
+            />
           </div>
           <div>
             <ImageUploadField

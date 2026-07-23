@@ -5,6 +5,7 @@ import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, Mes
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import Select from '../components/ui/Select';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
 import { formatDate, formatPrice } from '../utils';
@@ -13,6 +14,25 @@ const PACKAGE_CONFIG = {
   early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
   normal: { label: 'Normal', color: 'bg-slate-100 text-slate-700' },
 } as const;
+
+const STATUS_OPTIONS = [
+  { value: 'new', label: 'New' },
+  { value: 'contacted', label: 'Contacted' },
+  { value: 'closed', label: 'Closed' },
+];
+
+const SOURCE_OPTIONS = [
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'phone', label: 'Phone Call' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'walk_in', label: 'Walk-in' },
+  { value: 'other', label: 'Other' },
+];
+
+const PACKAGE_OPTIONS = [
+  { value: 'normal', label: 'Normal Price' },
+  { value: 'early_bird', label: 'Early Bird' },
+];
 
 function paymentStatus(e: Enquiry): { label: string; color: string } {
   if (!e.total_amount) return { label: 'Not set', color: 'bg-slate-100 text-dark-muted' };
@@ -724,16 +744,13 @@ export default function AdminEnquiries() {
                             )}
                           </td>
                           <td className="px-2 py-3 text-right">
-                            <select
+                            <Select
                               value={e.status}
                               disabled={updating === e.id}
-                              onChange={ev => handleStatusChange(e.id, ev.target.value as Enquiry['status'])}
-                              className="w-full text-xs px-1.5 py-1.5 rounded-lg border border-background-warm bg-background text-dark cursor-pointer outline-none focus:border-primary"
-                            >
-                              <option value="new">New</option>
-                              <option value="contacted">Contacted</option>
-                              <option value="closed">Closed</option>
-                            </select>
+                              onChange={val => handleStatusChange(e.id, val as Enquiry['status'])}
+                              options={STATUS_OPTIONS}
+                              size="sm"
+                            />
                             <button
                               onClick={() => handleCancelToggle(e)}
                               disabled={updating === e.id}
@@ -877,16 +894,15 @@ export default function AdminEnquiries() {
                             {isBooked(e) ? <CheckCircle2 size={14} /> : e.cancelled_at ? <XCircle size={14} /> : <Circle size={14} />}
                             {isBooked(e) ? 'Booked' : e.cancelled_at ? 'Cancelled' : 'Not booked'}
                           </span>
-                          <select
-                            value={e.status}
-                            disabled={updating === e.id}
-                            onChange={ev => handleStatusChange(e.id, ev.target.value as Enquiry['status'])}
-                            className="flex-1 text-xs px-2 py-2 rounded-xl border border-background-warm bg-background text-dark cursor-pointer outline-none focus:border-primary"
-                          >
-                            <option value="new">New</option>
-                            <option value="contacted">Contacted</option>
-                            <option value="closed">Closed</option>
-                          </select>
+                          <div className="flex-1">
+                            <Select
+                              value={e.status}
+                              disabled={updating === e.id}
+                              onChange={val => handleStatusChange(e.id, val as Enquiry['status'])}
+                              options={STATUS_OPTIONS}
+                              size="sm"
+                            />
+                          </div>
                         </div>
 
                         <button
@@ -935,45 +951,34 @@ export default function AdminEnquiries() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
-            <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value as Enquiry['source'] }))} className={inputClass}>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="phone">Phone Call</option>
-              <option value="instagram">Instagram</option>
-              <option value="walk_in">Walk-in</option>
-              <option value="other">Other</option>
-            </select>
+            <Select
+              value={form.source}
+              onChange={val => setForm(f => ({ ...f, source: val as Enquiry['source'] }))}
+              options={SOURCE_OPTIONS}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Trip</label>
-            <select
+            <Select
               value={form.trip_id}
-              onChange={e => {
-                const tripId = e.target.value;
-                setForm(f => ({ ...f, trip_id: tripId }));
-                applySuggestedAmount(tripId, form.package_type);
+              onChange={val => {
+                setForm(f => ({ ...f, trip_id: val }));
+                applySuggestedAmount(val, form.package_type);
               }}
-              className={inputClass}
-            >
-              <option value="">— No specific trip —</option>
-              {trips.map(t => (
-                <option key={t.id} value={t.id}>{t.title}</option>
-              ))}
-            </select>
+              options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Package</label>
-            <select
+            <Select
               value={form.package_type}
-              onChange={e => {
-                const packageType = e.target.value as Enquiry['package_type'];
+              onChange={val => {
+                const packageType = val as Enquiry['package_type'];
                 setForm(f => ({ ...f, package_type: packageType }));
                 applySuggestedAmount(form.trip_id, packageType);
               }}
-              className={inputClass}
-            >
-              <option value="normal">Normal Price</option>
-              <option value="early_bird">Early Bird</option>
-            </select>
+              options={PACKAGE_OPTIONS}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
@@ -1020,18 +1025,15 @@ export default function AdminEnquiries() {
 
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Package</label>
-              <select
+              <Select
                 value={paymentForm.package_type}
-                onChange={e => {
-                  const packageType = e.target.value as Enquiry['package_type'];
+                onChange={val => {
+                  const packageType = val as Enquiry['package_type'];
                   const suggested = getTripPrice(paymentTarget.trip_id, packageType);
                   setPaymentForm(f => ({ ...f, package_type: packageType, total_amount: suggested ?? f.total_amount }));
                 }}
-                className={inputClass}
-              >
-                <option value="normal">Normal Price</option>
-                <option value="early_bird">Early Bird</option>
-              </select>
+                options={PACKAGE_OPTIONS}
+              />
               {paymentTarget.trip_id && (
                 <div className="text-xs mt-1">
                   {(() => {

@@ -11,6 +11,7 @@ import ItineraryEditor from '../components/ui/ItineraryEditor';
 import FAQEditor from '../components/ui/FAQEditor';
 import CancellationPolicyEditor from '../components/ui/CancellationPolicyEditor';
 import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDisplay';
+import DatePicker from '../components/ui/DatePicker';
 import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip } from '../services/api';
 
 import type { UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy } from '../types';
@@ -252,26 +253,17 @@ export default function AdminTrips() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Start Date *</label>
-            <input
-              type="date"
+            <DatePicker
               value={form.start_date}
-              onChange={e => setForm(f => {
-                const start_date = e.target.value;
-                return { ...f, start_date, duration: computeDuration(start_date, f.end_date) || f.duration };
-              })}
-              className={inputClass}
+              onChange={start_date => setForm(f => ({ ...f, start_date, duration: computeDuration(start_date, f.end_date) || f.duration }))}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">End Date *</label>
-            <input
-              type="date"
+            <DatePicker
               value={form.end_date}
-              onChange={e => setForm(f => {
-                const end_date = e.target.value;
-                return { ...f, end_date, duration: computeDuration(f.start_date, end_date) || f.duration };
-              })}
-              className={inputClass}
+              onChange={end_date => setForm(f => ({ ...f, end_date, duration: computeDuration(f.start_date, end_date) || f.duration }))}
+              min={form.start_date || undefined}
             />
           </div>
           <div>
@@ -314,11 +306,9 @@ export default function AdminTrips() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Early-Bird Deadline</label>
-            <input
-              type="date"
+            <DatePicker
               value={form.early_bird_deadline}
-              onChange={e => setForm(f => ({ ...f, early_bird_deadline: e.target.value }))}
-              className={inputClass}
+              onChange={early_bird_deadline => setForm(f => ({ ...f, early_bird_deadline }))}
             />
             <p className="text-xs text-dark-muted mt-1">The early-bird price shows automatically until this date, then the page switches to the regular price on its own.</p>
           </div>
@@ -608,7 +598,7 @@ export default function AdminTrips() {
                   <span className="transition-transform group-open:rotate-90">▶</span> Terms & Conditions
                 </summary>
                 <div className="mt-2 bg-background rounded-xl p-3 max-h-64 overflow-y-auto space-y-4">
-                  {parseTerms(viewingTrip.terms_and_conditions).map(section => (
+                  {parseTerms(viewingTrip.terms_and_conditions || '').map(section => (
                     <div key={section.number}>
                       <p className="text-xs font-bold text-dark mb-1">
                         {section.number}. {section.title}

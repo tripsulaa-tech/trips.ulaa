@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import MultiImageUploadField from '../components/ui/MultiImageUploadField';
+import DatePicker from '../components/ui/DatePicker';
 import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTrip } from '../services/api';
 
 import type { CompletedTrip } from '../types';
@@ -212,7 +213,7 @@ export default function AdminAlbums() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Trip Date *</label>
-            <input type="date" value={form.trip_date} onChange={e => setForm(f => ({ ...f, trip_date: e.target.value }))} className={inputClass} />
+            <DatePicker value={form.trip_date} onChange={trip_date => setForm(f => ({ ...f, trip_date }))} />
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Participants</label>

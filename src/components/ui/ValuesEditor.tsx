@@ -1,5 +1,6 @@
 import { Plus, X } from 'lucide-react';
 import type { AboutValue } from '../../types';
+import Select from './Select';
 
 interface ValuesEditorProps {
   value: AboutValue[];
@@ -42,13 +43,14 @@ export default function ValuesEditor({ value, onChange, iconOptions }: ValuesEdi
           {value.map((item, index) => (
             <div key={index} className="bg-background-warm rounded-xl p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <select
-                  value={item.icon}
-                  onChange={e => updateItem(index, { icon: e.target.value })}
-                  className={`${inputClass} w-36`}
-                >
-                  {iconOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
+                <div className="w-36">
+                  <Select
+                    value={item.icon}
+                    onChange={val => updateItem(index, { icon: val })}
+                    options={iconOptions.map(opt => ({ value: opt, label: opt }))}
+                    size="sm"
+                  />
+                </div>
                 <button type="button" onClick={() => removeItem(index)} className="p-1 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove">
                   <X size={14} />
                 </button>
