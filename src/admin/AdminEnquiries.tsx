@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Instagram, MapPin, Globe, HelpCircle } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -18,7 +18,7 @@ const SOURCE_CONFIG = {
   website: { label: 'Website', icon: Globe },
   whatsapp: { label: 'WhatsApp', icon: MessageCircle },
   phone: { label: 'Phone Call', icon: Phone },
-  instagram: { label: 'Instagram', icon: Instagram },
+  instagram: { label: 'Instagram', icon: Camera },
   walk_in: { label: 'Walk-in', icon: MapPin },
   other: { label: 'Other', icon: HelpCircle },
 } as const;
