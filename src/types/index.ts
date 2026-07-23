@@ -89,6 +89,8 @@ export interface Enquiry {
   total_amount?: number;
   amount_paid: number;
   terms_accepted?: boolean;
+  cancelled_at?: string | null;
+  refund_amount: number;
   created_at: string;
   updated_at: string;
 }

@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
 import { formatDate, formatPrice } from '../utils';
 
@@ -31,6 +31,26 @@ function paymentFilterKey(e: Enquiry): 'paid' | 'partial' | 'unpaid' | 'not_set'
   if (e.amount_paid <= 0) return 'unpaid';
   if (e.amount_paid >= e.total_amount) return 'paid';
   return 'partial';
+}
+
+// A seat is only actually held when money's been paid AND the booking
+// hasn't been cancelled since. amount_paid itself is left untouched by
+// cancellation — it's the historical record of what they paid — so
+// "booked" can't just check amount_paid > 0 anymore.
+function isBooked(e: Enquiry): boolean {
+  return !e.cancelled_at && e.amount_paid > 0;
+}
+
+// Only relevant for cancelled bookings that had money on them. Tracks
+// refund_amount against amount_paid independently, so partial refunds
+// (processed in installments) show correctly as "pending" until they
+// fully catch up.
+function refundStatus(e: Enquiry): { label: string; color: string } | null {
+  if (!e.cancelled_at || e.amount_paid <= 0) return null;
+  const refunded = e.refund_amount || 0;
+  if (refunded >= e.amount_paid) return { label: 'Refunded', color: 'bg-green-100 text-green-700' };
+  if (refunded > 0) return { label: `Refund pending — ${formatPrice(e.amount_paid - refunded)} left`, color: 'bg-amber-100 text-amber-700' };
+  return { label: `Refund pending — ${formatPrice(e.amount_paid)}`, color: 'bg-red-100 text-red-700' };
 }
 
 const STATUS_CONFIG = {
@@ -79,6 +99,7 @@ type PaymentForm = {
   package_type: Enquiry['package_type'];
   total_amount: number | '';
   amount_paid: number | '';
+  refund_amount: number | '';
 };
 
 export default function AdminEnquiries() {
@@ -100,7 +121,7 @@ export default function AdminEnquiries() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
-  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '' });
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '' });
   const [savingPayment, setSavingPayment] = useState(false);
 
   const load = () => {
@@ -125,11 +146,24 @@ export default function AdminEnquiries() {
     if (!expandedId) return;
     const el = cardRefs.current[expandedId];
     if (!el) return;
-    // Wait a beat for the expand animation/layout to settle, then bring the
-    // card's header to the top of the viewport so the revealed details
-    // (which push the card taller) are visible without hunting/scrolling.
+    // Wait a beat for the expand animation/layout to settle, then decide
+    // whether the page needs to move at all.
     const t = setTimeout(() => {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const rect = el.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const fitsAlready = rect.top >= 0 && rect.bottom <= viewportHeight;
+
+      // Plenty of room below (or above) already — expanding in place is all
+      // that's needed, so don't move the page and cause an unnecessary jump.
+      if (fitsAlready) return;
+
+      // Not enough room below: bring the card fully into view. If the whole
+      // expanded card is taller than the viewport itself, prioritize showing
+      // its header/top details ('start'); otherwise align its bottom edge to
+      // the viewport bottom ('end'), which is what makes the card appear to
+      // slide up just enough to reveal the newly expanded content.
+      const cardTallerThanViewport = rect.height > viewportHeight;
+      el.scrollIntoView({ behavior: 'smooth', block: cardTallerThanViewport ? 'start' : 'end' });
     }, 80);
     return () => clearTimeout(t);
   }, [expandedId]);
@@ -175,7 +209,33 @@ export default function AdminEnquiries() {
       package_type: packageType,
       total_amount: suggested ?? '',
       amount_paid: enquiry.amount_paid ?? 0,
+      refund_amount: enquiry.refund_amount ?? 0,
     });
+  };
+
+  // Cancels (or reactivates) an enquiry. Cancelling frees the trip seat
+  // immediately but never touches amount_paid — that stays as the record of
+  // what was actually collected, separate from whatever gets refunded.
+  const handleCancelToggle = async (e: Enquiry) => {
+    if (!e.cancelled_at && !confirm(`Mark ${e.full_name}'s booking as cancelled? This frees up their seat right away.`)) {
+      return;
+    }
+    setUpdating(e.id);
+    try {
+      if (e.cancelled_at) {
+        await uncancelEnquiry(e);
+      } else {
+        await cancelEnquiry(e);
+      }
+      const freshTrips = await getAllUpcomingTripsAdmin();
+      setTrips(freshTrips);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update cancellation status.');
+    } finally {
+      setUpdating(null);
+    }
   };
 
   const handleSavePayment = async () => {
@@ -186,6 +246,11 @@ export default function AdminEnquiries() {
       alert("Amount paid can't be more than the total amount.");
       return;
     }
+    const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
+    if (refundAmount > amountPaid) {
+      alert("Refund amount can't be more than what was actually paid.");
+      return;
+    }
     try {
       setSavingPayment(true);
       await recordPayment(paymentTarget, {
@@ -193,6 +258,9 @@ export default function AdminEnquiries() {
         total_amount: totalAmount,
         package_type: paymentForm.package_type,
       });
+      if (paymentTarget.cancelled_at) {
+        await recordRefund(paymentTarget.id, refundAmount);
+      }
       setPaymentTarget(null);
       const freshTrips = await getAllUpcomingTripsAdmin();
       setTrips(freshTrips);
@@ -279,7 +347,7 @@ export default function AdminEnquiries() {
   const filtered = scopedEnquiries
     .filter(e => filter === 'all' || e.status === filter)
     .filter(e => payFilter === 'all' || paymentFilterKey(e) === payFilter)
-    .filter(e => bookedFilter === 'all' || (bookedFilter === 'booked' ? e.amount_paid > 0 : e.amount_paid <= 0));
+    .filter(e => bookedFilter === 'all' || (bookedFilter === 'booked' ? isBooked(e) : !isBooked(e)));
   const counts = {
     all: scopedEnquiries.length,
     new: scopedEnquiries.filter(e => e.status === 'new').length,
@@ -295,8 +363,8 @@ export default function AdminEnquiries() {
   };
   const bookedCounts = {
     all: scopedEnquiries.length,
-    booked: scopedEnquiries.filter(e => e.amount_paid > 0).length,
-    not_booked: scopedEnquiries.filter(e => e.amount_paid <= 0).length,
+    booked: scopedEnquiries.filter(isBooked).length,
+    not_booked: scopedEnquiries.filter(e => !isBooked(e)).length,
   };
   const activeFilterCount = (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0);
 
@@ -612,14 +680,19 @@ export default function AdminEnquiries() {
                           </td>
                           <td className="px-2 py-3 text-center">
                             <span
-                              title={e.amount_paid > 0 ? 'Seat booked automatically from payment' : 'No payment recorded yet, so no seat is held'}
+                              title={isBooked(e) ? 'Seat booked automatically from payment' : e.cancelled_at ? 'Cancelled — seat released' : 'No payment recorded yet, so no seat is held'}
                               className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                                e.amount_paid > 0 ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'
+                                isBooked(e) ? 'bg-green-100 text-green-700' : e.cancelled_at ? 'bg-red-100 text-red-700' : 'bg-background-warm text-dark-muted'
                               }`}
                             >
-                              {e.amount_paid > 0 ? <CheckCircle2 size={12} /> : <Circle size={12} />}
-                              {e.amount_paid > 0 ? 'Booked' : 'Not booked'}
+                              {isBooked(e) ? <CheckCircle2 size={12} /> : e.cancelled_at ? <XCircle size={12} /> : <Circle size={12} />}
+                              {isBooked(e) ? 'Booked' : e.cancelled_at ? 'Cancelled' : 'Not booked'}
                             </span>
+                            {refundStatus(e) && (
+                              <p className={`text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-full inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
+                                {refundStatus(e)!.label}
+                              </p>
+                            )}
                           </td>
                           <td className="px-2 py-3 text-right">
                             <select
@@ -632,6 +705,17 @@ export default function AdminEnquiries() {
                               <option value="contacted">Contacted</option>
                               <option value="closed">Closed</option>
                             </select>
+                            <button
+                              onClick={() => handleCancelToggle(e)}
+                              disabled={updating === e.id}
+                              className={`mt-1.5 w-full text-[11px] font-button font-semibold px-1.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
+                                e.cancelled_at
+                                  ? 'border-green-200 text-green-700 hover:bg-green-50'
+                                  : 'border-red-200 text-red-600 hover:bg-red-50'
+                              }`}
+                            >
+                              {e.cancelled_at ? 'Reactivate' : 'Cancel'}
+                            </button>
                           </td>
                         </motion.tr>
                       );
@@ -665,6 +749,11 @@ export default function AdminEnquiries() {
                           {e.package_type === 'early_bird' && (
                             <span className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 shrink-0">
                               <Zap size={9} /> Early Bird
+                            </span>
+                          )}
+                          {e.cancelled_at && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">
+                              <XCircle size={9} /> Cancelled
                             </span>
                           )}
                         </p>
@@ -737,6 +826,12 @@ export default function AdminEnquiries() {
                           </div>
                         )}
 
+                        {refundStatus(e) && (
+                          <div className={`rounded-xl px-3 py-2 ${refundStatus(e)!.color}`}>
+                            <p className="text-xs font-medium">{refundStatus(e)!.label}</p>
+                          </div>
+                        )}
+
                         <div className="flex items-center flex-wrap gap-2 pt-1">
                           <button
                             onClick={() => openPayment(e)}
@@ -745,13 +840,13 @@ export default function AdminEnquiries() {
                             <IndianRupee size={14} /> Payment
                           </button>
                           <span
-                            title={e.amount_paid > 0 ? 'Seat booked automatically from payment' : 'No payment recorded yet, so no seat is held'}
+                            title={isBooked(e) ? 'Seat booked automatically from payment' : e.cancelled_at ? 'Cancelled — seat released' : 'No payment recorded yet, so no seat is held'}
                             className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl whitespace-nowrap ${
-                              e.amount_paid > 0 ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'
+                              isBooked(e) ? 'bg-green-100 text-green-700' : e.cancelled_at ? 'bg-red-100 text-red-700' : 'bg-background-warm text-dark-muted'
                             }`}
                           >
-                            {e.amount_paid > 0 ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                            {e.amount_paid > 0 ? 'Booked' : 'Not booked'}
+                            {isBooked(e) ? <CheckCircle2 size={14} /> : e.cancelled_at ? <XCircle size={14} /> : <Circle size={14} />}
+                            {isBooked(e) ? 'Booked' : e.cancelled_at ? 'Cancelled' : 'Not booked'}
                           </span>
                           <select
                             value={e.status}
@@ -764,6 +859,18 @@ export default function AdminEnquiries() {
                             <option value="closed">Closed</option>
                           </select>
                         </div>
+
+                        <button
+                          onClick={() => handleCancelToggle(e)}
+                          disabled={updating === e.id}
+                          className={`w-full text-xs font-button font-semibold px-3 py-2 rounded-xl border transition-colors ${
+                            e.cancelled_at
+                              ? 'border-green-200 text-green-700 hover:bg-green-50'
+                              : 'border-red-200 text-red-600 hover:bg-red-50'
+                          }`}
+                        >
+                          {e.cancelled_at ? 'Reactivate Booking' : 'Mark as Cancelled'}
+                        </button>
                       </div>
                     )}
                   </motion.div>
@@ -963,6 +1070,26 @@ export default function AdminEnquiries() {
               <p className="text-sm text-dark-muted">
                 Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, Number(paymentForm.total_amount) - Number(paymentForm.amount_paid)))}</span>
               </p>
+            )}
+
+            {paymentTarget.cancelled_at && (
+              <div className="bg-red-50 rounded-xl p-3 space-y-2">
+                <p className="text-red-700 text-xs font-medium">This booking is cancelled. Track any refund here as you process it.</p>
+                <div>
+                  <label className="block text-sm font-medium text-dark mb-1">Refund Amount (₹)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={paymentForm.refund_amount}
+                    onChange={e => setPaymentForm(f => ({ ...f, refund_amount: e.target.value === '' ? '' : +e.target.value }))}
+                    className={inputClass}
+                    placeholder="How much has been refunded so far"
+                  />
+                  <p className="text-[11px] text-dark-muted mt-1">
+                    They paid {formatPrice(paymentTarget.amount_paid || 0)} in total.
+                  </p>
+                </div>
+              </div>
             )}
 
             <div className="flex gap-3 pt-2">

@@ -247,6 +247,54 @@ export async function recordPayment(
   return data;
 }
 
+// Cancels an enquiry / booking. Frees the trip seat immediately if one was
+// held (amount_paid > 0 and not already cancelled), but deliberately leaves
+// amount_paid untouched — that's the historical record of what they actually
+// paid, separate from refund_amount which tracks what's been paid back.
+export async function cancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
+  const hadSeat = !enquiry.cancelled_at && enquiry.amount_paid > 0;
+
+  const { data, error } = await supabase
+    .from('enquiries')
+    .update({ cancelled_at: new Date().toISOString() })
+    .eq('id', enquiry.id)
+    .select()
+    .single();
+  if (error) throw error;
+
+  if (enquiry.trip_id && hadSeat) {
+    await adjustTripSeats(enquiry.trip_id, -1);
+  }
+
+  return data;
+}
+
+// Reverses a cancellation (person changed their mind / cancelled by mistake).
+// Re-books the seat if they'd already paid something.
+export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
+  const { data, error } = await supabase
+    .from('enquiries')
+    .update({ cancelled_at: null })
+    .eq('id', enquiry.id)
+    .select()
+    .single();
+  if (error) throw error;
+
+  if (enquiry.trip_id && enquiry.amount_paid > 0) {
+    await adjustTripSeats(enquiry.trip_id, 1);
+  }
+
+  return data;
+}
+
+// Logs how much has been refunded so far for a cancelled booking. Tracked
+// independently from amount_paid so the original payment record never gets
+// overwritten as refunds are processed (which may happen in installments).
+export async function recordRefund(id: string, refund_amount: number): Promise<void> {
+  const { error } = await supabase.from('enquiries').update({ refund_amount }).eq('id', id);
+  if (error) throw error;
+}
+
 // =============================================
 // Testimonials
 // =============================================
