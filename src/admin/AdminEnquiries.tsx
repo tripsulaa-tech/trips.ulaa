@@ -123,6 +123,9 @@ export default function AdminEnquiries() {
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '' });
   const [savingPayment, setSavingPayment] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<Enquiry | null>(null);
+  const [cancelCharges, setCancelCharges] = useState<number | ''>('');
+  const [cancelling, setCancelling] = useState(false);
 
   const load = () => {
     getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
@@ -213,28 +216,54 @@ export default function AdminEnquiries() {
     });
   };
 
-  // Cancels (or reactivates) an enquiry. Cancelling frees the trip seat
-  // immediately but never touches amount_paid — that stays as the record of
-  // what was actually collected, separate from whatever gets refunded.
-  const handleCancelToggle = async (e: Enquiry) => {
-    if (!e.cancelled_at && !confirm(`Mark ${e.full_name}'s booking as cancelled? This frees up their seat right away.`)) {
-      return;
-    }
+  // Reactivates a previously cancelled enquiry. Re-books the seat if
+  // something had been paid, and resets booking_status via uncancelEnquiry.
+  const handleReactivate = async (e: Enquiry) => {
     setUpdating(e.id);
     try {
-      if (e.cancelled_at) {
-        await uncancelEnquiry(e);
-      } else {
-        await cancelEnquiry(e);
-      }
+      await uncancelEnquiry(e);
       const freshTrips = await getAllUpcomingTripsAdmin();
       setTrips(freshTrips);
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to update cancellation status.');
+      alert('Failed to reactivate booking.');
     } finally {
       setUpdating(null);
+    }
+  };
+
+  // Cancel/reactivate entry point for the row-level button. Reactivating
+  // happens immediately; cancelling opens a modal first so third-party
+  // charges (airline/hotel penalties) can be recorded up front — cancelEnquiry
+  // uses them to compute suggested_refund_amount.
+  const handleCancelToggle = (e: Enquiry) => {
+    if (e.cancelled_at) {
+      handleReactivate(e);
+    } else {
+      setCancelTarget(e);
+      setCancelCharges('');
+    }
+  };
+
+  // Cancels an enquiry. Frees the trip seat immediately but never touches
+  // amount_paid — that stays as the record of what was actually collected,
+  // separate from whatever gets refunded.
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelling(true);
+    try {
+      const charges = cancelCharges === '' ? undefined : Number(cancelCharges);
+      await cancelEnquiry(cancelTarget, charges);
+      setCancelTarget(null);
+      const freshTrips = await getAllUpcomingTripsAdmin();
+      setTrips(freshTrips);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to cancel booking.');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -259,7 +288,7 @@ export default function AdminEnquiries() {
         package_type: paymentForm.package_type,
       });
       if (paymentTarget.cancelled_at) {
-        await recordRefund(paymentTarget.id, refundAmount);
+        await recordRefund(paymentTarget, refundAmount);
       }
       setPaymentTarget(null);
       const freshTrips = await getAllUpcomingTripsAdmin();
@@ -1075,6 +1104,12 @@ export default function AdminEnquiries() {
             {paymentTarget.cancelled_at && (
               <div className="bg-red-50 rounded-xl p-3 space-y-2">
                 <p className="text-red-700 text-xs font-medium">This booking is cancelled. Track any refund here as you process it.</p>
+                {paymentTarget.suggested_refund_amount != null && (
+                  <p className="text-xs text-dark-muted bg-white/60 rounded-lg px-2 py-1.5">
+                    Suggested refund (estimate — not binding, confirm before use): <span className="font-semibold text-dark">{formatPrice(paymentTarget.suggested_refund_amount)}</span>
+                    {paymentTarget.third_party_charges ? ` — after ${formatPrice(paymentTarget.third_party_charges)} in third-party charges` : ''}
+                  </p>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-dark mb-1">Refund Amount (₹)</label>
                   <input
@@ -1095,6 +1130,43 @@ export default function AdminEnquiries() {
             <div className="flex gap-3 pt-2">
               <Button variant="outline" size="md" onClick={() => setPaymentTarget(null)}>Cancel</Button>
               <Button variant="primary" size="md" onClick={handleSavePayment} loading={savingPayment}>Save Payment</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Cancel Booking Modal */}
+      <Modal isOpen={!!cancelTarget} onClose={() => setCancelTarget(null)} title="Cancel Booking" size="sm">
+        {cancelTarget && (
+          <div className="space-y-4">
+            <div className="bg-background-warm rounded-xl px-4 py-3">
+              <p className="font-medium text-dark">{cancelTarget.full_name}</p>
+              <p className="text-dark-muted text-xs">{cancelTarget.trip_title || 'No trip linked'}</p>
+            </div>
+
+            <p className="text-sm text-dark-muted">
+              This frees up their seat right away. {cancelTarget.amount_paid > 0 && `They've paid ${formatPrice(cancelTarget.amount_paid)} so far — `}
+              amount paid stays on record; refunds are tracked separately from the Payment screen.
+            </p>
+
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Third-Party Charges (₹)</label>
+              <input
+                type="number"
+                min={0}
+                value={cancelCharges}
+                onChange={ev => setCancelCharges(ev.target.value === '' ? '' : +ev.target.value)}
+                className={inputClass}
+                placeholder="Airline/hotel penalties, if known — optional"
+              />
+              <p className="text-[11px] text-dark-muted mt-1">
+                Used to compute the suggested refund estimate. You can leave this blank and add it later.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" size="md" onClick={() => setCancelTarget(null)}>Back</Button>
+              <Button variant="primary" size="md" onClick={handleConfirmCancel} loading={cancelling}>Confirm Cancellation</Button>
             </div>
           </div>
         )}

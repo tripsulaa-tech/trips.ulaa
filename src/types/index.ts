@@ -93,6 +93,33 @@ export interface Enquiry {
   refund_amount: number;
   created_at: string;
   updated_at: string;
+  // Booking/payment lifecycle — independent of `status` above, which only
+  // tracks lead follow-up (new/contacted/closed). A 'closed' lead can mean
+  // either "went nowhere" or "fully paid booking"; booking_status
+  // disambiguates that.
+  trip_type?: 'domestic' | 'international';
+  departure_date?: string; // snapshotted at booking time, doesn't move if the trip's dates change later
+  booking_amount: number; // non-refundable deposit (T&C clause 1); defaults to 0 until set
+  third_party_charges?: number; // manually entered at cancellation time
+  is_no_show: boolean;
+  booking_status?: 'booking_confirmed' | 'balance_pending' | 'fully_paid' | 'cancelled' | 'completed';
+  suggested_refund_amount?: number; // auto-computed suggestion only — never authoritative, admin sets refund_amount independently
+  balance_due_date?: string; // auto-derived from departure_date + trip_type, read-only
+}
+
+// One row per individual payment or refund against an enquiry. This is the
+// source of truth for enquiries.amount_paid / refund_amount, which are kept
+// in sync via a DB trigger — never write those columns directly once you're
+// recording a real payment event; insert here instead.
+export interface Payment {
+  id: string;
+  enquiry_id: string;
+  amount: number;
+  payment_type: 'booking_amount' | 'balance' | 'installment' | 'refund';
+  payment_method?: string;
+  paid_at: string;
+  notes?: string;
+  created_at: string;
 }
 
 export interface AdminNotification {

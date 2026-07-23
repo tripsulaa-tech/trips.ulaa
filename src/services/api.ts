@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification } from '../types';
+import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, Payment } from '../types';
 
 // =============================================
 // Upcoming Trips
@@ -167,23 +167,51 @@ export async function updateEnquiryStatus(id: string, status: Enquiry['status'])
 
 // Manual enquiry entry — for walk-ins, phone calls, WhatsApp messages, etc.
 // that never came through the website's booking form. If an amount is paid
-// up front, this books a seat and sets status/is_paid the same way
-// recordPayment does below.
+// up front, this books a seat, logs it to the payments ledger, and sets
+// status/booking_status/is_paid the same way recordPayment does above.
 export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<Enquiry> {
   const amountPaid = enquiry.amount_paid || 0;
   const totalAmount = enquiry.total_amount ?? null;
   const isPaidFull = !!totalAmount && amountPaid >= totalAmount;
   const status = computeAutoStatus(amountPaid, totalAmount, enquiry.status || 'new');
+  const bookingStatus = computeBookingStatus(
+    amountPaid,
+    totalAmount,
+    enquiry.booking_amount || 0,
+    enquiry.balance_due_date,
+    undefined
+  );
 
+  // Don't insert amount_paid directly if we're about to log it to the
+  // ledger — let the trigger set it, so the two never drift apart.
+  const { amount_paid: _omit, ...rest } = enquiry;
   const { data, error } = await supabase
     .from('enquiries')
-    .insert({ ...enquiry, amount_paid: amountPaid, is_paid: isPaidFull, status })
+    .insert({ ...rest, amount_paid: 0, is_paid: isPaidFull, status, booking_status: bookingStatus })
     .select()
     .single();
   if (error) throw error;
 
-  if (enquiry.trip_id && amountPaid > 0) {
-    await adjustTripSeats(enquiry.trip_id, 1);
+  if (amountPaid > 0) {
+    const { error: paymentError } = await supabase.from('payments').insert({
+      enquiry_id: data.id,
+      amount: amountPaid,
+      payment_type: 'booking_amount',
+      notes: 'Initial payment recorded at enquiry creation',
+    });
+    if (paymentError) throw paymentError;
+    if (enquiry.trip_id) {
+      await adjustTripSeats(enquiry.trip_id, 1);
+    }
+    // Re-fetch since the trigger just updated amount_paid out from under
+    // the row we already have in hand.
+    const { data: refreshed, error: refetchError } = await supabase
+      .from('enquiries')
+      .select('*')
+      .eq('id', data.id)
+      .single();
+    if (refetchError) throw refetchError;
+    return refreshed;
   }
 
   return data;
@@ -203,6 +231,26 @@ function computeAutoStatus(
   return currentStatus;
 }
 
+// Booking/payment lifecycle — a separate dimension from the lead `status`
+// above. Never downgrades away from 'cancelled' or 'completed' here; those
+// are set explicitly (cancelled via the DB trigger on cancelEnquiry,
+// completed manually by an admin after the trip wraps).
+function computeBookingStatus(
+  amountPaid: number,
+  totalAmount: number | null | undefined,
+  bookingAmount: number,
+  balanceDueDate: string | null | undefined,
+  current: Enquiry['booking_status']
+): Enquiry['booking_status'] {
+  if (current === 'cancelled' || current === 'completed') return current;
+  if (amountPaid <= 0) return undefined;
+  if (totalAmount && totalAmount > 0 && amountPaid >= totalAmount) return 'fully_paid';
+  if (bookingAmount > 0 && amountPaid >= bookingAmount && balanceDueDate) {
+    return new Date(balanceDueDate) < new Date() ? 'balance_pending' : 'booking_confirmed';
+  }
+  return 'booking_confirmed';
+}
+
 async function adjustTripSeats(tripId: string, delta: 1 | -1): Promise<void> {
   const { data: trip, error: tripError } = await supabase
     .from('upcoming_trips')
@@ -219,19 +267,74 @@ async function adjustTripSeats(tripId: string, delta: 1 | -1): Promise<void> {
   if (seatsError) throw seatsError;
 }
 
-// Updates how much has actually been paid so far (and, optionally, the total
-// amount owed / which package they booked). Any amount > 0 books a seat if
-// one wasn't already booked (going from 0 -> some amount); dropping back to
-// 0 frees the seat again. Status auto-advances per computeAutoStatus above.
+// Fetches the payment history for one enquiry (booking amount, balance,
+// installments, refunds) — this is the source of truth; enquiries.amount_paid
+// and refund_amount are just a cached rollup kept in sync via DB trigger.
+export async function getPayments(enquiryId: string): Promise<Payment[]> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('enquiry_id', enquiryId)
+    .order('paid_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+// Records a new payment (delta from what's already been paid, not an
+// absolute total) against an enquiry. Inserting into the payments ledger
+// triggers a DB-side recalculation of enquiries.amount_paid — this function
+// never writes amount_paid directly, to avoid it drifting from the ledger.
+//
+// `newAmountPaid` is the *running total* the admin enters in the UI (kept
+// this way so the form still just shows one "amount paid so far" field);
+// this function does the delta math and inserts one ledger row for the
+// difference. Passing a newAmountPaid equal to current.amount_paid is a
+// no-op (e.g. saving the form after only changing total_amount/package_type).
 export async function recordPayment(
   current: Enquiry,
-  payment: { amount_paid: number; total_amount?: number | null; package_type?: Enquiry['package_type'] }
+  payment: {
+    amount_paid: number; // new running total, not a delta
+    total_amount?: number | null;
+    package_type?: Enquiry['package_type'];
+    payment_method?: string;
+    notes?: string;
+  }
 ): Promise<Enquiry> {
   const newTotal = payment.total_amount !== undefined ? payment.total_amount : current.total_amount;
+  const delta = payment.amount_paid - (current.amount_paid || 0);
+
+  if (delta !== 0) {
+    const isFirstPayment = (current.amount_paid || 0) <= 0;
+    const { error: paymentError } = await supabase.from('payments').insert({
+      enquiry_id: current.id,
+      amount: delta,
+      payment_type: isFirstPayment ? 'booking_amount' : 'installment',
+      payment_method: payment.payment_method,
+      notes: payment.notes,
+    });
+    if (paymentError) throw paymentError;
+  }
+
+  // Re-read the trigger-updated amount_paid so is_paid/status/booking_status
+  // are computed from the actual synced value, not assumed from the delta.
+  const { data: refreshed, error: refreshError } = await supabase
+    .from('enquiries')
+    .select('amount_paid, balance_due_date, booking_amount, booking_status')
+    .eq('id', current.id)
+    .single();
+  if (refreshError) throw refreshError;
+
   const wasBooked = (current.amount_paid || 0) > 0;
-  const willBeBooked = payment.amount_paid > 0;
-  const isPaidFull = !!newTotal && newTotal > 0 && payment.amount_paid >= newTotal;
-  const status = computeAutoStatus(payment.amount_paid, newTotal, current.status);
+  const willBeBooked = refreshed.amount_paid > 0;
+  const isPaidFull = !!newTotal && newTotal > 0 && refreshed.amount_paid >= newTotal;
+  const status = computeAutoStatus(refreshed.amount_paid, newTotal, current.status);
+  const bookingStatus = computeBookingStatus(
+    refreshed.amount_paid,
+    newTotal,
+    refreshed.booking_amount,
+    refreshed.balance_due_date,
+    refreshed.booking_status
+  );
 
   if (current.trip_id && wasBooked !== willBeBooked) {
     await adjustTripSeats(current.trip_id, willBeBooked ? 1 : -1);
@@ -239,7 +342,13 @@ export async function recordPayment(
 
   const { data, error } = await supabase
     .from('enquiries')
-    .update({ ...payment, is_paid: isPaidFull, status })
+    .update({
+      total_amount: newTotal,
+      package_type: payment.package_type ?? current.package_type,
+      is_paid: isPaidFull,
+      status,
+      booking_status: bookingStatus,
+    })
     .eq('id', current.id)
     .select()
     .single();
@@ -248,11 +357,26 @@ export async function recordPayment(
 }
 
 // Cancels an enquiry / booking. Frees the trip seat immediately if one was
-// held (amount_paid > 0 and not already cancelled), but deliberately leaves
-// amount_paid untouched — that's the historical record of what they actually
-// paid, separate from refund_amount which tracks what's been paid back.
-export async function cancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
+// held (amount_paid > 0 and not already cancelled). amount_paid itself is
+// untouched — that's the historical record of what they actually paid,
+// separate from refund_amount which tracks what's been paid back.
+//
+// Setting cancelled_at fires a DB trigger that auto-computes
+// suggested_refund_amount and sets booking_status to 'cancelled' — this is
+// a SUGGESTION only, never authoritative; the admin still enters the real
+// refund_amount via recordRefund. Pass thirdPartyCharges if known at
+// cancellation time (airline/hotel penalties aren't derivable from stored
+// data) so the suggestion accounts for them.
+export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number): Promise<Enquiry> {
   const hadSeat = !enquiry.cancelled_at && enquiry.amount_paid > 0;
+
+  if (thirdPartyCharges !== undefined) {
+    const { error: chargesError } = await supabase
+      .from('enquiries')
+      .update({ third_party_charges: thirdPartyCharges })
+      .eq('id', enquiry.id);
+    if (chargesError) throw chargesError;
+  }
 
   const { data, error } = await supabase
     .from('enquiries')
@@ -270,11 +394,21 @@ export async function cancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
 }
 
 // Reverses a cancellation (person changed their mind / cancelled by mistake).
-// Re-books the seat if they'd already paid something.
+// Re-books the seat if they'd already paid something, and resets
+// booking_status back to whatever it would be given the current amount
+// paid (rather than leaving it stuck on 'cancelled').
 export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
+  const bookingStatus = computeBookingStatus(
+    enquiry.amount_paid,
+    enquiry.total_amount,
+    enquiry.booking_amount,
+    enquiry.balance_due_date,
+    undefined // force recompute rather than trusting the 'cancelled' value
+  );
+
   const { data, error } = await supabase
     .from('enquiries')
-    .update({ cancelled_at: null })
+    .update({ cancelled_at: null, booking_status: bookingStatus, suggested_refund_amount: null })
     .eq('id', enquiry.id)
     .select()
     .single();
@@ -287,12 +421,35 @@ export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
   return data;
 }
 
-// Logs how much has been refunded so far for a cancelled booking. Tracked
-// independently from amount_paid so the original payment record never gets
-// overwritten as refunds are processed (which may happen in installments).
-export async function recordRefund(id: string, refund_amount: number): Promise<void> {
-  const { error } = await supabase.from('enquiries').update({ refund_amount }).eq('id', id);
+// Logs how much has been refunded so far for a cancelled booking.
+// `newRefundAmount` is the running total (matching recordPayment's pattern)
+// — this inserts a ledger row for the delta rather than overwriting
+// refund_amount directly, so refund_amount stays in sync via the same DB
+// trigger that maintains amount_paid.
+export async function recordRefund(
+  current: Enquiry,
+  newRefundAmount: number,
+  options?: { payment_method?: string; notes?: string }
+): Promise<Enquiry> {
+  const delta = newRefundAmount - (current.refund_amount || 0);
+  if (delta !== 0) {
+    const { error: refundError } = await supabase.from('payments').insert({
+      enquiry_id: current.id,
+      amount: delta,
+      payment_type: 'refund',
+      payment_method: options?.payment_method,
+      notes: options?.notes,
+    });
+    if (refundError) throw refundError;
+  }
+
+  const { data, error } = await supabase
+    .from('enquiries')
+    .select('*')
+    .eq('id', current.id)
+    .single();
   if (error) throw error;
+  return data;
 }
 
 // =============================================
