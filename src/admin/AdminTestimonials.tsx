@@ -9,6 +9,7 @@ import ImageUploadField from '../components/ui/ImageUploadField';
 import {
   getAllTestimonialsAdmin, createTestimonial, updateTestimonial, deleteTestimonial,
 } from '../services/api';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { Testimonial } from '../types';
 
 interface TestimonialForm {
@@ -25,6 +26,7 @@ const emptyForm: TestimonialForm = {
 };
 
 export default function AdminTestimonials() {
+  const confirm = useConfirm();
   const [items, setItems] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -71,7 +73,7 @@ export default function AdminTestimonials() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this testimonial?')) return;
+    if (!(await confirm({ message: 'Delete this testimonial?', confirmLabel: 'Delete' }))) return;
     await deleteTestimonial(id);
     load();
   };

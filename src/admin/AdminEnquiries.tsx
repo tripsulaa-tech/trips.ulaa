@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund } from '../services/api';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
 import { formatDate, formatPrice } from '../utils';
 
@@ -123,6 +124,7 @@ type PaymentForm = {
 };
 
 export default function AdminEnquiries() {
+  const confirm = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
@@ -284,6 +286,32 @@ export default function AdminEnquiries() {
       alert('Failed to cancel booking.');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  // Permanently removes an enquiry. If it currently holds a seat, that seat
+  // is released first (handled inside deleteEnquiry) so trip counts stay
+  // accurate.
+  const handleDelete = async (e: Enquiry) => {
+    const ok = await confirm({
+      title: 'Delete this enquiry?',
+      message: 'This permanently removes the enquiry and its payment history. This cannot be undone.',
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+    setUpdating(e.id);
+    try {
+      await deleteEnquiry(e);
+      if (e.trip_id) {
+        const freshTrips = await getAllUpcomingTripsAdmin();
+        setTrips(freshTrips);
+      }
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete enquiry.');
+    } finally {
+      setUpdating(null);
     }
   };
 
@@ -751,17 +779,28 @@ export default function AdminEnquiries() {
                               options={STATUS_OPTIONS}
                               size="sm"
                             />
-                            <button
-                              onClick={() => handleCancelToggle(e)}
-                              disabled={updating === e.id}
-                              className={`mt-1.5 w-full text-[11px] font-button font-semibold px-1.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
-                                e.cancelled_at
-                                  ? 'border-green-200 text-green-700 hover:bg-green-50'
-                                  : 'border-red-200 text-red-600 hover:bg-red-50'
-                              }`}
-                            >
-                              {e.cancelled_at ? 'Reactivate' : 'Cancel'}
-                            </button>
+                            <div className="mt-1.5 flex items-stretch gap-1">
+                              <button
+                                onClick={() => handleCancelToggle(e)}
+                                disabled={updating === e.id}
+                                className={`flex-1 text-[11px] font-button font-semibold px-1.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
+                                  e.cancelled_at
+                                    ? 'border-green-200 text-green-700 hover:bg-green-50'
+                                    : 'border-red-200 text-red-600 hover:bg-red-50'
+                                }`}
+                              >
+                                {e.cancelled_at ? 'Reactivate' : 'Cancel'}
+                              </button>
+                              <button
+                                onClick={() => handleDelete(e)}
+                                disabled={updating === e.id}
+                                title="Delete enquiry"
+                                aria-label="Delete enquiry"
+                                className="shrink-0 w-7 flex items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           </td>
                         </motion.tr>
                       );
@@ -905,17 +944,28 @@ export default function AdminEnquiries() {
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => handleCancelToggle(e)}
-                          disabled={updating === e.id}
-                          className={`w-full text-xs font-button font-semibold px-3 py-2 rounded-xl border transition-colors ${
-                            e.cancelled_at
-                              ? 'border-green-200 text-green-700 hover:bg-green-50'
-                              : 'border-red-200 text-red-600 hover:bg-red-50'
-                          }`}
-                        >
-                          {e.cancelled_at ? 'Reactivate Booking' : 'Mark as Cancelled'}
-                        </button>
+                        <div className="flex items-stretch gap-2">
+                          <button
+                            onClick={() => handleCancelToggle(e)}
+                            disabled={updating === e.id}
+                            className={`flex-1 text-xs font-button font-semibold px-3 py-2 rounded-xl border transition-colors ${
+                              e.cancelled_at
+                                ? 'border-green-200 text-green-700 hover:bg-green-50'
+                                : 'border-red-200 text-red-600 hover:bg-red-50'
+                            }`}
+                          >
+                            {e.cancelled_at ? 'Reactivate Booking' : 'Mark as Cancelled'}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(e)}
+                            disabled={updating === e.id}
+                            title="Delete enquiry"
+                            aria-label="Delete enquiry"
+                            className="shrink-0 px-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     )}
                   </motion.div>

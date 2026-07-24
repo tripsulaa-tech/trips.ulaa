@@ -244,7 +244,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
       </div>
 
       <div className="relative">
-        <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-5 scroll-smooth">
+        <div className="max-h-[50vh] overflow-y-auto app-scroll pr-2 space-y-5 scroll-smooth">
           {termsSections.length > 0 ? termsSections.map(section => (
             <div
               key={section.number}

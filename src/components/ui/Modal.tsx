@@ -51,21 +51,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`relative w-full ${sizes[size]} bg-white rounded-3xl shadow-warm-lg max-h-[90vh] overflow-y-auto`}
+            className={`relative w-full ${sizes[size]} bg-white rounded-3xl shadow-warm-lg max-h-[90vh] overflow-hidden flex flex-col`}
           >
-            {/* Header */}
-            {title && (
-              <div className="flex items-center justify-between p-6 border-b border-background-warm">
-                <h3 className="font-display text-2xl font-bold text-dark">{title}</h3>
-                <button
-                  onClick={onClose}
-                  className="text-dark-muted hover:text-dark bg-background rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
-                  aria-label="Close"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            )}
             {!title && (
               <button
                 onClick={onClose}
@@ -76,8 +63,23 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
               </button>
             )}
 
-            {/* Content */}
-            <div className="p-6">
+            {/* Header */}
+            {title && (
+              <div className="flex items-center justify-between p-6 border-b border-background-warm flex-shrink-0">
+                <h3 className="font-display text-2xl font-bold text-dark">{title}</h3>
+                <button
+                  onClick={onClose}
+                  className="text-dark-muted hover:text-dark bg-background rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            )}
+
+            {/* Scrollable content — kept in its own box so the scrollbar
+                never has to render across the outer panel's rounded corner */}
+            <div className="app-scroll overflow-y-auto p-6">
               {children}
             </div>
           </motion.div>

@@ -6,6 +6,7 @@ import TimelineEditor from '../components/ui/TimelineEditor';
 import ValuesEditor from '../components/ui/ValuesEditor';
 import { getSiteContent, upsertSiteContent } from '../services/api';
 import { DEFAULT_ABOUT, ABOUT_VALUE_ICONS } from '../constants/about';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { AboutContent } from '../types';
 
 const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
@@ -13,6 +14,7 @@ const cardClass = 'bg-white rounded-2xl shadow-card p-6 space-y-4';
 const iconOptions = Object.keys(ABOUT_VALUE_ICONS);
 
 export default function AdminAbout() {
+  const confirm = useConfirm();
   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,8 +40,13 @@ export default function AdminAbout() {
     }
   };
 
-  const resetToDefault = () => {
-    if (!confirm('Reset all About page content to the original defaults? This will overwrite your edits below (not saved until you click Save).')) return;
+  const resetToDefault = async () => {
+    const ok = await confirm({
+      title: 'Reset to defaults?',
+      message: 'This will overwrite your edits below (not saved until you click Save).',
+      confirmLabel: 'Reset',
+    });
+    if (!ok) return;
     setContent(DEFAULT_ABOUT);
   };
 

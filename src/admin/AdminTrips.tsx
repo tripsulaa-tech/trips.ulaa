@@ -14,6 +14,7 @@ import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDispla
 import DatePicker from '../components/ui/DatePicker';
 import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip } from '../services/api';
 
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy } from '../types';
 import { formatDate, slugify } from '../utils';
 
@@ -72,6 +73,7 @@ const emptyForm: TripForm = {
 };
 
 export default function AdminTrips() {
+  const confirm = useConfirm();
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -139,7 +141,12 @@ export default function AdminTrips() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this trip? This cannot be undone.')) return;
+    const ok = await confirm({
+      title: 'Delete this trip?',
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
     await deleteUpcomingTrip(id);
     load();
   };
@@ -597,7 +604,7 @@ export default function AdminTrips() {
                 <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
                   <span className="transition-transform group-open:rotate-90">▶</span> Terms & Conditions
                 </summary>
-                <div className="mt-2 bg-background rounded-xl p-3 max-h-64 overflow-y-auto space-y-4">
+                <div className="mt-2 bg-background rounded-xl p-3 max-h-64 overflow-y-auto app-scroll space-y-4">
                   {parseTerms(viewingTrip.terms_and_conditions || '').map(section => (
                     <div key={section.number}>
                       <p className="text-xs font-bold text-dark mb-1">
@@ -614,7 +621,7 @@ export default function AdminTrips() {
               <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
                 <span className="transition-transform group-open:rotate-90">▶</span> Cancellation Policy
               </summary>
-              <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto">
+              <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto app-scroll">
                 <CancellationPolicyDisplay policy={viewingTrip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
               </div>
             </details>

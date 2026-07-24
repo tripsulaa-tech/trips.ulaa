@@ -68,19 +68,42 @@ button, .btn {
   font-family: var(--font-button);
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar — thin, rounded, inset from the edge so it reads as a
+   floating pill rather than a hard bar cutting across rounded corners. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary-light) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-background);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-primary);
-  border-radius: 3px;
+  background-color: var(--color-primary-light);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary-dark);
+  background-color: var(--color-primary);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Use on any scrollable box that sits inside a rounded card/modal so the
+   scrollbar tucks in near the corner radius instead of sitting flush
+   against the edge. */
+.app-scroll {
+  scrollbar-gutter: stable;
+}
+.app-scroll::-webkit-scrollbar {
+  width: 6px;
 }
 
 /* Masonry grid */
@@ -115,6 +138,12 @@ button, .btn {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-6 {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

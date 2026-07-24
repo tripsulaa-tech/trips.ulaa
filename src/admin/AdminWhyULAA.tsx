@@ -5,12 +5,14 @@ import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import { getSiteContent, upsertSiteContent } from '../services/api';
 import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { WhyUlaaContent } from '../types';
 
 const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 const cardClass = 'bg-white rounded-2xl shadow-card p-6 space-y-4';
 
 export default function AdminWhyULAA() {
+  const confirm = useConfirm();
   const [content, setContent] = useState<WhyUlaaContent>(DEFAULT_WHY_ULAA);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,8 +44,13 @@ export default function AdminWhyULAA() {
     }
   };
 
-  const resetToDefault = () => {
-    if (!confirm('Reset all Why ULAA cards to the original defaults? This will overwrite your edits below (not saved until you click Save).')) return;
+  const resetToDefault = async () => {
+    const ok = await confirm({
+      title: 'Reset to defaults?',
+      message: 'This will overwrite your edits below (not saved until you click Save).',
+      confirmLabel: 'Reset',
+    });
+    if (!ok) return;
     setContent(DEFAULT_WHY_ULAA);
   };
 

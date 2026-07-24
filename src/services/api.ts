@@ -407,7 +407,23 @@ export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number
   return data;
 }
 
-// Reverses a cancellation (person changed their mind / cancelled by mistake).
+// Permanently deletes an enquiry. Frees the trip seat first if one was
+// still held (not cancelled and something was paid) — otherwise the trip
+// would be left showing a seat booked for a record that no longer exists.
+// Associated payment rows cascade-delete via the DB's
+// "on delete cascade" FK, so nothing orphaned is left behind.
+export async function deleteEnquiry(enquiry: Enquiry): Promise<void> {
+  const hadSeat = !enquiry.cancelled_at && enquiry.amount_paid > 0;
+
+  const { error } = await supabase.from('enquiries').delete().eq('id', enquiry.id);
+  if (error) throw error;
+
+  if (enquiry.trip_id && hadSeat) {
+    await adjustTripSeats(enquiry.trip_id, -1);
+  }
+}
+
+
 // Re-books the seat if they'd already paid something, and resets
 // booking_status back to whatever it would be given the current amount
 // paid (rather than leaving it stuck on 'cancelled').

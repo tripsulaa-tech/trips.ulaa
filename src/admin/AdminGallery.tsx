@@ -5,9 +5,11 @@ import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import { getGalleryImages, uploadImage, deleteImage } from '../services/api';
 import { supabase } from '../services/supabase';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { GalleryImage } from '../types';
 
 export default function AdminGallery() {
+  const confirm = useConfirm();
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -39,7 +41,7 @@ export default function AdminGallery() {
   };
 
   const handleDelete = async (img: GalleryImage) => {
-    if (!confirm('Delete this image?')) return;
+    if (!(await confirm({ message: 'Delete this image?', confirmLabel: 'Delete' }))) return;
     const path = img.image_url.split('/').slice(-2).join('/');
     await deleteImage('ulaa', path).catch(() => {});
     await supabase.from('gallery').delete().eq('id', img.id);

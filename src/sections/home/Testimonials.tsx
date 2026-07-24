@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { PanInfo } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import SectionTitle from '../../components/ui/SectionTitle';
 import TestimonialCard from '../../components/ui/TestimonialCard';
@@ -36,15 +37,34 @@ const DEMO_TESTIMONIALS: Testimonial[] = [
 export default function Testimonials() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState(0);
 
   useEffect(() => {
     getTestimonials()
-      .then(data => setTestimonials(data.length > 0 ? data : DEMO_TESTIMONIALS))
-      .catch(() => setTestimonials(DEMO_TESTIMONIALS));
+      .then(data => setTestimonials((data.length > 0 ? data : DEMO_TESTIMONIALS).slice(0, 3)))
+      .catch(() => setTestimonials(DEMO_TESTIMONIALS.slice(0, 3)));
   }, []);
 
-  const prev = () => setCurrent(c => Math.max(0, c - 1));
-  const next = () => setCurrent(c => Math.min(testimonials.length - 1, c + 1));
+  const prev = () => {
+    setDirection(-1);
+    setCurrent(c => Math.max(0, c - 1));
+  };
+  const next = () => {
+    setDirection(1);
+    setCurrent(c => Math.min(testimonials.length - 1, c + 1));
+  };
+
+  const SWIPE_THRESHOLD = 50;
+  const handleDragEnd = (_e: unknown, info: PanInfo) => {
+    if (info.offset.x < -SWIPE_THRESHOLD) next();
+    else if (info.offset.x > SWIPE_THRESHOLD) prev();
+  };
+
+  const slideVariants = {
+    enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -80 : 80, opacity: 0 }),
+  };
 
   return (
     <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-dark overflow-hidden">
@@ -60,26 +80,35 @@ export default function Testimonials() {
         </div>
 
         {/* Desktop grid */}
-        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {testimonials.map((t, i) => (
             <TestimonialCard key={t.id} testimonial={t} index={i} />
           ))}
         </div>
 
-        {/* Mobile carousel */}
+        {/* Mobile carousel — only the active card is rendered, so the
+            section height always matches that card, not the tallest one */}
         <div className="md:hidden">
-          <div className="overflow-hidden">
-            <motion.div
-              animate={{ x: `-${current * 100}%` }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="flex"
-            >
-              {testimonials.map((t, i) => (
-                <div key={t.id} className="w-full shrink-0 px-2">
-                  <TestimonialCard testimonial={t} index={i} />
-                </div>
-              ))}
-            </motion.div>
+          <div className="overflow-hidden px-2">
+            <AnimatePresence mode="wait" custom={direction} initial={false}>
+              <motion.div
+                key={testimonials[current]?.id}
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.15}
+                onDragEnd={handleDragEnd}
+              >
+                {testimonials[current] && (
+                  <TestimonialCard testimonial={testimonials[current]} index={0} />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
           {/* Controls */}
           <div className="flex items-center justify-center gap-4 mt-6">
@@ -94,7 +123,7 @@ export default function Testimonials() {
               {testimonials.map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => setCurrent(i)}
+                  onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
                   className={`w-2 h-2 rounded-full transition-all ${i === current ? 'bg-secondary w-5' : 'bg-white/30'}`}
                 />
               ))}

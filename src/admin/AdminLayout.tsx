@@ -51,7 +51,7 @@ function SidebarContent({ userEmail, initial, onNavigate }: SidebarContentProps)
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto app-scroll">
         {adminNav.map(({ label, to, icon: Icon }) => (
           <NavLink
             key={to}

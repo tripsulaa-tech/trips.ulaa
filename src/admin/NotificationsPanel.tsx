@@ -107,7 +107,7 @@ export default function NotificationsPanel() {
               )}
             </div>
 
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto app-scroll">
               {loading ? (
                 <p className="text-center text-sm text-dark-muted py-10">Loading...</p>
               ) : items.length === 0 ? (

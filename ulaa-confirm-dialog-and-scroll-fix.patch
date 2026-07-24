@@ -1,0 +1,511 @@
+diff --git a/src/App.tsx b/src/App.tsx
+index 583973e..c31f619 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,7 +1,12 @@
+ import AppRouter from './routes/AppRouter';
++import { ConfirmDialogProvider } from './components/ui/ConfirmDialog';
+ 
+ function App() {
+-  return <AppRouter />;
++  return (
++    <ConfirmDialogProvider>
++      <AppRouter />
++    </ConfirmDialogProvider>
++  );
+ }
+ 
+ export default App;
+diff --git a/src/admin/AdminAbout.tsx b/src/admin/AdminAbout.tsx
+index ca47e79..2acbfd5 100644
+--- a/src/admin/AdminAbout.tsx
++++ b/src/admin/AdminAbout.tsx
+@@ -6,6 +6,7 @@ import TimelineEditor from '../components/ui/TimelineEditor';
+ import ValuesEditor from '../components/ui/ValuesEditor';
+ import { getSiteContent, upsertSiteContent } from '../services/api';
+ import { DEFAULT_ABOUT, ABOUT_VALUE_ICONS } from '../constants/about';
++import { useConfirm } from '../components/ui/ConfirmDialog';
+ import type { AboutContent } from '../types';
+ 
+ const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+@@ -13,6 +14,7 @@ const cardClass = 'bg-white rounded-2xl shadow-card p-6 space-y-4';
+ const iconOptions = Object.keys(ABOUT_VALUE_ICONS);
+ 
+ export default function AdminAbout() {
++  const confirm = useConfirm();
+   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
+   const [loading, setLoading] = useState(true);
+   const [saving, setSaving] = useState(false);
+@@ -38,8 +40,13 @@ export default function AdminAbout() {
+     }
+   };
+ 
+-  const resetToDefault = () => {
+-    if (!confirm('Reset all About page content to the original defaults? This will overwrite your edits below (not saved until you click Save).')) return;
++  const resetToDefault = async () => {
++    const ok = await confirm({
++      title: 'Reset to defaults?',
++      message: 'This will overwrite your edits below (not saved until you click Save).',
++      confirmLabel: 'Reset',
++    });
++    if (!ok) return;
+     setContent(DEFAULT_ABOUT);
+   };
+ 
+diff --git a/src/admin/AdminAlbums.tsx b/src/admin/AdminAlbums.tsx
+index 5ce1c2c..bb27ad0 100644
+--- a/src/admin/AdminAlbums.tsx
++++ b/src/admin/AdminAlbums.tsx
+@@ -9,6 +9,7 @@ import MultiImageUploadField from '../components/ui/MultiImageUploadField';
+ import DatePicker from '../components/ui/DatePicker';
+ import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTrip } from '../services/api';
+ 
++import { useConfirm } from '../components/ui/ConfirmDialog';
+ import type { CompletedTrip } from '../types';
+ import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils';
+ 
+@@ -26,6 +27,7 @@ interface AlbumForm {
+ }
+ 
+ export default function AdminAlbums() {
++  const confirm = useConfirm();
+   const [albums, setAlbums] = useState<CompletedTrip[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [modalOpen, setModalOpen] = useState(false);
+@@ -81,7 +83,7 @@ export default function AdminAlbums() {
+   };
+ 
+   const handleDelete = async (id: string) => {
+-    if (!confirm('Delete this album?')) return;
++    if (!(await confirm({ message: 'Delete this album?', confirmLabel: 'Delete' }))) return;
+     await deleteCompletedTrip(id);
+     load();
+   };
+@@ -317,7 +319,7 @@ export default function AdminAlbums() {
+                   <span className="transition-transform group-open:rotate-90">▶</span> Original Trip Plan
+                   <span className="text-dark-muted/70 font-normal">(from Upcoming Trips — admin reference only, not shown publicly)</span>
+                 </summary>
+-                <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto space-y-4">
++                <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto app-scroll space-y-4">
+                   {viewing.original_highlights?.length ? (
+                     <div>
+                       <p className="text-xs font-medium text-dark-muted mb-1">Highlights</p>
+diff --git a/src/admin/AdminGallery.tsx b/src/admin/AdminGallery.tsx
+index f184238..8061db9 100644
+--- a/src/admin/AdminGallery.tsx
++++ b/src/admin/AdminGallery.tsx
+@@ -5,9 +5,11 @@ import AdminLayout from './AdminLayout';
+ import Button from '../components/ui/Button';
+ import { getGalleryImages, uploadImage, deleteImage } from '../services/api';
+ import { supabase } from '../services/supabase';
++import { useConfirm } from '../components/ui/ConfirmDialog';
+ import type { GalleryImage } from '../types';
+ 
+ export default function AdminGallery() {
++  const confirm = useConfirm();
+   const [images, setImages] = useState<GalleryImage[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [uploading, setUploading] = useState(false);
+@@ -39,7 +41,7 @@ export default function AdminGallery() {
+   };
+ 
+   const handleDelete = async (img: GalleryImage) => {
+-    if (!confirm('Delete this image?')) return;
++    if (!(await confirm({ message: 'Delete this image?', confirmLabel: 'Delete' }))) return;
+     const path = img.image_url.split('/').slice(-2).join('/');
+     await deleteImage('ulaa', path).catch(() => {});
+     await supabase.from('gallery').delete().eq('id', img.id);
+diff --git a/src/admin/AdminLayout.tsx b/src/admin/AdminLayout.tsx
+index 5103b87..ec59f79 100644
+--- a/src/admin/AdminLayout.tsx
++++ b/src/admin/AdminLayout.tsx
+@@ -51,7 +51,7 @@ function SidebarContent({ userEmail, initial, onNavigate }: SidebarContentProps)
+         </div>
+       </div>
+ 
+-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
++      <nav className="flex-1 px-4 space-y-1 overflow-y-auto app-scroll">
+         {adminNav.map(({ label, to, icon: Icon }) => (
+           <NavLink
+             key={to}
+diff --git a/src/admin/AdminTestimonials.tsx b/src/admin/AdminTestimonials.tsx
+index b5ab404..42e0db1 100644
+--- a/src/admin/AdminTestimonials.tsx
++++ b/src/admin/AdminTestimonials.tsx
+@@ -9,6 +9,7 @@ import ImageUploadField from '../components/ui/ImageUploadField';
+ import {
+   getAllTestimonialsAdmin, createTestimonial, updateTestimonial, deleteTestimonial,
+ } from '../services/api';
++import { useConfirm } from '../components/ui/ConfirmDialog';
+ import type { Testimonial } from '../types';
+ 
+ interface TestimonialForm {
+@@ -25,6 +26,7 @@ const emptyForm: TestimonialForm = {
+ };
+ 
+ export default function AdminTestimonials() {
++  const confirm = useConfirm();
+   const [items, setItems] = useState<Testimonial[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [modalOpen, setModalOpen] = useState(false);
+@@ -71,7 +73,7 @@ export default function AdminTestimonials() {
+   };
+ 
+   const handleDelete = async (id: string) => {
+-    if (!confirm('Delete this testimonial?')) return;
++    if (!(await confirm({ message: 'Delete this testimonial?', confirmLabel: 'Delete' }))) return;
+     await deleteTestimonial(id);
+     load();
+   };
+diff --git a/src/admin/AdminTrips.tsx b/src/admin/AdminTrips.tsx
+index 9218462..94e5c56 100644
+--- a/src/admin/AdminTrips.tsx
++++ b/src/admin/AdminTrips.tsx
+@@ -14,6 +14,7 @@ import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDispla
+ import DatePicker from '../components/ui/DatePicker';
+ import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip } from '../services/api';
+ 
++import { useConfirm } from '../components/ui/ConfirmDialog';
+ import type { UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy } from '../types';
+ import { formatDate, slugify } from '../utils';
+ 
+@@ -72,6 +73,7 @@ const emptyForm: TripForm = {
+ };
+ 
+ export default function AdminTrips() {
++  const confirm = useConfirm();
+   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [modalOpen, setModalOpen] = useState(false);
+@@ -139,7 +141,12 @@ export default function AdminTrips() {
+   };
+ 
+   const handleDelete = async (id: string) => {
+-    if (!confirm('Delete this trip? This cannot be undone.')) return;
++    const ok = await confirm({
++      title: 'Delete this trip?',
++      message: 'This cannot be undone.',
++      confirmLabel: 'Delete',
++    });
++    if (!ok) return;
+     await deleteUpcomingTrip(id);
+     load();
+   };
+@@ -597,7 +604,7 @@ export default function AdminTrips() {
+                 <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
+                   <span className="transition-transform group-open:rotate-90">▶</span> Terms & Conditions
+                 </summary>
+-                <div className="mt-2 bg-background rounded-xl p-3 max-h-64 overflow-y-auto space-y-4">
++                <div className="mt-2 bg-background rounded-xl p-3 max-h-64 overflow-y-auto app-scroll space-y-4">
+                   {parseTerms(viewingTrip.terms_and_conditions || '').map(section => (
+                     <div key={section.number}>
+                       <p className="text-xs font-bold text-dark mb-1">
+@@ -614,7 +621,7 @@ export default function AdminTrips() {
+               <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
+                 <span className="transition-transform group-open:rotate-90">▶</span> Cancellation Policy
+               </summary>
+-              <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto">
++              <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto app-scroll">
+                 <CancellationPolicyDisplay policy={viewingTrip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
+               </div>
+             </details>
+diff --git a/src/admin/AdminWhyULAA.tsx b/src/admin/AdminWhyULAA.tsx
+index b93dc55..f9fcc33 100644
+--- a/src/admin/AdminWhyULAA.tsx
++++ b/src/admin/AdminWhyULAA.tsx
+@@ -5,12 +5,14 @@ import Button from '../components/ui/Button';
+ import ImageUploadField from '../components/ui/ImageUploadField';
+ import { getSiteContent, upsertSiteContent } from '../services/api';
+ import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
++import { useConfirm } from '../components/ui/ConfirmDialog';
+ import type { WhyUlaaContent } from '../types';
+ 
+ const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+ const cardClass = 'bg-white rounded-2xl shadow-card p-6 space-y-4';
+ 
+ export default function AdminWhyULAA() {
++  const confirm = useConfirm();
+   const [content, setContent] = useState<WhyUlaaContent>(DEFAULT_WHY_ULAA);
+   const [loading, setLoading] = useState(true);
+   const [saving, setSaving] = useState(false);
+@@ -42,8 +44,13 @@ export default function AdminWhyULAA() {
+     }
+   };
+ 
+-  const resetToDefault = () => {
+-    if (!confirm('Reset all Why ULAA cards to the original defaults? This will overwrite your edits below (not saved until you click Save).')) return;
++  const resetToDefault = async () => {
++    const ok = await confirm({
++      title: 'Reset to defaults?',
++      message: 'This will overwrite your edits below (not saved until you click Save).',
++      confirmLabel: 'Reset',
++    });
++    if (!ok) return;
+     setContent(DEFAULT_WHY_ULAA);
+   };
+ 
+diff --git a/src/admin/NotificationsPanel.tsx b/src/admin/NotificationsPanel.tsx
+index 3228b3b..dd1bc7a 100644
+--- a/src/admin/NotificationsPanel.tsx
++++ b/src/admin/NotificationsPanel.tsx
+@@ -107,7 +107,7 @@ export default function NotificationsPanel() {
+               )}
+             </div>
+ 
+-            <div className="max-h-96 overflow-y-auto">
++            <div className="max-h-96 overflow-y-auto app-scroll">
+               {loading ? (
+                 <p className="text-center text-sm text-dark-muted py-10">Loading...</p>
+               ) : items.length === 0 ? (
+diff --git a/src/components/ui/BookingForm.tsx b/src/components/ui/BookingForm.tsx
+index 8971189..b1e78e8 100644
+--- a/src/components/ui/BookingForm.tsx
++++ b/src/components/ui/BookingForm.tsx
+@@ -244,7 +244,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
+       </div>
+ 
+       <div className="relative">
+-        <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-5 scroll-smooth">
++        <div className="max-h-[50vh] overflow-y-auto app-scroll pr-2 space-y-5 scroll-smooth">
+           {termsSections.length > 0 ? termsSections.map(section => (
+             <div
+               key={section.number}
+diff --git a/src/components/ui/ConfirmDialog.tsx b/src/components/ui/ConfirmDialog.tsx
+new file mode 100644
+index 0000000..c45498d
+--- /dev/null
++++ b/src/components/ui/ConfirmDialog.tsx
+@@ -0,0 +1,117 @@
++import { createContext, useCallback, useContext, useRef, useState } from 'react';
++import type { ReactNode } from 'react';
++import { AnimatePresence, motion } from 'framer-motion';
++import { AlertTriangle, HelpCircle } from 'lucide-react';
++import Button from './Button';
++
++export interface ConfirmOptions {
++  title?: string;
++  message: string;
++  confirmLabel?: string;
++  cancelLabel?: string;
++  /** 'danger' for destructive actions (delete, reset, etc). Defaults to 'danger'. */
++  variant?: 'danger' | 'default';
++}
++
++type ConfirmFn = (options: ConfirmOptions | string) => Promise<boolean>;
++
++const ConfirmContext = createContext<ConfirmFn | null>(null);
++
++/**
++ * Drop-in, app-themed replacement for `window.confirm`.
++ *
++ * const confirm = useConfirm();
++ * const ok = await confirm('Delete this album?');
++ * if (!ok) return;
++ */
++export function useConfirm(): ConfirmFn {
++  const ctx = useContext(ConfirmContext);
++  if (!ctx) throw new Error('useConfirm must be used within a <ConfirmDialogProvider>');
++  return ctx;
++}
++
++export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
++  const [options, setOptions] = useState<ConfirmOptions | null>(null);
++  const resolverRef = useRef<((value: boolean) => void) | undefined>(undefined);
++
++  const confirm = useCallback<ConfirmFn>((opts) => {
++    setOptions(typeof opts === 'string' ? { message: opts } : opts);
++    return new Promise<boolean>((resolve) => {
++      resolverRef.current = resolve;
++    });
++  }, []);
++
++  const settle = (result: boolean) => {
++    setOptions(null);
++    resolverRef.current?.(result);
++    resolverRef.current = undefined;
++  };
++
++  const isOpen = !!options;
++  const variant = options?.variant ?? 'danger';
++  const Icon = variant === 'danger' ? AlertTriangle : HelpCircle;
++
++  return (
++    <ConfirmContext.Provider value={confirm}>
++      {children}
++      <AnimatePresence>
++        {isOpen && options && (
++          <motion.div
++            initial={{ opacity: 0 }}
++            animate={{ opacity: 1 }}
++            exit={{ opacity: 0 }}
++            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-dark/60 backdrop-blur-sm"
++            onClick={(e) => { if (e.target === e.currentTarget) settle(false); }}
++          >
++            <motion.div
++              initial={{ scale: 0.92, opacity: 0, y: 20 }}
++              animate={{ scale: 1, opacity: 1, y: 0 }}
++              exit={{ scale: 0.92, opacity: 0, y: 20 }}
++              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
++              className="relative w-full max-w-sm bg-white rounded-3xl shadow-warm-lg overflow-hidden"
++              role="alertdialog"
++              aria-modal="true"
++              aria-labelledby="confirm-dialog-message"
++            >
++              <div className="p-6">
++                <div className="flex items-start gap-4">
++                  <div
++                    className={`flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center ${
++                      variant === 'danger' ? 'bg-red-100 text-red-600' : 'bg-primary/10 text-primary'
++                    }`}
++                  >
++                    <Icon size={22} />
++                  </div>
++                  <div className="flex-1 pt-1 min-w-0">
++                    {options.title && (
++                      <h3 className="font-display text-lg font-bold text-dark mb-1">{options.title}</h3>
++                    )}
++                    <p id="confirm-dialog-message" className="text-dark-muted text-sm leading-relaxed">
++                      {options.message}
++                    </p>
++                  </div>
++                </div>
++                <div className="flex gap-3 mt-6 justify-end">
++                  <Button variant="ghost" size="sm" onClick={() => settle(false)} autoFocus>
++                    {options.cancelLabel ?? 'Cancel'}
++                  </Button>
++                  <Button
++                    size="sm"
++                    onClick={() => settle(true)}
++                    className={
++                      variant === 'danger'
++                        ? '!bg-red-600 !border-red-600 hover:!bg-red-700 active:!bg-red-700 !text-white'
++                        : ''
++                    }
++                  >
++                    {options.confirmLabel ?? 'Confirm'}
++                  </Button>
++                </div>
++              </div>
++            </motion.div>
++          </motion.div>
++        )}
++      </AnimatePresence>
++    </ConfirmContext.Provider>
++  );
++}
+diff --git a/src/components/ui/Modal.tsx b/src/components/ui/Modal.tsx
+index 1f1fe87..a52ad81 100644
+--- a/src/components/ui/Modal.tsx
++++ b/src/components/ui/Modal.tsx
+@@ -51,11 +51,21 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
+             animate={{ scale: 1, opacity: 1, y: 0 }}
+             exit={{ scale: 0.92, opacity: 0, y: 20 }}
+             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+-            className={`relative w-full ${sizes[size]} bg-white rounded-3xl shadow-warm-lg max-h-[90vh] overflow-y-auto`}
++            className={`relative w-full ${sizes[size]} bg-white rounded-3xl shadow-warm-lg max-h-[90vh] overflow-hidden flex flex-col`}
+           >
++            {!title && (
++              <button
++                onClick={onClose}
++                className="absolute top-4 right-4 text-dark-muted hover:text-dark bg-background rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors z-10"
++                aria-label="Close"
++              >
++                <X size={20} />
++              </button>
++            )}
++
+             {/* Header */}
+             {title && (
+-              <div className="flex items-center justify-between p-6 border-b border-background-warm">
++              <div className="flex items-center justify-between p-6 border-b border-background-warm flex-shrink-0">
+                 <h3 className="font-display text-2xl font-bold text-dark">{title}</h3>
+                 <button
+                   onClick={onClose}
+@@ -66,18 +76,10 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
+                 </button>
+               </div>
+             )}
+-            {!title && (
+-              <button
+-                onClick={onClose}
+-                className="absolute top-4 right-4 text-dark-muted hover:text-dark bg-background rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors z-10"
+-                aria-label="Close"
+-              >
+-                <X size={20} />
+-              </button>
+-            )}
+ 
+-            {/* Content */}
+-            <div className="p-6">
++            {/* Scrollable content — kept in its own box so the scrollbar
++                never has to render across the outer panel's rounded corner */}
++            <div className="app-scroll overflow-y-auto p-6">
+               {children}
+             </div>
+           </motion.div>
+diff --git a/src/components/ui/Select.tsx b/src/components/ui/Select.tsx
+index 3d439dc..2e41b97 100644
+--- a/src/components/ui/Select.tsx
++++ b/src/components/ui/Select.tsx
+@@ -107,7 +107,7 @@ export default function Select<T extends string | number = string>({
+             width: coords.width,
+             maxHeight: 240,
+           }}
+-          className="z-[100] overflow-auto rounded-xl border-2 border-background-warm bg-white shadow-warm-lg py-1"
++          className="z-[100] overflow-auto app-scroll rounded-xl border-2 border-background-warm bg-white shadow-warm-lg py-1"
+         >
+           {options.map(opt => (
+             <li key={String(opt.value)}>
+diff --git a/src/styles/globals.css b/src/styles/globals.css
+index 455eeaa..bcf5548 100644
+--- a/src/styles/globals.css
++++ b/src/styles/globals.css
+@@ -68,19 +68,42 @@ button, .btn {
+   font-family: var(--font-button);
+ }
+ 
+-/* Custom scrollbar */
++/* Custom scrollbar — thin, rounded, inset from the edge so it reads as a
++   floating pill rather than a hard bar cutting across rounded corners. */
++* {
++  scrollbar-width: thin;
++  scrollbar-color: var(--color-primary-light) transparent;
++}
++
+ ::-webkit-scrollbar {
+-  width: 6px;
++  width: 8px;
++  height: 8px;
+ }
+ ::-webkit-scrollbar-track {
+-  background: var(--color-background);
++  background: transparent;
+ }
+ ::-webkit-scrollbar-thumb {
+-  background: var(--color-primary);
+-  border-radius: 3px;
++  background-color: var(--color-primary-light);
++  border-radius: 9999px;
++  border: 2px solid transparent;
++  background-clip: padding-box;
+ }
+ ::-webkit-scrollbar-thumb:hover {
+-  background: var(--color-primary-dark);
++  background-color: var(--color-primary);
++  background-clip: padding-box;
++}
++::-webkit-scrollbar-corner {
++  background: transparent;
++}
++
++/* Use on any scrollable box that sits inside a rounded card/modal so the
++   scrollbar tucks in near the corner radius instead of sitting flush
++   against the edge. */
++.app-scroll {
++  scrollbar-gutter: stable;
++}
++.app-scroll::-webkit-scrollbar {
++  width: 6px;
+ }
+ 
+ /* Masonry grid */

@@ -9,6 +9,7 @@ import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import DatePicker from '../components/ui/DatePicker';
 import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTrip } from '../services/api';
 
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { CompletedTrip } from '../types';
 import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils';
 
@@ -26,6 +27,7 @@ interface AlbumForm {
 }
 
 export default function AdminAlbums() {
+  const confirm = useConfirm();
   const [albums, setAlbums] = useState<CompletedTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -81,7 +83,7 @@ export default function AdminAlbums() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this album?')) return;
+    if (!(await confirm({ message: 'Delete this album?', confirmLabel: 'Delete' }))) return;
     await deleteCompletedTrip(id);
     load();
   };
@@ -317,7 +319,7 @@ export default function AdminAlbums() {
                   <span className="transition-transform group-open:rotate-90">▶</span> Original Trip Plan
                   <span className="text-dark-muted/70 font-normal">(from Upcoming Trips — admin reference only, not shown publicly)</span>
                 </summary>
-                <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto space-y-4">
+                <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto app-scroll space-y-4">
                   {viewing.original_highlights?.length ? (
                     <div>
                       <p className="text-xs font-medium text-dark-muted mb-1">Highlights</p>
