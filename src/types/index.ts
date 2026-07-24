@@ -49,6 +49,13 @@ export interface CompletedTrip {
   is_published: boolean;
   created_at: string;
   updated_at: string;
+  // Snapshot of the upcoming trip's planning content, copied over
+  // automatically when the album is created. Admin reference only — never
+  // rendered on the public album page (AlbumPage.tsx).
+  original_itinerary?: ItineraryDay[];
+  original_highlights?: string[];
+  original_included?: string[];
+  original_not_included?: string[];
 }
 
 export interface TripImage {

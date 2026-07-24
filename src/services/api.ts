@@ -2,6 +2,18 @@ import { supabase } from './supabase';
 import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, Payment } from '../types';
 
 // =============================================
+// Trip lifecycle
+// =============================================
+// Finds upcoming trips whose start_date has passed, creates a draft album
+// for each in completed_trips (same id, so linked enquiries stay linked),
+// and unpublishes them from Upcoming. Safe to call repeatedly — it only
+// acts on trips that need it. Called once from AdminDashboard on load.
+export async function syncStartedTripAlbums(): Promise<void> {
+  const { error } = await supabase.rpc('sync_started_trip_albums');
+  if (error) throw error;
+}
+
+// =============================================
 // Upcoming Trips
 // =============================================
 export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {

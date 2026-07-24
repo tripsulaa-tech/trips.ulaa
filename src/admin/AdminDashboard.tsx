@@ -7,6 +7,7 @@ import {
 import AdminLayout from './AdminLayout';
 import {
   getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getEnquiries,
+  syncStartedTripAlbums,
 } from '../services/api';
 import type { UpcomingTrip, Enquiry } from '../types';
 import bannerImg from '../assets/hero.png';
@@ -58,15 +59,20 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      getAllUpcomingTripsAdmin(),
-      getAllCompletedTripsAdmin(),
-      getEnquiries(),
-    ]).then(([upcomingTrips, completed, allEnquiries]) => {
-      setUpcoming(upcomingTrips);
-      setCompletedCount(completed.length);
-      setEnquiries(allEnquiries);
-    }).catch(console.error).finally(() => setLoading(false));
+    // Best-effort: catch its own errors so a sync failure never blocks the
+    // dashboard from loading. Awaited first so any trip that just started
+    // is already moved over by the time the lists below are fetched.
+    syncStartedTripAlbums().catch(console.error).finally(() => {
+      Promise.all([
+        getAllUpcomingTripsAdmin(),
+        getAllCompletedTripsAdmin(),
+        getEnquiries(),
+      ]).then(([upcomingTrips, completed, allEnquiries]) => {
+        setUpcoming(upcomingTrips);
+        setCompletedCount(completed.length);
+        setEnquiries(allEnquiries);
+      }).catch(console.error).finally(() => setLoading(false));
+    });
   }, []);
 
   const todayStr = new Date().toDateString();

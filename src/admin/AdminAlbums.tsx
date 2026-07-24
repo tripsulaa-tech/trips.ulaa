@@ -310,6 +310,61 @@ export default function AdminAlbums() {
               </div>
             )}
 
+            {(viewing.original_itinerary?.length || viewing.original_highlights?.length
+              || viewing.original_included?.length || viewing.original_not_included?.length) ? (
+              <details className="group">
+                <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
+                  <span className="transition-transform group-open:rotate-90">▶</span> Original Trip Plan
+                  <span className="text-dark-muted/70 font-normal">(from Upcoming Trips — admin reference only, not shown publicly)</span>
+                </summary>
+                <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto space-y-4">
+                  {viewing.original_highlights?.length ? (
+                    <div>
+                      <p className="text-xs font-medium text-dark-muted mb-1">Highlights</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {viewing.original_highlights.map((h, i) => (
+                          <span key={i} className="text-xs bg-white text-dark px-2 py-1 rounded-full">{h}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {viewing.original_itinerary?.length ? (
+                    <div>
+                      <p className="text-xs font-medium text-dark-muted mb-1">Itinerary</p>
+                      <div className="space-y-2">
+                        {viewing.original_itinerary.map((d, i) => (
+                          <div key={i} className="text-sm">
+                            <p className="font-medium text-dark">Day {d.day || i + 1}: {d.title}</p>
+                            {d.description && <p className="text-dark-muted text-xs mt-0.5">{d.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {(viewing.original_included?.length || viewing.original_not_included?.length) ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      {viewing.original_included?.length ? (
+                        <div>
+                          <p className="text-xs font-medium text-dark-muted mb-1">What's Included</p>
+                          <ul className="text-sm text-dark list-disc list-inside space-y-0.5">
+                            {viewing.original_included.map((item, i) => <li key={i}>{item}</li>)}
+                          </ul>
+                        </div>
+                      ) : null}
+                      {viewing.original_not_included?.length ? (
+                        <div>
+                          <p className="text-xs font-medium text-dark-muted mb-1">Not Included</p>
+                          <ul className="text-sm text-dark list-disc list-inside space-y-0.5">
+                            {viewing.original_not_included.map((item, i) => <li key={i}>{item}</li>)}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </details>
+            ) : null}
+
             <div className="flex gap-3 pt-2 border-t border-background-warm">
               <Button
                 variant="primary"
