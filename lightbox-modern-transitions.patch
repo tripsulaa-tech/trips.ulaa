@@ -1,0 +1,199 @@
+diff --git a/src/components/ui/Lightbox.tsx b/src/components/ui/Lightbox.tsx
+index 2c66a4c..5f83726 100644
+--- a/src/components/ui/Lightbox.tsx
++++ b/src/components/ui/Lightbox.tsx
+@@ -9,12 +9,35 @@ interface LightboxProps {
+   onClose: () => void;
+ }
+ 
++// Direction-aware slide: photo enters from the side you navigated toward and
++// exits toward the opposite side, instead of a flat crossfade. `direction`
++// is +1 moving forward (next), -1 moving backward (prev), 0 on first open.
++const slideVariants = {
++  enter: (direction: number) => ({
++    x: direction >= 0 ? 80 : -80,
++    opacity: 0,
++    scale: 0.96,
++  }),
++  center: {
++    x: 0,
++    opacity: 1,
++    scale: 1,
++  },
++  exit: (direction: number) => ({
++    x: direction >= 0 ? -80 : 80,
++    opacity: 0,
++    scale: 0.96,
++  }),
++};
++
+ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }: LightboxProps) {
+-  const [current, setCurrent] = useState(initialIndex);
++  // [index, direction] kept together so the exit animation always knows
++  // which way the *previous* slide should leave, even after state updates.
++  const [[current, direction], setSlide] = useState<[number, number]>([initialIndex, 0]);
+   const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
+ 
+   useEffect(() => {
+-    setCurrent(initialIndex);
++    setSlide([initialIndex, 0]);
+   }, [initialIndex]);
+ 
+   // Lock body scroll while lightbox is open so the footer/page behind
+@@ -29,13 +52,17 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }:
+   }, [isOpen]);
+ 
+   const prev = useCallback(() => {
+-    setCurrent(c => (c > 0 ? c - 1 : images.length - 1));
++    setSlide(([c]) => [c > 0 ? c - 1 : images.length - 1, -1]);
+   }, [images.length]);
+ 
+   const next = useCallback(() => {
+-    setCurrent(c => (c < images.length - 1 ? c + 1 : 0));
++    setSlide(([c]) => [c < images.length - 1 ? c + 1 : 0, 1]);
+   }, [images.length]);
+ 
++  const goTo = (index: number) => {
++    setSlide(([c]) => [index, index >= c ? 1 : -1]);
++  };
++
+   useEffect(() => {
+     if (!isOpen) return;
+     const handler = (e: KeyboardEvent) => {
+@@ -73,20 +100,54 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }:
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           exit={{ opacity: 0 }}
+-          className="fixed inset-0 z-[100] bg-[#0c0906]/98 backdrop-blur-xl flex items-center justify-center p-4"
++          className="fixed inset-0 z-[100] overflow-hidden flex items-center justify-center p-3 sm:p-4"
+           onClick={onClose}
+         >
++          {/* Ambient backdrop — a blurred, oversized version of the current
++              photo bleeding through a dark scrim. Crossfades independently
++              of the main slide so the room's "color" shifts with the photo
++              instead of sitting on a flat brand-color slab. */}
++          <div className="absolute inset-0 bg-dark">
++            <AnimatePresence>
++              <motion.img
++                key={current}
++                src={images[current]}
++                alt=""
++                aria-hidden="true"
++                initial={{ opacity: 0 }}
++                animate={{ opacity: 0.35 }}
++                exit={{ opacity: 0 }}
++                transition={{ duration: 0.5 }}
++                className="absolute inset-0 w-full h-full object-cover scale-125 blur-3xl saturate-150"
++              />
++            </AnimatePresence>
++            <div className="absolute inset-0 bg-gradient-to-b from-dark/80 via-dark/70 to-dark/90 backdrop-blur-2xl" />
++          </div>
++
++          {/* Progress dashes — mobile only, replaces the numeric counter so
++              position is legible at a glance without reading digits. */}
++          {images.length > 1 && (
++            <div className="absolute top-4 left-4 right-16 sm:hidden flex gap-1 z-10">
++              {images.map((_, i) => (
++                <div
++                  key={i}
++                  className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i === current ? 'bg-secondary' : 'bg-cream/25'}`}
++                />
++              ))}
++            </div>
++          )}
++
+           {/* Close */}
+           <button
+             onClick={onClose}
+-            className="absolute top-4 right-4 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center z-10 cursor-pointer transition-colors"
++            className="absolute top-4 right-4 text-cream hover:text-white bg-primary/25 hover:bg-primary/40 rounded-full p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center z-10 cursor-pointer transition-colors"
+             aria-label="Close"
+           >
+             <X size={24} />
+           </button>
+ 
+-          {/* Counter */}
+-          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/60 text-sm font-button tracking-wide">
++          {/* Counter — desktop only, mobile uses the progress dashes above */}
++          <div className="hidden sm:block absolute top-4 left-1/2 -translate-x-1/2 text-cream/80 text-sm font-button tracking-wide bg-primary/20 px-3 py-1 rounded-full">
+             {current + 1} / {images.length}
+           </div>
+ 
+@@ -94,23 +155,25 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }:
+           {images.length > 1 && (
+             <button
+               onClick={(e) => { e.stopPropagation(); prev(); }}
+-              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 hover:scale-110 active:scale-95 rounded-full p-3 z-10 cursor-pointer transition-all"
++              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 text-cream hover:text-white bg-primary/25 hover:bg-primary/40 hover:scale-110 active:scale-95 rounded-full p-3 z-10 cursor-pointer transition-all"
+               aria-label="Previous"
+             >
+               <ChevronLeft size={26} />
+             </button>
+           )}
+ 
+-          {/* Image (swipeable) */}
+-          <AnimatePresence initial={false} mode="wait">
++          {/* Image (swipeable, directional slide) */}
++          <AnimatePresence initial={false} custom={direction} mode="popLayout">
+             <motion.div
+               key={current}
+-              initial={{ opacity: 0 }}
+-              animate={{ opacity: 1 }}
+-              exit={{ opacity: 0 }}
+-              transition={{ duration: 0.2 }}
++              custom={direction}
++              variants={slideVariants}
++              initial="enter"
++              animate="center"
++              exit="exit"
++              transition={{ x: { type: 'spring', stiffness: 320, damping: 32 }, opacity: { duration: 0.2 }, scale: { duration: 0.2 } }}
+               onClick={e => e.stopPropagation()}
+-              className="max-w-5xl max-h-[78vh] w-full touch-pan-y"
++              className="relative max-w-5xl max-h-[85vh] sm:max-h-[78vh] w-full touch-pan-y bg-dark-muted/30 rounded-2xl p-1.5 sm:p-2 shadow-warm-lg"
+               drag="x"
+               dragConstraints={{ left: 0, right: 0 }}
+               dragElastic={0.6}
+@@ -121,7 +184,7 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }:
+                 src={images[current]}
+                 alt={`Gallery image ${current + 1}`}
+                 draggable={false}
+-                className="w-full h-full max-h-[78vh] object-contain rounded-2xl select-none pointer-events-none"
++                className="w-full h-full max-h-[82vh] sm:max-h-[74vh] object-contain rounded-xl select-none pointer-events-none"
+               />
+             </motion.div>
+           </AnimatePresence>
+@@ -130,7 +193,7 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }:
+           {images.length > 1 && (
+             <button
+               onClick={(e) => { e.stopPropagation(); next(); }}
+-              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 hover:scale-110 active:scale-95 rounded-full p-3 z-10 cursor-pointer transition-all"
++              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-cream hover:text-white bg-primary/25 hover:bg-primary/40 hover:scale-110 active:scale-95 rounded-full p-3 z-10 cursor-pointer transition-all"
+               aria-label="Next"
+             >
+               <ChevronRight size={26} />
+@@ -145,20 +208,20 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }:
+             >
+               <div className="relative">
+                 {/* edge fade masks */}
+-                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#0c0906] to-transparent z-10 rounded-l-2xl" />
+-                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0c0906] to-transparent z-10 rounded-r-2xl" />
++                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-dark to-transparent z-10 rounded-l-2xl" />
++                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-dark to-transparent z-10 rounded-r-2xl" />
+ 
+-                <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth bg-white/[0.06] border border-white/10 backdrop-blur-md rounded-2xl px-3 py-2.5">
++                <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth bg-primary/15 border border-primary/25 backdrop-blur-md rounded-2xl px-3 py-2.5">
+                   {images.map((img, i) => (
+                     <button
+                       key={i}
+                       ref={el => { thumbRefs.current[i] = el; }}
+-                      onClick={() => setCurrent(i)}
++                      onClick={() => goTo(i)}
+                       aria-label={`Go to image ${i + 1}`}
+                       aria-current={i === current}
+                       className={`relative w-12 h-12 rounded-xl overflow-hidden shrink-0 cursor-pointer transition-all duration-200 ${
+                         i === current
+-                          ? 'ring-2 ring-secondary ring-offset-2 ring-offset-[#0c0906] scale-105'
++                          ? 'ring-2 ring-secondary ring-offset-2 ring-offset-dark scale-105'
+                           : 'opacity-50 hover:opacity-90'
+                       }`}
+                     >
