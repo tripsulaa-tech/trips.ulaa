@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { PanInfo } from 'framer-motion';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import SectionTitle from '../../components/ui/SectionTitle';
 import AlbumCard from '../../components/ui/AlbumCard';
 import { SkeletonGrid } from '../../components/ui/Skeletons';
@@ -33,18 +35,60 @@ const DEMO_COMPLETED: CompletedTrip[] = [
     gallery_images: [],
     is_published: true, created_at: '', updated_at: '',
   },
+  {
+    id: '4', title: 'Rajasthan Royals', destination: 'Rajasthan',
+    slug: 'rajasthan-royals', trip_date: '2024-04-05',
+    description: 'Forts, palaces, desert sunsets, and the warmest hospitality — a week of royal history and sisterhood.',
+    participants: 15, cover_image: 'https://images.unsplash.com/photo-1477587458883-47145ed94245?w=600&q=80',
+    gallery_images: [],
+    is_published: true, created_at: '', updated_at: '',
+  },
+  {
+    id: '5', title: 'Spiti Snow Trails', destination: 'Spiti Valley',
+    slug: 'spiti-snow-trails', trip_date: '2024-02-12',
+    description: 'High-altitude monasteries, frozen rivers, and the kind of silence that changes you — Spiti in winter.',
+    participants: 12, cover_image: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=600&q=80',
+    gallery_images: [],
+    is_published: true, created_at: '', updated_at: '',
+  },
 ];
 
 export default function CompletedTripsPreview() {
   const [trips, setTrips] = useState<CompletedTrip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState(0);
 
   useEffect(() => {
     getCompletedTrips()
-      .then(data => setTrips(data.length > 0 ? data.slice(0, 3) : DEMO_COMPLETED))
+      .then(data => setTrips(data.length > 0 ? data.slice(0, 8) : DEMO_COMPLETED))
       .catch(() => setTrips(DEMO_COMPLETED))
       .finally(() => setLoading(false));
   }, []);
+
+  const featured = trips.slice(0, 2);
+  const rest = trips.slice(2);
+
+  const prev = () => {
+    setDirection(-1);
+    setCurrent(c => Math.max(0, c - 1));
+  };
+  const next = () => {
+    setDirection(1);
+    setCurrent(c => Math.min(rest.length - 1, c + 1));
+  };
+
+  const SWIPE_THRESHOLD = 50;
+  const handleDragEnd = (_e: unknown, info: PanInfo) => {
+    if (info.offset.x < -SWIPE_THRESHOLD) next();
+    else if (info.offset.x > SWIPE_THRESHOLD) prev();
+  };
+
+  const slideVariants = {
+    enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -80 : 80, opacity: 0 }),
+  };
 
   return (
     <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-cream">
@@ -67,11 +111,79 @@ export default function CompletedTripsPreview() {
         {loading ? (
           <SkeletonGrid count={3} type="album" />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {trips.map((trip, i) => (
-              <AlbumCard key={trip.id} trip={trip} index={i} />
-            ))}
-          </div>
+          <>
+            {/* Featured — always the first 2 albums, always visible */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+              {featured.map((trip, i) => (
+                <AlbumCard key={trip.id} trip={trip} index={i} />
+              ))}
+            </div>
+
+            {rest.length > 0 && (
+              <div className="mt-6 md:mt-8">
+                {/* Desktop grid — the rest of the albums, all visible */}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                  {rest.map((trip, i) => (
+                    <AlbumCard key={trip.id} trip={trip} index={i} />
+                  ))}
+                </div>
+
+                {/* Mobile carousel — only the active card is rendered, so the
+                    section height always matches that card, not the tallest one */}
+                <div className="md:hidden">
+                  <div className="overflow-hidden px-2">
+                    <AnimatePresence mode="wait" custom={direction} initial={false}>
+                      <motion.div
+                        key={rest[current]?.id}
+                        custom={direction}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                        drag="x"
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.15}
+                        onDragEnd={handleDragEnd}
+                      >
+                        {rest[current] && (
+                          <AlbumCard trip={rest[current]} index={0} />
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+                  {/* Controls */}
+                  {rest.length > 1 && (
+                    <div className="flex items-center justify-center gap-4 mt-6">
+                      <button
+                        onClick={prev}
+                        disabled={current === 0}
+                        className="w-10 h-10 rounded-full bg-white hover:bg-primary hover:text-white text-dark-muted border border-background-warm flex items-center justify-center disabled:opacity-40 transition-colors"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <div className="flex gap-2">
+                        {rest.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
+                            className={`w-2 h-2 rounded-full transition-all ${i === current ? 'bg-primary w-5' : 'bg-background-warm'}`}
+                          />
+                        ))}
+                      </div>
+                      <button
+                        onClick={next}
+                        disabled={current === rest.length - 1}
+                        className="w-10 h-10 rounded-full bg-white hover:bg-primary hover:text-white text-dark-muted border border-background-warm flex items-center justify-center disabled:opacity-40 transition-colors"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
