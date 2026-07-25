@@ -68,3 +68,27 @@ export function downloadTripIcs(trip: UpcomingTrip): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/** True on iOS/iPadOS and macOS Safari, where downloading an .ics file
+ *  hands off directly to the native Calendar app — a better experience
+ *  there than Google Calendar's web prefill screen. */
+function prefersIcsDownload(): boolean {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !('MSStream' in window);
+  // iPadOS 13+ reports as "Macintosh" but exposes touch support, unlike real Macs.
+  const isIPadOS = ua.includes('Macintosh') && navigator.maxTouchPoints > 1;
+  const isMac = /Macintosh/.test(ua) && !isIPadOS;
+  return isIOS || isIPadOS || isMac;
+}
+
+/** One-click "Add to calendar": picks the right action for the visitor's
+ *  device automatically, no menu required. iOS/iPadOS/macOS get an .ics
+ *  download (opens straight into Apple Calendar); everyone else gets the
+ *  Google Calendar prefill link in a new tab. */
+export function addToCalendar(trip: UpcomingTrip): void {
+  if (prefersIcsDownload()) {
+    downloadTripIcs(trip);
+  } else {
+    window.open(getGoogleCalendarUrl(trip), '_blank', 'noopener,noreferrer');
+  }
+}

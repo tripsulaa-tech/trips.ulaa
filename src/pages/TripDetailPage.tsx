@@ -12,11 +12,11 @@ import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import { getUpcomingTripBySlug } from '../services/api';
 import type { UpcomingTrip } from '../types';
 import { formatDateRange, formatDate, seatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
-import { getGoogleCalendarUrl, downloadTripIcs } from '../utils/calendar';
+import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/calendar';
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
   MapPin, Calendar, Clock, Users, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus,
+  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download,
 } from 'lucide-react';
 
 export default function TripDetailPage() {
@@ -25,8 +25,10 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
+  const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
   const navBarRef = useRef<HTMLElement>(null);
   const navLinkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
+  const calendarMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -70,6 +72,22 @@ export default function TripDetailPage() {
     const target = link.offsetLeft - bar.clientWidth / 2 + link.clientWidth / 2;
     bar.scrollTo({ left: target, behavior: 'smooth' });
   }, [activeSection]);
+
+  useEffect(() => {
+    if (!calendarMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!calendarMenuRef.current?.contains(e.target as Node)) setCalendarMenuOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCalendarMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [calendarMenuOpen]);
 
   if (loading) {
     return (
@@ -130,8 +148,8 @@ export default function TripDetailPage() {
 
       {/* Quick jump nav */}
       <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1344px] mx-auto">
-          <nav ref={navBarRef} className="flex gap-1 overflow-x-auto no-scrollbar py-3">
+        <div className="max-w-[1344px] mx-auto flex items-center gap-2">
+          <nav ref={navBarRef} className="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar py-3">
             <a
               href="#overview"
               ref={el => { navLinkRefs.current['overview'] = el; }}
@@ -181,6 +199,29 @@ export default function TripDetailPage() {
               Cancellation
             </a>
           </nav>
+
+          {/* Pinned actions — stay visible through the whole page scroll,
+              unlike the sidebar card below which only sticks on desktop. */}
+          <div className="shrink-0 flex items-center gap-1 pl-1 border-l border-background-warm">
+            <button
+              type="button"
+              onClick={() => navigator.share?.({ title: trip.title, url: window.location.href })}
+              aria-label="Share this trip"
+              title="Share this trip"
+              className="h-9 w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
+            >
+              <Share2 size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => addToCalendar(trip)}
+              aria-label="Add to calendar"
+              title="Add to calendar"
+              className="h-9 w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
+            >
+              <CalendarPlus size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -408,6 +449,36 @@ export default function TripDetailPage() {
                 >
                   <Share2 size={14} /> Share this trip
                 </button>
+
+                <div ref={calendarMenuRef} className="relative">
+                  <button
+                    onClick={() => setCalendarMenuOpen(o => !o)}
+                    className="w-full flex items-center justify-center gap-2 mt-2 text-sm text-dark-muted hover:text-primary transition-colors"
+                  >
+                    <CalendarPlus size={14} /> Add to calendar
+                  </button>
+
+                  {calendarMenuOpen && (
+                    <div className="absolute bottom-full left-0 right-0 mb-2 z-20 rounded-xl border-2 border-background-warm bg-white shadow-warm-lg py-1 overflow-hidden">
+                      <a
+                        href={getGoogleCalendarUrl(trip)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setCalendarMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-dark text-left hover:bg-background-warm transition-colors"
+                      >
+                        <Calendar size={14} className="shrink-0" /> Google Calendar
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => { downloadTripIcs(trip); setCalendarMenuOpen(false); }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-dark text-left hover:bg-background-warm transition-colors"
+                      >
+                        <Download size={14} className="shrink-0" /> Apple / Outlook (.ics)
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <p className="text-xs text-dark-muted text-center mt-4">
                   No payment required to enquire. We'll contact you within 24 hours.

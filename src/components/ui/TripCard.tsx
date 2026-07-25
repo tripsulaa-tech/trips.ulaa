@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Clock, Users, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, ArrowRight, CalendarPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip } from '../../types';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, seatsLeft, PLACEHOLDER_IMAGE } from '../../utils';
+import { addToCalendar } from '../../utils/calendar';
 import Button from './Button';
 
 interface TripCardProps {
@@ -50,6 +51,17 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             </span>
           )}
         </div>
+
+        {/* Add to calendar */}
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); addToCalendar(trip); }}
+          aria-label="Add to calendar"
+          title="Add to calendar"
+          className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25 transition-colors"
+        >
+          <CalendarPlus size={16} />
+        </button>
 
         {/* Destination overlay */}
         <div className="absolute bottom-4 left-4">
