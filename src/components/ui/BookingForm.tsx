@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { CheckCircle, AlertCircle, FileText } from 'lucide-react';
@@ -25,6 +25,54 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
   const termsText = (terms || '').trim() || DEFAULT_TERMS_AND_CONDITIONS;
   const termsSections = useMemo(() => parseTerms(termsText), [termsText]);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
+  const chipBarRef = useRef<HTMLDivElement>(null);
+  const chipRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [activeSectionNum, setActiveSectionNum] = useState<string | null>(null);
+  // Falls back to the first section before the observer below has fired
+  // (e.g. right when the modal opens), without needing its own effect.
+  const displayedActiveNum = activeSectionNum ?? termsSections[0]?.number ?? null;
+
+  // Highlight whichever chip's section is currently at the top of the
+  // modal's own scroll box (not the page) — same live-highlight behavior
+  // as the other quick-jump tab bars in the app.
+  useEffect(() => {
+    if (!termsOpen) return;
+    const root = scrollBodyRef.current;
+    if (!root) return;
+    const sections = termsSections
+      .map(s => sectionRefs.current[s.number])
+      .filter((el): el is HTMLDivElement => el !== null);
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries.filter(e => e.isIntersecting);
+        if (visible.length === 0) return;
+        const topMost = visible.reduce((a, b) => (a.boundingClientRect.top <= b.boundingClientRect.top ? a : b));
+        const num = Object.keys(sectionRefs.current).find(key => sectionRefs.current[key] === topMost.target);
+        if (num) setActiveSectionNum(num);
+      },
+      { root, rootMargin: '0px 0px -70% 0px', threshold: 0 }
+    );
+    sections.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, [termsOpen, termsSections]);
+
+  // Keeps the active chip scrolled into view horizontally — scrollLeft only,
+  // so it never touches the vertical scroll of the policy text below it.
+  useEffect(() => {
+    const bar = chipBarRef.current;
+    const chip = displayedActiveNum ? chipRefs.current[displayedActiveNum] : null;
+    if (!bar || !chip) return;
+    const target = chip.offsetLeft - bar.clientWidth / 2 + chip.clientWidth / 2;
+    bar.scrollTo({ left: target, behavior: 'smooth' });
+  }, [displayedActiveNum]);
+
+  const handleChipSelect = (num: string) => {
+    setActiveSectionNum(num);
+    sectionRefs.current[num]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const {
     register,
@@ -229,14 +277,19 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
       </div>
 
       {/* Quick-jump section chips */}
-      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-3 mb-3 border-b border-background-warm">
+      <div ref={chipBarRef} className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-3 mb-3 border-b border-background-warm">
         {termsSections.map(section => (
           <button
             key={section.number}
+            ref={el => { chipRefs.current[section.number] = el; }}
             type="button"
-            onClick={() => sectionRefs.current[section.number]?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            onClick={() => handleChipSelect(section.number)}
             title={section.title}
-            className="shrink-0 text-xs font-semibold w-7 h-7 rounded-full bg-background-warm text-dark-muted hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
+            className={`shrink-0 text-xs font-semibold w-7 h-7 rounded-full transition-colors flex items-center justify-center ${
+              displayedActiveNum === section.number
+                ? 'bg-primary text-white'
+                : 'bg-background-warm text-dark-muted hover:bg-primary hover:text-white'
+            }`}
           >
             {section.number}
           </button>
@@ -244,7 +297,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
       </div>
 
       <div className="relative">
-        <div className="max-h-[50vh] overflow-y-auto app-scroll pr-2 space-y-5 scroll-smooth">
+        <div ref={scrollBodyRef} className="max-h-[50vh] overflow-y-auto app-scroll pr-2 space-y-5 scroll-smooth">
           {termsSections.length > 0 ? termsSections.map(section => (
             <div
               key={section.number}

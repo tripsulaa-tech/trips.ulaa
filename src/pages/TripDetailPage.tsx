@@ -12,10 +12,11 @@ import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import { getUpcomingTripBySlug } from '../services/api';
 import type { UpcomingTrip } from '../types';
 import { formatDateRange, formatDate, seatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
+import { getGoogleCalendarUrl, downloadTripIcs } from '../utils/calendar';
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
   MapPin, Calendar, Clock, Users, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2,
+  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus,
 } from 'lucide-react';
 
 export default function TripDetailPage() {
