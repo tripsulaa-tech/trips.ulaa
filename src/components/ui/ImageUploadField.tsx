@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Upload, X, ImagePlus } from 'lucide-react';
-import { uploadImage } from '../../services/api';
+import { uploadImage, deleteImageByUrl } from '../../services/api';
 
 interface ImageUploadFieldProps {
   label: string;
@@ -19,17 +19,27 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const previousUrl = value;
     try {
       setUploading(true);
       const path = `${pathPrefix}/${Date.now()}-${file.name}`;
       const url = await uploadImage(bucket, file, path);
       onChange(url);
+      // Replacing an existing image — clean up the file it's replacing so
+      // it doesn't sit around as an orphan in storage.
+      if (previousUrl) await deleteImageByUrl(bucket, previousUrl).catch(() => {});
     } catch {
       alert(`Failed to upload. Make sure the Supabase storage bucket "${bucket}" exists and is public.`);
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
     }
+  };
+
+  const handleRemove = async () => {
+    const previousUrl = value;
+    onChange('');
+    if (previousUrl) await deleteImageByUrl(bucket, previousUrl).catch(() => {});
   };
 
   return (
@@ -54,7 +64,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
           <div className="absolute inset-0 bg-dark/0 group-hover:bg-dark/40 transition-colors" />
           <button
             type="button"
-            onClick={() => onChange('')}
+            onClick={handleRemove}
             className="absolute top-2 right-2 p-1.5 rounded-lg bg-dark/70 text-white hover:bg-red-600 transition-colors"
             title="Remove image"
           >

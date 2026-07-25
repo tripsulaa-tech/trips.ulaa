@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Upload, X, ImagePlus, Loader2 } from 'lucide-react';
-import { uploadImage } from '../../services/api';
+import { uploadImage, deleteImageByUrl } from '../../services/api';
 
 interface MultiImageUploadFieldProps {
   label: string;
@@ -34,8 +34,24 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
     }
   };
 
-  const removeAt = (index: number) => {
+  const [removingUrl, setRemovingUrl] = useState<string | null>(null);
+
+  const removeAt = async (index: number) => {
+    const url = value[index];
+    // Drop it from the form state immediately so the UI feels responsive...
     onChange(value.filter((_, i) => i !== index));
+    // ...then clean up the actual file in storage. If this fails, the file
+    // becomes an orphan in the bucket (harmless but wastes quota) — we
+    // don't re-add it to the form on failure since the user already asked
+    // for it gone from the album.
+    try {
+      setRemovingUrl(url);
+      await deleteImageByUrl(bucket, url);
+    } catch {
+      // best-effort — surfaced nowhere on purpose, matches existing delete UX elsewhere
+    } finally {
+      setRemovingUrl(null);
+    }
   };
 
   return (
@@ -58,10 +74,11 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
             <button
               type="button"
               onClick={() => removeAt(index)}
-              className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-dark/70 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+              disabled={removingUrl === url}
+              className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-dark/70 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-100 disabled:cursor-wait"
               title="Remove image"
             >
-              <X size={14} />
+              {removingUrl === url ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
             </button>
           </div>
         ))}

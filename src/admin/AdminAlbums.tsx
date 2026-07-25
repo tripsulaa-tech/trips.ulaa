@@ -236,7 +236,13 @@ export default function AdminAlbums() {
               value={form.gallery_images}
               onChange={urls => setForm(f => ({ ...f, gallery_images: urls }))}
               bucket="ulaa"
-              pathPrefix={`albums/${editing ? editing.id : 'new'}`}
+              // Folder name is the album's slug (e.g. "attapadi") rather than
+              // its UUID, so storage stays human-readable. For an existing
+              // album we use its saved slug; for a brand-new one (not saved
+              // yet, so no slug exists) we derive one live from the title
+              // being typed, falling back to "new" only if the title is
+              // still empty.
+              pathPrefix={`albums/${editing ? editing.slug : (slugify(form.title) || 'new')}`}
             />
           </div>
           <div className="md:col-span-2">
