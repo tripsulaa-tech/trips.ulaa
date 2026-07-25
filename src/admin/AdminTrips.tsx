@@ -10,6 +10,7 @@ import TagListEditor from '../components/ui/TagListEditor';
 import ItineraryEditor from '../components/ui/ItineraryEditor';
 import FAQEditor from '../components/ui/FAQEditor';
 import CancellationPolicyEditor from '../components/ui/CancellationPolicyEditor';
+import TermsEditor from '../components/ui/TermsEditor';
 import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDisplay';
 import DatePicker from '../components/ui/DatePicker';
 import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip } from '../services/api';
@@ -444,15 +445,9 @@ export default function AdminTrips() {
           </div>
 
           <div className="md:col-span-2 border-t border-background-warm pt-4">
-            <label className="block text-sm font-medium text-dark mb-1">Terms & Conditions</label>
-            <p className="text-xs text-dark-muted mb-1.5">
-              Shown to participants on the booking form for this trip — they must tick a checkbox agreeing to these before they can submit an enquiry. Pre-filled with the standard terms; edit freely for this trip.
-            </p>
-            <textarea
+            <TermsEditor
               value={form.terms_and_conditions}
-              onChange={e => setForm(f => ({ ...f, terms_and_conditions: e.target.value }))}
-              rows={10}
-              className={`${inputClass} resize-y font-mono text-xs leading-relaxed`}
+              onChange={terms_and_conditions => setForm(f => ({ ...f, terms_and_conditions }))}
             />
           </div>
 
