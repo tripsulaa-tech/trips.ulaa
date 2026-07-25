@@ -26,6 +26,8 @@ interface AlbumForm {
   is_published: boolean;
 }
 
+type AlbumFormErrors = Partial<Record<'title' | 'destination' | 'trip_date' | 'description', string>>;
+
 export default function AdminAlbums() {
   const confirm = useConfirm();
   const [albums, setAlbums] = useState<CompletedTrip[]>([]);
@@ -34,6 +36,7 @@ export default function AdminAlbums() {
   const [editing, setEditing] = useState<CompletedTrip | null>(null);
   const [viewing, setViewing] = useState<CompletedTrip | null>(null);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<AlbumFormErrors>({});
   const [form, setForm] = useState<AlbumForm>({
     title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false,
   });
@@ -46,17 +49,35 @@ export default function AdminAlbums() {
 
   const openCreate = () => {
     setEditing(null);
+    setErrors({});
     setForm({ title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false });
     setModalOpen(true);
   };
 
   const openEdit = (album: CompletedTrip) => {
     setEditing(album);
+    setErrors({});
     setForm({ title: album.title, destination: album.destination, map_url: album.map_url || '', trip_date: album.trip_date, description: album.description, batch: album.batch || '', participants: album.participants, cover_image: album.cover_image || '', gallery_images: album.gallery_images || [], is_published: album.is_published });
     setModalOpen(true);
   };
 
+  const validate = (): AlbumFormErrors => {
+    const next: AlbumFormErrors = {};
+    if (!form.title.trim()) next.title = 'Album title is required.';
+    if (!form.destination.trim()) next.destination = 'Destination is required.';
+    if (!form.trip_date.trim()) next.trip_date = 'Trip date is required.';
+    if (!form.description.trim()) next.description = 'Description is required.';
+    return next;
+  };
+
   const handleSave = async () => {
+    const fieldErrors = validate();
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
+    setErrors({});
+
     const batch = form.batch.trim() || undefined;
     const titleNorm = form.title.trim().toLowerCase();
     const batchNorm = (batch || '').trim().toLowerCase();
@@ -78,7 +99,7 @@ export default function AdminAlbums() {
       else await createCompletedTrip(data);
       setModalOpen(false);
       load();
-    } catch { alert('Failed to save.'); }
+    } catch { alert('Failed to save. Please check your connection and try again.'); }
     finally { setSaving(false); }
   };
 
@@ -171,12 +192,22 @@ export default function AdminAlbums() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Album Title *</label>
-            <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="e.g. Magical Meghalaya" />
+            <input
+              value={form.title}
+              onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setErrors(err => ({ ...err, title: undefined })); }}
+              className={`${inputClass} ${errors.title ? '!border-red-400' : ''}`}
+              placeholder="e.g. Magical Meghalaya"
+            />
+            {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Destination *</label>
             <div className="flex gap-2">
-              <input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} />
+              <input
+                value={form.destination}
+                onChange={e => { setForm(f => ({ ...f, destination: e.target.value })); setErrors(err => ({ ...err, destination: undefined })); }}
+                className={`${inputClass} ${errors.destination ? '!border-red-400' : ''}`}
+              />
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.destination)}`}
                 target="_blank"
@@ -188,6 +219,7 @@ export default function AdminAlbums() {
                 Find on Maps ↗
               </a>
             </div>
+            {errors.destination && <p className="text-xs text-red-500 mt-1">{errors.destination}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Destination — Google Maps Link</label>
@@ -215,7 +247,12 @@ export default function AdminAlbums() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Trip Date *</label>
-            <DatePicker value={form.trip_date} onChange={trip_date => setForm(f => ({ ...f, trip_date }))} />
+            <DatePicker
+              value={form.trip_date}
+              onChange={trip_date => { setForm(f => ({ ...f, trip_date })); setErrors(err => ({ ...err, trip_date: undefined })); }}
+              className={errors.trip_date ? '!border-red-400' : ''}
+            />
+            {errors.trip_date && <p className="text-xs text-red-500 mt-1">{errors.trip_date}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Participants</label>
@@ -248,7 +285,13 @@ export default function AdminAlbums() {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Description *</label>
-            <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
+            <textarea
+              value={form.description}
+              onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setErrors(err => ({ ...err, description: undefined })); }}
+              rows={3}
+              className={`${inputClass} resize-none ${errors.description ? '!border-red-400' : ''}`}
+            />
+            {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
           </div>
           <div className="md:col-span-2 flex items-center gap-3">
             <input type="checkbox" id="pub" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />

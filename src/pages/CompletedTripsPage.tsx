@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
 import AlbumCard from '../components/ui/AlbumCard';
+import AlbumCarousel from '../components/ui/AlbumCarousel';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getCompletedTrips } from '../services/api';
 import type { CompletedTrip } from '../types';
@@ -131,11 +132,35 @@ export default function CompletedTripsPage() {
         {loading ? (
           <SkeletonGrid count={6} type="album" />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {trips.map((trip, i) => (
-              <AlbumCard key={trip.id} trip={trip} index={i} />
-            ))}
-          </div>
+          <>
+            {/* Mobile: first 2 albums static, 3rd onward in a swipeable carousel */}
+            <div className="md:hidden">
+              <div className="grid grid-cols-1 gap-6">
+                {trips.slice(0, 2).map((trip, i) => (
+                  <AlbumCard key={trip.id} trip={trip} index={i} />
+                ))}
+              </div>
+              {trips.length > 2 && (
+                <div className="mt-6">
+                  <AlbumCarousel items={trips.slice(2)} />
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: first 3 albums static, 4th onward in a swipeable carousel */}
+            <div className="hidden md:block">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {trips.slice(0, 3).map((trip, i) => (
+                  <AlbumCard key={trip.id} trip={trip} index={i} />
+                ))}
+              </div>
+              {trips.length > 3 && (
+                <div className="mt-8 max-w-sm mx-auto">
+                  <AlbumCarousel items={trips.slice(3)} />
+                </div>
+              )}
+            </div>
+          </>
         )}
         </div>
       </div>
