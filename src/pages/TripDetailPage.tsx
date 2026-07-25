@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
@@ -24,6 +24,8 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
+  const navBarRef = useRef<HTMLElement>(null);
+  const navLinkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
 
   useEffect(() => {
     if (!slug) return;
@@ -56,6 +58,17 @@ export default function TripDetailPage() {
     sections.forEach(el => observer.observe(el));
     return () => observer.disconnect();
   }, [trip]);
+
+  // Keep the active tab scrolled into view within the horizontally-scrolling
+  // nav strip, whether it became active from a click or from scrolling past
+  // it manually — so it's never highlighted off to the left or right.
+  useEffect(() => {
+    const bar = navBarRef.current;
+    const link = navLinkRefs.current[activeSection];
+    if (!bar || !link) return;
+    const target = link.offsetLeft - bar.clientWidth / 2 + link.clientWidth / 2;
+    bar.scrollTo({ left: target, behavior: 'smooth' });
+  }, [activeSection]);
 
   if (loading) {
     return (
@@ -117,9 +130,10 @@ export default function TripDetailPage() {
       {/* Quick jump nav */}
       <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1344px] mx-auto">
-          <nav className="flex gap-1 overflow-x-auto no-scrollbar py-3">
+          <nav ref={navBarRef} className="flex gap-1 overflow-x-auto no-scrollbar py-3">
             <a
               href="#overview"
+              ref={el => { navLinkRefs.current['overview'] = el; }}
               className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'overview' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
             >
               Overview
@@ -127,6 +141,7 @@ export default function TripDetailPage() {
             {trip.itinerary.length > 0 && (
               <a
                 href="#itinerary"
+                ref={el => { navLinkRefs.current['itinerary'] = el; }}
                 className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'itinerary' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Itinerary
@@ -134,6 +149,7 @@ export default function TripDetailPage() {
             )}
             <a
               href="#inclusions"
+              ref={el => { navLinkRefs.current['inclusions'] = el; }}
               className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'inclusions' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
             >
               Inclusions
@@ -141,6 +157,7 @@ export default function TripDetailPage() {
             {trip.gallery_images.length > 0 && (
               <a
                 href="#gallery"
+                ref={el => { navLinkRefs.current['gallery'] = el; }}
                 className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'gallery' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Gallery
@@ -149,6 +166,7 @@ export default function TripDetailPage() {
             {trip.faqs.length > 0 && (
               <a
                 href="#faqs"
+                ref={el => { navLinkRefs.current['faqs'] = el; }}
                 className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'faqs' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 FAQs
@@ -156,6 +174,7 @@ export default function TripDetailPage() {
             )}
             <a
               href="#cancellation"
+              ref={el => { navLinkRefs.current['cancellation'] = el; }}
               className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'cancellation' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
             >
               Cancellation
@@ -171,7 +190,7 @@ export default function TripDetailPage() {
           {/* Left column */}
           <div className="lg:col-span-2 space-y-12">
             {/* Overview */}
-            <section id="overview" className="scroll-mt-36">
+            <section id="overview" className="scroll-mt-44">
               <h2 className="font-display text-3xl font-bold text-dark mb-4">Trip Overview</h2>
               <p className="text-dark-muted leading-relaxed text-lg">{trip.description}</p>
             </section>
@@ -193,7 +212,7 @@ export default function TripDetailPage() {
 
             {/* Itinerary */}
             {trip.itinerary.length > 0 && (
-              <section id="itinerary" className="scroll-mt-36">
+              <section id="itinerary" className="scroll-mt-44">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Detailed Itinerary</h2>
                 <div className="space-y-4">
                   {trip.itinerary.map((day) => (
@@ -214,7 +233,7 @@ export default function TripDetailPage() {
             )}
 
             {/* Included / Not Included */}
-            <section id="inclusions" className="scroll-mt-36 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <section id="inclusions" className="scroll-mt-44 grid grid-cols-1 sm:grid-cols-2 gap-6">
               {trip.included.length > 0 && (
                 <div>
                   <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
@@ -279,7 +298,7 @@ export default function TripDetailPage() {
 
             {/* Gallery */}
             {trip.gallery_images.length > 0 && (
-              <section id="gallery" className="scroll-mt-36">
+              <section id="gallery" className="scroll-mt-44">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Photo Gallery</h2>
                 <GalleryGrid images={trip.gallery_images} />
               </section>
@@ -287,14 +306,14 @@ export default function TripDetailPage() {
 
             {/* FAQs */}
             {trip.faqs.length > 0 && (
-              <section id="faqs" className="scroll-mt-36">
+              <section id="faqs" className="scroll-mt-44">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">FAQs</h2>
                 <FAQAccordion faqs={trip.faqs} />
               </section>
             )}
 
             {/* Cancellation Policy */}
-            <section id="cancellation" className="scroll-mt-36">
+            <section id="cancellation" className="scroll-mt-44">
               <h2 className="font-display text-3xl font-bold text-dark mb-6">Cancellation Policy</h2>
               <CancellationPolicyDisplay policy={trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
             </section>
