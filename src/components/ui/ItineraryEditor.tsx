@@ -1,14 +1,22 @@
-import { Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, X, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
 import type { ItineraryDay } from '../../types';
+import MultiImageUploadField from './MultiImageUploadField';
 
 interface ItineraryEditorProps {
   value: ItineraryDay[];
   onChange: (days: ItineraryDay[]) => void;
+  // Used to namespace uploaded photos in storage (trips/{tripId}/itinerary/day-N).
+  // Falls back to 'new' for trips that haven't been saved yet.
+  tripId?: string;
 }
 
 const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 
-export default function ItineraryEditor({ value, onChange }: ItineraryEditorProps) {
+// Minimum number of photos we ask admins to add per day. Not hard-enforced
+// (a day can still be saved with fewer/no photos), just nudges the UI.
+const MIN_RECOMMENDED_PHOTOS = 3;
+
+export default function ItineraryEditor({ value, onChange, tripId }: ItineraryEditorProps) {
   const renumber = (days: ItineraryDay[]) => days.map((d, i) => ({ ...d, day: i + 1 }));
 
   const addDay = () => {
@@ -78,6 +86,22 @@ export default function ItineraryEditor({ value, onChange }: ItineraryEditorProp
                 rows={2}
                 className={`${inputClass} resize-none`}
               />
+
+              <div className="pt-1">
+                <MultiImageUploadField
+                  label={`Day ${day.day} Photos`}
+                  value={day.images || []}
+                  onChange={urls => updateDay(index, { images: urls })}
+                  bucket="ulaa"
+                  pathPrefix={`trips/${tripId || 'new'}/itinerary/day-${day.day}`}
+                />
+                {(day.images?.length || 0) < MIN_RECOMMENDED_PHOTOS && (
+                  <p className="flex items-center gap-1 text-xs text-amber-600 mt-1.5">
+                    <AlertTriangle size={12} />
+                    Add at least {MIN_RECOMMENDED_PHOTOS} photos so this day looks great on the trip page.
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </div>

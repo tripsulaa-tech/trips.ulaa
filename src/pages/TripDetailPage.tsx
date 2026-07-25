@@ -8,6 +8,7 @@ import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDispla
 import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
 import { GalleryGrid } from '../components/ui/Lightbox';
+import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import { getUpcomingTripBySlug } from '../services/api';
 import type { UpcomingTrip } from '../types';
 import { formatDateRange, formatDate, seatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
@@ -201,9 +202,10 @@ export default function TripDetailPage() {
                         <span className="text-xs">Day</span>
                         <span className="text-base leading-none">{day.day}</span>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h3 className="font-display font-bold text-dark text-lg mb-1">{day.title}</h3>
                         <p className="text-dark-muted text-sm leading-relaxed">{day.description}</p>
+                        <ItineraryDayPhotos images={day.images || []} />
                       </div>
                     </div>
                   ))}

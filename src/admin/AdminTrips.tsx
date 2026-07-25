@@ -347,6 +347,7 @@ export default function AdminTrips() {
             <ItineraryEditor
               value={form.itinerary}
               onChange={days => setForm(f => ({ ...f, itinerary: days }))}
+              tripId={editingTrip?.id}
             />
           </div>
 
@@ -550,6 +551,18 @@ export default function AdminTrips() {
                     <div key={i} className="text-sm">
                       <p className="font-medium text-dark">Day {d.day || i + 1}: {d.title}</p>
                       {d.description && <p className="text-dark-muted text-xs mt-0.5">{d.description}</p>}
+                      {d.images && d.images.length > 0 && (
+                        <div className="flex gap-1.5 mt-1.5">
+                          {d.images.slice(0, 6).map((url, j) => (
+                            <img key={j} src={url} alt="" className="w-10 h-10 object-cover rounded-lg" />
+                          ))}
+                          {d.images.length > 6 && (
+                            <span className="w-10 h-10 rounded-lg bg-background-warm text-dark-muted text-xs flex items-center justify-center">
+                              +{d.images.length - 6}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

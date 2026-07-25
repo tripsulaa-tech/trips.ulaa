@@ -156,6 +156,7 @@ export interface ItineraryDay {
   day: number;
   title: string;
   description: string;
+  images?: string[];
 }
 
 export interface FAQ {
