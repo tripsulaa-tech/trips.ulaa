@@ -228,6 +228,7 @@ export default function AdminAlbums() {
               onChange={url => setForm(f => ({ ...f, cover_image: url }))}
               bucket="ulaa"
               pathPrefix="album-covers"
+              fileNamePrefix={editing ? editing.slug : (slugify(form.title) || undefined)}
             />
           </div>
           <div className="md:col-span-2">

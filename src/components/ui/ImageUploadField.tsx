@@ -9,9 +9,15 @@ interface ImageUploadFieldProps {
   bucket: string;
   pathPrefix: string;
   required?: boolean;
+  // Optional identifying name baked into the filename (e.g. an album's
+  // slug). Useful when pathPrefix is a flat, shared folder — like
+  // "album-covers", where every album's cover ends up in the same folder —
+  // so the filename alone tells you "1784...-attapadi-IMG_8255.webp"
+  // belongs to Attapadi, instead of being an anonymous timestamp+filename.
+  fileNamePrefix?: string;
 }
 
-export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required }: ImageUploadFieldProps) {
+export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix }: ImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputId = `upload-${pathPrefix}-${label.replace(/\s+/g, '-').toLowerCase()}`;
@@ -22,7 +28,8 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
     const previousUrl = value;
     try {
       setUploading(true);
-      const path = `${pathPrefix}/${Date.now()}-${file.name}`;
+      const namePart = fileNamePrefix ? `${fileNamePrefix}-${file.name}` : file.name;
+      const path = `${pathPrefix}/${Date.now()}-${namePart}`;
       const url = await uploadImage(bucket, file, path);
       onChange(url);
       // Replacing an existing image — clean up the file it's replacing so
