@@ -347,7 +347,7 @@ export default function AdminTrips() {
             <ItineraryEditor
               value={form.itinerary}
               onChange={days => setForm(f => ({ ...f, itinerary: days }))}
-              tripId={editingTrip?.id}
+              tripSlug={editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}
             />
           </div>
 
@@ -432,7 +432,7 @@ export default function AdminTrips() {
               value={form.gallery_images}
               onChange={urls => setForm(f => ({ ...f, gallery_images: urls }))}
               bucket="ulaa"
-              pathPrefix={`trips/${editingTrip ? editingTrip.id : 'new'}`}
+              pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}`}
             />
           </div>
 

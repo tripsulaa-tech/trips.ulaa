@@ -5,9 +5,10 @@ import MultiImageUploadField from './MultiImageUploadField';
 interface ItineraryEditorProps {
   value: ItineraryDay[];
   onChange: (days: ItineraryDay[]) => void;
-  // Used to namespace uploaded photos in storage (trips/{tripId}/itinerary/day-N).
-  // Falls back to 'new' for trips that haven't been saved yet.
-  tripId?: string;
+  // Used to namespace uploaded photos in storage (trips/{tripSlug}/itinerary/day-N)
+  // so folder names in Supabase Storage are readable instead of raw UUIDs.
+  // Falls back to 'new-trip' for trips that haven't been saved/titled yet.
+  tripSlug?: string;
 }
 
 const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
@@ -16,7 +17,7 @@ const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm 
 // (a day can still be saved with fewer/no photos), just nudges the UI.
 const MIN_RECOMMENDED_PHOTOS = 3;
 
-export default function ItineraryEditor({ value, onChange, tripId }: ItineraryEditorProps) {
+export default function ItineraryEditor({ value, onChange, tripSlug }: ItineraryEditorProps) {
   const renumber = (days: ItineraryDay[]) => days.map((d, i) => ({ ...d, day: i + 1 }));
 
   const addDay = () => {
@@ -93,7 +94,7 @@ export default function ItineraryEditor({ value, onChange, tripId }: ItineraryEd
                   value={day.images || []}
                   onChange={urls => updateDay(index, { images: urls })}
                   bucket="ulaa"
-                  pathPrefix={`trips/${tripId || 'new'}/itinerary/day-${day.day}`}
+                  pathPrefix={`trips/${tripSlug || 'new-trip'}/itinerary/day-${day.day}`}
                 />
                 {(day.images?.length || 0) < MIN_RECOMMENDED_PHOTOS && (
                   <p className="flex items-center gap-1 text-xs text-amber-600 mt-1.5">
