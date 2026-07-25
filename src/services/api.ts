@@ -11,6 +11,62 @@ import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, B
 export async function syncStartedTripAlbums(): Promise<void> {
   const { error } = await supabase.rpc('sync_started_trip_albums');
   if (error) throw error;
+  await relocateStartedTripImages();
+}
+
+// The DB-side copy above carries the cover/gallery URLs over as-is, so a
+// freshly-created album still points at the old trip-covers/ and
+// trips/{tripId}/ folders it had as an upcoming trip. This moves those
+// files into album-covers/ and albums/{slug}/ (matching where images land
+// when uploaded directly to an album) and updates the row to point at the
+// new URLs. Uses storage .move() (rename-in-place) rather than
+// download+reupload+delete, and only touches rows that still have
+// old-style paths, so it's safe to call on every sync — already-migrated
+// albums are skipped.
+async function relocateStartedTripImages(): Promise<void> {
+  const { data: rows, error } = await supabase
+    .from('completed_trips')
+    .select('id, slug, cover_image, gallery_images');
+  if (error || !rows) return;
+
+  for (const row of rows) {
+    const needsCoverMove = !!row.cover_image?.includes('/trip-covers/');
+    const needsGalleryMove = (row.gallery_images || []).some((u: string) => u.includes('/trips/'));
+    if (!needsCoverMove && !needsGalleryMove) continue;
+
+    const newCover = needsCoverMove
+      ? (await moveImage(row.cover_image, 'album-covers')) ?? row.cover_image
+      : row.cover_image;
+
+    const newGallery: string[] = [];
+    for (const url of row.gallery_images || []) {
+      if (url.includes('/trips/')) {
+        newGallery.push((await moveImage(url, `albums/${row.slug}`)) ?? url);
+      } else {
+        newGallery.push(url);
+      }
+    }
+
+    await supabase
+      .from('completed_trips')
+      .update({ cover_image: newCover, gallery_images: newGallery })
+      .eq('id', row.id);
+  }
+}
+
+// Moves a single storage object into destFolder, keeping its filename, and
+// returns the new public URL — or null if the URL couldn't be parsed or
+// the move failed (caller falls back to leaving the original URL as-is).
+async function moveImage(url: string, destFolder: string): Promise<string | null> {
+  const path = getStoragePathFromUrl('ulaa', url);
+  if (!path) return null;
+  const filename = path.split('/').pop();
+  if (!filename) return null;
+  const newPath = `${destFolder}/${filename}`;
+  const { error } = await supabase.storage.from('ulaa').move(path, newPath);
+  if (error) return null;
+  const { data } = supabase.storage.from('ulaa').getPublicUrl(newPath);
+  return data.publicUrl;
 }
 
 // =============================================
