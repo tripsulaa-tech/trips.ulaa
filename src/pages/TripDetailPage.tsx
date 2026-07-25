@@ -443,23 +443,16 @@ export default function TripDetailPage() {
                   {isFull ? 'Join Waitlist' : 'Book Your Seat'}
                 </Button>
 
-                <button
-                  onClick={() => navigator.share?.({ title: trip.title, url: window.location.href })}
-                  className="w-full flex items-center justify-center gap-2 mt-3 text-sm text-dark-muted hover:text-primary transition-colors"
-                >
-                  <Share2 size={14} /> Share this trip
-                </button>
-
                 <div ref={calendarMenuRef} className="relative">
                   <button
                     onClick={() => setCalendarMenuOpen(o => !o)}
-                    className="w-full flex items-center justify-center gap-2 mt-2 text-sm text-dark-muted hover:text-primary transition-colors"
+                    className="w-full flex items-center justify-center gap-2 mt-3 text-sm text-dark-muted hover:text-primary transition-colors"
                   >
                     <CalendarPlus size={14} /> Add to calendar
                   </button>
 
                   {calendarMenuOpen && (
-                    <div className="absolute bottom-full left-0 right-0 mb-2 z-20 rounded-xl border-2 border-background-warm bg-white shadow-warm-lg py-1 overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 mt-2 z-20 rounded-xl border-2 border-background-warm bg-white shadow-warm-lg py-1 overflow-hidden">
                       <a
                         href={getGoogleCalendarUrl(trip)}
                         target="_blank"
@@ -479,6 +472,13 @@ export default function TripDetailPage() {
                     </div>
                   )}
                 </div>
+
+                <button
+                  onClick={() => navigator.share?.({ title: trip.title, url: window.location.href })}
+                  className="w-full flex items-center justify-center gap-2 mt-2 text-sm text-dark-muted hover:text-primary transition-colors"
+                >
+                  <Share2 size={14} /> Share this trip
+                </button>
 
                 <p className="text-xs text-dark-muted text-center mt-4">
                   No payment required to enquire. We'll contact you within 24 hours.

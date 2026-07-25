@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Clock, Users, ArrowRight, CalendarPlus } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, ArrowRight, CalendarPlus, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip } from '../../types';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, seatsLeft, PLACEHOLDER_IMAGE } from '../../utils';
@@ -52,16 +52,31 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           )}
         </div>
 
-        {/* Add to calendar */}
-        <button
-          type="button"
-          onClick={(e) => { e.preventDefault(); addToCalendar(trip); }}
-          aria-label="Add to calendar"
-          title="Add to calendar"
-          className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25 transition-colors"
-        >
-          <CalendarPlus size={16} />
-        </button>
+        {/* Share + Add to calendar */}
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              const url = `${window.location.origin}/trips/${trip.slug}`;
+              navigator.share?.({ title: trip.title, url });
+            }}
+            aria-label="Share this trip"
+            title="Share this trip"
+            className="h-9 w-9 flex items-center justify-center rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25 transition-colors"
+          >
+            <Share2 size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); addToCalendar(trip); }}
+            aria-label="Add to calendar"
+            title="Add to calendar"
+            className="h-9 w-9 flex items-center justify-center rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25 transition-colors"
+          >
+            <CalendarPlus size={16} />
+          </button>
+        </div>
 
         {/* Destination overlay */}
         <div className="absolute bottom-4 left-4">
