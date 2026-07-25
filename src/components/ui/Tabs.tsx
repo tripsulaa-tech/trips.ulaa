@@ -57,9 +57,28 @@ export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
   // the right tab (not just clicking one) — and keeps that tab scrolled
   // into view horizontally too, so it's never highlighted off-screen.
   const lastActiveRef = useRef(defaultIndex);
+  // While a tab click's own smooth scroll is still in flight, the sections
+  // it scrolls past will briefly cross the observed band too — ignore the
+  // observer during that window so its corrective button scrollIntoView
+  // doesn't fight/cancel the scroll the click just started.
+  const suppressObserverRef = useRef(false);
+  const suppressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Scrolls the tab bar horizontally only — avoids scrollIntoView's
+  // block/vertical dimension entirely so it can never nudge the page's
+  // vertical scroll (which is what let this compete with a click's scroll).
+  const scrollButtonIntoView = (i: number) => {
+    const bar = barRef.current;
+    const btn = buttonRefs.current[i];
+    if (!bar || !btn) return;
+    const target = btn.offsetLeft - bar.clientWidth / 2 + btn.clientWidth / 2;
+    bar.scrollTo({ left: target, behavior: 'smooth' });
+  };
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
+        if (suppressObserverRef.current) return;
         const visible = entries.filter(e => e.isIntersecting);
         if (visible.length === 0) return;
         const topMost = visible.reduce((a, b) => (a.boundingClientRect.top <= b.boundingClientRect.top ? a : b));
@@ -67,7 +86,7 @@ export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
         if (idx !== -1 && idx !== lastActiveRef.current) {
           lastActiveRef.current = idx;
           setActive(idx);
-          buttonRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          scrollButtonIntoView(idx);
         }
       },
       { rootMargin: '-88px 0px -65% 0px', threshold: 0 }
@@ -79,9 +98,17 @@ export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
   const handleSelect = (i: number) => {
     lastActiveRef.current = i;
     setActive(i);
+    suppressObserverRef.current = true;
+    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
     sectionRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    buttonRefs.current[i]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    scrollButtonIntoView(i);
+    // Smooth scrolls to nearby sections finish quickly; give it generous
+    // room for a long jump (e.g. first tab to last) before trusting the
+    // observer again.
+    suppressTimeoutRef.current = setTimeout(() => { suppressObserverRef.current = false; }, 900);
   };
+
+  useEffect(() => () => { if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current); }, []);
 
   return (
     <div>
@@ -90,7 +117,7 @@ export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
           the body's own p-6) and repaints a solid white background over
           that padding area, so nothing scrolled-past can peek through
           above it. */}
-      <div className="sticky top-0 z-20 bg-white -mx-6 -mt-6 px-6 pt-6 pb-3 mb-2">
+      <div className="sticky -top-6 z-20 bg-white -mx-6 -mt-6 px-6 pt-6 pb-3 mb-2">
         <div className="relative">
           <div ref={barRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
             {panels.map((panel, i) => (
