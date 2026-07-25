@@ -11,8 +11,9 @@ interface AlbumCarouselProps {
 
 // Swipeable, single-card-at-a-time carousel. Used to show "overflow"
 // albums beyond the static featured set (2 on mobile, 3 on desktop).
-// Renders as a carousel even when there's only one item in `items` —
-// nav arrows/dots simply don't appear until there's more than one.
+// Nav controls always render — even with just one item — so this section
+// is visually identifiable as carousel content and never mistaken for a
+// plain static card. With a single item both arrows are simply disabled.
 export default function AlbumCarousel({ items }: AlbumCarouselProps) {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -62,33 +63,31 @@ export default function AlbumCarousel({ items }: AlbumCarouselProps) {
         </AnimatePresence>
       </div>
 
-      {items.length > 1 && (
-        <div className="flex items-center justify-center gap-4 mt-6">
-          <button
-            onClick={prev}
-            disabled={current === 0}
-            className="w-10 h-10 rounded-full bg-white hover:bg-primary hover:text-white text-dark-muted border border-background-warm flex items-center justify-center disabled:opacity-40 transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <div className="flex gap-2">
-            {items.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
-                className={`w-2 h-2 rounded-full transition-all ${i === current ? 'bg-primary w-5' : 'bg-background-warm'}`}
-              />
-            ))}
-          </div>
-          <button
-            onClick={next}
-            disabled={current === items.length - 1}
-            className="w-10 h-10 rounded-full bg-white hover:bg-primary hover:text-white text-dark-muted border border-background-warm flex items-center justify-center disabled:opacity-40 transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
+      <div className="flex items-center justify-center gap-4 mt-6">
+        <button
+          onClick={prev}
+          disabled={current === 0}
+          className="w-10 h-10 rounded-full bg-white hover:bg-primary hover:text-white text-dark-muted border border-background-warm flex items-center justify-center disabled:opacity-40 transition-colors"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <div className="flex gap-2">
+          {items.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
+              className={`w-2 h-2 rounded-full transition-all ${i === current ? 'bg-primary w-5' : 'bg-background-warm'}`}
+            />
+          ))}
         </div>
-      )}
+        <button
+          onClick={next}
+          disabled={current === items.length - 1}
+          className="w-10 h-10 rounded-full bg-white hover:bg-primary hover:text-white text-dark-muted border border-background-warm flex items-center justify-center disabled:opacity-40 transition-colors"
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
     </div>
   );
 }
