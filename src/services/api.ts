@@ -145,10 +145,103 @@ export async function getGalleryImages(): Promise<GalleryImage[]> {
   return data || [];
 }
 
+// =============================================
+// Image compression (client-side, before upload)
+// =============================================
+// Every uploaded image is downscaled (if needed) and re-encoded to WebP,
+// stepping quality down until it lands at or under TARGET_SIZE_BYTES —
+// so a phone photo that starts at 4-8MB lands around ~100KB before it
+// ever reaches Supabase storage. This matters a lot on the free tier's
+// storage quota, and it also makes the public site load noticeably
+// faster. Quality never drops below MIN_QUALITY even if still oversized —
+// past that point we shrink dimensions further instead, so a very busy/
+// detailed photo doesn't turn into visible mush just to hit the byte
+// target. Animated GIFs and files already under the target are left
+// untouched (nothing to gain, and canvas re-encoding would kill the
+// animation).
+const TARGET_SIZE_BYTES = 100 * 1024; // 100KB
+const MAX_DIMENSION = 1920; // px, longest side — plenty for any use in this app
+const MIN_QUALITY = 0.4; // quality floor; shrink dimensions instead of going below this
+
+async function compressImage(file: File): Promise<File> {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+  if (file.size <= TARGET_SIZE_BYTES) return file;
+
+  let bitmap: ImageBitmap;
+  try {
+    // imageOrientation: 'from-image' bakes in EXIF rotation (e.g. iPhone
+    // photos) so the compressed output isn't sideways.
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    return file; // couldn't decode — upload the original rather than fail the whole action
+  }
+
+  let width = bitmap.width;
+  let height = bitmap.height;
+  if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+    const scale = MAX_DIMENSION / Math.max(width, height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    bitmap.close();
+    return file;
+  }
+
+  const draw = (w: number, h: number) => {
+    canvas.width = w;
+    canvas.height = h;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+  };
+  draw(width, height);
+
+  const toBlob = (quality: number): Promise<Blob | null> =>
+    new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
+
+  let quality = 0.85;
+  let blob = await toBlob(quality);
+
+  while (blob && blob.size > TARGET_SIZE_BYTES && quality > MIN_QUALITY) {
+    quality = Math.max(quality - 0.1, MIN_QUALITY);
+    blob = await toBlob(quality);
+    if (quality === MIN_QUALITY) break;
+  }
+
+  // Still oversized at the quality floor: shrink dimensions instead of
+  // pushing quality any lower. Capped at 2x the target (200KB) rather than
+  // forcing all the way down to 100KB — for a busy/detailed photo (lots of
+  // people, foliage, patterns), squeezing the last bit out costs a lot more
+  // resolution than it saves in bytes.
+  let attempts = 0;
+  while (blob && blob.size > TARGET_SIZE_BYTES * 2 && attempts < 4) {
+    width = Math.round(width * 0.9);
+    height = Math.round(height * 0.9);
+    draw(width, height);
+    blob = await toBlob(MIN_QUALITY);
+    attempts++;
+  }
+
+  bitmap.close();
+
+  if (!blob) return file; // encoding failed for some reason — fall back to the original
+
+  const newName = file.name.replace(/\.[^./]+$/, '') + '.webp';
+  return new File([blob], newName, { type: 'image/webp' });
+}
+
 export async function uploadImage(bucket: string, file: File, path: string): Promise<string> {
-  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+  const compressed = await compressImage(file);
+  // If the file got re-encoded to webp, the storage path's extension needs
+  // to match, or the browser will guess the wrong content-type on download.
+  const finalPath = compressed !== file
+    ? path.replace(/\.[^./]+$/, '') + '.webp'
+    : path;
+  const { error } = await supabase.storage.from(bucket).upload(finalPath, compressed, { upsert: true });
   if (error) throw error;
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(finalPath);
   return data.publicUrl;
 }
 
