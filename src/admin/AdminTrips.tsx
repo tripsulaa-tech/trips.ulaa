@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import Tabs, { TabPanel } from '../components/ui/Tabs';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import TagListEditor from '../components/ui/TagListEditor';
@@ -239,236 +240,262 @@ export default function AdminTrips() {
 
 
       {/* Create/Edit Modal */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingTrip ? 'Edit Trip' : 'Add Trip'} size="xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
-            <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley Winter Expedition" />
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingTrip ? 'Edit Trip' : 'Add Trip'}
+        size="xl"
+        footer={
+          <div className="flex gap-3">
+            <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
+              {editingTrip ? 'Save Changes' : 'Create Trip'}
+            </Button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Destination *</label>
-            <input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti, Himachal Pradesh" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Duration *</label>
-            <input
-              value={form.duration}
-              readOnly
-              className={`${inputClass} bg-background-warm/60 cursor-not-allowed`}
-              placeholder="Auto-filled from Start/End Date"
-            />
-            <p className="text-xs text-dark-muted mt-1">Calculated automatically from the Start and End Date fields.</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Start Date *</label>
-            <DatePicker
-              value={form.start_date}
-              onChange={start_date => setForm(f => ({ ...f, start_date, duration: computeDuration(start_date, f.end_date) || f.duration }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">End Date *</label>
-            <DatePicker
-              value={form.end_date}
-              onChange={end_date => setForm(f => ({ ...f, end_date, duration: computeDuration(f.start_date, end_date) || f.duration }))}
-              min={form.start_date || undefined}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Total Seats</label>
-            <input type="number" min={0} value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Seats Filled</label>
-            <input
-              type="number"
-              min={0}
-              max={form.total_seats}
-              value={form.seats_booked}
-              onChange={e => setForm(f => ({ ...f, seats_booked: Math.max(0, Math.min(+e.target.value, f.total_seats)) }))}
-              className={inputClass}
-            />
-            <p className="text-xs text-dark-muted mt-1">
-              {Math.max(0, form.total_seats - form.seats_booked)} of {form.total_seats} seats left
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹)</label>
-            <input
-              type="number"
-              value={form.price}
-              onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : +e.target.value }))}
-              className={inputClass}
-              placeholder="e.g. 42999"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Early-Bird Price per person (₹)</label>
-            <input
-              type="number"
-              value={form.early_bird_price}
-              onChange={e => setForm(f => ({ ...f, early_bird_price: e.target.value === '' ? '' : +e.target.value }))}
-              className={inputClass}
-              placeholder="e.g. 39999 (optional)"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Early-Bird Deadline</label>
-            <DatePicker
-              value={form.early_bird_deadline}
-              onChange={early_bird_deadline => setForm(f => ({ ...f, early_bird_deadline }))}
-            />
-            <p className="text-xs text-dark-muted mt-1">The early-bird price shows automatically until this date, then the page switches to the regular price on its own.</p>
-          </div>
-          <div>
-            <ImageUploadField
-              label="Cover Image"
-              value={form.cover_image}
-              onChange={url => setForm(f => ({ ...f, cover_image: url }))}
-              bucket="ulaa"
-              pathPrefix="trip-covers"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Description *</label>
-            <p className="text-xs text-dark-muted mb-1">Short overview only — put the day-by-day plan in Itinerary below, not here.</p>
-            <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
-          </div>
-
-          <div className="md:col-span-2 border-t border-background-warm pt-4">
-            <TagListEditor
-              label="Trip Highlights"
-              value={form.highlights}
-              onChange={items => setForm(f => ({ ...f, highlights: items }))}
-              placeholder="e.g. Chandratal Lake at dawn"
-            />
-          </div>
-
-          <div className="md:col-span-2 border-t border-background-warm pt-4">
-            <ItineraryEditor
-              value={form.itinerary}
-              onChange={days => setForm(f => ({ ...f, itinerary: days }))}
-              tripSlug={editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}
-            />
-          </div>
-
-          <div className="border-t border-background-warm pt-4">
-            <TagListEditor
-              label="What's Included"
-              value={form.included}
-              onChange={items => setForm(f => ({ ...f, included: items }))}
-              placeholder="e.g. All meals"
-            />
-          </div>
-          <div className="border-t border-background-warm pt-4">
-            <TagListEditor
-              label="What's Not Included"
-              value={form.not_included}
-              onChange={items => setForm(f => ({ ...f, not_included: items }))}
-              placeholder="e.g. Flights"
-            />
-          </div>
-
-          <div className="md:col-span-2 border-t border-background-warm pt-4">
-            <TagListEditor
-              label="Things to Carry"
-              value={form.things_to_carry}
-              onChange={items => setForm(f => ({ ...f, things_to_carry: items }))}
-              placeholder="e.g. Warm jacket"
-            />
-          </div>
-
-          <div className="md:col-span-2 border-t border-background-warm pt-4">
-            <label className="block text-sm font-medium text-dark mb-1">Meeting Point</label>
-            <div className="flex gap-2">
-              <input
-                value={form.meeting_point}
-                onChange={e => setForm(f => ({ ...f, meeting_point: e.target.value }))}
-                className={inputClass}
-                placeholder="e.g. Shimla Bus Stand, Himachal Pradesh — 7:00 AM on Day 1"
-              />
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.meeting_point || form.destination)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={e => { if (!form.meeting_point.trim() && !form.destination.trim()) e.preventDefault(); }}
-                className="shrink-0 flex items-center gap-1.5 px-3 rounded-xl border-2 border-background-warm bg-background text-dark text-sm font-medium hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
-                title="Opens Google Maps in a new tab, already searching for this"
-              >
-                Find on Maps ↗
-              </a>
+        }
+      >
+        <Tabs>
+          <TabPanel label="Basic Info">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
+              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley Winter Expedition" />
             </div>
-            <p className="text-xs text-dark-muted mt-1.5">Shown as plain text on the trip page. Click "Find on Maps" to jump straight to a search for it.</p>
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Destination *</label>
+              <input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti, Himachal Pradesh" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Duration *</label>
+              <input
+                value={form.duration}
+                readOnly
+                className={`${inputClass} bg-background-warm/60 cursor-not-allowed`}
+                placeholder="Auto-filled from Start/End Date"
+              />
+              <p className="text-xs text-dark-muted mt-1">Calculated automatically from the Start and End Date fields.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Start Date *</label>
+              <DatePicker
+                value={form.start_date}
+                onChange={start_date => setForm(f => ({ ...f, start_date, duration: computeDuration(start_date, f.end_date) || f.duration }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">End Date *</label>
+              <DatePicker
+                value={form.end_date}
+                onChange={end_date => setForm(f => ({ ...f, end_date, duration: computeDuration(f.start_date, end_date) || f.duration }))}
+                min={form.start_date || undefined}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Description *</label>
+              <p className="text-xs text-dark-muted mb-1">Short overview only — put the day-by-day plan in Itinerary below, not here.</p>
+              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
+            </div>
+          </TabPanel>
 
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Meeting Point — Google Maps Link</label>
-            <input
-              value={form.meeting_point_map_url}
-              onChange={e => setForm(f => ({ ...f, meeting_point_map_url: e.target.value }))}
-              className={inputClass}
-              placeholder="Paste the link here"
-            />
-            <p className="text-xs text-dark-muted mt-1.5">
-              In the Maps tab that opened: confirm the pin is on the right spot (search again if not) → tap <span className="font-medium text-dark">Share</span> → <span className="font-medium text-dark">Copy link</span> → paste it above.
-              {form.meeting_point_map_url.trim() && (
-                <>
-                  {' '}
-                  <a
-                    href={form.meeting_point_map_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary font-medium hover:underline"
-                  >
-                    Open this link ↗
-                  </a>
-                </>
-              )}
-            </p>
-          </div>
+          <TabPanel label="Pricing & Availability">
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Total Seats</label>
+              <input type="number" min={0} value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Seats Filled</label>
+              <input
+                type="number"
+                min={0}
+                max={form.total_seats}
+                value={form.seats_booked}
+                onChange={e => setForm(f => ({ ...f, seats_booked: Math.max(0, Math.min(+e.target.value, f.total_seats)) }))}
+                className={inputClass}
+              />
+              <p className="text-xs text-dark-muted mt-1">
+                {Math.max(0, form.total_seats - form.seats_booked)} of {form.total_seats} seats left
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹)</label>
+              <input
+                type="number"
+                value={form.price}
+                onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : +e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 42999"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Early-Bird Price per person (₹)</label>
+              <input
+                type="number"
+                value={form.early_bird_price}
+                onChange={e => setForm(f => ({ ...f, early_bird_price: e.target.value === '' ? '' : +e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 39999 (optional)"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Early-Bird Deadline</label>
+              <DatePicker
+                value={form.early_bird_deadline}
+                onChange={early_bird_deadline => setForm(f => ({ ...f, early_bird_deadline }))}
+              />
+              <p className="text-xs text-dark-muted mt-1">The early-bird price shows automatically until this date, then the page switches to the regular price on its own.</p>
+            </div>
+          </TabPanel>
 
-          <div className="md:col-span-2 border-t border-background-warm pt-4">
-            <MultiImageUploadField
-              label="Photo Gallery"
-              value={form.gallery_images}
-              onChange={urls => setForm(f => ({ ...f, gallery_images: urls }))}
-              bucket="ulaa"
-              pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}`}
-            />
-          </div>
+          <TabPanel label="Media">
+            <div className="md:col-span-2">
+              <ImageUploadField
+                label="Cover Image"
+                value={form.cover_image}
+                onChange={url => setForm(f => ({ ...f, cover_image: url }))}
+                bucket="ulaa"
+                pathPrefix="trip-covers"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <MultiImageUploadField
+                label="Photo Gallery"
+                value={form.gallery_images}
+                onChange={urls => setForm(f => ({ ...f, gallery_images: urls }))}
+                bucket="ulaa"
+                pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}`}
+              />
+            </div>
+          </TabPanel>
 
-          <div className="md:col-span-2 border-t border-background-warm pt-4">
-            <FAQEditor
-              value={form.faqs}
-              onChange={faqs => setForm(f => ({ ...f, faqs }))}
-            />
-          </div>
+          <TabPanel label="Overview & Itinerary">
+            <div className="md:col-span-2">
+              <TagListEditor
+                label="Trip Highlights"
+                value={form.highlights}
+                onChange={items => setForm(f => ({ ...f, highlights: items }))}
+                placeholder="e.g. Chandratal Lake at dawn"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <ItineraryEditor
+                value={form.itinerary}
+                onChange={days => setForm(f => ({ ...f, itinerary: days }))}
+                tripSlug={editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}
+              />
+            </div>
+          </TabPanel>
 
-          <div className="md:col-span-2 border-t border-background-warm pt-4">
-            <TermsEditor
-              value={form.terms_and_conditions}
-              onChange={terms_and_conditions => setForm(f => ({ ...f, terms_and_conditions }))}
-            />
-          </div>
+          <TabPanel label="Inclusions & Prep">
+            <div>
+              <TagListEditor
+                label="What's Included"
+                value={form.included}
+                onChange={items => setForm(f => ({ ...f, included: items }))}
+                placeholder="e.g. All meals"
+              />
+            </div>
+            <div>
+              <TagListEditor
+                label="What's Not Included"
+                value={form.not_included}
+                onChange={items => setForm(f => ({ ...f, not_included: items }))}
+                placeholder="e.g. Flights"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <TagListEditor
+                label="Things to Carry"
+                value={form.things_to_carry}
+                onChange={items => setForm(f => ({ ...f, things_to_carry: items }))}
+                placeholder="e.g. Warm jacket"
+              />
+            </div>
+          </TabPanel>
 
-          <div className="md:col-span-2 border-t border-background-warm pt-4">
-            <CancellationPolicyEditor
-              value={form.cancellation_policy}
-              onChange={cancellation_policy => setForm(f => ({ ...f, cancellation_policy }))}
-            />
-          </div>
+          <TabPanel label="Meeting Point">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Meeting Point</label>
+              <div className="flex gap-2">
+                <input
+                  value={form.meeting_point}
+                  onChange={e => setForm(f => ({ ...f, meeting_point: e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. Shimla Bus Stand, Himachal Pradesh — 7:00 AM on Day 1"
+                />
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.meeting_point || form.destination)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => { if (!form.meeting_point.trim() && !form.destination.trim()) e.preventDefault(); }}
+                  className="shrink-0 flex items-center gap-1.5 px-3 rounded-xl border-2 border-background-warm bg-background text-dark text-sm font-medium hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+                  title="Opens Google Maps in a new tab, already searching for this"
+                >
+                  Find on Maps ↗
+                </a>
+              </div>
+              <p className="text-xs text-dark-muted mt-1.5">Shown as plain text on the trip page. Click "Find on Maps" to jump straight to a search for it.</p>
+            </div>
 
-          <div className="md:col-span-2 flex items-center gap-3 border-t border-background-warm pt-4">
-            <input type="checkbox" id="is_published" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
-            <label htmlFor="is_published" className="text-sm font-medium text-dark">Publish immediately</label>
-          </div>
-        </div>
-        <div className="flex gap-3 mt-6">
-          <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>Cancel</Button>
-          <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
-            {editingTrip ? 'Save Changes' : 'Create Trip'}
-          </Button>
-        </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Meeting Point — Google Maps Link</label>
+              <input
+                value={form.meeting_point_map_url}
+                onChange={e => setForm(f => ({ ...f, meeting_point_map_url: e.target.value }))}
+                className={inputClass}
+                placeholder="Paste the link here"
+              />
+              <p className="text-xs text-dark-muted mt-1.5">
+                In the Maps tab that opened: confirm the pin is on the right spot (search again if not) → tap <span className="font-medium text-dark">Share</span> → <span className="font-medium text-dark">Copy link</span> → paste it above.
+                {form.meeting_point_map_url.trim() && (
+                  <>
+                    {' '}
+                    <a
+                      href={form.meeting_point_map_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary font-medium hover:underline"
+                    >
+                      Open this link ↗
+                    </a>
+                  </>
+                )}
+              </p>
+            </div>
+          </TabPanel>
+
+          <TabPanel label="FAQs">
+            <div className="md:col-span-2">
+              <FAQEditor
+                value={form.faqs}
+                onChange={faqs => setForm(f => ({ ...f, faqs }))}
+              />
+            </div>
+          </TabPanel>
+
+          <TabPanel label="Terms & Conditions">
+            <div className="md:col-span-2">
+              <TermsEditor
+                value={form.terms_and_conditions}
+                onChange={terms_and_conditions => setForm(f => ({ ...f, terms_and_conditions }))}
+              />
+            </div>
+          </TabPanel>
+
+          <TabPanel label="Cancellation Policy">
+            <div className="md:col-span-2">
+              <CancellationPolicyEditor
+                value={form.cancellation_policy}
+                onChange={cancellation_policy => setForm(f => ({ ...f, cancellation_policy }))}
+              />
+            </div>
+          </TabPanel>
+
+          <TabPanel label="Publish">
+            <div className="md:col-span-2 flex items-center gap-3">
+              <input type="checkbox" id="is_published" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
+              <label htmlFor="is_published" className="text-sm font-medium text-dark">Publish immediately</label>
+            </div>
+          </TabPanel>
+        </Tabs>
       </Modal>
 
       {/* View-only details popup — no editable fields, just a clean read-out */}

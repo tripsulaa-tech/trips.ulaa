@@ -9,6 +9,9 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Optional actions (e.g. Save/Cancel), rendered as a footer bar that
+   *  stays pinned to the bottom of the modal while the body scrolls. */
+  footer?: ReactNode;
 }
 
 const sizes = {
@@ -18,7 +21,7 @@ const sizes = {
   xl: 'max-w-4xl',
 };
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', footer }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -77,10 +80,23 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
               </div>
             )}
 
-            {/* Scrollable content — kept in its own box so the scrollbar
-                never has to render across the outer panel's rounded corner */}
-            <div className="app-scroll overflow-y-auto p-6">
+            {/* Scrollable content. `overflow-y-auto` sits directly on this
+                flex item (not a wrapper) — that's what lets the browser
+                shrink it to the remaining space in the flex-col modal and
+                actually scroll, instead of growing to fit all the content
+                and getting clipped by the outer overflow-hidden. */}
+            <div className="app-scroll overflow-y-auto flex-1 min-h-0 p-6">
               {children}
+
+              {/* Sticky footer — lives inside the scroll container as its
+                  last child, pinned to the bottom via `position: sticky`.
+                  This keeps Save/Cancel reachable at all times without
+                  relying on fragile height calculations elsewhere. */}
+              {footer && (
+                <div className="sticky -bottom-6 -mx-6 -mb-6 mt-6 px-6 py-4 border-t border-background-warm bg-white rounded-b-3xl">
+                  {footer}
+                </div>
+              )}
             </div>
           </motion.div>
         </motion.div>

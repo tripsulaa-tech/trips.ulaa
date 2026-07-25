@@ -101,9 +101,20 @@ button, .btn {
    against the edge. */
 .app-scroll {
   scrollbar-gutter: stable;
+  scrollbar-width: auto; /* Firefox: use the normal (not thin) scrollbar so it's easy to grab */
 }
 .app-scroll::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
+}
+.app-scroll::-webkit-scrollbar-track {
+  background: var(--color-background, #f5f1ea);
+  border-radius: 999px;
+}
+.app-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary);
+  border-radius: 999px;
+  border: 2px solid var(--color-background, #f5f1ea);
+  background-clip: padding-box;
 }
 
 /* Masonry grid */
