@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -50,6 +50,46 @@ const PACKAGE_OPTIONS = [
   { value: 'normal', label: 'Normal Price' },
   { value: 'early_bird', label: 'Early Bird' },
 ];
+
+// Bulk-edit fields are all opt-in — "No change" is the default for every
+// field so an admin can update just, say, Status across a selection without
+// accidentally blanking out everyone's Food Preference or Package. Only
+// fields the admin actually touches get applied when Bulk Save runs.
+const BULK_NO_CHANGE = 'no_change' as const;
+
+const BULK_STATUS_OPTIONS = [
+  { value: BULK_NO_CHANGE, label: 'No change' },
+  ...STATUS_OPTIONS,
+];
+
+const BULK_PACKAGE_OPTIONS = [
+  { value: BULK_NO_CHANGE, label: 'No change' },
+  ...PACKAGE_OPTIONS,
+];
+
+const BULK_FOOD_OPTIONS = [
+  { value: BULK_NO_CHANGE, label: 'No change' },
+  { value: 'not_set', label: 'Not asked / unknown' },
+  { value: 'veg', label: 'Veg' },
+  { value: 'non_veg', label: 'Non-veg' },
+];
+
+type BulkEditForm = {
+  food_preference: typeof BULK_NO_CHANGE | 'not_set' | 'veg' | 'non_veg';
+  package_type: typeof BULK_NO_CHANGE | Enquiry['package_type'];
+  // This is the trip price (total_amount), not what's been collected so far
+  // (amount_paid) — setting only amount_paid without a total_amount is what
+  // left rows stuck showing "Price not set" after a bulk save.
+  total_amount: number | '';
+  status: typeof BULK_NO_CHANGE | Enquiry['status'];
+};
+
+const emptyBulkForm: BulkEditForm = {
+  food_preference: BULK_NO_CHANGE,
+  package_type: BULK_NO_CHANGE,
+  total_amount: '',
+  status: BULK_NO_CHANGE,
+};
 
 function paymentStatus(e: Enquiry): { label: string; color: string } {
   if (!e.total_amount) return { label: 'Not set', color: 'bg-slate-100 text-dark-muted' };
@@ -210,6 +250,28 @@ export default function AdminEnquiries() {
   // in line for — see the Cancel modal and the per-trip banner below.
   const [waitlistWaitingCounts, setWaitlistWaitingCounts] = useState<Record<string, number>>({});
 
+  // Bulk operations: select, edit, save, delete across multiple enquiries
+  // at once. Selection is keyed by enquiry id and is intentionally cleared
+  // whenever the admin drills into a different trip group, since the
+  // checkboxes only ever reflect what's currently on screen.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkForm, setBulkForm] = useState<BulkEditForm>(emptyBulkForm);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  // Lightweight, self-dismissing confirmation for things that succeeded but
+  // don't need to block the admin with an "OK" click — unlike the shared
+  // AlertDialog (via `alert` below), which is reserved for errors/validation
+  // that the admin actually needs to acknowledge.
+  const [toast, setToast] = useState<string | null>(null);
+  const showToast = (message: string) => setToast(message);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const load = () => {
     getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
   };
@@ -320,11 +382,25 @@ export default function AdminEnquiries() {
     return () => clearTimeout(t);
   }, [highlightId]);
 
-  const handleStatusChange = async (id: string, status: Enquiry['status']) => {
-    setUpdating(id);
-    await updateEnquiryStatus(id, status).catch(console.error);
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [selectedTripKey]);
+
+  // Single-record status change from the per-row dropdown. Bulk status
+  // changes never go through here — they're applied in handleBulkSave
+  // instead — which is what keeps the Track Payment popup from appearing
+  // during a bulk update to Contacted.
+  const handleStatusChange = async (enquiry: Enquiry, status: Enquiry['status']) => {
+    const wasContacted = enquiry.status === status;
+    setUpdating(enquiry.id);
+    await updateEnquiryStatus(enquiry.id, status).catch(console.error);
     load();
     setUpdating(null);
+    // Only pop up Track Payment when this single update actually moved the
+    // status to Contacted — not on a no-op re-select of the same value.
+    if (status === 'contacted' && !wasContacted) {
+      openPayment({ ...enquiry, status });
+    }
   };
 
   const openAdd = () => {
@@ -482,6 +558,120 @@ export default function AdminEnquiries() {
       alert(err instanceof Error ? err.message : 'Failed to save payment details.');
     } finally {
       setSavingPayment(false);
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const allSelected = filtered.length > 0 && filtered.every(e => next.has(e.id));
+      if (allSelected) {
+        filtered.forEach(e => next.delete(e.id));
+      } else {
+        filtered.forEach(e => next.add(e.id));
+      }
+      return next;
+    });
+  };
+
+  const openBulkEdit = () => {
+    setBulkForm(emptyBulkForm);
+    setBulkEditOpen(true);
+  };
+
+  // Applies whichever bulk-edit fields the admin actually touched (anything
+  // still on "No change" is left alone) across every selected enquiry.
+  // Status is applied last and via the plain status-only endpoint — never
+  // through recordPayment — and never opens the Track Payment popup, no
+  // matter how many of the selected rows move to Contacted.
+  const handleBulkSave = async () => {
+    const targets = enquiries.filter(e => selectedIds.has(e.id));
+    if (targets.length === 0) return;
+
+    const touchesPaymentFields = bulkForm.food_preference !== BULK_NO_CHANGE
+      || bulkForm.package_type !== BULK_NO_CHANGE
+      || bulkForm.total_amount !== '';
+    const touchesStatus = bulkForm.status !== BULK_NO_CHANGE;
+
+    // Every field defaults to "No change" — if the admin hits Bulk Save
+    // without touching anything, the loop below would silently do nothing
+    // and still look like a success. Catch that here instead of guessing.
+    if (!touchesPaymentFields && !touchesStatus) {
+      alert('Pick at least one field to change before saving — everything is still set to "No change".');
+      return;
+    }
+
+    setBulkSaving(true);
+    try {
+      await Promise.all(targets.map(async (enquiry) => {
+        if (touchesPaymentFields) {
+          await recordPayment(enquiry, {
+            amount_paid: enquiry.amount_paid,
+            total_amount: bulkForm.total_amount !== '' ? Number(bulkForm.total_amount) : enquiry.total_amount,
+            package_type: bulkForm.package_type !== BULK_NO_CHANGE ? bulkForm.package_type : enquiry.package_type,
+            food_preference: bulkForm.food_preference !== BULK_NO_CHANGE
+              ? (bulkForm.food_preference === 'not_set' ? null : bulkForm.food_preference)
+              : (enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : null),
+          });
+        }
+        if (bulkForm.status !== BULK_NO_CHANGE) {
+          await updateEnquiryStatus(enquiry.id, bulkForm.status);
+        }
+      }));
+      setBulkEditOpen(false);
+      setBulkForm(emptyBulkForm);
+      setSelectedIds(new Set());
+      const freshTrips = await getAllUpcomingTripsAdmin();
+      setTrips(freshTrips);
+      load();
+      // Toast, not the blocking AlertDialog — this is just a confirmation,
+      // not something that needs an "OK" click to dismiss. Otherwise a
+      // successful save where the new value happens to match what most
+      // rows already had (e.g. Package already Normal) looks identical to
+      // nothing having happened at all, with no gentler way to say "done."
+      showToast(`Updated ${targets.length} enquir${targets.length === 1 ? 'y' : 'ies'}.`);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to update some of the selected enquiries.');
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  // Permanently removes every selected enquiry. Same underlying delete as
+  // the single-row action, just fanned out across the selection.
+  const handleBulkDelete = async () => {
+    const targets = enquiries.filter(e => selectedIds.has(e.id));
+    if (targets.length === 0) return;
+    const ok = await confirm({
+      title: `Delete ${targets.length} enquir${targets.length === 1 ? 'y' : 'ies'}?`,
+      message: 'This permanently removes the selected enquiries and their payment history. This cannot be undone.',
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all(targets.map(e => deleteEnquiry(e)));
+      const tripIds = new Set(targets.map(e => e.trip_id).filter(Boolean));
+      if (tripIds.size > 0) {
+        const freshTrips = await getAllUpcomingTripsAdmin();
+        setTrips(freshTrips);
+      }
+      setSelectedIds(new Set());
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete some of the selected enquiries.');
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -985,12 +1175,48 @@ export default function AdminEnquiries() {
           </div>
         ) : (
           <>
+            {/* Bulk actions toolbar — appears once at least one enquiry is selected */}
+            {selectedIds.size > 0 && (
+              <div className="flex flex-wrap items-center gap-3 bg-white rounded-2xl shadow-card px-4 py-3">
+                <p className="text-sm font-medium text-dark">
+                  {selectedIds.size} selected
+                </p>
+                <div className="flex items-center gap-2 ml-auto">
+                  <Button variant="outline" size="sm" onClick={openBulkEdit}>
+                    <Pencil size={14} /> Bulk Edit
+                  </Button>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={bulkDeleting}
+                    className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-60"
+                  >
+                    <Trash2 size={14} /> {bulkDeleting ? 'Deleting…' : 'Delete'}
+                  </button>
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl border border-background-warm text-dark-muted hover:bg-background/50 transition-colors"
+                  >
+                    <X size={14} /> Clear
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Desktop / tablet table */}
             <div className="hidden sm:block bg-white rounded-2xl shadow-card overflow-hidden">
               <div className="overflow-x-auto scrollbar-hide">
                 <table className="w-full text-sm">
                   <thead className="bg-background-warm text-dark font-medium">
                     <tr>
+                      <th className="px-3 py-3 text-left w-8">
+                        <input
+                          type="checkbox"
+                          checked={filtered.length > 0 && filtered.every(e => selectedIds.has(e.id))}
+                          onChange={toggleSelectAllFiltered}
+                          aria-label="Select all"
+                          className="w-4 h-4 rounded border-background-warm accent-primary cursor-pointer"
+                        />
+                      </th>
                       <th className="px-3 py-3 text-left hidden md:table-cell">S.No</th>
                       <th className="px-4 py-3 text-left">Name</th>
                       <th className="px-4 py-3 text-left hidden sm:table-cell">Phone</th>
@@ -1021,7 +1247,16 @@ export default function AdminEnquiries() {
                             isHighlighted ? 'bg-amber-50 ring-2 ring-inset ring-primary/40' : clr ? clr.row : 'hover:bg-background/50'
                           }`}
                         >
-                          <td className={`px-3 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap ${clr ? `border-l-4 ${clr.accent}` : ''}`}>{idx + 1}</td>
+                          <td className={`px-3 py-3 ${clr ? `border-l-4 ${clr.accent}` : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(e.id)}
+                              onChange={() => toggleSelectOne(e.id)}
+                              aria-label={`Select ${e.full_name}`}
+                              className="w-4 h-4 rounded border-background-warm accent-primary cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-3 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">{idx + 1}</td>
                           <td className="px-4 py-3 max-w-[150px] sm:max-w-none">
                             <button
                               onClick={() => setExpandedId(isExpanded ? null : e.id)}
@@ -1113,7 +1348,7 @@ export default function AdminEnquiries() {
                             <Select
                               value={e.status}
                               disabled={updating === e.id}
-                              onChange={val => handleStatusChange(e.id, val as Enquiry['status'])}
+                              onChange={val => handleStatusChange(e, val as Enquiry['status'])}
                               options={STATUS_OPTIONS}
                               size="sm"
                             />
@@ -1143,7 +1378,7 @@ export default function AdminEnquiries() {
                         </motion.tr>
                         {isExpanded && (
                           <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={clr ? clr.row : 'bg-background/40'}>
-                            <td colSpan={10} className="px-4 pb-4">
+                            <td colSpan={11} className="px-4 pb-4">
                               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2 text-sm border-t border-background-warm pt-3">
                                 <div>
                                   <p className="text-dark-muted text-xs">Phone</p>
@@ -1207,9 +1442,17 @@ export default function AdminEnquiries() {
                       isHighlighted ? 'ring-2 ring-primary/40' : ''
                     } ${clr ? `border-l-4 ${clr.accent}` : ''}`}
                   >
+                    <div className={`w-full flex items-center gap-2 px-4 py-3 ${clr ? clr.row : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(e.id)}
+                        onChange={() => toggleSelectOne(e.id)}
+                        aria-label={`Select ${e.full_name}`}
+                        className="w-4 h-4 shrink-0 rounded border-background-warm accent-primary cursor-pointer"
+                      />
                     <button
                       onClick={() => setExpandedId(isOpen ? null : e.id)}
-                      className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left ${clr ? clr.row : ''}`}
+                      className="flex-1 min-w-0 flex items-center justify-between gap-3 text-left"
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-dark truncate flex items-center gap-1.5">
@@ -1264,6 +1507,7 @@ export default function AdminEnquiries() {
                         <ChevronDown size={16} className={`text-dark-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                       </div>
                     </button>
+                    </div>
 
                     {isOpen && (
                       <div className="px-4 pb-4 pt-1 border-t border-background-warm space-y-3">
@@ -1344,7 +1588,7 @@ export default function AdminEnquiries() {
                             <Select
                               value={e.status}
                               disabled={updating === e.id}
-                              onChange={val => handleStatusChange(e.id, val as Enquiry['status'])}
+                              onChange={val => handleStatusChange(e, val as Enquiry['status'])}
                               options={STATUS_OPTIONS}
                               size="sm"
                             />
@@ -1675,6 +1919,109 @@ export default function AdminEnquiries() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Lightweight success toast — bulk-save confirmation only, doesn't
+          block the admin the way the AlertDialog (errors/validation) does */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-dark text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-warm-lg"
+          >
+            <CheckCircle2 size={16} className="text-green-400 shrink-0" />
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Edit Modal */}
+      <Modal isOpen={bulkEditOpen} onClose={() => setBulkEditOpen(false)} title={`Bulk Edit — ${selectedIds.size} selected`} size="sm">
+        <div className="space-y-4">
+          <p className="text-xs text-dark-muted bg-background-warm rounded-xl px-3 py-2">
+            Only fields you change here are applied — anything left on "No change" is left exactly as it is for every selected enquiry.
+          </p>
+
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <Select
+              value={bulkForm.food_preference}
+              onChange={val => setBulkForm(f => ({ ...f, food_preference: val as BulkEditForm['food_preference'] }))}
+              options={BULK_FOOD_OPTIONS}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Package</label>
+            <Select
+              value={bulkForm.package_type}
+              onChange={val => {
+                const packageType = val as BulkEditForm['package_type'];
+                // Mirrors the single-row Track Payment modal: picking a
+                // package pulls in that package's configured trip price as
+                // the suggested Total Amount, so picking "Normal Price"
+                // actually sets a price instead of just relabeling the row.
+                const suggested = packageType !== BULK_NO_CHANGE && activeGroup?.trip
+                  ? getTripPrice(activeGroup.trip.id, packageType)
+                  : undefined;
+                setBulkForm(f => ({
+                  ...f,
+                  package_type: packageType,
+                  total_amount: suggested ?? f.total_amount,
+                }));
+              }}
+              options={BULK_PACKAGE_OPTIONS}
+            />
+            {bulkForm.package_type !== BULK_NO_CHANGE && !activeGroup?.trip && (
+              <p className="text-amber-600 text-[11px] mt-1">
+                These enquiries aren't linked to a trip, so there's no configured price to pull in — enter the amount manually below.
+              </p>
+            )}
+            {bulkForm.package_type !== BULK_NO_CHANGE && activeGroup?.trip && getTripPrice(activeGroup.trip.id, bulkForm.package_type) == null && (
+              <p className="text-amber-600 text-[11px] mt-1">
+                This trip's price for this package isn't set yet — enter the amount manually below, or add it under Upcoming Trips first.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Enter Money — Total Amount (₹)</label>
+            <input
+              type="number"
+              min={0}
+              value={bulkForm.total_amount}
+              onChange={ev => setBulkForm(f => ({ ...f, total_amount: ev.target.value === '' ? '' : +ev.target.value }))}
+              className={inputClass}
+              placeholder="Leave blank to leave unchanged"
+            />
+            <p className="text-[11px] text-dark-muted mt-1">
+              Sets the trip price for every selected enquiry — this is what clears "Price not set". Picking a Package above fills this in automatically when that trip has a price configured; you can still type over it. Leave blank to leave each one's price as-is. To record what someone's actually paid, use Track Payment on that one row instead.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Status</label>
+            <Select
+              value={bulkForm.status}
+              onChange={val => setBulkForm(f => ({ ...f, status: val as BulkEditForm['status'] }))}
+              options={BULK_STATUS_OPTIONS}
+            />
+            {bulkForm.status === 'contacted' && (
+              <p className="text-[11px] text-dark-muted mt-1">
+                The Track Payment popup only appears for single-record updates, so it won't open here.
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" size="md" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
+            <Button variant="primary" size="md" onClick={handleBulkSave} loading={bulkSaving}>
+              Bulk Save
+            </Button>
+          </div>
+        </div>
       </Modal>
     </AdminLayout>
   );
