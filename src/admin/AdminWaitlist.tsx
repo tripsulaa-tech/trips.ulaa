@@ -72,7 +72,13 @@ export default function AdminWaitlist() {
     return Array.from(map.entries()).map(([id, title]) => ({ value: id, label: title }));
   }, [entries]);
 
-  const hasSeatOpen = (e: WaitlistEntry) => e.status === 'waiting' && (seatsAvailable[e.trip_id] ?? 0) > 0;
+  // A solo entry (group_size null/1) is ready the moment any seat is free.
+  // A group entry needs at least group_size seats free together before
+  // it's actually convertible — e.g. a group of 3 isn't "ready" just
+  // because 1 seat opened up from a single cancellation.
+  const seatsNeeded = (e: WaitlistEntry) => e.group_size && e.group_size > 1 ? e.group_size : 1;
+  const hasSeatOpen = (e: WaitlistEntry) =>
+    e.status === 'waiting' && (seatsAvailable[e.trip_id] ?? 0) >= seatsNeeded(e);
 
   const filtered = entries
     .filter(e => statusFilter === 'all' || e.status === statusFilter)
@@ -121,9 +127,13 @@ export default function AdminWaitlist() {
           full_name: entry.full_name,
           phone: entry.phone,
           email: entry.email,
+          age: entry.age,
+          city: entry.city,
+          food_preference: entry.food_preference,
           trip_id: entry.trip_id,
           trip_title: entry.trip_title,
           message: entry.message,
+          group_size: entry.group_size,
         },
       },
     });
@@ -211,8 +221,25 @@ export default function AdminWaitlist() {
                     {filtered.map(e => (
                       <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
                         <td className="px-4 py-3 max-w-[160px] sm:max-w-none">
-                          <p className="font-medium text-dark truncate">{e.full_name}</p>
+                          <p className="font-medium text-dark truncate flex items-center gap-1.5">
+                            {e.full_name}
+                            {e.group_size && e.group_size > 1 && (
+                              <span
+                                title={`Waiting for ${e.group_size} seats together`}
+                                className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-background-warm text-dark-muted whitespace-nowrap"
+                              >
+                                <Users size={9} /> Group of {e.group_size}
+                              </span>
+                            )}
+                          </p>
                           <p className="text-dark-muted text-xs truncate md:hidden">{e.email}</p>
+                          {(e.age || e.food_preference) && (
+                            <p className="text-dark-muted text-xs mt-0.5">
+                              {e.age && `${e.age} yrs`}
+                              {e.age && e.food_preference && ' · '}
+                              {e.food_preference && (e.food_preference === 'veg' ? 'Veg' : 'Non-veg')}
+                            </p>
+                          )}
                           {e.message && (
                             <p className="text-dark-muted text-xs mt-1 flex items-start gap-1 max-w-xs">
                               <MessageSquare size={11} className="shrink-0 mt-0.5" />
@@ -228,10 +255,20 @@ export default function AdminWaitlist() {
                               {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
                             </span>
                           )}
+                          {!hasSeatOpen(e) && e.status === 'waiting' && e.group_size && e.group_size > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
+                            <span
+                              title={`Needs ${e.group_size} seats free together — only ${seatsAvailable[e.trip_id]} open so far`}
+                              className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap"
+                            >
+                              {seatsAvailable[e.trip_id]}/{e.group_size} seats open
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-dark-muted hidden md:table-cell">
                           <p className="flex items-center gap-1 text-xs"><Mail size={11} className="shrink-0" /> {e.email}</p>
                           <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" /> {e.phone}</p>
+                          {e.city && <p className="text-xs mt-0.5">{e.city}</p>}
+                          {e.emergency_contact && <p className="text-xs mt-0.5">Emergency: {e.emergency_contact}</p>}
                         </td>
                         <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">
                           {formatDate(e.created_at, { day: 'numeric', month: 'short' })}
@@ -318,12 +355,24 @@ export default function AdminWaitlist() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="font-medium text-dark truncate">{e.full_name}</p>
+                        <p className="font-medium text-dark truncate flex items-center gap-1.5">
+                          {e.full_name}
+                          {e.group_size && e.group_size > 1 && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-background-warm text-dark-muted whitespace-nowrap">
+                              <Users size={9} /> Group of {e.group_size}
+                            </span>
+                          )}
+                        </p>
                         <p className="text-dark-muted text-xs truncate">{e.trip_title || 'Untitled trip'}</p>
                         {hasSeatOpen(e) && (
                           <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
                             <PartyPopper size={10} className="shrink-0" />
                             {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
+                          </span>
+                        )}
+                        {!hasSeatOpen(e) && e.status === 'waiting' && e.group_size && e.group_size > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
+                          <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
+                            {seatsAvailable[e.trip_id]}/{e.group_size} seats open
                           </span>
                         )}
                       </div>
@@ -336,6 +385,15 @@ export default function AdminWaitlist() {
                     <div className="text-xs text-dark-muted space-y-1">
                       <p className="flex items-center gap-1.5"><Mail size={12} className="shrink-0" /> {e.email}</p>
                       <p className="flex items-center gap-1.5"><Phone size={12} className="shrink-0" /> {e.phone}</p>
+                      {(e.age || e.food_preference) && (
+                        <p>
+                          {e.age && `${e.age} yrs`}
+                          {e.age && e.food_preference && ' · '}
+                          {e.food_preference && (e.food_preference === 'veg' ? 'Veg' : 'Non-veg')}
+                        </p>
+                      )}
+                      {e.city && <p>{e.city}</p>}
+                      {e.emergency_contact && <p>Emergency: {e.emergency_contact}</p>}
                       <p>{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                       {e.message && (
                         <p className="flex items-start gap-1.5 mt-1.5">

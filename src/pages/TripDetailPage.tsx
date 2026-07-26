@@ -7,7 +7,6 @@ import FAQAccordion from '../components/ui/FAQAccordion';
 import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDisplay';
 import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
-import WaitlistForm from '../components/ui/WaitlistForm';
 import { GalleryGrid } from '../components/ui/Lightbox';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import { getUpcomingTripBySlug } from '../services/api';
@@ -25,7 +24,6 @@ export default function TripDetailPage() {
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
   const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -469,7 +467,7 @@ export default function TripDetailPage() {
                   variant="primary"
                   size="lg"
                   fullWidth
-                  onClick={() => (isFull ? setWaitlistOpen(true) : setBookingOpen(true))}
+                  onClick={() => setBookingOpen(true)}
                 >
                   {isFull ? 'Join Waitlist' : 'Book Your Seat'}
                 </Button>
@@ -575,7 +573,7 @@ export default function TripDetailPage() {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => (isFull ? setWaitlistOpen(true) : setBookingOpen(true))}
+            onClick={() => setBookingOpen(true)}
             className="!rounded-xl !px-4 !py-2 shrink-0 flex flex-col items-center !gap-0 leading-tight"
           >
             <span className="text-sm font-bold whitespace-nowrap">
@@ -590,11 +588,13 @@ export default function TripDetailPage() {
         </div>
       </div>
 
-      {/* Booking Modal */}
+      {/* Booking Modal — routes to an enquiry or the waitlist depending on
+          whether what's requested (solo seat, or N for a group) actually
+          fits in what's left; see BookingForm. */}
       <Modal
         isOpen={bookingOpen}
         onClose={() => setBookingOpen(false)}
-        title="Book Your Seat"
+        title={isFull ? 'Join Waitlist' : 'Book Your Seat'}
         size="lg"
       >
         <BookingForm
@@ -603,20 +603,6 @@ export default function TripDetailPage() {
           terms={trip.terms_and_conditions}
           remainingSeats={remaining}
           onSuccess={() => setTimeout(() => setBookingOpen(false), 3000)}
-        />
-      </Modal>
-
-      {/* Waitlist Modal */}
-      <Modal
-        isOpen={waitlistOpen}
-        onClose={() => setWaitlistOpen(false)}
-        title="Join Waitlist"
-        size="md"
-      >
-        <WaitlistForm
-          tripId={trip.id}
-          tripTitle={trip.title}
-          onSuccess={() => setTimeout(() => setWaitlistOpen(false), 3000)}
         />
       </Modal>
     </Layout>

@@ -247,20 +247,34 @@ export interface WaitlistEntry {
   full_name: string;
   phone: string;
   email: string;
+  age?: number | null;
+  city?: string | null;
+  emergency_contact?: string | null;
+  food_preference?: 'veg' | 'non_veg' | null;
   message?: string;
   status: 'waiting' | 'notified' | 'converted' | 'declined';
   notified_at?: string | null;
   converted_enquiry_id?: string | null;
   created_at: string;
+  // How many seats this signup needs. Null/1 = solo. Set when someone
+  // joins the waitlist because their group didn't fit in the remaining
+  // seats — a group entry only counts as "ready to convert" once at least
+  // this many seats are free, not the moment any single seat opens up.
+  group_size?: number | null;
 }
 
 export interface WaitlistFormData {
   full_name: string;
   phone: string;
   email: string;
+  age?: number | null;
+  city?: string | null;
+  emergency_contact?: string | null;
+  food_preference?: 'veg' | 'non_veg' | null;
   message?: string;
   trip_id: string;
   trip_title?: string;
+  group_size?: number | null;
 }
 
 // =============================================

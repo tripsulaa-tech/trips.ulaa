@@ -1,5 +1,5 @@
 // =============================================
-// Shared validation rules for public-facing forms (BookingForm, WaitlistForm)
+// Shared validation rules for public-facing forms (BookingForm)
 // Centralized here so both forms enforce the exact same rules and error
 // copy instead of drifting apart over time.
 // =============================================

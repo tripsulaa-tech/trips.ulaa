@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { CheckCircle, AlertCircle, FileText, User, Users, Utensils } from 'lucide-react';
+import { CheckCircle, AlertCircle, FileText, User, Users, Utensils, Clock3 } from 'lucide-react';
 import type { BookingFormData, BookingMode } from '../../types';
-import { submitEnquiry, submitGroupEnquiry } from '../../services/api';
+import { submitEnquiry, submitGroupEnquiry, submitWaitlist } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
 import { validateFullName, validateCity, validatePhone, validateOptionalPhone, validateAge } from '../../utils/formValidation';
@@ -21,12 +21,13 @@ interface BookingFormProps {
   tripTitle?: string;
   terms?: string;
   onSuccess?: () => void;
-  // How many seats are actually left on the trip right now. Without this,
-  // Group mode let someone submit a group of, say, 3 when only 1 seat
-  // remained — the enquiry itself isn't capacity-checked (that only
-  // happens once a seat is paid for), so it silently created entries that
-  // could never all be honored. Optional so existing callers that don't
-  // pass it still work (falls back to the fixed MIN/MAX_GROUP_SIZE range).
+  // How many seats are actually left on the trip right now. Both Solo and
+  // Group stay selectable regardless of this number — if what's requested
+  // (1 seat for Solo, N for Group) doesn't fit, submit silently routes to
+  // the waitlist instead of an enquiry, using the exact same fields, so
+  // there's no separate "not enough seats" dead end in the UI. Optional so
+  // existing callers that don't pass it still work (falls back to always
+  // treating this as a normal booking).
   remainingSeats?: number;
 }
 
@@ -38,6 +39,9 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   const [groupSize, setGroupSize] = useState(MIN_GROUP_SIZE);
   const [groupSizeError, setGroupSizeError] = useState('');
   const [successCount, setSuccessCount] = useState(1);
+  // Which path the most recent successful submission actually took —
+  // drives the wording on the success screen (enquiry vs waitlist).
+  const [submittedAsWaitlist, setSubmittedAsWaitlist] = useState(false);
   // Not react-hook-form fields (kept alongside bookingMode/groupSize as
   // separate choices, same pattern as Solo/Group above).
   // Solo: one shared preference, same as full_name/phone/etc.
@@ -49,30 +53,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // input below).
   const [groupVegCount, setGroupVegCount] = useState(MIN_GROUP_SIZE);
 
-  // The real ceiling for a group submission — whichever is tighter, the
-  // form's own MAX_GROUP_SIZE or the seats actually left on the trip.
-  // remainingSeats is undefined for callers that don't pass it (falls back
-  // to the old fixed-range behavior).
-  const effectiveMaxGroupSize = remainingSeats !== undefined
-    ? Math.max(0, Math.min(MAX_GROUP_SIZE, remainingSeats))
-    : MAX_GROUP_SIZE;
-  // Fewer seats left than a group needs at minimum — Group mode can't
-  // produce anything postable, so it's not offered as a choice at all
-  // rather than left selectable and failing at submit time.
-  const groupModeUnavailable = remainingSeats !== undefined && remainingSeats < MIN_GROUP_SIZE;
-
-  useEffect(() => {
-    if (groupModeUnavailable && bookingMode === 'group') {
-      setBookingMode('solo');
-    }
-  }, [groupModeUnavailable, bookingMode]);
-
-  useEffect(() => {
-    if (groupSize > effectiveMaxGroupSize && effectiveMaxGroupSize >= MIN_GROUP_SIZE) {
-      setGroupSize(effectiveMaxGroupSize);
-      setGroupVegCount(prev => Math.min(prev, effectiveMaxGroupSize));
-    }
-  }, [effectiveMaxGroupSize, groupSize]);
+  // Whether what's currently selected/entered actually fits in the seats
+  // left. When it doesn't, submitting still succeeds — it just becomes a
+  // waitlist signup instead of an enquiry (see onSubmit below). Undefined
+  // remainingSeats (caller didn't pass it) always means "treat as fits".
+  const soloFits = remainingSeats === undefined || remainingSeats >= 1;
+  const groupFits = remainingSeats === undefined || groupSize <= remainingSeats;
+  const willWaitlist = bookingMode === 'solo' ? !soloFits : !groupFits;
 
   const termsText = (terms || '').trim() || DEFAULT_TERMS_AND_CONDITIONS;
   const termsSections = useMemo(() => parseTerms(termsText), [termsText]);
@@ -135,12 +122,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
   const onSubmit = async (data: BookingFormData) => {
     if (bookingMode === 'group') {
-      if (!Number.isInteger(groupSize) || groupSize < MIN_GROUP_SIZE || groupSize > effectiveMaxGroupSize) {
-        setGroupSizeError(
-          effectiveMaxGroupSize < MIN_GROUP_SIZE
-            ? `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left — not enough for a group. Try Solo, or join the waitlist.`
-            : `Enter a number of people between ${MIN_GROUP_SIZE} and ${effectiveMaxGroupSize}.`
-        );
+      if (!Number.isInteger(groupSize) || groupSize < MIN_GROUP_SIZE || groupSize > MAX_GROUP_SIZE) {
+        setGroupSizeError(`Enter a number of people between ${MIN_GROUP_SIZE} and ${MAX_GROUP_SIZE}.`);
         return;
       }
     }
@@ -156,14 +139,54 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     try {
       setStatus('loading');
       if (bookingMode === 'group') {
-        const foodPreferences: ('veg' | 'non_veg')[] = [
-          ...Array(groupVegCountClamped).fill('veg'),
-          ...Array(groupSize - groupVegCountClamped).fill('non_veg'),
-        ];
-        await submitGroupEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences);
+        if (groupFits) {
+          const foodPreferences: ('veg' | 'non_veg')[] = [
+            ...Array(groupVegCountClamped).fill('veg'),
+            ...Array(groupSize - groupVegCountClamped).fill('non_veg'),
+          ];
+          await submitGroupEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences);
+          setSubmittedAsWaitlist(false);
+        } else {
+          // Doesn't fit in what's left — one waitlist row for the whole
+          // group (group_size on the row), not one enquiry per seat. The
+          // veg/non-veg split isn't stored as structured data on a single
+          // row, so it's folded into the message for whoever follows up.
+          const foodNote = `${groupVegCountClamped} veg / ${groupSize - groupVegCountClamped} non-veg.`;
+          await submitWaitlist({
+            full_name: data.full_name,
+            phone: data.phone,
+            email: data.email,
+            age: data.age,
+            city: data.city,
+            emergency_contact: data.emergency_contact,
+            message: data.message ? `${foodNote} ${data.message}` : foodNote,
+            trip_id: tripId!,
+            trip_title: tripTitle,
+            group_size: groupSize,
+          });
+          setSubmittedAsWaitlist(true);
+        }
         setSuccessCount(groupSize);
       } else {
-        await submitEnquiry({ ...data, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle });
+        if (soloFits) {
+          await submitEnquiry({ ...data, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle });
+          setSubmittedAsWaitlist(false);
+        } else {
+          await submitWaitlist({
+            full_name: data.full_name,
+            phone: data.phone,
+            email: data.email,
+            age: data.age,
+            city: data.city,
+            emergency_contact: data.emergency_contact,
+            food_preference: foodPreference,
+            message: data.message,
+            trip_id: tripId!,
+            trip_title: tripTitle,
+            group_size: null,
+          });
+          setSubmittedAsWaitlist(true);
+        }
         setSuccessCount(1);
       }
       setStatus('success');
@@ -177,6 +200,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       setStatus('error');
       if (err instanceof Error && err.message === 'DUPLICATE_ENQUIRY') {
         setErrorMsg("Looks like you've already submitted an enquiry for this trip with these exact details. We'll be in touch shortly — or message us on WhatsApp if you need to change something.");
+      } else if (err instanceof Error && err.message === 'DUPLICATE_WAITLIST_ENTRY') {
+        setErrorMsg("You're already on the waitlist for this trip with these exact details — we'll reach out the moment enough seats open up.");
       } else {
         setErrorMsg('Something went wrong. Please try again or contact us on WhatsApp.');
       }
@@ -191,11 +216,17 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         className="text-center py-12"
       >
         <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
-        <h3 className="font-display text-2xl font-bold text-dark mb-2">Enquiry Received!</h3>
+        <h3 className="font-display text-2xl font-bold text-dark mb-2">
+          {submittedAsWaitlist ? "You're on the list!" : 'Enquiry Received!'}
+        </h3>
         <p className="text-dark-muted">
-          {successCount > 1
-            ? `Thank you! We've logged your group of ${successCount} and will contact you shortly to confirm your spots.`
-            : "Thank you! We'll contact you shortly to confirm your spot."}
+          {submittedAsWaitlist
+            ? (successCount > 1
+                ? `We'll message and email you the moment ${successCount} seats free up together on this trip.`
+                : "We'll message and email you the moment a seat frees up on this trip.")
+            : (successCount > 1
+                ? `Thank you! We've logged your group of ${successCount} and will contact you shortly to confirm your spots.`
+                : "Thank you! We'll contact you shortly to confirm your spot.")}
         </p>
       </motion.div>
     );
@@ -239,13 +270,9 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           </button>
           <button
             type="button"
-            disabled={groupModeUnavailable}
             onClick={() => setBookingMode('group')}
-            title={groupModeUnavailable ? `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left — not enough for a group` : undefined}
             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
-              groupModeUnavailable
-                ? 'border-background-warm text-dark-muted/50 cursor-not-allowed'
-                : bookingMode === 'group'
+              bookingMode === 'group'
                 ? 'border-primary bg-primary/10 text-primary'
                 : 'border-background-warm text-dark-muted hover:border-primary/40'
             }`}
@@ -253,9 +280,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             <Users size={16} /> Group
           </button>
         </div>
-        {groupModeUnavailable && (
-          <p className="text-xs text-dark-muted mt-1">
-            Only {remainingSeats} seat{remainingSeats === 1 ? '' : 's'} left — not enough for a group booking. Book solo for the last {remainingSeats === 1 ? 'seat' : 'seats'}, or join the waitlist for the rest of your group.
+        {bookingMode === 'solo' && !soloFits && (
+          <p className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
+            <Clock3 size={13} className="text-primary shrink-0 mt-0.5" />
+            This trip is full right now — submitting will add you to the waitlist instead, and
+            we'll notify you the moment a seat opens up.
           </p>
         )}
       </div>
@@ -267,7 +296,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             type="number"
             inputMode="numeric"
             min={MIN_GROUP_SIZE}
-            max={effectiveMaxGroupSize}
+            max={MAX_GROUP_SIZE}
             value={groupSize}
             onChange={e => {
               setGroupSizeError('');
@@ -277,10 +306,17 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             }}
             className={inputClass}
           />
-          <p className="text-xs text-dark-muted mt-1">
-            We'll create one entry per person under this name and contact — {groupSize} {groupSize === 1 ? 'entry' : 'entries'} in total.
-            {remainingSeats !== undefined && ` Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left on this trip.`}
-          </p>
+          {groupFits ? (
+            <p className="text-xs text-dark-muted mt-1">
+              We'll create one entry per person under this name and contact — {groupSize} {groupSize === 1 ? 'entry' : 'entries'} in total.
+              {remainingSeats !== undefined && ` ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left on this trip.`}
+            </p>
+          ) : (
+            <p className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
+              <Clock3 size={13} className="text-primary shrink-0 mt-0.5" />
+              Only {remainingSeats} seat{remainingSeats === 1 ? '' : 's'} left right now — not enough for {groupSize}. Submitting will add your group to the waitlist instead, and we'll notify you the moment {groupSize} seats are free together.
+            </p>
+          )}
           {groupSizeError && <p className={errorClass}>{groupSizeError}</p>}
         </div>
       )}
@@ -472,11 +508,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         loading={status === 'loading'}
         className="mt-2"
       >
-        Submit Enquiry
+        {willWaitlist ? 'Join Waitlist' : 'Submit Enquiry'}
       </Button>
 
       <p className="text-xs text-dark-muted text-center">
-        No payment required. We'll contact you to confirm your spot.
+        {willWaitlist
+          ? "No payment required. We'll notify you the moment seats free up."
+          : "No payment required. We'll contact you to confirm your spot."}
       </p>
     </form>
 

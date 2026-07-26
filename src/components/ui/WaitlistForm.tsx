@@ -1,22 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { CheckCircle, AlertCircle, Clock3 } from 'lucide-react';
+import { CheckCircle, AlertCircle, Clock3, User, Users } from 'lucide-react';
 import type { WaitlistFormData } from '../../types';
 import { submitWaitlist } from '../../services/api';
 import Button from './Button';
+
+// Mirrors BookingForm's MIN/MAX_GROUP_SIZE — a group waitlist signup is
+// still "how many seats does this group need", same bounds apply.
+const MIN_GROUP_SIZE = 2;
+const MAX_GROUP_SIZE = 15;
 
 interface WaitlistFormProps {
   tripId: string;
   tripTitle?: string;
   onSuccess?: () => void;
+  // Preselects Group mode and seeds the seat count — used when someone
+  // arrives here because their group didn't fit in the seats remaining
+  // (BookingForm's "join the waitlist for your group" case), so they don't
+  // have to re-declare Solo vs Group from scratch.
+  defaultMode?: 'solo' | 'group';
+  defaultGroupSize?: number;
 }
 
-type FormValues = Omit<WaitlistFormData, 'trip_id' | 'trip_title'>;
+type FormValues = Omit<WaitlistFormData, 'trip_id' | 'trip_title' | 'group_size'>;
 
-export default function WaitlistForm({ tripId, tripTitle, onSuccess }: WaitlistFormProps) {
+export default function WaitlistForm({ tripId, tripTitle, onSuccess, defaultMode = 'solo', defaultGroupSize }: WaitlistFormProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [mode, setMode] = useState<'solo' | 'group'>(defaultMode);
+  const [groupSize, setGroupSize] = useState(
+    Math.min(Math.max(defaultGroupSize ?? MIN_GROUP_SIZE, MIN_GROUP_SIZE), MAX_GROUP_SIZE)
+  );
+
+  // Keep in sync if the caller opens this same mounted form for a
+  // different context (e.g. re-triggered with a new group size).
+  useEffect(() => { setMode(defaultMode); }, [defaultMode]);
+  useEffect(() => {
+    if (defaultGroupSize !== undefined) {
+      setGroupSize(Math.min(Math.max(defaultGroupSize, MIN_GROUP_SIZE), MAX_GROUP_SIZE));
+    }
+  }, [defaultGroupSize]);
 
   const {
     register,
@@ -28,7 +52,12 @@ export default function WaitlistForm({ tripId, tripTitle, onSuccess }: WaitlistF
   const onSubmit = async (data: FormValues) => {
     try {
       setStatus('loading');
-      await submitWaitlist({ ...data, trip_id: tripId, trip_title: tripTitle });
+      await submitWaitlist({
+        ...data,
+        trip_id: tripId,
+        trip_title: tripTitle,
+        group_size: mode === 'group' ? groupSize : null,
+      });
       setStatus('success');
       reset();
       onSuccess?.();
@@ -52,7 +81,9 @@ export default function WaitlistForm({ tripId, tripTitle, onSuccess }: WaitlistF
         <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
         <h3 className="font-display text-2xl font-bold text-dark mb-2">You're on the list!</h3>
         <p className="text-dark-muted">
-          We'll message and email you the moment a seat frees up on this trip.
+          {mode === 'group'
+            ? `We'll message and email you the moment ${groupSize} seats free up together on this trip.`
+            : "We'll message and email you the moment a seat frees up on this trip."}
         </p>
       </motion.div>
     );
@@ -74,9 +105,71 @@ export default function WaitlistForm({ tripId, tripTitle, onSuccess }: WaitlistF
         <div className="bg-background-warm rounded-xl px-4 py-3 mb-2 flex items-start gap-2.5">
           <Clock3 size={16} className="text-primary shrink-0 mt-0.5" />
           <p className="text-sm text-dark-muted">
-            This trip is fully booked. Join the waitlist for{' '}
-            <span className="font-semibold text-dark">{tripTitle}</span> and we'll notify you the
-            moment a seat opens up — no payment needed.
+            {mode === 'group' ? (
+              <>
+                Not enough seats left to book your group on{' '}
+                <span className="font-semibold text-dark">{tripTitle}</span> right now. Join the
+                waitlist and we'll notify you the moment enough seats open up together — no
+                payment needed.
+              </>
+            ) : (
+              <>
+                This trip is fully booked. Join the waitlist for{' '}
+                <span className="font-semibold text-dark">{tripTitle}</span> and we'll notify you
+                the moment a seat opens up — no payment needed.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Solo vs Group */}
+      <div>
+        <label className="block text-sm font-medium text-dark mb-1">Waiting For</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setMode('solo')}
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+              mode === 'solo'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-background-warm text-dark-muted hover:border-primary/40'
+            }`}
+          >
+            <User size={16} /> Solo
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('group')}
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+              mode === 'group'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-background-warm text-dark-muted hover:border-primary/40'
+            }`}
+          >
+            <Users size={16} /> Group
+          </button>
+        </div>
+      </div>
+
+      {mode === 'group' && (
+        <div>
+          <label className="block text-sm font-medium text-dark mb-1">Number of People *</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={MIN_GROUP_SIZE}
+            max={MAX_GROUP_SIZE}
+            value={groupSize}
+            onChange={e => {
+              const val = e.target.value === '' ? MIN_GROUP_SIZE : Math.round(Number(e.target.value));
+              setGroupSize(Math.min(Math.max(val, MIN_GROUP_SIZE), MAX_GROUP_SIZE));
+            }}
+            className={inputClass}
+          />
+          <p className="text-xs text-dark-muted mt-1">
+            We'll only mark you ready to convert once at least {groupSize} seats are free together
+            — not the moment a single seat opens up.
           </p>
         </div>
       )}

@@ -326,18 +326,29 @@ export default function AdminEnquiries() {
   // the add-enquiry form with what we already know about them so the admin
   // only has to fill in the payment.
   useEffect(() => {
-    const incoming = (location.state as { convertWaitlist?: { id: string; full_name: string; phone: string; email: string; trip_id?: string; trip_title?: string; message?: string } } | null)?.convertWaitlist;
+    const incoming = (location.state as { convertWaitlist?: { id: string; full_name: string; phone: string; email: string; age?: number | null; city?: string | null; food_preference?: 'veg' | 'non_veg' | null; trip_id?: string; trip_title?: string; message?: string; group_size?: number | null } } | null)?.convertWaitlist;
     if (!incoming) return;
+    // Only enough seats to cover the whole group should ever be converted
+    // from here — the Waitlist page's "Convert" action is already gated on
+    // that (see AdminWaitlist.hasSeatOpen), but the note here makes it
+    // explicit to whoever is filling in the payment that this was a group
+    // of N, not a solo booking, so they log the other seats too.
+    const groupNote = incoming.group_size && incoming.group_size > 1
+      ? `Converted from waitlist (group of ${incoming.group_size} — log the other ${incoming.group_size - 1} seat${incoming.group_size - 1 === 1 ? '' : 's'} too).`
+      : 'Converted from waitlist.';
     setForm({
       ...emptyForm,
       full_name: incoming.full_name,
       phone: incoming.phone,
       email: incoming.email || '',
+      age: incoming.age ?? '',
+      city: incoming.city ?? '',
+      food_preference: incoming.food_preference ?? '',
       trip_id: incoming.trip_id || '',
       source: 'other',
       message: incoming.message
-        ? `Converted from waitlist. ${incoming.message}`
-        : 'Converted from waitlist.',
+        ? `${groupNote} ${incoming.message}`
+        : groupNote,
     });
     setConvertingWaitlist({ id: incoming.id, name: incoming.full_name });
     setModalOpen(true);
