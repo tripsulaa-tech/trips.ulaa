@@ -167,13 +167,15 @@ export default function AdminWaitlist() {
   // Declined.
   const kpiPct = (n: number) => (counts.all ? Math.round((n / counts.all) * 100) : 0);
   const KPI_CARDS = [
-    { label: 'Total Signups', value: counts.all, sub: 'All time', icon: Users, iconBg: 'bg-rose-100', iconColor: 'text-rose-600' },
-    { label: 'Waiting', value: counts.waiting, sub: `${kpiPct(counts.waiting)}% of total`, icon: Circle, iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
-    { label: 'Notified', value: counts.notified, sub: `${kpiPct(counts.notified)}% of total`, icon: Bell, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-    { label: 'Converted', value: counts.converted, sub: `${kpiPct(counts.converted)}% of total`, icon: CheckCircle2, iconBg: 'bg-green-100', iconColor: 'text-green-600' },
-    { label: 'Declined', value: counts.declined, sub: `${kpiPct(counts.declined)}% of total`, icon: XCircle, iconBg: 'bg-red-100', iconColor: 'text-red-600' },
+    { label: 'Total Signups', value: counts.all, sub: 'All time', icon: Users },
+    { label: 'Waiting', value: counts.waiting, sub: `${kpiPct(counts.waiting)}% of total`, icon: Circle },
+    { label: 'Notified', value: counts.notified, sub: `${kpiPct(counts.notified)}% of total`, icon: Bell },
+    { label: 'Converted', value: counts.converted, sub: `${kpiPct(counts.converted)}% of total`, icon: CheckCircle2 },
+    { label: 'Declined', value: counts.declined, sub: `${kpiPct(counts.declined)}% of total`, icon: XCircle },
   ] as const;
 
+  // Icon style matches the Dashboard's KPI cards: no background circle,
+  // every icon in the same brand color.
   const renderKpiCards = (cards: typeof KPI_CARDS) => (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
       {cards.map(card => {
@@ -183,8 +185,8 @@ export default function AdminWaitlist() {
             key={card.label}
             className="bg-white rounded-2xl p-4 shadow-card flex items-center gap-3 min-w-0"
           >
-            <div className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center ${card.iconBg} ${card.iconColor}`}>
-              <Icon size={20} />
+            <div className="shrink-0 w-11 h-11 flex items-center justify-center text-primary">
+              <Icon size={22} />
             </div>
             <div className="min-w-0">
               <p className="text-dark-muted text-xs font-medium truncate">{card.label}</p>
@@ -309,19 +311,17 @@ export default function AdminWaitlist() {
         <div className="bg-white rounded-2xl shadow-card p-4">
           <div className="flex items-center gap-2 mb-4">
             <SlidersHorizontal size={16} className="text-dark" />
-            <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap">Filters</span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            {/* Search */}
-            <div className="relative sm:w-64 sm:shrink-0">
+            <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1">Filters</span>
+            {/* Search — lives in the title row, directly above Clear All,
+                which sits at the end of the filters row below. */}
+            <div className="relative w-full sm:w-56">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={ev => setSearchQuery(ev.target.value)}
-                placeholder="Search by name, phone, email or trip..."
-                className="w-full pl-9 pr-8 py-2.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+                placeholder="Search..."
+                className="w-full pl-9 pr-8 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
               />
               {searchQuery && (
                 <button
@@ -333,21 +333,22 @@ export default function AdminWaitlist() {
                 </button>
               )}
             </div>
+          </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+            {/* Filters + Clear All — sit together in one row at the bottom
+                of the panel. */}
+            <div className="flex flex-wrap items-end gap-2 flex-1 min-w-0">
               {/* Status */}
-              <div className="relative">
+              <div className="relative w-full sm:w-auto sm:min-w-[140px]">
+                <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Status</label>
                 <button
                   onClick={() => setOpenFilterPanel(p => (p === 'status' ? null : 'status'))}
-                  className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                    openFilterPanel === 'status' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                  className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                    openFilterPanel === 'status' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                   }`}
                 >
-                  <div className="text-left leading-tight flex-1 min-w-0">
-                    <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Status</p>
-                    <p className="text-xs font-button font-semibold text-dark truncate">{statusFilter === 'all' ? 'All' : STATUS_CONFIG[statusFilter].label}</p>
-                  </div>
+                  <span className="text-sm font-button font-medium text-primary truncate">{statusFilter === 'all' ? 'All' : STATUS_CONFIG[statusFilter].label}</span>
                   <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'status' ? 'rotate-180' : ''}`} />
                 </button>
                 {openFilterPanel === 'status' && (
@@ -363,19 +364,17 @@ export default function AdminWaitlist() {
 
               {/* Trip */}
               {trips.length > 0 && (
-                <div className="relative">
+                <div className="relative w-full sm:w-auto sm:min-w-[160px]">
+                  <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                   <button
                     onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
-                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[160px] transition-colors ${
-                      openFilterPanel === 'trip' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                    className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                      openFilterPanel === 'trip' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                     }`}
                   >
-                    <div className="text-left leading-tight flex-1 min-w-0">
-                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Trip</p>
-                      <p className="text-xs font-button font-semibold text-dark truncate">
-                        {tripFilter === 'all' ? 'All trips' : trips.find(t => t.value === tripFilter)?.label || 'All trips'}
-                      </p>
-                    </div>
+                    <span className="text-sm font-button font-medium text-primary truncate">
+                      {tripFilter === 'all' ? 'All' : trips.find(t => t.value === tripFilter)?.label || 'All'}
+                    </span>
                     <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} />
                   </button>
                   {openFilterPanel === 'trip' && (
@@ -392,7 +391,8 @@ export default function AdminWaitlist() {
               )}
             </div>
 
-            {/* Clear All */}
+            {/* Clear All — sits at the end of the row; disabled (and
+                dimmed) whenever no filter or search term is active. */}
             <button
               onClick={clearAllFilters}
               disabled={activeFilterCount === 0}

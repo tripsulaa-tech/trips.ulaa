@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Search, Hourglass, CalendarCheck } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Search, Hourglass, CalendarCheck } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -307,6 +307,9 @@ export default function AdminEnquiries() {
   const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | Enquiry['source']>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // Client-side pagination for the results table below the filter bar.
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(1);
   // Which single filter's dropdown is open — only one at a time. 'more'
   // is the overflow menu for less-frequently-used filters (currently just
   // Source), keeping the main bar to five compact boxes.
@@ -557,6 +560,12 @@ export default function AdminEnquiries() {
   useEffect(() => {
     setSelectedIds(new Set());
   }, [selectedTripKey]);
+
+  // Any filter or search change invalidates the current page — always
+  // land back on page 1 so the admin doesn't end up on an empty page.
+  useEffect(() => {
+    setPage(1);
+  }, [filter, payFilter, bookedFilter, groupFilter, foodFilter, sourceFilter, searchQuery, selectedTripKey]);
 
   // Single-record status change from the per-row dropdown. Bulk status
   // changes never go through here — they're applied in handleBulkSave
@@ -1122,6 +1131,26 @@ export default function AdminEnquiries() {
       || e.phone?.toLowerCase().includes(trimmedSearch)
       || e.email?.toLowerCase().includes(trimmedSearch)
       || e.trip_title?.toLowerCase().includes(trimmedSearch));
+
+  // Pagination — clamp in case a filter change shrank the result set out
+  // from under the currently-selected page.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const pageEnd = Math.min(pageStart + PAGE_SIZE, filtered.length);
+  const paged = filtered.slice(pageStart, pageEnd);
+
+  // Arrived via a deep link (e.g. "View booking" from the Waitlist page) —
+  // jump straight to whichever page the highlighted enquiry actually falls
+  // on, since it may not be on page 1.
+  useEffect(() => {
+    if (!highlightId) return;
+    const idx = filtered.findIndex(e => e.id === highlightId);
+    if (idx === -1) return;
+    setPage(Math.floor(idx / PAGE_SIZE) + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightId]);
+
   const counts = {
     all: scopedEnquiries.length,
     new: scopedEnquiries.filter(e => e.status === 'new').length,
@@ -1201,11 +1230,11 @@ export default function AdminEnquiries() {
     const cancelled = list.filter(isCancelled).length;
     const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
     return [
-      { label: 'Total Enquiries', value: total, sub: 'All time', icon: MessageCircle, iconBg: 'bg-rose-100', iconColor: 'text-rose-600' },
-      { label: 'Open / Pending', value: openPending, sub: `${pct(openPending)}% of total`, icon: Hourglass, iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
-      { label: 'Contacted', value: contacted, sub: `${pct(contacted)}% of total`, icon: Phone, iconBg: 'bg-green-100', iconColor: 'text-green-600' },
-      { label: 'Booked', value: booked, sub: `${pct(booked)}% of total`, icon: CalendarCheck, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-      { label: 'Cancelled', value: cancelled, sub: `${pct(cancelled)}% of total`, icon: XCircle, iconBg: 'bg-red-100', iconColor: 'text-red-600' },
+      { label: 'Total Enquiries', value: total, sub: 'All time', icon: MessageCircle },
+      { label: 'Open / Pending', value: openPending, sub: `${pct(openPending)}% of total`, icon: Hourglass },
+      { label: 'Contacted', value: contacted, sub: `${pct(contacted)}% of total`, icon: Phone },
+      { label: 'Booked', value: booked, sub: `${pct(booked)}% of total`, icon: CalendarCheck },
+      { label: 'Cancelled', value: cancelled, sub: `${pct(cancelled)}% of total`, icon: XCircle },
     ] as const;
   };
 
@@ -1213,6 +1242,8 @@ export default function AdminEnquiries() {
   // the business-wide row up top and the per-trip row inside a drilled-into
   // trip view below. Plain function returning JSX (not a component defined
   // during render) to avoid remounting/resetting state on every render.
+  // Icon style matches the Dashboard's KPI cards: no background circle,
+  // every icon in the same brand color.
   const renderKpiCards = (cards: ReturnType<typeof buildKpiCards>) => (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
       {cards.map(card => {
@@ -1222,8 +1253,8 @@ export default function AdminEnquiries() {
             key={card.label}
             className="bg-white rounded-2xl p-4 shadow-card flex items-center gap-3 min-w-0"
           >
-            <div className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center ${card.iconBg} ${card.iconColor}`}>
-              <Icon size={20} />
+            <div className="shrink-0 w-11 h-11 flex items-center justify-center text-primary">
+              <Icon size={22} />
             </div>
             <div className="min-w-0">
               <p className="text-dark-muted text-xs font-medium truncate">{card.label}</p>
@@ -1327,45 +1358,23 @@ export default function AdminEnquiries() {
                 <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap">Filters</span>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                {/* Search */}
-                <div className="relative sm:w-64 sm:shrink-0">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={ev => setSearchQuery(ev.target.value)}
-                    placeholder="Search by name, phone, email or trip..."
-                    className="w-full pl-9 pr-8 py-2.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
-                      aria-label="Clear search"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Filters */}
-                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                {/* Filters + Clear All — sit together in one row at the
+                    bottom of the panel. */}
+                <div className="flex flex-wrap items-end gap-2 flex-1 min-w-0">
                   {/* Trip — lets an admin scope everything below (KPIs,
                       summary card, table) to one trip, or back to "All
                       Trips", without leaving this page. Same pattern as the
                       Trip filter on the Waitlist page. */}
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto sm:min-w-[150px]">
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
-                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[140px] transition-colors ${
-                        openFilterPanel === 'trip' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                        openFilterPanel === 'trip' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
-                      <div className="text-left leading-tight flex-1 min-w-0">
-                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Trip</p>
-                        <p className="text-xs font-button font-semibold text-dark truncate">{activeGroup ? activeGroup.title : 'All trips'}</p>
-                      </div>
+                      <span className="text-sm font-button font-medium text-primary truncate">{activeGroup ? activeGroup.title : 'All'}</span>
                       <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} />
                     </button>
                     {openFilterPanel === 'trip' && (
@@ -1381,17 +1390,15 @@ export default function AdminEnquiries() {
                   </div>
 
                   {/* Query Status */}
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Query Status</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'query' ? null : 'query'))}
-                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                        openFilterPanel === 'query' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                        openFilterPanel === 'query' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
-                      <div className="text-left leading-tight flex-1 min-w-0">
-                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Query Status</p>
-                        <p className="text-xs font-button font-semibold text-dark truncate">{filter === 'all' ? 'All' : STATUS_CONFIG[filter].label}</p>
-                      </div>
+                      <span className="text-sm font-button font-medium text-primary truncate">{filter === 'all' ? 'All' : STATUS_CONFIG[filter].label}</span>
                       <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'query' ? 'rotate-180' : ''}`} />
                     </button>
                     {openFilterPanel === 'query' && (
@@ -1406,17 +1413,15 @@ export default function AdminEnquiries() {
                   </div>
 
                   {/* Payment */}
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Payment</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'pay' ? null : 'pay'))}
-                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                        openFilterPanel === 'pay' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                        openFilterPanel === 'pay' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
-                      <div className="text-left leading-tight flex-1 min-w-0">
-                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Payment</p>
-                        <p className="text-xs font-button font-semibold text-dark truncate">{PAY_FILTER_LABELS[payFilter]}</p>
-                      </div>
+                      <span className="text-sm font-button font-medium text-primary truncate">{PAY_FILTER_LABELS[payFilter]}</span>
                       <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'pay' ? 'rotate-180' : ''}`} />
                     </button>
                     {openFilterPanel === 'pay' && (
@@ -1431,17 +1436,15 @@ export default function AdminEnquiries() {
                   </div>
 
                   {/* Booking */}
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'booked' ? null : 'booked'))}
-                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                        openFilterPanel === 'booked' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                        openFilterPanel === 'booked' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
-                      <div className="text-left leading-tight flex-1 min-w-0">
-                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Booking</p>
-                        <p className="text-xs font-button font-semibold text-dark truncate">{BOOKING_FILTER_LABELS[bookedFilter]}</p>
-                      </div>
+                      <span className="text-sm font-button font-medium text-primary truncate">{BOOKING_FILTER_LABELS[bookedFilter]}</span>
                       <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'booked' ? 'rotate-180' : ''}`} />
                     </button>
                     {openFilterPanel === 'booked' && (
@@ -1456,17 +1459,15 @@ export default function AdminEnquiries() {
                   </div>
 
                   {/* Group / Solo */}
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Group / Solo</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'group' ? null : 'group'))}
-                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                        openFilterPanel === 'group' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                        openFilterPanel === 'group' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
-                      <div className="text-left leading-tight flex-1 min-w-0">
-                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Group / Solo</p>
-                        <p className="text-xs font-button font-semibold text-dark truncate">{GROUP_FILTER_LABELS[groupFilter]}</p>
-                      </div>
+                      <span className="text-sm font-button font-medium text-primary truncate">{GROUP_FILTER_LABELS[groupFilter]}</span>
                       <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'group' ? 'rotate-180' : ''}`} />
                     </button>
                     {openFilterPanel === 'group' && (
@@ -1481,17 +1482,15 @@ export default function AdminEnquiries() {
                   </div>
 
                   {/* Food */}
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Food</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'food' ? null : 'food'))}
-                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                        openFilterPanel === 'food' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                        openFilterPanel === 'food' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
-                      <div className="text-left leading-tight flex-1 min-w-0">
-                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Food</p>
-                        <p className="text-xs font-button font-semibold text-dark truncate">{FOOD_FILTER_LABELS[foodFilter]}</p>
-                      </div>
+                      <span className="text-sm font-button font-medium text-primary truncate">{FOOD_FILTER_LABELS[foodFilter]}</span>
                       <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'food' ? 'rotate-180' : ''}`} />
                     </button>
                     {openFilterPanel === 'food' && (
@@ -1505,23 +1504,18 @@ export default function AdminEnquiries() {
                     )}
                   </div>
 
-                  {/* More Filters — overflow menu for less-frequently-used
-                      filters (Source today); keeps the main row compact no
-                      matter how many filters the page ends up with. */}
-                  <div className="relative">
+                  {/* Source — overflow filter, kept in the same
+                      label-on-top style as the rest of the row. */}
+                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Source</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'more' ? null : 'more'))}
-                      className={`w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 py-2 transition-colors ${
-                        openFilterPanel === 'more' || sourceFilter !== 'all'
-                          ? 'border-primary/50 bg-background-warm text-dark'
-                          : 'border-background-warm bg-background text-dark hover:border-primary/30'
+                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                        openFilterPanel === 'more' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
-                      <span className="inline-flex items-center gap-1 truncate">
-                        More Filters
-                        {sourceFilter !== 'all' && <span className="text-primary">· {SOURCE_CONFIG[sourceFilter].label}</span>}
-                      </span>
-                      <SlidersHorizontal size={13} className="shrink-0" />
+                      <span className="text-sm font-button font-medium text-primary truncate">{sourceFilter === 'all' ? 'All' : SOURCE_CONFIG[sourceFilter].label}</span>
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'more' ? 'rotate-180' : ''}`} />
                     </button>
                     {openFilterPanel === 'more' && (
                       <FilterDropdown
@@ -1590,9 +1584,43 @@ export default function AdminEnquiries() {
               </div>
             )}
 
+            {/* Results container — header (title + count + search) on top,
+                table/cards below, pagination at the bottom. */}
+            <div className="bg-white rounded-2xl shadow-card p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 sm:pr-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1 h-4 bg-primary rounded-full shrink-0" />
+                    <h2 className="font-button font-bold text-dark text-sm uppercase tracking-wide whitespace-nowrap">Enquiry Details</h2>
+                  </div>
+                  <p className="text-dark-muted text-sm mt-1">
+                    Showing {pageStart + 1}–{pageEnd} of <span className="font-semibold text-dark">{filtered.length}</span> {filtered.length === 1 ? 'Enquiry' : 'Enquiries'}
+                  </p>
+                </div>
+                <div className="relative w-full sm:w-72 sm:shrink-0">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={ev => setSearchQuery(ev.target.value)}
+                    placeholder="Search by name, phone, email or trip..."
+                    className="w-full pl-9 pr-8 py-2.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
+                      aria-label="Clear search"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
             {/* Desktop / tablet table */}
-            <div className="hidden sm:block bg-white rounded-2xl shadow-card overflow-hidden">
-              <div className="overflow-x-auto scrollbar-hide">
+            <div className="hidden sm:block border-t border-background-warm pt-4 -mx-4 sm:-mx-6">
+              <div className="overflow-x-auto scrollbar-hide px-4 sm:px-6">
                 <table className="w-full text-sm">
                   <thead className="bg-background-warm text-dark font-medium">
                     <tr>
@@ -1607,7 +1635,7 @@ export default function AdminEnquiries() {
                       </th>
                       <th className="px-3 py-3 text-left hidden md:table-cell">S.No</th>
                       <th className="px-4 py-3 text-left">Name</th>
-                      <th className="px-4 py-3 text-left hidden sm:table-cell">Phone</th>
+                      <th className="px-4 py-3 text-left hidden sm:table-cell">Contact</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Source</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Date &amp; Time</th>
                       <th className="px-2 py-3 text-center whitespace-nowrap">Package</th>
@@ -1618,7 +1646,7 @@ export default function AdminEnquiries() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-background-warm">
-                    {filtered.map((e, idx) => {
+                    {paged.map((e, idx) => {
                       const cfg = STATUS_CONFIG[e.status];
                       const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                       const isHighlighted = highlightId === e.id;
@@ -1655,7 +1683,7 @@ export default function AdminEnquiries() {
                                 {e.full_name}
                                 <ChevronDown size={12} className={`text-dark-muted shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                               </p>
-                              <p className="text-dark-muted text-xs truncate">{e.email}</p>
+                              <p className="text-dark-muted text-xs truncate sm:hidden">{e.email}</p>
                               <div className="flex items-center flex-wrap gap-1 mt-1">
                                 {e.group_size && e.group_size > 1 ? (
                                   <span
@@ -1678,7 +1706,10 @@ export default function AdminEnquiries() {
                               </div>
                             </button>
                           </td>
-                          <td className="px-4 py-3 text-dark-muted hidden sm:table-cell truncate">{e.phone}</td>
+                          <td className="px-4 py-3 text-dark-muted hidden sm:table-cell">
+                            <p className="flex items-center gap-1 text-xs truncate"><Mail size={11} className="shrink-0" /> <span className="truncate">{e.email}</span></p>
+                            <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" /> {e.phone}</p>
+                          </td>
                           <td className="px-4 py-3 text-dark-muted hidden lg:table-cell truncate">
                             <span className="inline-flex items-center gap-1 text-xs">
                               <srcCfg.icon size={12} className="shrink-0" />
