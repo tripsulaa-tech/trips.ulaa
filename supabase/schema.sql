@@ -369,6 +369,16 @@ $function$;
 -- and a reactivation (uncancel) of an old one — previously a reactivation
 -- could silently overbook, since the seats_booked counter just capped at
 -- total_seats without stopping the enquiry itself from being marked booked.
+--
+-- `for update` below locks the trip's upcoming_trips row for the rest of
+-- this transaction. Without it, two payments for the same trip recorded at
+-- nearly the same moment (e.g. Bulk Save firing several recordPayment calls
+-- concurrently, or two people paying at once) each read the same
+-- not-yet-updated seats_booked value, both pass the check, and both get
+-- admitted — overbooking the trip past total_seats. Locking forces the
+-- second transaction to wait until the first commits (and the seat-sync
+-- trigger has recomputed seats_booked) before it reads the count, so the
+-- check always sees an up-to-date value.
 create or replace function public.enforce_trip_capacity()
 returns trigger
 language plpgsql
@@ -381,7 +391,8 @@ declare
 begin
   if new.trip_id is not null and v_becomes_booked and not v_was_booked then
     select seats_booked, total_seats into v_seats_booked, v_total_seats
-    from public.upcoming_trips where id = new.trip_id;
+    from public.upcoming_trips where id = new.trip_id
+    for update;
 
     if v_total_seats is not null and v_seats_booked >= v_total_seats then
       raise exception 'This trip has no seats left (% / % booked).', v_seats_booked, v_total_seats;

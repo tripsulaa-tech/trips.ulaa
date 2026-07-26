@@ -21,9 +21,16 @@ interface BookingFormProps {
   tripTitle?: string;
   terms?: string;
   onSuccess?: () => void;
+  // How many seats are actually left on the trip right now. Without this,
+  // Group mode let someone submit a group of, say, 3 when only 1 seat
+  // remained — the enquiry itself isn't capacity-checked (that only
+  // happens once a seat is paid for), so it silently created entries that
+  // could never all be honored. Optional so existing callers that don't
+  // pass it still work (falls back to the fixed MIN/MAX_GROUP_SIZE range).
+  remainingSeats?: number;
 }
 
-export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: BookingFormProps) {
+export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats }: BookingFormProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [termsOpen, setTermsOpen] = useState(false);
@@ -41,6 +48,31 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
   // [0, groupSize] whenever groupSize changes (see the Number of People
   // input below).
   const [groupVegCount, setGroupVegCount] = useState(MIN_GROUP_SIZE);
+
+  // The real ceiling for a group submission — whichever is tighter, the
+  // form's own MAX_GROUP_SIZE or the seats actually left on the trip.
+  // remainingSeats is undefined for callers that don't pass it (falls back
+  // to the old fixed-range behavior).
+  const effectiveMaxGroupSize = remainingSeats !== undefined
+    ? Math.max(0, Math.min(MAX_GROUP_SIZE, remainingSeats))
+    : MAX_GROUP_SIZE;
+  // Fewer seats left than a group needs at minimum — Group mode can't
+  // produce anything postable, so it's not offered as a choice at all
+  // rather than left selectable and failing at submit time.
+  const groupModeUnavailable = remainingSeats !== undefined && remainingSeats < MIN_GROUP_SIZE;
+
+  useEffect(() => {
+    if (groupModeUnavailable && bookingMode === 'group') {
+      setBookingMode('solo');
+    }
+  }, [groupModeUnavailable, bookingMode]);
+
+  useEffect(() => {
+    if (groupSize > effectiveMaxGroupSize && effectiveMaxGroupSize >= MIN_GROUP_SIZE) {
+      setGroupSize(effectiveMaxGroupSize);
+      setGroupVegCount(prev => Math.min(prev, effectiveMaxGroupSize));
+    }
+  }, [effectiveMaxGroupSize, groupSize]);
 
   const termsText = (terms || '').trim() || DEFAULT_TERMS_AND_CONDITIONS;
   const termsSections = useMemo(() => parseTerms(termsText), [termsText]);
@@ -103,8 +135,12 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
 
   const onSubmit = async (data: BookingFormData) => {
     if (bookingMode === 'group') {
-      if (!Number.isInteger(groupSize) || groupSize < MIN_GROUP_SIZE || groupSize > MAX_GROUP_SIZE) {
-        setGroupSizeError(`Enter a number of people between ${MIN_GROUP_SIZE} and ${MAX_GROUP_SIZE}.`);
+      if (!Number.isInteger(groupSize) || groupSize < MIN_GROUP_SIZE || groupSize > effectiveMaxGroupSize) {
+        setGroupSizeError(
+          effectiveMaxGroupSize < MIN_GROUP_SIZE
+            ? `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left — not enough for a group. Try Solo, or join the waitlist.`
+            : `Enter a number of people between ${MIN_GROUP_SIZE} and ${effectiveMaxGroupSize}.`
+        );
         return;
       }
     }
@@ -203,9 +239,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
           </button>
           <button
             type="button"
+            disabled={groupModeUnavailable}
             onClick={() => setBookingMode('group')}
+            title={groupModeUnavailable ? `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left — not enough for a group` : undefined}
             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
-              bookingMode === 'group'
+              groupModeUnavailable
+                ? 'border-background-warm text-dark-muted/50 cursor-not-allowed'
+                : bookingMode === 'group'
                 ? 'border-primary bg-primary/10 text-primary'
                 : 'border-background-warm text-dark-muted hover:border-primary/40'
             }`}
@@ -213,6 +253,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
             <Users size={16} /> Group
           </button>
         </div>
+        {groupModeUnavailable && (
+          <p className="text-xs text-dark-muted mt-1">
+            Only {remainingSeats} seat{remainingSeats === 1 ? '' : 's'} left — not enough for a group booking. Book solo for the last {remainingSeats === 1 ? 'seat' : 'seats'}, or join the waitlist for the rest of your group.
+          </p>
+        )}
       </div>
 
       {bookingMode === 'group' && (
@@ -222,7 +267,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
             type="number"
             inputMode="numeric"
             min={MIN_GROUP_SIZE}
-            max={MAX_GROUP_SIZE}
+            max={effectiveMaxGroupSize}
             value={groupSize}
             onChange={e => {
               setGroupSizeError('');
@@ -234,6 +279,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
           />
           <p className="text-xs text-dark-muted mt-1">
             We'll create one entry per person under this name and contact — {groupSize} {groupSize === 1 ? 'entry' : 'entries'} in total.
+            {remainingSeats !== undefined && ` Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left on this trip.`}
           </p>
           {groupSizeError && <p className={errorClass}>{groupSizeError}</p>}
         </div>

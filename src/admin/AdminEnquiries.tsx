@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Search } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -81,6 +81,10 @@ type BulkEditForm = {
   // (amount_paid) — setting only amount_paid without a total_amount is what
   // left rows stuck showing "Price not set" after a bulk save.
   total_amount: number | '';
+  // What's actually been collected so far, set as a new running total (same
+  // semantics as recordPayment) — not a delta added on top of each row's
+  // current amount_paid. Left blank, every row's amount_paid is untouched.
+  amount_paid: number | '';
   status: typeof BULK_NO_CHANGE | Enquiry['status'];
 };
 
@@ -88,6 +92,7 @@ const emptyBulkForm: BulkEditForm = {
   food_preference: BULK_NO_CHANGE,
   package_type: BULK_NO_CHANGE,
   total_amount: '',
+  amount_paid: '',
   status: BULK_NO_CHANGE,
 };
 
@@ -219,6 +224,7 @@ export default function AdminEnquiries() {
   const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
   const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked'>('all');
   const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showQueryFilter, setShowQueryFilter] = useState(false);
   const [showPayFilter, setShowPayFilter] = useState(false);
   const [showBookedFilter, setShowBookedFilter] = useState(false);
@@ -598,7 +604,8 @@ export default function AdminEnquiries() {
 
     const touchesPaymentFields = bulkForm.food_preference !== BULK_NO_CHANGE
       || bulkForm.package_type !== BULK_NO_CHANGE
-      || bulkForm.total_amount !== '';
+      || bulkForm.total_amount !== ''
+      || bulkForm.amount_paid !== '';
     const touchesStatus = bulkForm.status !== BULK_NO_CHANGE;
 
     // Every field defaults to "No change" — if the admin hits Bulk Save
@@ -611,10 +618,18 @@ export default function AdminEnquiries() {
 
     setBulkSaving(true);
     try {
-      await Promise.all(targets.map(async (enquiry) => {
+      // Sequential, not Promise.all — firing these concurrently for
+      // enquiries on the same trip means each recordPayment's capacity
+      // check can race against the others (each briefly sees a stale
+      // seats_booked before the previous one commits). The DB-side lock in
+      // enforce_trip_capacity makes that race safe now, but it'd still
+      // mean these calls queue up waiting on each other anyway — doing it
+      // one at a time here avoids that contention and gives a clean,
+      // predictable order if one of them fails partway through.
+      for (const enquiry of targets) {
         if (touchesPaymentFields) {
           await recordPayment(enquiry, {
-            amount_paid: enquiry.amount_paid,
+            amount_paid: bulkForm.amount_paid !== '' ? Number(bulkForm.amount_paid) : enquiry.amount_paid,
             total_amount: bulkForm.total_amount !== '' ? Number(bulkForm.total_amount) : enquiry.total_amount,
             package_type: bulkForm.package_type !== BULK_NO_CHANGE ? bulkForm.package_type : enquiry.package_type,
             food_preference: bulkForm.food_preference !== BULK_NO_CHANGE
@@ -625,7 +640,7 @@ export default function AdminEnquiries() {
         if (bulkForm.status !== BULK_NO_CHANGE) {
           await updateEnquiryStatus(enquiry.id, bulkForm.status);
         }
-      }));
+      }
       setBulkEditOpen(false);
       setBulkForm(emptyBulkForm);
       setSelectedIds(new Set());
@@ -802,11 +817,17 @@ export default function AdminEnquiries() {
   });
   const groupColor = (e: Enquiry) => (e.group_id ? GROUP_COLOR_PALETTE[groupColorMap.get(e.group_id)!] : null);
 
+  const trimmedSearch = searchQuery.trim().toLowerCase();
   const filtered = sortedScoped
     .filter(e => filter === 'all' || e.status === filter)
     .filter(e => payFilter === 'all' || paymentFilterKey(e) === payFilter)
     .filter(e => bookedFilter === 'all' || (bookedFilter === 'booked' ? isBooked(e) : !isBooked(e)))
-    .filter(e => foodFilter === 'all' || foodPreferenceKey(e) === foodFilter);
+    .filter(e => foodFilter === 'all' || foodPreferenceKey(e) === foodFilter)
+    .filter(e => !trimmedSearch
+      || e.full_name?.toLowerCase().includes(trimmedSearch)
+      || e.phone?.toLowerCase().includes(trimmedSearch)
+      || e.email?.toLowerCase().includes(trimmedSearch)
+      || e.trip_title?.toLowerCase().includes(trimmedSearch));
   const counts = {
     all: scopedEnquiries.length,
     new: scopedEnquiries.filter(e => e.status === 'new').length,
@@ -831,7 +852,7 @@ export default function AdminEnquiries() {
     non_veg: scopedEnquiries.filter(e => foodPreferenceKey(e) === 'non_veg').length,
     not_set: scopedEnquiries.filter(e => foodPreferenceKey(e) === 'not_set').length,
   };
-  const activeFilterCount = (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0);
+  const activeFilterCount = (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (trimmedSearch ? 1 : 0);
 
   const paymentTotals = (list: Enquiry[]) => ({
     collected: list.reduce((sum, e) => sum + (e.amount_paid || 0), 0),
@@ -1038,10 +1059,30 @@ export default function AdminEnquiries() {
                 </span>
                 {activeFilterCount > 0 && (
                   <button
-                    onClick={() => { setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setFoodFilter('all'); setShowQueryFilter(false); setShowPayFilter(false); setShowBookedFilter(false); setShowFoodFilter(false); }}
+                    onClick={() => { setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setFoodFilter('all'); setSearchQuery(''); setShowQueryFilter(false); setShowPayFilter(false); setShowBookedFilter(false); setShowFoodFilter(false); }}
                     className="ml-auto text-[11px] font-button font-semibold text-primary hover:underline shrink-0"
                   >
                     Clear
+                  </button>
+                )}
+              </div>
+
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={ev => setSearchQuery(ev.target.value)}
+                  placeholder="Search by name, phone, email, or trip..."
+                  className="w-full pl-9 pr-8 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
                   </button>
                 )}
               </div>
@@ -1996,8 +2037,20 @@ export default function AdminEnquiries() {
               className={inputClass}
               placeholder="Leave blank to leave unchanged"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
+            <input
+              type="number"
+              min={0}
+              value={bulkForm.amount_paid}
+              onChange={ev => setBulkForm(f => ({ ...f, amount_paid: ev.target.value === '' ? '' : +ev.target.value }))}
+              className={inputClass}
+              placeholder="Leave blank to leave unchanged"
+            />
             <p className="text-[11px] text-dark-muted mt-1">
-              Sets the trip price for every selected enquiry — this is what clears "Price not set". Picking a Package above fills this in automatically when that trip has a price configured; you can still type over it. Leave blank to leave each one's price as-is. To record what someone's actually paid, use Track Payment on that one row instead.
+              Sets what's been collected so far for every selected enquiry, as a new total — not added on top of what's already recorded. Leave blank to leave each one's amount paid as-is.
             </p>
           </div>
 

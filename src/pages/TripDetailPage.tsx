@@ -601,6 +601,7 @@ export default function TripDetailPage() {
           tripId={trip.id}
           tripTitle={trip.title}
           terms={trip.terms_and_conditions}
+          remainingSeats={remaining}
           onSuccess={() => setTimeout(() => setBookingOpen(false), 3000)}
         />
       </Modal>
