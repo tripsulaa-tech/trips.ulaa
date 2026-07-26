@@ -140,10 +140,9 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
 
         <Link to={`/trips/${trip.slug}`}>
           <Button
-            variant={isFull ? 'ghost' : 'primary'}
+            variant={isFull ? 'outline' : 'primary'}
             size="sm"
             fullWidth
-            disabled={isFull}
             className="group/btn"
           >
             {isFull ? 'Join Waitlist' : 'View Details'}

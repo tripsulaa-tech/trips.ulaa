@@ -209,6 +209,31 @@ export interface BookingFormData {
 }
 
 // =============================================
+// Waitlist (sold-out trips)
+// =============================================
+export interface WaitlistEntry {
+  id: string;
+  trip_id: string;
+  trip_title?: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  message?: string;
+  status: 'waiting' | 'notified' | 'converted' | 'declined';
+  notified_at?: string | null;
+  created_at: string;
+}
+
+export interface WaitlistFormData {
+  full_name: string;
+  phone: string;
+  email: string;
+  message?: string;
+  trip_id: string;
+  trip_title?: string;
+}
+
+// =============================================
 // About Page (editable via Admin)
 // =============================================
 export interface AboutValue {

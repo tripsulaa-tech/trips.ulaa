@@ -178,6 +178,36 @@ create index payments_enquiry_id_idx on public.payments using btree (enquiry_id)
 create index payments_paid_at_idx on public.payments using btree (paid_at desc);
 
 -- ----------------------------------------------------------------------------
+-- waitlist
+-- ----------------------------------------------------------------------------
+-- trip_id is intentionally NOT a foreign key, same reasoning as
+-- enquiries.trip_id: upcoming_trips rows get deleted/replaced by
+-- completed_trips once a trip finishes, and we still want the historical
+-- waitlist record to remain queryable.
+create table public.waitlist (
+  id            uuid not null default uuid_generate_v4(),
+  trip_id       uuid not null,
+  trip_title    text,
+  full_name     text not null,
+  phone         text not null,
+  email         text not null,
+  message       text,
+  status        text not null default 'waiting'::text,
+  notified_at   timestamptz,
+  created_at    timestamptz not null default now(),
+  constraint waitlist_pkey primary key (id),
+  constraint waitlist_status_check
+    check (status = any (array['waiting'::text, 'notified'::text, 'converted'::text, 'declined'::text])),
+  -- Prevents the same person from spamming the same sold-out trip's
+  -- waitlist with repeat submissions.
+  constraint waitlist_trip_email_unique unique (trip_id, email)
+);
+
+create index waitlist_trip_id_idx on public.waitlist using btree (trip_id);
+create index waitlist_status_idx on public.waitlist using btree (status);
+create index waitlist_created_at_idx on public.waitlist using btree (created_at desc);
+
+-- ----------------------------------------------------------------------------
 -- gallery
 -- ----------------------------------------------------------------------------
 create table public.gallery (
@@ -331,6 +361,117 @@ begin
       body := jsonb_build_object(
         'title', 'New enquiry from ' || new.full_name,
         'body', coalesce(new.trip_title, 'General enquiry') || ' · ' || new.email,
+        'link', target_link
+      )
+    );
+  exception when others then
+    raise warning 'send-push call failed: %', sqlerrm;
+  end;
+
+  return new;
+end;
+$function$;
+
+-- Fires after a new waitlist signup is inserted: same shape as
+-- notify_new_enquiry() above — creates an in-app notification row and
+-- best-effort fires a push notification. Wrapped so a push failure can
+-- never block the waitlist insert.
+create or replace function public.notify_new_waitlist_signup()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public', 'extensions', 'net'
+as $function$
+declare
+  target_link text;
+begin
+  target_link := '/admin/waitlist?trip=' || new.trip_id::text;
+
+  insert into notifications (type, title, body, link)
+  values (
+    'new_waitlist',
+    'Waitlist signup from ' || new.full_name,
+    coalesce(new.trip_title, 'A trip') || ' · ' || new.email,
+    target_link
+  );
+
+  begin
+    perform net.http_post(
+      url := 'https://wephglgonrmtcmhfbjqe.supabase.co/functions/v1/send-push',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || (
+          select decrypted_secret from vault.decrypted_secrets
+          where name = 'edge_function_secret' limit 1
+        )
+      ),
+      body := jsonb_build_object(
+        'title', 'Waitlist signup from ' || new.full_name,
+        'body', coalesce(new.trip_title, 'A trip') || ' · ' || new.email,
+        'link', target_link
+      )
+    );
+  exception when others then
+    raise warning 'send-push call failed: %', sqlerrm;
+  end;
+
+  return new;
+end;
+$function$;
+
+-- Fires after a trip's seats_booked count DROPS (i.e. a cancellation freed
+-- up a seat). If that trip still has anyone 'waiting' on the waitlist,
+-- drops an admin notification + push. Deliberately does NOT auto-email/SMS
+-- the waitlisted person — there's no outbound email/SMS service wired up
+-- in this app; the actual outreach stays a manual step for the admin.
+create or replace function public.notify_seat_available()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public', 'extensions', 'net'
+as $function$
+declare
+  waiting_count integer;
+  target_link text;
+begin
+  if new.seats_booked >= old.seats_booked then
+    return new;
+  end if;
+
+  select count(*) into waiting_count
+    from public.waitlist
+   where trip_id = new.id
+     and status = 'waiting';
+
+  if waiting_count = 0 then
+    return new;
+  end if;
+
+  target_link := '/admin/waitlist?trip=' || new.id::text;
+
+  insert into notifications (type, title, body, link)
+  values (
+    'seat_available',
+    'A seat opened up on ' || new.title,
+    waiting_count || ' ' || (case when waiting_count = 1 then 'person is' else 'people are' end)
+      || ' waiting for this trip',
+    target_link
+  );
+
+  begin
+    perform net.http_post(
+      url := 'https://wephglgonrmtcmhfbjqe.supabase.co/functions/v1/send-push',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || (
+          select decrypted_secret from vault.decrypted_secrets
+          where name = 'edge_function_secret' limit 1
+        )
+      ),
+      body := jsonb_build_object(
+        'title', 'A seat opened up on ' || new.title,
+        'body', waiting_count || ' ' || (case when waiting_count = 1 then 'person is' else 'people are' end)
+          || ' waiting for this trip',
         'link', target_link
       )
     );
@@ -585,6 +726,14 @@ create trigger on_enquiry_created
   after insert on public.enquiries
   for each row execute function public.notify_new_enquiry();
 
+create trigger on_waitlist_created
+  after insert on public.waitlist
+  for each row execute function public.notify_new_waitlist_signup();
+
+create trigger on_trip_seat_freed
+  after update on public.upcoming_trips
+  for each row execute function public.notify_seat_available();
+
 create trigger sync_amount_paid_on_payments_change
   after insert or update or delete on public.payments
   for each row execute function public.sync_enquiry_amount_paid();
@@ -612,6 +761,7 @@ alter table public.completed_trips enable row level security;
 alter table public.upcoming_trips enable row level security;
 alter table public.enquiries enable row level security;
 alter table public.payments enable row level security;
+alter table public.waitlist enable row level security;
 alter table public.gallery enable row level security;
 alter table public.trip_images enable row level security;
 alter table public.testimonials enable row level security;
@@ -646,6 +796,17 @@ create policy "Admin delete enquiries" on public.enquiries
 -- written by the admin portal, never directly by the public form).
 create policy "Admin all payments" on public.payments
   for all using (auth.role() = 'authenticated');
+
+-- waitlist — public can only insert (submit the waitlist form); everything
+-- else (read/update/delete) requires an authenticated admin session.
+create policy "Public insert waitlist" on public.waitlist
+  for insert with check (true);
+create policy "Admin read waitlist" on public.waitlist
+  for select using (auth.role() = 'authenticated');
+create policy "Admin update waitlist" on public.waitlist
+  for update using (auth.role() = 'authenticated');
+create policy "Admin delete waitlist" on public.waitlist
+  for delete using (auth.role() = 'authenticated');
 
 -- gallery
 create policy "Admin all gallery" on public.gallery

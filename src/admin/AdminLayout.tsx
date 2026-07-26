@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Home, Briefcase, BookOpen, Image, MessageCircle,
-  LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles
+  LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles, ListChecks
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ const adminNav = [
   { label: 'About Page', to: '/admin/about', icon: FileText },
   { label: 'Why ULAA', to: '/admin/why-us', icon: Sparkles },
   { label: 'Enquiries', to: '/admin/enquiries', icon: MessageCircle },
+  { label: 'Waitlist', to: '/admin/waitlist', icon: ListChecks },
 ];
 
 interface AdminLayoutProps {

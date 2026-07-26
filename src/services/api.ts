@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, Payment } from '../types';
+import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, Payment, WaitlistEntry, WaitlistFormData } from '../types';
 
 // =============================================
 // Trip lifecycle
@@ -463,6 +463,46 @@ async function adjustTripSeats(tripId: string, delta: 1 | -1): Promise<void> {
     .update({ seats_booked: newSeatsBooked })
     .eq('id', tripId);
   if (seatsError) throw seatsError;
+}
+
+// =============================================
+// Waitlist
+// =============================================
+// Public-facing: submits a waitlist signup for a sold-out trip. The
+// (trip_id, email) unique constraint means a repeat submission from the
+// same person throws a Postgres 23505 — surfaced to the caller as a
+// distinct error so the UI can show "you're already on the list" instead
+// of a generic failure.
+export async function submitWaitlist(entry: WaitlistFormData): Promise<void> {
+  const { error } = await supabase.from('waitlist').insert(entry);
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('DUPLICATE_WAITLIST_ENTRY');
+    }
+    throw error;
+  }
+}
+
+// Admin: all waitlist entries across every trip, newest first.
+export async function getWaitlistEntries(): Promise<WaitlistEntry[]> {
+  const { data, error } = await supabase
+    .from('waitlist')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function updateWaitlistStatus(id: string, status: WaitlistEntry['status']): Promise<void> {
+  const updates: Partial<WaitlistEntry> = { status };
+  if (status === 'notified') updates.notified_at = new Date().toISOString();
+  const { error } = await supabase.from('waitlist').update(updates).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteWaitlistEntry(id: string): Promise<void> {
+  const { error } = await supabase.from('waitlist').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // Fetches the payment history for one enquiry (booking amount, balance,
