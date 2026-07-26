@@ -12,7 +12,7 @@ import { GalleryGrid } from '../components/ui/Lightbox';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import { getUpcomingTripBySlug } from '../services/api';
 import type { UpcomingTrip } from '../types';
-import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
+import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice, getStrikeThroughPrice } from '../utils';
 import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/calendar';
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
@@ -117,6 +117,7 @@ export default function TripDetailPage() {
   const isFull = remaining === 0;
   const isAlmostFull = remaining > 0 && remaining <= 5;
   const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
+  const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
 
   async function handleDownloadPdf() {
     if (!trip || pdfLoading) return;
@@ -396,24 +397,26 @@ export default function TripDetailPage() {
               <div className="bg-white rounded-3xl shadow-warm-lg p-8 border border-background-warm">
                 {activePrice != null && (
                   <div className="text-center mb-5 pb-5 border-b border-background-warm">
-                    {isEarlyBird && trip.price ? (
+                    {strikeThroughPrice != null ? (
                       <>
                         <div className="flex items-center justify-center gap-2">
                           <span className="font-display text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
-                          <span className="text-dark-muted line-through text-lg">{formatPrice(trip.price)}</span>
+                          <span className="text-dark-muted line-through text-lg">{formatPrice(strikeThroughPrice)}</span>
                         </div>
                         <p className="text-dark-muted text-xs mt-1">per person</p>
 
                         <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
                           <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-button font-medium px-2.5 py-1 rounded-full">
-                            Save {formatPrice(trip.price - activePrice)}
+                            Save {formatPrice(strikeThroughPrice - activePrice)}
                           </span>
-                          <span className="bg-secondary text-white text-xs font-button font-semibold px-2.5 py-1 rounded-full">
-                            Early Bird
-                          </span>
+                          {isEarlyBird && (
+                            <span className="bg-secondary text-white text-xs font-button font-semibold px-2.5 py-1 rounded-full">
+                              Early Bird
+                            </span>
+                          )}
                         </div>
 
-                        {trip.early_bird_deadline && (
+                        {isEarlyBird && trip.early_bird_deadline && (
                           <p className="flex items-center justify-center gap-1 text-orange-600 text-xs font-medium mt-2">
                             <Clock size={12} className="shrink-0" />
                             Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -538,11 +541,11 @@ export default function TripDetailPage() {
               {activePrice != null ? (
                 <>
                   <span className="font-display text-base font-bold text-dark shrink-0">{formatPrice(activePrice)}</span>
-                  {isEarlyBird && trip.price != null && (
+                  {strikeThroughPrice != null && (
                     <>
-                      <span className="text-dark-muted line-through text-xs shrink-0">{formatPrice(trip.price)}</span>
+                      <span className="text-dark-muted line-through text-xs shrink-0">{formatPrice(strikeThroughPrice)}</span>
                       <span className="bg-green-50 border border-green-200 text-green-700 text-[10px] font-button font-medium px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
-                        Save {formatPrice(trip.price - activePrice)}
+                        Save {formatPrice(strikeThroughPrice - activePrice)}
                       </span>
                     </>
                   )}

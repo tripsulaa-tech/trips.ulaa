@@ -54,6 +54,33 @@ export function formatTime(dateStr: string): string {
   });
 }
 
+/**
+ * Works out what price (if any) should show crossed out next to the active
+ * price — regardless of whether the active price is the regular price or
+ * the early-bird price.
+ *
+ * Precedence:
+ * 1. An explicit strike_through_price, if it's actually higher than what's
+ *    being shown — this is the new, independent "was ₹X" marketing price
+ *    and applies the same way whether early-bird is active or not.
+ * 2. Otherwise, the old built-in behavior: while early-bird is active,
+ *    cross out the regular price (so existing trips that never set a
+ *    strike_through_price keep working exactly as before).
+ * 3. Otherwise, nothing is crossed out.
+ */
+export function getStrikeThroughPrice(
+  activePrice: number | undefined,
+  regularPrice: number | undefined,
+  isEarlyBird: boolean,
+  strikeThroughPrice?: number
+): number | undefined {
+  if (strikeThroughPrice && activePrice != null && strikeThroughPrice > activePrice) {
+    return strikeThroughPrice;
+  }
+  if (isEarlyBird && regularPrice) return regularPrice;
+  return undefined;
+}
+
 /** Format a date range */
 export function formatDateRange(start: string, end: string): string {
   const s = new Date(start);

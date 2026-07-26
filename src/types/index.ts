@@ -30,6 +30,11 @@ export interface UpcomingTrip {
   price?: number;
   early_bird_price?: number;
   early_bird_deadline?: string;
+  // Optional "was ₹X" marketing price, shown crossed out next to whichever
+  // of price/early_bird_price is currently active. Independent of the
+  // early-bird mechanism itself — see getStrikeThroughPrice in utils/index.ts
+  // for how it combines with (and falls back around) early-bird pricing.
+  strike_through_price?: number;
   cover_image?: string;
   gallery_images: string[];
   terms_and_conditions?: string;

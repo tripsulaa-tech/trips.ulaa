@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { UpcomingTrip, CancellationTier } from '../types';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
-import { formatDateRange, getActivePrice } from './index';
+import { formatDateRange, getActivePrice, getStrikeThroughPrice } from './index';
 
 // =============================================
 // "Download Itinerary PDF" — builds a clean, branded PDF of a trip's full
@@ -270,6 +270,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   // Header
   // ---------------------------------------------------------------------
   const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
+  const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
   const hasPriceBox = activePrice != null;
   const priceBoxW = 42;
 
@@ -319,7 +320,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   if (hasPriceBox && activePrice != null) {
     const boxX = PAGE_W - MARGIN - priceBoxW;
     const boxY = 9;
-    const boxH = isEarlyBird && trip.price ? 32 : 20;
+    const boxH = strikeThroughPrice != null ? (isEarlyBird ? 32 : 24) : 20;
     setFill(COLORS.white);
     doc.roundedRect(boxX, boxY, priceBoxW, boxH, 3, 3, 'F');
     setText(COLORS.primary);
@@ -331,8 +332,8 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.setFontSize(6.5);
     doc.text('PER PERSON', boxX + priceBoxW / 2, boxY + 15.5, { align: 'center' });
 
-    if (isEarlyBird && trip.price) {
-      const origLabel = formatINR(trip.price);
+    if (strikeThroughPrice != null) {
+      const origLabel = formatINR(strikeThroughPrice);
       doc.setFontSize(7.5);
       const tw = doc.getTextWidth(origLabel);
       const tx = boxX + priceBoxW / 2 - tw / 2;
@@ -341,12 +342,14 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.setLineWidth(0.3);
       doc.line(tx, boxY + 19.6, tx + tw, boxY + 19.6);
 
-      setFill(COLORS.secondary);
-      doc.roundedRect(boxX + 5, boxY + 23, priceBoxW - 10, 5.5, 2.75, 2.75, 'F');
-      setText(COLORS.white);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(6.5);
-      doc.text('EARLY BIRD', boxX + priceBoxW / 2, boxY + 26.7, { align: 'center' });
+      if (isEarlyBird) {
+        setFill(COLORS.secondary);
+        doc.roundedRect(boxX + 5, boxY + 23, priceBoxW - 10, 5.5, 2.75, 2.75, 'F');
+        setText(COLORS.white);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.text('EARLY BIRD', boxX + priceBoxW / 2, boxY + 26.7, { align: 'center' });
+      }
     }
   }
 

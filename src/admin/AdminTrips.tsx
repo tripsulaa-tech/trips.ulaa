@@ -58,6 +58,7 @@ interface TripForm {
   price: number | '';
   early_bird_price: number | '';
   early_bird_deadline: string;
+  strike_through_price: number | '';
   cover_image: string;
   gallery_images: string[];
   terms_and_conditions: string;
@@ -69,7 +70,7 @@ const emptyForm: TripForm = {
   title: '', destination: '', start_date: '', end_date: '', duration: '',
   description: '', highlights: [], itinerary: [], included: [], not_included: [],
   things_to_carry: [], meeting_point: '', meeting_point_map_url: '', faqs: [], total_seats: 15, seats_booked: 0, price: '',
-  early_bird_price: '', early_bird_deadline: '',
+  early_bird_price: '', early_bird_deadline: '', strike_through_price: '',
   cover_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
 };
@@ -109,6 +110,7 @@ export default function AdminTrips() {
       faqs: trip.faqs || [], total_seats: trip.total_seats, seats_booked: trip.seats_booked || 0,
       price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
       early_bird_deadline: trip.early_bird_deadline || '',
+      strike_through_price: trip.strike_through_price ?? '',
       cover_image: trip.cover_image || '',
       gallery_images: trip.gallery_images || [], is_published: trip.is_published,
       terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
@@ -126,6 +128,7 @@ export default function AdminTrips() {
         price: form.price === '' ? undefined : form.price,
         early_bird_price: form.early_bird_price === '' ? undefined : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || undefined,
+        strike_through_price: form.strike_through_price === '' ? undefined : form.strike_through_price,
         seats_booked: Math.max(0, Math.min(form.seats_booked, form.total_seats)),
       };
       if (editingTrip) {
@@ -343,6 +346,19 @@ export default function AdminTrips() {
               />
               <p className="text-xs text-dark-muted mt-1">The early-bird price shows automatically until this date, then the page switches to the regular price on its own.</p>
             </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Strikeout Price per person (₹)</label>
+              <input
+                type="number"
+                value={form.strike_through_price}
+                onChange={e => setForm(f => ({ ...f, strike_through_price: e.target.value === '' ? '' : +e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 49999 (optional)"
+              />
+              <p className="text-xs text-dark-muted mt-1">
+                Shown crossed out next to whichever price is active — regular or early-bird — instead of automatically crossing out the regular price. Leave blank to keep the old behavior (regular price crossed out only during early-bird).
+              </p>
+            </div>
           </TabPanel>
 
           <TabPanel label="Media">
@@ -537,6 +553,7 @@ export default function AdminTrips() {
                 <p className="text-dark">
                   {viewingTrip.price ? `₹${viewingTrip.price.toLocaleString('en-IN')}` : '—'}
                   {viewingTrip.early_bird_price ? ` (Early-bird ₹${viewingTrip.early_bird_price.toLocaleString('en-IN')})` : ''}
+                  {viewingTrip.strike_through_price ? ` — strikeout ₹${viewingTrip.strike_through_price.toLocaleString('en-IN')}` : ''}
                 </p>
               </div>
               {viewingTrip.meeting_point && (
