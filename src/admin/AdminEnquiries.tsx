@@ -1195,17 +1195,6 @@ export default function AdminEnquiries() {
     return sum + Math.max(0, e.total_amount - (e.amount_paid || 0));
   }, 0);
 
-  // Business-wide enquiry counts for the summary cards up top — deliberately
-  // based on the full `enquiries` list (not scope-limited), same as
-  // totalCollected/totalPending above, so the cards read "across everything"
-  // regardless of which trip (if any) is currently drilled into.
-  const totalEnquiriesCount = enquiries.length;
-  const openPendingCount = enquiries.filter(e => e.status === 'new').length;
-  const contactedCount = enquiries.filter(e => e.status === 'contacted').length;
-  const bookedCountAll = enquiries.filter(isBooked).length;
-  const cancelledCountAll = enquiries.filter(isCancelled).length;
-  const pctOfTotal = (n: number) => (totalEnquiriesCount > 0 ? Math.round((n / totalEnquiriesCount) * 100) : 0);
-
   const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   return (
