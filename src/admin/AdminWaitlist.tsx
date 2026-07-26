@@ -77,8 +77,17 @@ export default function AdminWaitlist() {
   // it's actually convertible — e.g. a group of 3 isn't "ready" just
   // because 1 seat opened up from a single cancellation.
   const seatsNeeded = (e: WaitlistEntry) => e.group_size && e.group_size > 1 ? e.group_size : 1;
+  // Every enquiry converted from this entry so far (falls back to the
+  // legacy single-id column for any row a migration hasn't backfilled).
+  const convertedIds = (e: WaitlistEntry): string[] =>
+    e.converted_enquiry_ids ?? (e.converted_enquiry_id ? [e.converted_enquiry_id] : []);
+  const convertedCount = (e: WaitlistEntry) => convertedIds(e).length;
+  // What's still needed isn't the original group size once some of the
+  // group has already converted — a group of 3 with 2 already converted
+  // only needs 1 more seat, not 3.
+  const seatsRemaining = (e: WaitlistEntry) => Math.max(seatsNeeded(e) - convertedCount(e), 0);
   const hasSeatOpen = (e: WaitlistEntry) =>
-    e.status === 'waiting' && (seatsAvailable[e.trip_id] ?? 0) >= seatsNeeded(e);
+    e.status === 'waiting' && seatsRemaining(e) > 0 && (seatsAvailable[e.trip_id] ?? 0) >= seatsRemaining(e);
 
   const filtered = entries
     .filter(e => statusFilter === 'all' || e.status === statusFilter)
@@ -119,7 +128,40 @@ export default function AdminWaitlist() {
   // saved (see AdminEnquiries), not the moment we navigate away.
   const canConvert = (e: WaitlistEntry) => e.status === 'waiting' || e.status === 'notified';
 
-  const handleConvert = (entry: WaitlistEntry) => {
+  const handleConvert = async (entry: WaitlistEntry) => {
+    // canConvert() above only checks the entry's own status, not whether a
+    // seat is actually free — so this can be reached even when the trip
+    // has since filled up (e.g. someone else was converted first) or
+    // doesn't have enough room for the whole group. Rather than let the
+    // admin fill in the whole form and only find out from a failed save,
+    // tell them up front how many seats are actually available.
+    const needed = seatsRemaining(entry);
+    const available = seatsAvailable[entry.trip_id] ?? 0;
+
+    if (available <= 0) {
+      await confirm({
+        title: 'No slots available',
+        message: 'All slots are filled. Unable to complete the conversion.',
+        confirmLabel: 'OK',
+        hideCancel: true,
+        variant: 'default',
+      });
+      return;
+    }
+
+    if (available < needed) {
+      const slotWord = available === 1 ? 'slot' : 'slots';
+      const proceed = await confirm({
+        title: 'Not enough slots for the full group',
+        message: available === 1
+          ? 'Only 1 slot is available. Only 1 person can be converted.'
+          : `Only ${available} ${slotWord} available. You can convert up to ${available} people.`,
+        confirmLabel: 'Continue',
+        variant: 'default',
+      });
+      if (!proceed) return;
+    }
+
     navigate('/admin/enquiries', {
       state: {
         convertWaitlist: {
@@ -134,6 +176,7 @@ export default function AdminWaitlist() {
           trip_title: entry.trip_title,
           message: entry.message,
           group_size: entry.group_size,
+          already_converted: convertedCount(entry),
         },
       },
     });
@@ -231,6 +274,14 @@ export default function AdminWaitlist() {
                                 <Users size={9} /> Group of {e.group_size}
                               </span>
                             )}
+                            {e.status !== 'converted' && convertedCount(e) > 0 && (
+                              <span
+                                title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
+                                className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap"
+                              >
+                                <CheckCircle2 size={9} /> {convertedCount(e)}/{seatsNeeded(e)} converted
+                              </span>
+                            )}
                           </p>
                           <p className="text-dark-muted text-xs truncate md:hidden">{e.email}</p>
                           {(e.age || e.food_preference) && (
@@ -255,12 +306,12 @@ export default function AdminWaitlist() {
                               {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
                             </span>
                           )}
-                          {!hasSeatOpen(e) && e.status === 'waiting' && e.group_size && e.group_size > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
+                          {!hasSeatOpen(e) && e.status === 'waiting' && seatsRemaining(e) > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
                             <span
-                              title={`Needs ${e.group_size} seats free together — only ${seatsAvailable[e.trip_id]} open so far`}
+                              title={`Needs ${seatsRemaining(e)} more seats free together — only ${seatsAvailable[e.trip_id]} open so far`}
                               className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap"
                             >
-                              {seatsAvailable[e.trip_id]}/{e.group_size} seats open
+                              {seatsAvailable[e.trip_id]}/{seatsRemaining(e)} seats open
                             </span>
                           )}
                         </td>
@@ -278,25 +329,30 @@ export default function AdminWaitlist() {
                             <div className="flex flex-col items-end gap-1">
                               <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
                                 <CheckCircle2 size={12} className="shrink-0" />
-                                Converted
+                                Converted{convertedCount(e) > 1 ? ` (${convertedCount(e)}/${convertedCount(e)})` : ''}
                               </span>
-                              {e.converted_enquiry_id && cancelledEnquiryIds.has(e.converted_enquiry_id) && (
+                              {convertedIds(e).some(id => cancelledEnquiryIds.has(id)) && (
                                 <span
-                                  title="This person's booking was cancelled after they converted — their seat is free again."
+                                  title="At least one of this group's bookings was cancelled after converting — that seat is free again."
                                   className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700 whitespace-nowrap"
                                 >
                                   <XCircle size={12} className="shrink-0" />
-                                  Booking cancelled
+                                  {convertedIds(e).length > 1
+                                    ? `${convertedIds(e).filter(id => cancelledEnquiryIds.has(id)).length}/${convertedIds(e).length} cancelled`
+                                    : 'Booking cancelled'}
                                 </span>
                               )}
-                              {e.converted_enquiry_id && (
-                                <button
-                                  onClick={() => navigate(`/admin/enquiries?enquiry=${e.converted_enquiry_id}`)}
-                                  className="text-xs font-button font-semibold text-primary underline underline-offset-2 whitespace-nowrap"
-                                >
-                                  View booking
-                                </button>
-                              )}
+                              <div className="flex flex-col items-end gap-0.5">
+                                {convertedIds(e).map((id, i) => (
+                                  <button
+                                    key={id}
+                                    onClick={() => navigate(`/admin/enquiries?enquiry=${id}`)}
+                                    className="text-xs font-button font-semibold text-primary underline underline-offset-2 whitespace-nowrap"
+                                  >
+                                    View booking{convertedIds(e).length > 1 ? ` ${i + 1}` : ''}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           ) : (
                             <Select
@@ -362,6 +418,14 @@ export default function AdminWaitlist() {
                               <Users size={9} /> Group of {e.group_size}
                             </span>
                           )}
+                          {e.status !== 'converted' && convertedCount(e) > 0 && (
+                            <span
+                              title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
+                              className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap"
+                            >
+                              <CheckCircle2 size={9} /> {convertedCount(e)}/{seatsNeeded(e)} converted
+                            </span>
+                          )}
                         </p>
                         <p className="text-dark-muted text-xs truncate">{e.trip_title || 'Untitled trip'}</p>
                         {hasSeatOpen(e) && (
@@ -370,9 +434,9 @@ export default function AdminWaitlist() {
                             {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
                           </span>
                         )}
-                        {!hasSeatOpen(e) && e.status === 'waiting' && e.group_size && e.group_size > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
+                        {!hasSeatOpen(e) && e.status === 'waiting' && seatsRemaining(e) > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
                           <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
-                            {seatsAvailable[e.trip_id]}/{e.group_size} seats open
+                            {seatsAvailable[e.trip_id]}/{seatsRemaining(e)} seats open
                           </span>
                         )}
                       </div>
@@ -423,23 +487,28 @@ export default function AdminWaitlist() {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
                               <CheckCircle2 size={12} className="shrink-0" />
-                              Converted
+                              Converted{convertedCount(e) > 1 ? ` (${convertedCount(e)}/${convertedCount(e)})` : ''}
                             </span>
-                            {e.converted_enquiry_id && cancelledEnquiryIds.has(e.converted_enquiry_id) && (
+                            {convertedIds(e).some(id => cancelledEnquiryIds.has(id)) && (
                               <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700 whitespace-nowrap">
                                 <XCircle size={12} className="shrink-0" />
-                                Booking cancelled
+                                {convertedIds(e).length > 1
+                                  ? `${convertedIds(e).filter(id => cancelledEnquiryIds.has(id)).length}/${convertedIds(e).length} cancelled`
+                                  : 'Booking cancelled'}
                               </span>
                             )}
                           </div>
-                          {e.converted_enquiry_id && (
-                            <button
-                              onClick={() => navigate(`/admin/enquiries?enquiry=${e.converted_enquiry_id}`)}
-                              className="text-xs font-button font-semibold text-primary underline underline-offset-2 whitespace-nowrap"
-                            >
-                              View booking
-                            </button>
-                          )}
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            {convertedIds(e).map((id, i) => (
+                              <button
+                                key={id}
+                                onClick={() => navigate(`/admin/enquiries?enquiry=${id}`)}
+                                className="text-xs font-button font-semibold text-primary underline underline-offset-2 whitespace-nowrap"
+                              >
+                                View booking{convertedIds(e).length > 1 ? ` ${i + 1}` : ''}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       ) : (
                         <Select

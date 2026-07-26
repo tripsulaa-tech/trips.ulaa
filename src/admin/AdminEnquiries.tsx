@@ -251,10 +251,12 @@ export default function AdminEnquiries() {
   const [cancelTarget, setCancelTarget] = useState<Enquiry | null>(null);
   const [cancelCharges, setCancelCharges] = useState<number | ''>('');
   const [cancelling, setCancelling] = useState(false);
-  // How many people are on the waitlist (status 'waiting') for each trip.
-  // Used to warn admins before they free up a seat that someone's already
-  // in line for — see the Cancel modal and the per-trip banner below.
-  const [waitlistWaitingCounts, setWaitlistWaitingCounts] = useState<Record<string, number>>({});
+  // How many waitlist signups — and how many actual people, since a group
+  // signup (group_size > 1) is one signup but several people — are
+  // waiting (status 'waiting') for each trip. Used to warn admins before
+  // they free up a seat that someone's already in line for — see the
+  // Cancel modal and the per-trip banner below.
+  const [waitlistWaitingCounts, setWaitlistWaitingCounts] = useState<Record<string, { entries: number; people: number }>>({});
 
   // Bulk operations: select, edit, save, delete across multiple enquiries
   // at once. Selection is keyed by enquiry id and is intentionally cleared
@@ -285,14 +287,26 @@ export default function AdminEnquiries() {
   const loadWaitlistCounts = () => {
     getWaitlistEntries()
       .then(entries => {
-        const counts: Record<string, number> = {};
+        const counts: Record<string, { entries: number; people: number }> = {};
         entries.forEach(e => {
           if (e.status !== 'waiting') return;
-          counts[e.trip_id] = (counts[e.trip_id] || 0) + 1;
+          const needed = e.group_size && e.group_size > 1 ? e.group_size : 1;
+          const prev = counts[e.trip_id] || { entries: 0, people: 0 };
+          counts[e.trip_id] = { entries: prev.entries + 1, people: prev.people + needed };
         });
         setWaitlistWaitingCounts(counts);
       })
       .catch(console.error);
+  };
+
+  // Phrases a trip's waiting count so a group signup reads as a group, not
+  // as "1 person" — e.g. a lone group-of-3 signup becomes "1 group of 3",
+  // and a mix of signups becomes "5 people across 2 waitlist signups".
+  const describeWaiting = (summary: { entries: number; people: number }): string => {
+    if (summary.entries === 1) {
+      return summary.people > 1 ? `1 group of ${summary.people}` : '1 person';
+    }
+    return `${summary.people} people across ${summary.entries} waitlist signups`;
   };
 
   useEffect(() => {
@@ -326,15 +340,21 @@ export default function AdminEnquiries() {
   // the add-enquiry form with what we already know about them so the admin
   // only has to fill in the payment.
   useEffect(() => {
-    const incoming = (location.state as { convertWaitlist?: { id: string; full_name: string; phone: string; email: string; age?: number | null; city?: string | null; food_preference?: 'veg' | 'non_veg' | null; trip_id?: string; trip_title?: string; message?: string; group_size?: number | null } } | null)?.convertWaitlist;
+    const incoming = (location.state as { convertWaitlist?: { id: string; full_name: string; phone: string; email: string; age?: number | null; city?: string | null; food_preference?: 'veg' | 'non_veg' | null; trip_id?: string; trip_title?: string; message?: string; group_size?: number | null; already_converted?: number } } | null)?.convertWaitlist;
     if (!incoming) return;
-    // Only enough seats to cover the whole group should ever be converted
-    // from here — the Waitlist page's "Convert" action is already gated on
-    // that (see AdminWaitlist.hasSeatOpen), but the note here makes it
-    // explicit to whoever is filling in the payment that this was a group
-    // of N, not a solo booking, so they log the other seats too.
+    // This can now be a partial group conversion — some of the group may
+    // already have been converted in an earlier pass (see
+    // AdminWaitlist.handleConvert / markWaitlistConverted), so the note
+    // should only ask the admin to log whatever's genuinely still
+    // outstanding after this person, not the original group size.
+    const alreadyConverted = incoming.already_converted ?? 0;
+    const stillToLog = incoming.group_size && incoming.group_size > 1
+      ? Math.max(incoming.group_size - alreadyConverted - 1, 0)
+      : 0;
     const groupNote = incoming.group_size && incoming.group_size > 1
-      ? `Converted from waitlist (group of ${incoming.group_size} — log the other ${incoming.group_size - 1} seat${incoming.group_size - 1 === 1 ? '' : 's'} too).`
+      ? alreadyConverted > 0
+        ? `Converted from waitlist (group of ${incoming.group_size} — ${alreadyConverted} already logged${stillToLog > 0 ? `, log the other ${stillToLog} seat${stillToLog === 1 ? '' : 's'} too` : ', this is the last one'}).`
+        : `Converted from waitlist (group of ${incoming.group_size} — log the other ${stillToLog} seat${stillToLog === 1 ? '' : 's'} too).`
       : 'Converted from waitlist.';
     setForm({
       ...emptyForm,
@@ -749,10 +769,20 @@ export default function AdminEnquiries() {
       load();
     } catch (err) {
       console.error(err);
-      if (err instanceof Error && err.message === 'DUPLICATE_ENQUIRY') {
+      // Supabase throws plain PostgrestError objects for DB-rejected
+      // inserts (e.g. the enforce_trip_capacity trigger), not instances of
+      // Error — so `err instanceof Error` was false for those and this
+      // always fell through to the generic fallback below, hiding the
+      // trigger's actual message from the admin.
+      const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
+      if (message === 'DUPLICATE_ENQUIRY') {
         alert('There\'s already an active enquiry for this trip with this exact name, phone, and email. If this is meant to be a different traveler, tweak one of those fields — a shared family phone/email with a different name is fine.');
+      } else if (message && /no seats left/i.test(message)) {
+        alert(convertingWaitlist
+          ? 'All slots are filled. Unable to complete the conversion.'
+          : 'This trip is fully booked — there are no seats left to log this enquiry against.');
       } else {
-        alert(err instanceof Error ? err.message : 'Failed to save enquiry.');
+        alert(message || 'Failed to save enquiry.');
       }
     } finally {
       setSaving(false);
@@ -961,9 +991,9 @@ export default function AdminEnquiries() {
                       {pay.partial > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{pay.partial} partial</span>}
                       {pay.unpaid > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">{pay.unpaid} unpaid</span>}
                       {pay.notSet > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted">{pay.notSet} amount not set</span>}
-                      {g.trip && waitlistWaitingCounts[g.key] > 0 && seatsLeft(g.trip.total_seats, g.trip.seats_booked) > 0 && (
+                      {g.trip && waitlistWaitingCounts[g.key]?.entries > 0 && seatsLeft(g.trip.total_seats, g.trip.seats_booked) > 0 && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">
-                          <Users size={10} /> {waitlistWaitingCounts[g.key]} waiting for a seat
+                          <Users size={10} /> {describeWaiting(waitlistWaitingCounts[g.key])} waiting for a seat
                         </span>
                       )}
                     </div>
@@ -1038,12 +1068,12 @@ export default function AdminEnquiries() {
                 freed up (e.g. right after cancelling someone) and might
                 otherwise let it get booked by a new website visitor instead
                 of the person who's been waiting longer. */}
-            {activeGroup.trip && waitlistWaitingCounts[activeGroup.key] > 0 && seatsLeft(activeGroup.trip.total_seats, activeGroup.trip.seats_booked) > 0 && (
+            {activeGroup.trip && waitlistWaitingCounts[activeGroup.key]?.entries > 0 && seatsLeft(activeGroup.trip.total_seats, activeGroup.trip.seats_booked) > 0 && (
               <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3">
                 <Users size={18} className="text-orange-600 shrink-0" />
                 <p className="text-sm text-orange-800 flex-1">
                   <span className="font-semibold">
-                    {waitlistWaitingCounts[activeGroup.key]} {waitlistWaitingCounts[activeGroup.key] === 1 ? 'person is' : 'people are'} waiting
+                    {describeWaiting(waitlistWaitingCounts[activeGroup.key])} {waitlistWaitingCounts[activeGroup.key].entries === 1 ? 'is' : 'are'} waiting
                   </span>{' '}
                   for a seat on this trip, and one's open right now.
                 </p>
@@ -1937,15 +1967,15 @@ export default function AdminEnquiries() {
               amount paid stays on record; refunds are tracked separately from the Payment screen.
             </p>
 
-            {cancelTarget.trip_id && waitlistWaitingCounts[cancelTarget.trip_id] > 0 && (
+            {cancelTarget.trip_id && waitlistWaitingCounts[cancelTarget.trip_id]?.entries > 0 && (
               <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5 text-sm text-orange-800">
                 <Users size={16} className="shrink-0 mt-0.5" />
                 <p>
                   <span className="font-semibold">
-                    {waitlistWaitingCounts[cancelTarget.trip_id]} {waitlistWaitingCounts[cancelTarget.trip_id] === 1 ? 'person is' : 'people are'} waiting
+                    {describeWaiting(waitlistWaitingCounts[cancelTarget.trip_id])} {waitlistWaitingCounts[cancelTarget.trip_id].entries === 1 ? 'is' : 'are'} waiting
                   </span>{' '}
                   for a seat on this trip. Once you cancel, that freed seat is bookable by anyone on the website — convert
-                  the waitlisted {waitlistWaitingCounts[cancelTarget.trip_id] === 1 ? 'person' : 'people'} first if you want to give them priority.
+                  them first if you want to give them priority.
                 </p>
               </div>
             )}

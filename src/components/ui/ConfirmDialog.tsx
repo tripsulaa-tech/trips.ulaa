@@ -11,6 +11,8 @@ export interface ConfirmOptions {
   cancelLabel?: string;
   /** 'danger' for destructive actions (delete, reset, etc). Defaults to 'danger'. */
   variant?: 'danger' | 'default';
+  /** For a pure-info notice with nothing to cancel out of — hides the Cancel button, leaving only the confirm/OK action. */
+  hideCancel?: boolean;
 }
 
 type ConfirmFn = (options: ConfirmOptions | string) => Promise<boolean>;
@@ -61,7 +63,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-dark/60 backdrop-blur-sm"
-            onClick={(e) => { if (e.target === e.currentTarget) settle(false); }}
+            onClick={(e) => { if (e.target === e.currentTarget) settle(!!options?.hideCancel); }}
           >
             <motion.div
               initial={{ scale: 0.92, opacity: 0, y: 20 }}
@@ -92,11 +94,14 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
                   </div>
                 </div>
                 <div className="flex gap-3 mt-6 justify-end">
-                  <Button variant="ghost" size="sm" onClick={() => settle(false)} autoFocus>
-                    {options.cancelLabel ?? 'Cancel'}
-                  </Button>
+                  {!options.hideCancel && (
+                    <Button variant="ghost" size="sm" onClick={() => settle(false)} autoFocus>
+                      {options.cancelLabel ?? 'Cancel'}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
+                    autoFocus={options.hideCancel}
                     onClick={() => settle(true)}
                     className={
                       variant === 'danger'

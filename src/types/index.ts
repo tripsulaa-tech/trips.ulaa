@@ -254,7 +254,14 @@ export interface WaitlistEntry {
   message?: string;
   status: 'waiting' | 'notified' | 'converted' | 'declined';
   notified_at?: string | null;
+  // Legacy single-conversion field — no longer written to (superseded by
+  // converted_enquiry_ids below), kept only so old rows still type-check.
   converted_enquiry_id?: string | null;
+  // Every enquiry converted from this waitlist signup so far. For a group
+  // entry (group_size > 1), this can hold fewer entries than group_size
+  // while the rest of the group is still waiting — status only becomes
+  // 'converted' once this array covers the whole group.
+  converted_enquiry_ids?: string[] | null;
   created_at: string;
   // How many seats this signup needs. Null/1 = solo. Set when someone
   // joins the waitlist because their group didn't fit in the remaining

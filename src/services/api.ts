@@ -573,15 +573,35 @@ export async function updateWaitlistStatus(id: string, status: WaitlistEntry['st
   if (error) throw error;
 }
 
-// Marks a waitlist entry converted and links it to the enquiry that now
-// holds the seat. Only call this once the enquiry actually has an advance
+// Links a newly-created enquiry to a waitlist entry as one of its
+// conversions. Only call this once the enquiry actually has an advance
 // payment on it — the DB trigger enforces that too, but this function
 // doesn't re-check it itself so the caller (AdminEnquiries.handleSave)
 // must gate on amountPaid > 0 before calling it.
+//
+// A solo entry (group_size null/1) converts and closes out in one call,
+// same as before. A group entry (group_size > 1) only flips to 'converted'
+// once every seat has been linked — converting person 1 of 3 leaves this
+// row's status as whatever it already was ('waiting'/'notified') with
+// converted_enquiry_ids holding 1 id, so the remaining 2 seats are still
+// visible and actionable from the Waitlist page instead of the whole row
+// silently closing out early.
 export async function markWaitlistConverted(waitlistId: string, enquiryId: string): Promise<void> {
+  const { data: entry, error: fetchError } = await supabase
+    .from('waitlist')
+    .select('status, group_size, converted_enquiry_ids')
+    .eq('id', waitlistId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const existingIds = entry.converted_enquiry_ids || [];
+  const updatedIds = existingIds.includes(enquiryId) ? existingIds : [...existingIds, enquiryId];
+  const needed = entry.group_size && entry.group_size > 1 ? entry.group_size : 1;
+  const newStatus = updatedIds.length >= needed ? 'converted' : entry.status;
+
   const { error } = await supabase
     .from('waitlist')
-    .update({ status: 'converted', converted_enquiry_id: enquiryId })
+    .update({ status: newStatus, converted_enquiry_ids: updatedIds })
     .eq('id', waitlistId);
   if (error) throw error;
 }
