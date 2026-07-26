@@ -382,7 +382,8 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
 
   // Don't insert amount_paid directly if we're about to log it to the
   // ledger — let the trigger set it, so the two never drift apart.
-  const { amount_paid: _omit, ...rest } = enquiry;
+  const rest = { ...enquiry };
+  delete rest.amount_paid;
   const { data, error } = await supabase
     .from('enquiries')
     .insert({ ...rest, amount_paid: 0, is_paid: isPaidFull, status, booking_status: bookingStatus })
@@ -397,12 +398,19 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
       payment_type: 'booking_amount',
       notes: 'Initial payment recorded at enquiry creation',
     });
-    if (paymentError) throw paymentError;
-    if (enquiry.trip_id) {
-      await adjustTripSeats(enquiry.trip_id, 1);
+    if (paymentError) {
+      // The enquiry row above was already committed — it's a separate
+      // insert, not one transaction with this payment. If logging the
+      // payment fails (most commonly: the trip filled up in between and
+      // the enforce_trip_capacity DB trigger rejected it), don't leave
+      // that bare, unpaid enquiry behind as an orphan that then shows up
+      // in the list on its own. Delete it and surface the real error.
+      await supabase.from('enquiries').delete().eq('id', data.id);
+      throw paymentError;
     }
-    // Re-fetch since the trigger just updated amount_paid out from under
-    // the row we already have in hand.
+    // Re-fetch: inserting the payment above cascades, via DB triggers, into
+    // both enquiries.amount_paid and the trip's seats_booked count being
+    // recomputed from real data — no manual seat adjustment needed here.
     const { data: refreshed, error: refetchError } = await supabase
       .from('enquiries')
       .select('*')
@@ -449,21 +457,14 @@ function computeBookingStatus(
   return 'booking_confirmed';
 }
 
-async function adjustTripSeats(tripId: string, delta: 1 | -1): Promise<void> {
-  const { data: trip, error: tripError } = await supabase
-    .from('upcoming_trips')
-    .select('seats_booked, total_seats')
-    .eq('id', tripId)
-    .single();
-  if (tripError) throw tripError;
-
-  const newSeatsBooked = Math.max(0, Math.min(trip.seats_booked + delta, trip.total_seats));
-  const { error: seatsError } = await supabase
-    .from('upcoming_trips')
-    .update({ seats_booked: newSeatsBooked })
-    .eq('id', tripId);
-  if (seatsError) throw seatsError;
-}
+// NOTE: trips.seats_booked is no longer adjusted manually from here. The
+// on_enquiries_seat_sync DB trigger recomputes it straight from real
+// enquiries data (count of non-cancelled rows with amount_paid > 0) after
+// every insert/update/delete on `enquiries` — including the amount_paid
+// updates that cascade in from the `payments` table. Keeping a second,
+// manual +/-1 adjustment here double-counted every change (e.g. a
+// cancellation would free the seat via the trigger AND get decremented
+// again by this function), which is what caused seat counts to drift.
 
 // =============================================
 // Waitlist
@@ -580,8 +581,10 @@ export async function recordPayment(
     .single();
   if (refreshError) throw refreshError;
 
-  const wasBooked = (current.amount_paid || 0) > 0;
-  const willBeBooked = refreshed.amount_paid > 0;
+  // Seat booking follows automatically: the payment insert above already
+  // updated enquiries.amount_paid via a DB trigger, which in turn triggers
+  // the trip's seats_booked to be recomputed from real data. No manual
+  // adjustment needed here.
   const isPaidFull = !!newTotal && newTotal > 0 && refreshed.amount_paid >= newTotal;
   const status = computeAutoStatus(refreshed.amount_paid, newTotal, current.status);
   const bookingStatus = computeBookingStatus(
@@ -591,10 +594,6 @@ export async function recordPayment(
     refreshed.balance_due_date,
     refreshed.booking_status
   );
-
-  if (current.trip_id && wasBooked !== willBeBooked) {
-    await adjustTripSeats(current.trip_id, willBeBooked ? 1 : -1);
-  }
 
   const { data, error } = await supabase
     .from('enquiries')
@@ -623,9 +622,11 @@ export async function recordPayment(
 // refund_amount via recordRefund. Pass thirdPartyCharges if known at
 // cancellation time (airline/hotel penalties aren't derivable from stored
 // data) so the suggestion accounts for them.
+//
+// The trip's seats_booked count frees up on its own: the
+// on_enquiries_seat_sync DB trigger recomputes it from real enquiries data
+// right after this update commits, so no manual adjustment is made here.
 export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number): Promise<Enquiry> {
-  const hadSeat = !enquiry.cancelled_at && enquiry.amount_paid > 0;
-
   if (thirdPartyCharges !== undefined) {
     const { error: chargesError } = await supabase
       .from('enquiries')
@@ -642,33 +643,26 @@ export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number
     .single();
   if (error) throw error;
 
-  if (enquiry.trip_id && hadSeat) {
-    await adjustTripSeats(enquiry.trip_id, -1);
-  }
-
   return data;
 }
 
-// Permanently deletes an enquiry. Frees the trip seat first if one was
-// still held (not cancelled and something was paid) — otherwise the trip
-// would be left showing a seat booked for a record that no longer exists.
-// Associated payment rows cascade-delete via the DB's
-// "on delete cascade" FK, so nothing orphaned is left behind.
+// Permanently deletes an enquiry. Associated payment rows cascade-delete
+// via the DB's "on delete cascade" FK, so nothing orphaned is left behind.
+// If the enquiry still held a seat, the trip's seats_booked count is freed
+// automatically by the on_enquiries_seat_sync DB trigger once the delete
+// commits — no manual adjustment needed here.
 export async function deleteEnquiry(enquiry: Enquiry): Promise<void> {
-  const hadSeat = !enquiry.cancelled_at && enquiry.amount_paid > 0;
-
   const { error } = await supabase.from('enquiries').delete().eq('id', enquiry.id);
   if (error) throw error;
-
-  if (enquiry.trip_id && hadSeat) {
-    await adjustTripSeats(enquiry.trip_id, -1);
-  }
 }
 
 
 // Re-books the seat if they'd already paid something, and resets
 // booking_status back to whatever it would be given the current amount
-// paid (rather than leaving it stuck on 'cancelled').
+// paid (rather than leaving it stuck on 'cancelled'). Re-booking a seat
+// this way is still capacity-checked by the enforce_trip_capacity DB
+// trigger, and seats_booked is recomputed by on_enquiries_seat_sync right
+// after — no manual adjustment needed here.
 export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
   const bookingStatus = computeBookingStatus(
     enquiry.amount_paid,
@@ -685,10 +679,6 @@ export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
     .select()
     .single();
   if (error) throw error;
-
-  if (enquiry.trip_id && enquiry.amount_paid > 0) {
-    await adjustTripSeats(enquiry.trip_id, 1);
-  }
 
   return data;
 }

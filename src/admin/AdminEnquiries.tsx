@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted } from '../services/api';
+import { useAlert } from '../components/ui/AlertDialog';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
-import { formatDate, formatPrice } from '../utils';
+import { formatDate, formatPrice, seatsLeft } from '../utils';
 
 const PACKAGE_CONFIG = {
   early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
@@ -125,6 +126,7 @@ type PaymentForm = {
 
 export default function AdminEnquiries() {
   const confirm = useConfirm();
+  const alert = useAlert();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -154,14 +156,32 @@ export default function AdminEnquiries() {
   const [cancelTarget, setCancelTarget] = useState<Enquiry | null>(null);
   const [cancelCharges, setCancelCharges] = useState<number | ''>('');
   const [cancelling, setCancelling] = useState(false);
+  // How many people are on the waitlist (status 'waiting') for each trip.
+  // Used to warn admins before they free up a seat that someone's already
+  // in line for — see the Cancel modal and the per-trip banner below.
+  const [waitlistWaitingCounts, setWaitlistWaitingCounts] = useState<Record<string, number>>({});
 
   const load = () => {
     getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
   };
 
+  const loadWaitlistCounts = () => {
+    getWaitlistEntries()
+      .then(entries => {
+        const counts: Record<string, number> = {};
+        entries.forEach(e => {
+          if (e.status !== 'waiting') return;
+          counts[e.trip_id] = (counts[e.trip_id] || 0) + 1;
+        });
+        setWaitlistWaitingCounts(counts);
+      })
+      .catch(console.error);
+  };
+
   useEffect(() => {
     load();
     getAllUpcomingTripsAdmin().then(setTrips).catch(console.error);
+    loadWaitlistCounts();
   }, []);
 
   useEffect(() => {
@@ -434,6 +454,7 @@ export default function AdminEnquiries() {
       if (convertingWaitlist) {
         await markWaitlistConverted(convertingWaitlist.id, created.id).catch(console.error);
         setConvertingWaitlist(null);
+        loadWaitlistCounts();
       }
       setModalOpen(false);
       const freshTrips = await getAllUpcomingTripsAdmin();
@@ -584,6 +605,11 @@ export default function AdminEnquiries() {
                       {pay.partial > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{pay.partial} partial</span>}
                       {pay.unpaid > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">{pay.unpaid} unpaid</span>}
                       {pay.notSet > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted">{pay.notSet} amount not set</span>}
+                      {g.trip && waitlistWaitingCounts[g.key] > 0 && seatsLeft(g.trip.total_seats, g.trip.seats_booked) > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                          <Users size={10} /> {waitlistWaitingCounts[g.key]} waiting for a seat
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-background-warm">
@@ -627,6 +653,30 @@ export default function AdminEnquiries() {
                 </p>
               </div>
             </div>
+
+            {/* Someone's waiting for a seat on this trip and one's actually
+                open right now — surface it here too, not just on the
+                Waitlist page, since this is where an admin notices a seat
+                freed up (e.g. right after cancelling someone) and might
+                otherwise let it get booked by a new website visitor instead
+                of the person who's been waiting longer. */}
+            {activeGroup.trip && waitlistWaitingCounts[activeGroup.key] > 0 && seatsLeft(activeGroup.trip.total_seats, activeGroup.trip.seats_booked) > 0 && (
+              <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3">
+                <Users size={18} className="text-orange-600 shrink-0" />
+                <p className="text-sm text-orange-800 flex-1">
+                  <span className="font-semibold">
+                    {waitlistWaitingCounts[activeGroup.key]} {waitlistWaitingCounts[activeGroup.key] === 1 ? 'person is' : 'people are'} waiting
+                  </span>{' '}
+                  for a seat on this trip, and one's open right now.
+                </p>
+                <Link
+                  to={`/admin/waitlist?trip=${activeGroup.key}`}
+                  className="shrink-0 text-xs font-button font-semibold px-3 py-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors whitespace-nowrap"
+                >
+                  Go to Waitlist
+                </Link>
+              </div>
+            )}
 
             {/* Filters — collapsed by default into two tappable toggles
                 (Query Status / Payment), each expanding its own pill row
@@ -1267,6 +1317,19 @@ export default function AdminEnquiries() {
               This frees up their seat right away. {cancelTarget.amount_paid > 0 && `They've paid ${formatPrice(cancelTarget.amount_paid)} so far — `}
               amount paid stays on record; refunds are tracked separately from the Payment screen.
             </p>
+
+            {cancelTarget.trip_id && waitlistWaitingCounts[cancelTarget.trip_id] > 0 && (
+              <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5 text-sm text-orange-800">
+                <Users size={16} className="shrink-0 mt-0.5" />
+                <p>
+                  <span className="font-semibold">
+                    {waitlistWaitingCounts[cancelTarget.trip_id]} {waitlistWaitingCounts[cancelTarget.trip_id] === 1 ? 'person is' : 'people are'} waiting
+                  </span>{' '}
+                  for a seat on this trip. Once you cancel, that freed seat is bookable by anyone on the website — convert
+                  the waitlisted {waitlistWaitingCounts[cancelTarget.trip_id] === 1 ? 'person' : 'people'} first if you want to give them priority.
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Third-Party Charges (₹)</label>
