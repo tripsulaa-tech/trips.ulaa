@@ -16,7 +16,7 @@ import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/c
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
   MapPin, Calendar, Clock, Users, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download,
+  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2,
 } from 'lucide-react';
 
 export default function TripDetailPage() {
@@ -26,6 +26,7 @@ export default function TripDetailPage() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
   const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const navBarRef = useRef<HTMLElement>(null);
   const navLinkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const calendarMenuRef = useRef<HTMLDivElement>(null);
@@ -114,6 +115,22 @@ export default function TripDetailPage() {
   const isFull = remaining === 0;
   const isAlmostFull = remaining > 0 && remaining <= 5;
   const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
+
+  async function handleDownloadPdf() {
+    if (!trip || pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      // Lazy-loaded so jsPDF (and its html2canvas dependency) only ever
+      // download for someone who actually clicks this, not on every visit
+      // to a trip page.
+      const { downloadTripItineraryPdf } = await import('../utils/tripItineraryPdf');
+      await downloadTripItineraryPdf(trip);
+    } catch (err) {
+      console.error('Failed to generate itinerary PDF', err);
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   return (
     <Layout>
@@ -220,6 +237,16 @@ export default function TripDetailPage() {
               className="h-9 w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
             >
               <CalendarPlus size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={pdfLoading}
+              aria-label="Download itinerary PDF"
+              title="Download itinerary PDF"
+              className="h-9 w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors disabled:opacity-50"
+            >
+              {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
             </button>
           </div>
         </div>
@@ -478,6 +505,16 @@ export default function TripDetailPage() {
                   className="w-full flex items-center justify-center gap-2 mt-2 text-sm text-dark-muted hover:text-primary transition-colors"
                 >
                   <Share2 size={14} /> Share this trip
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={pdfLoading}
+                  className="w-full flex items-center justify-center gap-2 mt-2 text-sm text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
+                >
+                  {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+                  {pdfLoading ? 'Preparing PDF…' : 'Download itinerary PDF'}
                 </button>
 
                 <p className="text-xs text-dark-muted text-center mt-4">
