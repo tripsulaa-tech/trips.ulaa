@@ -381,6 +381,31 @@ export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
   }
 }
 
+// Group booking — the public form's "Group" option. Inserts one enquiry row
+// per seat (groupSize of them), all carrying the same submitted
+// name/phone/email/etc, so each seat still counts individually toward trip
+// capacity and can have its own payment/status/cancellation tracked in
+// Admin. Rows are tied together with a shared group_id and group_size, and
+// group_seq (1..groupSize) is what lets otherwise-identical rows coexist
+// under the duplicate-submission unique index — see
+// add_group_bookings.sql.
+export async function submitGroupEnquiry(enquiry: BookingFormData, groupSize: number): Promise<void> {
+  const groupId = crypto.randomUUID();
+  const rows = Array.from({ length: groupSize }, (_, i) => ({
+    ...enquiry,
+    group_id: groupId,
+    group_size: groupSize,
+    group_seq: i + 1,
+  }));
+  const { error } = await supabase.from('enquiries').insert(rows);
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('DUPLICATE_ENQUIRY');
+    }
+    throw error;
+  }
+}
+
 export async function getEnquiries(): Promise<Enquiry[]> {
   const { data, error } = await supabase
     .from('enquiries')

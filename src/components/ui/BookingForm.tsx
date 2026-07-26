@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { CheckCircle, AlertCircle, FileText } from 'lucide-react';
-import type { BookingFormData } from '../../types';
-import { submitEnquiry } from '../../services/api';
+import { CheckCircle, AlertCircle, FileText, User, Users } from 'lucide-react';
+import type { BookingFormData, BookingMode } from '../../types';
+import { submitEnquiry, submitGroupEnquiry } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
 import { validateFullName, validateCity, validatePhone, validateOptionalPhone, validateAge } from '../../utils/formValidation';
 import Button from './Button';
 import Modal from './Modal';
 import TermsBlocks from './TermsBlocks';
+
+// Group bookings top out at this many seats in one submission — beyond
+// that it's a phone/WhatsApp conversation, not a self-serve form.
+const MIN_GROUP_SIZE = 2;
+const MAX_GROUP_SIZE = 15;
 
 interface BookingFormProps {
   tripId?: string;
@@ -22,6 +27,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [termsOpen, setTermsOpen] = useState(false);
+  const [bookingMode, setBookingMode] = useState<BookingMode>('solo');
+  const [groupSize, setGroupSize] = useState(MIN_GROUP_SIZE);
+  const [groupSizeError, setGroupSizeError] = useState('');
+  const [successCount, setSuccessCount] = useState(1);
 
   const termsText = (terms || '').trim() || DEFAULT_TERMS_AND_CONDITIONS;
   const termsSections = useMemo(() => parseTerms(termsText), [termsText]);
@@ -83,11 +92,27 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
   } = useForm<BookingFormData>();
 
   const onSubmit = async (data: BookingFormData) => {
+    if (bookingMode === 'group') {
+      if (!Number.isInteger(groupSize) || groupSize < MIN_GROUP_SIZE || groupSize > MAX_GROUP_SIZE) {
+        setGroupSizeError(`Enter a number of people between ${MIN_GROUP_SIZE} and ${MAX_GROUP_SIZE}.`);
+        return;
+      }
+    }
+    setGroupSizeError('');
+
     try {
       setStatus('loading');
-      await submitEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle });
+      if (bookingMode === 'group') {
+        await submitGroupEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle }, groupSize);
+        setSuccessCount(groupSize);
+      } else {
+        await submitEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle });
+        setSuccessCount(1);
+      }
       setStatus('success');
       reset();
+      setBookingMode('solo');
+      setGroupSize(MIN_GROUP_SIZE);
       onSuccess?.();
     } catch (err) {
       setStatus('error');
@@ -109,7 +134,9 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
         <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
         <h3 className="font-display text-2xl font-bold text-dark mb-2">Enquiry Received!</h3>
         <p className="text-dark-muted">
-          Thank you! We'll contact you shortly to confirm your spot.
+          {successCount > 1
+            ? `Thank you! We've logged your group of ${successCount} and will contact you shortly to confirm your spots.`
+            : "Thank you! We'll contact you shortly to confirm your spot."}
         </p>
       </motion.div>
     );
@@ -133,6 +160,58 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
           <p className="text-sm text-dark-muted">
             Booking for: <span className="font-semibold text-dark">{tripTitle}</span>
           </p>
+        </div>
+      )}
+
+      {/* Solo vs Group booking */}
+      <div>
+        <label className="block text-sm font-medium text-dark mb-1">Booking Type</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setBookingMode('solo')}
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+              bookingMode === 'solo'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-background-warm text-dark-muted hover:border-primary/40'
+            }`}
+          >
+            <User size={16} /> Solo
+          </button>
+          <button
+            type="button"
+            onClick={() => setBookingMode('group')}
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+              bookingMode === 'group'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-background-warm text-dark-muted hover:border-primary/40'
+            }`}
+          >
+            <Users size={16} /> Group
+          </button>
+        </div>
+      </div>
+
+      {bookingMode === 'group' && (
+        <div>
+          <label className="block text-sm font-medium text-dark mb-1">Number of People *</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={MIN_GROUP_SIZE}
+            max={MAX_GROUP_SIZE}
+            value={groupSize}
+            onChange={e => {
+              setGroupSizeError('');
+              const val = e.target.value === '' ? MIN_GROUP_SIZE : Math.round(Number(e.target.value));
+              setGroupSize(val);
+            }}
+            className={inputClass}
+          />
+          <p className="text-xs text-dark-muted mt-1">
+            We'll create one entry per person under this name and contact — {groupSize} {groupSize === 1 ? 'entry' : 'entries'} in total.
+          </p>
+          {groupSizeError && <p className={errorClass}>{groupSizeError}</p>}
         </div>
       )}
 

@@ -137,6 +137,13 @@ create table public.enquiries (
   suggested_refund_amount   numeric,
   booking_status            text,
   balance_due_date          date,
+  -- Group bookings: a "Group" submission from the public booking form
+  -- inserts one row per seat, all sharing group_id/group_size. group_seq is
+  -- each row's 1-based position within that group (solo bookings are always
+  -- group_seq = 1). See add_group_bookings.sql for the full rationale.
+  group_id                  uuid,
+  group_size                integer,
+  group_seq                 integer not null default 1,
   constraint enquiries_pkey primary key (id),
   constraint enquiries_status_check
     check (status = any (array['new'::text, 'contacted'::text, 'closed'::text])),
@@ -152,11 +159,23 @@ create table public.enquiries (
     check (booking_status is null or booking_status = any (array[
       'booking_confirmed'::text, 'balance_pending'::text, 'fully_paid'::text,
       'cancelled'::text, 'completed'::text
-    ]))
+    ])),
+  constraint enquiries_group_size_check
+    check (group_size is null or group_size >= 2),
+  constraint enquiries_group_seq_check
+    check (group_seq >= 1)
 );
 
 create index enquiries_is_paid_idx on public.enquiries using btree (is_paid);
 create index enquiries_source_idx on public.enquiries using btree (source);
+create index enquiries_group_id_idx on public.enquiries using btree (group_id);
+
+-- Duplicate-submission protection, keyed so group bookings (N rows sharing
+-- identical name/phone/email/trip by design) can coexist — see
+-- add_duplicate_submission_constraints.sql and add_group_bookings.sql.
+create unique index enquiries_trip_name_phone_email_active_unique
+  on public.enquiries (trip_id, lower(trim(full_name)), phone, lower(trim(email)), group_seq)
+  where (cancelled_at is null);
 
 -- ----------------------------------------------------------------------------
 -- payments

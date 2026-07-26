@@ -119,6 +119,13 @@ export interface Enquiry {
   booking_status?: 'booking_confirmed' | 'balance_pending' | 'fully_paid' | 'cancelled' | 'completed';
   suggested_refund_amount?: number; // auto-computed suggestion only — never authoritative, admin sets refund_amount independently
   balance_due_date?: string; // auto-derived from departure_date + trip_type, read-only
+  // Group bookings: a "Group" submission from the public booking form
+  // creates one row per seat, all sharing group_id/group_size. group_seq is
+  // this row's 1-based position within the group. Solo bookings are always
+  // group_seq = 1 with group_id/group_size left null.
+  group_id?: string | null;
+  group_size?: number | null;
+  group_seq: number;
 }
 
 // One row per individual payment or refund against an enquiry. This is the
@@ -213,6 +220,11 @@ export interface BookingFormData {
   trip_title?: string;
   terms_accepted: boolean;
 }
+
+// Not part of BookingFormData itself (that's the react-hook-form-managed
+// fields, one shared set of details per seat in a group) — this is the
+// separate "how many seats" choice the form also collects alongside it.
+export type BookingMode = 'solo' | 'group';
 
 // =============================================
 // Waitlist (sold-out trips)

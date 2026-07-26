@@ -10,12 +10,27 @@ import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
-import { formatDate, formatPrice, seatsLeft } from '../utils';
+import { formatDate, formatTime, formatPrice, seatsLeft } from '../utils';
 
 const PACKAGE_CONFIG = {
   early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
   normal: { label: 'Normal', color: 'bg-slate-100 text-slate-700' },
 } as const;
+
+// Cycled across group bookings (see groupColorMap below) so that every
+// group visible on screen at once gets a visually distinct row tint, left
+// accent, and badge color — the main way an admin tells "these rows are one
+// group" apart from "these rows just happen to be next to each other".
+const GROUP_COLOR_PALETTE = [
+  { row: 'bg-blue-50/60 hover:bg-blue-50', accent: 'border-blue-400', badge: 'bg-blue-100 text-blue-700' },
+  { row: 'bg-purple-50/60 hover:bg-purple-50', accent: 'border-purple-400', badge: 'bg-purple-100 text-purple-700' },
+  { row: 'bg-teal-50/60 hover:bg-teal-50', accent: 'border-teal-400', badge: 'bg-teal-100 text-teal-700' },
+  { row: 'bg-amber-50/60 hover:bg-amber-50', accent: 'border-amber-400', badge: 'bg-amber-100 text-amber-700' },
+  { row: 'bg-pink-50/60 hover:bg-pink-50', accent: 'border-pink-400', badge: 'bg-pink-100 text-pink-700' },
+  { row: 'bg-lime-50/60 hover:bg-lime-50', accent: 'border-lime-400', badge: 'bg-lime-100 text-lime-700' },
+  { row: 'bg-cyan-50/60 hover:bg-cyan-50', accent: 'border-cyan-400', badge: 'bg-cyan-100 text-cyan-700' },
+  { row: 'bg-rose-50/60 hover:bg-rose-50', accent: 'border-rose-400', badge: 'bg-rose-100 text-rose-700' },
+] as const;
 
 const STATUS_OPTIONS = [
   { value: 'new', label: 'New' },
@@ -526,7 +541,46 @@ export default function AdminEnquiries() {
   const activeGroup = tripGroups.find(g => g.key === selectedTripKey) || null;
   const scopedEnquiries = activeGroup ? activeGroup.enquiries : enquiries;
 
-  const filtered = scopedEnquiries
+  // Group-booking rows are inserted together in one batch, so their
+  // created_at timestamps are effectively identical — ordering purely by
+  // created_at (as the initial fetch does) then leaves them in whatever
+  // arbitrary order the database happened to return, e.g. "Group 2/5, 1/5,
+  // 3/5...". This re-sorts so every group's members sit together,
+  // internally ordered 1/N, 2/N, 3/N..., while the groups (and any solo
+  // bookings) themselves stay in the same overall newest-first order as
+  // before — keyed off the *earliest* created_at seen in each group, since
+  // that's the one moment a batch actually happened.
+  const groupEarliestCreatedAt = new Map<string, string>();
+  scopedEnquiries.forEach(e => {
+    if (!e.group_id) return;
+    const existing = groupEarliestCreatedAt.get(e.group_id);
+    if (!existing || e.created_at < existing) groupEarliestCreatedAt.set(e.group_id, e.created_at);
+  });
+  const sortedScoped = [...scopedEnquiries].sort((a, b) => {
+    const aKey = a.group_id ? groupEarliestCreatedAt.get(a.group_id)! : a.created_at;
+    const bKey = b.group_id ? groupEarliestCreatedAt.get(b.group_id)! : b.created_at;
+    if (aKey !== bKey) return aKey < bKey ? 1 : -1; // newest batch/entry first
+    if (a.group_id && a.group_id === b.group_id) return (a.group_seq || 1) - (b.group_seq || 1);
+    return 0;
+  });
+
+  // Assigns each group_id a color from the palette below, in the order
+  // groups first appear top-to-bottom in the (now-clustered) list — so any
+  // two groups visible near each other on screen always get different
+  // colors, which is what actually matters for telling them apart at a
+  // glance. The color ties together a group's row background/left-accent
+  // and its "Group x/y" badge everywhere it's rendered.
+  const groupColorMap = new Map<string, number>();
+  let nextGroupColorIdx = 0;
+  sortedScoped.forEach(e => {
+    if (e.group_id && !groupColorMap.has(e.group_id)) {
+      groupColorMap.set(e.group_id, nextGroupColorIdx % GROUP_COLOR_PALETTE.length);
+      nextGroupColorIdx++;
+    }
+  });
+  const groupColor = (e: Enquiry) => (e.group_id ? GROUP_COLOR_PALETTE[groupColorMap.get(e.group_id)!] : null);
+
+  const filtered = sortedScoped
     .filter(e => filter === 'all' || e.status === filter)
     .filter(e => payFilter === 'all' || paymentFilterKey(e) === payFilter)
     .filter(e => bookedFilter === 'all' || (bookedFilter === 'booked' ? isBooked(e) : !isBooked(e)));
@@ -833,10 +887,11 @@ export default function AdminEnquiries() {
                 <table className="w-full text-sm">
                   <thead className="bg-background-warm text-dark font-medium">
                     <tr>
+                      <th className="px-3 py-3 text-left hidden md:table-cell">S.No</th>
                       <th className="px-4 py-3 text-left">Name</th>
                       <th className="px-4 py-3 text-left hidden sm:table-cell">Phone</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Source</th>
-                      <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
+                      <th className="px-4 py-3 text-left hidden lg:table-cell">Date &amp; Time</th>
                       <th className="px-2 py-3 text-center whitespace-nowrap">Package</th>
                       <th className="px-2 py-3 text-left whitespace-nowrap">Payment</th>
                       <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
@@ -845,10 +900,11 @@ export default function AdminEnquiries() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-background-warm">
-                    {filtered.map(e => {
+                    {filtered.map((e, idx) => {
                       const cfg = STATUS_CONFIG[e.status];
                       const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                       const isHighlighted = highlightId === e.id;
+                      const clr = groupColor(e);
                       return (
                         <motion.tr
                           key={e.id}
@@ -856,11 +912,22 @@ export default function AdminEnquiries() {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           className={`transition-colors duration-1000 ${
-                            isHighlighted ? 'bg-amber-50 ring-2 ring-inset ring-primary/40' : 'hover:bg-background/50'
+                            isHighlighted ? 'bg-amber-50 ring-2 ring-inset ring-primary/40' : clr ? clr.row : 'hover:bg-background/50'
                           }`}
                         >
+                          <td className={`px-3 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap ${clr ? `border-l-4 ${clr.accent}` : ''}`}>{idx + 1}</td>
                           <td className="px-4 py-3 max-w-[150px] sm:max-w-none">
-                            <p className="font-medium text-dark truncate">{e.full_name}</p>
+                            <p className="font-medium text-dark truncate flex items-center gap-1.5">
+                              {e.full_name}
+                              {e.group_size && e.group_size > 1 && clr && (
+                                <span
+                                  title={`Part of a group booking of ${e.group_size}`}
+                                  className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap ${clr.badge}`}
+                                >
+                                  <Users size={9} /> Group {e.group_seq}/{e.group_size}
+                                </span>
+                              )}
+                            </p>
                             <p className="text-dark-muted text-xs truncate">{e.email}</p>
                           </td>
                           <td className="px-4 py-3 text-dark-muted hidden sm:table-cell truncate">{e.phone}</td>
@@ -870,7 +937,10 @@ export default function AdminEnquiries() {
                               {srcCfg.label}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</td>
+                          <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">
+                            <p>{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</p>
+                            <p className="text-[11px] text-dark-muted/80">{formatTime(e.created_at)}</p>
+                          </td>
                           <td className="px-2 py-3 text-center">
                             <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${PACKAGE_CONFIG[e.package_type || 'normal'].color}`}>
                               {e.package_type === 'early_bird' && <Zap size={12} className="shrink-0" />}
@@ -955,11 +1025,12 @@ export default function AdminEnquiries() {
 
             {/* Mobile: tap a card to expand full details */}
             <div className="sm:hidden space-y-3">
-              {filtered.map(e => {
+              {filtered.map((e, idx) => {
                 const cfg = STATUS_CONFIG[e.status];
                 const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                 const isOpen = expandedId === e.id;
                 const isHighlighted = highlightId === e.id;
+                const clr = groupColor(e);
                 return (
                   <motion.div
                     key={e.id}
@@ -968,15 +1039,24 @@ export default function AdminEnquiries() {
                     animate={{ opacity: 1 }}
                     className={`bg-white rounded-2xl shadow-card overflow-hidden transition-shadow duration-1000 ${
                       isHighlighted ? 'ring-2 ring-primary/40' : ''
-                    }`}
+                    } ${clr ? `border-l-4 ${clr.accent}` : ''}`}
                   >
                     <button
                       onClick={() => setExpandedId(isOpen ? null : e.id)}
-                      className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left ${clr ? clr.row : ''}`}
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-dark truncate flex items-center gap-1.5">
+                          <span className="text-dark-muted text-xs font-normal shrink-0">#{idx + 1}</span>
                           {e.full_name}
+                          {e.group_size && e.group_size > 1 && clr && (
+                            <span
+                              title={`Part of a group booking of ${e.group_size}`}
+                              className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${clr.badge}`}
+                            >
+                              <Users size={9} /> Group {e.group_seq}/{e.group_size}
+                            </span>
+                          )}
                           {e.package_type === 'early_bird' && (
                             <span className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 shrink-0">
                               <Zap size={9} /> Early Bird
@@ -1035,8 +1115,9 @@ export default function AdminEnquiries() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-dark-muted text-xs">Date</p>
+                            <p className="text-dark-muted text-xs">Date &amp; Time</p>
                             <p className="text-dark truncate">{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            <p className="text-dark-muted text-xs truncate">{formatTime(e.created_at)}</p>
                           </div>
                           <div>
                             <p className="text-dark-muted text-xs">Package</p>

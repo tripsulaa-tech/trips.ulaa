@@ -41,6 +41,19 @@ export function formatDate(dateStr: string, options?: Intl.DateTimeFormatOptions
   });
 }
 
+/** Format just the time portion of a timestamp (e.g. "9:08 AM"), for
+ * showing alongside a date wherever exactly when an entry was created
+ * matters — e.g. enquiries, so admins can see submission order within a
+ * day, not just the date. */
+export function formatTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
 /** Format a date range */
 export function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
