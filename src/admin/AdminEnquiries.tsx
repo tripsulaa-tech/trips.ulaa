@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, Utensils } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -56,6 +56,14 @@ function paymentStatus(e: Enquiry): { label: string; color: string } {
   if (e.amount_paid <= 0) return { label: 'Unpaid', color: 'bg-red-100 text-red-700' };
   if (e.amount_paid >= e.total_amount) return { label: 'Paid in full', color: 'bg-green-100 text-green-700' };
   return { label: 'Partial', color: 'bg-amber-100 text-amber-700' };
+}
+
+// Small inline badge shown next to each enquiry's name — lets an admin spot
+// missing food preferences directly in the list, without opening the row.
+function foodBadge(e: Enquiry): { label: string; color: string } {
+  if (e.food_preference === 'veg') return { label: 'Veg', color: 'bg-green-100 text-green-700' };
+  if (e.food_preference === 'non_veg') return { label: 'Non-veg', color: 'bg-red-100 text-red-700' };
+  return { label: 'Food not set', color: 'bg-slate-100 text-dark-muted' };
 }
 
 function paymentBalance(e: Enquiry): number | null {
@@ -155,6 +163,7 @@ type PaymentForm = {
   total_amount: number | '';
   amount_paid: number | '';
   refund_amount: number | '';
+  food_preference: 'veg' | 'non_veg' | '';
 };
 
 export default function AdminEnquiries() {
@@ -191,7 +200,7 @@ export default function AdminEnquiries() {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
-  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '' });
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '', food_preference: '' });
   const [savingPayment, setSavingPayment] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<Enquiry | null>(null);
   const [cancelCharges, setCancelCharges] = useState<number | ''>('');
@@ -359,6 +368,7 @@ export default function AdminEnquiries() {
       total_amount: suggested ?? '',
       amount_paid: enquiry.amount_paid ?? 0,
       refund_amount: enquiry.refund_amount ?? 0,
+      food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
     });
   };
 
@@ -458,6 +468,7 @@ export default function AdminEnquiries() {
         amount_paid: amountPaid,
         total_amount: totalAmount,
         package_type: paymentForm.package_type,
+        food_preference: paymentForm.food_preference || null,
       });
       if (paymentTarget.cancelled_at) {
         await recordRefund(paymentTarget, refundAmount);
@@ -998,9 +1009,11 @@ export default function AdminEnquiries() {
                       const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                       const isHighlighted = highlightId === e.id;
                       const clr = groupColor(e);
+                      const isExpanded = expandedId === e.id;
+                      const food = foodBadge(e);
                       return (
+                        <Fragment key={e.id}>
                         <motion.tr
-                          key={e.id}
                           ref={(el) => { cardRefs.current[e.id] = el; }}
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -1010,18 +1023,37 @@ export default function AdminEnquiries() {
                         >
                           <td className={`px-3 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap ${clr ? `border-l-4 ${clr.accent}` : ''}`}>{idx + 1}</td>
                           <td className="px-4 py-3 max-w-[150px] sm:max-w-none">
-                            <p className="font-medium text-dark truncate flex items-center gap-1.5">
-                              {e.full_name}
-                              {e.group_size && e.group_size > 1 && clr && (
-                                <span
-                                  title={`Part of a group booking of ${e.group_size}`}
-                                  className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap ${clr.badge}`}
-                                >
-                                  <Users size={9} /> Group {e.group_seq}/{e.group_size}
+                            <button
+                              onClick={() => setExpandedId(isExpanded ? null : e.id)}
+                              className="text-left w-full group"
+                              title="Click for full details"
+                            >
+                              <p className="font-medium text-dark truncate flex items-center gap-1.5 group-hover:text-primary transition-colors">
+                                {e.full_name}
+                                <ChevronDown size={12} className={`text-dark-muted shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                              </p>
+                              <p className="text-dark-muted text-xs truncate">{e.email}</p>
+                              <div className="flex items-center flex-wrap gap-1 mt-1">
+                                {e.group_size && e.group_size > 1 ? (
+                                  <span
+                                    title={`Part of a group booking of ${e.group_size}`}
+                                    className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                                  >
+                                    <Users size={9} /> Group {e.group_seq}/{e.group_size}
+                                  </span>
+                                ) : (
+                                  <span
+                                    title="Booked individually, not part of a group"
+                                    className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
+                                  >
+                                    <User size={9} /> Solo
+                                  </span>
+                                )}
+                                <span className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap ${food.color}`}>
+                                  <Utensils size={9} /> {food.label}
                                 </span>
-                              )}
-                            </p>
-                            <p className="text-dark-muted text-xs truncate">{e.email}</p>
+                              </div>
+                            </button>
                           </td>
                           <td className="px-4 py-3 text-dark-muted hidden sm:table-cell truncate">{e.phone}</td>
                           <td className="px-4 py-3 text-dark-muted hidden lg:table-cell truncate">
@@ -1109,6 +1141,47 @@ export default function AdminEnquiries() {
                             </div>
                           </td>
                         </motion.tr>
+                        {isExpanded && (
+                          <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={clr ? clr.row : 'bg-background/40'}>
+                            <td colSpan={10} className="px-4 pb-4">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2 text-sm border-t border-background-warm pt-3">
+                                <div>
+                                  <p className="text-dark-muted text-xs">Phone</p>
+                                  <p className="text-dark truncate">{e.phone}</p>
+                                </div>
+                                <div>
+                                  <p className="text-dark-muted text-xs">City</p>
+                                  <p className="text-dark truncate">{e.city || '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-dark-muted text-xs">Age</p>
+                                  <p className="text-dark truncate">{e.age ?? '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-dark-muted text-xs">Source</p>
+                                  <p className="text-dark truncate inline-flex items-center gap-1">
+                                    <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-dark-muted text-xs">Date &amp; Time</p>
+                                  <p className="text-dark truncate">{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(e.created_at)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-dark-muted text-xs">Package</p>
+                                  <p className="text-dark truncate">{PACKAGE_CONFIG[e.package_type || 'normal'].label}</p>
+                                </div>
+                                {e.message && (
+                                  <div className="col-span-2 sm:col-span-3 lg:col-span-4">
+                                    <p className="text-dark-muted text-xs">Notes</p>
+                                    <p className="text-dark text-sm">{e.message}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </motion.tr>
+                        )}
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -1142,12 +1215,19 @@ export default function AdminEnquiries() {
                         <p className="font-medium text-dark truncate flex items-center gap-1.5">
                           <span className="text-dark-muted text-xs font-normal shrink-0">#{idx + 1}</span>
                           {e.full_name}
-                          {e.group_size && e.group_size > 1 && clr && (
+                          {e.group_size && e.group_size > 1 ? (
                             <span
                               title={`Part of a group booking of ${e.group_size}`}
-                              className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${clr.badge}`}
+                              className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                             >
                               <Users size={9} /> Group {e.group_seq}/{e.group_size}
+                            </span>
+                          ) : (
+                            <span
+                              title="Booked individually, not part of a group"
+                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-slate-100 text-dark-muted"
+                            >
+                              <User size={9} /> Solo
                             </span>
                           )}
                           {e.package_type === 'early_bird' && (
@@ -1171,6 +1251,9 @@ export default function AdminEnquiries() {
                               Balance {formatPrice(paymentBalance(e)!)}
                             </span>
                           )}
+                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${foodBadge(e).color}`}>
+                            <Utensils size={9} /> {foodBadge(e).label}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -1411,9 +1494,23 @@ export default function AdminEnquiries() {
       <Modal isOpen={!!paymentTarget} onClose={() => setPaymentTarget(null)} title="Track Payment" size="sm">
         {paymentTarget && (
           <div className="space-y-4">
-            <div className="bg-background-warm rounded-xl px-4 py-3">
-              <p className="font-medium text-dark">{paymentTarget.full_name}</p>
-              <p className="text-dark-muted text-xs">{paymentTarget.trip_title || 'No trip linked'}</p>
+            <div className="bg-background-warm rounded-xl px-4 py-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-medium text-dark truncate">{paymentTarget.full_name}</p>
+                <p className="text-dark-muted text-xs truncate">{paymentTarget.trip_title || 'No trip linked'}</p>
+              </div>
+              <span className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${foodBadge(paymentTarget).color}`}>
+                <Utensils size={11} /> {foodBadge(paymentTarget).label}
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+              <Select
+                value={paymentForm.food_preference}
+                onChange={val => setPaymentForm(f => ({ ...f, food_preference: val as PaymentForm['food_preference'] }))}
+                options={FOOD_PREFERENCE_OPTIONS}
+              />
             </div>
 
             <div>

@@ -620,6 +620,7 @@ export async function recordPayment(
     amount_paid: number; // new running total, not a delta
     total_amount?: number | null;
     package_type?: Enquiry['package_type'];
+    food_preference?: 'veg' | 'non_veg' | null;
     payment_method?: string;
     notes?: string;
   }
@@ -667,6 +668,7 @@ export async function recordPayment(
     .update({
       total_amount: newTotal,
       package_type: payment.package_type ?? current.package_type,
+      food_preference: payment.food_preference !== undefined ? payment.food_preference : current.food_preference,
       is_paid: isPaidFull,
       status,
       booking_status: bookingStatus,
