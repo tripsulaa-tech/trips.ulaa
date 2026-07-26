@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Briefcase, BookOpen, Users, TrendingUp, ChevronRight,
-  PlusCircle, FolderPlus, ImagePlus, IndianRupee, ListChecks, AlertTriangle, Utensils,
+  PlusCircle, FolderPlus, ImagePlus, ListChecks,
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import {
@@ -10,7 +10,6 @@ import {
   syncStartedTripAlbums,
 } from '../services/api';
 import type { UpcomingTrip, Enquiry } from '../types';
-import { formatPrice } from '../utils';
 import bannerImg from '../assets/hero.png';
 
 const STATUS_STYLES: Record<Enquiry['status'], string> = {
@@ -82,41 +81,10 @@ export default function AdminDashboard() {
   const todayStr = new Date().toDateString();
   const newToday = enquiries.filter(e => new Date(e.created_at).toDateString() === todayStr).length;
 
-  // Money — same definitions as the Enquiries page: collected is real
-  // money in (amount_paid), pending is only counted where a total_amount
-  // has actually been set.
-  const totalCollected = enquiries.reduce((sum, e) => sum + (e.amount_paid || 0), 0);
-  const totalPending = enquiries.reduce((sum, e) => {
-    if (!e.total_amount) return sum;
-    return sum + Math.max(0, e.total_amount - (e.amount_paid || 0));
-  }, 0);
-
-  // Seats — occupancy across every published upcoming trip, not just one.
-  const seatsBooked = upcoming.reduce((sum, t) => sum + (t.seats_booked || 0), 0);
-  const seatsTotal = upcoming.reduce((sum, t) => sum + (t.total_seats || 0), 0);
-
-  // Food preference — meal-planning headcount across active (non-cancelled)
-  // bookings, so catering counts aren't thrown off by cancelled seats.
-  const activeEnquiries = enquiries.filter(e => !e.cancelled_at);
-  const vegCount = activeEnquiries.filter(e => e.food_preference === 'veg').length;
-  const nonVegCount = activeEnquiries.filter(e => e.food_preference === 'non_veg').length;
-
-  // Needs Attention — booked (money already in), not cancelled, not yet
-  // fully paid, with a balance due within the next 7 days (or already
-  // overdue) — the set of people an admin actually needs to chase before
-  // departure, not just a list of everyone who owes something eventually.
-  const in7Days = new Date();
-  in7Days.setDate(in7Days.getDate() + 7);
-  const needsAttention = enquiries
-    .filter(e => !e.cancelled_at && e.amount_paid > 0 && e.total_amount && e.amount_paid < e.total_amount && e.balance_due_date)
-    .filter(e => new Date(e.balance_due_date!) <= in7Days)
-    .sort((a, b) => new Date(a.balance_due_date!).getTime() - new Date(b.balance_due_date!).getTime())
-    .slice(0, 5);
-
   const statCards = [
     { label: 'Upcoming Trips', value: upcoming.length, icon: Briefcase, color: 'text-primary', to: '/admin/trips', cta: 'View all trips' },
     { label: 'Completed Albums', value: completedCount, icon: BookOpen, color: 'text-primary', to: '/admin/albums', cta: 'View all albums' },
-    { label: 'Total Enquiries', value: enquiries.length, icon: Users, color: 'text-primary', to: '/admin/enquiries', cta: 'View enquiries' },
+    { label: 'Waiting List', value: waitingCount, icon: ListChecks, color: 'text-primary', to: '/admin/waitlist', cta: 'View waitlist' },
   ];
 
   const quickActions = [
@@ -180,7 +148,10 @@ export default function AdminDashboard() {
             </Link>
           ))}
 
-          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2 h-full">
+          <Link
+            to="/admin/enquiries"
+            className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2 h-full"
+          >
             <div className="min-w-0">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 text-primary">
@@ -193,86 +164,6 @@ export default function AdminDashboard() {
               <p className="text-dark-muted text-xs sm:text-sm mt-1">New Enquiries Today</p>
             </div>
             <ChevronRight size={18} className="sm:w-6 sm:h-6 text-primary flex-shrink-0" />
-          </div>
-        </div>
-
-        {/* Business at a glance — money, occupancy, waitlist, and meal prep,
-            the operational numbers that used to require a trip into
-            Enquiries/Waitlist to see at all. */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-5 items-stretch">
-          <Link
-            to="/admin/enquiries"
-            className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center gap-2 sm:gap-3 h-full"
-          >
-            <div className="w-8 h-8 sm:w-11 sm:h-11 flex items-center justify-center flex-shrink-0 text-green-700">
-              <IndianRupee size={18} className="sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-display text-base sm:text-xl font-bold text-green-700 truncate">
-                {loading ? '—' : formatPrice(totalCollected)}
-              </p>
-              <p className="text-dark-muted text-[11px] sm:text-xs mt-0.5">Total Collected</p>
-            </div>
-          </Link>
-
-          <Link
-            to="/admin/enquiries"
-            className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center gap-2 sm:gap-3 h-full"
-          >
-            <div className="w-8 h-8 sm:w-11 sm:h-11 flex items-center justify-center flex-shrink-0 text-amber-600">
-              <IndianRupee size={18} className="sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-display text-base sm:text-xl font-bold text-amber-600 truncate">
-                {loading ? '—' : formatPrice(totalPending)}
-              </p>
-              <p className="text-dark-muted text-[11px] sm:text-xs mt-0.5">Pending Balance</p>
-            </div>
-          </Link>
-
-          <Link
-            to="/admin/trips"
-            className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center gap-2 sm:gap-3 h-full"
-          >
-            <div className="w-8 h-8 sm:w-11 sm:h-11 flex items-center justify-center flex-shrink-0 text-primary">
-              <Briefcase size={18} className="sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-display text-base sm:text-xl font-bold text-dark truncate">
-                {loading ? '—' : `${seatsBooked}/${seatsTotal}`}
-              </p>
-              <p className="text-dark-muted text-[11px] sm:text-xs mt-0.5">Seats Booked</p>
-            </div>
-          </Link>
-
-          <Link
-            to="/admin/waitlist"
-            className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center gap-2 sm:gap-3 h-full"
-          >
-            <div className="w-8 h-8 sm:w-11 sm:h-11 flex items-center justify-center flex-shrink-0 text-orange-600">
-              <ListChecks size={18} className="sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-display text-base sm:text-xl font-bold text-dark truncate">
-                {loading ? '—' : waitingCount}
-              </p>
-              <p className="text-dark-muted text-[11px] sm:text-xs mt-0.5">People Waiting</p>
-            </div>
-          </Link>
-
-          <Link
-            to="/admin/enquiries"
-            className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center gap-2 sm:gap-3 h-full col-span-2 lg:col-span-1"
-          >
-            <div className="w-8 h-8 sm:w-11 sm:h-11 flex items-center justify-center flex-shrink-0 text-primary">
-              <Utensils size={18} className="sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-display text-base sm:text-xl font-bold text-dark truncate">
-                {loading ? '—' : `${vegCount} · ${nonVegCount}`}
-              </p>
-              <p className="text-dark-muted text-[11px] sm:text-xs mt-0.5">Veg · Non-veg (active)</p>
-            </div>
           </Link>
         </div>
 
