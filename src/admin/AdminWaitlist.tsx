@@ -16,7 +16,12 @@ const STATUS_CONFIG = {
   declined: { label: 'Declined', color: 'bg-red-100 text-red-700', icon: XCircle },
 } as const;
 
-const STATUS_OPTIONS = (Object.keys(STATUS_CONFIG) as WaitlistEntry['status'][]).map(key => ({
+// 'converted' is deliberately excluded here — it's never manually
+// selectable. It's only ever set by the app itself once a linked enquiry
+// with an actual advance payment exists (see AdminEnquiries.handleSave /
+// markWaitlistConverted). The DB trigger enforces this too, but the point
+// is to not even offer the option that led to the bug in the first place.
+const EDITABLE_STATUS_OPTIONS = (['waiting', 'notified', 'declined'] as const).map(key => ({
   value: key,
   label: STATUS_CONFIG[key].label,
 }));
@@ -225,13 +230,30 @@ export default function AdminWaitlist() {
                           {formatDate(e.created_at, { day: 'numeric', month: 'short' })}
                         </td>
                         <td className="px-2 py-3 text-right">
-                          <Select
-                            value={e.status}
-                            disabled={updating === e.id}
-                            onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
-                            options={STATUS_OPTIONS}
-                            size="sm"
-                          />
+                          {e.status === 'converted' ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                                <CheckCircle2 size={12} className="shrink-0" />
+                                Converted
+                              </span>
+                              {e.converted_enquiry_id && (
+                                <button
+                                  onClick={() => navigate(`/admin/enquiries?enquiry=${e.converted_enquiry_id}`)}
+                                  className="text-xs font-button font-semibold text-primary underline underline-offset-2 whitespace-nowrap"
+                                >
+                                  View booking
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <Select
+                              value={e.status}
+                              disabled={updating === e.id}
+                              onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
+                              options={EDITABLE_STATUS_OPTIONS}
+                              size="sm"
+                            />
+                          )}
                         </td>
                         <td className="px-2 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -322,14 +344,31 @@ export default function AdminWaitlist() {
                     )}
 
                     <div className="flex items-center gap-2 pt-1">
-                      <Select
-                        value={e.status}
-                        disabled={updating === e.id}
-                        onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
-                        options={STATUS_OPTIONS}
-                        size="sm"
-                        className="flex-1"
-                      />
+                      {e.status === 'converted' ? (
+                        <div className="flex-1 flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                            <CheckCircle2 size={12} className="shrink-0" />
+                            Converted
+                          </span>
+                          {e.converted_enquiry_id && (
+                            <button
+                              onClick={() => navigate(`/admin/enquiries?enquiry=${e.converted_enquiry_id}`)}
+                              className="text-xs font-button font-semibold text-primary underline underline-offset-2 whitespace-nowrap"
+                            >
+                              View booking
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <Select
+                          value={e.status}
+                          disabled={updating === e.id}
+                          onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
+                          options={EDITABLE_STATUS_OPTIONS}
+                          size="sm"
+                          className="flex-1"
+                        />
+                      )}
                       <button
                         onClick={() => handleDelete(e)}
                         disabled={updating === e.id}

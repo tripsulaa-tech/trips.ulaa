@@ -221,6 +221,7 @@ export interface WaitlistEntry {
   message?: string;
   status: 'waiting' | 'notified' | 'converted' | 'declined';
   notified_at?: string | null;
+  converted_enquiry_id?: string | null;
   created_at: string;
 }
 

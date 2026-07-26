@@ -2,10 +2,13 @@
 -- ULAA — Supabase schema (public schema)
 --
 -- This file is a snapshot of the LIVE database, regenerated from direct
--- introspection (information_schema + pg_catalog) on 2026-07-24. It is
--- documentation only — nothing here is applied automatically. To change the
--- live schema, run SQL directly in Supabase → SQL Editor, then update this
--- file to match.
+-- introspection (information_schema + pg_catalog) on 2026-07-24, then hand-
+-- updated on 2026-07-26 to add the waitlist-conversion + seat-integrity
+-- migration (converted_enquiry_id column, enforce_waitlist_conversion,
+-- recompute_trip_seats, trg_enquiries_seat_sync, enforce_trip_capacity, and
+-- their triggers). It is documentation only — nothing here is applied
+-- automatically. To change the live schema, run SQL directly in Supabase →
+-- SQL Editor, then update this file to match.
 --
 -- Previous versions of this file were reconstructed from app code and had
 -- several gaps (missing column defaults, missing check constraints, unclear
@@ -185,16 +188,24 @@ create index payments_paid_at_idx on public.payments using btree (paid_at desc);
 -- completed_trips once a trip finishes, and we still want the historical
 -- waitlist record to remain queryable.
 create table public.waitlist (
-  id            uuid not null default uuid_generate_v4(),
-  trip_id       uuid not null,
-  trip_title    text,
-  full_name     text not null,
-  phone         text not null,
-  email         text not null,
-  message       text,
-  status        text not null default 'waiting'::text,
-  notified_at   timestamptz,
-  created_at    timestamptz not null default now(),
+  id                    uuid not null default uuid_generate_v4(),
+  trip_id               uuid not null,
+  trip_title            text,
+  full_name             text not null,
+  phone                 text not null,
+  email                 text not null,
+  message               text,
+  status                text not null default 'waiting'::text,
+  notified_at           timestamptz,
+  -- Set once this entry is converted into a real, paid booking (see
+  -- markWaitlistConverted in api.ts). NOT a foreign key to enquiries in the
+  -- sense of enforcing existence at insert time via app code, but IS a real
+  -- FK constraint here — unlike trip_id, enquiries rows are never deleted
+  -- out from under an old waitlist record the way upcoming_trips rows are,
+  -- so this one is safe to enforce. on delete set null so a later manual
+  -- delete of the enquiry doesn't block deleting this row.
+  converted_enquiry_id  uuid references public.enquiries (id) on delete set null,
+  created_at            timestamptz not null default now(),
   constraint waitlist_pkey primary key (id),
   constraint waitlist_status_check
     check (status = any (array['waiting'::text, 'notified'::text, 'converted'::text, 'declined'::text])),
@@ -206,6 +217,7 @@ create table public.waitlist (
 create index waitlist_trip_id_idx on public.waitlist using btree (trip_id);
 create index waitlist_status_idx on public.waitlist using btree (status);
 create index waitlist_created_at_idx on public.waitlist using btree (created_at desc);
+create index waitlist_converted_enquiry_id_idx on public.waitlist using btree (converted_enquiry_id);
 
 -- ----------------------------------------------------------------------------
 -- gallery
@@ -321,6 +333,66 @@ begin
    where balance_due_date is not null
      and balance_due_date < current_date
      and booking_status not in ('fully_paid', 'cancelled', 'completed');
+end;
+$function$;
+
+-- Rejects an insert/update that would newly hold a seat (cancelled_at is
+-- null and amount_paid > 0, having not been true before the change) on a
+-- trip that's already at total_seats. Covers both a brand-new paid enquiry
+-- and a reactivation (uncancel) of an old one — previously a reactivation
+-- could silently overbook, since the seats_booked counter just capped at
+-- total_seats without stopping the enquiry itself from being marked booked.
+create or replace function public.enforce_trip_capacity()
+returns trigger
+language plpgsql
+as $function$
+declare
+  v_becomes_booked boolean := (new.cancelled_at is null and new.amount_paid > 0);
+  v_was_booked boolean := (tg_op = 'UPDATE' and old.cancelled_at is null and old.amount_paid > 0);
+  v_seats_booked int;
+  v_total_seats int;
+begin
+  if new.trip_id is not null and v_becomes_booked and not v_was_booked then
+    select seats_booked, total_seats into v_seats_booked, v_total_seats
+    from public.upcoming_trips where id = new.trip_id;
+
+    if v_total_seats is not null and v_seats_booked >= v_total_seats then
+      raise exception 'This trip has no seats left (% / % booked).', v_seats_booked, v_total_seats;
+    end if;
+  end if;
+  return new;
+end;
+$function$;
+
+-- Enforces the waitlist "converted" status can only be set/unset correctly:
+-- moving TO converted requires a converted_enquiry_id pointing at an
+-- enquiry that actually has amount_paid > 0 (blocks marking someone
+-- converted straight from the status dropdown with no real booking behind
+-- it). Moving AWAY from converted is blocked while that linked enquiry is
+-- still an active (non-cancelled) booking — the booking itself may only be
+-- changed from the Enquiries screen, never by flipping this dropdown.
+create or replace function public.enforce_waitlist_conversion()
+returns trigger
+language plpgsql
+as $function$
+begin
+  if new.status = 'converted' and old.status is distinct from 'converted' then
+    if new.converted_enquiry_id is null or not exists (
+      select 1 from public.enquiries
+      where id = new.converted_enquiry_id and amount_paid > 0
+    ) then
+      raise exception 'Cannot mark converted without a linked enquiry that has an advance payment recorded.';
+    end if;
+  end if;
+
+  if old.status = 'converted' and new.status is distinct from 'converted' then
+    if old.converted_enquiry_id is not null and exists (
+      select 1 from public.enquiries where id = old.converted_enquiry_id and cancelled_at is null
+    ) then
+      raise exception 'This waitlist entry is linked to an active booking. Cancel the booking in Enquiries first.';
+    end if;
+  end if;
+  return new;
 end;
 $function$;
 
@@ -511,6 +583,27 @@ begin
 end;
 $function$;
 
+-- Recomputes upcoming_trips.seats_booked for one trip from the actual
+-- enquiries that hold a seat (not cancelled, amount_paid > 0), rather than
+-- trusting the app's incremental +/-1 calls. Called by
+-- trg_enquiries_seat_sync() below after any enquiries change, so the count
+-- self-heals even if some future code path forgets to adjust it manually.
+create or replace function public.recompute_trip_seats(p_trip_id uuid)
+returns void
+language plpgsql
+as $function$
+begin
+  update public.upcoming_trips t
+     set seats_booked = (
+       select count(*) from public.enquiries e
+        where e.trip_id = p_trip_id
+          and e.cancelled_at is null
+          and e.amount_paid > 0
+     )
+   where t.id = p_trip_id;
+end;
+$function$;
+
 -- Event trigger (not a per-table trigger): automatically enables RLS on any
 -- new table created in the public schema, so RLS is never forgotten.
 create or replace function public.rls_auto_enable()
@@ -682,6 +775,20 @@ begin
 end;
 $function$;
 
+-- AFTER trigger on enquiries: recomputes seats_booked for whichever trip
+-- was affected (insert/update/delete) using recompute_trip_seats() above,
+-- so upcoming_trips.seats_booked is always derived from real data instead
+-- of drifting from missed adjustTripSeats() calls in the app.
+create or replace function public.trg_enquiries_seat_sync()
+returns trigger
+language plpgsql
+as $function$
+begin
+  perform public.recompute_trip_seats(coalesce(new.trip_id, old.trip_id));
+  return null;
+end;
+$function$;
+
 -- Generic BEFORE UPDATE trigger function: stamps updated_at = now() on any
 -- table it's attached to.
 create or replace function public.update_updated_at()
@@ -725,10 +832,23 @@ create trigger update_enquiries_updated_at
 create trigger on_enquiry_created
   after insert on public.enquiries
   for each row execute function public.notify_new_enquiry();
+-- Must run before enquiry_cancelled_trigger/notify_new_enquiry care about
+-- ordering — Postgres fires same-timing triggers alphabetically by name,
+-- and "capacity" < "cancelled_trigger", so this rejects an overbooking
+-- attempt before any other BEFORE trigger on the row runs.
+create trigger on_enquiries_capacity_check
+  before insert or update on public.enquiries
+  for each row execute function public.enforce_trip_capacity();
+create trigger on_enquiries_seat_sync
+  after insert or update or delete on public.enquiries
+  for each row execute function public.trg_enquiries_seat_sync();
 
 create trigger on_waitlist_created
   after insert on public.waitlist
   for each row execute function public.notify_new_waitlist_signup();
+create trigger on_waitlist_status_change
+  before update on public.waitlist
+  for each row execute function public.enforce_waitlist_conversion();
 
 create trigger on_trip_seat_freed
   after update on public.upcoming_trips

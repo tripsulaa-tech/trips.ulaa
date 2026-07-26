@@ -493,10 +493,28 @@ export async function getWaitlistEntries(): Promise<WaitlistEntry[]> {
   return data || [];
 }
 
+// For the manual status dropdown only — waiting / notified / declined.
+// 'converted' is never set through here; see markWaitlistConverted below.
+// The DB trigger (enforce_waitlist_conversion) rejects a bare 'converted'
+// passed to this function anyway, but the UI no longer offers it as an
+// option in the first place.
 export async function updateWaitlistStatus(id: string, status: WaitlistEntry['status']): Promise<void> {
   const updates: Partial<WaitlistEntry> = { status };
   if (status === 'notified') updates.notified_at = new Date().toISOString();
   const { error } = await supabase.from('waitlist').update(updates).eq('id', id);
+  if (error) throw error;
+}
+
+// Marks a waitlist entry converted and links it to the enquiry that now
+// holds the seat. Only call this once the enquiry actually has an advance
+// payment on it — the DB trigger enforces that too, but this function
+// doesn't re-check it itself so the caller (AdminEnquiries.handleSave)
+// must gate on amountPaid > 0 before calling it.
+export async function markWaitlistConverted(waitlistId: string, enquiryId: string): Promise<void> {
+  const { error } = await supabase
+    .from('waitlist')
+    .update({ status: 'converted', converted_enquiry_id: enquiryId })
+    .eq('id', waitlistId);
   if (error) throw error;
 }
 

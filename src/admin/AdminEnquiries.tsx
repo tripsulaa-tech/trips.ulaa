@@ -7,7 +7,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, updateWaitlistStatus } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
 import { formatDate, formatPrice } from '../utils';
 
@@ -294,7 +294,7 @@ export default function AdminEnquiries() {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to reactivate booking.');
+      alert(err instanceof Error ? err.message : 'Failed to reactivate booking.');
     } finally {
       setUpdating(null);
     }
@@ -389,7 +389,7 @@ export default function AdminEnquiries() {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to save payment details.');
+      alert(err instanceof Error ? err.message : 'Failed to save payment details.');
     } finally {
       setSavingPayment(false);
     }
@@ -406,10 +406,17 @@ export default function AdminEnquiries() {
       alert("Amount paid can't be more than the total amount.");
       return;
     }
+    // A waitlist entry can only become "converted" once real money is on
+    // the booking — the DB trigger enforces this too, but check here first
+    // so the admin gets a clear message instead of a generic save failure.
+    if (convertingWaitlist && amountPaid <= 0) {
+      alert('An advance payment is required to convert a waitlist entry into a booking. Enter at least the booking amount before saving.');
+      return;
+    }
     try {
       setSaving(true);
       const trip = trips.find(t => t.id === form.trip_id);
-      await createManualEnquiry({
+      const created = await createManualEnquiry({
         full_name: form.full_name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim() || 'not-provided@ulaa.local',
@@ -425,7 +432,7 @@ export default function AdminEnquiries() {
         amount_paid: amountPaid,
       });
       if (convertingWaitlist) {
-        await updateWaitlistStatus(convertingWaitlist.id, 'converted').catch(console.error);
+        await markWaitlistConverted(convertingWaitlist.id, created.id).catch(console.error);
         setConvertingWaitlist(null);
       }
       setModalOpen(false);
@@ -434,7 +441,7 @@ export default function AdminEnquiries() {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to save enquiry.');
+      alert(err instanceof Error ? err.message : 'Failed to save enquiry.');
     } finally {
       setSaving(false);
     }
