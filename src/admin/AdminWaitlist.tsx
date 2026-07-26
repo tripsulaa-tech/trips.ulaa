@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, Search, X, ChevronDown, SlidersHorizontal, RefreshCw } from 'lucide-react';
+import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, ChevronDown, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
+import { TableHeaderBar, TablePagination, paginate } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries } from '../services/api';
 import { formatDate, seatsLeft } from '../utils';
@@ -81,6 +82,9 @@ export default function AdminWaitlist() {
   // Which single filter's dropdown is open — only one at a time, same
   // pattern as the Enquiries page's filter bar.
   const [openFilterPanel, setOpenFilterPanel] = useState<'status' | 'trip' | null>(null);
+  // Table pagination — 50 rows per page, same as the Enquiries page.
+  const [currentPage, setCurrentPage] = useState(1);
+  const WAITLIST_PAGE_SIZE = 10;
 
   const load = () => {
     Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries()])
@@ -140,6 +144,20 @@ export default function AdminWaitlist() {
     // Waiting entries whose trip now has an open seat bubble to the top —
     // these are the ones that need action right now.
     .sort((a, b) => Number(hasSeatOpen(b)) - Number(hasSeatOpen(a)));
+
+  const {
+    pageItems: paginatedEntries,
+    totalPages: waitlistTotalPages,
+    safePage: waitlistSafePage,
+    rangeStart: waitlistRangeStart,
+    rangeEnd: waitlistRangeEnd,
+  } = paginate(filtered, currentPage, WAITLIST_PAGE_SIZE);
+
+  // Land back on page 1 whenever the filters or search term change, so the
+  // admin never gets stuck on a page that no longer has any rows.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, tripFilter, trimmedSearch]);
 
   const seatOpenCount = entries.filter(hasSeatOpen).length;
 
@@ -312,27 +330,6 @@ export default function AdminWaitlist() {
           <div className="flex items-center gap-2 mb-4">
             <SlidersHorizontal size={16} className="text-dark" />
             <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1">Filters</span>
-            {/* Search — lives in the title row, directly above Clear All,
-                which sits at the end of the filters row below. */}
-            <div className="relative w-full sm:w-56">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={ev => setSearchQuery(ev.target.value)}
-                placeholder="Search..."
-                className="w-full pl-9 pr-8 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
-                  aria-label="Clear search"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -419,9 +416,19 @@ export default function AdminWaitlist() {
           <>
             {/* Desktop / tablet table */}
             <div className="hidden sm:block bg-white rounded-2xl shadow-card overflow-hidden">
-              <div className="overflow-x-auto scrollbar-hide">
+              <TableHeaderBar
+                title="Waitlist details"
+                rangeStart={waitlistRangeStart}
+                rangeEnd={waitlistRangeEnd}
+                total={filtered.length}
+                itemLabel="signups"
+                searchValue={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Search name, trip, contact..."
+              />
+              <div className="overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-xl border border-background-warm">
                 <table className="w-full text-sm">
-                  <thead className="bg-background-warm text-dark font-medium">
+                  <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
                     <tr>
                       <th className="px-4 py-3 text-left">Name</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Trip</th>
@@ -432,7 +439,7 @@ export default function AdminWaitlist() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-background-warm">
-                    {filtered.map(e => (
+                    {paginatedEntries.map(e => (
                       <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
                         <td className="px-4 py-3 max-w-[160px] sm:max-w-none">
                           <p className="font-medium text-dark truncate flex items-center gap-1.5">
@@ -567,11 +574,16 @@ export default function AdminWaitlist() {
                   </tbody>
                 </table>
               </div>
+              <TablePagination
+                currentPage={waitlistSafePage}
+                totalPages={waitlistTotalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
 
             {/* Mobile cards */}
             <div className="sm:hidden space-y-3">
-              {filtered.map(e => {
+              {paginatedEntries.map(e => {
                 const cfg = STATUS_CONFIG[e.status];
                 return (
                   <motion.div

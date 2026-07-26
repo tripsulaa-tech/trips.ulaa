@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Search, Hourglass, CalendarCheck } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
+import FoodMark from '../components/ui/FoodMark';
+import { TableHeaderBar, TablePagination, paginate } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
@@ -307,6 +309,11 @@ export default function AdminEnquiries() {
   const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | Enquiry['source']>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // Table pagination — 50 rows per page, matching the reference table
+  // design. Reset to page 1 whenever a filter or search term changes (see
+  // effect below), so the admin never lands on a now-empty page.
+  const [currentPage, setCurrentPage] = useState(1);
+  const ENQUIRIES_PAGE_SIZE = 10;
   // Which single filter's dropdown is open — only one at a time. 'more'
   // is the overflow menu for less-frequently-used filters (currently just
   // Source), keeping the main bar to five compact boxes.
@@ -750,11 +757,11 @@ export default function AdminEnquiries() {
   const toggleSelectAllFiltered = () => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      const allSelected = filtered.length > 0 && filtered.every(e => next.has(e.id));
+      const allSelected = paginatedEnquiries.length > 0 && paginatedEnquiries.every(e => next.has(e.id));
       if (allSelected) {
-        filtered.forEach(e => next.delete(e.id));
+        paginatedEnquiries.forEach(e => next.delete(e.id));
       } else {
-        filtered.forEach(e => next.add(e.id));
+        paginatedEnquiries.forEach(e => next.add(e.id));
       }
       return next;
     });
@@ -1122,6 +1129,22 @@ export default function AdminEnquiries() {
       || e.phone?.toLowerCase().includes(trimmedSearch)
       || e.email?.toLowerCase().includes(trimmedSearch)
       || e.trip_title?.toLowerCase().includes(trimmedSearch));
+
+  const {
+    pageItems: paginatedEnquiries,
+    totalPages: enquiriesTotalPages,
+    safePage: enquiriesSafePage,
+    rangeStart: enquiriesRangeStart,
+    rangeEnd: enquiriesRangeEnd,
+  } = paginate(filtered, currentPage, ENQUIRIES_PAGE_SIZE);
+
+  // Any change to what's being filtered/searched can shrink the result set
+  // out from under the current page, so land back on page 1 whenever the
+  // filters, trip scope, or search term change.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, payFilter, bookedFilter, groupFilter, foodFilter, sourceFilter, selectedTripKey, trimmedSearch]);
+
   const counts = {
     all: scopedEnquiries.length,
     new: scopedEnquiries.filter(e => e.status === 'new').length,
@@ -1327,27 +1350,6 @@ export default function AdminEnquiries() {
               <div className="flex items-center gap-2 mb-4">
                 <SlidersHorizontal size={16} className="text-dark" />
                 <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1">Filters</span>
-                {/* Search — lives in the title row, directly above Clear
-                    All, which sits at the end of the filters row below. */}
-                <div className="relative w-full sm:w-56">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={ev => setSearchQuery(ev.target.value)}
-                    placeholder="Search..."
-                    className="w-full pl-9 pr-8 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
-                      aria-label="Clear search"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -1578,14 +1580,24 @@ export default function AdminEnquiries() {
 
             {/* Desktop / tablet table */}
             <div className="hidden sm:block bg-white rounded-2xl shadow-card overflow-hidden">
-              <div className="overflow-x-auto scrollbar-hide">
+              <TableHeaderBar
+                title="Enquiry details"
+                rangeStart={enquiriesRangeStart}
+                rangeEnd={enquiriesRangeEnd}
+                total={filtered.length}
+                itemLabel="enquiries"
+                searchValue={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Search case #, title, owner..."
+              />
+              <div className="overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-xl border border-background-warm">
                 <table className="w-full text-sm">
-                  <thead className="bg-background-warm text-dark font-medium">
+                  <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
                     <tr>
                       <th className="px-3 py-3 text-left w-8">
                         <input
                           type="checkbox"
-                          checked={filtered.length > 0 && filtered.every(e => selectedIds.has(e.id))}
+                          checked={paginatedEnquiries.length > 0 && paginatedEnquiries.every(e => selectedIds.has(e.id))}
                           onChange={toggleSelectAllFiltered}
                           aria-label="Select all"
                           className="w-4 h-4 rounded border-background-warm accent-primary cursor-pointer"
@@ -1604,7 +1616,8 @@ export default function AdminEnquiries() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-background-warm">
-                    {filtered.map((e, idx) => {
+                    {paginatedEnquiries.map((e, pageIdx) => {
+                      const idx = (enquiriesSafePage - 1) * ENQUIRIES_PAGE_SIZE + pageIdx;
                       const cfg = STATUS_CONFIG[e.status];
                       const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                       const isHighlighted = highlightId === e.id;
@@ -1621,7 +1634,7 @@ export default function AdminEnquiries() {
                             isHighlighted ? 'bg-amber-50 ring-2 ring-inset ring-primary/40' : clr ? clr.row : 'hover:bg-background/50'
                           }`}
                         >
-                          <td className={`px-3 py-3 ${clr ? `border-l-4 ${clr.accent}` : ''}`}>
+                          <td className="px-3 py-3">
                             <input
                               type="checkbox"
                               checked={selectedIds.has(e.id)}
@@ -1659,7 +1672,7 @@ export default function AdminEnquiries() {
                                   </span>
                                 )}
                                 <span className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap ${food.color}`}>
-                                  <Utensils size={9} /> {food.label}
+                                  <FoodMark type={foodPreferenceKey(e)} size={9} /> {food.label}
                                 </span>
                               </div>
                             </button>
@@ -1799,11 +1812,16 @@ export default function AdminEnquiries() {
                   </tbody>
                 </table>
               </div>
+              <TablePagination
+                currentPage={enquiriesSafePage}
+                totalPages={enquiriesTotalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
 
             {/* Mobile: tap a card to expand full details */}
             <div className="sm:hidden space-y-3">
-              {filtered.map((e, idx) => {
+              {paginatedEnquiries.map((e, idx) => {
                 const cfg = STATUS_CONFIG[e.status];
                 const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                 const isOpen = expandedId === e.id;
@@ -1817,7 +1835,7 @@ export default function AdminEnquiries() {
                     animate={{ opacity: 1 }}
                     className={`bg-white rounded-2xl shadow-card overflow-hidden transition-shadow duration-1000 ${
                       isHighlighted ? 'ring-2 ring-primary/40' : ''
-                    } ${clr ? `border-l-4 ${clr.accent}` : ''}`}
+                    }`}
                   >
                     <div className={`w-full flex items-center gap-2 px-4 py-3 ${clr ? clr.row : ''}`}>
                       <input
@@ -1872,7 +1890,7 @@ export default function AdminEnquiries() {
                             </span>
                           )}
                           <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${foodBadge(e).color}`}>
-                            <Utensils size={9} /> {foodBadge(e).label}
+                            <FoodMark type={foodPreferenceKey(e)} size={9} /> {foodBadge(e).label}
                           </span>
                         </div>
                       </div>
@@ -2241,7 +2259,7 @@ export default function AdminEnquiries() {
                 <p className="text-dark-muted text-xs truncate">{paymentTarget.trip_title || 'No trip linked'}</p>
               </div>
               <span className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${foodBadge(paymentTarget).color}`}>
-                <Utensils size={11} /> {foodBadge(paymentTarget).label}
+                <FoodMark type={foodPreferenceKey(paymentTarget)} size={11} /> {foodBadge(paymentTarget).label}
               </span>
             </div>
 
