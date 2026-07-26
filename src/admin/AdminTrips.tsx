@@ -17,6 +17,7 @@ import DatePicker from '../components/ui/DatePicker';
 import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useAlert } from '../components/ui/AlertDialog';
 import type { UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy } from '../types';
 import { formatDate, slugify } from '../utils';
 
@@ -77,6 +78,7 @@ const emptyForm: TripForm = {
 
 export default function AdminTrips() {
   const confirm = useConfirm();
+  const alert = useAlert();
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -120,12 +122,19 @@ export default function AdminTrips() {
   };
 
   const handleSave = async () => {
+    if (form.price === '' || Number(form.price) <= 0) {
+      await alert({
+        title: 'Regular price required',
+        message: 'Please enter a Regular Price per person before saving this trip.',
+      });
+      return;
+    }
     try {
       setSaving(true);
       const data = {
         ...form,
         slug: slugify(form.title),
-        price: form.price === '' ? undefined : form.price,
+        price: form.price,
         early_bird_price: form.early_bird_price === '' ? undefined : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || undefined,
         strike_through_price: form.strike_through_price === '' ? undefined : form.strike_through_price,
@@ -319,7 +328,7 @@ export default function AdminTrips() {
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹)</label>
+              <label className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹) *</label>
               <input
                 type="number"
                 value={form.price}
