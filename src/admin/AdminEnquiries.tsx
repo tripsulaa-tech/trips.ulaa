@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, updateWaitlistStatus } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
 import { formatDate, formatPrice } from '../utils';
 
@@ -125,6 +125,8 @@ type PaymentForm = {
 
 export default function AdminEnquiries() {
   const confirm = useConfirm();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
@@ -140,6 +142,10 @@ export default function AdminEnquiries() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  // Set when we arrived here via "Convert to Enquiry" from the Waitlist page —
+  // once the enquiry below is actually saved, this waitlist row gets marked
+  // 'converted' too, instead of the moment the admin merely navigates here.
+  const [convertingWaitlist, setConvertingWaitlist] = useState<{ id: string; name: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
@@ -166,6 +172,39 @@ export default function AdminEnquiries() {
     if (enquiryParam) setExpandedId(enquiryParam);
     if (tripParam || enquiryParam) setSearchParams({}, { replace: true });
   }, [enquiries, searchParams]);
+
+  // Someone hit "Convert to Enquiry" on the Waitlist page — a seat opened up
+  // (usually from a cancellation) and this person is next in line. Prefill
+  // the add-enquiry form with what we already know about them so the admin
+  // only has to fill in the payment.
+  useEffect(() => {
+    const incoming = (location.state as { convertWaitlist?: { id: string; full_name: string; phone: string; email: string; trip_id?: string; trip_title?: string; message?: string } } | null)?.convertWaitlist;
+    if (!incoming) return;
+    setForm({
+      ...emptyForm,
+      full_name: incoming.full_name,
+      phone: incoming.phone,
+      email: incoming.email || '',
+      trip_id: incoming.trip_id || '',
+      source: 'other',
+      message: incoming.message
+        ? `Converted from waitlist. ${incoming.message}`
+        : 'Converted from waitlist.',
+    });
+    setConvertingWaitlist({ id: incoming.id, name: incoming.full_name });
+    setModalOpen(true);
+    // Clear the handoff state so refreshing or navigating back doesn't
+    // reopen the modal with stale data.
+    navigate(location.pathname, { replace: true });
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Trip prices load asynchronously, separately from the handoff above, so
+  // fill in the suggested total once both the converting entry and the
+  // trip list are available.
+  useEffect(() => {
+    if (!convertingWaitlist || !form.trip_id || trips.length === 0 || form.total_amount !== '') return;
+    applySuggestedAmount(form.trip_id, form.package_type);
+  }, [convertingWaitlist, trips, form.trip_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!expandedId) return;
@@ -202,7 +241,13 @@ export default function AdminEnquiries() {
 
   const openAdd = () => {
     setForm(emptyForm);
+    setConvertingWaitlist(null);
     setModalOpen(true);
+  };
+
+  const closeAddModal = () => {
+    setModalOpen(false);
+    setConvertingWaitlist(null);
   };
 
   // Looks up what a trip actually charges for a given package (early-bird or
@@ -379,6 +424,10 @@ export default function AdminEnquiries() {
         total_amount: totalAmount,
         amount_paid: amountPaid,
       });
+      if (convertingWaitlist) {
+        await updateWaitlistStatus(convertingWaitlist.id, 'converted').catch(console.error);
+        setConvertingWaitlist(null);
+      }
       setModalOpen(false);
       const freshTrips = await getAllUpcomingTripsAdmin();
       setTrips(freshTrips);
@@ -977,7 +1026,16 @@ export default function AdminEnquiries() {
       </div>
 
       {/* Manual Add Enquiry Modal */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Log an Enquiry" size="md">
+      <Modal isOpen={modalOpen} onClose={closeAddModal} title={convertingWaitlist ? 'Convert Waitlist Signup' : 'Log an Enquiry'} size="md">
+        {convertingWaitlist && (
+          <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 mb-4 text-sm text-green-800">
+            <PartyPopper size={16} className="shrink-0 mt-0.5" />
+            <p>
+              A seat opened up for <span className="font-semibold">{convertingWaitlist.name}</span>. Confirm the details
+              below and record their payment to book the seat — they'll be marked "converted" on the waitlist automatically.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
@@ -1059,8 +1117,10 @@ export default function AdminEnquiries() {
           </div>
         </div>
         <div className="flex gap-3 mt-6">
-          <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>Cancel</Button>
-          <Button variant="primary" size="md" onClick={handleSave} loading={saving}>Save Enquiry</Button>
+          <Button variant="outline" size="md" onClick={closeAddModal}>Cancel</Button>
+          <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
+            {convertingWaitlist ? 'Convert & Save' : 'Save Enquiry'}
+          </Button>
         </div>
       </Modal>
 

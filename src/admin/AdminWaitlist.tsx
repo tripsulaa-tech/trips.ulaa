@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper } from 'lucide-react';
+import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import { useConfirm } from '../components/ui/ConfirmDialog';
@@ -23,6 +23,7 @@ const STATUS_OPTIONS = (Object.keys(STATUS_CONFIG) as WaitlistEntry['status'][])
 
 export default function AdminWaitlist() {
   const confirm = useConfirm();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
   const [seatsAvailable, setSeatsAvailable] = useState<Record<string, number>>({});
@@ -91,6 +92,29 @@ export default function AdminWaitlist() {
     await deleteWaitlistEntry(entry.id).catch(console.error);
     setEntries(prev => prev.filter(e => e.id !== entry.id));
     setUpdating(null);
+  };
+
+  // A seat freed up (e.g. someone else cancelled) — hand this person off to
+  // Enquiries pre-filled, the same way a phone/WhatsApp lead would be
+  // logged, so the admin can take payment and book the seat. The waitlist
+  // entry itself is only marked "converted" once that enquiry is actually
+  // saved (see AdminEnquiries), not the moment we navigate away.
+  const canConvert = (e: WaitlistEntry) => e.status === 'waiting' || e.status === 'notified';
+
+  const handleConvert = (entry: WaitlistEntry) => {
+    navigate('/admin/enquiries', {
+      state: {
+        convertWaitlist: {
+          id: entry.id,
+          full_name: entry.full_name,
+          phone: entry.phone,
+          email: entry.email,
+          trip_id: entry.trip_id,
+          trip_title: entry.trip_title,
+          message: entry.message,
+        },
+      },
+    });
   };
 
   return (
@@ -210,15 +234,31 @@ export default function AdminWaitlist() {
                           />
                         </td>
                         <td className="px-2 py-3 text-right">
-                          <button
-                            onClick={() => handleDelete(e)}
-                            disabled={updating === e.id}
-                            title="Remove from waitlist"
-                            aria-label="Remove from waitlist"
-                            className="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            {canConvert(e) && (
+                              <button
+                                onClick={() => handleConvert(e)}
+                                title="Convert to enquiry"
+                                className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 h-7 rounded-lg border transition-colors whitespace-nowrap ${
+                                  hasSeatOpen(e)
+                                    ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+                                    : 'border-primary/40 text-primary hover:bg-primary/10'
+                                }`}
+                              >
+                                <UserPlus size={12} className="shrink-0" />
+                                Convert
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDelete(e)}
+                              disabled={updating === e.id}
+                              title="Remove from waitlist"
+                              aria-label="Remove from waitlist"
+                              className="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </td>
                       </motion.tr>
                     ))}
@@ -266,6 +306,20 @@ export default function AdminWaitlist() {
                         </p>
                       )}
                     </div>
+
+                    {canConvert(e) && (
+                      <button
+                        onClick={() => handleConvert(e)}
+                        className={`w-full inline-flex items-center justify-center gap-1.5 text-sm font-button font-semibold py-2 rounded-lg border transition-colors ${
+                          hasSeatOpen(e)
+                            ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+                            : 'border-primary/40 text-primary hover:bg-primary/10'
+                        }`}
+                      >
+                        <UserPlus size={14} className="shrink-0" />
+                        Convert to Enquiry
+                      </button>
+                    )}
 
                     <div className="flex items-center gap-2 pt-1">
                       <Select
