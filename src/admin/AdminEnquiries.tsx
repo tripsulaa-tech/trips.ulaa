@@ -131,6 +131,20 @@ function isBooked(e: Enquiry): boolean {
   return !e.cancelled_at && e.amount_paid > 0;
 }
 
+// Cancelled is its own booking-filter bucket now (previously folded into
+// "Not booked"), so an admin can isolate cancellations without also seeing
+// enquiries that were simply never paid.
+function isCancelled(e: Enquiry): boolean {
+  return !!e.cancelled_at;
+}
+
+// Group vs Solo is purely about whether this row is part of a multi-seat
+// signup (group_size > 1) — same test used everywhere else in this file
+// (row tinting, "Group x/y" badges) so the filter matches what's on screen.
+function isGroupEntry(e: Enquiry): boolean {
+  return !!(e.group_size && e.group_size > 1);
+}
+
 // Only relevant for cancelled bookings that had money on them. Tracks
 // refund_amount against amount_paid independently, so partial refunds
 // (processed in installments) show correctly as "pending" until they
@@ -162,6 +176,19 @@ const FOOD_FILTER_LABELS = {
   veg: 'Veg',
   non_veg: 'Non-veg',
   not_set: 'Not set',
+} as const;
+
+const BOOKING_FILTER_LABELS = {
+  all: 'All',
+  booked: 'Booked',
+  not_booked: 'Not booked',
+  cancelled: 'Cancelled',
+} as const;
+
+const GROUP_FILTER_LABELS = {
+  all: 'All',
+  group: 'Group',
+  solo: 'Solo',
 } as const;
 
 function foodPreferenceKey(e: Enquiry): 'veg' | 'non_veg' | 'not_set' {
@@ -229,6 +256,41 @@ type PaymentForm = {
   food_preference: 'veg' | 'non_veg' | '';
 };
 
+// Shared dropdown menu used by every filter box in the filter bar — a
+// vertical list of options with counts, the selected one highlighted.
+// Kept generic so the same component serves Query Status, Payment,
+// Booking, Group/Solo, Food, and Source without repeating markup.
+function FilterDropdown<T extends string>({
+  options,
+  value,
+  onSelect,
+  align = 'left',
+}: {
+  options: { key: T; label: string; count: number }[];
+  value: T;
+  onSelect: (key: T) => void;
+  align?: 'left' | 'right';
+}) {
+  return (
+    <div
+      className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-xl shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
+    >
+      {options.map(opt => (
+        <button
+          key={opt.key}
+          onClick={() => onSelect(opt.key)}
+          className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-button text-left transition-colors ${
+            value === opt.key ? 'bg-primary/10 text-primary font-semibold' : 'text-dark-muted hover:bg-background-warm'
+          }`}
+        >
+          <span className="truncate">{opt.label}</span>
+          <span className="opacity-60 shrink-0">{opt.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminEnquiries() {
   const confirm = useConfirm();
   const alert = useAlert();
@@ -240,13 +302,15 @@ export default function AdminEnquiries() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | Enquiry['status']>('all');
   const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
-  const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked'>('all');
+  const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked' | 'cancelled'>('all');
+  const [groupFilter, setGroupFilter] = useState<'all' | 'group' | 'solo'>('all');
   const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
+  const [sourceFilter, setSourceFilter] = useState<'all' | Enquiry['source']>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showQueryFilter, setShowQueryFilter] = useState(false);
-  const [showPayFilter, setShowPayFilter] = useState(false);
-  const [showBookedFilter, setShowBookedFilter] = useState(false);
-  const [showFoodFilter, setShowFoodFilter] = useState(false);
+  // Which single filter's dropdown is open — only one at a time. 'more'
+  // is the overflow menu for less-frequently-used filters (currently just
+  // Source), keeping the main bar to five compact boxes.
+  const [openFilterPanel, setOpenFilterPanel] = useState<'query' | 'pay' | 'booked' | 'group' | 'food' | 'more' | null>(null);
   const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1045,8 +1109,14 @@ export default function AdminEnquiries() {
   const filtered = sortedScoped
     .filter(e => filter === 'all' || e.status === filter)
     .filter(e => payFilter === 'all' || paymentFilterKey(e) === payFilter)
-    .filter(e => bookedFilter === 'all' || (bookedFilter === 'booked' ? isBooked(e) : !isBooked(e)))
+    .filter(e => bookedFilter === 'all' || (
+      bookedFilter === 'cancelled' ? isCancelled(e)
+      : bookedFilter === 'booked' ? isBooked(e)
+      : !isBooked(e) && !isCancelled(e)
+    ))
+    .filter(e => groupFilter === 'all' || (groupFilter === 'group' ? isGroupEntry(e) : !isGroupEntry(e)))
     .filter(e => foodFilter === 'all' || foodPreferenceKey(e) === foodFilter)
+    .filter(e => sourceFilter === 'all' || e.source === sourceFilter)
     .filter(e => !trimmedSearch
       || e.full_name?.toLowerCase().includes(trimmedSearch)
       || e.phone?.toLowerCase().includes(trimmedSearch)
@@ -1068,7 +1138,13 @@ export default function AdminEnquiries() {
   const bookedCounts = {
     all: scopedEnquiries.length,
     booked: scopedEnquiries.filter(isBooked).length,
-    not_booked: scopedEnquiries.filter(e => !isBooked(e)).length,
+    not_booked: scopedEnquiries.filter(e => !isBooked(e) && !isCancelled(e)).length,
+    cancelled: scopedEnquiries.filter(isCancelled).length,
+  };
+  const groupCounts = {
+    all: scopedEnquiries.length,
+    group: scopedEnquiries.filter(isGroupEntry).length,
+    solo: scopedEnquiries.filter(e => !isGroupEntry(e)).length,
   };
   const foodCounts = {
     all: scopedEnquiries.length,
@@ -1076,7 +1152,23 @@ export default function AdminEnquiries() {
     non_veg: scopedEnquiries.filter(e => foodPreferenceKey(e) === 'non_veg').length,
     not_set: scopedEnquiries.filter(e => foodPreferenceKey(e) === 'not_set').length,
   };
-  const activeFilterCount = (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (trimmedSearch ? 1 : 0);
+  const sourceCounts = Object.keys(SOURCE_CONFIG).reduce((acc, key) => {
+    acc[key] = scopedEnquiries.filter(e => e.source === key).length;
+    return acc;
+  }, { all: scopedEnquiries.length } as Record<string, number>);
+  const activeFilterCount = (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (trimmedSearch ? 1 : 0);
+
+  // Drives the "Clear all" action in the filter bar below.
+  const clearAllFilters = () => {
+    setFilter('all');
+    setPayFilter('all');
+    setBookedFilter('all');
+    setGroupFilter('all');
+    setFoodFilter('all');
+    setSourceFilter('all');
+    setSearchQuery('');
+    setOpenFilterPanel(null);
+  };
 
   const paymentTotals = (list: Enquiry[]) => ({
     collected: list.reduce((sum, e) => sum + (e.amount_paid || 0), 0),
@@ -1102,6 +1194,17 @@ export default function AdminEnquiries() {
     if (!e.total_amount) return sum;
     return sum + Math.max(0, e.total_amount - (e.amount_paid || 0));
   }, 0);
+
+  // Business-wide enquiry counts for the summary cards up top — deliberately
+  // based on the full `enquiries` list (not scope-limited), same as
+  // totalCollected/totalPending above, so the cards read "across everything"
+  // regardless of which trip (if any) is currently drilled into.
+  const totalEnquiriesCount = enquiries.length;
+  const openPendingCount = enquiries.filter(e => e.status === 'new').length;
+  const contactedCount = enquiries.filter(e => e.status === 'contacted').length;
+  const bookedCountAll = enquiries.filter(isBooked).length;
+  const cancelledCountAll = enquiries.filter(isCancelled).length;
+  const pctOfTotal = (n: number) => (totalEnquiriesCount > 0 ? Math.round((n / totalEnquiriesCount) * 100) : 0);
 
   const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
@@ -1145,7 +1248,7 @@ export default function AdminEnquiries() {
                 return (
                   <button
                     key={g.key}
-                    onClick={() => { setSelectedTripKey(g.key); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setFoodFilter('all'); }}
+                    onClick={() => { setSelectedTripKey(g.key); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setGroupFilter('all'); setFoodFilter('all'); setSourceFilter('all'); }}
                     className="bg-white rounded-2xl p-5 text-left shadow-card hover:shadow-card-hover transition-all"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -1207,7 +1310,7 @@ export default function AdminEnquiries() {
         ) : (
           <>
             <button
-              onClick={() => { setSelectedTripKey(null); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setFoodFilter('all'); }}
+              onClick={() => { setSelectedTripKey(null); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setGroupFilter('all'); setFoodFilter('all'); setSourceFilter('all'); }}
               className="inline-flex items-center gap-1 text-sm font-button font-semibold text-primary hover:underline"
             >
               ← All Trips
@@ -1269,165 +1372,225 @@ export default function AdminEnquiries() {
               </div>
             )}
 
-            {/* Filters — collapsed by default into two tappable toggles
-                (Query Status / Payment), each expanding its own pill row
-                on demand, so the card stays compact until you need it. */}
-            <div className="bg-white rounded-2xl shadow-card p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal size={13} className="text-dark-muted shrink-0" />
-                <p className="text-[11px] font-button font-semibold text-dark-muted uppercase tracking-wide">Filters</p>
-                <span className={`inline-flex items-center text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                  activeFilterCount > 0 ? 'bg-primary/10 text-primary' : 'bg-background-warm text-dark-muted'
-                }`}>
-                  {activeFilterCount} Active
-                </span>
-                {activeFilterCount > 0 && (
+            {/* Filters — a left-hand column (Filters label + Active badge,
+                with Clear all beneath it) is visually split off from
+                everything else with a divider, while the search box and
+                filter boxes live in their own column to the right. Each
+                filter box pops open a dropdown of options below it, plus a
+                "More Filters" overflow box for anything used less often
+                (currently Source). Only one dropdown is open at a time; a
+                transparent full-screen layer closes whichever is open when
+                you click elsewhere. */}
+            {openFilterPanel && (
+              <div className="fixed inset-0 z-20" onClick={() => setOpenFilterPanel(null)} />
+            )}
+            <div className="bg-white rounded-2xl shadow-card p-4">
+              <div className="flex flex-col sm:flex-row items-stretch gap-4">
+                <div className="flex flex-row sm:flex-col items-center sm:items-stretch justify-between gap-3 pb-3 sm:pb-0 sm:pr-4 border-b sm:border-b-0 sm:border-r border-background-warm shrink-0">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal size={16} className="text-dark" />
+                    <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap">Filters</span>
+                    {activeFilterCount > 0 && (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-button font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full whitespace-nowrap">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                        Active
+                      </span>
+                    )}
+                  </div>
                   <button
-                    onClick={() => { setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setFoodFilter('all'); setSearchQuery(''); setShowQueryFilter(false); setShowPayFilter(false); setShowBookedFilter(false); setShowFoodFilter(false); }}
-                    className="ml-auto text-[11px] font-button font-semibold text-primary hover:underline shrink-0"
+                    onClick={clearAllFilters}
+                    disabled={activeFilterCount === 0}
+                    className={`self-start inline-flex items-center gap-1.5 text-xs font-button font-semibold transition-colors whitespace-nowrap ${
+                      activeFilterCount === 0 ? 'text-dark-muted/40 cursor-default' : 'text-dark-muted hover:text-dark'
+                    }`}
                   >
-                    Clear
+                    <RefreshCw size={13} /> Clear all
                   </button>
-                )}
-              </div>
+                </div>
 
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={ev => setSearchQuery(ev.target.value)}
-                  placeholder="Search by name, phone, email, or trip..."
-                  className="w-full pl-9 pr-8 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-                />
-                {searchQuery && (
+                <div className="flex-1 min-w-0 w-full space-y-3">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={ev => setSearchQuery(ev.target.value)}
+                      placeholder="Search by name, phone, email, or trip..."
+                      className="w-full pl-9 pr-8 py-2.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
+                        aria-label="Clear search"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:flex-wrap">
+                    {/* Query Status */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setOpenFilterPanel(p => (p === 'query' ? null : 'query'))}
+                        className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                          openFilterPanel === 'query' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                        }`}
+                      >
+                    <div className="text-left leading-tight flex-1 min-w-0">
+                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Query Status</p>
+                      <p className="text-xs font-button font-semibold text-dark truncate">{filter === 'all' ? 'All' : STATUS_CONFIG[filter].label}</p>
+                    </div>
+                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'query' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openFilterPanel === 'query' && (
+                    <FilterDropdown
+                      value={filter}
+                      onSelect={key => { setFilter(key); setOpenFilterPanel(null); }}
+                      options={(['all', 'new', 'contacted', 'closed'] as const).map(key => ({
+                        key, label: key === 'all' ? 'All' : STATUS_CONFIG[key].label, count: counts[key],
+                      }))}
+                    />
+                  )}
+                </div>
+
+                {/* Payment */}
+                <div className="relative">
                   <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
-                    aria-label="Clear search"
+                    onClick={() => setOpenFilterPanel(p => (p === 'pay' ? null : 'pay'))}
+                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                      openFilterPanel === 'pay' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                    }`}
                   >
-                    <X size={14} />
+                    <div className="text-left leading-tight flex-1 min-w-0">
+                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Payment</p>
+                      <p className="text-xs font-button font-semibold text-dark truncate">{PAY_FILTER_LABELS[payFilter]}</p>
+                    </div>
+                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'pay' ? 'rotate-180' : ''}`} />
                   </button>
-                )}
+                  {openFilterPanel === 'pay' && (
+                    <FilterDropdown
+                      value={payFilter}
+                      onSelect={key => { setPayFilter(key); setOpenFilterPanel(null); }}
+                      options={(['all', 'paid', 'partial', 'unpaid', 'not_set'] as const).map(key => ({
+                        key, label: PAY_FILTER_LABELS[key], count: payCounts[key],
+                      }))}
+                    />
+                  )}
+                </div>
+
+                {/* Booking */}
+                <div className="relative">
+                  <button
+                    onClick={() => setOpenFilterPanel(p => (p === 'booked' ? null : 'booked'))}
+                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                      openFilterPanel === 'booked' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                    }`}
+                  >
+                    <div className="text-left leading-tight flex-1 min-w-0">
+                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Booking</p>
+                      <p className="text-xs font-button font-semibold text-dark truncate">{BOOKING_FILTER_LABELS[bookedFilter]}</p>
+                    </div>
+                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'booked' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openFilterPanel === 'booked' && (
+                    <FilterDropdown
+                      value={bookedFilter}
+                      onSelect={key => { setBookedFilter(key); setOpenFilterPanel(null); }}
+                      options={(['all', 'booked', 'not_booked', 'cancelled'] as const).map(key => ({
+                        key, label: BOOKING_FILTER_LABELS[key], count: bookedCounts[key],
+                      }))}
+                    />
+                  )}
+                </div>
+
+                {/* Group / Solo */}
+                <div className="relative">
+                  <button
+                    onClick={() => setOpenFilterPanel(p => (p === 'group' ? null : 'group'))}
+                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                      openFilterPanel === 'group' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                    }`}
+                  >
+                    <div className="text-left leading-tight flex-1 min-w-0">
+                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Group / Solo</p>
+                      <p className="text-xs font-button font-semibold text-dark truncate">{GROUP_FILTER_LABELS[groupFilter]}</p>
+                    </div>
+                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'group' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openFilterPanel === 'group' && (
+                    <FilterDropdown
+                      value={groupFilter}
+                      onSelect={key => { setGroupFilter(key); setOpenFilterPanel(null); }}
+                      options={(['all', 'group', 'solo'] as const).map(key => ({
+                        key, label: GROUP_FILTER_LABELS[key], count: groupCounts[key],
+                      }))}
+                    />
+                  )}
+                </div>
+
+                {/* Food */}
+                <div className="relative">
+                  <button
+                    onClick={() => setOpenFilterPanel(p => (p === 'food' ? null : 'food'))}
+                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                      openFilterPanel === 'food' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                    }`}
+                  >
+                    <div className="text-left leading-tight flex-1 min-w-0">
+                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Food</p>
+                      <p className="text-xs font-button font-semibold text-dark truncate">{FOOD_FILTER_LABELS[foodFilter]}</p>
+                    </div>
+                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'food' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openFilterPanel === 'food' && (
+                    <FilterDropdown
+                      value={foodFilter}
+                      onSelect={key => { setFoodFilter(key); setOpenFilterPanel(null); }}
+                      options={(['all', 'veg', 'non_veg', 'not_set'] as const).map(key => ({
+                        key, label: FOOD_FILTER_LABELS[key], count: foodCounts[key],
+                      }))}
+                    />
+                  )}
+                </div>
+
+                {/* More Filters — overflow menu for less-frequently-used
+                    filters (Source today); keeps the main row to five
+                    boxes no matter how many filters the page ends up
+                    with. */}
+                <div className="relative sm:ml-auto">
+                  <button
+                    onClick={() => setOpenFilterPanel(p => (p === 'more' ? null : 'more'))}
+                    className={`w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 py-2 transition-colors ${
+                      openFilterPanel === 'more' || sourceFilter !== 'all'
+                        ? 'border-primary/50 bg-background-warm text-dark'
+                        : 'border-background-warm bg-background text-dark hover:border-primary/30'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1 truncate">
+                      More Filters
+                      {sourceFilter !== 'all' && <span className="text-primary">· {SOURCE_CONFIG[sourceFilter].label}</span>}
+                    </span>
+                    <SlidersHorizontal size={13} className="shrink-0" />
+                  </button>
+                  {openFilterPanel === 'more' && (
+                    <FilterDropdown
+                      align="right"
+                      value={sourceFilter}
+                      onSelect={key => { setSourceFilter(key); setOpenFilterPanel(null); }}
+                      options={[
+                        { key: 'all' as const, label: 'All sources', count: sourceCounts.all },
+                        ...(Object.keys(SOURCE_CONFIG) as (keyof typeof SOURCE_CONFIG)[]).map(key => ({
+                          key, label: SOURCE_CONFIG[key].label, count: sourceCounts[key] || 0,
+                        })),
+                      ]}
+                    />
+                  )}
+                </div>
               </div>
-
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
-                <button
-                  onClick={() => { setShowQueryFilter(v => !v); setShowPayFilter(false); setShowBookedFilter(false); setShowFoodFilter(false); }}
-                  className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                    showQueryFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
-                  }`}
-                >
-                  Query Status{filter !== 'all' && <span className="text-primary">· {STATUS_CONFIG[filter].label}</span>}
-                  <ChevronDown size={12} className={`transition-transform ${showQueryFilter ? 'rotate-180' : ''}`} />
-                </button>
-                <button
-                  onClick={() => { setShowPayFilter(v => !v); setShowQueryFilter(false); setShowBookedFilter(false); setShowFoodFilter(false); }}
-                  className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                    showPayFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
-                  }`}
-                >
-                  Payment{payFilter !== 'all' && <span className="text-primary">· {PAY_FILTER_LABELS[payFilter]}</span>}
-                  <ChevronDown size={12} className={`transition-transform ${showPayFilter ? 'rotate-180' : ''}`} />
-                </button>
-                <button
-                  onClick={() => { setShowBookedFilter(v => !v); setShowQueryFilter(false); setShowPayFilter(false); setShowFoodFilter(false); }}
-                  className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                    showBookedFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
-                  }`}
-                >
-                  Booking{bookedFilter !== 'all' && <span className="text-primary">· {bookedFilter === 'booked' ? 'Booked' : 'Not booked'}</span>}
-                  <ChevronDown size={12} className={`transition-transform ${showBookedFilter ? 'rotate-180' : ''}`} />
-                </button>
-                <button
-                  onClick={() => { setShowFoodFilter(v => !v); setShowQueryFilter(false); setShowPayFilter(false); setShowBookedFilter(false); }}
-                  className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                    showFoodFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
-                  }`}
-                >
-                  Food{foodFilter !== 'all' && <span className="text-primary">· {FOOD_FILTER_LABELS[foodFilter]}</span>}
-                  <ChevronDown size={12} className={`transition-transform ${showFoodFilter ? 'rotate-180' : ''}`} />
-                </button>
               </div>
-
-              {showQueryFilter && (
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pt-1">
-                  {([['all', 'All'], ['new', 'New'], ['contacted', 'Contacted'], ['closed', 'Closed']] as const).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => setFilter(key)}
-                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                        filter === key ? 'bg-primary text-white border-primary' : 'bg-background text-dark-muted border-background-warm hover:border-primary/50'
-                      }`}
-                    >
-                      {label} <span className="opacity-70">{counts[key]}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {showPayFilter && (
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pt-1">
-                  {([
-                    ['all', 'All'],
-                    ['paid', 'Paid in full'],
-                    ['partial', 'Partial'],
-                    ['unpaid', 'Unpaid'],
-                    ['not_set', 'Price not set'],
-                  ] as const).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => setPayFilter(key)}
-                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                        payFilter === key ? 'bg-primary text-white border-primary' : 'bg-background text-dark-muted border-background-warm hover:border-primary/50'
-                      }`}
-                    >
-                      {label} <span className="opacity-70">{payCounts[key]}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {showBookedFilter && (
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pt-1">
-                  {([
-                    ['all', 'All'],
-                    ['booked', 'Booked'],
-                    ['not_booked', 'Not booked'],
-                  ] as const).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => setBookedFilter(key)}
-                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                        bookedFilter === key ? 'bg-primary text-white border-primary' : 'bg-background text-dark-muted border-background-warm hover:border-primary/50'
-                      }`}
-                    >
-                      {label} <span className="opacity-70">{bookedCounts[key]}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {showFoodFilter && (
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pt-1">
-                  {([
-                    ['all', 'All'],
-                    ['veg', 'Veg'],
-                    ['non_veg', 'Non-veg'],
-                    ['not_set', 'Not set'],
-                  ] as const).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => setFoodFilter(key)}
-                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                        foodFilter === key ? 'bg-primary text-white border-primary' : 'bg-background text-dark-muted border-background-warm hover:border-primary/50'
-                      }`}
-                    >
-                      {label} <span className="opacity-70">{foodCounts[key]}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              </div>
             </div>
           </>
         )}
