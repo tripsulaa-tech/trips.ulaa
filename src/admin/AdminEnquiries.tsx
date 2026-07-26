@@ -203,6 +203,24 @@ const FOOD_PREFERENCE_OPTIONS = [
   { value: 'non_veg', label: 'Non-veg' },
 ];
 
+// One row of the bulk waitlist-conversion form — trip/package/notes stay
+// shared across the whole group (see `form`), but each person needs their
+// own identity + their own advance payment since a waitlist conversion
+// requires money on the booking before it counts as seated.
+type WaitlistPersonForm = {
+  full_name: string;
+  phone: string;
+  email: string;
+  age: number | '';
+  city: string;
+  food_preference: 'veg' | 'non_veg' | '';
+  amount_paid: number | '';
+};
+
+const emptyWaitlistPerson: WaitlistPersonForm = {
+  full_name: '', phone: '', email: '', age: '', city: '', food_preference: '', amount_paid: '',
+};
+
 type PaymentForm = {
   package_type: Enquiry['package_type'];
   total_amount: number | '';
@@ -237,7 +255,21 @@ export default function AdminEnquiries() {
   // Set when we arrived here via "Convert to Enquiry" from the Waitlist page —
   // once the enquiry below is actually saved, this waitlist row gets marked
   // 'converted' too, instead of the moment the admin merely navigates here.
-  const [convertingWaitlist, setConvertingWaitlist] = useState<{ id: string; name: string } | null>(null);
+  // groupId/groupSize/groupSeq let a multi-seat waitlist group (group_size
+  // > 1) end up linked the same way a public "Group" booking is: every
+  // enquiry converted from the same waitlist row shares one group_id, so
+  // they render together (shared color, "Group X/Y" badge) in the list
+  // below instead of looking like unrelated solo bookings. The waitlist
+  // row's own id is reused as the group_id — stable across however many
+  // separate Convert & Save passes it takes to seat the whole group, with
+  // no extra column or coordination needed.
+  const [convertingWaitlist, setConvertingWaitlist] = useState<{ id: string; name: string; groupId: string | null; groupSize: number | null; groupSeq: number; slots: number } | null>(null);
+  // Filled in whenever slots > 1 — one entry per seat being converted in
+  // this pass, so admins can seat everyone that fits in the seats actually
+  // available right now instead of repeating the whole flow per person.
+  // Left empty for solo/single-slot conversions, which still use the plain
+  // `form` fields below exactly as before.
+  const [waitlistPeople, setWaitlistPeople] = useState<WaitlistPersonForm[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // Separate from expandedId: expandedId also drives the mobile
   // expand/collapse toggle and should stay set. highlightId is purely a
@@ -340,21 +372,28 @@ export default function AdminEnquiries() {
   // the add-enquiry form with what we already know about them so the admin
   // only has to fill in the payment.
   useEffect(() => {
-    const incoming = (location.state as { convertWaitlist?: { id: string; full_name: string; phone: string; email: string; age?: number | null; city?: string | null; food_preference?: 'veg' | 'non_veg' | null; trip_id?: string; trip_title?: string; message?: string; group_size?: number | null; already_converted?: number } } | null)?.convertWaitlist;
+    const incoming = (location.state as { convertWaitlist?: { id: string; full_name: string; phone: string; email: string; age?: number | null; city?: string | null; food_preference?: 'veg' | 'non_veg' | null; trip_id?: string; trip_title?: string; message?: string; group_size?: number | null; already_converted?: number; slots?: number } } | null)?.convertWaitlist;
     if (!incoming) return;
     // This can now be a partial group conversion — some of the group may
     // already have been converted in an earlier pass (see
     // AdminWaitlist.handleConvert / markWaitlistConverted), so the note
     // should only ask the admin to log whatever's genuinely still
-    // outstanding after this person, not the original group size.
+    // outstanding after this pass, not the original group size.
     const alreadyConverted = incoming.already_converted ?? 0;
+    // How many people AdminWaitlist determined we can actually seat right
+    // now (never more than what's still needed, never more than what's
+    // physically free) — 1 for a solo entry or when only one seat is open.
+    const slots = Math.max(incoming.slots ?? 1, 1);
     const stillToLog = incoming.group_size && incoming.group_size > 1
-      ? Math.max(incoming.group_size - alreadyConverted - 1, 0)
+      ? Math.max(incoming.group_size - alreadyConverted - slots, 0)
       : 0;
     const groupNote = incoming.group_size && incoming.group_size > 1
-      ? alreadyConverted > 0
-        ? `Converted from waitlist (group of ${incoming.group_size} — ${alreadyConverted} already logged${stillToLog > 0 ? `, log the other ${stillToLog} seat${stillToLog === 1 ? '' : 's'} too` : ', this is the last one'}).`
-        : `Converted from waitlist (group of ${incoming.group_size} — log the other ${stillToLog} seat${stillToLog === 1 ? '' : 's'} too).`
+      ? [
+          `Converted from waitlist (group of ${incoming.group_size}`,
+          alreadyConverted > 0 ? ` — ${alreadyConverted} already logged, logging ${slots} more now` : ` — logging ${slots} now`,
+          stillToLog > 0 ? `, ${stillToLog} seat${stillToLog === 1 ? '' : 's'} still to go after this` : ', completes the group',
+          ').',
+        ].join('')
       : 'Converted from waitlist.';
     setForm({
       ...emptyForm,
@@ -370,7 +409,39 @@ export default function AdminEnquiries() {
         ? `${groupNote} ${incoming.message}`
         : groupNote,
     });
-    setConvertingWaitlist({ id: incoming.id, name: incoming.full_name });
+    // Bulk mode (slots > 1): one editable row per seat, first one prefilled
+    // with the contact who actually signed up for the waitlist, the rest
+    // blank for the admin to fill in with the other group members' details
+    // (the waitlist signup itself only ever captures one contact for the
+    // whole group).
+    setWaitlistPeople(
+      slots > 1
+        ? [
+            {
+              full_name: incoming.full_name,
+              phone: incoming.phone,
+              email: incoming.email || '',
+              age: incoming.age ?? '',
+              city: incoming.city ?? '',
+              food_preference: incoming.food_preference ?? '',
+              amount_paid: '',
+            },
+            ...Array.from({ length: slots - 1 }, () => ({ ...emptyWaitlistPerson })),
+          ]
+        : []
+    );
+    setConvertingWaitlist({
+      id: incoming.id,
+      name: incoming.full_name,
+      // Only a real group (size > 1) needs linking — a solo waitlist entry
+      // stays group_id: null, same as any other solo enquiry.
+      groupId: incoming.group_size && incoming.group_size > 1 ? incoming.id : null,
+      groupSize: incoming.group_size && incoming.group_size > 1 ? incoming.group_size : null,
+      // alreadyConverted people already hold seats 1..alreadyConverted in
+      // the group, so this pass starts at the next open slot.
+      groupSeq: alreadyConverted + 1,
+      slots,
+    });
     setModalOpen(true);
     // Clear the handoff state so refreshing or navigating back doesn't
     // reopen the modal with stale data.
@@ -443,12 +514,18 @@ export default function AdminEnquiries() {
   const openAdd = () => {
     setForm(emptyForm);
     setConvertingWaitlist(null);
+    setWaitlistPeople([]);
     setModalOpen(true);
   };
 
   const closeAddModal = () => {
     setModalOpen(false);
     setConvertingWaitlist(null);
+    setWaitlistPeople([]);
+  };
+
+  const updateWaitlistPerson = (index: number, patch: Partial<WaitlistPersonForm>) => {
+    setWaitlistPeople(prev => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
   };
 
   // Looks up what a trip actually charges for a given package (early-bird or
@@ -722,6 +799,9 @@ export default function AdminEnquiries() {
   };
 
   const handleSave = async () => {
+    if (convertingWaitlist && convertingWaitlist.slots > 1) {
+      return handleSaveWaitlistGroup();
+    }
     if (!form.full_name.trim() || !form.phone.trim()) {
       alert('Name and phone are required.');
       return;
@@ -757,6 +837,12 @@ export default function AdminEnquiries() {
         package_type: form.package_type,
         total_amount: totalAmount,
         amount_paid: amountPaid,
+        // Link this seat to the rest of its waitlist group (if any) so it
+        // renders grouped in the list below instead of as a standalone
+        // enquiry — see the convertingWaitlist state comment above.
+        ...(convertingWaitlist?.groupId
+          ? { group_id: convertingWaitlist.groupId, group_size: convertingWaitlist.groupSize ?? undefined, group_seq: convertingWaitlist.groupSeq }
+          : {}),
       });
       if (convertingWaitlist) {
         await markWaitlistConverted(convertingWaitlist.id, created.id).catch(console.error);
@@ -783,6 +869,103 @@ export default function AdminEnquiries() {
           : 'This trip is fully booked — there are no seats left to log this enquiry against.');
       } else {
         alert(message || 'Failed to save enquiry.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Seats every person entered for this pass in one click — up to
+  // convertingWaitlist.slots people (never more than the seats that were
+  // actually free when this flow started). Each becomes its own enquiry,
+  // sharing convertingWaitlist.groupId/groupSize so they render together
+  // afterwards, same as any other group booking.
+  //
+  // Runs sequentially rather than Promise.all — markWaitlistConverted does
+  // a fetch-then-update on the waitlist row's converted_enquiry_ids array,
+  // so parallel calls would race and could silently drop an id. It also
+  // means if the trip fills up partway through (e.g. someone else grabbed
+  // a seat at the same time), whatever was already saved stays saved
+  // instead of the whole batch failing.
+  const handleSaveWaitlistGroup = async () => {
+    if (!convertingWaitlist) return;
+
+    const missing = waitlistPeople.find(p => !p.full_name.trim() || !p.phone.trim());
+    if (missing) {
+      alert('Every person needs at least a name and phone number.');
+      return;
+    }
+    const totalAmount = form.total_amount === '' ? undefined : Number(form.total_amount);
+    for (const p of waitlistPeople) {
+      const amountPaid = p.amount_paid === '' ? 0 : Number(p.amount_paid);
+      // Same rule as the single-conversion path: no waitlist entry becomes
+      // a real booking without an advance payment on it (the DB trigger
+      // enforces this too).
+      if (amountPaid <= 0) {
+        alert(`An advance payment is required to convert ${p.full_name.trim() || 'each person'} into a booking. Enter at least the booking amount for everyone before saving.`);
+        return;
+      }
+      if (totalAmount != null && amountPaid > totalAmount) {
+        alert(`${p.full_name.trim() || 'One person'}'s amount paid can't be more than the total amount.`);
+        return;
+      }
+    }
+
+    setSaving(true);
+    const trip = trips.find(t => t.id === form.trip_id);
+    let seated = 0;
+    try {
+      for (let i = 0; i < waitlistPeople.length; i++) {
+        const p = waitlistPeople[i];
+        const amountPaid = p.amount_paid === '' ? 0 : Number(p.amount_paid);
+        const created = await createManualEnquiry({
+          full_name: p.full_name.trim(),
+          phone: p.phone.trim(),
+          email: p.email.trim() || 'not-provided@ulaa.local',
+          age: p.age === '' ? undefined : p.age,
+          city: p.city.trim() || undefined,
+          trip_id: form.trip_id || undefined,
+          trip_title: trip?.title,
+          source: form.source,
+          message: form.message.trim() || undefined,
+          food_preference: p.food_preference || undefined,
+          status: 'new',
+          package_type: form.package_type,
+          total_amount: totalAmount,
+          amount_paid: amountPaid,
+          group_id: convertingWaitlist.groupId ?? undefined,
+          group_size: convertingWaitlist.groupSize ?? undefined,
+          group_seq: convertingWaitlist.groupSeq + i,
+        });
+        await markWaitlistConverted(convertingWaitlist.id, created.id);
+        seated++;
+      }
+      setConvertingWaitlist(null);
+      setWaitlistPeople([]);
+      setModalOpen(false);
+      loadWaitlistCounts();
+      const freshTrips = await getAllUpcomingTripsAdmin();
+      setTrips(freshTrips);
+      load();
+      showToast(`Seated ${seated} of ${waitlistPeople.length} people from this group.`);
+    } catch (err) {
+      console.error(err);
+      const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
+      const partial = seated > 0 ? ` ${seated} of ${waitlistPeople.length} were saved before this happened.` : '';
+      if (message === 'DUPLICATE_ENQUIRY') {
+        alert(`There's already an active enquiry for this trip with that exact name, phone, and email.${partial} Tweak that person's details and try the remaining seats again.`);
+      } else if (message && /no seats left/i.test(message)) {
+        alert(`Ran out of free seats partway through this batch.${partial}`);
+      } else {
+        alert((message || 'Failed to save one of the enquiries.') + partial);
+      }
+      // Whatever did get saved is real — reflect it immediately rather than
+      // leaving the admin looking at stale counts after a partial failure.
+      if (seated > 0) {
+        loadWaitlistCounts();
+        const freshTrips = await getAllUpcomingTripsAdmin();
+        setTrips(freshTrips);
+        load();
       }
     } finally {
       setSaving(false);
@@ -1715,103 +1898,223 @@ export default function AdminEnquiries() {
           <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 mb-4 text-sm text-green-800">
             <PartyPopper size={16} className="shrink-0 mt-0.5" />
             <p>
-              A seat opened up for <span className="font-semibold">{convertingWaitlist.name}</span>. Confirm the details
-              below and record their payment to book the seat — they'll be marked "converted" on the waitlist automatically.
+              {convertingWaitlist.slots > 1 ? (
+                <>
+                  <span className="font-semibold">{convertingWaitlist.slots} seats</span> just opened up for{' '}
+                  <span className="font-semibold">{convertingWaitlist.name}</span>'s group. Fill in each person below and
+                  record their payment — all {convertingWaitlist.slots} will be booked and marked "converted" on the
+                  waitlist together.
+                </>
+              ) : (
+                <>
+                  A seat opened up for <span className="font-semibold">{convertingWaitlist.name}</span>. Confirm the details
+                  below and record their payment to book the seat — they'll be marked "converted" on the waitlist automatically.
+                </>
+              )}
             </p>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
-            <input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} className={inputClass} placeholder="e.g. Priya Sharma" />
+
+        {convertingWaitlist && convertingWaitlist.slots > 1 ? (
+          <>
+            {/* Shared trip/package/pricing — one trip, one price, several people */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Trip</label>
+                <Select
+                  value={form.trip_id}
+                  onChange={val => {
+                    setForm(f => ({ ...f, trip_id: val }));
+                    applySuggestedAmount(val, form.package_type);
+                  }}
+                  options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Package</label>
+                <Select
+                  value={form.package_type}
+                  onChange={val => {
+                    const packageType = val as Enquiry['package_type'];
+                    setForm(f => ({ ...f, package_type: packageType }));
+                    applySuggestedAmount(form.trip_id, packageType);
+                  }}
+                  options={PACKAGE_OPTIONS}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹) <span className="text-dark-muted font-normal">— per person</span></label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.total_amount}
+                  onChange={e => setForm(f => ({ ...f, total_amount: e.target.value === '' ? '' : +e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 15000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
+                <Select
+                  value={form.source}
+                  onChange={val => setForm(f => ({ ...f, source: val as Enquiry['source'] }))}
+                  options={SOURCE_OPTIONS}
+                />
+              </div>
+            </div>
+
+            {/* One card per seat being filled this pass */}
+            <div className="space-y-4">
+              {waitlistPeople.map((p, i) => (
+                <div key={i} className="border-2 border-background-warm rounded-xl p-3">
+                  <p className="text-xs font-button font-semibold text-dark-muted mb-2 flex items-center gap-1.5">
+                    <Users size={12} /> Seat {convertingWaitlist.groupSeq + i} of {convertingWaitlist.groupSize}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-dark mb-1">Full Name *</label>
+                      <input value={p.full_name} onChange={e => updateWaitlistPerson(i, { full_name: e.target.value })} className={inputClass} placeholder="e.g. Priya Sharma" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-dark mb-1">Phone *</label>
+                      <input value={p.phone} onChange={e => updateWaitlistPerson(i, { phone: e.target.value })} className={inputClass} placeholder="e.g. 98765 43210" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-dark mb-1">Email</label>
+                      <input value={p.email} onChange={e => updateWaitlistPerson(i, { email: e.target.value })} className={inputClass} placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-dark mb-1">Age</label>
+                      <input type="number" min={0} value={p.age} onChange={e => updateWaitlistPerson(i, { age: e.target.value === '' ? '' : +e.target.value })} className={inputClass} placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-dark mb-1">Food Preference</label>
+                      <Select
+                        value={p.food_preference}
+                        onChange={val => updateWaitlistPerson(i, { food_preference: val as WaitlistPersonForm['food_preference'] })}
+                        options={FOOD_PREFERENCE_OPTIONS}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-dark mb-1">Amount Paid (₹) *</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={p.amount_paid}
+                        onChange={e => updateWaitlistPerson(i, { amount_paid: e.target.value === '' ? '' : +e.target.value })}
+                        className={inputClass}
+                        placeholder="e.g. 5000 (advance)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-dark mb-1">Notes</label>
+              <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this group" />
+            </div>
+          </>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
+              <input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} className={inputClass} placeholder="e.g. Priya Sharma" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Phone *</label>
+              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputClass} placeholder="e.g. 98765 43210" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Email</label>
+              <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="Optional" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Age</label>
+              <input type="number" min={0} value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))} className={inputClass} placeholder="Optional" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">City</label>
+              <input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputClass} placeholder="Optional" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
+              <Select
+                value={form.source}
+                onChange={val => setForm(f => ({ ...f, source: val as Enquiry['source'] }))}
+                options={SOURCE_OPTIONS}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+              <Select
+                value={form.food_preference}
+                onChange={val => setForm(f => ({ ...f, food_preference: val as EnquiryForm['food_preference'] }))}
+                options={FOOD_PREFERENCE_OPTIONS}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Trip</label>
+              <Select
+                value={form.trip_id}
+                onChange={val => {
+                  setForm(f => ({ ...f, trip_id: val }));
+                  applySuggestedAmount(val, form.package_type);
+                }}
+                options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Package</label>
+              <Select
+                value={form.package_type}
+                onChange={val => {
+                  const packageType = val as Enquiry['package_type'];
+                  setForm(f => ({ ...f, package_type: packageType }));
+                  applySuggestedAmount(form.trip_id, packageType);
+                }}
+                options={PACKAGE_OPTIONS}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
+              <input
+                type="number"
+                min={0}
+                value={form.total_amount}
+                onChange={e => setForm(f => ({ ...f, total_amount: e.target.value === '' ? '' : +e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 15000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
+              <input
+                type="number"
+                min={0}
+                value={form.amount_paid}
+                onChange={e => setForm(f => ({ ...f, amount_paid: e.target.value === '' ? '' : +e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 5000 (advance) — leave blank if unpaid"
+              />
+              <p className="text-[11px] text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Notes</label>
+              <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this enquiry" />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Phone *</label>
-            <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputClass} placeholder="e.g. 98765 43210" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Email</label>
-            <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="Optional" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Age</label>
-            <input type="number" min={0} value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))} className={inputClass} placeholder="Optional" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">City</label>
-            <input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputClass} placeholder="Optional" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
-            <Select
-              value={form.source}
-              onChange={val => setForm(f => ({ ...f, source: val as Enquiry['source'] }))}
-              options={SOURCE_OPTIONS}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
-            <Select
-              value={form.food_preference}
-              onChange={val => setForm(f => ({ ...f, food_preference: val as EnquiryForm['food_preference'] }))}
-              options={FOOD_PREFERENCE_OPTIONS}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Trip</label>
-            <Select
-              value={form.trip_id}
-              onChange={val => {
-                setForm(f => ({ ...f, trip_id: val }));
-                applySuggestedAmount(val, form.package_type);
-              }}
-              options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Package</label>
-            <Select
-              value={form.package_type}
-              onChange={val => {
-                const packageType = val as Enquiry['package_type'];
-                setForm(f => ({ ...f, package_type: packageType }));
-                applySuggestedAmount(form.trip_id, packageType);
-              }}
-              options={PACKAGE_OPTIONS}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
-            <input
-              type="number"
-              min={0}
-              value={form.total_amount}
-              onChange={e => setForm(f => ({ ...f, total_amount: e.target.value === '' ? '' : +e.target.value }))}
-              className={inputClass}
-              placeholder="e.g. 15000"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
-            <input
-              type="number"
-              min={0}
-              value={form.amount_paid}
-              onChange={e => setForm(f => ({ ...f, amount_paid: e.target.value === '' ? '' : +e.target.value }))}
-              className={inputClass}
-              placeholder="e.g. 5000 (advance) — leave blank if unpaid"
-            />
-            <p className="text-[11px] text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Notes</label>
-            <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this enquiry" />
-          </div>
-        </div>
+        )}
+
         <div className="flex gap-3 mt-6">
           <Button variant="outline" size="md" onClick={closeAddModal}>Cancel</Button>
           <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
-            {convertingWaitlist ? 'Convert & Save' : 'Save Enquiry'}
+            {convertingWaitlist
+              ? convertingWaitlist.slots > 1
+                ? `Convert ${convertingWaitlist.slots} & Save`
+                : 'Convert & Save'
+              : 'Save Enquiry'}
           </Button>
         </div>
       </Modal>

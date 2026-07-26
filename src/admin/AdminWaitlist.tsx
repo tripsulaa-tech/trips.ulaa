@@ -162,6 +162,10 @@ export default function AdminWaitlist() {
       if (!proceed) return;
     }
 
+    // How many people we can actually seat right now — never more than what's
+    // still needed for the group, never more than what's physically free.
+    const slots = Math.max(Math.min(needed, available), 1);
+
     navigate('/admin/enquiries', {
       state: {
         convertWaitlist: {
@@ -177,6 +181,7 @@ export default function AdminWaitlist() {
           message: entry.message,
           group_size: entry.group_size,
           already_converted: convertedCount(entry),
+          slots,
         },
       },
     });
