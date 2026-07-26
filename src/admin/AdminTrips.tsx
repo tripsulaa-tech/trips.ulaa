@@ -329,6 +329,16 @@ export default function AdminTrips() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-dark mb-1">Strikeout Price per person (₹)</label>
+              <input
+                type="number"
+                value={form.strike_through_price}
+                onChange={e => setForm(f => ({ ...f, strike_through_price: e.target.value === '' ? '' : +e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 49999 (optional)"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-dark mb-1">Early-Bird Price per person (₹)</label>
               <input
                 type="number"
@@ -338,26 +348,13 @@ export default function AdminTrips() {
                 placeholder="e.g. 39999 (optional)"
               />
             </div>
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-dark mb-1">Early-Bird Deadline</label>
               <DatePicker
                 value={form.early_bird_deadline}
                 onChange={early_bird_deadline => setForm(f => ({ ...f, early_bird_deadline }))}
               />
               <p className="text-xs text-dark-muted mt-1">The early-bird price shows automatically until this date, then the page switches to the regular price on its own.</p>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Strikeout Price per person (₹)</label>
-              <input
-                type="number"
-                value={form.strike_through_price}
-                onChange={e => setForm(f => ({ ...f, strike_through_price: e.target.value === '' ? '' : +e.target.value }))}
-                className={inputClass}
-                placeholder="e.g. 49999 (optional)"
-              />
-              <p className="text-xs text-dark-muted mt-1">
-                Shown crossed out next to whichever price is active — regular or early-bird — instead of automatically crossing out the regular price. Leave blank to keep the old behavior (regular price crossed out only during early-bird).
-              </p>
             </div>
           </TabPanel>
 
