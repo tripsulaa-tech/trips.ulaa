@@ -131,6 +131,11 @@ export interface Enquiry {
   group_id?: string | null;
   group_size?: number | null;
   group_seq: number;
+  // Dietary preference for meals on the trip. Optional/nullable so existing
+  // rows (created before this field existed) and admin-logged enquiries
+  // where it wasn't asked don't break — the public booking form itself
+  // requires a choice.
+  food_preference?: 'veg' | 'non_veg' | null;
 }
 
 // One row per individual payment or refund against an enquiry. This is the
@@ -224,6 +229,7 @@ export interface BookingFormData {
   trip_id?: string;
   trip_title?: string;
   terms_accepted: boolean;
+  food_preference: 'veg' | 'non_veg';
 }
 
 // Not part of BookingFormData itself (that's the react-hook-form-managed

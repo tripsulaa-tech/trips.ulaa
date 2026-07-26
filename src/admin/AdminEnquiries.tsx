@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, Utensils } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -10,7 +10,7 @@ import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
 import type { Enquiry, UpcomingTrip } from '../types';
-import { formatDate, formatTime, formatPrice, seatsLeft } from '../utils';
+import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft } from '../utils';
 
 const PACKAGE_CONFIG = {
   early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
@@ -104,6 +104,17 @@ const PAY_FILTER_LABELS = {
   not_set: 'Price not set',
 } as const;
 
+const FOOD_FILTER_LABELS = {
+  all: 'All',
+  veg: 'Veg',
+  non_veg: 'Non-veg',
+  not_set: 'Not set',
+} as const;
+
+function foodPreferenceKey(e: Enquiry): 'veg' | 'non_veg' | 'not_set' {
+  return e.food_preference === 'veg' || e.food_preference === 'non_veg' ? e.food_preference : 'not_set';
+}
+
 const SOURCE_CONFIG = {
   website: { label: 'Website', icon: Globe },
   whatsapp: { label: 'WhatsApp', icon: MessageCircle },
@@ -125,12 +136,19 @@ type EnquiryForm = {
   package_type: Enquiry['package_type'];
   total_amount: number | '';
   amount_paid: number | '';
+  food_preference: 'veg' | 'non_veg' | '';
 };
 
 const emptyForm: EnquiryForm = {
   full_name: '', phone: '', email: '', age: '', city: '', trip_id: '', source: 'whatsapp', message: '',
-  package_type: 'normal', total_amount: '', amount_paid: '',
+  package_type: 'normal', total_amount: '', amount_paid: '', food_preference: '',
 };
+
+const FOOD_PREFERENCE_OPTIONS = [
+  { value: '', label: 'Not asked / unknown' },
+  { value: 'veg', label: 'Veg' },
+  { value: 'non_veg', label: 'Non-veg' },
+];
 
 type PaymentForm = {
   package_type: Enquiry['package_type'];
@@ -151,9 +169,11 @@ export default function AdminEnquiries() {
   const [filter, setFilter] = useState<'all' | Enquiry['status']>('all');
   const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
   const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked'>('all');
+  const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
   const [showQueryFilter, setShowQueryFilter] = useState(false);
   const [showPayFilter, setShowPayFilter] = useState(false);
   const [showBookedFilter, setShowBookedFilter] = useState(false);
+  const [showFoodFilter, setShowFoodFilter] = useState(false);
   const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -485,6 +505,7 @@ export default function AdminEnquiries() {
         trip_title: trip?.title,
         source: form.source,
         message: form.message.trim() || undefined,
+        food_preference: form.food_preference || undefined,
         status: 'new',
         package_type: form.package_type,
         total_amount: totalAmount,
@@ -583,7 +604,8 @@ export default function AdminEnquiries() {
   const filtered = sortedScoped
     .filter(e => filter === 'all' || e.status === filter)
     .filter(e => payFilter === 'all' || paymentFilterKey(e) === payFilter)
-    .filter(e => bookedFilter === 'all' || (bookedFilter === 'booked' ? isBooked(e) : !isBooked(e)));
+    .filter(e => bookedFilter === 'all' || (bookedFilter === 'booked' ? isBooked(e) : !isBooked(e)))
+    .filter(e => foodFilter === 'all' || foodPreferenceKey(e) === foodFilter);
   const counts = {
     all: scopedEnquiries.length,
     new: scopedEnquiries.filter(e => e.status === 'new').length,
@@ -602,7 +624,13 @@ export default function AdminEnquiries() {
     booked: scopedEnquiries.filter(isBooked).length,
     not_booked: scopedEnquiries.filter(e => !isBooked(e)).length,
   };
-  const activeFilterCount = (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0);
+  const foodCounts = {
+    all: scopedEnquiries.length,
+    veg: scopedEnquiries.filter(e => foodPreferenceKey(e) === 'veg').length,
+    non_veg: scopedEnquiries.filter(e => foodPreferenceKey(e) === 'non_veg').length,
+    not_set: scopedEnquiries.filter(e => foodPreferenceKey(e) === 'not_set').length,
+  };
+  const activeFilterCount = (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0);
 
   const paymentTotals = (list: Enquiry[]) => ({
     collected: list.reduce((sum, e) => sum + (e.amount_paid || 0), 0),
@@ -614,6 +642,13 @@ export default function AdminEnquiries() {
     partial: list.filter(e => e.total_amount && e.amount_paid > 0 && e.amount_paid < e.total_amount).length,
     unpaid: list.filter(e => e.total_amount && e.amount_paid <= 0).length,
     notSet: list.filter(e => !e.total_amount).length,
+  });
+
+  // Meal-planning counts for a trip: how many veg vs non-veg vs not-yet-known.
+  const foodTotals = (list: Enquiry[]) => ({
+    veg: list.filter(e => foodPreferenceKey(e) === 'veg').length,
+    nonVeg: list.filter(e => foodPreferenceKey(e) === 'non_veg').length,
+    notSet: list.filter(e => foodPreferenceKey(e) === 'not_set').length,
   });
 
   const totalCollected = enquiries.reduce((sum, e) => sum + (e.amount_paid || 0), 0);
@@ -660,10 +695,11 @@ export default function AdminEnquiries() {
                   closed: g.enquiries.filter(e => e.status === 'closed').length,
                 };
                 const pay = paymentTotals(g.enquiries);
+                const food = foodTotals(g.enquiries);
                 return (
                   <button
                     key={g.key}
-                    onClick={() => { setSelectedTripKey(g.key); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); }}
+                    onClick={() => { setSelectedTripKey(g.key); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setFoodFilter('all'); }}
                     className="bg-white rounded-2xl p-5 text-left shadow-card hover:shadow-card-hover transition-all"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -674,7 +710,12 @@ export default function AdminEnquiries() {
                         </span>
                       )}
                     </div>
-                    <p className="text-dark-muted text-xs mt-0.5">{g.enquiries.length} {g.enquiries.length === 1 ? 'enquiry' : 'enquiries'}</p>
+                    <p className="text-dark-muted text-xs mt-0.5">
+                      {g.enquiries.length} {g.enquiries.length === 1 ? 'enquiry' : 'enquiries'}
+                      {g.trip?.start_date && g.trip?.end_date && (
+                        <> · {formatDateRange(g.trip.start_date, g.trip.end_date)}</>
+                      )}
+                    </p>
 
                     <div className="flex flex-wrap items-center gap-1.5 mt-3">
                       <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700"><Clock size={10} /> {c.new} new</span>
@@ -694,6 +735,14 @@ export default function AdminEnquiries() {
                       )}
                     </div>
 
+                    {(food.veg > 0 || food.nonVeg > 0 || food.notSet > 0) && (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        {food.veg > 0 && <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700"><Utensils size={9} /> {food.veg} veg</span>}
+                        {food.nonVeg > 0 && <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700"><Utensils size={9} /> {food.nonVeg} non-veg</span>}
+                        {food.notSet > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted">{food.notSet} food pref not set</span>}
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-background-warm">
                       <div>
                         <p className="text-[10px] text-dark-muted">Collected</p>
@@ -712,7 +761,7 @@ export default function AdminEnquiries() {
         ) : (
           <>
             <button
-              onClick={() => { setSelectedTripKey(null); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); }}
+              onClick={() => { setSelectedTripKey(null); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setFoodFilter('all'); }}
               className="inline-flex items-center gap-1 text-sm font-button font-semibold text-primary hover:underline"
             >
               ← All Trips
@@ -723,8 +772,22 @@ export default function AdminEnquiries() {
               <div>
                 <p className="font-display font-bold text-dark">{activeGroup.title}</p>
                 {activeGroup.trip && (
-                  <p className="text-dark-muted text-xs">{activeGroup.trip.seats_booked}/{activeGroup.trip.total_seats} seats booked</p>
+                  <p className="text-dark-muted text-xs">
+                    {activeGroup.trip.seats_booked}/{activeGroup.trip.total_seats} seats booked
+                    {activeGroup.trip.start_date && activeGroup.trip.end_date && (
+                      <> · {formatDateRange(activeGroup.trip.start_date, activeGroup.trip.end_date)}</>
+                    )}
+                  </p>
                 )}
+                {(() => {
+                  const food = foodTotals(activeGroup.enquiries);
+                  return (food.veg > 0 || food.nonVeg > 0 || food.notSet > 0) ? (
+                    <p className="text-dark-muted text-xs mt-1 inline-flex items-center gap-1">
+                      <Utensils size={11} className="shrink-0" />
+                      {food.veg} veg · {food.nonVeg} non-veg{food.notSet > 0 ? ` · ${food.notSet} not set` : ''}
+                    </p>
+                  ) : null;
+                })()}
               </div>
               <div className="text-right">
                 <p className="text-dark-muted text-xs">Collected · Pending</p>
@@ -774,7 +837,7 @@ export default function AdminEnquiries() {
                 </span>
                 {activeFilterCount > 0 && (
                   <button
-                    onClick={() => { setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setShowQueryFilter(false); setShowPayFilter(false); setShowBookedFilter(false); }}
+                    onClick={() => { setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setFoodFilter('all'); setShowQueryFilter(false); setShowPayFilter(false); setShowBookedFilter(false); setShowFoodFilter(false); }}
                     className="ml-auto text-[11px] font-button font-semibold text-primary hover:underline shrink-0"
                   >
                     Clear
@@ -784,7 +847,7 @@ export default function AdminEnquiries() {
 
               <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
                 <button
-                  onClick={() => { setShowQueryFilter(v => !v); setShowPayFilter(false); setShowBookedFilter(false); }}
+                  onClick={() => { setShowQueryFilter(v => !v); setShowPayFilter(false); setShowBookedFilter(false); setShowFoodFilter(false); }}
                   className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
                     showQueryFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
                   }`}
@@ -793,7 +856,7 @@ export default function AdminEnquiries() {
                   <ChevronDown size={12} className={`transition-transform ${showQueryFilter ? 'rotate-180' : ''}`} />
                 </button>
                 <button
-                  onClick={() => { setShowPayFilter(v => !v); setShowQueryFilter(false); setShowBookedFilter(false); }}
+                  onClick={() => { setShowPayFilter(v => !v); setShowQueryFilter(false); setShowBookedFilter(false); setShowFoodFilter(false); }}
                   className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
                     showPayFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
                   }`}
@@ -802,13 +865,22 @@ export default function AdminEnquiries() {
                   <ChevronDown size={12} className={`transition-transform ${showPayFilter ? 'rotate-180' : ''}`} />
                 </button>
                 <button
-                  onClick={() => { setShowBookedFilter(v => !v); setShowQueryFilter(false); setShowPayFilter(false); }}
+                  onClick={() => { setShowBookedFilter(v => !v); setShowQueryFilter(false); setShowPayFilter(false); setShowFoodFilter(false); }}
                   className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
                     showBookedFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
                   }`}
                 >
                   Booking{bookedFilter !== 'all' && <span className="text-primary">· {bookedFilter === 'booked' ? 'Booked' : 'Not booked'}</span>}
                   <ChevronDown size={12} className={`transition-transform ${showBookedFilter ? 'rotate-180' : ''}`} />
+                </button>
+                <button
+                  onClick={() => { setShowFoodFilter(v => !v); setShowQueryFilter(false); setShowPayFilter(false); setShowBookedFilter(false); }}
+                  className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                    showFoodFilter ? 'bg-background-warm text-dark border-primary/40' : 'bg-background text-dark-muted border-background-warm'
+                  }`}
+                >
+                  Food{foodFilter !== 'all' && <span className="text-primary">· {FOOD_FILTER_LABELS[foodFilter]}</span>}
+                  <ChevronDown size={12} className={`transition-transform ${showFoodFilter ? 'rotate-180' : ''}`} />
                 </button>
               </div>
 
@@ -865,6 +937,27 @@ export default function AdminEnquiries() {
                       }`}
                     >
                       {label} <span className="opacity-70">{bookedCounts[key]}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {showFoodFilter && (
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pt-1">
+                  {([
+                    ['all', 'All'],
+                    ['veg', 'Veg'],
+                    ['non_veg', 'Non-veg'],
+                    ['not_set', 'Not set'],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setFoodFilter(key)}
+                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+                        foodFilter === key ? 'bg-primary text-white border-primary' : 'bg-background text-dark-muted border-background-warm hover:border-primary/50'
+                      }`}
+                    >
+                      {label} <span className="opacity-70">{foodCounts[key]}</span>
                     </button>
                   ))}
                 </div>
@@ -1109,6 +1202,10 @@ export default function AdminEnquiries() {
                             <p className="text-dark truncate">{e.age ?? '—'}</p>
                           </div>
                           <div>
+                            <p className="text-dark-muted text-xs">Food Preference</p>
+                            <p className="text-dark truncate">{e.food_preference === 'veg' ? 'Veg' : e.food_preference === 'non_veg' ? 'Non-veg' : '—'}</p>
+                          </div>
+                          <div>
                             <p className="text-dark-muted text-xs">Source</p>
                             <p className="text-dark truncate inline-flex items-center gap-1">
                               <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
@@ -1241,6 +1338,14 @@ export default function AdminEnquiries() {
               value={form.source}
               onChange={val => setForm(f => ({ ...f, source: val as Enquiry['source'] }))}
               options={SOURCE_OPTIONS}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <Select
+              value={form.food_preference}
+              onChange={val => setForm(f => ({ ...f, food_preference: val as EnquiryForm['food_preference'] }))}
+              options={FOOD_PREFERENCE_OPTIONS}
             />
           </div>
           <div>

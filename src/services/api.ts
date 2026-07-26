@@ -389,10 +389,15 @@ export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
 // group_seq (1..groupSize) is what lets otherwise-identical rows coexist
 // under the duplicate-submission unique index — see
 // add_group_bookings.sql.
-export async function submitGroupEnquiry(enquiry: BookingFormData, groupSize: number): Promise<void> {
+// food_preference is the one exception to "same details on every row" —
+// a group can be a mix of veg/non-veg, so it's collected per-seat on the
+// form (see BookingForm's group food-preference stepper) and passed here
+// as an array of length groupSize, one entry per seat.
+export async function submitGroupEnquiry(enquiry: BookingFormData, groupSize: number, foodPreferences: ('veg' | 'non_veg')[]): Promise<void> {
   const groupId = crypto.randomUUID();
   const rows = Array.from({ length: groupSize }, (_, i) => ({
     ...enquiry,
+    food_preference: foodPreferences[i],
     group_id: groupId,
     group_size: groupSize,
     group_seq: i + 1,

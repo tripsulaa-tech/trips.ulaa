@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { CheckCircle, AlertCircle, FileText, User, Users } from 'lucide-react';
+import { CheckCircle, AlertCircle, FileText, User, Users, Utensils } from 'lucide-react';
 import type { BookingFormData, BookingMode } from '../../types';
 import { submitEnquiry, submitGroupEnquiry } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
@@ -31,6 +31,16 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
   const [groupSize, setGroupSize] = useState(MIN_GROUP_SIZE);
   const [groupSizeError, setGroupSizeError] = useState('');
   const [successCount, setSuccessCount] = useState(1);
+  // Not react-hook-form fields (kept alongside bookingMode/groupSize as
+  // separate choices, same pattern as Solo/Group above).
+  // Solo: one shared preference, same as full_name/phone/etc.
+  const [foodPreference, setFoodPreference] = useState<'veg' | 'non_veg' | null>(null);
+  const [foodPreferenceError, setFoodPreferenceError] = useState('');
+  // Group: a group can be a mix, so this collects how many of the
+  // groupSize seats are veg — the rest are treated as non-veg. Clamped to
+  // [0, groupSize] whenever groupSize changes (see the Number of People
+  // input below).
+  const [groupVegCount, setGroupVegCount] = useState(MIN_GROUP_SIZE);
 
   const termsText = (terms || '').trim() || DEFAULT_TERMS_AND_CONDITIONS;
   const termsSections = useMemo(() => parseTerms(termsText), [termsText]);
@@ -100,19 +110,32 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
     }
     setGroupSizeError('');
 
+    const groupVegCountClamped = Math.min(Math.max(groupVegCount, 0), groupSize);
+    if (bookingMode === 'solo' && !foodPreference) {
+      setFoodPreferenceError('Please let us know your food preference.');
+      return;
+    }
+    setFoodPreferenceError('');
+
     try {
       setStatus('loading');
       if (bookingMode === 'group') {
-        await submitGroupEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle }, groupSize);
+        const foodPreferences: ('veg' | 'non_veg')[] = [
+          ...Array(groupVegCountClamped).fill('veg'),
+          ...Array(groupSize - groupVegCountClamped).fill('non_veg'),
+        ];
+        await submitGroupEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences);
         setSuccessCount(groupSize);
       } else {
-        await submitEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle });
+        await submitEnquiry({ ...data, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle });
         setSuccessCount(1);
       }
       setStatus('success');
       reset();
       setBookingMode('solo');
       setGroupSize(MIN_GROUP_SIZE);
+      setGroupVegCount(MIN_GROUP_SIZE);
+      setFoodPreference(null);
       onSuccess?.();
     } catch (err) {
       setStatus('error');
@@ -205,6 +228,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
               setGroupSizeError('');
               const val = e.target.value === '' ? MIN_GROUP_SIZE : Math.round(Number(e.target.value));
               setGroupSize(val);
+              setGroupVegCount(prev => Math.min(prev, val));
             }}
             className={inputClass}
           />
@@ -298,6 +322,59 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
           />
           {errors.emergency_contact && <p className={errorClass}>{errors.emergency_contact.message}</p>}
         </div>
+      </div>
+
+      {/* Food Preference */}
+      <div>
+        {bookingMode === 'solo' ? (
+          <>
+            <label className="block text-sm font-medium text-dark mb-1">Food Preference *</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => { setFoodPreference('veg'); setFoodPreferenceError(''); }}
+                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+                  foodPreference === 'veg'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-background-warm text-dark-muted hover:border-primary/40'
+                }`}
+              >
+                <Utensils size={16} /> Veg
+              </button>
+              <button
+                type="button"
+                onClick={() => { setFoodPreference('non_veg'); setFoodPreferenceError(''); }}
+                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+                  foodPreference === 'non_veg'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-background-warm text-dark-muted hover:border-primary/40'
+                }`}
+              >
+                <Utensils size={16} /> Non-veg
+              </button>
+            </div>
+            {foodPreferenceError && <p className={errorClass}>{foodPreferenceError}</p>}
+          </>
+        ) : (
+          <>
+            <label className="block text-sm font-medium text-dark mb-1">Food Preference — how many prefer Veg? *</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={groupSize}
+              value={Math.min(groupVegCount, groupSize)}
+              onChange={e => {
+                const val = e.target.value === '' ? 0 : Math.round(Number(e.target.value));
+                setGroupVegCount(Math.min(Math.max(val, 0), groupSize));
+              }}
+              className={inputClass}
+            />
+            <p className="text-xs text-dark-muted mt-1">
+              {Math.min(groupVegCount, groupSize)} Veg · {groupSize - Math.min(groupVegCount, groupSize)} Non-veg out of {groupSize} {groupSize === 1 ? 'person' : 'people'}.
+            </p>
+          </>
+        )}
       </div>
 
       {/* Message */}
