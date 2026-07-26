@@ -88,6 +88,7 @@ export default function WaitlistForm({ tripId, tripTitle, onSuccess }: WaitlistF
           <input
             {...register('full_name', { required: 'Full name is required' })}
             placeholder="Your full name"
+            autoComplete="name"
             className={inputClass}
           />
           {errors.full_name && <p className={errorClass}>{errors.full_name.message}</p>}
@@ -103,6 +104,7 @@ export default function WaitlistForm({ tripId, tripTitle, onSuccess }: WaitlistF
               pattern: { value: /^[+\d\s\-()]{8,15}$/, message: 'Invalid phone number' },
             })}
             placeholder="+91 63813 36772"
+            autoComplete="tel"
             className={inputClass}
           />
           {errors.phone && <p className={errorClass}>{errors.phone.message}</p>}
@@ -118,6 +120,7 @@ export default function WaitlistForm({ tripId, tripTitle, onSuccess }: WaitlistF
               pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email address' },
             })}
             placeholder="you@example.com"
+            autoComplete="email"
             className={inputClass}
           />
           {errors.email && <p className={errorClass}>{errors.email.message}</p>}

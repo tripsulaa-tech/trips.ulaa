@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { MapPin, Calendar, Clock, Users, ArrowRight, CalendarPlus, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip } from '../../types';
-import { formatDateRange, formatDate, formatPrice, getActivePrice, seatsLeft, PLACEHOLDER_IMAGE } from '../../utils';
+import { formatDateRange, formatDate, formatPrice, getActivePrice, publicSeatsLeft, PLACEHOLDER_IMAGE } from '../../utils';
 import { addToCalendar } from '../../utils/calendar';
 import Button from './Button';
 
@@ -12,7 +12,7 @@ interface TripCardProps {
 }
 
 export default function TripCard({ trip, index = 0 }: TripCardProps) {
-  const remaining = seatsLeft(trip.total_seats, trip.seats_booked);
+  const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
   const isAlmostFull = remaining <= 5 && remaining > 0;
   const isFull = remaining === 0;
   const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);

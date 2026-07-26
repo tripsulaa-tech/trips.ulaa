@@ -149,7 +149,12 @@ export default function AdminEnquiries() {
   // 'converted' too, instead of the moment the admin merely navigates here.
   const [convertingWaitlist, setConvertingWaitlist] = useState<{ id: string; name: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Separate from expandedId: expandedId also drives the mobile
+  // expand/collapse toggle and should stay set. highlightId is purely a
+  // "you arrived here via a link" visual cue for the desktop table (which
+  // has no expand/collapse concept) and fades out on its own.
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '' });
   const [savingPayment, setSavingPayment] = useState(false);
@@ -189,7 +194,18 @@ export default function AdminEnquiries() {
     const tripParam = searchParams.get('trip');
     const enquiryParam = searchParams.get('enquiry');
     if (tripParam) setSelectedTripKey(tripParam);
-    if (enquiryParam) setExpandedId(enquiryParam);
+    if (enquiryParam) {
+      setExpandedId(enquiryParam);
+      setHighlightId(enquiryParam);
+      // "View booking" links (e.g. from the Waitlist page) only pass
+      // ?enquiry=, not ?trip= — without also selecting that enquiry's trip
+      // group here, activeGroup stays null, the trip-scoped table never
+      // renders, and there's nothing on screen for expandedId to expand.
+      if (!tripParam) {
+        const target = enquiries.find(e => e.id === enquiryParam);
+        if (target) setSelectedTripKey(target.trip_id || 'unlinked');
+      }
+    }
     if (tripParam || enquiryParam) setSearchParams({}, { replace: true });
   }, [enquiries, searchParams]);
 
@@ -251,6 +267,14 @@ export default function AdminEnquiries() {
     }, 80);
     return () => clearTimeout(t);
   }, [expandedId]);
+
+  // Fades the "you arrived here" highlight after a couple seconds so it
+  // reads as a pointer, not a permanent state.
+  useEffect(() => {
+    if (!highlightId) return;
+    const t = setTimeout(() => setHighlightId(null), 2500);
+    return () => clearTimeout(t);
+  }, [highlightId]);
 
   const handleStatusChange = async (id: string, status: Enquiry['status']) => {
     setUpdating(id);
@@ -462,7 +486,11 @@ export default function AdminEnquiries() {
       load();
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to save enquiry.');
+      if (err instanceof Error && err.message === 'DUPLICATE_ENQUIRY') {
+        alert('There\'s already an active enquiry for this trip with this exact name, phone, and email. If this is meant to be a different traveler, tweak one of those fields — a shared family phone/email with a different name is fine.');
+      } else {
+        alert(err instanceof Error ? err.message : 'Failed to save enquiry.');
+      }
     } finally {
       setSaving(false);
     }
@@ -820,8 +848,17 @@ export default function AdminEnquiries() {
                     {filtered.map(e => {
                       const cfg = STATUS_CONFIG[e.status];
                       const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
+                      const isHighlighted = highlightId === e.id;
                       return (
-                        <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
+                        <motion.tr
+                          key={e.id}
+                          ref={(el) => { cardRefs.current[e.id] = el; }}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className={`transition-colors duration-1000 ${
+                            isHighlighted ? 'bg-amber-50 ring-2 ring-inset ring-primary/40' : 'hover:bg-background/50'
+                          }`}
+                        >
                           <td className="px-4 py-3 max-w-[150px] sm:max-w-none">
                             <p className="font-medium text-dark truncate">{e.full_name}</p>
                             <p className="text-dark-muted text-xs truncate">{e.email}</p>
@@ -922,13 +959,16 @@ export default function AdminEnquiries() {
                 const cfg = STATUS_CONFIG[e.status];
                 const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                 const isOpen = expandedId === e.id;
+                const isHighlighted = highlightId === e.id;
                 return (
                   <motion.div
                     key={e.id}
                     ref={(el) => { cardRefs.current[e.id] = el; }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="bg-white rounded-2xl shadow-card overflow-hidden"
+                    className={`bg-white rounded-2xl shadow-card overflow-hidden transition-shadow duration-1000 ${
+                      isHighlighted ? 'ring-2 ring-primary/40' : ''
+                    }`}
                   >
                     <button
                       onClick={() => setExpandedId(isOpen ? null : e.id)}

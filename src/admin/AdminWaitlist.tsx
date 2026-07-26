@@ -5,7 +5,7 @@ import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle,
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin } from '../services/api';
+import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries } from '../services/api';
 import { formatDate, seatsLeft } from '../utils';
 import type { WaitlistEntry } from '../types';
 
@@ -32,18 +32,25 @@ export default function AdminWaitlist() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
   const [seatsAvailable, setSeatsAvailable] = useState<Record<string, number>>({});
+  // Maps a converted entry's linked enquiry id -> whether that booking was
+  // later cancelled. A waitlist entry is only ever marked 'converted' once
+  // and never automatically flipped back, so without this a person whose
+  // booking got cancelled after converting would still just show
+  // "Converted" here with no sign the seat is free again.
+  const [cancelledEnquiryIds, setCancelledEnquiryIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | WaitlistEntry['status']>('all');
   const [tripFilter, setTripFilter] = useState<string>(searchParams.get('trip') || 'all');
 
   const load = () => {
-    Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin()])
-      .then(([waitlistData, trips]) => {
+    Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries()])
+      .then(([waitlistData, trips, enquiries]) => {
         setEntries(waitlistData);
         const map: Record<string, number> = {};
         trips.forEach(t => { map[t.id] = seatsLeft(t.total_seats, t.seats_booked); });
         setSeatsAvailable(map);
+        setCancelledEnquiryIds(new Set(enquiries.filter(en => !!en.cancelled_at).map(en => en.id)));
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -236,6 +243,15 @@ export default function AdminWaitlist() {
                                 <CheckCircle2 size={12} className="shrink-0" />
                                 Converted
                               </span>
+                              {e.converted_enquiry_id && cancelledEnquiryIds.has(e.converted_enquiry_id) && (
+                                <span
+                                  title="This person's booking was cancelled after they converted — their seat is free again."
+                                  className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700 whitespace-nowrap"
+                                >
+                                  <XCircle size={12} className="shrink-0" />
+                                  Booking cancelled
+                                </span>
+                              )}
                               {e.converted_enquiry_id && (
                                 <button
                                   onClick={() => navigate(`/admin/enquiries?enquiry=${e.converted_enquiry_id}`)}
@@ -345,11 +361,19 @@ export default function AdminWaitlist() {
 
                     <div className="flex items-center gap-2 pt-1">
                       {e.status === 'converted' ? (
-                        <div className="flex-1 flex items-center justify-between gap-2">
-                          <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
-                            <CheckCircle2 size={12} className="shrink-0" />
-                            Converted
-                          </span>
+                        <div className="flex-1 flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                              <CheckCircle2 size={12} className="shrink-0" />
+                              Converted
+                            </span>
+                            {e.converted_enquiry_id && cancelledEnquiryIds.has(e.converted_enquiry_id) && (
+                              <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700 whitespace-nowrap">
+                                <XCircle size={12} className="shrink-0" />
+                                Booking cancelled
+                              </span>
+                            )}
+                          </div>
                           {e.converted_enquiry_id && (
                             <button
                               onClick={() => navigate(`/admin/enquiries?enquiry=${e.converted_enquiry_id}`)}

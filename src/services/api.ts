@@ -75,27 +75,48 @@ async function moveImage(url: string, destFolder: string, fileNamePrefix?: strin
 // =============================================
 // Upcoming Trips
 // =============================================
+// PII-free RPC — returns { trip_id, reserved_count } for trips that have
+// people still active on the waitlist (waiting/notified). Used to keep the
+// public "seats left" number from showing a seat that's next in line for
+// someone who's already waiting. Never throws: if it fails for any reason
+// we just show real seat counts (fail open to "no reservation buffer").
+async function getWaitlistReservedCounts(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc('get_waitlist_reserved_counts');
+  if (error || !data) return {};
+  const map: Record<string, number> = {};
+  for (const row of data as { trip_id: string; reserved_count: number }[]) {
+    map[row.trip_id] = row.reserved_count;
+  }
+  return map;
+}
+
 export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
   const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from('upcoming_trips')
-    .select('*')
-    .eq('is_published', true)
-    .gte('start_date', today)
-    .order('start_date', { ascending: true });
+  const [{ data, error }, reservedCounts] = await Promise.all([
+    supabase
+      .from('upcoming_trips')
+      .select('*')
+      .eq('is_published', true)
+      .gte('start_date', today)
+      .order('start_date', { ascending: true }),
+    getWaitlistReservedCounts(),
+  ]);
   if (error) throw error;
-  return data || [];
+  return (data || []).map(trip => ({ ...trip, waitlist_reserved: reservedCounts[trip.id] || 0 }));
 }
 
 export async function getUpcomingTripBySlug(slug: string): Promise<UpcomingTrip | null> {
-  const { data, error } = await supabase
-    .from('upcoming_trips')
-    .select('*')
-    .eq('slug', slug)
-    .eq('is_published', true)
-    .single();
+  const [{ data, error }, reservedCounts] = await Promise.all([
+    supabase
+      .from('upcoming_trips')
+      .select('*')
+      .eq('slug', slug)
+      .eq('is_published', true)
+      .single(),
+    getWaitlistReservedCounts(),
+  ]);
   if (error) return null;
-  return data;
+  return { ...data, waitlist_reserved: reservedCounts[data.id] || 0 };
 }
 
 export async function getAllUpcomingTripsAdmin(): Promise<UpcomingTrip[]> {
@@ -344,9 +365,20 @@ export async function deleteImageByUrl(bucket: string, url: string): Promise<voi
 // =============================================
 // Enquiries
 // =============================================
+// The (trip_id, name, phone, email) unique constraint (active enquiries
+// only — cancelled ones are excluded) means an exact literal re-submission
+// throws a Postgres 23505. Surfaced as a distinct error so the UI can show
+// "you've already enquired" instead of a generic failure. Deliberately
+// keyed on all three fields together (not email/phone alone) so a family
+// booking several seats through one shared contact still works fine.
 export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
   const { error } = await supabase.from('enquiries').insert(enquiry);
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('DUPLICATE_ENQUIRY');
+    }
+    throw error;
+  }
 }
 
 export async function getEnquiries(): Promise<Enquiry[]> {
@@ -389,7 +421,12 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
     .insert({ ...rest, amount_paid: 0, is_paid: isPaidFull, status, booking_status: bookingStatus })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('DUPLICATE_ENQUIRY');
+    }
+    throw error;
+  }
 
   if (amountPaid > 0) {
     const { error: paymentError } = await supabase.from('payments').insert({

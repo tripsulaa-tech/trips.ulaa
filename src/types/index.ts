@@ -21,6 +21,12 @@ export interface UpcomingTrip {
   faqs: FAQ[];
   total_seats: number;
   seats_booked: number;
+  // Not a DB column — merged in client-side (see getUpcomingTrips /
+  // getUpcomingTripBySlug) from get_waitlist_reserved_counts(). Counts
+  // people still active on the waitlist (waiting/notified) so the public
+  // site doesn't let a new visitor book a seat that's next in line for
+  // someone who's already been waiting.
+  waitlist_reserved?: number;
   price?: number;
   early_bird_price?: number;
   early_bird_deadline?: string;

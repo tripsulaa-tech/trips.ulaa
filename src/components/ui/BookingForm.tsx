@@ -6,6 +6,7 @@ import type { BookingFormData } from '../../types';
 import { submitEnquiry } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
+import { validateFullName, validateCity, validatePhone, validateOptionalPhone, validateAge } from '../../utils/formValidation';
 import Button from './Button';
 import Modal from './Modal';
 import TermsBlocks from './TermsBlocks';
@@ -90,7 +91,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
       onSuccess?.();
     } catch (err) {
       setStatus('error');
-      setErrorMsg('Something went wrong. Please try again or contact us on WhatsApp.');
+      if (err instanceof Error && err.message === 'DUPLICATE_ENQUIRY') {
+        setErrorMsg("Looks like you've already submitted an enquiry for this trip with these exact details. We'll be in touch shortly — or message us on WhatsApp if you need to change something.");
+      } else {
+        setErrorMsg('Something went wrong. Please try again or contact us on WhatsApp.');
+      }
     }
   };
 
@@ -136,8 +141,9 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
         <div>
           <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
           <input
-            {...register('full_name', { required: 'Full name is required' })}
+            {...register('full_name', { required: 'Full name is required', validate: validateFullName })}
             placeholder="Your full name"
+            autoComplete="name"
             className={inputClass}
           />
           {errors.full_name && <p className={errorClass}>{errors.full_name.message}</p>}
@@ -148,12 +154,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
           <label className="block text-sm font-medium text-dark mb-1">Age *</label>
           <input
             type="number"
-            {...register('age', {
-              required: 'Age is required',
-              min: { value: 18, message: 'Must be 18 or older' },
-              max: { value: 65, message: 'Age must be under 65' },
-            })}
+            inputMode="numeric"
+            maxLength={3}
+            {...register('age', { required: 'Age is required', validate: validateAge })}
             placeholder="Your age"
+            autoComplete="off"
             className={inputClass}
           />
           {errors.age && <p className={errorClass}>{errors.age.message}</p>}
@@ -164,11 +169,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
           <label className="block text-sm font-medium text-dark mb-1">Phone Number *</label>
           <input
             type="tel"
-            {...register('phone', {
-              required: 'Phone number is required',
-              pattern: { value: /^[+\d\s\-()]{8,15}$/, message: 'Invalid phone number' },
-            })}
+            inputMode="tel"
+            {...register('phone', { required: 'Phone number is required', validate: validatePhone })}
             placeholder="+91 63813 36772"
+            autoComplete="tel"
             className={inputClass}
           />
           {errors.phone && <p className={errorClass}>{errors.phone.message}</p>}
@@ -184,6 +188,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
               pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email address' },
             })}
             placeholder="you@example.com"
+            autoComplete="email"
             className={inputClass}
           />
           {errors.email && <p className={errorClass}>{errors.email.message}</p>}
@@ -193,10 +198,12 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
         <div>
           <label className="block text-sm font-medium text-dark mb-1">City</label>
           <input
-            {...register('city')}
+            {...register('city', { validate: validateCity })}
             placeholder="Your city"
+            autoComplete="address-level2"
             className={inputClass}
           />
+          {errors.city && <p className={errorClass}>{errors.city.message}</p>}
         </div>
 
         {/* Emergency Contact */}
@@ -204,10 +211,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess }: Boo
           <label className="block text-sm font-medium text-dark mb-1">Emergency Contact</label>
           <input
             type="tel"
-            {...register('emergency_contact')}
+            inputMode="tel"
+            {...register('emergency_contact', { validate: validateOptionalPhone })}
             placeholder="Emergency contact number"
+            autoComplete="off"
             className={inputClass}
           />
+          {errors.emergency_contact && <p className={errorClass}>{errors.emergency_contact.message}</p>}
         </div>
       </div>
 

@@ -12,7 +12,7 @@ import { GalleryGrid } from '../components/ui/Lightbox';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import { getUpcomingTripBySlug } from '../services/api';
 import type { UpcomingTrip } from '../types';
-import { formatDateRange, formatDate, seatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
+import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice } from '../utils';
 import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/calendar';
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
@@ -113,7 +113,7 @@ export default function TripDetailPage() {
     );
   }
 
-  const remaining = seatsLeft(trip.total_seats, trip.seats_booked);
+  const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
   const isFull = remaining === 0;
   const isAlmostFull = remaining > 0 && remaining <= 5;
   const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);

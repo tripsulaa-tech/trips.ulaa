@@ -55,6 +55,17 @@ export function seatsLeft(total: number, booked: number): number {
   return Math.max(0, total - booked);
 }
 
+/**
+ * Seats left as shown to the public. If people are actively waiting
+ * (waitlist status 'waiting' or 'notified') for this trip, freed-up seats
+ * go to them first — so the public count is reduced by that many, floored
+ * at 0. If nobody is waiting, this is identical to seatsLeft. Admin views
+ * should keep using seatsLeft directly since admins need the real number.
+ */
+export function publicSeatsLeft(total: number, booked: number, waitlistReserved: number): number {
+  return Math.max(0, seatsLeft(total, booked) - waitlistReserved);
+}
+
 /** Truncate text */
 export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
