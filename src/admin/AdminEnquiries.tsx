@@ -307,9 +307,6 @@ export default function AdminEnquiries() {
   const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | Enquiry['source']>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  // Client-side pagination for the results table below the filter bar.
-  const PAGE_SIZE = 50;
-  const [page, setPage] = useState(1);
   // Which single filter's dropdown is open — only one at a time. 'more'
   // is the overflow menu for less-frequently-used filters (currently just
   // Source), keeping the main bar to five compact boxes.
@@ -560,12 +557,6 @@ export default function AdminEnquiries() {
   useEffect(() => {
     setSelectedIds(new Set());
   }, [selectedTripKey]);
-
-  // Any filter or search change invalidates the current page — always
-  // land back on page 1 so the admin doesn't end up on an empty page.
-  useEffect(() => {
-    setPage(1);
-  }, [filter, payFilter, bookedFilter, groupFilter, foodFilter, sourceFilter, searchQuery, selectedTripKey]);
 
   // Single-record status change from the per-row dropdown. Bulk status
   // changes never go through here — they're applied in handleBulkSave
@@ -1131,26 +1122,6 @@ export default function AdminEnquiries() {
       || e.phone?.toLowerCase().includes(trimmedSearch)
       || e.email?.toLowerCase().includes(trimmedSearch)
       || e.trip_title?.toLowerCase().includes(trimmedSearch));
-
-  // Pagination — clamp in case a filter change shrank the result set out
-  // from under the currently-selected page.
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageStart = (safePage - 1) * PAGE_SIZE;
-  const pageEnd = Math.min(pageStart + PAGE_SIZE, filtered.length);
-  const paged = filtered.slice(pageStart, pageEnd);
-
-  // Arrived via a deep link (e.g. "View booking" from the Waitlist page) —
-  // jump straight to whichever page the highlighted enquiry actually falls
-  // on, since it may not be on page 1.
-  useEffect(() => {
-    if (!highlightId) return;
-    const idx = filtered.findIndex(e => e.id === highlightId);
-    if (idx === -1) return;
-    setPage(Math.floor(idx / PAGE_SIZE) + 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highlightId]);
-
   const counts = {
     all: scopedEnquiries.length,
     new: scopedEnquiries.filter(e => e.status === 'new').length,
@@ -1355,7 +1326,28 @@ export default function AdminEnquiries() {
             <div className="bg-white rounded-2xl shadow-card p-4">
               <div className="flex items-center gap-2 mb-4">
                 <SlidersHorizontal size={16} className="text-dark" />
-                <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap">Filters</span>
+                <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1">Filters</span>
+                {/* Search — lives in the title row, directly above Clear
+                    All, which sits at the end of the filters row below. */}
+                <div className="relative w-full sm:w-56">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={ev => setSearchQuery(ev.target.value)}
+                    placeholder="Search..."
+                    className="w-full pl-9 pr-8 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
+                      aria-label="Clear search"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -1584,43 +1576,9 @@ export default function AdminEnquiries() {
               </div>
             )}
 
-            {/* Results container — header (title + count + search) on top,
-                table/cards below, pagination at the bottom. */}
-            <div className="bg-white rounded-2xl shadow-card p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 sm:pr-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1 h-4 bg-primary rounded-full shrink-0" />
-                    <h2 className="font-button font-bold text-dark text-sm uppercase tracking-wide whitespace-nowrap">Enquiry Details</h2>
-                  </div>
-                  <p className="text-dark-muted text-sm mt-1">
-                    Showing {pageStart + 1}–{pageEnd} of <span className="font-semibold text-dark">{filtered.length}</span> {filtered.length === 1 ? 'Enquiry' : 'Enquiries'}
-                  </p>
-                </div>
-                <div className="relative w-full sm:w-72 sm:shrink-0">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={ev => setSearchQuery(ev.target.value)}
-                    placeholder="Search by name, phone, email or trip..."
-                    className="w-full pl-9 pr-8 py-2.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
-                      aria-label="Clear search"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
             {/* Desktop / tablet table */}
-            <div className="hidden sm:block border-t border-background-warm pt-4 -mx-4 sm:-mx-6">
-              <div className="overflow-x-auto scrollbar-hide px-4 sm:px-6">
+            <div className="hidden sm:block bg-white rounded-2xl shadow-card overflow-hidden">
+              <div className="overflow-x-auto scrollbar-hide">
                 <table className="w-full text-sm">
                   <thead className="bg-background-warm text-dark font-medium">
                     <tr>
@@ -1646,7 +1604,7 @@ export default function AdminEnquiries() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-background-warm">
-                    {paged.map((e, idx) => {
+                    {filtered.map((e, idx) => {
                       const cfg = STATUS_CONFIG[e.status];
                       const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                       const isHighlighted = highlightId === e.id;
