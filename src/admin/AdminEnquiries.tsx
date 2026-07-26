@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Search } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Search, Hourglass, CalendarCheck } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -310,7 +310,7 @@ export default function AdminEnquiries() {
   // Which single filter's dropdown is open — only one at a time. 'more'
   // is the overflow menu for less-frequently-used filters (currently just
   // Source), keeping the main bar to five compact boxes.
-  const [openFilterPanel, setOpenFilterPanel] = useState<'query' | 'pay' | 'booked' | 'group' | 'food' | 'more' | null>(null);
+  const [openFilterPanel, setOpenFilterPanel] = useState<'trip' | 'query' | 'pay' | 'booked' | 'group' | 'food' | 'more' | null>(null);
   const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1156,10 +1156,11 @@ export default function AdminEnquiries() {
     acc[key] = scopedEnquiries.filter(e => e.source === key).length;
     return acc;
   }, { all: scopedEnquiries.length } as Record<string, number>);
-  const activeFilterCount = (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (trimmedSearch ? 1 : 0);
+  const activeFilterCount = (selectedTripKey !== null ? 1 : 0) + (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (trimmedSearch ? 1 : 0);
 
   // Drives the "Clear all" action in the filter bar below.
   const clearAllFilters = () => {
+    setSelectedTripKey(null);
     setFilter('all');
     setPayFilter('all');
     setBookedFilter('all');
@@ -1189,11 +1190,51 @@ export default function AdminEnquiries() {
     notSet: list.filter(e => foodPreferenceKey(e) === 'not_set').length,
   });
 
-  const totalCollected = enquiries.reduce((sum, e) => sum + (e.amount_paid || 0), 0);
-  const totalPending = enquiries.reduce((sum, e) => {
-    if (!e.total_amount) return sum;
-    return sum + Math.max(0, e.total_amount - (e.amount_paid || 0));
-  }, 0);
+  // KPI snapshot builder for the summary cards up top — called with
+  // scopedEnquiries so the numbers reflect whichever trip is currently
+  // selected in the Trip filter (or business-wide when "All trips").
+  const buildKpiCards = (list: Enquiry[]) => {
+    const total = list.length;
+    const openPending = list.filter(e => e.status === 'new').length;
+    const contacted = list.filter(e => e.status === 'contacted').length;
+    const booked = list.filter(isBooked).length;
+    const cancelled = list.filter(isCancelled).length;
+    const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+    return [
+      { label: 'Total Enquiries', value: total, sub: 'All time', icon: MessageCircle, iconBg: 'bg-rose-100', iconColor: 'text-rose-600' },
+      { label: 'Open / Pending', value: openPending, sub: `${pct(openPending)}% of total`, icon: Hourglass, iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
+      { label: 'Contacted', value: contacted, sub: `${pct(contacted)}% of total`, icon: Phone, iconBg: 'bg-green-100', iconColor: 'text-green-600' },
+      { label: 'Booked', value: booked, sub: `${pct(booked)}% of total`, icon: CalendarCheck, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+      { label: 'Cancelled', value: cancelled, sub: `${pct(cancelled)}% of total`, icon: XCircle, iconBg: 'bg-red-100', iconColor: 'text-red-600' },
+    ] as const;
+  };
+
+  // Small presentational helper so the exact same card markup renders both
+  // the business-wide row up top and the per-trip row inside a drilled-into
+  // trip view below. Plain function returning JSX (not a component defined
+  // during render) to avoid remounting/resetting state on every render.
+  const renderKpiCards = (cards: ReturnType<typeof buildKpiCards>) => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      {cards.map(card => {
+        const Icon = card.icon;
+        return (
+          <div
+            key={card.label}
+            className="bg-white rounded-2xl p-4 shadow-card flex items-center gap-3 min-w-0"
+          >
+            <div className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center ${card.iconBg} ${card.iconColor}`}>
+              <Icon size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-dark-muted text-xs font-medium truncate">{card.label}</p>
+              <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
+              <p className="text-dark-muted text-[11px] truncate">{card.sub}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
@@ -1207,384 +1248,314 @@ export default function AdminEnquiries() {
           </Button>
         </div>
 
-        {/* Payment summary (business-wide — hidden once drilled into a single trip, which shows its own) */}
-        {!activeGroup && (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl p-4 shadow-card">
-              <p className="text-dark-muted text-sm">Total Collected</p>
-              <p className="font-display text-2xl font-bold text-green-700">{formatPrice(totalCollected)}</p>
-            </div>
-            <div className="bg-white rounded-2xl p-4 shadow-card">
-              <p className="text-dark-muted text-sm">Pending Balance</p>
-              <p className="font-display text-2xl font-bold text-amber-600">{formatPrice(totalPending)}</p>
-            </div>
+        {/* KPI summary cards — always visible, scoped to whichever trip is
+            selected in the Trip filter below (or business-wide when "All
+            trips" is selected). */}
+        {renderKpiCards(buildKpiCards(scopedEnquiries))}
+
+        {/* Trip summary card — shows "All Trips" totals when no Trip filter
+            is selected below, or that trip's own name/seats/food/money
+            once one is picked from the Trip filter. */}
+        <div className="bg-white rounded-2xl p-4 shadow-card flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="font-display font-bold text-dark">{activeGroup ? activeGroup.title : 'All Trips'}</p>
+            {activeGroup?.trip && (
+              <p className="text-dark-muted text-xs">
+                {activeGroup.trip.seats_booked}/{activeGroup.trip.total_seats} seats booked
+                {activeGroup.trip.start_date && activeGroup.trip.end_date && (
+                  <> · {formatDateRange(activeGroup.trip.start_date, activeGroup.trip.end_date)}</>
+                )}
+              </p>
+            )}
+            {(() => {
+              const food = foodTotals(scopedEnquiries);
+              return (food.veg > 0 || food.nonVeg > 0 || food.notSet > 0) ? (
+                <p className="text-dark-muted text-xs mt-1 inline-flex items-center gap-1">
+                  <Utensils size={11} className="shrink-0" />
+                  {food.veg} veg · {food.nonVeg} non-veg{food.notSet > 0 ? ` · ${food.notSet} not set` : ''}
+                </p>
+              ) : null;
+            })()}
+          </div>
+          <div className="text-right">
+            <p className="text-dark-muted text-xs">Collected · Pending</p>
+            <p className="text-sm font-semibold whitespace-nowrap">
+              <span className="text-green-700">{formatPrice(paymentTotals(scopedEnquiries).collected)}</span>
+              {' · '}
+              <span className="text-amber-600">{formatPrice(paymentTotals(scopedEnquiries).pending)}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Someone's waiting for a seat on this trip and one's actually
+            open right now — surface it here too, not just on the
+            Waitlist page, since this is where an admin notices a seat
+            freed up (e.g. right after cancelling someone) and might
+            otherwise let it get booked by a new website visitor instead
+            of the person who's been waiting longer. Only relevant once a
+            specific trip is picked from the Trip filter. */}
+        {activeGroup?.trip && waitlistWaitingCounts[activeGroup.key]?.entries > 0 && seatsLeft(activeGroup.trip.total_seats, activeGroup.trip.seats_booked) > 0 && (
+          <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3">
+            <Users size={18} className="text-orange-600 shrink-0" />
+            <p className="text-sm text-orange-800 flex-1">
+              <span className="font-semibold">
+                {describeWaiting(waitlistWaitingCounts[activeGroup.key])} {waitlistWaitingCounts[activeGroup.key].entries === 1 ? 'is' : 'are'} waiting
+              </span>{' '}
+              for a seat on this trip, and one's open right now.
+            </p>
+            <Link
+              to={`/admin/waitlist?trip=${activeGroup.key}`}
+              className="shrink-0 text-xs font-button font-semibold px-3 py-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors whitespace-nowrap"
+            >
+              Go to Waitlist
+            </Link>
           </div>
         )}
 
-        {/* Trip overview: pick a trip to see its enquiries, or "All Trips" to see everything */}
-        {!activeGroup ? (
-          <div>
-            <p className="text-dark-muted text-sm mb-3">Tap a trip to see who's coming, who's paid, and who's still owed.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {tripGroups.map(g => {
-                const c = {
-                  new: g.enquiries.filter(e => e.status === 'new').length,
-                  contacted: g.enquiries.filter(e => e.status === 'contacted').length,
-                  closed: g.enquiries.filter(e => e.status === 'closed').length,
-                };
-                const pay = paymentTotals(g.enquiries);
-                const food = foodTotals(g.enquiries);
-                return (
-                  <button
-                    key={g.key}
-                    onClick={() => { setSelectedTripKey(g.key); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setGroupFilter('all'); setFoodFilter('all'); setSourceFilter('all'); }}
-                    className="bg-white rounded-2xl p-5 text-left shadow-card hover:shadow-card-hover transition-all"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-display font-bold text-dark leading-tight">{g.title}</p>
-                      {g.trip && (
-                        <span className="shrink-0 text-xs font-button font-semibold text-dark-muted whitespace-nowrap">
-                          {g.trip.seats_booked}/{g.trip.total_seats} seats
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-dark-muted text-xs mt-0.5">
-                      {g.enquiries.length} {g.enquiries.length === 1 ? 'enquiry' : 'enquiries'}
-                      {g.trip?.start_date && g.trip?.end_date && (
-                        <> · {formatDateRange(g.trip.start_date, g.trip.end_date)}</>
-                      )}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-1.5 mt-3">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700"><Clock size={10} /> {c.new} new</span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700"><RefreshCw size={10} /> {c.contacted} contacted</span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700"><CheckCircle size={10} /> {c.closed} closed</span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      {pay.paidFull > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">{pay.paidFull} paid in full</span>}
-                      {pay.partial > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{pay.partial} partial</span>}
-                      {pay.unpaid > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">{pay.unpaid} unpaid</span>}
-                      {pay.notSet > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted">{pay.notSet} amount not set</span>}
-                      {g.trip && waitlistWaitingCounts[g.key]?.entries > 0 && seatsLeft(g.trip.total_seats, g.trip.seats_booked) > 0 && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">
-                          <Users size={10} /> {describeWaiting(waitlistWaitingCounts[g.key])} waiting for a seat
-                        </span>
-                      )}
-                    </div>
-
-                    {(food.veg > 0 || food.nonVeg > 0 || food.notSet > 0) && (
-                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                        {food.veg > 0 && <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700"><Utensils size={9} /> {food.veg} veg</span>}
-                        {food.nonVeg > 0 && <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700"><Utensils size={9} /> {food.nonVeg} non-veg</span>}
-                        {food.notSet > 0 && <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted">{food.notSet} food pref not set</span>}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-background-warm">
-                      <div>
-                        <p className="text-[10px] text-dark-muted">Collected</p>
-                        <p className="font-semibold text-green-700 text-sm">{formatPrice(pay.collected)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] text-dark-muted">Pending</p>
-                        <p className="font-semibold text-amber-600 text-sm">{formatPrice(pay.pending)}</p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <>
-            <button
-              onClick={() => { setSelectedTripKey(null); setFilter('all'); setPayFilter('all'); setBookedFilter('all'); setGroupFilter('all'); setFoodFilter('all'); setSourceFilter('all'); }}
-              className="inline-flex items-center gap-1 text-sm font-button font-semibold text-primary hover:underline"
-            >
-              ← All Trips
-            </button>
-
-            {/* Trip header: name, seats, and money — all in one compact card */}
-            <div className="bg-white rounded-2xl p-4 shadow-card flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <p className="font-display font-bold text-dark">{activeGroup.title}</p>
-                {activeGroup.trip && (
-                  <p className="text-dark-muted text-xs">
-                    {activeGroup.trip.seats_booked}/{activeGroup.trip.total_seats} seats booked
-                    {activeGroup.trip.start_date && activeGroup.trip.end_date && (
-                      <> · {formatDateRange(activeGroup.trip.start_date, activeGroup.trip.end_date)}</>
-                    )}
-                  </p>
-                )}
-                {(() => {
-                  const food = foodTotals(activeGroup.enquiries);
-                  return (food.veg > 0 || food.nonVeg > 0 || food.notSet > 0) ? (
-                    <p className="text-dark-muted text-xs mt-1 inline-flex items-center gap-1">
-                      <Utensils size={11} className="shrink-0" />
-                      {food.veg} veg · {food.nonVeg} non-veg{food.notSet > 0 ? ` · ${food.notSet} not set` : ''}
-                    </p>
-                  ) : null;
-                })()}
-              </div>
-              <div className="text-right">
-                <p className="text-dark-muted text-xs">Collected · Pending</p>
-                <p className="text-sm font-semibold whitespace-nowrap">
-                  <span className="text-green-700">{formatPrice(paymentTotals(activeGroup.enquiries).collected)}</span>
-                  {' · '}
-                  <span className="text-amber-600">{formatPrice(paymentTotals(activeGroup.enquiries).pending)}</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Someone's waiting for a seat on this trip and one's actually
-                open right now — surface it here too, not just on the
-                Waitlist page, since this is where an admin notices a seat
-                freed up (e.g. right after cancelling someone) and might
-                otherwise let it get booked by a new website visitor instead
-                of the person who's been waiting longer. */}
-            {activeGroup.trip && waitlistWaitingCounts[activeGroup.key]?.entries > 0 && seatsLeft(activeGroup.trip.total_seats, activeGroup.trip.seats_booked) > 0 && (
-              <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3">
-                <Users size={18} className="text-orange-600 shrink-0" />
-                <p className="text-sm text-orange-800 flex-1">
-                  <span className="font-semibold">
-                    {describeWaiting(waitlistWaitingCounts[activeGroup.key])} {waitlistWaitingCounts[activeGroup.key].entries === 1 ? 'is' : 'are'} waiting
-                  </span>{' '}
-                  for a seat on this trip, and one's open right now.
-                </p>
-                <Link
-                  to={`/admin/waitlist?trip=${activeGroup.key}`}
-                  className="shrink-0 text-xs font-button font-semibold px-3 py-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors whitespace-nowrap"
-                >
-                  Go to Waitlist
-                </Link>
-              </div>
-            )}
-
-            {/* Filters — a left-hand column (Filters label + Active badge,
-                with Clear all beneath it) is visually split off from
-                everything else with a divider, while the search box and
-                filter boxes live in their own column to the right. Each
-                filter box pops open a dropdown of options below it, plus a
-                "More Filters" overflow box for anything used less often
-                (currently Source). Only one dropdown is open at a time; a
-                transparent full-screen layer closes whichever is open when
-                you click elsewhere. */}
+            {/* Filters — one single row: Search | Filters | Clear All.
+                Each filter box pops open a dropdown of options below it,
+                plus a "More Filters" overflow box for anything used less
+                often (currently Source). Only one dropdown is open at a
+                time; a transparent full-screen layer closes whichever is
+                open when you click elsewhere. */}
             {openFilterPanel && (
               <div className="fixed inset-0 z-20" onClick={() => setOpenFilterPanel(null)} />
             )}
             <div className="bg-white rounded-2xl shadow-card p-4">
-              <div className="flex flex-col sm:flex-row items-stretch gap-4">
-                <div className="flex flex-row sm:flex-col items-center sm:items-stretch justify-between gap-3 pb-3 sm:pb-0 sm:pr-4 border-b sm:border-b-0 sm:border-r border-background-warm shrink-0">
-                  <div className="flex items-center gap-2">
-                    <SlidersHorizontal size={16} className="text-dark" />
-                    <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap">Filters</span>
-                    {activeFilterCount > 0 && (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-button font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full whitespace-nowrap">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                        Active
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={clearAllFilters}
-                    disabled={activeFilterCount === 0}
-                    className={`self-start inline-flex items-center gap-1.5 text-xs font-button font-semibold transition-colors whitespace-nowrap ${
-                      activeFilterCount === 0 ? 'text-dark-muted/40 cursor-default' : 'text-dark-muted hover:text-dark'
-                    }`}
-                  >
-                    <RefreshCw size={13} /> Clear all
-                  </button>
+              <div className="flex items-center gap-2 mb-4">
+                <SlidersHorizontal size={16} className="text-dark" />
+                <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap">Filters</span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                {/* Search */}
+                <div className="relative sm:w-64 sm:shrink-0">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={ev => setSearchQuery(ev.target.value)}
+                    placeholder="Search by name, phone, email or trip..."
+                    className="w-full pl-9 pr-8 py-2.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
+                      aria-label="Clear search"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
 
-                <div className="flex-1 min-w-0 w-full space-y-3">
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                  {/* Trip — lets an admin scope everything below (KPIs,
+                      summary card, table) to one trip, or back to "All
+                      Trips", without leaving this page. Same pattern as the
+                      Trip filter on the Waitlist page. */}
                   <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={ev => setSearchQuery(ev.target.value)}
-                      placeholder="Search by name, phone, email, or trip..."
-                      className="w-full pl-9 pr-8 py-2.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
-                        aria-label="Clear search"
-                      >
-                        <X size={14} />
-                      </button>
+                    <button
+                      onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
+                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[140px] transition-colors ${
+                        openFilterPanel === 'trip' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      }`}
+                    >
+                      <div className="text-left leading-tight flex-1 min-w-0">
+                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Trip</p>
+                        <p className="text-xs font-button font-semibold text-dark truncate">{activeGroup ? activeGroup.title : 'All trips'}</p>
+                      </div>
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openFilterPanel === 'trip' && (
+                      <FilterDropdown
+                        value={selectedTripKey ?? 'all'}
+                        onSelect={key => { setSelectedTripKey(key === 'all' ? null : key); setOpenFilterPanel(null); }}
+                        options={[
+                          { key: 'all', label: 'All trips', count: enquiries.length },
+                          ...tripGroups.map(g => ({ key: g.key, label: g.title, count: g.enquiries.length })),
+                        ]}
+                      />
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:flex-wrap">
-                    {/* Query Status */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setOpenFilterPanel(p => (p === 'query' ? null : 'query'))}
-                        className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                          openFilterPanel === 'query' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
-                        }`}
-                      >
-                    <div className="text-left leading-tight flex-1 min-w-0">
-                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Query Status</p>
-                      <p className="text-xs font-button font-semibold text-dark truncate">{filter === 'all' ? 'All' : STATUS_CONFIG[filter].label}</p>
-                    </div>
-                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'query' ? 'rotate-180' : ''}`} />
-                  </button>
-                  {openFilterPanel === 'query' && (
-                    <FilterDropdown
-                      value={filter}
-                      onSelect={key => { setFilter(key); setOpenFilterPanel(null); }}
-                      options={(['all', 'new', 'contacted', 'closed'] as const).map(key => ({
-                        key, label: key === 'all' ? 'All' : STATUS_CONFIG[key].label, count: counts[key],
-                      }))}
-                    />
-                  )}
+                  {/* Query Status */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenFilterPanel(p => (p === 'query' ? null : 'query'))}
+                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                        openFilterPanel === 'query' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      }`}
+                    >
+                      <div className="text-left leading-tight flex-1 min-w-0">
+                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Query Status</p>
+                        <p className="text-xs font-button font-semibold text-dark truncate">{filter === 'all' ? 'All' : STATUS_CONFIG[filter].label}</p>
+                      </div>
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'query' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openFilterPanel === 'query' && (
+                      <FilterDropdown
+                        value={filter}
+                        onSelect={key => { setFilter(key); setOpenFilterPanel(null); }}
+                        options={(['all', 'new', 'contacted', 'closed'] as const).map(key => ({
+                          key, label: key === 'all' ? 'All' : STATUS_CONFIG[key].label, count: counts[key],
+                        }))}
+                      />
+                    )}
+                  </div>
+
+                  {/* Payment */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenFilterPanel(p => (p === 'pay' ? null : 'pay'))}
+                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                        openFilterPanel === 'pay' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      }`}
+                    >
+                      <div className="text-left leading-tight flex-1 min-w-0">
+                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Payment</p>
+                        <p className="text-xs font-button font-semibold text-dark truncate">{PAY_FILTER_LABELS[payFilter]}</p>
+                      </div>
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'pay' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openFilterPanel === 'pay' && (
+                      <FilterDropdown
+                        value={payFilter}
+                        onSelect={key => { setPayFilter(key); setOpenFilterPanel(null); }}
+                        options={(['all', 'paid', 'partial', 'unpaid', 'not_set'] as const).map(key => ({
+                          key, label: PAY_FILTER_LABELS[key], count: payCounts[key],
+                        }))}
+                      />
+                    )}
+                  </div>
+
+                  {/* Booking */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenFilterPanel(p => (p === 'booked' ? null : 'booked'))}
+                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                        openFilterPanel === 'booked' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      }`}
+                    >
+                      <div className="text-left leading-tight flex-1 min-w-0">
+                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Booking</p>
+                        <p className="text-xs font-button font-semibold text-dark truncate">{BOOKING_FILTER_LABELS[bookedFilter]}</p>
+                      </div>
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'booked' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openFilterPanel === 'booked' && (
+                      <FilterDropdown
+                        value={bookedFilter}
+                        onSelect={key => { setBookedFilter(key); setOpenFilterPanel(null); }}
+                        options={(['all', 'booked', 'not_booked', 'cancelled'] as const).map(key => ({
+                          key, label: BOOKING_FILTER_LABELS[key], count: bookedCounts[key],
+                        }))}
+                      />
+                    )}
+                  </div>
+
+                  {/* Group / Solo */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenFilterPanel(p => (p === 'group' ? null : 'group'))}
+                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                        openFilterPanel === 'group' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      }`}
+                    >
+                      <div className="text-left leading-tight flex-1 min-w-0">
+                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Group / Solo</p>
+                        <p className="text-xs font-button font-semibold text-dark truncate">{GROUP_FILTER_LABELS[groupFilter]}</p>
+                      </div>
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'group' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openFilterPanel === 'group' && (
+                      <FilterDropdown
+                        value={groupFilter}
+                        onSelect={key => { setGroupFilter(key); setOpenFilterPanel(null); }}
+                        options={(['all', 'group', 'solo'] as const).map(key => ({
+                          key, label: GROUP_FILTER_LABELS[key], count: groupCounts[key],
+                        }))}
+                      />
+                    )}
+                  </div>
+
+                  {/* Food */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenFilterPanel(p => (p === 'food' ? null : 'food'))}
+                      className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                        openFilterPanel === 'food' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                      }`}
+                    >
+                      <div className="text-left leading-tight flex-1 min-w-0">
+                        <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Food</p>
+                        <p className="text-xs font-button font-semibold text-dark truncate">{FOOD_FILTER_LABELS[foodFilter]}</p>
+                      </div>
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'food' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openFilterPanel === 'food' && (
+                      <FilterDropdown
+                        value={foodFilter}
+                        onSelect={key => { setFoodFilter(key); setOpenFilterPanel(null); }}
+                        options={(['all', 'veg', 'non_veg', 'not_set'] as const).map(key => ({
+                          key, label: FOOD_FILTER_LABELS[key], count: foodCounts[key],
+                        }))}
+                      />
+                    )}
+                  </div>
+
+                  {/* More Filters — overflow menu for less-frequently-used
+                      filters (Source today); keeps the main row compact no
+                      matter how many filters the page ends up with. */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenFilterPanel(p => (p === 'more' ? null : 'more'))}
+                      className={`w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 py-2 transition-colors ${
+                        openFilterPanel === 'more' || sourceFilter !== 'all'
+                          ? 'border-primary/50 bg-background-warm text-dark'
+                          : 'border-background-warm bg-background text-dark hover:border-primary/30'
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-1 truncate">
+                        More Filters
+                        {sourceFilter !== 'all' && <span className="text-primary">· {SOURCE_CONFIG[sourceFilter].label}</span>}
+                      </span>
+                      <SlidersHorizontal size={13} className="shrink-0" />
+                    </button>
+                    {openFilterPanel === 'more' && (
+                      <FilterDropdown
+                        align="right"
+                        value={sourceFilter}
+                        onSelect={key => { setSourceFilter(key); setOpenFilterPanel(null); }}
+                        options={[
+                          { key: 'all' as const, label: 'All sources', count: sourceCounts.all },
+                          ...(Object.keys(SOURCE_CONFIG) as (keyof typeof SOURCE_CONFIG)[]).map(key => ({
+                            key, label: SOURCE_CONFIG[key].label, count: sourceCounts[key] || 0,
+                          })),
+                        ]}
+                      />
+                    )}
+                  </div>
                 </div>
 
-                {/* Payment */}
-                <div className="relative">
-                  <button
-                    onClick={() => setOpenFilterPanel(p => (p === 'pay' ? null : 'pay'))}
-                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                      openFilterPanel === 'pay' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
-                    }`}
-                  >
-                    <div className="text-left leading-tight flex-1 min-w-0">
-                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Payment</p>
-                      <p className="text-xs font-button font-semibold text-dark truncate">{PAY_FILTER_LABELS[payFilter]}</p>
-                    </div>
-                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'pay' ? 'rotate-180' : ''}`} />
-                  </button>
-                  {openFilterPanel === 'pay' && (
-                    <FilterDropdown
-                      value={payFilter}
-                      onSelect={key => { setPayFilter(key); setOpenFilterPanel(null); }}
-                      options={(['all', 'paid', 'partial', 'unpaid', 'not_set'] as const).map(key => ({
-                        key, label: PAY_FILTER_LABELS[key], count: payCounts[key],
-                      }))}
-                    />
-                  )}
-                </div>
-
-                {/* Booking */}
-                <div className="relative">
-                  <button
-                    onClick={() => setOpenFilterPanel(p => (p === 'booked' ? null : 'booked'))}
-                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                      openFilterPanel === 'booked' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
-                    }`}
-                  >
-                    <div className="text-left leading-tight flex-1 min-w-0">
-                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Booking</p>
-                      <p className="text-xs font-button font-semibold text-dark truncate">{BOOKING_FILTER_LABELS[bookedFilter]}</p>
-                    </div>
-                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'booked' ? 'rotate-180' : ''}`} />
-                  </button>
-                  {openFilterPanel === 'booked' && (
-                    <FilterDropdown
-                      value={bookedFilter}
-                      onSelect={key => { setBookedFilter(key); setOpenFilterPanel(null); }}
-                      options={(['all', 'booked', 'not_booked', 'cancelled'] as const).map(key => ({
-                        key, label: BOOKING_FILTER_LABELS[key], count: bookedCounts[key],
-                      }))}
-                    />
-                  )}
-                </div>
-
-                {/* Group / Solo */}
-                <div className="relative">
-                  <button
-                    onClick={() => setOpenFilterPanel(p => (p === 'group' ? null : 'group'))}
-                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                      openFilterPanel === 'group' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
-                    }`}
-                  >
-                    <div className="text-left leading-tight flex-1 min-w-0">
-                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Group / Solo</p>
-                      <p className="text-xs font-button font-semibold text-dark truncate">{GROUP_FILTER_LABELS[groupFilter]}</p>
-                    </div>
-                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'group' ? 'rotate-180' : ''}`} />
-                  </button>
-                  {openFilterPanel === 'group' && (
-                    <FilterDropdown
-                      value={groupFilter}
-                      onSelect={key => { setGroupFilter(key); setOpenFilterPanel(null); }}
-                      options={(['all', 'group', 'solo'] as const).map(key => ({
-                        key, label: GROUP_FILTER_LABELS[key], count: groupCounts[key],
-                      }))}
-                    />
-                  )}
-                </div>
-
-                {/* Food */}
-                <div className="relative">
-                  <button
-                    onClick={() => setOpenFilterPanel(p => (p === 'food' ? null : 'food'))}
-                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
-                      openFilterPanel === 'food' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
-                    }`}
-                  >
-                    <div className="text-left leading-tight flex-1 min-w-0">
-                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Food</p>
-                      <p className="text-xs font-button font-semibold text-dark truncate">{FOOD_FILTER_LABELS[foodFilter]}</p>
-                    </div>
-                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'food' ? 'rotate-180' : ''}`} />
-                  </button>
-                  {openFilterPanel === 'food' && (
-                    <FilterDropdown
-                      value={foodFilter}
-                      onSelect={key => { setFoodFilter(key); setOpenFilterPanel(null); }}
-                      options={(['all', 'veg', 'non_veg', 'not_set'] as const).map(key => ({
-                        key, label: FOOD_FILTER_LABELS[key], count: foodCounts[key],
-                      }))}
-                    />
-                  )}
-                </div>
-
-                {/* More Filters — overflow menu for less-frequently-used
-                    filters (Source today); keeps the main row to five
-                    boxes no matter how many filters the page ends up
-                    with. */}
-                <div className="relative sm:ml-auto">
-                  <button
-                    onClick={() => setOpenFilterPanel(p => (p === 'more' ? null : 'more'))}
-                    className={`w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 py-2 transition-colors ${
-                      openFilterPanel === 'more' || sourceFilter !== 'all'
-                        ? 'border-primary/50 bg-background-warm text-dark'
-                        : 'border-background-warm bg-background text-dark hover:border-primary/30'
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-1 truncate">
-                      More Filters
-                      {sourceFilter !== 'all' && <span className="text-primary">· {SOURCE_CONFIG[sourceFilter].label}</span>}
-                    </span>
-                    <SlidersHorizontal size={13} className="shrink-0" />
-                  </button>
-                  {openFilterPanel === 'more' && (
-                    <FilterDropdown
-                      align="right"
-                      value={sourceFilter}
-                      onSelect={key => { setSourceFilter(key); setOpenFilterPanel(null); }}
-                      options={[
-                        { key: 'all' as const, label: 'All sources', count: sourceCounts.all },
-                        ...(Object.keys(SOURCE_CONFIG) as (keyof typeof SOURCE_CONFIG)[]).map(key => ({
-                          key, label: SOURCE_CONFIG[key].label, count: sourceCounts[key] || 0,
-                        })),
-                      ]}
-                    />
-                  )}
-                </div>
-              </div>
-              </div>
+                {/* Clear All — sits at the end of the row; disabled (and
+                    dimmed) whenever no filter or search term is active. */}
+                <button
+                  onClick={clearAllFilters}
+                  disabled={activeFilterCount === 0}
+                  className={`w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 py-2 transition-colors whitespace-nowrap ${
+                    activeFilterCount === 0
+                      ? 'border-background-warm text-dark-muted/40 cursor-default'
+                      : 'border-background-warm text-dark hover:border-primary/30'
+                  }`}
+                >
+                  <RefreshCw size={13} /> Clear All
+                </button>
               </div>
             </div>
-          </>
-        )}
 
-        {activeGroup && (loading ? (
+        {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading enquiries...</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl shadow-card">
@@ -2041,7 +2012,7 @@ export default function AdminEnquiries() {
               })}
             </div>
           </>
-        ))}
+        )}
       </div>
 
       {/* Manual Add Enquiry Modal */}

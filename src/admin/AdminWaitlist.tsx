@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus } from 'lucide-react';
+import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, Search, X, ChevronDown, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import { useConfirm } from '../components/ui/ConfirmDialog';
@@ -26,6 +26,41 @@ const EDITABLE_STATUS_OPTIONS = (['waiting', 'notified', 'declined'] as const).m
   label: STATUS_CONFIG[key].label,
 }));
 
+// Shared dropdown menu used by every filter box in the filter bar — a
+// vertical list of options with counts, the selected one highlighted.
+// Mirrors the one on the Enquiries page so both filter bars look and
+// behave the same way.
+function FilterDropdown<T extends string>({
+  options,
+  value,
+  onSelect,
+  align = 'left',
+}: {
+  options: { key: T; label: string; count: number }[];
+  value: T;
+  onSelect: (key: T) => void;
+  align?: 'left' | 'right';
+}) {
+  return (
+    <div
+      className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-xl shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
+    >
+      {options.map(opt => (
+        <button
+          key={opt.key}
+          onClick={() => onSelect(opt.key)}
+          className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-button text-left transition-colors ${
+            value === opt.key ? 'bg-primary/10 text-primary font-semibold' : 'text-dark-muted hover:bg-background-warm'
+          }`}
+        >
+          <span className="truncate">{opt.label}</span>
+          <span className="opacity-60 shrink-0">{opt.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminWaitlist() {
   const confirm = useConfirm();
   const navigate = useNavigate();
@@ -42,6 +77,10 @@ export default function AdminWaitlist() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | WaitlistEntry['status']>('all');
   const [tripFilter, setTripFilter] = useState<string>(searchParams.get('trip') || 'all');
+  const [searchQuery, setSearchQuery] = useState('');
+  // Which single filter's dropdown is open — only one at a time, same
+  // pattern as the Enquiries page's filter bar.
+  const [openFilterPanel, setOpenFilterPanel] = useState<'status' | 'trip' | null>(null);
 
   const load = () => {
     Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries()])
@@ -89,9 +128,15 @@ export default function AdminWaitlist() {
   const hasSeatOpen = (e: WaitlistEntry) =>
     e.status === 'waiting' && seatsRemaining(e) > 0 && (seatsAvailable[e.trip_id] ?? 0) >= seatsRemaining(e);
 
+  const trimmedSearch = searchQuery.trim().toLowerCase();
   const filtered = entries
     .filter(e => statusFilter === 'all' || e.status === statusFilter)
     .filter(e => tripFilter === 'all' || e.trip_id === tripFilter)
+    .filter(e => !trimmedSearch
+      || e.full_name?.toLowerCase().includes(trimmedSearch)
+      || e.phone?.toLowerCase().includes(trimmedSearch)
+      || e.email?.toLowerCase().includes(trimmedSearch)
+      || e.trip_title?.toLowerCase().includes(trimmedSearch))
     // Waiting entries whose trip now has an open seat bubble to the top —
     // these are the ones that need action right now.
     .sort((a, b) => Number(hasSeatOpen(b)) - Number(hasSeatOpen(a)));
@@ -105,6 +150,52 @@ export default function AdminWaitlist() {
     converted: entries.filter(e => e.status === 'converted').length,
     declined: entries.filter(e => e.status === 'declined').length,
   };
+
+  const tripCounts: Record<string, number> = { all: entries.length };
+  trips.forEach(t => { tripCounts[t.value] = entries.filter(e => e.trip_id === t.value).length; });
+
+  const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (tripFilter !== 'all' ? 1 : 0) + (trimmedSearch ? 1 : 0);
+  const clearAllFilters = () => {
+    setStatusFilter('all');
+    setTripFilter('all');
+    setSearchQuery('');
+    setOpenFilterPanel(null);
+  };
+
+  // KPI summary cards — same visual style as the Enquiries page, adapted
+  // to waitlist statuses: Total signups, Waiting, Notified, Converted,
+  // Declined.
+  const kpiPct = (n: number) => (counts.all ? Math.round((n / counts.all) * 100) : 0);
+  const KPI_CARDS = [
+    { label: 'Total Signups', value: counts.all, sub: 'All time', icon: Users, iconBg: 'bg-rose-100', iconColor: 'text-rose-600' },
+    { label: 'Waiting', value: counts.waiting, sub: `${kpiPct(counts.waiting)}% of total`, icon: Circle, iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
+    { label: 'Notified', value: counts.notified, sub: `${kpiPct(counts.notified)}% of total`, icon: Bell, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+    { label: 'Converted', value: counts.converted, sub: `${kpiPct(counts.converted)}% of total`, icon: CheckCircle2, iconBg: 'bg-green-100', iconColor: 'text-green-600' },
+    { label: 'Declined', value: counts.declined, sub: `${kpiPct(counts.declined)}% of total`, icon: XCircle, iconBg: 'bg-red-100', iconColor: 'text-red-600' },
+  ] as const;
+
+  const renderKpiCards = (cards: typeof KPI_CARDS) => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      {cards.map(card => {
+        const Icon = card.icon;
+        return (
+          <div
+            key={card.label}
+            className="bg-white rounded-2xl p-4 shadow-card flex items-center gap-3 min-w-0"
+          >
+            <div className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center ${card.iconBg} ${card.iconColor}`}>
+              <Icon size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-dark-muted text-xs font-medium truncate">{card.label}</p>
+              <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
+              <p className="text-dark-muted text-[11px] truncate">{card.sub}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   const handleStatusChange = async (id: string, status: WaitlistEntry['status']) => {
     setUpdating(id);
@@ -207,39 +298,114 @@ export default function AdminWaitlist() {
           </motion.div>
         )}
 
-        {/* Status tabs */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {(['all', 'waiting', 'notified', 'converted', 'declined'] as const).map(key => (
+        {/* KPI summary cards — same style as the Enquiries page */}
+        {renderKpiCards(KPI_CARDS)}
+
+        {/* Filters — one single row: Search | Filters | Clear All, same
+            layout as the Enquiries page's filter bar. */}
+        {openFilterPanel && (
+          <div className="fixed inset-0 z-20" onClick={() => setOpenFilterPanel(null)} />
+        )}
+        <div className="bg-white rounded-2xl shadow-card p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <SlidersHorizontal size={16} className="text-dark" />
+            <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap">Filters</span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {/* Search */}
+            <div className="relative sm:w-64 sm:shrink-0">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={ev => setSearchQuery(ev.target.value)}
+                placeholder="Search by name, phone, email or trip..."
+                className="w-full pl-9 pr-8 py-2.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+              {/* Status */}
+              <div className="relative">
+                <button
+                  onClick={() => setOpenFilterPanel(p => (p === 'status' ? null : 'status'))}
+                  className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[128px] transition-colors ${
+                    openFilterPanel === 'status' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                  }`}
+                >
+                  <div className="text-left leading-tight flex-1 min-w-0">
+                    <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Status</p>
+                    <p className="text-xs font-button font-semibold text-dark truncate">{statusFilter === 'all' ? 'All' : STATUS_CONFIG[statusFilter].label}</p>
+                  </div>
+                  <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'status' ? 'rotate-180' : ''}`} />
+                </button>
+                {openFilterPanel === 'status' && (
+                  <FilterDropdown
+                    value={statusFilter}
+                    onSelect={key => { setStatusFilter(key); setOpenFilterPanel(null); }}
+                    options={(['all', 'waiting', 'notified', 'converted', 'declined'] as const).map(key => ({
+                      key, label: key === 'all' ? 'All' : STATUS_CONFIG[key].label, count: counts[key],
+                    }))}
+                  />
+                )}
+              </div>
+
+              {/* Trip */}
+              {trips.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
+                    className={`w-full sm:w-auto flex items-center gap-2 rounded-xl border-2 pl-3 pr-2.5 py-2 sm:min-w-[160px] transition-colors ${
+                      openFilterPanel === 'trip' ? 'border-primary/50 bg-background-warm' : 'border-background-warm bg-background hover:border-primary/30'
+                    }`}
+                  >
+                    <div className="text-left leading-tight flex-1 min-w-0">
+                      <p className="text-[10px] font-button font-medium text-dark-muted whitespace-nowrap">Trip</p>
+                      <p className="text-xs font-button font-semibold text-dark truncate">
+                        {tripFilter === 'all' ? 'All trips' : trips.find(t => t.value === tripFilter)?.label || 'All trips'}
+                      </p>
+                    </div>
+                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openFilterPanel === 'trip' && (
+                    <FilterDropdown
+                      value={tripFilter}
+                      onSelect={key => { setTripFilter(key); setOpenFilterPanel(null); }}
+                      options={[
+                        { key: 'all', label: 'All trips', count: tripCounts.all },
+                        ...trips.map(t => ({ key: t.value, label: t.label, count: tripCounts[t.value] || 0 })),
+                      ]}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Clear All */}
             <button
-              key={key}
-              onClick={() => setStatusFilter(key)}
-              className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-button font-semibold px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-                statusFilter === key
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-background text-dark-muted border-background-warm hover:border-primary/50'
+              onClick={clearAllFilters}
+              disabled={activeFilterCount === 0}
+              className={`w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 py-2 transition-colors whitespace-nowrap ${
+                activeFilterCount === 0
+                  ? 'border-background-warm text-dark-muted/40 cursor-default'
+                  : 'border-background-warm text-dark hover:border-primary/30'
               }`}
             >
-              {key === 'all' ? 'All' : STATUS_CONFIG[key].label}
-              <span className={statusFilter === key ? 'text-white/80' : 'text-dark-muted/70'}>
-                · {counts[key]}
-              </span>
+              <RefreshCw size={13} /> Clear All
             </button>
-          ))}
-        </div>
-
-        {/* Trip filter */}
-        {trips.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Users size={14} className="text-dark-muted shrink-0" />
-            <Select
-              value={tripFilter}
-              onChange={setTripFilter}
-              options={[{ value: 'all', label: 'All trips' }, ...trips]}
-              size="sm"
-              className="max-w-xs"
-            />
           </div>
-        )}
+        </div>
 
         {loading ? (
           <div className="text-center py-16">
