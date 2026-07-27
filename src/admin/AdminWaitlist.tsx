@@ -1,16 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, ChevronDown, SlidersHorizontal, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, ChevronDown, SlidersHorizontal, RefreshCw, Search, X, Plus } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
+import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import FoodMark from '../components/ui/FoodMark';
 import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh } from '../components/ui/DataTableChrome';
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries } from '../services/api';
+import { useAlert } from '../components/ui/AlertDialog';
+import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries, submitWaitlist } from '../services/api';
 import { formatDate, seatsLeft } from '../utils/utils-index';
-import type { WaitlistEntry } from '../types/types-index';
+import type { WaitlistEntry, UpcomingTrip } from '../types/types-index';
 
 const STATUS_CONFIG = {
   waiting: { label: 'Waiting', color: 'bg-amber-100 text-amber-700', icon: Circle },
@@ -28,6 +31,30 @@ const EDITABLE_STATUS_OPTIONS = (['waiting', 'notified', 'declined'] as const).m
   value: key,
   label: STATUS_CONFIG[key].label,
 }));
+
+const FOOD_PREFERENCE_OPTIONS = [
+  { value: '', label: 'Not asked / unknown' },
+  { value: 'veg', label: 'Veg' },
+  { value: 'non_veg', label: 'Non-veg' },
+];
+
+type WaitlistForm = {
+  full_name: string;
+  phone: string;
+  email: string;
+  age: number | '';
+  city: string;
+  emergency_contact: string;
+  trip_id: string;
+  food_preference: 'veg' | 'non_veg' | '';
+  group_size: number | '';
+  message: string;
+};
+
+const emptyWaitlistForm: WaitlistForm = {
+  full_name: '', phone: '', email: '', age: '', city: '', emergency_contact: '',
+  trip_id: '', food_preference: '', group_size: '', message: '',
+};
 
 // Shared dropdown menu used by every filter box in the filter bar — a
 // vertical list of options with counts, the selected one highlighted.
@@ -66,10 +93,16 @@ function FilterDropdown<T extends string>({
 
 export default function AdminWaitlist() {
   const confirm = useConfirm();
+  const alert = useAlert();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
   const [seatsAvailable, setSeatsAvailable] = useState<Record<string, number>>({});
+  // Full upcoming-trips list (not just trips that already have waitlist
+  // entries, unlike the `trips` filter options below) — needed so the Add
+  // to Waitlist modal can offer every sold-out-or-not trip, including ones
+  // with zero signups so far.
+  const [allTrips, setAllTrips] = useState<UpcomingTrip[]>([]);
   // Maps a converted entry's linked enquiry id -> whether that booking was
   // later cancelled. A waitlist entry is only ever marked 'converted' once
   // and never automatically flipped back, so without this a person whose
@@ -84,6 +117,9 @@ export default function AdminWaitlist() {
   // Which single filter's dropdown is open — only one at a time, same
   // pattern as the Enquiries page's filter bar.
   const [openFilterPanel, setOpenFilterPanel] = useState<'status' | 'trip' | null>(null);
+  // Mobile only: filter panel collapsed by default, opened via the toggle
+  // in the Filters header — same pattern as the Enquiries page.
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   // Table pagination — 50 rows per page, same as the Enquiries page.
   const [currentPage, setCurrentPage] = useState(1);
   const WAITLIST_PAGE_SIZE = 10;
@@ -100,12 +136,76 @@ export default function AdminWaitlist() {
     }
   };
 
+  // Manual "Add to Waitlist" — logs a signup an admin took over the
+  // phone/WhatsApp directly, the same way Enquiries lets an admin log a
+  // manual enquiry.
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState<WaitlistForm>(emptyWaitlistForm);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const showToast = (message: string) => setToast(message);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const openAdd = () => {
+    setForm(emptyWaitlistForm);
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.full_name.trim() || !form.phone.trim()) {
+      alert('Name and phone are required.');
+      return;
+    }
+    if (!form.trip_id) {
+      alert('Pick which trip they\'re waiting for.');
+      return;
+    }
+    const trip = allTrips.find(t => t.id === form.trip_id);
+    try {
+      setSaving(true);
+      await submitWaitlist({
+        full_name: form.full_name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim() || 'not-provided@ulaa.local',
+        age: form.age === '' ? undefined : form.age,
+        city: form.city.trim() || undefined,
+        emergency_contact: form.emergency_contact.trim() || undefined,
+        food_preference: form.food_preference || undefined,
+        message: form.message.trim() || undefined,
+        trip_id: form.trip_id,
+        trip_title: trip?.title,
+        group_size: form.group_size === '' ? undefined : form.group_size,
+      });
+      setModalOpen(false);
+      load();
+      showToast(`Added ${form.full_name.trim()} to the waitlist.`);
+    } catch (err) {
+      console.error(err);
+      const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
+      if (message === 'DUPLICATE_WAITLIST_ENTRY') {
+        alert('This person is already on the waitlist for this trip.');
+      } else if (message === 'AGE_NOT_ELIGIBLE') {
+        alert('The age entered falls outside this trip\'s age range (set in Admin → Trips → Basic Info). Adjust the age or the trip\'s age range and try again.');
+      } else {
+        alert(message || 'Failed to add to the waitlist.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const load = () => {
     Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries()])
-      .then(([waitlistData, trips, enquiries]) => {
+      .then(([waitlistData, tripsData, enquiries]) => {
         setEntries(waitlistData);
+        setAllTrips(tripsData);
         const map: Record<string, number> = {};
-        trips.forEach(t => { map[t.id] = seatsLeft(t.total_seats, t.seats_booked); });
+        tripsData.forEach(t => { map[t.id] = seatsLeft(t.total_seats, t.seats_booked); });
         setSeatsAvailable(map);
         setCancelledEnquiryIds(new Set(enquiries.filter(en => !!en.cancelled_at).map(en => en.id)));
       })
@@ -239,25 +339,47 @@ export default function AdminWaitlist() {
   // Icon style matches the Dashboard's KPI cards: no background circle,
   // every icon in the same brand color.
   const renderKpiCards = (cards: typeof KPI_CARDS) => (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+    <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
       {cards.map(card => {
         const Icon = card.icon;
         return (
           <div
             key={card.label}
-            className="bg-white rounded-2xl p-4 shadow-card flex items-center gap-3 min-w-0"
+            className="bg-white rounded-2xl p-4 shadow-card min-w-0"
           >
-            <div className="shrink-0 w-11 h-11 flex items-center justify-center text-primary">
-              <Icon size={22} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-dark-muted text-xs font-medium truncate">{card.label}</p>
+            <div className="flex items-center gap-2">
+              <Icon size={20} className="shrink-0 text-primary" />
               <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
-              <p className="text-dark-muted text-[11px] truncate">{card.sub}</p>
             </div>
+            <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
           </div>
         );
       })}
+    </div>
+  );
+
+  // Mobile-only: same KPI data as renderKpiCards, but laid out as a
+  // horizontally-scrolling carousel of compact cards, rather than a
+  // cramped 2-col grid.
+  const renderKpiCarousel = (cards: typeof KPI_CARDS) => (
+    <div className="sm:hidden">
+      <div className="flex gap-2.5 overflow-x-auto pb-1 snap-x snap-mandatory scrollbar-hide">
+        {cards.map(card => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.label}
+              className="shrink-0 w-[132px] snap-start bg-white rounded-2xl p-3 shadow-card"
+            >
+              <div className="flex items-center gap-2">
+                <Icon size={18} className="shrink-0 text-primary" />
+                <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
+              </div>
+              <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -342,9 +464,17 @@ export default function AdminWaitlist() {
     });
   };
 
+  const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+
   return (
     <AdminLayout title="Waitlist" subtitle="Everyone who signed up to be notified when a sold-out trip frees a seat.">
       <div className="space-y-6">
+        <div className="flex justify-end">
+          <Button variant="primary" size="sm" onClick={openAdd}>
+            <Plus size={16} /> Add to Waitlist
+          </Button>
+        </div>
+
         {/* Actionable banner — seats open for people still waiting */}
         {seatOpenCount > 0 && (
           <motion.div
@@ -362,8 +492,33 @@ export default function AdminWaitlist() {
           </motion.div>
         )}
 
-        {/* KPI summary cards — same style as the Enquiries page */}
+        {/* KPI summary — desktop grid + mobile carousel, same style as the Enquiries page */}
         {renderKpiCards(KPI_CARDS)}
+        {renderKpiCarousel(KPI_CARDS)}
+
+        {/* Mobile-only search bar — reachable with a thumb without
+            hunting through the (collapsed-by-default) filter panel
+            below. Bound to the same searchQuery state the desktop
+            TableHeaderBar search uses. */}
+        <div className="relative sm:hidden">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={ev => setSearchQuery(ev.target.value)}
+            placeholder="Search name, trip, contact..."
+            className="w-full pl-10 pr-10 py-3 rounded-2xl border-2 border-background-warm bg-white font-body text-dark text-sm focus:border-primary outline-none transition-colors shadow-card"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark p-1"
+              aria-label="Clear search"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
 
         {/* Filters — one single row: Search | Filters | Clear All, same
             layout as the Enquiries page's filter bar. */}
@@ -371,15 +526,25 @@ export default function AdminWaitlist() {
           <div className="fixed inset-0 z-20" onClick={() => setOpenFilterPanel(null)} />
         )}
         <div className="bg-white rounded-2xl shadow-card p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <SlidersHorizontal size={16} className="text-dark" />
-            <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1">Filters</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(o => !o)}
+            className="w-full flex items-center gap-2 sm:pointer-events-none sm:cursor-default"
+          >
+            <SlidersHorizontal size={16} className="text-dark shrink-0" />
+            <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1 text-left">Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-full bg-primary/10 text-primary text-[11px] font-button font-semibold">
+                {activeFilterCount} active
+              </span>
+            )}
+            <ChevronDown size={18} className={`sm:hidden shrink-0 text-dark-muted transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row sm:items-end gap-3 mt-4`}>
             {/* Filters + Clear All — sit together in one row at the bottom
                 of the panel. */}
-            <div className="flex flex-wrap items-end gap-2 flex-1 min-w-0">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2 flex-1 min-w-0">
               {/* Status */}
               <div className="relative w-full sm:w-auto sm:min-w-[140px]">
                 <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Status</label>
@@ -799,9 +964,148 @@ export default function AdminWaitlist() {
                 );
               })}
             </div>
+
+            {/* Mobile: same "Showing X–Y of N" + Prev/Next pagination the
+                desktop table gets. */}
+            <div className="sm:hidden bg-white rounded-2xl shadow-card overflow-hidden">
+              <p className="text-dark-muted text-xs text-center px-4 pt-3">
+                {filtered.length === 0 ? 'No signups found' : `Showing ${waitlistRangeStart}\u2013${waitlistRangeEnd} of ${filtered.length} signups`}
+              </p>
+              <TablePagination
+                currentPage={waitlistSafePage}
+                totalPages={waitlistTotalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
           </>
         )}
       </div>
+
+      {/* Manual Add to Waitlist Modal */}
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add to Waitlist" size="md">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
+            <input
+              type="text"
+              value={form.full_name}
+              onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+              className={inputClass}
+              placeholder="e.g. Priya Sharma"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Phone *</label>
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              className={inputClass}
+              placeholder="e.g. 98765 43210"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Email</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              className={inputClass}
+              placeholder="Leave blank if unknown"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Age</label>
+            <input
+              type="number"
+              min={0}
+              value={form.age}
+              onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))}
+              className={inputClass}
+              placeholder="e.g. 28"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">City</label>
+            <input
+              type="text"
+              value={form.city}
+              onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+              className={inputClass}
+              placeholder="e.g. Mumbai"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Emergency Contact</label>
+            <input
+              type="text"
+              value={form.emergency_contact}
+              onChange={e => setForm(f => ({ ...f, emergency_contact: e.target.value }))}
+              className={inputClass}
+              placeholder="Optional"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Trip *</label>
+            <Select
+              value={form.trip_id}
+              onChange={val => setForm(f => ({ ...f, trip_id: val }))}
+              options={[{ value: '', label: '— Select a trip —' }, ...allTrips.map(t => ({ value: t.id, label: t.title }))]}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <Select
+              value={form.food_preference}
+              onChange={val => setForm(f => ({ ...f, food_preference: val as WaitlistForm['food_preference'] }))}
+              options={FOOD_PREFERENCE_OPTIONS}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Group Size</label>
+            <input
+              type="number"
+              min={1}
+              value={form.group_size}
+              onChange={e => setForm(f => ({ ...f, group_size: e.target.value === '' ? '' : +e.target.value }))}
+              className={inputClass}
+              placeholder="Leave blank for solo"
+            />
+            <p className="text-[11px] text-dark-muted mt-1">
+              Only how many seats they need together — not the number of separate people they're asking on behalf of.
+            </p>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-dark mb-1">Notes</label>
+            <textarea
+              value={form.message}
+              onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+              className={`${inputClass} min-h-[80px] resize-none`}
+              placeholder="Anything else worth noting"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-5">
+          <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>Cancel</Button>
+          <Button variant="primary" size="md" onClick={handleSave} loading={saving}>Save</Button>
+        </div>
+      </Modal>
+
+      {/* Lightweight success toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-dark text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-warm-lg"
+          >
+            <CheckCircle2 size={16} className="text-green-400 shrink-0" />
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AdminLayout>
   );
 }

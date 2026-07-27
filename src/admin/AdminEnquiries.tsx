@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -385,6 +385,11 @@ export default function AdminEnquiries() {
   // whenever the admin drills into a different trip group, since the
   // checkboxes only ever reflect what's currently on screen.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Mobile only: filter panel is collapsed by default (it's 7 stacked
+  // fields — always showing it pushes the actual list off-screen on a
+  // phone) and is opened via the toggle in the Filters header. Desktop
+  // ignores this entirely and always shows the panel expanded.
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState<BulkEditForm>(emptyBulkForm);
   const [bulkSaving, setBulkSaving] = useState(false);
@@ -1277,25 +1282,49 @@ export default function AdminEnquiries() {
   // Icon style matches the Dashboard's KPI cards: no background circle,
   // every icon in the same brand color.
   const renderKpiCards = (cards: ReturnType<typeof buildKpiCards>) => (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+    <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
       {cards.map(card => {
         const Icon = card.icon;
         return (
           <div
             key={card.label}
-            className="bg-white rounded-2xl p-4 shadow-card flex items-center gap-3 min-w-0"
+            className="bg-white rounded-2xl p-4 shadow-card min-w-0"
           >
-            <div className="shrink-0 w-11 h-11 flex items-center justify-center text-primary">
-              <Icon size={22} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-dark-muted text-xs font-medium truncate">{card.label}</p>
+            <div className="flex items-center gap-2">
+              <Icon size={20} className="shrink-0 text-primary" />
               <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
-              <p className="text-dark-muted text-[11px] truncate">{card.sub}</p>
             </div>
+            <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
           </div>
         );
       })}
+    </div>
+  );
+
+  // Mobile-only: same KPI data as renderKpiCards, but laid out as a
+  // horizontally-scrolling carousel of compact cards, rather than a
+  // cramped 2-col grid.
+  const renderKpiCarousel = (cards: ReturnType<typeof buildKpiCards>) => (
+    <div className="sm:hidden">
+      <div
+        className="flex gap-2.5 overflow-x-auto pb-1 snap-x snap-mandatory scrollbar-hide"
+      >
+        {cards.map(card => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.label}
+              className="shrink-0 w-[132px] snap-start bg-white rounded-2xl p-3 shadow-card"
+            >
+              <div className="flex items-center gap-2">
+                <Icon size={18} className="shrink-0 text-primary" />
+                <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
+              </div>
+              <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -1303,7 +1332,7 @@ export default function AdminEnquiries() {
 
   return (
     <AdminLayout title="Enquiries">
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="flex justify-between items-center gap-3">
           <p className="text-dark-muted text-sm hidden sm:block">Log a WhatsApp, phone, or walk-in enquiry that didn't come through the website.</p>
           <Button variant="primary" size="sm" onClick={openAdd} className="ml-auto">
@@ -1311,10 +1340,35 @@ export default function AdminEnquiries() {
           </Button>
         </div>
 
-        {/* KPI summary cards — always visible, scoped to whichever trip is
-            selected in the Trip filter below (or business-wide when "All
-            trips" is selected). */}
+        {/* KPI summary — desktop grid + mobile carousel, both scoped to
+            whichever trip is selected in the Trip filter below (or
+            business-wide when "All trips" is selected). */}
         {renderKpiCards(buildKpiCards(scopedEnquiries))}
+        {renderKpiCarousel(buildKpiCards(scopedEnquiries))}
+
+        {/* Mobile-only search bar — sits right under the KPI carousel so
+            it's reachable with a thumb without hunting through the
+            (collapsed-by-default) filter panel below. Bound to the same
+            searchQuery state the desktop TableHeaderBar search uses. */}
+        <div className="relative sm:hidden">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={ev => setSearchQuery(ev.target.value)}
+            placeholder="Search name, phone, email, trip..."
+            className="w-full pl-10 pr-10 py-3 rounded-2xl border-2 border-background-warm bg-white font-body text-dark text-sm focus:border-primary outline-none transition-colors shadow-card"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark p-1"
+              aria-label="Clear search"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
 
         {/* Trip summary card — shows "All Trips" totals when no Trip filter
             is selected below, or that trip's own name/seats/food/money
@@ -1385,20 +1439,31 @@ export default function AdminEnquiries() {
               <div className="fixed inset-0 z-20" onClick={() => setOpenFilterPanel(null)} />
             )}
             <div className="bg-white rounded-2xl shadow-card p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <SlidersHorizontal size={16} className="text-dark" />
-                <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1">Filters</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(o => !o)}
+                className="w-full flex items-center gap-2 sm:pointer-events-none sm:cursor-default"
+              >
+                <SlidersHorizontal size={16} className="text-dark shrink-0" />
+                <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1 text-left">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-full bg-primary/10 text-primary text-[11px] font-button font-semibold">
+                    {activeFilterCount} active
+                  </span>
+                )}
+                <ChevronDown size={18} className={`sm:hidden shrink-0 text-dark-muted transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} />
+              </button>
 
-              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row sm:items-end gap-3 mt-4`}>
                 {/* Filters + Clear All — sit together in one row at the
                     bottom of the panel. */}
-                <div className="flex flex-wrap items-end gap-2 flex-1 min-w-0">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2 flex-1 min-w-0">
                   {/* Trip — lets an admin scope everything below (KPIs,
                       summary card, table) to one trip, or back to "All
                       Trips", without leaving this page. Same pattern as the
-                      Trip filter on the Waitlist page. */}
-                  <div className="relative w-full sm:w-auto sm:min-w-[150px]">
+                      Trip filter on the Waitlist page. Spans both mobile
+                      grid columns since it's the primary/most-used filter. */}
+                  <div className="relative col-span-2 sm:col-span-1 w-full sm:w-auto sm:min-w-[150px]">
                     <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
@@ -1840,17 +1905,19 @@ export default function AdminEnquiries() {
                       isHighlighted ? 'ring-2 ring-primary/40' : ''
                     }`}
                   >
-                    <div className={`w-full flex items-center gap-2 px-4 py-3 ${clr ? clr.row : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(e.id)}
-                        onChange={() => toggleSelectOne(e.id)}
-                        aria-label={`Select ${e.full_name}`}
-                        className="w-4 h-4 shrink-0 rounded border-background-warm accent-primary cursor-pointer"
-                      />
+                    <div className={`w-full flex items-center gap-1 px-2 py-1.5 ${clr ? clr.row : ''}`}>
+                      <label className="shrink-0 flex items-center justify-center w-11 h-11 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(e.id)}
+                          onChange={() => toggleSelectOne(e.id)}
+                          aria-label={`Select ${e.full_name}`}
+                          className="w-5 h-5 rounded border-background-warm accent-primary cursor-pointer"
+                        />
+                      </label>
                     <button
                       onClick={() => setExpandedId(isOpen ? null : e.id)}
-                      className="flex-1 min-w-0 flex items-center justify-between gap-3 text-left"
+                      className="flex-1 min-w-0 flex items-center justify-between gap-3 text-left py-2 pr-1"
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-dark truncate flex items-center gap-1.5">
@@ -2020,6 +2087,22 @@ export default function AdminEnquiries() {
                   </motion.div>
                 );
               })}
+            </div>
+
+            {/* Mobile: same "Showing X–Y of N" + Prev/Next/page-number
+                pagination the desktop table gets — previously mobile had
+                no way to reach page 2+ at all. Wrapped in its own card so
+                it reads as a distinct, easy-to-find control at the end of
+                the list rather than bare text. */}
+            <div className="sm:hidden bg-white rounded-2xl shadow-card overflow-hidden">
+              <p className="text-dark-muted text-xs text-center px-4 pt-3">
+                {filtered.length === 0 ? 'No enquiries found' : `Showing ${enquiriesRangeStart}\u2013${enquiriesRangeEnd} of ${filtered.length} enquiries`}
+              </p>
+              <TablePagination
+                currentPage={enquiriesSafePage}
+                totalPages={enquiriesTotalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </>
         )}
