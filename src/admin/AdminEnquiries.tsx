@@ -12,8 +12,9 @@ import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
-import type { Enquiry, UpcomingTrip } from '../types/types-index';
-import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft } from '../utils/utils-index';
+import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../types/types-index';
+import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap } from '../utils/utils-index';
+import type { GroupUnit } from '../utils/utils-index';
 
 const PACKAGE_CONFIG = {
   early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
@@ -379,6 +380,10 @@ export default function AdminEnquiries() {
   // they free up a seat that someone's already in line for — see the
   // Cancel modal and the per-trip banner below.
   const [waitlistWaitingCounts, setWaitlistWaitingCounts] = useState<Record<string, { entries: number; people: number }>>({});
+  // Raw waitlist entries — kept only so group waitlist signups (group_size
+  // > 1) can be folded into the same trip-scoped Group A/B/C sequence as
+  // group bookings in the table below (see groupLetterMap).
+  const [waitlistEntriesForGroups, setWaitlistEntriesForGroups] = useState<WaitlistEntry[]>([]);
 
   // Bulk operations: select, edit, save, delete across multiple enquiries
   // at once. Selection is keyed by enquiry id and is intentionally cleared
@@ -414,6 +419,7 @@ export default function AdminEnquiries() {
   const loadWaitlistCounts = () => {
     getWaitlistEntries()
       .then(entries => {
+        setWaitlistEntriesForGroups(entries);
         const counts: Record<string, { entries: number; people: number }> = {};
         entries.forEach(e => {
           if (e.status !== 'waiting') return;
@@ -1101,6 +1107,35 @@ export default function AdminEnquiries() {
   const activeGroup = tripGroups.find(g => g.key === selectedTripKey) || null;
   const scopedEnquiries = activeGroup ? activeGroup.enquiries : enquiries;
 
+  // Names every group booking "Group A", "Group B", "Group C"... scoped to
+  // the trip it belongs to — the first group ever created for a given trip
+  // is always Group A, regardless of which trip is currently being viewed,
+  // what filters/sort/search are active, or how the list is paginated.
+  // Group waitlist signups (someone joining the waitlist because their
+  // group of N didn't fit) are folded into the very same per-trip sequence
+  // — via the buildGroupLetterMap helper shared with the Waitlist page —
+  // so a new group waitlist entry picks up the next letter after whatever
+  // group bookings already exist for that trip, instead of starting over.
+  // Built from the full, unscoped `enquiries`/waitlist lists (not
+  // scopedEnquiries or any filtered/sorted derivative) so a group's letter
+  // is stable and never reshuffles as the admin navigates around.
+  const groupUnits: GroupUnit[] = [];
+  {
+    const seenGroupIds = new Set<string>();
+    enquiries.forEach(e => {
+      if (!e.group_id || seenGroupIds.has(e.group_id)) return;
+      seenGroupIds.add(e.group_id);
+      groupUnits.push({ key: e.group_id, tripId: e.trip_id || 'unlinked', createdAt: e.created_at });
+    });
+    waitlistEntriesForGroups.forEach(w => {
+      if (!w.group_size || w.group_size <= 1) return;
+      groupUnits.push({ key: `wl:${w.id}`, tripId: w.trip_id || 'unlinked', createdAt: w.created_at });
+    });
+  }
+  const groupLetterMap = buildGroupLetterMap(groupUnits);
+  const groupLabel = (e: Enquiry) =>
+    e.group_id && groupLetterMap.has(e.group_id) ? `Group ${groupLetterMap.get(e.group_id)}` : 'Group';
+
   // Group-booking rows are inserted together in one batch, so their
   // created_at timestamps are effectively identical — ordering purely by
   // created_at (as the initial fetch does) then leaves them in whatever
@@ -1767,10 +1802,10 @@ export default function AdminEnquiries() {
                           <td className="px-2 py-3 whitespace-nowrap">
                             {e.group_size && e.group_size > 1 ? (
                               <span
-                                title={`Part of a group booking of ${e.group_size}`}
+                                title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
                                 className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                               >
-                                <Users size={12} className="shrink-0" /> Group {e.group_seq}/{e.group_size}
+                                <Users size={12} className="shrink-0" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
                               </span>
                             ) : (
                               <span
@@ -1925,10 +1960,10 @@ export default function AdminEnquiries() {
                           {e.full_name}
                           {e.group_size && e.group_size > 1 ? (
                             <span
-                              title={`Part of a group booking of ${e.group_size}`}
+                              title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
                               className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                             >
-                              <Users size={9} /> Group {e.group_seq}/{e.group_size}
+                              <Users size={9} /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
                             </span>
                           ) : (
                             <span
@@ -2484,10 +2519,10 @@ export default function AdminEnquiries() {
               <div className="flex items-center flex-wrap gap-1.5">
                 {detailsTarget.group_size && detailsTarget.group_size > 1 ? (
                   <span
-                    title={`Part of a group booking of ${detailsTarget.group_size}`}
+                    title={`${groupLabel(detailsTarget)} — part of a group booking of ${detailsTarget.group_size}`}
                     className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-dark-muted"
                   >
-                    <Users size={10} /> Group {detailsTarget.group_seq}/{detailsTarget.group_size}
+                    <Users size={10} /> {groupLabel(detailsTarget)} · {detailsTarget.group_seq}/{detailsTarget.group_size}
                   </span>
                 ) : (
                   <span

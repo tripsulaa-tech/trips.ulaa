@@ -12,8 +12,9 @@ import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries, submitWaitlist } from '../services/api';
-import { formatDate, seatsLeft } from '../utils/utils-index';
-import type { WaitlistEntry, UpcomingTrip } from '../types/types-index';
+import { formatDate, seatsLeft, buildGroupLetterMap } from '../utils/utils-index';
+import type { GroupUnit } from '../utils/utils-index';
+import type { WaitlistEntry, UpcomingTrip, Enquiry } from '../types/types-index';
 
 const STATUS_CONFIG = {
   waiting: { label: 'Waiting', color: 'bg-amber-100 text-amber-700', icon: Circle },
@@ -109,6 +110,10 @@ export default function AdminWaitlist() {
   // booking got cancelled after converting would still just show
   // "Converted" here with no sign the seat is free again.
   const [cancelledEnquiryIds, setCancelledEnquiryIds] = useState<Set<string>>(new Set());
+  // Raw enquiries — kept only so group bookings (enquiries.group_id) can be
+  // folded into the same trip-scoped Group A/B/C sequence as group waitlist
+  // signups below (see groupLetterMap), matching what the Enquiries page shows.
+  const [enquiriesForGroups, setEnquiriesForGroups] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | WaitlistEntry['status']>('all');
@@ -208,6 +213,7 @@ export default function AdminWaitlist() {
         tripsData.forEach(t => { map[t.id] = seatsLeft(t.total_seats, t.seats_booked); });
         setSeatsAvailable(map);
         setCancelledEnquiryIds(new Set(enquiries.filter(en => !!en.cancelled_at).map(en => en.id)));
+        setEnquiriesForGroups(enquiries);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -262,6 +268,31 @@ export default function AdminWaitlist() {
   const seatsRemaining = (e: WaitlistEntry) => Math.max(seatsNeeded(e) - convertedCount(e), 0);
   const hasSeatOpen = (e: WaitlistEntry) =>
     e.status === 'waiting' && seatsRemaining(e) > 0 && (seatsAvailable[e.trip_id] ?? 0) >= seatsRemaining(e);
+
+  // Names every group on a trip "Group A", "Group B", "Group C"... in the
+  // order it was first created — shared with the Enquiries page (via the
+  // same buildGroupLetterMap helper) so a group booking and a group
+  // waitlist signup for the same trip sit in one continuous sequence. A
+  // brand-new group waitlist entry always picks up the next letter after
+  // whatever groups (bookings or waitlist) already exist for that trip.
+  const groupUnits: GroupUnit[] = [];
+  {
+    const seenGroupIds = new Set<string>();
+    enquiriesForGroups.forEach(en => {
+      if (!en.group_id || seenGroupIds.has(en.group_id)) return;
+      seenGroupIds.add(en.group_id);
+      groupUnits.push({ key: en.group_id, tripId: en.trip_id || 'unlinked', createdAt: en.created_at });
+    });
+    entries.forEach(w => {
+      if (!w.group_size || w.group_size <= 1) return;
+      groupUnits.push({ key: `wl:${w.id}`, tripId: w.trip_id || 'unlinked', createdAt: w.created_at });
+    });
+  }
+  const groupLetterMap = buildGroupLetterMap(groupUnits);
+  const groupLabel = (e: WaitlistEntry) =>
+    e.group_size && e.group_size > 1 && groupLetterMap.has(`wl:${e.id}`)
+      ? `Group ${groupLetterMap.get(`wl:${e.id}`)}`
+      : 'Group';
 
   const trimmedSearch = searchQuery.trim().toLowerCase();
   const filtered = entries
@@ -682,10 +713,10 @@ export default function AdminWaitlist() {
                         <td className="px-2 py-3 whitespace-nowrap">
                           {e.group_size && e.group_size > 1 ? (
                             <span
-                              title={`Waiting for ${e.group_size} seats together`}
+                              title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
                               className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full bg-background-warm text-dark-muted whitespace-nowrap"
                             >
-                              <Users size={12} className="shrink-0" /> Group of {e.group_size}
+                              <Users size={12} className="shrink-0" /> {groupLabel(e)} · {e.group_size}
                             </span>
                           ) : (
                             <span
@@ -834,8 +865,11 @@ export default function AdminWaitlist() {
                         <p className="font-medium text-dark truncate flex items-center gap-1.5">
                           {e.full_name}
                           {e.group_size && e.group_size > 1 && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-background-warm text-dark-muted whitespace-nowrap">
-                              <Users size={9} /> Group of {e.group_size}
+                            <span
+                              title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
+                              className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-background-warm text-dark-muted whitespace-nowrap"
+                            >
+                              <Users size={9} /> {groupLabel(e)} · {e.group_size}
                             </span>
                           )}
                           {e.status !== 'converted' && convertedCount(e) > 0 && (

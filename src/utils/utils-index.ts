@@ -166,3 +166,58 @@ export function getWhatsAppLink(phone: string, message?: string): string {
   const encoded = encodeURIComponent(message || 'Hi! I am interested in ULAA trips.');
   return `https://wa.me/${phone}?text=${encoded}`;
 }
+
+/**
+ * Turns a 0-based index into a spreadsheet-style letter label: 0 -> "A",
+ * 1 -> "B", ... 25 -> "Z", 26 -> "AA", 27 -> "AB", etc.
+ */
+export function letterLabel(index: number): string {
+  let n = index;
+  let label = '';
+  do {
+    label = String.fromCharCode(65 + (n % 26)) + label;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return label;
+}
+
+/** One "group" unit to be named — a group booking (enquiries.group_id) or
+ * a group waitlist signup (one waitlist row with group_size > 1). */
+export interface GroupUnit {
+  /** Stable identity for this group — e.g. an enquiries.group_id, or
+   * `wl:${waitlistRowId}` for a waitlist signup. */
+  key: string;
+  /** Trip this group belongs to — letters are scoped per trip. */
+  tripId: string;
+  /** Earliest timestamp this group appeared — determines its letter. */
+  createdAt: string;
+}
+
+/**
+ * Names every group on a trip "Group A", "Group B", "Group C"... in the
+ * order they were first created — the single source of truth shared by the
+ * Enquiries and Waitlist admin pages, so a group keeps the same letter no
+ * matter which page it's viewed from, and a brand-new group (whether it's a
+ * fresh group booking or someone joining the waitlist as a group) always
+ * picks up the next letter in that trip's sequence, continuing on from
+ * whatever groups already exist for that trip across both places.
+ */
+export function buildGroupLetterMap(units: GroupUnit[]): Map<string, string> {
+  const earliestByKey = new Map<string, GroupUnit>();
+  units.forEach(u => {
+    const existing = earliestByKey.get(u.key);
+    if (!existing || u.createdAt < existing.createdAt) earliestByKey.set(u.key, u);
+  });
+  const byTrip = new Map<string, GroupUnit[]>();
+  earliestByKey.forEach(u => {
+    if (!byTrip.has(u.tripId)) byTrip.set(u.tripId, []);
+    byTrip.get(u.tripId)!.push(u);
+  });
+  const letters = new Map<string, string>();
+  byTrip.forEach(groupUnits => {
+    groupUnits
+      .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0))
+      .forEach((u, idx) => letters.set(u.key, letterLabel(idx)));
+  });
+  return letters;
+}
