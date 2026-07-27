@@ -12,7 +12,7 @@ import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries, submitWaitlist } from '../services/api';
-import { formatDate, seatsLeft, buildGroupLetterMap } from '../utils/utils-index';
+import { formatDate, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
 import type { WaitlistEntry, UpcomingTrip, Enquiry } from '../types/types-index';
 
@@ -355,6 +355,33 @@ export default function AdminWaitlist() {
     setOpenFilterPanel(null);
   };
 
+  // Exports exactly what's currently filtered/sorted — scoping to one trip
+  // via the Trip filter before exporting gives a per-trip waitlist export
+  // for free. All client-side, no backend round-trip.
+  const handleExportCsv = () => {
+    const headers = [
+      'Name', 'Phone', 'Email', 'Age', 'City', 'Trip', 'Group',
+      'Seats Needed', 'Seats Converted', 'Food / Notes', 'Status', 'Joined At',
+    ];
+    const rows = sortedFiltered.map(e => [
+      e.full_name,
+      e.phone,
+      e.email,
+      e.age ?? '',
+      e.city ?? '',
+      e.trip_title ?? '',
+      e.group_size && e.group_size > 1 ? groupLabel(e) : '',
+      seatsNeeded(e),
+      convertedCount(e),
+      foodBadge(e).key === 'not_set' ? (messageWithoutFoodBreakdown(e) || 'Not set') : foodBadge(e).label,
+      e.status,
+      formatDate(e.created_at),
+    ]);
+    const tripName = tripFilter !== 'all' ? trips.find(t => t.value === tripFilter)?.label : undefined;
+    const scopeSuffix = tripName ? `-${tripName.replace(/\s+/g, '_')}` : '';
+    downloadCsv(`waitlist${scopeSuffix}-${new Date().toISOString().slice(0, 10)}`, headers, rows);
+  };
+
   // KPI summary cards — same visual style as the Enquiries page, adapted
   // to waitlist statuses: Total signups, Waiting, Notified, Converted,
   // Declined.
@@ -665,6 +692,8 @@ export default function AdminWaitlist() {
                 searchValue={searchQuery}
                 onSearchChange={setSearchQuery}
                 searchPlaceholder="Search name, trip, contact..."
+                onExport={handleExportCsv}
+                exportLabel="Export CSV"
               />
               <div
                 ref={tableScrollRef}

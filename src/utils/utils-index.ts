@@ -227,3 +227,39 @@ export function buildGroupLetterMap(units: GroupUnit[]): Map<string, string> {
   });
   return letters;
 }
+
+// =============================================
+// CSV export
+// =============================================
+// Client-side only, no backend involved — serializes whatever rows the
+// admin passes in (already filtered/sorted/scoped by the calling page,
+// e.g. to one trip) straight to a downloaded .csv. Covers the common asks
+// this business actually gets: a passenger list for an airline/hotel
+// manifest, or a payments/waitlist export to hand off as a spreadsheet
+// rather than a link to the web app.
+export function downloadCsv(
+  filename: string,
+  headers: string[],
+  rows: (string | number | null | undefined)[][]
+): void {
+  const escapeCell = (cell: string | number | null | undefined): string => {
+    const str = cell == null ? '' : String(cell);
+    // Quote (and double up any embedded quotes) whenever the cell contains
+    // a comma, quote, or newline — anything else round-trips as plain text.
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  };
+  const lines = [headers, ...rows].map(row => row.map(escapeCell).join(','));
+  // Leading UTF-8 BOM so Excel (the realistic destination for a vendor
+  // headcount handoff) renders ₹ and non-ASCII names correctly instead of
+  // mojibake — plain browsers/Sheets ignore the BOM either way.
+  const csvContent = '\ufeff' + lines.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { Search, X, ChevronUp, ChevronDown, Phone, Mail } from 'lucide-react';
+import { Search, X, ChevronUp, ChevronDown, Phone, Mail, Download } from 'lucide-react';
 import { getWhatsAppLink } from '../../utils/utils-index';
 
 // Click-and-drag horizontal panning for the table's scroll container. Lets
@@ -61,6 +61,11 @@ interface TableHeaderBarProps {
   searchValue: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
+  // Optional — pages that support CSV export pass a handler here and get an
+  // "Export CSV" button next to the search box for free. Omitted entirely
+  // (not just disabled) on pages that don't wire it up.
+  onExport?: () => void;
+  exportLabel?: string;
 }
 
 export function TableHeaderBar({
@@ -72,6 +77,8 @@ export function TableHeaderBar({
   searchValue,
   onSearchChange,
   searchPlaceholder = 'Search...',
+  onExport,
+  exportLabel = 'Export CSV',
 }: TableHeaderBarProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-5 pt-4 sm:pt-5 pb-4">
@@ -81,22 +88,35 @@ export function TableHeaderBar({
           {total === 0 ? `No ${itemLabel.toLowerCase()} found` : `Showing ${rangeStart}\u2013${rangeEnd} of ${total} ${itemLabel}`}
         </p>
       </div>
-      <div className="relative w-full sm:w-72 shrink-0">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
-        <input
-          type="text"
-          value={searchValue}
-          onChange={ev => onSearchChange(ev.target.value)}
-          placeholder={searchPlaceholder}
-          className="w-full pl-9 pr-8 py-1.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-        />
-        {searchValue && (
+      <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+        <div className="relative flex-1 sm:w-72">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+          <input
+            type="text"
+            value={searchValue}
+            onChange={ev => onSearchChange(ev.target.value)}
+            placeholder={searchPlaceholder}
+            className="w-full pl-9 pr-8 py-1.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+          />
+          {searchValue && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
+              aria-label="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        {onExport && (
           <button
-            onClick={() => onSearchChange('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
-            aria-label="Clear search"
+            onClick={onExport}
+            disabled={total === 0}
+            title={total === 0 ? 'Nothing to export' : `${exportLabel} — exports exactly what's currently filtered`}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-background-warm text-dark text-sm font-button font-semibold hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:hover:border-background-warm disabled:hover:text-dark transition-colors"
           >
-            <X size={14} />
+            <Download size={14} />
+            <span className="hidden sm:inline">{exportLabel}</span>
           </button>
         )}
       </div>

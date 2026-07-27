@@ -13,8 +13,21 @@ import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
 import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../types/types-index';
-import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap } from '../utils/utils-index';
+import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
+
+// Parses a money-field <input type="number"> value into a non-negative
+// number, or '' if the field is empty. The HTML `min={0}` attribute on
+// these inputs is a visual hint only — some browsers still hand back a
+// negative number from a programmatic read (e.g. typing "-5000" and
+// tabbing away without the browser's spinner/blur clamp kicking in), so
+// every money field routes through this instead of a bare `+e.target.value`.
+function parseNonNegative(raw: string): number | '' {
+  if (raw === '') return '';
+  const n = Number(raw);
+  if (Number.isNaN(n)) return '';
+  return Math.max(0, n);
+}
 
 const PACKAGE_CONFIG = {
   early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
@@ -825,6 +838,27 @@ export default function AdminEnquiries() {
       return;
     }
 
+    // Unlike the single-enquiry payment modal, bulk edit applies one
+    // total_amount/amount_paid pair across a whole selection whose rows can
+    // each already have different total_amounts. Check every affected row
+    // up front instead of letting the DB's per-row CHECK constraint reject
+    // some rows partway through the loop below, which would leave the
+    // batch half-applied with a confusing generic error.
+    if (touchesPaymentFields) {
+      const bulkTotal = bulkForm.total_amount === '' ? null : Number(bulkForm.total_amount);
+      const bulkPaid = bulkForm.amount_paid === '' ? null : Number(bulkForm.amount_paid);
+      if (bulkPaid != null) {
+        const overpaid = targets.find(e => {
+          const effectiveTotal = bulkTotal != null ? bulkTotal : e.total_amount;
+          return effectiveTotal != null && bulkPaid > effectiveTotal;
+        });
+        if (overpaid) {
+          alert(`Amount paid can't exceed the total amount — this would overpay ${overpaid.full_name}. Adjust the amount or set a matching total amount for the selection.`);
+          return;
+        }
+      }
+    }
+
     setBulkSaving(true);
     try {
       // Sequential, not Promise.all — firing these concurrently for
@@ -1270,6 +1304,42 @@ export default function AdminEnquiries() {
     setSourceFilter('all');
     setSearchQuery('');
     setOpenFilterPanel(null);
+  };
+
+  // Exports exactly what's on screen: the current search/filter/sort, and —
+  // since "Trip" is itself one of the filters (selectedTripKey) — scoping to
+  // one trip before exporting gives a per-trip passenger list for free, no
+  // separate "export this trip" button needed. All client-side: serializes
+  // sortedFiltered straight to a download, no backend round-trip.
+  const handleExportCsv = () => {
+    const headers = [
+      'Name', 'Phone', 'Email', 'Age', 'City', 'Trip', 'Group',
+      'Package', 'Food Preference', 'Total Amount', 'Amount Paid',
+      'Payment Status', 'Booking Status', 'Refund Amount', 'Lead Status',
+      'Source', 'Cancelled', 'Created At',
+    ];
+    const rows = sortedFiltered.map(e => [
+      e.full_name,
+      e.phone,
+      e.email,
+      e.age ?? '',
+      e.city ?? '',
+      e.trip_title ?? '',
+      isGroupEntry(e) ? groupLabel(e) : '',
+      PACKAGE_CONFIG[e.package_type]?.label ?? e.package_type,
+      e.food_preference ?? 'Not set',
+      e.total_amount ?? '',
+      e.amount_paid,
+      paymentStatus(e).label,
+      e.booking_status ?? '',
+      e.refund_amount,
+      e.status,
+      e.source,
+      e.cancelled_at ? 'Yes' : 'No',
+      formatDate(e.created_at),
+    ]);
+    const scopeSuffix = activeGroup ? `-${activeGroup.title.replace(/\s+/g, '_')}` : '';
+    downloadCsv(`enquiries${scopeSuffix}-${new Date().toISOString().slice(0, 10)}`, headers, rows);
   };
 
   const paymentTotals = (list: Enquiry[]) => ({
@@ -1727,6 +1797,8 @@ export default function AdminEnquiries() {
                 searchValue={searchQuery}
                 onSearchChange={setSearchQuery}
                 searchPlaceholder="Search case #, title, owner..."
+                onExport={handleExportCsv}
+                exportLabel="Export CSV"
               />
               <div
                 ref={tableScrollRef}
@@ -2205,7 +2277,7 @@ export default function AdminEnquiries() {
                   type="number"
                   min={0}
                   value={form.total_amount}
-                  onChange={e => setForm(f => ({ ...f, total_amount: e.target.value === '' ? '' : +e.target.value }))}
+                  onChange={e => setForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
                   className={inputClass}
                   placeholder="e.g. 15000"
                 />
@@ -2258,7 +2330,7 @@ export default function AdminEnquiries() {
                         type="number"
                         min={0}
                         value={p.amount_paid}
-                        onChange={e => updateWaitlistPerson(i, { amount_paid: e.target.value === '' ? '' : +e.target.value })}
+                        onChange={e => updateWaitlistPerson(i, { amount_paid: parseNonNegative(e.target.value) })}
                         className={inputClass}
                         placeholder="e.g. 5000 (advance)"
                       />
@@ -2340,7 +2412,7 @@ export default function AdminEnquiries() {
                 type="number"
                 min={0}
                 value={form.total_amount}
-                onChange={e => setForm(f => ({ ...f, total_amount: e.target.value === '' ? '' : +e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
                 className={inputClass}
                 placeholder="e.g. 15000"
               />
@@ -2351,7 +2423,7 @@ export default function AdminEnquiries() {
                 type="number"
                 min={0}
                 value={form.amount_paid}
-                onChange={e => setForm(f => ({ ...f, amount_paid: e.target.value === '' ? '' : +e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
                 className={inputClass}
                 placeholder="e.g. 5000 (advance) — leave blank if unpaid"
               />
@@ -2455,7 +2527,7 @@ export default function AdminEnquiries() {
                   type="number"
                   min={0}
                   value={paymentForm.total_amount}
-                  onChange={e => setPaymentForm(f => ({ ...f, total_amount: e.target.value === '' ? '' : +e.target.value }))}
+                  onChange={e => setPaymentForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
                   className={inputClass}
                   placeholder="e.g. 15000"
                 />
@@ -2466,7 +2538,7 @@ export default function AdminEnquiries() {
                   type="number"
                   min={0}
                   value={paymentForm.amount_paid}
-                  onChange={e => setPaymentForm(f => ({ ...f, amount_paid: e.target.value === '' ? '' : +e.target.value }))}
+                  onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
                   className={inputClass}
                   placeholder="e.g. 5000 (advance)"
                 />
@@ -2494,7 +2566,7 @@ export default function AdminEnquiries() {
                     type="number"
                     min={0}
                     value={paymentForm.refund_amount}
-                    onChange={e => setPaymentForm(f => ({ ...f, refund_amount: e.target.value === '' ? '' : +e.target.value }))}
+                    onChange={e => setPaymentForm(f => ({ ...f, refund_amount: parseNonNegative(e.target.value) }))}
                     className={inputClass}
                     placeholder="How much has been refunded so far"
                   />
@@ -2623,7 +2695,7 @@ export default function AdminEnquiries() {
                 type="number"
                 min={0}
                 value={cancelCharges}
-                onChange={ev => setCancelCharges(ev.target.value === '' ? '' : +ev.target.value)}
+                onChange={ev => setCancelCharges(parseNonNegative(ev.target.value))}
                 className={inputClass}
                 placeholder="Airline/hotel penalties, if known — optional"
               />
@@ -2711,7 +2783,7 @@ export default function AdminEnquiries() {
               type="number"
               min={0}
               value={bulkForm.total_amount}
-              onChange={ev => setBulkForm(f => ({ ...f, total_amount: ev.target.value === '' ? '' : +ev.target.value }))}
+              onChange={ev => setBulkForm(f => ({ ...f, total_amount: parseNonNegative(ev.target.value) }))}
               className={inputClass}
               placeholder="Leave blank to leave unchanged"
             />
@@ -2723,7 +2795,7 @@ export default function AdminEnquiries() {
               type="number"
               min={0}
               value={bulkForm.amount_paid}
-              onChange={ev => setBulkForm(f => ({ ...f, amount_paid: ev.target.value === '' ? '' : +ev.target.value }))}
+              onChange={ev => setBulkForm(f => ({ ...f, amount_paid: parseNonNegative(ev.target.value) }))}
               className={inputClass}
               placeholder="Leave blank to leave unchanged"
             />

@@ -527,6 +527,12 @@ export async function updateEnquiryStatus(id: string, status: Enquiry['status'])
 export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<Enquiry> {
   const amountPaid = enquiry.amount_paid || 0;
   const totalAmount = enquiry.total_amount ?? null;
+  if (amountPaid < 0) {
+    throw new Error('Amount paid cannot be negative.');
+  }
+  if (totalAmount != null && totalAmount > 0 && amountPaid > totalAmount) {
+    throw new Error("Amount paid can't exceed the total amount.");
+  }
   const isPaidFull = !!totalAmount && amountPaid >= totalAmount;
   const status = computeAutoStatus(amountPaid, totalAmount, enquiry.status || 'new');
   const bookingStatus = computeBookingStatus(
@@ -747,6 +753,22 @@ export async function recordPayment(
   }
 ): Promise<Enquiry> {
   const newTotal = payment.total_amount !== undefined ? payment.total_amount : current.total_amount;
+
+  // Server-side bound-checking: the UI validates this too, but recordPayment
+  // is the one choke point every payment path (single edit, bulk edit,
+  // manual-enquiry creation) eventually calls, so guard here regardless of
+  // what a caller passes in. Without this, a typo'd amount_paid inserts a
+  // ledger delta straight into `payments` — the DB's amount_paid <=
+  // total_amount CHECK constraint only catches it once the sync trigger
+  // tries to write the recomputed total back to `enquiries`, by which point
+  // the bad ledger row already exists and the update just fails.
+  if (payment.amount_paid < 0) {
+    throw new Error('Amount paid cannot be negative.');
+  }
+  if (newTotal != null && newTotal > 0 && payment.amount_paid > newTotal) {
+    throw new Error("Amount paid can't exceed the total amount.");
+  }
+
   const delta = payment.amount_paid - (current.amount_paid || 0);
 
   if (delta !== 0) {
@@ -883,6 +905,16 @@ export async function recordRefund(
   newRefundAmount: number,
   options?: { payment_method?: string; notes?: string }
 ): Promise<Enquiry> {
+  // Same reasoning as the guard at the top of recordPayment above — this is
+  // the one choke point every refund path calls, so bound-check here even
+  // though the UI already does too.
+  if (newRefundAmount < 0) {
+    throw new Error('Refund amount cannot be negative.');
+  }
+  if (newRefundAmount > (current.amount_paid || 0)) {
+    throw new Error("Refund amount can't exceed what was actually paid.");
+  }
+
   const delta = newRefundAmount - (current.refund_amount || 0);
   if (delta !== 0) {
     const { error: refundError } = await supabase.from('payments').insert({
