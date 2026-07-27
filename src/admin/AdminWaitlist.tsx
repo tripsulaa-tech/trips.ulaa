@@ -7,7 +7,7 @@ import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import FoodMark from '../components/ui/FoodMark';
-import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh } from '../components/ui/DataTableChrome';
+import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
@@ -766,6 +766,9 @@ export default function AdminWaitlist() {
                           <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" /> {e.phone}</p>
                           {e.city && <p className="text-xs mt-0.5">{e.city}</p>}
                           {e.emergency_contact && <p className="text-xs mt-0.5">Emergency: {e.emergency_contact}</p>}
+                          <div className="mt-1.5">
+                            <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">
                           {formatDate(e.created_at, { day: 'numeric', month: 'short' })}
@@ -901,7 +904,10 @@ export default function AdminWaitlist() {
                     </div>
 
                     <div className="text-xs text-dark-muted space-y-1">
-                      <p className="flex items-center gap-1.5"><Mail size={12} className="shrink-0" /> {e.email}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="flex items-center gap-1.5 min-w-0"><Mail size={12} className="shrink-0" /> <span className="truncate">{e.email}</span></p>
+                        <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
+                      </div>
                       <p className="flex items-center gap-1.5"><Phone size={12} className="shrink-0" /> {e.phone}</p>
                       {(e.age || e.food_preference || foodBreakdown(e)) && (
                         <p className="flex items-center flex-wrap gap-x-1.5 gap-y-1">

@@ -7,7 +7,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import FoodMark from '../components/ui/FoodMark';
-import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh } from '../components/ui/DataTableChrome';
+import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
@@ -1824,6 +1824,9 @@ export default function AdminEnquiries() {
                           <td className="px-4 py-3 text-dark-muted hidden sm:table-cell">
                             <p className="flex items-center gap-1 text-xs truncate"><Mail size={11} className="shrink-0" /> <span className="truncate">{e.email}</span></p>
                             <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" /> {e.phone}</p>
+                            <div className="mt-1.5">
+                              <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-dark-muted hidden lg:table-cell truncate">
                             <span className="inline-flex items-center gap-1 text-xs">
@@ -2019,6 +2022,9 @@ export default function AdminEnquiries() {
                           <div>
                             <p className="text-dark-muted text-xs">Email</p>
                             <p className="text-dark truncate">{e.email}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
                           </div>
                           <div>
                             <p className="text-dark-muted text-xs">City</p>
@@ -2544,6 +2550,9 @@ export default function AdminEnquiries() {
                 <div>
                   <p className="text-dark-muted text-xs">Phone</p>
                   <p className="text-dark truncate">{detailsTarget.phone}</p>
+                </div>
+                <div className="col-span-2 sm:col-span-3">
+                  <ContactQuickLinks phone={detailsTarget.phone} email={detailsTarget.email} name={detailsTarget.full_name} tripTitle={detailsTarget.trip_title} size="md" />
                 </div>
                 <div>
                   <p className="text-dark-muted text-xs">City</p>

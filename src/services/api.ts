@@ -409,6 +409,41 @@ export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
   }
 }
 
+// General "Contact Us" message — not tied to a specific trip (trip_id left
+// null), used by ContactPage.tsx. Kept separate from submitEnquiry/
+// BookingFormData because a general enquiry doesn't have age/city/
+// emergency_contact/food_preference/terms_accepted to collect. Still goes
+// through the same enquiries table and the same error-marker conventions as
+// every other insert path here, rather than the page hitting supabase
+// directly — see enquiries_contact_message_active_unique in
+// add_contact_message_dedupe.sql for why this can also throw
+// DUPLICATE_ENQUIRY on an accidental double-submit.
+export async function submitContactEnquiry(contact: {
+  full_name: string;
+  email: string;
+  phone?: string;
+  message: string;
+}): Promise<void> {
+  const { error } = await supabase.from('enquiries').insert({
+    full_name: contact.full_name.trim(),
+    email: contact.email.trim(),
+    // enquiries.phone is NOT NULL in the schema, so '' is the "not
+    // provided" sentinel here (matches the rest of the app, which treats
+    // an empty string the same as absent when building tel:/WhatsApp
+    // links) — trimmed so accidental whitespace-only input doesn't count
+    // as "provided" either.
+    phone: contact.phone?.trim() || '',
+    message: contact.message.trim(),
+    trip_id: null,
+  });
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('DUPLICATE_ENQUIRY');
+    }
+    throw error;
+  }
+}
+
 // Group booking — the public form's "Group" option. Inserts one enquiry row
 // per seat (groupSize of them), all carrying the same submitted
 // name/phone/email/etc, so each seat still counts individually toward trip

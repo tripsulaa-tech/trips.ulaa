@@ -163,8 +163,14 @@ export const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-146985452308
 
 /** WhatsApp link */
 export function getWhatsAppLink(phone: string, message?: string): string {
+  // wa.me only accepts digits. The hardcoded business number this was
+  // originally written for is already digits-only, but phone numbers
+  // pulled from enquiry/waitlist rows can contain '+', spaces, or dashes
+  // (see the phone input patterns in BookingForm/WaitlistForm), which
+  // would otherwise produce a broken link.
+  const digitsOnly = phone.replace(/\D/g, '');
   const encoded = encodeURIComponent(message || 'Hi! I am interested in ULAA trips.');
-  return `https://wa.me/${phone}?text=${encoded}`;
+  return `https://wa.me/${digitsOnly}?text=${encoded}`;
 }
 
 /**

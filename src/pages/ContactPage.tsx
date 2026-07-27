@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Mail, MessageSquare, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
-import { supabase } from '../services/supabase';
+import { submitContactEnquiry } from '../services/api';
 import { getWhatsAppLink } from '../utils/utils-index';
 
 interface ContactForm {
@@ -19,21 +19,27 @@ const HERO_IMAGE = 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1
 
 export default function ContactPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ContactForm>();
 
   const onSubmit = async (data: ContactForm) => {
     try {
       setStatus('loading');
-      await supabase.from('enquiries').insert({
+      await submitContactEnquiry({
         full_name: data.name,
         email: data.email,
-        phone: data.phone || '',
+        phone: data.phone,
         message: data.message,
       });
       setStatus('success');
       reset();
-    } catch {
+    } catch (err) {
       setStatus('error');
+      if (err instanceof Error && err.message === 'DUPLICATE_ENQUIRY') {
+        setErrorMsg("Looks like you've already sent this exact message — we've got it and will get back to you shortly.");
+      } else {
+        setErrorMsg('Something went wrong. Please try again.');
+      }
     }
   };
 
@@ -168,7 +174,7 @@ export default function ContactPage() {
                 {status === 'error' && (
                   <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-xl p-3">
                     <AlertCircle size={16} />
-                    <p className="text-sm">Something went wrong. Please try again.</p>
+                    <p className="text-sm">{errorMsg}</p>
                   </div>
                 )}
 
