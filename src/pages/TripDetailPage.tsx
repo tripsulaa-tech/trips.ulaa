@@ -10,12 +10,12 @@ import BookingForm from '../components/ui/BookingForm';
 import { GalleryGrid } from '../components/ui/Lightbox';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import { getUpcomingTripBySlug } from '../services/api';
-import type { UpcomingTrip } from '../types';
-import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice, getStrikeThroughPrice } from '../utils';
+import type { UpcomingTrip } from '../types/types-index';
+import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice, getStrikeThroughPrice, formatAgeRange } from '../utils/utils-index';
 import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/calendar';
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
-  MapPin, Calendar, Clock, Users, CheckCircle, XCircle,
+  MapPin, Calendar, Clock, Users, UserCheck, CheckCircle, XCircle,
   Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2,
 } from 'lucide-react';
 
@@ -154,6 +154,9 @@ export default function TripDetailPage() {
               <span className="flex items-center gap-2"><Users size={14} />
                 {isFull ? 'Sold out' : isAlmostFull ? 'Almost full — hurry!' : `Group of ${trip.total_seats}`}
               </span>
+              {(trip.min_age !== undefined || trip.max_age !== undefined) && (
+                <span className="flex items-center gap-2"><UserCheck size={14} /> {formatAgeRange(trip.min_age, trip.max_age)}</span>
+              )}
 			  {isEarlyBird && (
 				<span className="flex items-center gap-1.5 bg-secondary text-white text-xs font-button font-semibold px-3 py-1.5 rounded-full">
 				Early Bird
@@ -374,6 +377,19 @@ export default function TripDetailPage() {
               </section>
             )}
 
+            {/* Eligibility — only shown when the admin has set an age
+                restriction on this trip (Admin → Trips → Basic Info). */}
+            {(trip.min_age !== undefined || trip.max_age !== undefined) && (
+              <section className="bg-background-warm rounded-2xl p-6">
+                <h2 className="font-display text-2xl font-bold text-dark mb-2 flex items-center gap-2">
+                  <UserCheck size={22} className="text-primary" /> Eligibility
+                </h2>
+                <p className="text-dark-muted">
+                  This trip is open to travelers aged {formatAgeRange(trip.min_age, trip.max_age)}.
+                </p>
+              </section>
+            )}
+
             {/* FAQs */}
             {trip.faqs.length > 0 && (
               <section id="faqs" className="scroll-mt-44">
@@ -461,6 +477,12 @@ export default function TripDetailPage() {
                     <span className="text-dark-muted">Group Size</span>
                     <span className="text-dark font-medium">Max {trip.total_seats}</span>
                   </div>
+                  {(trip.min_age !== undefined || trip.max_age !== undefined) && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-dark-muted">Age Range</span>
+                      <span className="text-dark font-medium">{formatAgeRange(trip.min_age, trip.max_age)}</span>
+                    </div>
+                  )}
                 </div>
 
                 <Button
@@ -602,6 +624,8 @@ export default function TripDetailPage() {
           tripTitle={trip.title}
           terms={trip.terms_and_conditions}
           remainingSeats={remaining}
+          minAge={trip.min_age}
+          maxAge={trip.max_age}
           onSuccess={() => setTimeout(() => setBookingOpen(false), 3000)}
         />
       </Modal>

@@ -5,7 +5,7 @@ import SectionTitle from '../components/ui/SectionTitle';
 import { Heart } from 'lucide-react';
 import { getSiteContent } from '../services/api';
 import { DEFAULT_ABOUT, ABOUT_VALUE_ICONS } from '../constants/about';
-import type { AboutContent } from '../types';
+import type { AboutContent } from '../types/types-index';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1600&q=80';
 

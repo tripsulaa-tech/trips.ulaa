@@ -35,6 +35,12 @@ export interface UpcomingTrip {
   // early-bird mechanism itself — see getStrikeThroughPrice in utils/index.ts
   // for how it combines with (and falls back around) early-bird pricing.
   strike_through_price?: number;
+  // Optional age eligibility range for this trip. Either side can be left
+  // unset (no restriction on that side); if both are unset, the public
+  // forms fall back to the app's default 18-65 rule — see validateAge in
+  // src/utils/formValidation.ts.
+  min_age?: number;
+  max_age?: number;
   cover_image?: string;
   gallery_images: string[];
   terms_and_conditions?: string;

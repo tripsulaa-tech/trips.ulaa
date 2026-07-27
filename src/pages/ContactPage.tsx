@@ -5,7 +5,7 @@ import { Mail, MessageSquare, MapPin, CheckCircle, AlertCircle } from 'lucide-re
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import { supabase } from '../services/supabase';
-import { getWhatsAppLink } from '../utils';
+import { getWhatsAppLink } from '../utils/utils-index';
 
 interface ContactForm {
   name: string;

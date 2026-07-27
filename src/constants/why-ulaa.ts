@@ -1,4 +1,4 @@
-import type { WhyUlaaContent } from '../types';
+import type { WhyUlaaContent } from '../types/types-index';
 
 // Placeholder images — replace via /admin/why-us once real trip photos are ready.
 export const DEFAULT_WHY_ULAA: WhyUlaaContent = {

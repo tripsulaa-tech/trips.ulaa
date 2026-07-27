@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import SectionTitle from '../../components/ui/SectionTitle';
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_WHY_ULAA } from '../../constants/why-ulaa';
-import type { WhyUlaaContent } from '../../types';
+import type { WhyUlaaContent } from '../../types/types-index';
 
 export default function WhyULAA() {
   const [content, setContent] = useState<WhyUlaaContent>(DEFAULT_WHY_ULAA);

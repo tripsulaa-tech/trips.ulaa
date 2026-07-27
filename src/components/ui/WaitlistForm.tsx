@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { CheckCircle, AlertCircle, Clock3, User, Users } from 'lucide-react';
-import type { WaitlistFormData } from '../../types';
+import type { WaitlistFormData } from '../../types/types-index';
 import { submitWaitlist } from '../../services/api';
 import Button from './Button';
 

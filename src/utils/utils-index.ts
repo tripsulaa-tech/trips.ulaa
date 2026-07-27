@@ -90,6 +90,19 @@ export function formatDateRange(start: string, end: string): string {
   return `${startStr} – ${endStr}`;
 }
 
+/**
+ * Renders a trip's optional age eligibility for display. Either side may
+ * be unset (no restriction on that side) — only called once at least one
+ * side is set, so this never needs to represent "no restriction at all"
+ * itself. See UpcomingTrip.min_age/max_age and validateAge in
+ * src/utils/formValidation.ts for the matching form-validation logic.
+ */
+export function formatAgeRange(minAge?: number, maxAge?: number): string {
+  if (minAge !== undefined && maxAge !== undefined) return `${minAge}–${maxAge} yrs`;
+  if (minAge !== undefined) return `${minAge}+ yrs`;
+  return `Up to ${maxAge} yrs`;
+}
+
 /** Get seats remaining count */
 export function seatsLeft(total: number, booked: number): number {
   return Math.max(0, total - booked);

@@ -10,8 +10,8 @@ import DatePicker from '../components/ui/DatePicker';
 import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTrip } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import type { CompletedTrip } from '../types';
-import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils';
+import type { CompletedTrip } from '../types/types-index';
+import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils/utils-index';
 
 interface AlbumForm {
   title: string;

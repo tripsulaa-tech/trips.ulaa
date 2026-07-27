@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
-import type { Testimonial } from '../../types';
-import { PLACEHOLDER_IMAGE } from '../../utils';
+import type { Testimonial } from '../../types/types-index';
+import { PLACEHOLDER_IMAGE } from '../../utils/utils-index';
 
 interface TestimonialCardProps {
   testimonial: Testimonial;

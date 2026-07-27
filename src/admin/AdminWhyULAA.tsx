@@ -6,7 +6,7 @@ import ImageUploadField from '../components/ui/ImageUploadField';
 import { getSiteContent, upsertSiteContent } from '../services/api';
 import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import type { WhyUlaaContent } from '../types';
+import type { WhyUlaaContent } from '../types/types-index';
 
 const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 const cardClass = 'bg-white rounded-2xl shadow-card p-6 space-y-4';

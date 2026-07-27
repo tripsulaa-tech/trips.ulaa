@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Heart, Mountain, Image, Users, Home, ChevronRight, Info } from 'lucide-react';
-import { getWhatsAppLink } from '../../utils';
+import { getWhatsAppLink } from '../../utils/utils-index';
 
 const WHATSAPP_NUMBER = '916381336772';
 

@@ -7,7 +7,7 @@ import ValuesEditor from '../components/ui/ValuesEditor';
 import { getSiteContent, upsertSiteContent } from '../services/api';
 import { DEFAULT_ABOUT, ABOUT_VALUE_ICONS } from '../constants/about';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import type { AboutContent } from '../types';
+import type { AboutContent } from '../types/types-index';
 
 const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 const cardClass = 'bg-white rounded-2xl shadow-card p-6 space-y-4';

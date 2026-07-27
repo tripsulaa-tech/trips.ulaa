@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { CheckCircle, AlertCircle, FileText, User, Users, Utensils, Clock3 } from 'lucide-react';
-import type { BookingFormData, BookingMode } from '../../types';
+import type { BookingFormData, BookingMode } from '../../types/types-index';
 import { submitEnquiry, submitGroupEnquiry, submitWaitlist } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
-import { validateFullName, validateCity, validatePhone, validateOptionalPhone, validateAge } from '../../utils/formValidation';
+import { validateFullName, validateCity, validatePhone, validateOptionalPhone, validateAge, DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
 import Button from './Button';
 import Modal from './Modal';
 import TermsBlocks from './TermsBlocks';
@@ -29,9 +29,18 @@ interface BookingFormProps {
   // existing callers that don't pass it still work (falls back to always
   // treating this as a normal booking).
   remainingSeats?: number;
+  // Trip-specific age eligibility, set by the admin on this trip (Admin →
+  // Trips → Basic Info). Either side can be left unset by the admin (no
+  // restriction on that side) or omitted entirely by the caller — in both
+  // cases validateAge falls back to the app's default 18-65 range. See
+  // src/utils/formValidation.ts.
+  minAge?: number;
+  maxAge?: number;
 }
 
-export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats }: BookingFormProps) {
+export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge }: BookingFormProps) {
+  const effectiveMinAge = minAge ?? DEFAULT_MIN_AGE;
+  const effectiveMaxAge = maxAge ?? DEFAULT_MAX_AGE;
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [termsOpen, setTermsOpen] = useState(false);
@@ -202,6 +211,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         setErrorMsg("Looks like you've already submitted an enquiry for this trip with these exact details. We'll be in touch shortly — or message us on WhatsApp if you need to change something.");
       } else if (err instanceof Error && err.message === 'DUPLICATE_WAITLIST_ENTRY') {
         setErrorMsg("You're already on the waitlist for this trip with these exact details — we'll reach out the moment enough seats open up.");
+      } else if (err instanceof Error && err.message === 'AGE_NOT_ELIGIBLE') {
+        setErrorMsg(`This trip is only open to ages ${effectiveMinAge}–${effectiveMaxAge}. Please double-check the age entered, or message us on WhatsApp if you have questions.`);
       } else {
         setErrorMsg('Something went wrong. Please try again or contact us on WhatsApp.');
       }
@@ -341,11 +352,19 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             type="number"
             inputMode="numeric"
             maxLength={3}
-            {...register('age', { required: 'Age is required', validate: validateAge })}
+            {...register('age', {
+              required: 'Age is required',
+              validate: value => validateAge(value, effectiveMinAge, effectiveMaxAge),
+            })}
             placeholder="Your age"
             autoComplete="off"
             className={inputClass}
           />
+          {!errors.age && (
+            <p className="text-xs text-dark-muted mt-1">
+              This trip is open to ages {effectiveMinAge}–{effectiveMaxAge}.
+            </p>
+          )}
           {errors.age && <p className={errorClass}>{errors.age.message}</p>}
         </div>
 

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
-import { getWhatsAppLink } from '../../utils';
+import { getWhatsAppLink } from '../../utils/utils-index';
 
 const WHATSAPP_NUMBER = '916381336772';
 

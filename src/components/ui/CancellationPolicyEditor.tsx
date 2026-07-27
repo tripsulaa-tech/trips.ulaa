@@ -1,5 +1,5 @@
 import { Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
-import type { CancellationPolicy, CancellationTier } from '../../types';
+import type { CancellationPolicy, CancellationTier } from '../../types/types-index';
 
 interface CancellationPolicyEditorProps {
   value: CancellationPolicy;

@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react';
-import type { AboutValue } from '../../types';
+import type { AboutValue } from '../../types/types-index';
 import Select from './Select';
 
 interface ValuesEditorProps {

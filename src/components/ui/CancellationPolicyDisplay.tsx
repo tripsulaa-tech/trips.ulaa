@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { CalendarClock, ShieldCheck, UserX, PackageX, Building2, Users, Clock3, CheckCircle2 } from 'lucide-react';
-import type { CancellationPolicy, CancellationTier } from '../../types';
+import type { CancellationPolicy, CancellationTier } from '../../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../../constants/cancellationPolicy';
 
 interface CancellationPolicyDisplayProps {

@@ -12,8 +12,8 @@ import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
-import type { Enquiry, UpcomingTrip } from '../types';
-import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft } from '../utils';
+import type { Enquiry, UpcomingTrip } from '../types/types-index';
+import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft } from '../utils/utils-index';
 
 const PACKAGE_CONFIG = {
   early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
@@ -953,6 +953,8 @@ export default function AdminEnquiries() {
       const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
       if (message === 'DUPLICATE_ENQUIRY') {
         alert('There\'s already an active enquiry for this trip with this exact name, phone, and email. If this is meant to be a different traveler, tweak one of those fields — a shared family phone/email with a different name is fine.');
+      } else if (message === 'AGE_NOT_ELIGIBLE') {
+        alert('The age entered falls outside this trip\'s age range (set in Admin → Trips → Basic Info). Adjust the age or the trip\'s age range and try again.');
       } else if (message && /no seats left/i.test(message)) {
         alert(convertingWaitlist
           ? 'All slots are filled. Unable to complete the conversion.'
@@ -1044,6 +1046,8 @@ export default function AdminEnquiries() {
       const partial = seated > 0 ? ` ${seated} of ${waitlistPeople.length} were saved before this happened.` : '';
       if (message === 'DUPLICATE_ENQUIRY') {
         alert(`There's already an active enquiry for this trip with that exact name, phone, and email.${partial} Tweak that person's details and try the remaining seats again.`);
+      } else if (message === 'AGE_NOT_ELIGIBLE') {
+        alert(`That person's age falls outside this trip's age range.${partial} Adjust their age (or the trip's age range in Admin → Trips) and try the remaining seats again.`);
       } else if (message && /no seats left/i.test(message)) {
         alert(`Ran out of free seats partway through this batch.${partial}`);
       } else {

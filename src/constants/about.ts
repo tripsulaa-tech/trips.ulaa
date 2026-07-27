@@ -1,5 +1,5 @@
 import { Heart, Globe, Shield, Compass, Star, Users, MapPin, Award } from 'lucide-react';
-import type { AboutContent } from '../types';
+import type { AboutContent } from '../types/types-index';
 
 // Icons an admin can pick from for a "value" card — keep this in sync with AdminAbout.tsx.
 export const ABOUT_VALUE_ICONS: Record<string, typeof Heart> = {

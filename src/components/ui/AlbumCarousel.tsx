@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import AlbumCard from './AlbumCard';
-import type { CompletedTrip } from '../../types';
+import type { CompletedTrip } from '../../types/types-index';
 
 interface AlbumCarouselProps {
   items: CompletedTrip[];

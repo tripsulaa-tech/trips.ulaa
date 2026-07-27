@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
-import type { UpcomingTrip, CancellationTier } from '../types';
+import type { UpcomingTrip, CancellationTier } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
-import { formatDateRange, getActivePrice } from './index';
+import { formatDateRange, getActivePrice } from './utils-index';
 
 // =============================================================================
 // "Download Itinerary PDF" — renders a trip's public detail page as a clean,

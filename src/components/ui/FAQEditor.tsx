@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react';
-import type { FAQ } from '../../types';
+import type { FAQ } from '../../types/types-index';
 
 interface FAQEditorProps {
   value: FAQ[];

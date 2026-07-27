@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, MailCheck, Inbox } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../services/api';
-import type { AdminNotification } from '../types';
+import type { AdminNotification } from '../types/types-index';
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);

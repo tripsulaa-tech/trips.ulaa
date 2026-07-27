@@ -18,8 +18,8 @@ import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, delet
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
-import type { UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy } from '../types';
-import { formatDate, slugify } from '../utils';
+import type { UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy } from '../types/types-index';
+import { formatDate, slugify, formatAgeRange } from '../utils/utils-index';
 
 // Computes a "X Days / Y Nights" string from two yyyy-mm-dd date strings.
 // Falls back to '' if either date is missing/invalid, and never returns a negative duration.
@@ -56,6 +56,10 @@ interface TripForm {
   faqs: FAQ[];
   total_seats: number;
   seats_booked: number;
+  // Optional age eligibility range. Blank ('') means no restriction on
+  // that side — see the DB check constraints in add_trip_age_range.sql.
+  min_age: number | '';
+  max_age: number | '';
   price: number | '';
   early_bird_price: number | '';
   early_bird_deadline: string;
@@ -70,7 +74,8 @@ interface TripForm {
 const emptyForm: TripForm = {
   title: '', destination: '', start_date: '', end_date: '', duration: '',
   description: '', highlights: [], itinerary: [], included: [], not_included: [],
-  things_to_carry: [], meeting_point: '', meeting_point_map_url: '', faqs: [], total_seats: 15, seats_booked: 0, price: '',
+  things_to_carry: [], meeting_point: '', meeting_point_map_url: '', faqs: [], total_seats: 15, seats_booked: 0,
+  min_age: '', max_age: '', price: '',
   early_bird_price: '', early_bird_deadline: '', strike_through_price: '',
   cover_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
@@ -110,6 +115,7 @@ export default function AdminTrips() {
       things_to_carry: trip.things_to_carry || [], meeting_point: trip.meeting_point || '',
       meeting_point_map_url: trip.meeting_point_map_url || '',
       faqs: trip.faqs || [], total_seats: trip.total_seats, seats_booked: trip.seats_booked || 0,
+      min_age: trip.min_age ?? '', max_age: trip.max_age ?? '',
       price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
       early_bird_deadline: trip.early_bird_deadline || '',
       strike_through_price: trip.strike_through_price ?? '',
@@ -129,6 +135,13 @@ export default function AdminTrips() {
       });
       return;
     }
+    if (form.min_age !== '' && form.max_age !== '' && Number(form.min_age) > Number(form.max_age)) {
+      await alert({
+        title: 'Invalid age range',
+        message: 'Min Age cannot be greater than Max Age.',
+      });
+      return;
+    }
     try {
       setSaving(true);
       const data = {
@@ -138,6 +151,8 @@ export default function AdminTrips() {
         early_bird_price: form.early_bird_price === '' ? undefined : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || undefined,
         strike_through_price: form.strike_through_price === '' ? undefined : form.strike_through_price,
+        min_age: form.min_age === '' ? undefined : form.min_age,
+        max_age: form.max_age === '' ? undefined : form.max_age,
         seats_booked: Math.max(0, Math.min(form.seats_booked, form.total_seats)),
       };
       if (editingTrip) {
@@ -305,6 +320,31 @@ export default function AdminTrips() {
               <label className="block text-sm font-medium text-dark mb-1">Description *</label>
               <p className="text-xs text-dark-muted mb-1">Short overview only — put the day-by-day plan in Itinerary below, not here.</p>
               <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Min Age</label>
+              <input
+                type="number"
+                min={0}
+                value={form.min_age}
+                onChange={e => setForm(f => ({ ...f, min_age: e.target.value === '' ? '' : +e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 18 (optional)"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Max Age</label>
+              <input
+                type="number"
+                min={0}
+                value={form.max_age}
+                onChange={e => setForm(f => ({ ...f, max_age: e.target.value === '' ? '' : +e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 65 (optional)"
+              />
+              <p className="text-xs text-dark-muted mt-1">
+                Leave either blank for no restriction on that side. Leave both blank to use the default 18–65 rule.
+              </p>
             </div>
           </TabPanel>
 
@@ -545,6 +585,14 @@ export default function AdminTrips() {
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-0.5">Duration</p>
                 <p className="text-dark">{viewingTrip.duration}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-0.5">Age Range</p>
+                <p className="text-dark">
+                  {viewingTrip.min_age !== undefined || viewingTrip.max_age !== undefined
+                    ? formatAgeRange(viewingTrip.min_age, viewingTrip.max_age)
+                    : 'No restriction (default 18–65)'}
+                </p>
               </div>
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-0.5">Dates</p>

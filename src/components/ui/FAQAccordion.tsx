@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import type { FAQ as FAQType } from '../../types';
+import type { FAQ as FAQType } from '../../types/types-index';
 
 interface FAQProps {
   faqs: FAQType[];

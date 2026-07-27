@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import SectionTitle from '../../components/ui/SectionTitle';
 import TestimonialCard from '../../components/ui/TestimonialCard';
 import { getTestimonials } from '../../services/api';
-import type { Testimonial } from '../../types';
+import type { Testimonial } from '../../types/types-index';
 
 const DEMO_TESTIMONIALS: Testimonial[] = [
   {

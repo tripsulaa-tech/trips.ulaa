@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, Payment, WaitlistEntry, WaitlistFormData } from '../types';
+import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, Payment, WaitlistEntry, WaitlistFormData } from '../types/types-index';
 
 // =============================================
 // Trip lifecycle
@@ -365,6 +365,15 @@ export async function deleteImageByUrl(bucket: string, url: string): Promise<voi
 // =============================================
 // Enquiries
 // =============================================
+// True when a Postgres error is the enforce_trip_age_eligibility trigger's
+// rejection (see add_trip_age_eligibility_enforcement.sql) rather than some
+// other failure. That trigger raises a plain 'AGE_NOT_ELIGIBLE' marker
+// message (default SQLSTATE — not a dedicated code like the 23505 unique
+// violations below), so it's matched on message text instead of error.code.
+function isAgeNotEligibleError(error: { message?: string }): boolean {
+  return !!error.message?.includes('AGE_NOT_ELIGIBLE');
+}
+
 // The (trip_id, name, phone, email) unique constraint (active enquiries
 // only — cancelled ones are excluded) means an exact literal re-submission
 // throws a Postgres 23505. Surfaced as a distinct error so the UI can show
@@ -376,6 +385,9 @@ export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
   if (error) {
     if (error.code === '23505') {
       throw new Error('DUPLICATE_ENQUIRY');
+    }
+    if (isAgeNotEligibleError(error)) {
+      throw new Error('AGE_NOT_ELIGIBLE');
     }
     throw error;
   }
@@ -406,6 +418,9 @@ export async function submitGroupEnquiry(enquiry: BookingFormData, groupSize: nu
   if (error) {
     if (error.code === '23505') {
       throw new Error('DUPLICATE_ENQUIRY');
+    }
+    if (isAgeNotEligibleError(error)) {
+      throw new Error('AGE_NOT_ELIGIBLE');
     }
     throw error;
   }
@@ -454,6 +469,9 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
   if (error) {
     if (error.code === '23505') {
       throw new Error('DUPLICATE_ENQUIRY');
+    }
+    if (isAgeNotEligibleError(error)) {
+      throw new Error('AGE_NOT_ELIGIBLE');
     }
     throw error;
   }
@@ -546,6 +564,9 @@ export async function submitWaitlist(entry: WaitlistFormData): Promise<void> {
   if (error) {
     if (error.code === '23505') {
       throw new Error('DUPLICATE_WAITLIST_ENTRY');
+    }
+    if (isAgeNotEligibleError(error)) {
+      throw new Error('AGE_NOT_ELIGIBLE');
     }
     throw error;
   }

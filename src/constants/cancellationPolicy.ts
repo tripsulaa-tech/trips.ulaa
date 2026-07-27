@@ -1,4 +1,4 @@
-import type { CancellationPolicy } from '../types';
+import type { CancellationPolicy } from '../types/types-index';
 
 // =============================================
 // Default Cancellation Policy

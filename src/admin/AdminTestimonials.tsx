@@ -10,7 +10,7 @@ import {
   getAllTestimonialsAdmin, createTestimonial, updateTestimonial, deleteTestimonial,
 } from '../services/api';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import type { Testimonial } from '../types';
+import type { Testimonial } from '../types/types-index';
 
 interface TestimonialForm {
   name: string;

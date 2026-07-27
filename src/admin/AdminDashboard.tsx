@@ -9,7 +9,7 @@ import {
   getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getEnquiries, getWaitlistEntries,
   syncStartedTripAlbums,
 } from '../services/api';
-import type { UpcomingTrip, Enquiry } from '../types';
+import type { UpcomingTrip, Enquiry } from '../types/types-index';
 import bannerImg from '../assets/hero.png';
 
 const STATUS_STYLES: Record<Enquiry['status'], string> = {

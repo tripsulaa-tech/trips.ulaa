@@ -9,8 +9,8 @@ import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh } 
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries } from '../services/api';
-import { formatDate, seatsLeft } from '../utils';
-import type { WaitlistEntry } from '../types';
+import { formatDate, seatsLeft } from '../utils/utils-index';
+import type { WaitlistEntry } from '../types/types-index';
 
 const STATUS_CONFIG = {
   waiting: { label: 'Waiting', color: 'bg-amber-100 text-amber-700', icon: Circle },

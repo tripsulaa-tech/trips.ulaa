@@ -1,5 +1,5 @@
 import { Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
-import type { AboutTimelineItem } from '../../types';
+import type { AboutTimelineItem } from '../../types/types-index';
 
 interface TimelineEditorProps {
   value: AboutTimelineItem[];

@@ -6,7 +6,7 @@ import AlbumCarousel from '../../components/ui/AlbumCarousel';
 import { SkeletonGrid } from '../../components/ui/Skeletons';
 import Button from '../../components/ui/Button';
 import { getCompletedTrips } from '../../services/api';
-import type { CompletedTrip } from '../../types';
+import type { CompletedTrip } from '../../types/types-index';
 
 const DEMO_COMPLETED: CompletedTrip[] = [
   {

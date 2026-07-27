@@ -6,7 +6,7 @@ import AlbumCard from '../components/ui/AlbumCard';
 import AlbumCarousel from '../components/ui/AlbumCarousel';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getCompletedTrips } from '../services/api';
-import type { CompletedTrip } from '../types';
+import type { CompletedTrip } from '../types/types-index';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1600&q=80';
 

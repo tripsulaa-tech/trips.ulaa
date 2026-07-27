@@ -5,7 +5,7 @@ import Layout from '../components/layout/Layout';
 import TripCard from '../components/ui/TripCard';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getUpcomingTrips } from '../services/api';
-import type { UpcomingTrip } from '../types';
+import type { UpcomingTrip } from '../types/types-index';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1600&q=80';
 

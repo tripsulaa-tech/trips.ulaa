@@ -1,5 +1,5 @@
 import { Plus, X, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
-import type { ItineraryDay } from '../../types';
+import type { ItineraryDay } from '../../types/types-index';
 import MultiImageUploadField from './MultiImageUploadField';
 
 interface ItineraryEditorProps {

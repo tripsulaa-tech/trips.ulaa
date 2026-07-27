@@ -6,7 +6,7 @@ import TripCard from '../../components/ui/TripCard';
 import { SkeletonGrid } from '../../components/ui/Skeletons';
 import Button from '../../components/ui/Button';
 import { getUpcomingTrips } from '../../services/api';
-import type { UpcomingTrip } from '../../types';
+import type { UpcomingTrip } from '../../types/types-index';
 
 export default function UpcomingTripsPreview() {
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);

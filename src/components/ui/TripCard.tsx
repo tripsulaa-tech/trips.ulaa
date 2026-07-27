@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Clock, Users, ArrowRight, CalendarPlus, Share2 } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, UserCheck, ArrowRight, CalendarPlus, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { UpcomingTrip } from '../../types';
-import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE } from '../../utils';
+import type { UpcomingTrip } from '../../types/types-index';
+import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
 import Button from './Button';
 
@@ -136,6 +136,12 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                     : `Group of ${trip.total_seats}`}
               </span>
             </div>
+            {(trip.min_age !== undefined || trip.max_age !== undefined) && (
+              <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
+                <UserCheck size={13} className="text-primary shrink-0" />
+                <span>{formatAgeRange(trip.min_age, trip.max_age)}</span>
+              </div>
+            )}
           </div>
         </div>
 

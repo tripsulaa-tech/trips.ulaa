@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 import { getGalleryImages, uploadImage, deleteImage } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import type { GalleryImage } from '../types';
+import type { GalleryImage } from '../types/types-index';
 
 export default function AdminGallery() {
   const confirm = useConfirm();

@@ -5,8 +5,8 @@ import { MapPin, Calendar, Users, Images, ArrowLeft, Share2 } from 'lucide-react
 import Layout from '../components/layout/Layout';
 import { GalleryGrid } from '../components/ui/Lightbox';
 import { getCompletedTripBySlug } from '../services/api';
-import type { CompletedTrip } from '../types';
-import { formatDate, formatBatchLabel, PLACEHOLDER_IMAGE } from '../utils';
+import type { CompletedTrip } from '../types/types-index';
+import { formatDate, formatBatchLabel, PLACEHOLDER_IMAGE } from '../utils/utils-index';
 
 const DEMO_ALBUM: CompletedTrip = {
   id: '1', title: 'Magical Meghalaya',

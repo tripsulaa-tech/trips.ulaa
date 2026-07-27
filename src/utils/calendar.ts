@@ -1,4 +1,4 @@
-import type { UpcomingTrip } from '../types';
+import type { UpcomingTrip } from '../types/types-index';
 
 /** YYYYMMDD, used by both the Google Calendar URL and the .ics file for
  *  all-day events. Google/most calendar apps treat the end date of an
