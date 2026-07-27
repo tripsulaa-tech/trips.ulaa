@@ -2247,12 +2247,23 @@ export default function AdminEnquiries() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                <Utensils size={15} />
+                              <span className={`w-9 h-9 rounded-full inline-flex items-center justify-center shrink-0 ${
+                                e.food_preference === 'veg' ? 'bg-green-50 text-green-700' : e.food_preference === 'non_veg' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                              }`}>
+                                {e.food_preference === 'veg' || e.food_preference === 'non_veg' ? (
+                                  <FoodMark type={e.food_preference} size={16} />
+                                ) : (
+                                  <Utensils size={15} />
+                                )}
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Food Preference</p>
-                                <p className="text-dark text-sm truncate">{e.food_preference === 'veg' ? 'Veg' : e.food_preference === 'non_veg' ? 'Non-veg' : '—'}</p>
+                                <p className={`text-sm truncate flex items-center gap-1 ${
+                                  e.food_preference === 'veg' ? 'text-green-700 font-medium' : e.food_preference === 'non_veg' ? 'text-red-700 font-medium' : 'text-dark'
+                                }`}>
+                                  {(e.food_preference === 'veg' || e.food_preference === 'non_veg') && <FoodMark type={e.food_preference} size={11} />}
+                                  {e.food_preference === 'veg' ? 'Veg' : e.food_preference === 'non_veg' ? 'Non-veg' : '—'}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -2289,9 +2300,14 @@ export default function AdminEnquiries() {
                                 <p className="text-dark text-sm truncate">{PACKAGE_CONFIG[e.package_type || 'normal'].label}</p>
                               </div>
                             </div>
-                            <div className="flex flex-col items-end">
-                              <p className="text-dark-muted text-xs mb-1.5">Quick Contact</p>
-                              <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} size="md" />
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                                <MessageCircle size={15} />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-dark-muted text-xs">Quick Contact</p>
+                                <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} size="md" />
+                              </div>
                             </div>
                           </div>
                         </div>

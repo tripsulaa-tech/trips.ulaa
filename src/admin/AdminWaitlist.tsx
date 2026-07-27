@@ -1000,10 +1000,20 @@ export default function AdminWaitlist() {
 
                     <div className="text-xs text-dark-muted space-y-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="flex items-center gap-1.5 min-w-0"><Mail size={12} className="shrink-0 text-primary" /> <span className="truncate">{e.email}</span></p>
+                        <p className="flex items-center gap-1.5 min-w-0">
+                          <span className="w-5 h-5 rounded-full bg-background-warm text-primary/70 inline-flex items-center justify-center shrink-0">
+                            <Mail size={10} />
+                          </span>
+                          <span className="truncate">{e.email}</span>
+                        </p>
                         <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
                       </div>
-                      <p className="flex items-center gap-1.5"><Phone size={12} className="shrink-0 text-primary/70" /> {e.phone}</p>
+                      <p className="flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-background-warm text-primary/70 inline-flex items-center justify-center shrink-0">
+                          <Phone size={10} />
+                        </span>
+                        {e.phone}
+                      </p>
                       <div className="border-b border-background-warm !mt-2.5 !mb-2.5" />
                       {(e.age || e.food_preference || foodBreakdown(e)) && (
                         <p className="flex items-center flex-wrap gap-x-2 gap-y-1.5">
