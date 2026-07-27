@@ -270,7 +270,7 @@ export function ContactQuickLinks({ phone, email, name, tripTitle, size = 'sm' }
     ? `${greeting}, following up on your ${tripTitle} enquiry with ULAA — `
     : `${greeting}, following up on your enquiry with ULAA — `;
 
-  const btnClass = `shrink-0 inline-flex items-center justify-center ${dim} rounded-lg border border-background-warm text-dark-muted hover:border-primary/40 hover:text-primary transition-colors`;
+  const btnClass = `shrink-0 inline-flex items-center justify-center ${dim} rounded-full border border-background-warm text-dark-muted hover:border-primary/40 hover:text-primary transition-colors`;
 
   return (
     <span className="inline-flex items-center gap-1" onClick={e => e.stopPropagation()}>

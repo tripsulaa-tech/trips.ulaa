@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -2193,58 +2193,106 @@ export default function AdminEnquiries() {
 
                     {isOpen && (
                       <div className="px-4 pb-4 pt-1 border-t border-background-warm space-y-3">
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm pt-2">
+                        <div className="grid grid-cols-2 gap-x-3 pt-3 pb-3 border-b border-background-warm">
                           <div>
                             <p className="text-dark-muted text-xs">Phone</p>
-                            <p className="text-dark truncate">{e.phone}</p>
+                            <p className="text-dark text-sm truncate">{e.phone}</p>
                           </div>
                           <div>
                             <p className="text-dark-muted text-xs">Email</p>
-                            <p className="text-dark truncate">{e.email}</p>
+                            <p className="text-dark text-sm truncate">{e.email}</p>
                           </div>
-                          <div className="col-span-2">
-                            <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
-                          </div>
+                        </div>
+
+                        <div className="divide-y divide-background-warm">
                           {/* Trip (3.8) — spelled out explicitly, including
                               the no-trip case, instead of only being
                               inferable from which Trip filter group the
                               admin happens to be scoped to. */}
-                          <div className="col-span-2">
-                            <p className="text-dark-muted text-xs">Trip</p>
-                            <p className="text-dark truncate">
-                              {e.trip_id ? e.trip_title : (
-                                <span className="text-dark-muted italic">
-                                  {isGeneralContactMessage(e) ? 'None — Contact Us message' : 'None — logged without a trip'}
-                                </span>
-                              )}
-                            </p>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                                <Briefcase size={15} />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-dark-muted text-xs">Trip</p>
+                                <p className="text-dark text-sm truncate">
+                                  {e.trip_id ? e.trip_title : (
+                                    <span className="text-dark-muted italic">
+                                      {isGeneralContactMessage(e) ? 'None — Contact Us message' : 'None — logged without a trip'}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                                <User size={15} />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-dark-muted text-xs">Age</p>
+                                <p className="text-dark text-sm truncate">{e.age ?? '—'}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-dark-muted text-xs">City</p>
-                            <p className="text-dark truncate">{e.city || '—'}</p>
+
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                                <Building2 size={15} />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-dark-muted text-xs">City</p>
+                                <p className="text-dark text-sm truncate">{e.city || '—'}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                                <Utensils size={15} />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-dark-muted text-xs">Food Preference</p>
+                                <p className="text-dark text-sm truncate">{e.food_preference === 'veg' ? 'Veg' : e.food_preference === 'non_veg' ? 'Non-veg' : '—'}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-dark-muted text-xs">Age</p>
-                            <p className="text-dark truncate">{e.age ?? '—'}</p>
+
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                                <CalendarDays size={15} />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-dark-muted text-xs">Date &amp; Time</p>
+                                <p className="text-dark text-sm truncate">{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                <p className="text-dark-muted text-xs truncate">{formatTime(e.created_at)}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                                <Globe size={15} />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-dark-muted text-xs">Source</p>
+                                <p className="text-dark text-sm truncate">{srcCfg.label}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-dark-muted text-xs">Food Preference</p>
-                            <p className="text-dark truncate">{e.food_preference === 'veg' ? 'Veg' : e.food_preference === 'non_veg' ? 'Non-veg' : '—'}</p>
-                          </div>
-                          <div>
-                            <p className="text-dark-muted text-xs">Source</p>
-                            <p className="text-dark truncate inline-flex items-center gap-1">
-                              <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-dark-muted text-xs">Date &amp; Time</p>
-                            <p className="text-dark truncate">{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                            <p className="text-dark-muted text-xs truncate">{formatTime(e.created_at)}</p>
-                          </div>
-                          <div>
-                            <p className="text-dark-muted text-xs">Package</p>
-                            <p className="text-dark truncate">{PACKAGE_CONFIG[e.package_type || 'normal'].label}</p>
+
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3 items-center">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                                <Package size={15} />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-dark-muted text-xs">Package</p>
+                                <p className="text-dark text-sm truncate">{PACKAGE_CONFIG[e.package_type || 'normal'].label}</p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <p className="text-dark-muted text-xs mb-1.5">Quick Contact</p>
+                              <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} size="md" />
+                            </div>
                           </div>
                         </div>
 
@@ -2270,13 +2318,13 @@ export default function AdminEnquiries() {
                         <div className="flex items-center flex-wrap gap-2 pt-1">
                           <button
                             onClick={() => openPayment(e)}
-                            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl whitespace-nowrap bg-background-warm text-dark-muted"
+                            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap bg-background-warm text-dark-muted"
                           >
                             <IndianRupee size={14} /> Payment
                           </button>
                           <span
                             title={isBooked(e) ? 'Seat booked automatically from payment' : e.cancelled_at ? 'Cancelled — seat released' : 'No payment recorded yet, so no seat is held'}
-                            className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl whitespace-nowrap ${
+                            className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap ${
                               isBooked(e) ? 'bg-green-100 text-green-700' : e.cancelled_at ? 'bg-red-100 text-red-700' : 'bg-background-warm text-dark-muted'
                             }`}
                           >
@@ -2298,12 +2346,13 @@ export default function AdminEnquiries() {
                           <button
                             onClick={() => handleCancelToggle(e)}
                             disabled={updating === e.id}
-                            className={`flex-1 text-xs font-button font-semibold px-3 py-2 rounded-xl border transition-colors ${
+                            className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full border transition-colors ${
                               e.cancelled_at
                                 ? 'border-green-200 text-green-700 hover:bg-green-50'
                                 : 'border-red-200 text-red-600 hover:bg-red-50'
                             }`}
                           >
+                            {e.cancelled_at ? <RefreshCw size={13} /> : null}
                             {e.cancelled_at ? 'Reactivate Booking' : 'Mark as Cancelled'}
                           </button>
                           <button
@@ -2311,7 +2360,7 @@ export default function AdminEnquiries() {
                             disabled={updating === e.id}
                             title="Delete enquiry"
                             aria-label="Delete enquiry"
-                            className="shrink-0 px-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center"
+                            className="shrink-0 w-10 rounded-full border border-red-200 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center"
                           >
                             <Trash2 size={14} />
                           </button>

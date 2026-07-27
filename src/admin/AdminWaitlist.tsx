@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, ChevronDown, SlidersHorizontal, RefreshCw, Search, X, Plus } from 'lucide-react';
+import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, ChevronDown, SlidersHorizontal, RefreshCw, Search, X, Plus, User, CalendarDays } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
@@ -948,7 +948,7 @@ export default function AdminWaitlist() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="font-medium text-dark truncate flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-dark truncate flex items-center gap-1.5">
                           {e.full_name}
                           {e.group_size && e.group_size > 1 && (
                             <span
@@ -1000,13 +1000,24 @@ export default function AdminWaitlist() {
 
                     <div className="text-xs text-dark-muted space-y-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="flex items-center gap-1.5 min-w-0"><Mail size={12} className="shrink-0" /> <span className="truncate">{e.email}</span></p>
+                        <p className="flex items-center gap-1.5 min-w-0"><Mail size={12} className="shrink-0 text-primary" /> <span className="truncate">{e.email}</span></p>
                         <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
                       </div>
-                      <p className="flex items-center gap-1.5"><Phone size={12} className="shrink-0" /> {e.phone}</p>
+                      <p className="flex items-center gap-1.5"><Phone size={12} className="shrink-0 text-primary/70" /> {e.phone}</p>
+                      <div className="border-b border-background-warm !mt-2.5 !mb-2.5" />
                       {(e.age || e.food_preference || foodBreakdown(e)) && (
-                        <p className="flex items-center flex-wrap gap-x-1.5 gap-y-1">
-                          {e.age && <span>{e.age} yrs</span>}
+                        <p className="flex items-center flex-wrap gap-x-2 gap-y-1.5">
+                          {e.age && (
+                            <>
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="w-5 h-5 rounded-full bg-background-warm text-primary/70 inline-flex items-center justify-center shrink-0">
+                                  <User size={10} />
+                                </span>
+                                {e.age} yrs
+                              </span>
+                              <span className="w-px h-3.5 bg-background-warm shrink-0" />
+                            </>
+                          )}
                           {foodBreakdown(e) ? (
                             <span className="inline-flex items-center gap-1.5">
                               <span className="inline-flex items-center gap-1 text-green-700">
@@ -1018,13 +1029,28 @@ export default function AdminWaitlist() {
                               </span>
                             </span>
                           ) : e.food_preference && (
-                            <span>{e.food_preference === 'veg' ? 'Veg' : 'Non-veg'}</span>
+                            <span className={`inline-flex items-center gap-1 ${e.food_preference === 'veg' ? 'text-green-700' : 'text-red-700'}`}>
+                              <FoodMark type={e.food_preference} size={11} /> {e.food_preference === 'veg' ? 'Veg' : 'Non-veg'}
+                            </span>
                           )}
+                          {(foodBreakdown(e) || e.food_preference) && (
+                            <span className="w-px h-3.5 bg-background-warm shrink-0" />
+                          )}
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-full bg-background-warm text-primary/70 inline-flex items-center justify-center shrink-0">
+                              <CalendarDays size={10} />
+                            </span>
+                            {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
                         </p>
                       )}
                       {e.city && <p>{e.city}</p>}
                       {e.emergency_contact && <p>Emergency: {e.emergency_contact}</p>}
-                      <p>{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                      {!(e.age || e.food_preference || foodBreakdown(e)) && (
+                        <p className="flex items-center gap-1.5">
+                          <CalendarDays size={11} className="shrink-0" /> {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      )}
                       {messageWithoutFoodBreakdown(e) && (
                         <p className="flex items-start gap-1.5 mt-1.5">
                           <MessageSquare size={12} className="shrink-0 mt-0.5" />
