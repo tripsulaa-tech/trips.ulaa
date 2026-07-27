@@ -1,4 +1,49 @@
-import { Search, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { Search, X, ChevronUp, ChevronDown } from 'lucide-react';
+
+// Click-and-drag horizontal panning for the table's scroll container. Lets
+// us hide the native scrollbar (scrollbar-hide) while still keeping the
+// table reachable sideways — drag left/right with the mouse; vertical
+// scrolling still works the normal way via the mouse wheel/trackpad.
+export function useDragScroll<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const drag = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const onMouseDown = (e: ReactMouseEvent) => {
+    const el = ref.current;
+    if (!el) return;
+    drag.current = { isDown: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft, moved: false };
+  };
+  const stop = () => {
+    if (drag.current.isDown) {
+      drag.current.isDown = false;
+      setIsDragging(false);
+    }
+  };
+  const onMouseMove = (e: ReactMouseEvent) => {
+    const el = ref.current;
+    if (!el || !drag.current.isDown) return;
+    const x = e.pageX - el.offsetLeft;
+    const walk = x - drag.current.startX;
+    if (!drag.current.moved && Math.abs(walk) > 4) {
+      drag.current.moved = true;
+      setIsDragging(true);
+    }
+    if (drag.current.moved) {
+      e.preventDefault();
+      el.scrollLeft = drag.current.scrollLeft - walk;
+    }
+  };
+
+  return {
+    ref,
+    isDragging,
+    handlers: { onMouseDown, onMouseMove, onMouseUp: stop, onMouseLeave: stop },
+  };
+}
+
 
 // Shared "table card" header — title + live "Showing X–Y of N" subtitle on
 // the left, search bar aligned to the right in the same row. Used by both
@@ -139,4 +184,38 @@ export function paginate<T>(items: T[], page: number, pageSize: number) {
     rangeStart: items.length === 0 ? 0 : start + 1,
     rangeEnd: Math.min(start + pageSize, items.length),
   };
+}
+
+export type SortDirection = 'asc' | 'desc';
+
+// Clickable column header with an up/down indicator — the up arrow lights
+// up when that column is the active ascending sort, the down arrow when
+// it's the active descending sort, so the current state is visible at a
+// glance rather than just on hover.
+interface SortableThProps<K extends string> {
+  label: string;
+  sortKey: K;
+  activeKey: K | null;
+  direction: SortDirection;
+  onSort: (key: K) => void;
+  className?: string;
+}
+
+export function SortableTh<K extends string>({ label, sortKey, activeKey, direction, onSort, className = '' }: SortableThProps<K>) {
+  const isActive = activeKey === sortKey;
+  return (
+    <th className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+      >
+        <span>{label}</span>
+        <span className="flex flex-col justify-center leading-none">
+          <ChevronUp size={10} className={`-mb-0.5 ${isActive && direction === 'asc' ? 'text-primary' : 'text-dark-muted/30'}`} />
+          <ChevronDown size={10} className={isActive && direction === 'desc' ? 'text-primary' : 'text-dark-muted/30'} />
+        </span>
+      </button>
+    </th>
+  );
 }

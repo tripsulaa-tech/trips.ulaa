@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, ChevronDown, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
-import { TableHeaderBar, TablePagination, paginate } from '../components/ui/DataTableChrome';
+import FoodMark from '../components/ui/FoodMark';
+import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh } from '../components/ui/DataTableChrome';
+import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries } from '../services/api';
 import { formatDate, seatsLeft } from '../utils';
@@ -85,6 +87,18 @@ export default function AdminWaitlist() {
   // Table pagination — 50 rows per page, same as the Enquiries page.
   const [currentPage, setCurrentPage] = useState(1);
   const WAITLIST_PAGE_SIZE = 10;
+  const { ref: tableScrollRef, isDragging, handlers: dragHandlers } = useDragScroll<HTMLDivElement>();
+  type WaitlistSortKey = 'name' | 'group' | 'food' | 'trip' | 'joined' | 'status';
+  const [sortKey, setSortKey] = useState<WaitlistSortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDirection>('asc');
+  const handleSort = (key: WaitlistSortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
 
   const load = () => {
     Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries()])
@@ -120,6 +134,23 @@ export default function AdminWaitlist() {
   // it's actually convertible — e.g. a group of 3 isn't "ready" just
   // because 1 seat opened up from a single cancellation.
   const seatsNeeded = (e: WaitlistEntry) => e.group_size && e.group_size > 1 ? e.group_size : 1;
+  // Small inline badge shown in the Food column — mirrors the one on the
+  // Enquiries page so both tables read the same way. For a group booking,
+  // there's no single `food_preference`; an admin instead jots the split
+  // straight into the notes (e.g. "2 veg / 2 non-veg."), so pull that out
+  // and show it as the food info instead of "Food not set".
+  const foodBreakdown = (e: WaitlistEntry) => e.message?.match(/\b(\d+)\s*veg\s*\/\s*(\d+)\s*non[- ]?veg\.?/i) || null;
+  const messageWithoutFoodBreakdown = (e: WaitlistEntry) => {
+    const match = foodBreakdown(e);
+    return match ? (e.message || '').replace(match[0], '').trim() : (e.message || '');
+  };
+  const foodBadge = (e: WaitlistEntry): { label: string; color: string; key: 'veg' | 'non_veg' | 'not_set' | 'mixed' } => {
+    const breakdown = foodBreakdown(e);
+    if (breakdown) return { label: `${breakdown[1]} veg / ${breakdown[2]} non-veg`, color: 'bg-purple-100 text-purple-700', key: 'mixed' };
+    if (e.food_preference === 'veg') return { label: 'Veg', color: 'bg-green-100 text-green-700', key: 'veg' };
+    if (e.food_preference === 'non_veg') return { label: 'Non-veg', color: 'bg-red-100 text-red-700', key: 'non_veg' };
+    return { label: 'Food not set', color: 'bg-slate-100 text-dark-muted', key: 'not_set' };
+  };
   // Every enquiry converted from this entry so far (falls back to the
   // legacy single-id column for any row a migration hasn't backfilled).
   const convertedIds = (e: WaitlistEntry): string[] =>
@@ -145,13 +176,26 @@ export default function AdminWaitlist() {
     // these are the ones that need action right now.
     .sort((a, b) => Number(hasSeatOpen(b)) - Number(hasSeatOpen(a)));
 
+  const sortedFiltered = sortKey ? [...filtered].sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    switch (sortKey) {
+      case 'name': return dir * (a.full_name || '').localeCompare(b.full_name || '');
+      case 'group': return dir * ((a.group_size || 1) - (b.group_size || 1));
+      case 'food': return dir * foodBadge(a).key.localeCompare(foodBadge(b).key);
+      case 'trip': return dir * (a.trip_title || '').localeCompare(b.trip_title || '');
+      case 'joined': return dir * (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0);
+      case 'status': return dir * (a.status || '').localeCompare(b.status || '');
+      default: return 0;
+    }
+  }) : filtered;
+
   const {
     pageItems: paginatedEntries,
     totalPages: waitlistTotalPages,
     safePage: waitlistSafePage,
     rangeStart: waitlistRangeStart,
     rangeEnd: waitlistRangeEnd,
-  } = paginate(filtered, currentPage, WAITLIST_PAGE_SIZE);
+  } = paginate(sortedFiltered, currentPage, WAITLIST_PAGE_SIZE);
 
   // Land back on page 1 whenever the filters or search term change, so the
   // admin never gets stuck on a page that no longer has any rows.
@@ -426,15 +470,21 @@ export default function AdminWaitlist() {
                 onSearchChange={setSearchQuery}
                 searchPlaceholder="Search name, trip, contact..."
               />
-              <div className="overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-xl border border-background-warm">
+              <div
+                ref={tableScrollRef}
+                {...dragHandlers}
+                className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-xl border border-background-warm ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+              >
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
                     <tr>
-                      <th className="px-4 py-3 text-left">Name</th>
-                      <th className="px-4 py-3 text-left hidden lg:table-cell">Trip</th>
+                      <SortableTh label="Name" sortKey="name" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left" />
+                      <SortableTh label="Group" sortKey="group" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
+                      <SortableTh label="Food" sortKey="food" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
+                      <SortableTh label="Trip" sortKey="trip" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left hidden lg:table-cell" />
                       <th className="px-4 py-3 text-left hidden md:table-cell">Contact</th>
-                      <th className="px-4 py-3 text-left hidden lg:table-cell">Joined</th>
-                      <th className="px-2 py-3 text-right whitespace-nowrap">Status</th>
+                      <SortableTh label="Joined" sortKey="joined" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left hidden lg:table-cell" />
+                      <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-right whitespace-nowrap" />
                       <th className="px-2 py-3 text-right whitespace-nowrap"></th>
                     </tr>
                   </thead>
@@ -444,14 +494,6 @@ export default function AdminWaitlist() {
                         <td className="px-4 py-3 max-w-[160px] sm:max-w-none">
                           <p className="font-medium text-dark truncate flex items-center gap-1.5">
                             {e.full_name}
-                            {e.group_size && e.group_size > 1 && (
-                              <span
-                                title={`Waiting for ${e.group_size} seats together`}
-                                className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-background-warm text-dark-muted whitespace-nowrap"
-                              >
-                                <Users size={9} /> Group of {e.group_size}
-                              </span>
-                            )}
                             {e.status !== 'converted' && convertedCount(e) > 0 && (
                               <span
                                 title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
@@ -462,18 +504,48 @@ export default function AdminWaitlist() {
                             )}
                           </p>
                           <p className="text-dark-muted text-xs truncate md:hidden">{e.email}</p>
-                          {(e.age || e.food_preference) && (
-                            <p className="text-dark-muted text-xs mt-0.5">
-                              {e.age && `${e.age} yrs`}
-                              {e.age && e.food_preference && ' · '}
-                              {e.food_preference && (e.food_preference === 'veg' ? 'Veg' : 'Non-veg')}
-                            </p>
+                          {e.age && (
+                            <p className="text-dark-muted text-xs mt-0.5">{e.age} yrs</p>
                           )}
-                          {e.message && (
+                          {messageWithoutFoodBreakdown(e) && (
                             <p className="text-dark-muted text-xs mt-1 flex items-start gap-1 max-w-xs">
                               <MessageSquare size={11} className="shrink-0 mt-0.5" />
-                              <span className="line-clamp-2">{e.message}</span>
+                              <span className="line-clamp-2">{messageWithoutFoodBreakdown(e)}</span>
                             </p>
+                          )}
+                        </td>
+                        <td className="px-2 py-3 whitespace-nowrap">
+                          {e.group_size && e.group_size > 1 ? (
+                            <span
+                              title={`Waiting for ${e.group_size} seats together`}
+                              className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full bg-background-warm text-dark-muted whitespace-nowrap"
+                            >
+                              <Users size={12} className="shrink-0" /> Group of {e.group_size}
+                            </span>
+                          ) : (
+                            <span
+                              title="Booked individually, not part of a group"
+                              className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full bg-slate-100 text-dark-muted whitespace-nowrap"
+                            >
+                              <UserPlus size={12} className="shrink-0" /> Solo
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 py-3 whitespace-nowrap">
+                          {foodBreakdown(e) ? (
+                            <span className="inline-flex items-center gap-2 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap bg-background-warm">
+                              <span className="inline-flex items-center gap-1 text-green-700">
+                                <FoodMark type="veg" size={12} /> {foodBreakdown(e)![1]} veg
+                              </span>
+                              <span className="text-dark-muted/40">/</span>
+                              <span className="inline-flex items-center gap-1 text-red-700">
+                                <FoodMark type="non_veg" size={12} /> {foodBreakdown(e)![2]} non-veg
+                              </span>
+                            </span>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${foodBadge(e).color}`}>
+                              <FoodMark type={foodBadge(e).key} size={12} /> {foodBadge(e).label}
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-dark-muted hidden lg:table-cell max-w-[180px]">
@@ -632,20 +704,31 @@ export default function AdminWaitlist() {
                     <div className="text-xs text-dark-muted space-y-1">
                       <p className="flex items-center gap-1.5"><Mail size={12} className="shrink-0" /> {e.email}</p>
                       <p className="flex items-center gap-1.5"><Phone size={12} className="shrink-0" /> {e.phone}</p>
-                      {(e.age || e.food_preference) && (
-                        <p>
-                          {e.age && `${e.age} yrs`}
-                          {e.age && e.food_preference && ' · '}
-                          {e.food_preference && (e.food_preference === 'veg' ? 'Veg' : 'Non-veg')}
+                      {(e.age || e.food_preference || foodBreakdown(e)) && (
+                        <p className="flex items-center flex-wrap gap-x-1.5 gap-y-1">
+                          {e.age && <span>{e.age} yrs</span>}
+                          {foodBreakdown(e) ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="inline-flex items-center gap-1 text-green-700">
+                                <FoodMark type="veg" size={11} /> {foodBreakdown(e)![1]} veg
+                              </span>
+                              <span className="text-dark-muted/40">/</span>
+                              <span className="inline-flex items-center gap-1 text-red-700">
+                                <FoodMark type="non_veg" size={11} /> {foodBreakdown(e)![2]} non-veg
+                              </span>
+                            </span>
+                          ) : e.food_preference && (
+                            <span>{e.food_preference === 'veg' ? 'Veg' : 'Non-veg'}</span>
+                          )}
                         </p>
                       )}
                       {e.city && <p>{e.city}</p>}
                       {e.emergency_contact && <p>Emergency: {e.emergency_contact}</p>}
                       <p>{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                      {e.message && (
+                      {messageWithoutFoodBreakdown(e) && (
                         <p className="flex items-start gap-1.5 mt-1.5">
                           <MessageSquare size={12} className="shrink-0 mt-0.5" />
-                          <span>{e.message}</span>
+                          <span>{messageWithoutFoodBreakdown(e)}</span>
                         </p>
                       )}
                     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck } from 'lucide-react';
@@ -7,7 +7,8 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import FoodMark from '../components/ui/FoodMark';
-import { TableHeaderBar, TablePagination, paginate } from '../components/ui/DataTableChrome';
+import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh } from '../components/ui/DataTableChrome';
+import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
@@ -314,6 +315,20 @@ export default function AdminEnquiries() {
   // effect below), so the admin never lands on a now-empty page.
   const [currentPage, setCurrentPage] = useState(1);
   const ENQUIRIES_PAGE_SIZE = 10;
+  const { ref: tableScrollRef, isDragging, handlers: dragHandlers } = useDragScroll<HTMLDivElement>();
+  // Column sorting — clicking a sortable header sorts the filtered list by
+  // that column; clicking the same header again flips the direction.
+  type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status';
+  const [sortKey, setSortKey] = useState<EnquirySortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDirection>('asc');
+  const handleSort = (key: EnquirySortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
   // Which single filter's dropdown is open — only one at a time. 'more'
   // is the overflow menu for less-frequently-used filters (currently just
   // Source), keeping the main bar to five compact boxes.
@@ -342,6 +357,10 @@ export default function AdminEnquiries() {
   // `form` fields below exactly as before.
   const [waitlistPeople, setWaitlistPeople] = useState<WaitlistPersonForm[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Desktop: clicking a name opens a details popup instead of expanding an
+  // inline row (mobile keeps the tap-to-expand card behavior via
+  // expandedId above).
+  const [detailsTarget, setDetailsTarget] = useState<Enquiry | null>(null);
   // Separate from expandedId: expandedId also drives the mobile
   // expand/collapse toggle and should stay set. highlightId is purely a
   // "you arrived here via a link" visual cue for the desktop table (which
@@ -1130,13 +1149,28 @@ export default function AdminEnquiries() {
       || e.email?.toLowerCase().includes(trimmedSearch)
       || e.trip_title?.toLowerCase().includes(trimmedSearch));
 
+  const sortedFiltered = sortKey ? [...filtered].sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    switch (sortKey) {
+      case 'name': return dir * (a.full_name || '').localeCompare(b.full_name || '');
+      case 'group': return dir * ((a.group_size || 1) - (b.group_size || 1));
+      case 'food': return dir * foodPreferenceKey(a).localeCompare(foodPreferenceKey(b));
+      case 'source': return dir * (a.source || '').localeCompare(b.source || '');
+      case 'date': return dir * (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0);
+      case 'package': return dir * (a.package_type || 'normal').localeCompare(b.package_type || 'normal');
+      case 'payment': return dir * ((a.amount_paid || 0) - (b.amount_paid || 0));
+      case 'status': return dir * (a.status || '').localeCompare(b.status || '');
+      default: return 0;
+    }
+  }) : filtered;
+
   const {
     pageItems: paginatedEnquiries,
     totalPages: enquiriesTotalPages,
     safePage: enquiriesSafePage,
     rangeStart: enquiriesRangeStart,
     rangeEnd: enquiriesRangeEnd,
-  } = paginate(filtered, currentPage, ENQUIRIES_PAGE_SIZE);
+  } = paginate(sortedFiltered, currentPage, ENQUIRIES_PAGE_SIZE);
 
   // Any change to what's being filtered/searched can shrink the result set
   // out from under the current page, so land back on page 1 whenever the
@@ -1590,7 +1624,11 @@ export default function AdminEnquiries() {
                 onSearchChange={setSearchQuery}
                 searchPlaceholder="Search case #, title, owner..."
               />
-              <div className="overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-xl border border-background-warm">
+              <div
+                ref={tableScrollRef}
+                {...dragHandlers}
+                className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-xl border border-background-warm ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+              >
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
                     <tr>
@@ -1604,13 +1642,15 @@ export default function AdminEnquiries() {
                         />
                       </th>
                       <th className="px-3 py-3 text-left hidden md:table-cell">S.No</th>
-                      <th className="px-4 py-3 text-left">Name</th>
+                      <SortableTh label="Name" sortKey="name" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left" />
+                      <SortableTh label="Group" sortKey="group" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
+                      <SortableTh label="Food" sortKey="food" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
                       <th className="px-4 py-3 text-left hidden sm:table-cell">Contact</th>
-                      <th className="px-4 py-3 text-left hidden lg:table-cell">Source</th>
-                      <th className="px-4 py-3 text-left hidden lg:table-cell">Date &amp; Time</th>
-                      <th className="px-2 py-3 text-center whitespace-nowrap">Package</th>
-                      <th className="px-2 py-3 text-left whitespace-nowrap">Payment</th>
-                      <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
+                      <SortableTh label="Source" sortKey="source" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left hidden lg:table-cell" />
+                      <SortableTh label="Date & Time" sortKey="date" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left hidden lg:table-cell" />
+                      <SortableTh label="Package" sortKey="package" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-center whitespace-nowrap" />
+                      <SortableTh label="Payment" sortKey="payment" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
+                      <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-center whitespace-nowrap" />
                       <th className="px-2 py-3 text-center whitespace-nowrap">Seat</th>
                       <th className="px-2 py-3 text-right whitespace-nowrap">Update</th>
                     </tr>
@@ -1622,11 +1662,10 @@ export default function AdminEnquiries() {
                       const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                       const isHighlighted = highlightId === e.id;
                       const clr = groupColor(e);
-                      const isExpanded = expandedId === e.id;
                       const food = foodBadge(e);
                       return (
-                        <Fragment key={e.id}>
                         <motion.tr
+                          key={e.id}
                           ref={(el) => { cardRefs.current[e.id] = el; }}
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -1646,36 +1685,37 @@ export default function AdminEnquiries() {
                           <td className="px-3 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">{idx + 1}</td>
                           <td className="px-4 py-3 max-w-[150px] sm:max-w-none">
                             <button
-                              onClick={() => setExpandedId(isExpanded ? null : e.id)}
+                              onClick={() => setDetailsTarget(e)}
                               className="text-left w-full group"
                               title="Click for full details"
                             >
-                              <p className="font-medium text-dark truncate flex items-center gap-1.5 group-hover:text-primary transition-colors">
+                              <p className="font-medium text-dark truncate group-hover:text-primary transition-colors">
                                 {e.full_name}
-                                <ChevronDown size={12} className={`text-dark-muted shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                               </p>
                               <p className="text-dark-muted text-xs truncate sm:hidden">{e.email}</p>
-                              <div className="flex items-center flex-wrap gap-1 mt-1">
-                                {e.group_size && e.group_size > 1 ? (
-                                  <span
-                                    title={`Part of a group booking of ${e.group_size}`}
-                                    className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
-                                  >
-                                    <Users size={9} /> Group {e.group_seq}/{e.group_size}
-                                  </span>
-                                ) : (
-                                  <span
-                                    title="Booked individually, not part of a group"
-                                    className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
-                                  >
-                                    <User size={9} /> Solo
-                                  </span>
-                                )}
-                                <span className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap ${food.color}`}>
-                                  <FoodMark type={foodPreferenceKey(e)} size={9} /> {food.label}
-                                </span>
-                              </div>
                             </button>
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap">
+                            {e.group_size && e.group_size > 1 ? (
+                              <span
+                                title={`Part of a group booking of ${e.group_size}`}
+                                className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                              >
+                                <Users size={12} className="shrink-0" /> Group {e.group_seq}/{e.group_size}
+                              </span>
+                            ) : (
+                              <span
+                                title="Booked individually, not part of a group"
+                                className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
+                              >
+                                <User size={12} className="shrink-0" /> Solo
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full shrink-0 whitespace-nowrap ${food.color}`}>
+                              <FoodMark type={foodPreferenceKey(e)} size={12} /> {food.label}
+                            </span>
                           </td>
                           <td className="px-4 py-3 text-dark-muted hidden sm:table-cell">
                             <p className="flex items-center gap-1 text-xs truncate"><Mail size={11} className="shrink-0" /> <span className="truncate">{e.email}</span></p>
@@ -1766,47 +1806,6 @@ export default function AdminEnquiries() {
                             </div>
                           </td>
                         </motion.tr>
-                        {isExpanded && (
-                          <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={clr ? clr.row : 'bg-background/40'}>
-                            <td colSpan={11} className="px-4 pb-4">
-                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2 text-sm border-t border-background-warm pt-3">
-                                <div>
-                                  <p className="text-dark-muted text-xs">Phone</p>
-                                  <p className="text-dark truncate">{e.phone}</p>
-                                </div>
-                                <div>
-                                  <p className="text-dark-muted text-xs">City</p>
-                                  <p className="text-dark truncate">{e.city || '—'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-dark-muted text-xs">Age</p>
-                                  <p className="text-dark truncate">{e.age ?? '—'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-dark-muted text-xs">Source</p>
-                                  <p className="text-dark truncate inline-flex items-center gap-1">
-                                    <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-dark-muted text-xs">Date &amp; Time</p>
-                                  <p className="text-dark truncate">{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(e.created_at)}</p>
-                                </div>
-                                <div>
-                                  <p className="text-dark-muted text-xs">Package</p>
-                                  <p className="text-dark truncate">{PACKAGE_CONFIG[e.package_type || 'normal'].label}</p>
-                                </div>
-                                {e.message && (
-                                  <div className="col-span-2 sm:col-span-3 lg:col-span-4">
-                                    <p className="text-dark-muted text-xs">Notes</p>
-                                    <p className="text-dark text-sm">{e.message}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </motion.tr>
-                        )}
-                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -2384,6 +2383,80 @@ export default function AdminEnquiries() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Enquiry Details Popup — desktop replacement for the old inline
+          expand-in-row panel. Clicking a name in the table opens this
+          instead of pushing the row below it down. */}
+      <Modal isOpen={!!detailsTarget} onClose={() => setDetailsTarget(null)} title={detailsTarget?.full_name || 'Enquiry Details'} size="md">
+        {detailsTarget && (() => {
+          const srcCfg = SOURCE_CONFIG[detailsTarget.source] || SOURCE_CONFIG.other;
+          const food = foodBadge(detailsTarget);
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center flex-wrap gap-1.5">
+                {detailsTarget.group_size && detailsTarget.group_size > 1 ? (
+                  <span
+                    title={`Part of a group booking of ${detailsTarget.group_size}`}
+                    className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-dark-muted"
+                  >
+                    <Users size={10} /> Group {detailsTarget.group_seq}/{detailsTarget.group_size}
+                  </span>
+                ) : (
+                  <span
+                    title="Booked individually, not part of a group"
+                    className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-dark-muted"
+                  >
+                    <User size={10} /> Solo
+                  </span>
+                )}
+                <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${food.color}`}>
+                  <FoodMark type={foodPreferenceKey(detailsTarget)} size={10} /> {food.label}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+                <div>
+                  <p className="text-dark-muted text-xs">Email</p>
+                  <p className="text-dark truncate">{detailsTarget.email}</p>
+                </div>
+                <div>
+                  <p className="text-dark-muted text-xs">Phone</p>
+                  <p className="text-dark truncate">{detailsTarget.phone}</p>
+                </div>
+                <div>
+                  <p className="text-dark-muted text-xs">City</p>
+                  <p className="text-dark truncate">{detailsTarget.city || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-dark-muted text-xs">Age</p>
+                  <p className="text-dark truncate">{detailsTarget.age ?? '—'}</p>
+                </div>
+                <div>
+                  <p className="text-dark-muted text-xs">Source</p>
+                  <p className="text-dark truncate inline-flex items-center gap-1">
+                    <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-dark-muted text-xs">Package</p>
+                  <p className="text-dark truncate">{PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}</p>
+                </div>
+                <div>
+                  <p className="text-dark-muted text-xs">Date &amp; Time</p>
+                  <p className="text-dark truncate">
+                    {formatDate(detailsTarget.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(detailsTarget.created_at)}
+                  </p>
+                </div>
+              </div>
+              {detailsTarget.message && (
+                <div>
+                  <p className="text-dark-muted text-xs mb-1">Notes</p>
+                  <p className="text-dark text-sm bg-background-warm rounded-xl px-3 py-2.5">{detailsTarget.message}</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </Modal>
 
       {/* Cancel Booking Modal */}
