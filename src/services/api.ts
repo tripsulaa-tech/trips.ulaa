@@ -374,6 +374,19 @@ function isAgeNotEligibleError(error: { message?: string }): boolean {
   return !!error.message?.includes('AGE_NOT_ELIGIBLE');
 }
 
+// The enforce_enquiry_capacity_or_waitlist() DB trigger (see
+// add_enquiry_capacity_enforcement.sql) raises a plain 'SEATS_UNAVAILABLE'
+// marker — not a dedicated SQLSTATE — when a plain enquiry insert (or a
+// group's worth of them) would exceed the trip's real, live seat count.
+// This is the hard backstop behind getTripSeatSnapshot()'s pre-submit
+// re-check below: even if two people submit within the same instant, only
+// as many as actually fit get through as real enquiries — the rest get
+// this error and the caller routes them to the waitlist instead. Matched
+// on message text, same pattern as isAgeNotEligibleError above.
+function isSeatsUnavailableError(error: { message?: string }): boolean {
+  return !!error.message?.includes('SEATS_UNAVAILABLE');
+}
+
 // The (trip_id, name, phone, email) unique constraint (active enquiries
 // only — cancelled ones are excluded) means an exact literal re-submission
 // throws a Postgres 23505. Surfaced as a distinct error so the UI can show
@@ -388,6 +401,9 @@ export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
     }
     if (isAgeNotEligibleError(error)) {
       throw new Error('AGE_NOT_ELIGIBLE');
+    }
+    if (isSeatsUnavailableError(error)) {
+      throw new Error('SEATS_UNAVAILABLE');
     }
     throw error;
   }
@@ -422,8 +438,37 @@ export async function submitGroupEnquiry(enquiry: BookingFormData, groupSize: nu
     if (isAgeNotEligibleError(error)) {
       throw new Error('AGE_NOT_ELIGIBLE');
     }
+    if (isSeatsUnavailableError(error)) {
+      throw new Error('SEATS_UNAVAILABLE');
+    }
     throw error;
   }
+}
+
+// Live, uncached snapshot of one trip's seat numbers — queried right before
+// a booking submission decides enquiry-vs-waitlist, instead of trusting
+// whatever was true when the trip page first loaded. Mirrors the same
+// total/booked/waitlist-reserved math getUpcomingTrips() and
+// getUpcomingTripBySlug() use for the public "seats left" figure (see
+// publicSeatsLeft() in utils/utils-index.ts), just re-fetched fresh at
+// submit time. This closes most of the "two people submit against the same
+// stale seats-left number" race; the SEATS_UNAVAILABLE DB trigger (see
+// add_enquiry_capacity_enforcement.sql) is the hard backstop for whatever's
+// left of that window. Returns null on any fetch failure so callers can
+// fall back to their existing cached number rather than blocking submission.
+export async function getTripSeatSnapshot(
+  tripId: string
+): Promise<{ totalSeats: number | null; seatsBooked: number; waitlistReserved: number } | null> {
+  const [{ data, error }, reservedCounts] = await Promise.all([
+    supabase.from('upcoming_trips').select('total_seats, seats_booked').eq('id', tripId).single(),
+    getWaitlistReservedCounts(),
+  ]);
+  if (error || !data) return null;
+  return {
+    totalSeats: data.total_seats,
+    seatsBooked: data.seats_booked,
+    waitlistReserved: reservedCounts[tripId] || 0,
+  };
 }
 
 export async function getEnquiries(): Promise<Enquiry[]> {

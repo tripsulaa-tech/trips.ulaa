@@ -165,6 +165,10 @@ create table public.enquiries (
   group_id                  uuid,
   group_size                integer,
   group_seq                 integer not null default 1,
+  -- Admin-only escape hatch from enforce_enquiry_capacity_or_waitlist()
+  -- (see add_enquiry_capacity_enforcement.sql) — always false on the public
+  -- form, which never sets it.
+  bypass_capacity_check     boolean not null default false,
   constraint enquiries_pkey primary key (id),
   constraint enquiries_status_check
     check (status = any (array['new'::text, 'contacted'::text, 'closed'::text])),
@@ -411,6 +415,63 @@ begin
       raise exception 'This trip has no seats left (% / % booked).', v_seats_booked, v_total_seats;
     end if;
   end if;
+  return new;
+end;
+$function$;
+
+-- Enforces capacity at plain enquiry SUBMISSION time, not just at payment
+-- time. enforce_trip_capacity() above only rejects the amount_paid 0→>0
+-- transition, so an ordinary (unpaid) public-form enquiry was never checked
+-- against capacity at the DB level — the enquiry-vs-waitlist decision lived
+-- entirely in the browser (BookingForm's remainingSeats, computed once on
+-- page load) and could go stale if seats filled up while the form was still
+-- open. This locks the trip row and checks the request (1 seat for solo,
+-- group_size for a group) against the trip's real, current
+-- seats_booked/total_seats, raising a plain 'SEATS_UNAVAILABLE' marker
+-- (matched by src/services/api.ts, same convention as AGE_NOT_ELIGIBLE) so
+-- the UI can fall back to a waitlist signup instead of failing outright.
+-- See add_enquiry_capacity_enforcement.sql for the full rationale.
+create or replace function public.enforce_enquiry_capacity_or_waitlist()
+returns trigger
+language plpgsql
+as $function$
+declare
+  v_seats_booked int;
+  v_total_seats int;
+  v_real_remaining int;
+  v_requested_seats int;
+begin
+  -- Only gates brand-new, not-yet-cancelled enquiry rows, and only the
+  -- first row of a group submission — a group inserts one row per seat in
+  -- a single multi-row INSERT (see submitGroupEnquiry in api.ts), so
+  -- checking group_seq = 1 against the full group_size (rather than
+  -- checking every row against just 1 seat) rejects/accepts the whole
+  -- group atomically. Admin's explicit override skips this entirely.
+  if new.trip_id is null
+     or new.cancelled_at is not null
+     or coalesce(new.bypass_capacity_check, false)
+     or (new.group_seq is not null and new.group_seq > 1) then
+    return new;
+  end if;
+
+  select seats_booked, total_seats
+    into v_seats_booked, v_total_seats
+    from public.upcoming_trips
+   where id = new.trip_id
+     for update;
+
+  if v_total_seats is null then
+    return new;
+  end if;
+
+  v_real_remaining := greatest(v_total_seats - coalesce(v_seats_booked, 0), 0);
+  v_requested_seats := coalesce(new.group_size, 1);
+
+  if v_requested_seats > v_real_remaining then
+    raise exception 'SEATS_UNAVAILABLE: only % seat(s) actually left for this trip (requested %).',
+      v_real_remaining, v_requested_seats;
+  end if;
+
   return new;
 end;
 $function$;
@@ -927,6 +988,14 @@ create trigger on_enquiry_created
 create trigger on_enquiries_capacity_check
   before insert or update on public.enquiries
   for each row execute function public.enforce_trip_capacity();
+-- Gates plain (unpaid) enquiry submission against live capacity — see
+-- enforce_enquiry_capacity_or_waitlist() above. Named later alphabetically
+-- than on_enquiries_capacity_check purely to keep trigger order predictable;
+-- the two don't overlap in practice since no insert path sets amount_paid > 0
+-- directly.
+create trigger on_enquiries_capacity_check_at_submit
+  before insert on public.enquiries
+  for each row execute function public.enforce_enquiry_capacity_or_waitlist();
 create trigger on_enquiries_seat_sync
   after insert or update or delete on public.enquiries
   for each row execute function public.trg_enquiries_seat_sync();

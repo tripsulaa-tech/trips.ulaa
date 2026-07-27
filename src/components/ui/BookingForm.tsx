@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { CheckCircle, AlertCircle, FileText, User, Users, Utensils, Clock3 } from 'lucide-react';
 import type { BookingFormData, BookingMode } from '../../types/types-index';
-import { submitEnquiry, submitGroupEnquiry, submitWaitlist } from '../../services/api';
+import { submitEnquiry, submitGroupEnquiry, submitWaitlist, getTripSeatSnapshot } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
 import { validateFullName, validateCity, validatePhone, validateOptionalPhone, validateAge, DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
@@ -51,6 +51,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // Which path the most recent successful submission actually took —
   // drives the wording on the success screen (enquiry vs waitlist).
   const [submittedAsWaitlist, setSubmittedAsWaitlist] = useState(false);
+  // True when the waitlist path was reached because the DB's live capacity
+  // check rejected what looked (from this form's stale seats-left number)
+  // like a fitting enquiry — i.e. the exact race this component's
+  // remainingSeats prop can't fully close on its own. Drives a distinct,
+  // more specific success message than the ordinary "didn't fit" waitlist
+  // path below.
+  const [justMissedSeats, setJustMissedSeats] = useState(false);
   // Not react-hook-form fields (kept alongside bookingMode/groupSize as
   // separate choices, same pattern as Solo/Group above).
   // Solo: one shared preference, same as full_name/phone/etc.
@@ -147,53 +154,100 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
     try {
       setStatus('loading');
+      setJustMissedSeats(false);
+
+      // remainingSeats (the prop) reflects whatever was true when the trip
+      // page loaded — it goes stale the moment seats fill up while this
+      // form is still open. Re-fetch the trip's live seat numbers right
+      // before deciding enquiry-vs-waitlist so that decision uses current
+      // data instead of a snapshot from page load. Falls back to the prop
+      // if the fetch fails for any reason, rather than blocking submission.
+      let liveRemaining = remainingSeats;
+      if (tripId) {
+        const snapshot = await getTripSeatSnapshot(tripId);
+        if (snapshot) {
+          liveRemaining = snapshot.totalSeats == null
+            ? undefined
+            : Math.max(0, snapshot.totalSeats - snapshot.seatsBooked - snapshot.waitlistReserved);
+        }
+      }
+      const soloFitsLive = liveRemaining === undefined || liveRemaining >= 1;
+      const groupFitsLive = liveRemaining === undefined || groupSize <= liveRemaining;
+
       if (bookingMode === 'group') {
-        if (groupFits) {
-          const foodPreferences: ('veg' | 'non_veg')[] = [
-            ...Array(groupVegCountClamped).fill('veg'),
-            ...Array(groupSize - groupVegCountClamped).fill('non_veg'),
-          ];
-          await submitGroupEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences);
-          setSubmittedAsWaitlist(false);
+        const foodPreferences: ('veg' | 'non_veg')[] = [
+          ...Array(groupVegCountClamped).fill('veg'),
+          ...Array(groupSize - groupVegCountClamped).fill('non_veg'),
+        ];
+        // Doesn't fit in what's left — one waitlist row for the whole group
+        // (group_size on the row), not one enquiry per seat. The veg/non-veg
+        // split isn't stored as structured data on a single row, so it's
+        // folded into the message for whoever follows up.
+        const foodNote = `${groupVegCountClamped} veg / ${groupSize - groupVegCountClamped} non-veg.`;
+        const waitlistPayload = {
+          full_name: data.full_name,
+          phone: data.phone,
+          email: data.email,
+          age: data.age,
+          city: data.city,
+          emergency_contact: data.emergency_contact,
+          message: data.message ? `${foodNote} ${data.message}` : foodNote,
+          trip_id: tripId!,
+          trip_title: tripTitle,
+          group_size: groupSize,
+        };
+
+        if (groupFitsLive) {
+          try {
+            await submitGroupEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences);
+            setSubmittedAsWaitlist(false);
+          } catch (err) {
+            // The DB's own capacity check — the hard backstop behind the
+            // live re-check above — says these seats are actually gone.
+            // Fall back to the waitlist instead of failing outright.
+            if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {
+              await submitWaitlist(waitlistPayload);
+              setSubmittedAsWaitlist(true);
+              setJustMissedSeats(true);
+            } else {
+              throw err;
+            }
+          }
         } else {
-          // Doesn't fit in what's left — one waitlist row for the whole
-          // group (group_size on the row), not one enquiry per seat. The
-          // veg/non-veg split isn't stored as structured data on a single
-          // row, so it's folded into the message for whoever follows up.
-          const foodNote = `${groupVegCountClamped} veg / ${groupSize - groupVegCountClamped} non-veg.`;
-          await submitWaitlist({
-            full_name: data.full_name,
-            phone: data.phone,
-            email: data.email,
-            age: data.age,
-            city: data.city,
-            emergency_contact: data.emergency_contact,
-            message: data.message ? `${foodNote} ${data.message}` : foodNote,
-            trip_id: tripId!,
-            trip_title: tripTitle,
-            group_size: groupSize,
-          });
+          await submitWaitlist(waitlistPayload);
           setSubmittedAsWaitlist(true);
         }
         setSuccessCount(groupSize);
       } else {
-        if (soloFits) {
-          await submitEnquiry({ ...data, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle });
-          setSubmittedAsWaitlist(false);
+        const waitlistPayload = {
+          full_name: data.full_name,
+          phone: data.phone,
+          email: data.email,
+          age: data.age,
+          city: data.city,
+          emergency_contact: data.emergency_contact,
+          food_preference: foodPreference,
+          message: data.message,
+          trip_id: tripId!,
+          trip_title: tripTitle,
+          group_size: null,
+        };
+
+        if (soloFitsLive) {
+          try {
+            await submitEnquiry({ ...data, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle });
+            setSubmittedAsWaitlist(false);
+          } catch (err) {
+            if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {
+              await submitWaitlist(waitlistPayload);
+              setSubmittedAsWaitlist(true);
+              setJustMissedSeats(true);
+            } else {
+              throw err;
+            }
+          }
         } else {
-          await submitWaitlist({
-            full_name: data.full_name,
-            phone: data.phone,
-            email: data.email,
-            age: data.age,
-            city: data.city,
-            emergency_contact: data.emergency_contact,
-            food_preference: foodPreference,
-            message: data.message,
-            trip_id: tripId!,
-            trip_title: tripTitle,
-            group_size: null,
-          });
+          await submitWaitlist(waitlistPayload);
           setSubmittedAsWaitlist(true);
         }
         setSuccessCount(1);
@@ -213,6 +267,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         setErrorMsg("You're already on the waitlist for this trip with these exact details — we'll reach out the moment enough seats open up.");
       } else if (err instanceof Error && err.message === 'AGE_NOT_ELIGIBLE') {
         setErrorMsg(`This trip is only open to ages ${effectiveMinAge}–${effectiveMaxAge}. Please double-check the age entered, or message us on WhatsApp if you have questions.`);
+      } else if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {
+        setErrorMsg("Seats for this trip just sold out while you were booking. Please refresh the page and try again — you'll be offered the waitlist instead.");
       } else {
         setErrorMsg('Something went wrong. Please try again or contact us on WhatsApp.');
       }
@@ -231,7 +287,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           {submittedAsWaitlist ? "You're on the list!" : 'Enquiry Received!'}
         </h3>
         <p className="text-dark-muted">
-          {submittedAsWaitlist
+          {justMissedSeats
+            ? (successCount > 1
+                ? `Seats for this trip just sold out as you were booking — no worries, we've added your group of ${successCount} to the waitlist and will message and email you the moment seats free up together.`
+                : "A seat for this trip just sold out as you were booking — no worries, we've added you to the waitlist and will message and email you the moment one frees up.")
+            : submittedAsWaitlist
             ? (successCount > 1
                 ? `We'll message and email you the moment ${successCount} seats free up together on this trip.`
                 : "We'll message and email you the moment a seat frees up on this trip.")
