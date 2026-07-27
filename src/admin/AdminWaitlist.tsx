@@ -463,6 +463,30 @@ export default function AdminWaitlist() {
   // saved (see AdminEnquiries), not the moment we navigate away.
   const canConvert = (e: WaitlistEntry) => e.status === 'waiting' || e.status === 'notified';
 
+  // Per-trip FIFO queue rank (3.3) — ranks every still-convertible
+  // (waiting/notified) entry by how long it's been sitting relative to
+  // others waiting on the *same trip*, oldest first. Declined/converted
+  // entries don't hold a queue spot. This is purely a visibility +
+  // soft-warning aid: nothing in the DB enforces conversion order, an
+  // admin can still convert out of turn (e.g. a group that only just now
+  // fits), but they get a clear "#2 of 5" indicator and a confirmation
+  // prompt before doing so instead of no signal at all beyond eyeballing
+  // the Joined column.
+  const queueRank = useMemo(() => {
+    const map = new Map<string, { rank: number; total: number }>();
+    const byTrip = new Map<string, WaitlistEntry[]>();
+    entries.forEach(e => {
+      if (!canConvert(e)) return;
+      if (!byTrip.has(e.trip_id)) byTrip.set(e.trip_id, []);
+      byTrip.get(e.trip_id)!.push(e);
+    });
+    byTrip.forEach(list => {
+      const sorted = [...list].sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));
+      sorted.forEach((e, i) => map.set(e.id, { rank: i + 1, total: sorted.length }));
+    });
+    return map;
+  }, [entries]);
+
   const handleConvert = async (entry: WaitlistEntry) => {
     // canConvert() above only checks the entry's own status, not whether a
     // seat is actually free — so this can be reached even when the trip
@@ -472,6 +496,24 @@ export default function AdminWaitlist() {
     // tell them up front how many seats are actually available.
     const needed = seatsRemaining(entry);
     const available = seatsAvailable[entry.trip_id] ?? 0;
+
+    // Soft FIFO warning (3.3): nothing stops converting a newer signup
+    // ahead of an older one for the same trip, so ask for a deliberate
+    // confirmation rather than letting it happen silently. Doesn't block —
+    // there are legitimate reasons to skip the line (the person ahead
+    // isn't reachable, only a partial group fits, etc.) — it just makes
+    // sure it's a choice, not an accident.
+    const rankInfo = queueRank.get(entry.id);
+    if (rankInfo && rankInfo.rank > 1) {
+      const aheadCount = rankInfo.rank - 1;
+      const proceed = await confirm({
+        title: 'Not first in line',
+        message: `${aheadCount} ${aheadCount === 1 ? 'person has' : 'people have'} been waiting longer than ${entry.full_name} for this trip (they're #${rankInfo.rank} of ${rankInfo.total}). Convert them ahead of the others anyway?`,
+        confirmLabel: 'Convert anyway',
+        variant: 'default',
+      });
+      if (!proceed) return;
+    }
 
     if (available <= 0) {
       await confirm({
@@ -719,6 +761,18 @@ export default function AdminWaitlist() {
                         <td className="px-4 py-3 max-w-[160px] sm:max-w-none">
                           <p className="font-medium text-dark truncate flex items-center gap-1.5">
                             {e.full_name}
+                            {canConvert(e) && (queueRank.get(e.id)?.total ?? 0) > 1 && (
+                              <span
+                                title={queueRank.get(e.id)!.rank === 1
+                                  ? `First in line for this trip — ${queueRank.get(e.id)!.total} waiting in total`
+                                  : `#${queueRank.get(e.id)!.rank} of ${queueRank.get(e.id)!.total} waiting for this trip — ${queueRank.get(e.id)!.rank - 1} waited longer`}
+                                className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                                  queueRank.get(e.id)!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                }`}
+                              >
+                                #{queueRank.get(e.id)!.rank} of {queueRank.get(e.id)!.total} waiting
+                              </span>
+                            )}
                             {e.status !== 'converted' && convertedCount(e) > 0 && (
                               <span
                                 title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
@@ -902,6 +956,18 @@ export default function AdminWaitlist() {
                               className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-background-warm text-dark-muted whitespace-nowrap"
                             >
                               <Users size={9} /> {groupLabel(e)} · {e.group_size}
+                            </span>
+                          )}
+                          {canConvert(e) && (queueRank.get(e.id)?.total ?? 0) > 1 && (
+                            <span
+                              title={queueRank.get(e.id)!.rank === 1
+                                ? `First in line for this trip — ${queueRank.get(e.id)!.total} waiting in total`
+                                : `#${queueRank.get(e.id)!.rank} of ${queueRank.get(e.id)!.total} waiting for this trip — ${queueRank.get(e.id)!.rank - 1} waited longer`}
+                              className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                                queueRank.get(e.id)!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                              }`}
+                            >
+                              #{queueRank.get(e.id)!.rank} of {queueRank.get(e.id)!.total} waiting
                             </span>
                           )}
                           {e.status !== 'converted' && convertedCount(e) > 0 && (

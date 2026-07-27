@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -27,6 +27,30 @@ function parseNonNegative(raw: string): number | '' {
   const n = Number(raw);
   if (Number.isNaN(n)) return '';
   return Math.max(0, n);
+}
+
+// Digits-only phone "signature" used for fuzzy duplicate matching (3.5).
+// The DB's own duplicate guard only catches an *exact* string match on
+// (trip, name, phone, email), so "+91 98765-43210", "098765 43210", and
+// "9876543210" all count as different people to it even though they're
+// the same number typed three different ways. Comparing just the last 10
+// digits absorbs country-code/leading-zero/formatting differences without
+// needing a full phone-parsing library. Returns null for anything too
+// short to mean anything (avoids flagging two blank/junk phones as a match).
+function phoneSignature(phone: string | null | undefined): string | null {
+  const digits = (phone || '').replace(/\D/g, '');
+  if (digits.length < 6) return null;
+  return digits.slice(-10);
+}
+
+// Same idea for email — trims/lowercases so casing or stray whitespace
+// doesn't hide a match, and ignores the app's own "not provided" sentinel
+// (see createManualEnquiry/submitWaitlist) so two people who never gave an
+// email don't get flagged as duplicates of each other.
+function emailSignature(email: string | null | undefined): string | null {
+  const trimmed = (email || '').trim().toLowerCase();
+  if (!trimmed || trimmed === 'not-provided@ulaa.local') return null;
+  return trimmed;
 }
 
 const PACKAGE_CONFIG = {
@@ -933,6 +957,27 @@ export default function AdminEnquiries() {
     }
   };
 
+  // Possible-duplicate soft warning (3.5) — fuzzy-matches the phone/email
+  // being typed into the manual "Log an Enquiry" form against every
+  // enquiry already in the system, across every trip, not just an exact
+  // string match on the current trip the way the DB's own unique
+  // constraint does. Catches the cases that constraint misses: the same
+  // phone typed in a different format, or a second walk-in logged for
+  // someone who already has a website enquiry under a slightly different
+  // spelling of their name. Purely advisory — it never blocks Save, it
+  // just gives the admin a chance to notice and merge by hand instead of
+  // silently creating a second, untracked record for the same traveler.
+  const possibleDuplicates = (() => {
+    if (convertingWaitlist) return []; // this flow is already tied to one specific waitlist signup
+    const phoneSig = phoneSignature(form.phone);
+    const emailSig = emailSignature(form.email);
+    if (!phoneSig && !emailSig) return [];
+    return enquiries.filter(e =>
+      (phoneSig && phoneSignature(e.phone) === phoneSig) ||
+      (emailSig && emailSignature(e.email) === emailSig)
+    );
+  })();
+
   const handleSave = async () => {
     if (convertingWaitlist && convertingWaitlist.slots > 1) {
       return handleSaveWaitlistGroup();
@@ -1121,22 +1166,40 @@ export default function AdminEnquiries() {
     enquiries: Enquiry[];
   };
 
+  // 'unlinked' bucket = every enquiry with trip_id null — both genuine
+  // "Contact Us" messages (submitContactEnquiry, always source: 'website')
+  // and any manual admin entry logged without picking a trip. Labeled and
+  // sorted distinctly (3.8) so it doesn't just blend into the trip list:
+  // pinned to the front regardless of count, since a handful of "just say
+  // hi" messages could otherwise sink to the bottom of a long, busy-season
+  // trip list and never get noticed.
+  const UNLINKED_GROUP_KEY = 'unlinked';
   const tripGroups: TripGroup[] = (() => {
     const map = new Map<string, TripGroup>();
     enquiries.forEach(e => {
-      const key = e.trip_id || 'unlinked';
+      const key = e.trip_id || UNLINKED_GROUP_KEY;
       if (!map.has(key)) {
         map.set(key, {
           key,
-          title: e.trip_title || 'No Trip Linked',
+          title: e.trip_title || 'General Enquiries (No Trip)',
           trip: e.trip_id ? trips.find(t => t.id === e.trip_id) : undefined,
           enquiries: [],
         });
       }
       map.get(key)!.enquiries.push(e);
     });
-    return Array.from(map.values()).sort((a, b) => b.enquiries.length - a.enquiries.length);
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.key === UNLINKED_GROUP_KEY) return -1;
+      if (b.key === UNLINKED_GROUP_KEY) return 1;
+      return b.enquiries.length - a.enquiries.length;
+    });
   })();
+
+  // Is this enquiry a genuine "Contact Us" website message, as opposed to
+  // a manual no-trip entry an admin logged? The manual-entry form's source
+  // dropdown never offers 'website' (see SOURCE_OPTIONS), so trip_id null
+  // + source 'website' can only come from submitContactEnquiry.
+  const isGeneralContactMessage = (e: Enquiry) => !e.trip_id && e.source === 'website';
 
   const activeGroup = tripGroups.find(g => g.key === selectedTripKey) || null;
   const scopedEnquiries = activeGroup ? activeGroup.enquiries : enquiries;
@@ -1324,7 +1387,7 @@ export default function AdminEnquiries() {
       e.email,
       e.age ?? '',
       e.city ?? '',
-      e.trip_title ?? '',
+      e.trip_id ? (e.trip_title ?? '') : 'General (No Trip)',
       isGroupEntry(e) ? groupLabel(e) : '',
       PACKAGE_CONFIG[e.package_type]?.label ?? e.package_type,
       e.food_preference ?? 'Not set',
@@ -1590,6 +1653,34 @@ export default function AdminEnquiries() {
                       />
                     )}
                   </div>
+
+                  {/* Explicit "General Enquiries" chip (3.8) — a one-click
+                      toggle for the no-trip bucket (Contact Us messages +
+                      any manual entry logged without picking a trip),
+                      separate from the Trip dropdown above, so it doesn't
+                      require an admin to think to open that dropdown and
+                      scroll past every trip to find it. Only rendered when
+                      there's actually something in that bucket. */}
+                  {enquiries.some(e => !e.trip_id) && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTripKey(k => (k === UNLINKED_GROUP_KEY ? null : UNLINKED_GROUP_KEY))}
+                      title="Enquiries not linked to any trip — Contact Us messages and manual entries logged without picking a trip"
+                      className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 h-[38px] transition-colors whitespace-nowrap ${
+                        selectedTripKey === UNLINKED_GROUP_KEY
+                          ? 'bg-primary text-white border-primary'
+                          : 'border-background-warm text-dark hover:border-primary/30'
+                      }`}
+                    >
+                      <MessageCircle size={13} className="shrink-0" />
+                      General Enquiries
+                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] ${
+                        selectedTripKey === UNLINKED_GROUP_KEY ? 'bg-white/20' : 'bg-background-warm'
+                      }`}>
+                        {enquiries.filter(e => !e.trip_id).length}
+                      </span>
+                    </button>
+                  )}
 
                   {/* Query Status */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
@@ -1865,8 +1956,16 @@ export default function AdminEnquiries() {
                               className="text-left w-full group"
                               title="Click for full details"
                             >
-                              <p className="font-medium text-dark truncate group-hover:text-primary transition-colors">
+                              <p className="font-medium text-dark truncate group-hover:text-primary transition-colors flex items-center gap-1.5">
                                 {e.full_name}
+                                {!e.trip_id && !activeGroup && (
+                                  <span
+                                    title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
+                                    className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted shrink-0"
+                                  >
+                                    <MessageCircle size={9} className="shrink-0" /> General
+                                  </span>
+                                )}
                               </p>
                               <p className="text-dark-muted text-xs truncate sm:hidden">{e.email}</p>
                             </button>
@@ -2058,6 +2157,14 @@ export default function AdminEnquiries() {
                               <XCircle size={9} /> Cancelled
                             </span>
                           )}
+                          {!e.trip_id && !activeGroup && (
+                            <span
+                              title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
+                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted shrink-0"
+                            >
+                              <MessageCircle size={9} /> General
+                            </span>
+                          )}
                         </p>
                         <p className="text-dark-muted text-xs truncate">{e.phone}</p>
                         <div className="flex items-center flex-wrap gap-1 mt-1">
@@ -2097,6 +2204,20 @@ export default function AdminEnquiries() {
                           </div>
                           <div className="col-span-2">
                             <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
+                          </div>
+                          {/* Trip (3.8) — spelled out explicitly, including
+                              the no-trip case, instead of only being
+                              inferable from which Trip filter group the
+                              admin happens to be scoped to. */}
+                          <div className="col-span-2">
+                            <p className="text-dark-muted text-xs">Trip</p>
+                            <p className="text-dark truncate">
+                              {e.trip_id ? e.trip_title : (
+                                <span className="text-dark-muted italic">
+                                  {isGeneralContactMessage(e) ? 'None — Contact Us message' : 'None — logged without a trip'}
+                                </span>
+                              )}
+                            </p>
                           </div>
                           <div>
                             <p className="text-dark-muted text-xs">City</p>
@@ -2359,6 +2480,35 @@ export default function AdminEnquiries() {
               <label className="block text-sm font-medium text-dark mb-1">Email</label>
               <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="Optional" />
             </div>
+
+            {/* Possible-duplicate soft warning (3.5) — fuzzy phone/email
+                match against every enquiry already in the system, not just
+                this trip. Advisory only; doesn't block Save. */}
+            {possibleDuplicates.length > 0 && (
+              <div className="md:col-span-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-amber-800">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">
+                    Possible duplicate{possibleDuplicates.length > 1 ? 's' : ''} — {possibleDuplicates.length === 1 ? 'someone' : `${possibleDuplicates.length} people`} already in the system {possibleDuplicates.length === 1 ? 'shares' : 'share'} this phone or email
+                  </p>
+                  <p className="text-xs mt-0.5 text-amber-700">Double-check this isn't the same traveler before saving a new entry.</p>
+                  <ul className="mt-1.5 space-y-1">
+                    {possibleDuplicates.slice(0, 5).map(d => (
+                      <li key={d.id} className="text-xs flex items-center gap-1 flex-wrap">
+                        <span className="font-medium">{d.full_name}</span>
+                        <span className="text-amber-700/80">
+                          — {d.trip_title || 'No trip linked'} · {d.status}{d.cancelled_at ? ' · cancelled' : ''}
+                        </span>
+                      </li>
+                    ))}
+                    {possibleDuplicates.length > 5 && (
+                      <li className="text-xs text-amber-700/80">+ {possibleDuplicates.length - 5} more</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Age</label>
               <input type="number" min={0} value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))} className={inputClass} placeholder="Optional" />
@@ -2625,6 +2775,20 @@ export default function AdminEnquiries() {
                 </div>
                 <div className="col-span-2 sm:col-span-3">
                   <ContactQuickLinks phone={detailsTarget.phone} email={detailsTarget.email} name={detailsTarget.full_name} tripTitle={detailsTarget.trip_title} size="md" />
+                </div>
+                {/* Trip (3.8) — spelled out explicitly, including the
+                    no-trip case, instead of only being inferable from
+                    which Trip filter group the admin happens to be
+                    scoped to. */}
+                <div className="col-span-2 sm:col-span-3">
+                  <p className="text-dark-muted text-xs">Trip</p>
+                  <p className="text-dark truncate">
+                    {detailsTarget.trip_id ? detailsTarget.trip_title : (
+                      <span className="text-dark-muted italic">
+                        {isGeneralContactMessage(detailsTarget) ? 'None — Contact Us message' : 'None — logged without a trip'}
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <div>
                   <p className="text-dark-muted text-xs">City</p>
