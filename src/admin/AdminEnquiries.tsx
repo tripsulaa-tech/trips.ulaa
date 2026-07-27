@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -2148,8 +2148,11 @@ export default function AdminEnquiries() {
                             </span>
                           )}
                           {e.package_type === 'early_bird' && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 shrink-0">
-                              <Zap size={9} /> Early Bird
+                            <span
+                              title="Early Bird"
+                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 shrink-0"
+                            >
+                              <Bird size={11} />
                             </span>
                           )}
                           {e.cancelled_at && (
@@ -2247,14 +2250,8 @@ export default function AdminEnquiries() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <span className={`w-9 h-9 rounded-full inline-flex items-center justify-center shrink-0 ${
-                                e.food_preference === 'veg' ? 'bg-green-50 text-green-700' : e.food_preference === 'non_veg' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
-                              }`}>
-                                {e.food_preference === 'veg' || e.food_preference === 'non_veg' ? (
-                                  <FoodMark type={e.food_preference} size={16} />
-                                ) : (
-                                  <Utensils size={15} />
-                                )}
+                              <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                                <Utensils size={15} />
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Food Preference</p>
@@ -2293,7 +2290,7 @@ export default function AdminEnquiries() {
                           <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3 items-center">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                <Package size={15} />
+                                {e.package_type === 'early_bird' ? <Bird size={15} /> : <Package size={15} />}
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Package</p>
@@ -2331,7 +2328,7 @@ export default function AdminEnquiries() {
                           </div>
                         )}
 
-                        <div className="flex items-center flex-wrap gap-2 pt-1">
+                        <div className="flex items-center flex-wrap gap-2 pt-3">
                           <button
                             onClick={() => openPayment(e)}
                             className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap bg-background-warm text-dark-muted"

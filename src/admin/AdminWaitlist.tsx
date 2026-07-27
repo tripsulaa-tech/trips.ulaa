@@ -1001,7 +1001,7 @@ export default function AdminWaitlist() {
                     <div className="text-xs text-dark-muted space-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="flex items-center gap-1.5 min-w-0">
-                          <span className="w-5 h-5 rounded-full bg-background-warm text-primary/70 inline-flex items-center justify-center shrink-0">
+                          <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
                             <Mail size={10} />
                           </span>
                           <span className="truncate">{e.email}</span>
@@ -1009,7 +1009,7 @@ export default function AdminWaitlist() {
                         <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
                       </div>
                       <p className="flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full bg-background-warm text-primary/70 inline-flex items-center justify-center shrink-0">
+                        <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
                           <Phone size={10} />
                         </span>
                         {e.phone}
@@ -1020,7 +1020,7 @@ export default function AdminWaitlist() {
                           {e.age && (
                             <>
                               <span className="inline-flex items-center gap-1.5">
-                                <span className="w-5 h-5 rounded-full bg-background-warm text-primary/70 inline-flex items-center justify-center shrink-0">
+                                <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
                                   <User size={10} />
                                 </span>
                                 {e.age} yrs
@@ -1047,7 +1047,7 @@ export default function AdminWaitlist() {
                             <span className="w-px h-3.5 bg-background-warm shrink-0" />
                           )}
                           <span className="inline-flex items-center gap-1.5">
-                            <span className="w-5 h-5 rounded-full bg-background-warm text-primary/70 inline-flex items-center justify-center shrink-0">
+                            <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
                               <CalendarDays size={10} />
                             </span>
                             {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
