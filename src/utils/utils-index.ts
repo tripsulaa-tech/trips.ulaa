@@ -97,10 +97,13 @@ export function formatDateRange(start: string, end: string): string {
  * itself. See UpcomingTrip.min_age/max_age and validateAge in
  * src/utils/formValidation.ts for the matching form-validation logic.
  */
-export function formatAgeRange(minAge?: number, maxAge?: number): string {
-  if (minAge !== undefined && maxAge !== undefined) return `${minAge}–${maxAge} yrs`;
-  if (minAge !== undefined) return `${minAge}+ yrs`;
-  return `Up to ${maxAge} yrs`;
+export function formatAgeRange(minAge?: number | null, maxAge?: number | null): string {
+  const hasMin = minAge !== undefined && minAge !== null;
+  const hasMax = maxAge !== undefined && maxAge !== null;
+  if (hasMin && hasMax) return `${minAge}–${maxAge} yrs`;
+  if (hasMin) return `${minAge}+ yrs`;
+  if (hasMax) return `Up to ${maxAge} yrs`;
+  return 'All ages welcome';
 }
 
 /** Get seats remaining count */

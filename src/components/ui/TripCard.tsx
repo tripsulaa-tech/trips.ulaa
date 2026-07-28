@@ -64,7 +64,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             }}
             aria-label="Share this trip"
             title="Share this trip"
-            className="h-9 w-9 flex items-center justify-center rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25 transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-full bg-primary text-white border-2 border-primary shadow-warm hover:bg-primary-dark hover:shadow-warm-lg transition-all"
           >
             <Share2 size={16} />
           </button>
@@ -73,7 +73,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             onClick={(e) => { e.preventDefault(); addToCalendar(trip); }}
             aria-label="Add to calendar"
             title="Add to calendar"
-            className="h-9 w-9 flex items-center justify-center rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25 transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-full bg-primary text-white border-2 border-primary shadow-warm hover:bg-primary-dark hover:shadow-warm-lg transition-all"
           >
             <CalendarPlus size={16} />
           </button>
@@ -136,12 +136,10 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                     : `Group of ${trip.total_seats}`}
               </span>
             </div>
-            {(trip.min_age !== undefined || trip.max_age !== undefined) && (
-              <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
-                <UserCheck size={13} className="text-primary shrink-0" />
-                <span>{formatAgeRange(trip.min_age, trip.max_age)}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
+              <UserCheck size={13} className="text-primary shrink-0" />
+              <span>{formatAgeRange(trip.min_age, trip.max_age)}</span>
+            </div>
           </div>
         </div>
 
