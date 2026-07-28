@@ -142,6 +142,11 @@ export interface Enquiry {
   // where it wasn't asked don't break — the public booking form itself
   // requires a choice.
   food_preference?: 'veg' | 'non_veg' | null;
+  // Admin-only escape hatch from enforce_enquiry_capacity_or_waitlist() —
+  // always false/omitted on the public booking form. Used when converting a
+  // waitlist entry into a booking, since the seat was already accounted for
+  // on the waitlist rather than being a fresh request against live capacity.
+  bypass_capacity_check?: boolean;
 }
 
 // One row per individual payment or refund against an enquiry. This is the
