@@ -104,7 +104,7 @@ export default function AdminDashboard() {
     <AdminLayout title="Dashboard">
       <div className="space-y-5 sm:space-y-8">
         {/* Welcome banner */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl">
+        <div className="relative overflow-hidden rounded-lg sm:rounded-xl">
           <img
             src={bannerImg}
             alt=""
@@ -131,7 +131,7 @@ export default function AdminDashboard() {
             <Link
               key={label}
               to={to}
-              className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2 h-full"
+              className="bg-white rounded-md sm:rounded-lg p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2 h-full"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
 
           <Link
             to="/admin/enquiries"
-            className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2 h-full"
+            className="bg-white rounded-md sm:rounded-lg p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center justify-between gap-2 h-full"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2 sm:gap-3">
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
               <Link
                 key={label}
                 to={to}
-                className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center gap-2 sm:gap-3 group"
+                className="bg-white rounded-md sm:rounded-lg p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center gap-2 sm:gap-3 group"
               >
                 <div className={`w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 ${color}`}>
                   <Icon size={20} className="sm:w-7 sm:h-7" />
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
 
         {/* Recent Enquiries + Upcoming Trips */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5">
-          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card">
+          <div className="bg-white rounded-md sm:rounded-lg p-3 sm:p-4 shadow-card">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="flex items-center gap-2">
                 <h3 className="font-display text-base sm:text-lg font-bold text-dark">Recent Enquiries</h3>
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-card">
+          <div className="bg-white rounded-md sm:rounded-lg p-3 sm:p-4 shadow-card">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="flex items-center gap-2">
                 <h3 className="font-display text-base sm:text-lg font-bold text-dark">Upcoming Trips</h3>
@@ -259,7 +259,7 @@ export default function AdminDashboard() {
                       to="/admin/trips"
                       className="flex items-start gap-3 sm:gap-4 group"
                     >
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl overflow-hidden bg-background-warm flex-shrink-0">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded sm:rounded-md overflow-hidden bg-background-warm flex-shrink-0">
                         {trip.cover_image && (
                           <img src={trip.cover_image} alt={trip.title} className="w-full h-full object-cover" />
                         )}

@@ -57,7 +57,7 @@ export default function AdminGallery() {
     <AdminLayout title="Instagram Moments" subtitle="Photos shown in the 'Instagram Moments' section on the homepage.">
       <div className="space-y-6">
         {/* Upload */}
-        <div className="bg-white rounded-2xl shadow-card p-6 border-2 border-dashed border-background-warm hover:border-primary transition-colors">
+        <div className="bg-white rounded-lg shadow-card p-6 border-2 border-dashed border-background-warm hover:border-primary transition-colors">
           <div className="text-center">
             <Upload size={32} className="mx-auto text-primary mb-3" />
             <p className="font-display text-lg font-bold text-dark mb-1">Upload Images</p>
@@ -81,7 +81,7 @@ export default function AdminGallery() {
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading gallery...</div>
         ) : images.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-card">
+          <div className="text-center py-16 bg-white rounded-lg shadow-card">
             <p className="font-display text-xl text-dark-muted">No images yet. Upload your first!</p>
           </div>
         ) : (
@@ -93,20 +93,20 @@ export default function AdminGallery() {
                   key={img.id}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="relative group rounded-2xl overflow-hidden aspect-square"
+                  className="relative group rounded-lg overflow-hidden aspect-square"
                 >
                   <img src={img.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                   <div className="absolute inset-0 bg-dark/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button
                       onClick={() => toggleFeatured(img)}
-                      className={`p-2 rounded-lg transition-colors ${img.is_featured ? 'bg-secondary text-white' : 'bg-white/20 text-white hover:bg-secondary'}`}
+                      className={`p-2 rounded transition-colors ${img.is_featured ? 'bg-secondary text-white' : 'bg-white/20 text-white hover:bg-secondary'}`}
                       title="Toggle featured"
                     >
                       <Star size={16} className={img.is_featured ? 'fill-white' : ''} />
                     </button>
                     <button
                       onClick={() => handleDelete(img)}
-                      className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
+                      className="p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
                       title="Delete"
                     >
                       <Trash2 size={16} />

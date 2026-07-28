@@ -9,8 +9,8 @@ import { DEFAULT_ABOUT, ABOUT_VALUE_ICONS } from '../constants/about';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { AboutContent } from '../types/types-index';
 
-const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
-const cardClass = 'bg-white rounded-2xl shadow-card p-6 space-y-4';
+const inputClass = 'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+const cardClass = 'bg-white rounded-lg shadow-card p-6 space-y-4';
 const iconOptions = Object.keys(ABOUT_VALUE_ICONS);
 
 export default function AdminAbout() {
@@ -153,7 +153,7 @@ export default function AdminAbout() {
         </div>
 
         {/* Actions — floats above the form while scrolling, with a solid backdrop so it doesn't bleed into the fields behind it */}
-        <div className="sticky bottom-4 z-20 flex items-center gap-3 bg-white rounded-2xl shadow-warm-lg border border-background-warm px-5 py-4">
+        <div className="sticky bottom-4 z-20 flex items-center gap-3 bg-white rounded-lg shadow-warm-lg border border-background-warm px-5 py-4">
           <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
             <Save size={16} /> Save Changes
           </Button>

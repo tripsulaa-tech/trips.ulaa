@@ -114,7 +114,7 @@ export default function AdminAlbums() {
     load();
   };
 
-  const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+  const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   return (
     <AdminLayout title="Completed Trips">
@@ -127,7 +127,7 @@ export default function AdminAlbums() {
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading...</div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+          <div className="bg-white rounded-lg shadow-card overflow-hidden">
             <div className="overflow-x-auto scrollbar-hide">
               <table className="w-full text-sm">
                 <thead className="bg-background-warm text-dark font-medium">
@@ -172,11 +172,11 @@ export default function AdminAlbums() {
                       </td>
                       <td className="pl-4 pr-3 py-3">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => togglePublish(album)} className="p-1.5 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                          <button onClick={() => togglePublish(album)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
                             {album.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
                           </button>
-                          <button onClick={() => openEdit(album)} className="p-1.5 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={15} /></button>
-                          <button onClick={() => handleDelete(album.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
+                          <button onClick={() => openEdit(album)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={15} /></button>
+                          <button onClick={() => handleDelete(album.id)} className="p-1.5 rounded hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
                         </div>
                       </td>
                     </motion.tr>
@@ -213,7 +213,7 @@ export default function AdminAlbums() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={e => { if (!form.destination.trim()) e.preventDefault(); }}
-                className="shrink-0 flex items-center gap-1.5 px-3 rounded-xl border-2 border-background-warm bg-background text-dark text-sm font-medium hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+                className="shrink-0 flex items-center gap-1.5 px-3 rounded-md border-2 border-background-warm bg-background text-dark text-sm font-medium hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
                 title="Opens Google Maps in a new tab, already searching for this"
               >
                 Find on Maps ↗
@@ -311,7 +311,7 @@ export default function AdminAlbums() {
         {viewing && (
           <div className="space-y-5">
             {viewing.cover_image && (
-              <img src={viewing.cover_image} alt={viewing.title} className="w-full h-48 object-cover rounded-xl" />
+              <img src={viewing.cover_image} alt={viewing.title} className="w-full h-48 object-cover rounded-md" />
             )}
 
             <div className="flex flex-wrap items-center gap-2">
@@ -356,7 +356,7 @@ export default function AdminAlbums() {
                 <p className="text-xs font-medium text-dark-muted mb-1">Gallery ({viewing.gallery_images.length})</p>
                 <div className="grid grid-cols-4 gap-2">
                   {viewing.gallery_images.slice(0, 8).map((url, i) => (
-                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded-lg" />
+                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
                   ))}
                 </div>
               </div>
@@ -369,7 +369,7 @@ export default function AdminAlbums() {
                   <span className="transition-transform group-open:rotate-90">▶</span> Original Trip Plan
                   <span className="text-dark-muted/70 font-normal">(from Upcoming Trips — admin reference only, not shown publicly)</span>
                 </summary>
-                <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto app-scroll space-y-4">
+                <div className="mt-2 bg-background rounded-md p-3 max-h-80 overflow-y-auto app-scroll space-y-4">
                   {viewing.original_highlights?.length ? (
                     <div>
                       <p className="text-xs font-medium text-dark-muted mb-1">Highlights</p>

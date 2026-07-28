@@ -185,7 +185,7 @@ export default function AdminTrips() {
     load();
   };
 
-  const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+  const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   return (
     <AdminLayout title="Upcoming Trips">
@@ -200,12 +200,12 @@ export default function AdminTrips() {
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading...</div>
         ) : trips.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-card">
+          <div className="text-center py-16 bg-white rounded-lg shadow-card">
             <p className="font-display text-xl text-dark-muted mb-4">No trips yet.</p>
             <Button variant="primary" onClick={openCreate}><Plus size={16} /> Add Your First Trip</Button>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+          <div className="bg-white rounded-lg shadow-card overflow-hidden">
             <div className="overflow-x-auto scrollbar-hide">
               <table className="w-full text-sm">
                 <thead className="bg-background-warm text-dark font-medium">
@@ -245,13 +245,13 @@ export default function AdminTrips() {
                       </td>
                       <td className="pl-4 pr-3 py-3">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => togglePublish(trip)} className="p-1.5 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.is_published ? 'Unpublish' : 'Publish'}>
+                          <button onClick={() => togglePublish(trip)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.is_published ? 'Unpublish' : 'Publish'}>
                             {trip.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
                           </button>
-                          <button onClick={() => openEdit(trip)} className="p-1.5 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                          <button onClick={() => openEdit(trip)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
                             <Edit2 size={15} />
                           </button>
-                          <button onClick={() => handleDelete(trip.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors">
+                          <button onClick={() => handleDelete(trip.id)} className="p-1.5 rounded hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors">
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -488,7 +488,7 @@ export default function AdminTrips() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={e => { if (!form.meeting_point.trim() && !form.destination.trim()) e.preventDefault(); }}
-                  className="shrink-0 flex items-center gap-1.5 px-3 rounded-xl border-2 border-background-warm bg-background text-dark text-sm font-medium hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+                  className="shrink-0 flex items-center gap-1.5 px-3 rounded-md border-2 border-background-warm bg-background text-dark text-sm font-medium hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
                   title="Opens Google Maps in a new tab, already searching for this"
                 >
                   Find on Maps ↗
@@ -565,7 +565,7 @@ export default function AdminTrips() {
         {viewingTrip && (
           <div className="space-y-5">
             {viewingTrip.cover_image && (
-              <img src={viewingTrip.cover_image} alt={viewingTrip.title} className="w-full h-48 object-cover rounded-xl" />
+              <img src={viewingTrip.cover_image} alt={viewingTrip.title} className="w-full h-48 object-cover rounded-md" />
             )}
 
             <div className="flex flex-wrap items-center gap-2">
@@ -647,10 +647,10 @@ export default function AdminTrips() {
                       {d.images && d.images.length > 0 && (
                         <div className="flex gap-1.5 mt-1.5">
                           {d.images.slice(0, 6).map((url, j) => (
-                            <img key={j} src={url} alt="" className="w-10 h-10 object-cover rounded-lg" />
+                            <img key={j} src={url} alt="" className="w-10 h-10 object-cover rounded" />
                           ))}
                           {d.images.length > 6 && (
-                            <span className="w-10 h-10 rounded-lg bg-background-warm text-dark-muted text-xs flex items-center justify-center">
+                            <span className="w-10 h-10 rounded bg-background-warm text-dark-muted text-xs flex items-center justify-center">
                               +{d.images.length - 6}
                             </span>
                           )}
@@ -699,7 +699,7 @@ export default function AdminTrips() {
                 <p className="text-xs font-medium text-dark-muted mb-1">Gallery ({viewingTrip.gallery_images.length})</p>
                 <div className="grid grid-cols-4 gap-2">
                   {viewingTrip.gallery_images.slice(0, 8).map((url, i) => (
-                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded-lg" />
+                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
                   ))}
                 </div>
               </div>
@@ -710,7 +710,7 @@ export default function AdminTrips() {
                 <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
                   <span className="transition-transform group-open:rotate-90">▶</span> Terms & Conditions
                 </summary>
-                <div className="mt-2 bg-background rounded-xl p-3 max-h-64 overflow-y-auto app-scroll space-y-4">
+                <div className="mt-2 bg-background rounded-md p-3 max-h-64 overflow-y-auto app-scroll space-y-4">
                   {parseTerms(viewingTrip.terms_and_conditions || '').map(section => (
                     <div key={section.number}>
                       <p className="text-xs font-bold text-dark mb-1">
@@ -727,7 +727,7 @@ export default function AdminTrips() {
               <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
                 <span className="transition-transform group-open:rotate-90">▶</span> Cancellation Policy
               </summary>
-              <div className="mt-2 bg-background rounded-xl p-3 max-h-80 overflow-y-auto app-scroll">
+              <div className="mt-2 bg-background rounded-md p-3 max-h-80 overflow-y-auto app-scroll">
                 <CancellationPolicyDisplay policy={viewingTrip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
               </div>
             </details>

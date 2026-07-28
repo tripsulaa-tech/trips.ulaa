@@ -94,7 +94,7 @@ export default function NotificationsPanel() {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div ref={panelRef} className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-card-hover border border-background-warm z-20 overflow-hidden">
+          <div ref={panelRef} className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-md shadow-card-hover border border-background-warm z-20 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-background-warm">
               <p className="font-display font-semibold text-dark">Notifications</p>
               {unreadCount > 0 && (

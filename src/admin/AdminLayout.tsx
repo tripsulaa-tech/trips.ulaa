@@ -54,7 +54,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
             onClick={onToggleCollapse}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={`shrink-0 flex items-center justify-center p-1.5 rounded-lg text-dark-muted hover:bg-background-warm hover:text-primary transition-colors ${
+            className={`shrink-0 flex items-center justify-center p-1.5 rounded text-dark-muted hover:bg-background-warm hover:text-primary transition-colors ${
               collapsed ? '' : 'absolute right-4 top-6'
             }`}
           >
@@ -84,7 +84,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
             onClick={onNavigate}
             title={collapsed ? label : undefined}
             className={({ isActive }) => `
-              flex items-center gap-3 py-3 rounded-xl text-sm font-medium transition-all
+              flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all
               ${collapsed ? 'justify-center px-0' : 'px-4'}
               ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
             `}
@@ -99,7 +99,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
         <Link
           to="/"
           title={collapsed ? 'View Site' : undefined}
-          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border border-background-warm text-sm font-medium text-dark hover:bg-background-warm transition-colors ${collapsed ? 'px-0' : 'px-4'}`}
+          className={`flex items-center justify-center gap-2 py-2.5 rounded-md border border-background-warm text-sm font-medium text-dark hover:bg-background-warm transition-colors ${collapsed ? 'px-0' : 'px-4'}`}
         >
           <ExternalLink size={16} className="shrink-0" />
           {!collapsed && 'View Site'}
@@ -168,7 +168,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
         <div className="lg:hidden fixed inset-0 z-40 flex">
           <div className="fixed inset-0 bg-dark/50" onClick={() => setSidebarOpen(false)} />
           <div className="relative w-72 bg-white flex flex-col z-50">
-            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-xl text-dark-muted hover:bg-background">
+            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-md text-dark-muted hover:bg-background">
               <X size={20} />
             </button>
             <SidebarContent userEmail={user?.email} initial={initial} onNavigate={() => setSidebarOpen(false)} />
@@ -183,7 +183,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-dark hover:bg-background flex-shrink-0"
+              className="lg:hidden p-2 rounded-md text-dark hover:bg-background flex-shrink-0"
             >
               <Menu size={20} />
             </button>
@@ -214,7 +214,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
               {profileOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-card-hover border border-background-warm py-2 z-20">
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-md shadow-card-hover border border-background-warm py-2 z-20">
                     <p className="px-4 py-2 text-xs text-dark-muted truncate border-b border-background-warm mb-1">{user?.email}</p>
                     <button
                       onClick={handleSignOut}

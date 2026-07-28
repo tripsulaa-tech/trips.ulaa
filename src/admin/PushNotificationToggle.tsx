@@ -42,7 +42,7 @@ export default function PushNotificationToggle() {
     return (
       <span
         title="Notifications are blocked in your browser settings"
-        className="p-2 rounded-xl text-dark-muted"
+        className="p-2 rounded-md text-dark-muted"
       >
         <BellOff size={18} />
       </span>
@@ -54,7 +54,7 @@ export default function PushNotificationToggle() {
       onClick={handleClick}
       disabled={busy}
       title={status === 'subscribed' ? 'Disable push notifications on this device' : 'Enable push notifications on this device'}
-      className="p-2 rounded-xl text-dark hover:bg-background-warm transition-colors disabled:opacity-50"
+      className="p-2 rounded-md text-dark hover:bg-background-warm transition-colors disabled:opacity-50"
     >
       {status === 'subscribed' ? <BellRing size={18} className="text-primary" /> : <BellOff size={18} />}
     </button>

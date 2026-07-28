@@ -95,7 +95,7 @@ export default function AdminTestimonials() {
     load();
   };
 
-  const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+  const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   return (
     <AdminLayout title="Testimonials" subtitle="Manage the 'Real Stories' shown on the homepage.">
@@ -108,9 +108,9 @@ export default function AdminTestimonials() {
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading...</div>
         ) : items.length === 0 ? (
-          <div className="text-center py-16 text-dark-muted bg-white rounded-2xl shadow-card">No testimonials yet.</div>
+          <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card">No testimonials yet.</div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+          <div className="bg-white rounded-lg shadow-card overflow-hidden">
             <div className="overflow-x-auto scrollbar-hide">
               <table className="w-full text-sm">
                 <thead className="bg-background-warm text-dark font-medium">
@@ -150,11 +150,11 @@ export default function AdminTestimonials() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => togglePublish(t)} className="p-2 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                          <button onClick={() => togglePublish(t)} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
                             {t.is_published ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
-                          <button onClick={() => openEdit(t)} className="p-2 rounded-lg hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDelete(t.id)} className="p-2 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
+                          <button onClick={() => openEdit(t)} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDelete(t.id)} className="p-2 rounded hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </motion.tr>

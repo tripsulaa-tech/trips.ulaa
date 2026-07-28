@@ -11,7 +11,7 @@ import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh, C
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
-import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries, submitWaitlist, getWaitlistReservedCounts } from '../services/api';
+import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries, submitWaitlist } from '../services/api';
 import { formatDate, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
 import type { WaitlistEntry, UpcomingTrip, Enquiry } from '../types/types-index';
@@ -74,7 +74,7 @@ function FilterDropdown<T extends string>({
 }) {
   return (
     <div
-      className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-xl shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
+      className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-md shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
     >
       {options.map(opt => (
         <button
@@ -205,19 +205,12 @@ export default function AdminWaitlist() {
   };
 
   const load = () => {
-    Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries(), getWaitlistReservedCounts()])
-      .then(([waitlistData, tripsData, enquiries, reservedCounts]) => {
+    Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries()])
+      .then(([waitlistData, tripsData, enquiries]) => {
         setEntries(waitlistData);
         setAllTrips(tripsData);
         const map: Record<string, number> = {};
-        // Subtract the waitlist-reserved count per trip so the displayed
-        // "X seats open" badge reflects how many seats are truly unallocated
-        // (not already spoken for by others waiting in line). Clamped to 0
-        // so it never shows negative.
-        tripsData.forEach(t => {
-          const reserved = reservedCounts[t.id] || 0;
-          map[t.id] = Math.max(0, seatsLeft(t.total_seats, t.seats_booked) - reserved);
-        });
+        tripsData.forEach(t => { map[t.id] = seatsLeft(t.total_seats, t.seats_booked); });
         setSeatsAvailable(map);
         setCancelledEnquiryIds(new Set(enquiries.filter(en => !!en.cancelled_at).map(en => en.id)));
         setEnquiriesForGroups(enquiries);
@@ -410,7 +403,7 @@ export default function AdminWaitlist() {
         return (
           <div
             key={card.label}
-            className="bg-white rounded-2xl p-4 shadow-card min-w-0"
+            className="bg-white rounded-lg p-4 shadow-card min-w-0"
           >
             <div className="flex items-center gap-2">
               <Icon size={20} className="shrink-0 text-primary" />
@@ -434,7 +427,7 @@ export default function AdminWaitlist() {
           return (
             <div
               key={card.label}
-              className="shrink-0 w-[132px] snap-start bg-white rounded-2xl p-3 shadow-card"
+              className="shrink-0 w-[132px] snap-start bg-white rounded-lg p-3 shadow-card"
             >
               <div className="flex items-center gap-2">
                 <Icon size={18} className="shrink-0 text-primary" />
@@ -571,7 +564,7 @@ export default function AdminWaitlist() {
     });
   };
 
-  const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+  const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   return (
     <AdminLayout title="Waitlist" subtitle="Everyone who signed up to be notified when a sold-out trip frees a seat.">
@@ -587,7 +580,7 @@ export default function AdminWaitlist() {
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-2xl px-4 py-3"
+            className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3"
           >
             <PartyPopper size={18} className="text-green-600 shrink-0" />
             <p className="text-sm text-green-800">
@@ -614,7 +607,7 @@ export default function AdminWaitlist() {
             value={searchQuery}
             onChange={ev => setSearchQuery(ev.target.value)}
             placeholder="Search name, trip, contact..."
-            className="w-full pl-10 pr-10 py-3 rounded-2xl border-2 border-background-warm bg-white font-body text-dark text-sm focus:border-primary outline-none transition-colors shadow-card"
+            className="w-full pl-10 pr-10 py-3 rounded-lg border-2 border-background-warm bg-white font-body text-dark text-sm focus:border-primary outline-none transition-colors shadow-card"
           />
           {searchQuery && (
             <button
@@ -632,7 +625,7 @@ export default function AdminWaitlist() {
         {openFilterPanel && (
           <div className="fixed inset-0 z-20" onClick={() => setOpenFilterPanel(null)} />
         )}
-        <div className="bg-white rounded-2xl shadow-card p-4">
+        <div className="bg-white rounded-lg shadow-card p-4">
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(o => !o)}
@@ -657,7 +650,7 @@ export default function AdminWaitlist() {
                 <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Status</label>
                 <button
                   onClick={() => setOpenFilterPanel(p => (p === 'status' ? null : 'status'))}
-                  className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                  className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                     openFilterPanel === 'status' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                   }`}
                 >
@@ -681,7 +674,7 @@ export default function AdminWaitlist() {
                   <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                   <button
                     onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
-                    className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                    className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                       openFilterPanel === 'trip' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                     }`}
                   >
@@ -709,7 +702,7 @@ export default function AdminWaitlist() {
             <button
               onClick={clearAllFilters}
               disabled={activeFilterCount === 0}
-              className={`w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 py-2 transition-colors whitespace-nowrap ${
+              className={`w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold rounded-md border-2 px-3 py-2 transition-colors whitespace-nowrap ${
                 activeFilterCount === 0
                   ? 'border-background-warm text-dark-muted/40 cursor-default'
                   : 'border-background-warm text-dark hover:border-primary/30'
@@ -725,13 +718,13 @@ export default function AdminWaitlist() {
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-card">
+          <div className="text-center py-16 bg-white rounded-lg shadow-card">
             <p className="font-display text-xl text-dark-muted">No waitlist signups found.</p>
           </div>
         ) : (
           <>
             {/* Desktop / tablet table */}
-            <div className="hidden sm:block bg-white rounded-2xl shadow-card overflow-hidden">
+            <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
               <TableHeaderBar
                 title="Waitlist details"
                 rangeStart={waitlistRangeStart}
@@ -747,7 +740,7 @@ export default function AdminWaitlist() {
               <div
                 ref={tableScrollRef}
                 {...dragHandlers}
-                className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-xl border border-background-warm ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+                className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-md border border-background-warm ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
               >
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
@@ -909,7 +902,7 @@ export default function AdminWaitlist() {
                               <button
                                 onClick={() => handleConvert(e)}
                                 title="Convert to enquiry"
-                                className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 h-7 rounded-lg border transition-colors whitespace-nowrap ${
+                                className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 h-7 rounded border transition-colors whitespace-nowrap ${
                                   hasSeatOpen(e)
                                     ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
                                     : 'border-primary/40 text-primary hover:bg-primary/10'
@@ -924,7 +917,7 @@ export default function AdminWaitlist() {
                               disabled={updating === e.id}
                               title="Remove from waitlist"
                               aria-label="Remove from waitlist"
-                              className="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                              className="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -951,7 +944,7 @@ export default function AdminWaitlist() {
                     key={e.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="bg-white rounded-2xl shadow-card p-4 space-y-3"
+                    className="bg-white rounded-lg shadow-card p-4 space-y-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -1079,7 +1072,7 @@ export default function AdminWaitlist() {
                     {canConvert(e) && (
                       <button
                         onClick={() => handleConvert(e)}
-                        className={`w-full inline-flex items-center justify-center gap-1.5 text-sm font-button font-semibold py-2 rounded-lg border transition-colors ${
+                        className={`w-full inline-flex items-center justify-center gap-1.5 text-sm font-button font-semibold py-2 rounded border transition-colors ${
                           hasSeatOpen(e)
                             ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
                             : 'border-primary/40 text-primary hover:bg-primary/10'
@@ -1133,7 +1126,7 @@ export default function AdminWaitlist() {
                         onClick={() => handleDelete(e)}
                         disabled={updating === e.id}
                         aria-label="Remove from waitlist"
-                        className="shrink-0 w-9 h-9 inline-flex items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                        className="shrink-0 w-9 h-9 inline-flex items-center justify-center rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -1145,7 +1138,7 @@ export default function AdminWaitlist() {
 
             {/* Mobile: same "Showing X–Y of N" + Prev/Next pagination the
                 desktop table gets. */}
-            <div className="sm:hidden bg-white rounded-2xl shadow-card overflow-hidden">
+            <div className="sm:hidden bg-white rounded-lg shadow-card overflow-hidden">
               <p className="text-dark-muted text-xs text-center px-4 pt-3">
                 {filtered.length === 0 ? 'No signups found' : `Showing ${waitlistRangeStart}\u2013${waitlistRangeEnd} of ${filtered.length} signups`}
               </p>
@@ -1277,7 +1270,7 @@ export default function AdminWaitlist() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-dark text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-warm-lg"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-dark text-white text-sm font-medium px-4 py-2.5 rounded-md shadow-warm-lg"
           >
             <CheckCircle2 size={16} className="text-green-400 shrink-0" />
             {toast}

@@ -24,7 +24,7 @@ export default function AdminLogin() {
     }
   };
 
-  const inputClass = `w-full px-4 py-3 rounded-xl border-2 border-background-warm bg-background font-body text-dark placeholder-dark-muted/50 transition-all duration-200 outline-none focus:border-primary focus:bg-white`;
+  const inputClass = `w-full px-4 py-3 rounded-md border-2 border-background-warm bg-background font-body text-dark placeholder-dark-muted/50 transition-all duration-200 outline-none focus:border-primary focus:bg-white`;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -39,7 +39,7 @@ export default function AdminLogin() {
           <p className="text-dark-muted text-sm mt-1">Sign in to manage ULAA trips and enquiries.</p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-warm-lg p-8">
+        <div className="bg-white rounded-xl shadow-warm-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Email</label>
@@ -67,7 +67,7 @@ export default function AdminLogin() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-xl p-3">
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-md p-3">
                 <AlertCircle size={16} className="shrink-0" />
                 <p className="text-sm">{error}</p>
               </div>

@@ -314,7 +314,7 @@ function FilterDropdown<T extends string>({
 }) {
   return (
     <div
-      className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-xl shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
+      className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-md shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
     >
       {options.map(opt => (
         <button
@@ -1456,7 +1456,7 @@ export default function AdminEnquiries() {
         return (
           <div
             key={card.label}
-            className="bg-white rounded-2xl p-4 shadow-card min-w-0"
+            className="bg-white rounded-lg p-4 shadow-card min-w-0"
           >
             <div className="flex items-center gap-2">
               <Icon size={20} className="shrink-0 text-primary" />
@@ -1482,7 +1482,7 @@ export default function AdminEnquiries() {
           return (
             <div
               key={card.label}
-              className="shrink-0 w-[132px] snap-start bg-white rounded-2xl p-3 shadow-card"
+              className="shrink-0 w-[132px] snap-start bg-white rounded-lg p-3 shadow-card"
             >
               <div className="flex items-center gap-2">
                 <Icon size={18} className="shrink-0 text-primary" />
@@ -1496,7 +1496,7 @@ export default function AdminEnquiries() {
     </div>
   );
 
-  const inputClass = `w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+  const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   return (
     <AdminLayout title="Enquiries">
@@ -1525,7 +1525,7 @@ export default function AdminEnquiries() {
             value={searchQuery}
             onChange={ev => setSearchQuery(ev.target.value)}
             placeholder="Search name, phone, email, trip..."
-            className="w-full pl-10 pr-10 py-3 rounded-2xl border-2 border-background-warm bg-white font-body text-dark text-sm focus:border-primary outline-none transition-colors shadow-card"
+            className="w-full pl-10 pr-10 py-3 rounded-lg border-2 border-background-warm bg-white font-body text-dark text-sm focus:border-primary outline-none transition-colors shadow-card"
           />
           {searchQuery && (
             <button
@@ -1541,16 +1541,16 @@ export default function AdminEnquiries() {
         {/* Trip summary card — shows "All Trips" totals when no Trip filter
             is selected below, or that trip's own name/seats/food/money
             once one is picked from the Trip filter. */}
-        <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-          <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-background-warm">
+        <div className="bg-white rounded-lg shadow-card overflow-hidden">
+          <div className="flex flex-col md:flex-row">
             {/* Section 1 — trip photo + name / date / seats booked · food split */}
-            <div className="flex items-center gap-3 p-4 flex-1 min-w-0 md:basis-1/3">
-              <div className="w-14 h-14 rounded-xl overflow-hidden bg-background-warm shrink-0">
+            <div className="flex items-center gap-3 p-4 flex-1 min-w-0 md:basis-1/3 border-b md:border-b-0 border-background-warm mx-4 md:mx-0 md:my-4 md:border-r">
+              <div className="w-14 h-14 rounded-md overflow-hidden bg-background-warm shrink-0">
                 {activeGroup?.trip?.cover_image && (
                   <img src={activeGroup.trip.cover_image} alt={activeGroup.title} className="w-full h-full object-cover" />
                 )}
               </div>
-              <div className="min-w-0 flex flex-col gap-1">
+              <div className="min-w-0 flex-1 flex flex-col justify-between h-14 py-0.5">
                 <p className="font-display font-bold text-dark truncate">{activeGroup ? activeGroup.title : 'All Trips'}</p>
                 {activeGroup?.trip?.start_date && activeGroup.trip.end_date && (
                   <p className="text-dark-muted text-xs flex items-center gap-1">
@@ -1565,8 +1565,8 @@ export default function AdminEnquiries() {
                       {(food.veg > 0 || food.nonVeg > 0) && (
                         <>
                           {activeGroup?.trip && <span className="text-dark-muted/40" aria-hidden="true">|</span>}
-                          <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-600 shrink-0" /> {food.veg} Veg</span>
-                          <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" /> {food.nonVeg} Non-veg</span>
+                          <span className="inline-flex items-center gap-1 text-green-700"><FoodMark type="veg" size={9} /> {food.veg} Veg</span>
+                          <span className="inline-flex items-center gap-1 text-red-700"><FoodMark type="non_veg" size={9} /> {food.nonVeg} Non-veg</span>
                         </>
                       )}
                     </p>
@@ -1577,7 +1577,7 @@ export default function AdminEnquiries() {
 
             {/* Section 2 — seat utilization bar (only meaningful once a specific trip is picked) */}
             {activeGroup?.trip && (
-              <div className="flex flex-col justify-center gap-1.5 p-4 flex-1 min-w-0 md:basis-1/3">
+              <div className="flex flex-col justify-center gap-1.5 p-4 flex-1 min-w-0 md:basis-1/3 border-b md:border-b-0 border-background-warm mx-4 md:mx-0 md:my-4 md:border-r">
                 <p className="text-dark-muted text-xs font-medium">Seat Utilization</p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-2 rounded-full bg-background-warm overflow-hidden">
@@ -1594,28 +1594,29 @@ export default function AdminEnquiries() {
               </div>
             )}
 
-            {/* Section 3 — payments collected/pending + link to the trip */}
-            <div className="flex flex-col justify-center gap-1.5 p-4 flex-1 min-w-0 md:basis-1/3">
-              <p className="text-dark-muted text-xs font-medium">Payments</p>
-              <div className="flex items-center gap-6">
-                <div>
-                  <p className="text-dark-muted text-xs">Collected</p>
-                  <p className="text-green-700 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries).collected)}</p>
+            {/* Section 3 — payments collected/pending + link to the trip, button vertically centered against the full card height */}
+            <div className="flex items-center gap-4 p-4 flex-1 min-w-0 md:basis-1/3">
+              <div className="min-w-0 flex-1">
+                <p className="text-dark-muted text-xs font-medium mb-1.5">Payments</p>
+                <div className="flex items-center gap-6">
+                  <div>
+                    <p className="text-dark-muted text-xs">Collected</p>
+                    <p className="text-green-700 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries).collected)}</p>
+                  </div>
+                  <div>
+                    <p className="text-dark-muted text-xs">Pending</p>
+                    <p className="text-amber-600 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries).pending)}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-dark-muted text-xs">Pending</p>
-                  <p className="text-amber-600 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries).pending)}</p>
-                </div>
-                <div className="flex-1" />
-                {activeGroup?.trip && (
-                  <Link
-                    to="/admin/trips"
-                    className="shrink-0 text-xs font-button font-semibold px-3 py-1.5 rounded-lg border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap"
-                  >
-                    View Trip Details
-                  </Link>
-                )}
               </div>
+              {activeGroup?.trip && (
+                <Link
+                  to="/admin/trips"
+                  className="shrink-0 self-center text-xs font-button font-semibold px-4 py-2.5 rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap"
+                >
+                  View Trip Details
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -1628,7 +1629,7 @@ export default function AdminEnquiries() {
             of the person who's been waiting longer. Only relevant once a
             specific trip is picked from the Trip filter. */}
         {activeGroup?.trip && waitlistWaitingCounts[activeGroup.key]?.entries > 0 && seatsLeft(activeGroup.trip.total_seats, activeGroup.trip.seats_booked) > 0 && (
-          <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3">
+          <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-lg px-4 py-3">
             <Users size={18} className="text-orange-600 shrink-0" />
             <p className="text-sm text-orange-800 flex-1">
               <span className="font-semibold">
@@ -1638,7 +1639,7 @@ export default function AdminEnquiries() {
             </p>
             <Link
               to={`/admin/waitlist?trip=${activeGroup.key}`}
-              className="shrink-0 text-xs font-button font-semibold px-3 py-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors whitespace-nowrap"
+              className="shrink-0 text-xs font-button font-semibold px-3 py-1.5 rounded bg-orange-600 text-white hover:bg-orange-700 transition-colors whitespace-nowrap"
             >
               Go to Waitlist
             </Link>
@@ -1654,7 +1655,7 @@ export default function AdminEnquiries() {
             {openFilterPanel && (
               <div className="fixed inset-0 z-20" onClick={() => setOpenFilterPanel(null)} />
             )}
-            <div className="bg-white rounded-2xl shadow-card p-4">
+            <div className="bg-white rounded-lg shadow-card p-4">
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(o => !o)}
@@ -1683,7 +1684,7 @@ export default function AdminEnquiries() {
                     <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'trip' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
@@ -1714,7 +1715,7 @@ export default function AdminEnquiries() {
                       type="button"
                       onClick={() => setSelectedTripKey(k => (k === UNLINKED_GROUP_KEY ? null : UNLINKED_GROUP_KEY))}
                       title="Enquiries not linked to any trip — Contact Us messages and manual entries logged without picking a trip"
-                      className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 h-[38px] transition-colors whitespace-nowrap ${
+                      className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-button font-semibold rounded-md border-2 px-3 h-[38px] transition-colors whitespace-nowrap ${
                         selectedTripKey === UNLINKED_GROUP_KEY
                           ? 'bg-primary text-white border-primary'
                           : 'border-background-warm text-dark hover:border-primary/30'
@@ -1735,7 +1736,7 @@ export default function AdminEnquiries() {
                     <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Query Status</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'query' ? null : 'query'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'query' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
@@ -1758,7 +1759,7 @@ export default function AdminEnquiries() {
                     <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Payment</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'pay' ? null : 'pay'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'pay' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
@@ -1781,7 +1782,7 @@ export default function AdminEnquiries() {
                     <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'booked' ? null : 'booked'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'booked' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
@@ -1804,7 +1805,7 @@ export default function AdminEnquiries() {
                     <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Group / Solo</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'group' ? null : 'group'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'group' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
@@ -1827,7 +1828,7 @@ export default function AdminEnquiries() {
                     <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Food</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'food' ? null : 'food'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'food' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
@@ -1851,7 +1852,7 @@ export default function AdminEnquiries() {
                     <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Source</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'more' ? null : 'more'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 px-3 py-2 bg-white transition-colors ${
+                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'more' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
@@ -1879,7 +1880,7 @@ export default function AdminEnquiries() {
                 <button
                   onClick={clearAllFilters}
                   disabled={activeFilterCount === 0}
-                  className={`w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold rounded-xl border-2 px-3 py-2 transition-colors whitespace-nowrap ${
+                  className={`w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold rounded-md border-2 px-3 py-2 transition-colors whitespace-nowrap ${
                     activeFilterCount === 0
                       ? 'border-background-warm text-dark-muted/40 cursor-default'
                       : 'border-background-warm text-dark hover:border-primary/30'
@@ -1893,14 +1894,14 @@ export default function AdminEnquiries() {
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading enquiries...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-card">
+          <div className="text-center py-16 bg-white rounded-lg shadow-card">
             <p className="font-display text-xl text-dark-muted">No enquiries found.</p>
           </div>
         ) : (
           <>
             {/* Bulk actions toolbar — appears once at least one enquiry is selected */}
             {selectedIds.size > 0 && (
-              <div className="flex flex-wrap items-center gap-3 bg-white rounded-2xl shadow-card px-4 py-3">
+              <div className="flex flex-wrap items-center gap-3 bg-white rounded-lg shadow-card px-4 py-3">
                 <p className="text-sm font-medium text-dark">
                   {selectedIds.size} selected
                 </p>
@@ -1911,13 +1912,13 @@ export default function AdminEnquiries() {
                   <button
                     onClick={handleBulkDelete}
                     disabled={bulkDeleting}
-                    className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-60"
+                    className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-60"
                   >
                     <Trash2 size={14} /> {bulkDeleting ? 'Deleting…' : 'Delete'}
                   </button>
                   <button
                     onClick={() => setSelectedIds(new Set())}
-                    className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-xl border border-background-warm text-dark-muted hover:bg-background/50 transition-colors"
+                    className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-background-warm text-dark-muted hover:bg-background/50 transition-colors"
                   >
                     <X size={14} /> Clear
                   </button>
@@ -1926,7 +1927,7 @@ export default function AdminEnquiries() {
             )}
 
             {/* Desktop / tablet table */}
-            <div className="hidden sm:block bg-white rounded-2xl shadow-card overflow-hidden">
+            <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
               <TableHeaderBar
                 title="Enquiry details"
                 rangeStart={enquiriesRangeStart}
@@ -1942,7 +1943,7 @@ export default function AdminEnquiries() {
               <div
                 ref={tableScrollRef}
                 {...dragHandlers}
-                className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-xl border border-background-warm ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+                className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-md border border-background-warm ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
               >
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
@@ -2112,7 +2113,7 @@ export default function AdminEnquiries() {
                               <button
                                 onClick={() => handleCancelToggle(e)}
                                 disabled={updating === e.id}
-                                className={`flex-1 text-[11px] font-button font-semibold px-1.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
+                                className={`flex-1 text-[11px] font-button font-semibold px-1.5 py-1 rounded border transition-colors whitespace-nowrap ${
                                   e.cancelled_at
                                     ? 'border-green-200 text-green-700 hover:bg-green-50'
                                     : 'border-red-200 text-red-600 hover:bg-red-50'
@@ -2125,7 +2126,7 @@ export default function AdminEnquiries() {
                                 disabled={updating === e.id}
                                 title="Delete enquiry"
                                 aria-label="Delete enquiry"
-                                className="shrink-0 w-7 flex items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                                className="shrink-0 w-7 flex items-center justify-center rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -2158,7 +2159,7 @@ export default function AdminEnquiries() {
                     ref={(el) => { cardRefs.current[e.id] = el; }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className={`bg-white rounded-2xl shadow-card overflow-hidden transition-shadow duration-1000 ${
+                    className={`bg-white rounded-lg shadow-card overflow-hidden transition-shadow duration-1000 ${
                       isHighlighted ? 'ring-2 ring-primary/40' : ''
                     }`}
                   >
@@ -2367,13 +2368,13 @@ export default function AdminEnquiries() {
                         )}
 
                         {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                          <div className="bg-amber-50 rounded-xl px-3 py-2">
+                          <div className="bg-amber-50 rounded-md px-3 py-2">
                             <p className="text-amber-700 text-xs font-medium">Balance due: {formatPrice(paymentBalance(e)!)}</p>
                           </div>
                         )}
 
                         {refundStatus(e) && (
-                          <div className={`rounded-xl px-3 py-2 ${refundStatus(e)!.color}`}>
+                          <div className={`rounded-md px-3 py-2 ${refundStatus(e)!.color}`}>
                             <p className="text-xs font-medium">{refundStatus(e)!.label}</p>
                           </div>
                         )}
@@ -2440,7 +2441,7 @@ export default function AdminEnquiries() {
                 no way to reach page 2+ at all. Wrapped in its own card so
                 it reads as a distinct, easy-to-find control at the end of
                 the list rather than bare text. */}
-            <div className="sm:hidden bg-white rounded-2xl shadow-card overflow-hidden">
+            <div className="sm:hidden bg-white rounded-lg shadow-card overflow-hidden">
               <p className="text-dark-muted text-xs text-center px-4 pt-3">
                 {filtered.length === 0 ? 'No enquiries found' : `Showing ${enquiriesRangeStart}\u2013${enquiriesRangeEnd} of ${filtered.length} enquiries`}
               </p>
@@ -2457,7 +2458,7 @@ export default function AdminEnquiries() {
       {/* Manual Add Enquiry Modal */}
       <Modal isOpen={modalOpen} onClose={closeAddModal} title={convertingWaitlist ? 'Convert Waitlist Signup' : 'Log an Enquiry'} size="md">
         {convertingWaitlist && (
-          <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 mb-4 text-sm text-green-800">
+          <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-md px-3 py-2.5 mb-4 text-sm text-green-800">
             <PartyPopper size={16} className="shrink-0 mt-0.5" />
             <p>
               {convertingWaitlist.slots > 1 ? (
@@ -2528,7 +2529,7 @@ export default function AdminEnquiries() {
             {/* One card per seat being filled this pass */}
             <div className="space-y-4">
               {waitlistPeople.map((p, i) => (
-                <div key={i} className="border-2 border-background-warm rounded-xl p-3">
+                <div key={i} className="border-2 border-background-warm rounded-md p-3">
                   <p className="text-xs font-button font-semibold text-dark-muted mb-2 flex items-center gap-1.5">
                     <Users size={12} /> Seat {convertingWaitlist.groupSeq + i} of {convertingWaitlist.groupSize}
                   </p>
@@ -2597,7 +2598,7 @@ export default function AdminEnquiries() {
                 match against every enquiry already in the system, not just
                 this trip. Advisory only; doesn't block Save. */}
             {possibleDuplicates.length > 0 && (
-              <div className="md:col-span-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-amber-800">
+              <div className="md:col-span-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2.5 text-amber-800">
                 <AlertTriangle size={16} className="shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">
@@ -2714,7 +2715,7 @@ export default function AdminEnquiries() {
       <Modal isOpen={!!paymentTarget} onClose={() => setPaymentTarget(null)} title="Track Payment" size="sm">
         {paymentTarget && (
           <div className="space-y-4">
-            <div className="bg-background-warm rounded-xl px-4 py-3 flex items-center justify-between gap-2">
+            <div className="bg-background-warm rounded-md px-4 py-3 flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-medium text-dark truncate">{paymentTarget.full_name}</p>
                 <p className="text-dark-muted text-xs truncate">{paymentTarget.trip_title || 'No trip linked'}</p>
@@ -2814,10 +2815,10 @@ export default function AdminEnquiries() {
             )}
 
             {paymentTarget.cancelled_at && (
-              <div className="bg-red-50 rounded-xl p-3 space-y-2">
+              <div className="bg-red-50 rounded-md p-3 space-y-2">
                 <p className="text-red-700 text-xs font-medium">This booking is cancelled. Track any refund here as you process it.</p>
                 {paymentTarget.suggested_refund_amount != null && (
-                  <p className="text-xs text-dark-muted bg-white/60 rounded-lg px-2 py-1.5">
+                  <p className="text-xs text-dark-muted bg-white/60 rounded px-2 py-1.5">
                     Suggested refund (estimate — not binding, confirm before use): <span className="font-semibold text-dark">{formatPrice(paymentTarget.suggested_refund_amount)}</span>
                     {paymentTarget.third_party_charges ? ` — after ${formatPrice(paymentTarget.third_party_charges)} in third-party charges` : ''}
                   </p>
@@ -2930,7 +2931,7 @@ export default function AdminEnquiries() {
               {detailsTarget.message && (
                 <div>
                   <p className="text-dark-muted text-xs mb-1">Notes</p>
-                  <p className="text-dark text-sm bg-background-warm rounded-xl px-3 py-2.5">{detailsTarget.message}</p>
+                  <p className="text-dark text-sm bg-background-warm rounded-md px-3 py-2.5">{detailsTarget.message}</p>
                 </div>
               )}
             </div>
@@ -2942,7 +2943,7 @@ export default function AdminEnquiries() {
       <Modal isOpen={!!cancelTarget} onClose={() => setCancelTarget(null)} title="Cancel Booking" size="sm">
         {cancelTarget && (
           <div className="space-y-4">
-            <div className="bg-background-warm rounded-xl px-4 py-3">
+            <div className="bg-background-warm rounded-md px-4 py-3">
               <p className="font-medium text-dark">{cancelTarget.full_name}</p>
               <p className="text-dark-muted text-xs">{cancelTarget.trip_title || 'No trip linked'}</p>
             </div>
@@ -2953,7 +2954,7 @@ export default function AdminEnquiries() {
             </p>
 
             {cancelTarget.trip_id && waitlistWaitingCounts[cancelTarget.trip_id]?.entries > 0 && (
-              <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5 text-sm text-orange-800">
+              <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-md px-3 py-2.5 text-sm text-orange-800">
                 <Users size={16} className="shrink-0 mt-0.5" />
                 <p>
                   <span className="font-semibold">
@@ -2996,7 +2997,7 @@ export default function AdminEnquiries() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-dark text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-warm-lg"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-dark text-white text-sm font-medium px-4 py-2.5 rounded-md shadow-warm-lg"
           >
             <CheckCircle2 size={16} className="text-green-400 shrink-0" />
             {toast}
@@ -3007,7 +3008,7 @@ export default function AdminEnquiries() {
       {/* Bulk Edit Modal */}
       <Modal isOpen={bulkEditOpen} onClose={() => setBulkEditOpen(false)} title={`Bulk Edit — ${selectedIds.size} selected`} size="sm">
         <div className="space-y-4">
-          <p className="text-xs text-dark-muted bg-background-warm rounded-xl px-3 py-2">
+          <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">
             Only fields you change here are applied — anything left on "No change" is left exactly as it is for every selected enquiry.
           </p>
 
