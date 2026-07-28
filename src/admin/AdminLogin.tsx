@@ -39,7 +39,7 @@ export default function AdminLogin() {
           <p className="text-dark-muted text-sm mt-1">Sign in to manage ULAA trips and enquiries.</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-warm-lg p-8">
+        <div className="bg-white rounded-lg shadow-warm-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Email</label>

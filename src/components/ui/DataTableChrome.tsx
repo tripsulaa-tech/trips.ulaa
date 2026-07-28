@@ -96,7 +96,7 @@ export function TableHeaderBar({
             value={searchValue}
             onChange={ev => onSearchChange(ev.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full pl-9 pr-8 py-1.5 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+            className="w-full pl-9 pr-8 py-1.5 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
           />
           {searchValue && (
             <button
@@ -113,7 +113,7 @@ export function TableHeaderBar({
             onClick={onExport}
             disabled={total === 0}
             title={total === 0 ? 'Nothing to export' : `${exportLabel} — exports exactly what's currently filtered`}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-background-warm text-dark text-sm font-button font-semibold hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:hover:border-background-warm disabled:hover:text-dark transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-background-warm text-dark text-sm font-button font-semibold hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:hover:border-background-warm disabled:hover:text-dark transition-colors"
           >
             <Download size={14} />
             <span className="hidden sm:inline">{exportLabel}</span>

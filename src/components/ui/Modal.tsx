@@ -54,7 +54,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`relative w-full ${sizes[size]} bg-white rounded-3xl shadow-warm-lg max-h-[90vh] overflow-hidden flex flex-col`}
+            className={`relative w-full ${sizes[size]} bg-white rounded-2xl shadow-warm-lg max-h-[90vh] overflow-hidden flex flex-col`}
           >
             {!title && (
               <button
@@ -93,7 +93,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
                   This keeps Save/Cancel reachable at all times without
                   relying on fragile height calculations elsewhere. */}
               {footer && (
-                <div className="sticky -bottom-6 -mx-6 -mb-6 mt-6 px-6 py-4 border-t border-background-warm bg-white rounded-b-3xl">
+                <div className="sticky -bottom-6 -mx-6 -mb-6 mt-6 px-6 py-4 border-t border-background-warm bg-white rounded-b-2xl">
                   {footer}
                 </div>
               )}

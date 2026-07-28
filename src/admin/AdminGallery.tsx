@@ -113,7 +113,7 @@ export default function AdminGallery() {
                     </button>
                   </div>
                   {img.is_featured && (
-                    <div className="absolute top-2 left-2 bg-secondary text-white text-xs px-2 py-0.5 rounded-full font-button font-semibold">
+                    <div className="absolute top-2 left-2 bg-secondary text-white text-xs px-2 py-0.5 rounded-md font-button font-semibold">
                       Featured
                     </div>
                   )}

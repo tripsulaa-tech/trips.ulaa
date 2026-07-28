@@ -144,7 +144,7 @@ export default function AdminTestimonials() {
                       </td>
                       <td className="px-4 py-3 text-dark-muted hidden lg:table-cell max-w-[280px] truncate">{t.review}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-xs font-button font-semibold px-3 py-1 rounded-full ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                        <span className={`text-xs font-button font-semibold px-3 py-1 rounded-md ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                           {t.is_published ? 'Published' : 'Draft'}
                         </span>
                       </td>

@@ -634,7 +634,7 @@ export default function AdminWaitlist() {
             <SlidersHorizontal size={16} className="text-dark shrink-0" />
             <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1 text-left">Filters</span>
             {activeFilterCount > 0 && (
-              <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-full bg-primary/10 text-primary text-[11px] font-button font-semibold">
+              <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-md bg-primary/10 text-primary text-[11px] font-button font-semibold">
                 {activeFilterCount} active
               </span>
             )}
@@ -650,7 +650,7 @@ export default function AdminWaitlist() {
                 <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Status</label>
                 <button
                   onClick={() => setOpenFilterPanel(p => (p === 'status' ? null : 'status'))}
-                  className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
+                  className={`w-full flex items-center justify-between gap-2 rounded-md border-2 px-3 py-2 bg-white transition-colors ${
                     openFilterPanel === 'status' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                   }`}
                 >
@@ -674,7 +674,7 @@ export default function AdminWaitlist() {
                   <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                   <button
                     onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
-                    className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
+                    className={`w-full flex items-center justify-between gap-2 rounded-md border-2 px-3 py-2 bg-white transition-colors ${
                       openFilterPanel === 'trip' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                     }`}
                   >
@@ -766,7 +766,7 @@ export default function AdminWaitlist() {
                                 title={queueRank.get(e.id)!.rank === 1
                                   ? `First in line for this trip — ${queueRank.get(e.id)!.total} waiting in total`
                                   : `#${queueRank.get(e.id)!.rank} of ${queueRank.get(e.id)!.total} waiting for this trip — ${queueRank.get(e.id)!.rank - 1} waited longer`}
-                                className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                                className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${
                                   queueRank.get(e.id)!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                                 }`}
                               >
@@ -776,7 +776,7 @@ export default function AdminWaitlist() {
                             {e.status !== 'converted' && convertedCount(e) > 0 && (
                               <span
                                 title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
-                                className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap"
+                                className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 whitespace-nowrap"
                               >
                                 <CheckCircle2 size={9} /> {convertedCount(e)}/{seatsNeeded(e)} converted
                               </span>
@@ -797,14 +797,14 @@ export default function AdminWaitlist() {
                           {e.group_size && e.group_size > 1 ? (
                             <span
                               title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
-                              className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full bg-background-warm text-dark-muted whitespace-nowrap"
+                              className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
                             >
                               <Users size={12} className="shrink-0" /> {groupLabel(e)} · {e.group_size}
                             </span>
                           ) : (
                             <span
                               title="Booked individually, not part of a group"
-                              className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full bg-slate-100 text-dark-muted whitespace-nowrap"
+                              className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-slate-100 text-dark-muted whitespace-nowrap"
                             >
                               <UserPlus size={12} className="shrink-0" /> Solo
                             </span>
@@ -812,7 +812,7 @@ export default function AdminWaitlist() {
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap">
                           {foodBreakdown(e) ? (
-                            <span className="inline-flex items-center gap-2 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap bg-background-warm">
+                            <span className="inline-flex items-center gap-2 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-background-warm">
                               <span className="inline-flex items-center gap-1 text-green-700">
                                 <FoodMark type="veg" size={12} /> {foodBreakdown(e)![1]} veg
                               </span>
@@ -822,7 +822,7 @@ export default function AdminWaitlist() {
                               </span>
                             </span>
                           ) : (
-                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${foodBadge(e).color}`}>
+                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${foodBadge(e).color}`}>
                               <FoodMark type={foodBadge(e).key} size={12} /> {foodBadge(e).label}
                             </span>
                           )}
@@ -830,7 +830,7 @@ export default function AdminWaitlist() {
                         <td className="px-4 py-3 text-dark-muted hidden lg:table-cell max-w-[180px]">
                           <p className="truncate">{e.trip_title || '—'}</p>
                           {hasSeatOpen(e) && (
-                            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
                               <PartyPopper size={10} className="shrink-0" />
                               {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
                             </span>
@@ -838,7 +838,7 @@ export default function AdminWaitlist() {
                           {!hasSeatOpen(e) && e.status === 'waiting' && seatsRemaining(e) > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
                             <span
                               title={`Needs ${seatsRemaining(e)} more seats free together — only ${seatsAvailable[e.trip_id]} open so far`}
-                              className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap"
+                              className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 whitespace-nowrap"
                             >
                               {seatsAvailable[e.trip_id]}/{seatsRemaining(e)} seats open
                             </span>
@@ -859,14 +859,14 @@ export default function AdminWaitlist() {
                         <td className="px-2 py-3 text-right">
                           {e.status === 'converted' ? (
                             <div className="flex flex-col items-end gap-1">
-                              <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
                                 <CheckCircle2 size={12} className="shrink-0" />
                                 Converted{convertedCount(e) > 1 ? ` (${convertedCount(e)}/${convertedCount(e)})` : ''}
                               </span>
                               {convertedIds(e).some(id => cancelledEnquiryIds.has(id)) && (
                                 <span
                                   title="At least one of this group's bookings was cancelled after converting — that seat is free again."
-                                  className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700 whitespace-nowrap"
+                                  className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-red-100 text-red-700 whitespace-nowrap"
                                 >
                                   <XCircle size={12} className="shrink-0" />
                                   {convertedIds(e).length > 1
@@ -953,7 +953,7 @@ export default function AdminWaitlist() {
                           {e.group_size && e.group_size > 1 && (
                             <span
                               title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
-                              className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-background-warm text-dark-muted whitespace-nowrap"
+                              className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
                             >
                               <Users size={9} /> {groupLabel(e)} · {e.group_size}
                             </span>
@@ -963,7 +963,7 @@ export default function AdminWaitlist() {
                               title={queueRank.get(e.id)!.rank === 1
                                 ? `First in line for this trip — ${queueRank.get(e.id)!.total} waiting in total`
                                 : `#${queueRank.get(e.id)!.rank} of ${queueRank.get(e.id)!.total} waiting for this trip — ${queueRank.get(e.id)!.rank - 1} waited longer`}
-                              className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                              className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${
                                 queueRank.get(e.id)!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                               }`}
                             >
@@ -973,7 +973,7 @@ export default function AdminWaitlist() {
                           {e.status !== 'converted' && convertedCount(e) > 0 && (
                             <span
                               title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
-                              className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap"
+                              className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 whitespace-nowrap"
                             >
                               <CheckCircle2 size={9} /> {convertedCount(e)}/{seatsNeeded(e)} converted
                             </span>
@@ -981,18 +981,18 @@ export default function AdminWaitlist() {
                         </p>
                         <p className="text-dark-muted text-xs truncate">{e.trip_title || 'Untitled trip'}</p>
                         {hasSeatOpen(e) && (
-                          <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                          <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
                             <PartyPopper size={10} className="shrink-0" />
                             {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
                           </span>
                         )}
                         {!hasSeatOpen(e) && e.status === 'waiting' && seatsRemaining(e) > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
-                          <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
+                          <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 whitespace-nowrap">
                             {seatsAvailable[e.trip_id]}/{seatsRemaining(e)} seats open
                           </span>
                         )}
                       </div>
-                      <span className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
+                      <span className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
                         <cfg.icon size={11} className="shrink-0" />
                         {cfg.label}
                       </span>
@@ -1087,12 +1087,12 @@ export default function AdminWaitlist() {
                       {e.status === 'converted' ? (
                         <div className="flex-1 flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
                               <CheckCircle2 size={12} className="shrink-0" />
                               Converted{convertedCount(e) > 1 ? ` (${convertedCount(e)}/${convertedCount(e)})` : ''}
                             </span>
                             {convertedIds(e).some(id => cancelledEnquiryIds.has(id)) && (
-                              <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-red-100 text-red-700 whitespace-nowrap">
                                 <XCircle size={12} className="shrink-0" />
                                 {convertedIds(e).length > 1
                                   ? `${convertedIds(e).filter(id => cancelledEnquiryIds.has(id)).length}/${convertedIds(e).length} cancelled`

@@ -239,7 +239,7 @@ export default function AdminTrips() {
                         </span>
                       </td>
                       <td className="px-2 py-3 text-center">
-                        <span className={`inline-block text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${trip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                        <span className={`inline-block text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${trip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                           {trip.is_published ? 'Published' : 'Draft'}
                         </span>
                       </td>
@@ -569,10 +569,10 @@ export default function AdminTrips() {
             )}
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${viewingTrip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+              <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${viewingTrip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                 {viewingTrip.is_published ? 'Published' : 'Draft'}
               </span>
-              <span className="text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap bg-background-warm text-dark-muted">
+              <span className="text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-background-warm text-dark-muted">
                 {viewingTrip.seats_booked}/{viewingTrip.total_seats} seats booked
               </span>
             </div>

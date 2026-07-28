@@ -1179,10 +1179,11 @@ export default function AdminEnquiries() {
     enquiries.forEach(e => {
       const key = e.trip_id || UNLINKED_GROUP_KEY;
       if (!map.has(key)) {
+        const linkedTrip = e.trip_id ? trips.find(t => t.id === e.trip_id) : undefined;
         map.set(key, {
           key,
-          title: e.trip_title || 'General Enquiries (No Trip)',
-          trip: e.trip_id ? trips.find(t => t.id === e.trip_id) : undefined,
+          title: linkedTrip?.title || e.trip_title || 'General Enquiries (No Trip)',
+          trip: linkedTrip,
           enquiries: [],
         });
       }
@@ -1550,8 +1551,8 @@ export default function AdminEnquiries() {
                   <img src={activeGroup.trip.cover_image} alt={activeGroup.title} className="w-full h-full object-cover" />
                 )}
               </div>
-              <div className="min-w-0 flex-1 flex flex-col justify-between h-14 py-0.5">
-                <p className="font-display font-bold text-dark truncate">{activeGroup ? activeGroup.title : 'All Trips'}</p>
+              <div className="min-w-0 flex-1 flex flex-col gap-1 py-0.5">
+                <p className="font-display font-bold text-dark truncate">{activeGroup ? (activeGroup.title || activeGroup.trip?.title || 'Untitled Trip') : 'All Trips'}</p>
                 {activeGroup?.trip?.start_date && activeGroup.trip.end_date && (
                   <p className="text-dark-muted text-xs flex items-center gap-1">
                     <CalendarDays size={11} className="shrink-0" /> {formatDateRange(activeGroup.trip.start_date, activeGroup.trip.end_date)}

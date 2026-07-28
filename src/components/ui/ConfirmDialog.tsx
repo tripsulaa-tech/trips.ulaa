@@ -70,7 +70,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.92, opacity: 0, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-sm bg-white rounded-3xl shadow-warm-lg overflow-hidden"
+              className="relative w-full max-w-sm bg-white rounded-2xl shadow-warm-lg overflow-hidden"
               role="alertdialog"
               aria-modal="true"
               aria-labelledby="confirm-dialog-message"

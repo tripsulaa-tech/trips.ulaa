@@ -104,7 +104,7 @@ export default function AdminDashboard() {
     <AdminLayout title="Dashboard">
       <div className="space-y-5 sm:space-y-8">
         {/* Welcome banner */}
-        <div className="relative overflow-hidden rounded-lg sm:rounded-xl">
+        <div className="relative overflow-hidden rounded-lg">
           <img
             src={bannerImg}
             alt=""
