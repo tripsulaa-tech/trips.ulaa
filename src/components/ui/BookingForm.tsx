@@ -137,6 +137,21 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   } = useForm<BookingFormData>();
 
   const onSubmit = async (data: BookingFormData) => {
+    // Trim all text fields to strip accidental leading/trailing whitespace
+    // before submission — the DB's unique index already normalises with
+    // lower(trim()), but storing untrimmed values would mean a second
+    // identical submission (same name/phone with a trailing space) bypasses
+    // the duplicate check. Trimming here aligns what's stored with what the
+    // index sees.
+    const d: BookingFormData = {
+      ...data,
+      full_name: data.full_name.trim(),
+      phone: data.phone.trim(),
+      email: data.email.trim(),
+      city: (data.city ?? '').trim(),
+      emergency_contact: (data.emergency_contact ?? '').trim(),
+      message: data.message?.trim(),
+    };
     if (bookingMode === 'group') {
       if (!Number.isInteger(groupSize) || groupSize < MIN_GROUP_SIZE || groupSize > MAX_GROUP_SIZE) {
         setGroupSizeError(`Enter a number of people between ${MIN_GROUP_SIZE} and ${MAX_GROUP_SIZE}.`);
@@ -185,13 +200,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         // folded into the message for whoever follows up.
         const foodNote = `${groupVegCountClamped} veg / ${groupSize - groupVegCountClamped} non-veg.`;
         const waitlistPayload = {
-          full_name: data.full_name,
-          phone: data.phone,
-          email: data.email,
-          age: data.age,
-          city: data.city,
-          emergency_contact: data.emergency_contact,
-          message: data.message ? `${foodNote} ${data.message}` : foodNote,
+          full_name: d.full_name,
+          phone: d.phone,
+          email: d.email,
+          age: d.age,
+          city: d.city,
+          emergency_contact: d.emergency_contact,
+          message: d.message ? `${foodNote} ${d.message}` : foodNote,
           trip_id: tripId!,
           trip_title: tripTitle,
           group_size: groupSize,
@@ -199,7 +214,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
         if (groupFitsLive) {
           try {
-            await submitGroupEnquiry({ ...data, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences);
+            await submitGroupEnquiry({ ...d, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences);
             setSubmittedAsWaitlist(false);
           } catch (err) {
             // The DB's own capacity check — the hard backstop behind the
@@ -220,14 +235,14 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         setSuccessCount(groupSize);
       } else {
         const waitlistPayload = {
-          full_name: data.full_name,
-          phone: data.phone,
-          email: data.email,
-          age: data.age,
-          city: data.city,
-          emergency_contact: data.emergency_contact,
+          full_name: d.full_name,
+          phone: d.phone,
+          email: d.email,
+          age: d.age,
+          city: d.city,
+          emergency_contact: d.emergency_contact,
           food_preference: foodPreference,
-          message: data.message,
+          message: d.message,
           trip_id: tripId!,
           trip_title: tripTitle,
           group_size: null,
@@ -235,7 +250,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
         if (soloFitsLive) {
           try {
-            await submitEnquiry({ ...data, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle });
+            await submitEnquiry({ ...d, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle });
             setSubmittedAsWaitlist(false);
           } catch (err) {
             if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {

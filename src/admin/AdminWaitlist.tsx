@@ -11,7 +11,7 @@ import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh, C
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
-import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries, submitWaitlist } from '../services/api';
+import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries, submitWaitlist, getWaitlistReservedCounts } from '../services/api';
 import { formatDate, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
 import type { WaitlistEntry, UpcomingTrip, Enquiry } from '../types/types-index';
@@ -205,12 +205,19 @@ export default function AdminWaitlist() {
   };
 
   const load = () => {
-    Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries()])
-      .then(([waitlistData, tripsData, enquiries]) => {
+    Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries(), getWaitlistReservedCounts()])
+      .then(([waitlistData, tripsData, enquiries, reservedCounts]) => {
         setEntries(waitlistData);
         setAllTrips(tripsData);
         const map: Record<string, number> = {};
-        tripsData.forEach(t => { map[t.id] = seatsLeft(t.total_seats, t.seats_booked); });
+        // Subtract the waitlist-reserved count per trip so the displayed
+        // "X seats open" badge reflects how many seats are truly unallocated
+        // (not already spoken for by others waiting in line). Clamped to 0
+        // so it never shows negative.
+        tripsData.forEach(t => {
+          const reserved = reservedCounts[t.id] || 0;
+          map[t.id] = Math.max(0, seatsLeft(t.total_seats, t.seats_booked) - reserved);
+        });
         setSeatsAvailable(map);
         setCancelledEnquiryIds(new Set(enquiries.filter(en => !!en.cancelled_at).map(en => en.id)));
         setEnquiriesForGroups(enquiries);

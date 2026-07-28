@@ -80,7 +80,9 @@ async function moveImage(url: string, destFolder: string, fileNamePrefix?: strin
 // public "seats left" number from showing a seat that's next in line for
 // someone who's already waiting. Never throws: if it fails for any reason
 // we just show real seat counts (fail open to "no reservation buffer").
-async function getWaitlistReservedCounts(): Promise<Record<string, number>> {
+// Exported so AdminWaitlist can factor in reserved counts when computing
+// how many seats are truly available for conversion.
+export async function getWaitlistReservedCounts(): Promise<Record<string, number>> {
   const { data, error } = await supabase.rpc('get_waitlist_reserved_counts');
   if (error || !data) return {};
   const map: Record<string, number> = {};
@@ -510,6 +512,7 @@ export async function getEnquiries(): Promise<Enquiry[]> {
   const { data, error } = await supabase
     .from('enquiries')
     .select('*')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data || [];
@@ -576,7 +579,15 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
       // the enforce_trip_capacity DB trigger rejected it), don't leave
       // that bare, unpaid enquiry behind as an orphan that then shows up
       // in the list on its own. Delete it and surface the real error.
-      await supabase.from('enquiries').delete().eq('id', data.id);
+      // Retry the cleanup once if the first attempt fails (e.g. transient
+      // network hiccup) — an orphaned unpaid enquiry is worse than a
+      // slightly longer error path.
+      const cleanup = () => supabase.from('enquiries').delete().eq('id', data.id);
+      const { error: deleteError } = await cleanup();
+      if (deleteError) {
+        console.error('Orphan cleanup failed, retrying:', deleteError);
+        await cleanup();
+      }
       throw paymentError;
     }
     // Re-fetch: inserting the payment above cascades, via DB triggers, into
@@ -694,12 +705,28 @@ export async function updateWaitlistStatus(id: string, status: WaitlistEntry['st
 // visible and actionable from the Waitlist page instead of the whole row
 // silently closing out early.
 export async function markWaitlistConverted(waitlistId: string, enquiryId: string): Promise<void> {
-  const { data: entry, error: fetchError } = await supabase
-    .from('waitlist')
-    .select('status, group_size, converted_enquiry_ids')
-    .eq('id', waitlistId)
-    .single();
+  // Fetch the waitlist entry and the linked enquiry in parallel so we can
+  // verify they belong to the same trip before linking them — prevents an
+  // admin accidentally (or programmatically) cross-linking entries across
+  // different trips.
+  const [{ data: entry, error: fetchError }, { data: enquiry, error: enquiryFetchError }] = await Promise.all([
+    supabase
+      .from('waitlist')
+      .select('trip_id, status, group_size, converted_enquiry_ids')
+      .eq('id', waitlistId)
+      .single(),
+    supabase
+      .from('enquiries')
+      .select('trip_id')
+      .eq('id', enquiryId)
+      .single(),
+  ]);
   if (fetchError) throw fetchError;
+  if (enquiryFetchError) throw enquiryFetchError;
+
+  if (entry.trip_id !== enquiry.trip_id) {
+    throw new Error('Waitlist entry and enquiry belong to different trips — cannot link them.');
+  }
 
   const existingIds = entry.converted_enquiry_ids || [];
   const updatedIds = existingIds.includes(enquiryId) ? existingIds : [...existingIds, enquiryId];
@@ -858,13 +885,26 @@ export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number
   return data;
 }
 
-// Permanently deletes an enquiry. Associated payment rows cascade-delete
-// via the DB's "on delete cascade" FK, so nothing orphaned is left behind.
-// If the enquiry still held a seat, the trip's seats_booked count is freed
-// automatically by the on_enquiries_seat_sync DB trigger once the delete
-// commits — no manual adjustment needed here.
+// Fetches a single enquiry by id — used for stale-data detection (see
+// handleSavePayment in AdminEnquiries: we re-fetch updated_at just before
+// saving to catch concurrent edits from another admin session).
+export async function getEnquiry(id: string): Promise<Enquiry | null> {
+  const { data, error } = await supabase.from('enquiries').select('*').eq('id', id).single();
+  if (error) return null;
+  return data;
+}
+
+// Soft-deletes an enquiry by stamping deleted_at — the row is hidden from
+// all normal queries but preserved in the DB for recovery. Payment history
+// is kept intact (no cascade). If the enquiry held a seat, the
+// on_enquiries_seat_sync trigger frees it automatically because the
+// updated row no longer matches the "paid & not cancelled & not deleted"
+// count condition.
 export async function deleteEnquiry(enquiry: Enquiry): Promise<void> {
-  const { error } = await supabase.from('enquiries').delete().eq('id', enquiry.id);
+  const { error } = await supabase
+    .from('enquiries')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', enquiry.id);
   if (error) throw error;
 }
 

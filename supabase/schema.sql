@@ -119,7 +119,11 @@ create table public.upcoming_trips (
   constraint upcoming_trips_max_age_check
     check (max_age is null or max_age >= 0),
   constraint upcoming_trips_age_range_check
-    check (min_age is null or max_age is null or min_age <= max_age)
+    check (min_age is null or max_age is null or min_age <= max_age),
+  -- Prevents recompute_trip_seats() from storing a negative count if a
+  -- cancellation/refund trigger fires in an unexpected order.
+  constraint upcoming_trips_seats_booked_nonneg
+    check (seats_booked >= 0)
 );
 
 -- ----------------------------------------------------------------------------
@@ -169,6 +173,11 @@ create table public.enquiries (
   -- (see add_enquiry_capacity_enforcement.sql) — always false on the public
   -- form, which never sets it.
   bypass_capacity_check     boolean not null default false,
+  -- Soft-delete timestamp: NULL means the row is live. When set, the row is
+  -- hidden from all normal queries (getEnquiries filters deleted_at IS NULL)
+  -- but the data and payment history are preserved for recovery. See
+  -- add_soft_delete_enquiries.sql.
+  deleted_at                timestamptz,
   constraint enquiries_pkey primary key (id),
   constraint enquiries_status_check
     check (status = any (array['new'::text, 'contacted'::text, 'closed'::text])),
@@ -198,9 +207,11 @@ create index enquiries_group_id_idx on public.enquiries using btree (group_id);
 -- Duplicate-submission protection, keyed so group bookings (N rows sharing
 -- identical name/phone/email/trip by design) can coexist — see
 -- add_duplicate_submission_constraints.sql and add_group_bookings.sql.
+-- The partial index also excludes soft-deleted rows so a deleted enquiry
+-- doesn't block re-submission with the same contact details.
 create unique index enquiries_trip_name_phone_email_active_unique
   on public.enquiries (trip_id, lower(trim(full_name)), phone, lower(trim(email)), group_seq)
-  where (cancelled_at is null);
+  where (cancelled_at is null and deleted_at is null);
 
 -- ----------------------------------------------------------------------------
 -- payments
@@ -517,30 +528,49 @@ $function$;
 -- moving TO converted requires a converted_enquiry_id pointing at an
 -- enquiry that actually has amount_paid > 0 (blocks marking someone
 -- converted straight from the status dropdown with no real booking behind
--- it). Moving AWAY from converted is blocked while that linked enquiry is
+-- it). Moving AWAY from converted is blocked while any linked enquiry is
 -- still an active (non-cancelled) booking — the booking itself may only be
 -- changed from the Enquiries screen, never by flipping this dropdown.
+--
+-- Updated to use converted_enquiry_ids (array) instead of the legacy
+-- converted_enquiry_id (singular) — see add_waitlist_partial_group_conversion.sql.
 create or replace function public.enforce_waitlist_conversion()
 returns trigger
 language plpgsql
 as $function$
+declare
+  v_needed int := greatest(coalesce(new.group_size, 1), 1);
 begin
-  if new.status = 'converted' and old.status is distinct from 'converted' then
-    if new.converted_enquiry_id is null or not exists (
-      select 1 from public.enquiries
-      where id = new.converted_enquiry_id and amount_paid > 0
+  -- Whenever the array of linked enquiry ids changes, every id in it must
+  -- point at an enquiry that actually has an advance payment on it.
+  if new.converted_enquiry_ids is distinct from old.converted_enquiry_ids then
+    if exists (
+      select 1 from unnest(new.converted_enquiry_ids) eid
+      where not exists (select 1 from public.enquiries where id = eid and amount_paid > 0)
     ) then
-      raise exception 'Cannot mark converted without a linked enquiry that has an advance payment recorded.';
+      raise exception 'Cannot link a conversion without an advance payment recorded on that enquiry.';
     end if;
   end if;
 
+  -- Moving TO 'converted' requires the full group's worth of linked, paid
+  -- enquiries (not just the first one).
+  if new.status = 'converted' and old.status is distinct from 'converted' then
+    if coalesce(array_length(new.converted_enquiry_ids, 1), 0) < v_needed then
+      raise exception 'Cannot mark converted until all % seat(s) in this group are linked to a paid enquiry.', v_needed;
+    end if;
+  end if;
+
+  -- Moving AWAY from 'converted' is blocked while any linked enquiry is
+  -- still an active (non-cancelled) booking.
   if old.status = 'converted' and new.status is distinct from 'converted' then
-    if old.converted_enquiry_id is not null and exists (
-      select 1 from public.enquiries where id = old.converted_enquiry_id and cancelled_at is null
+    if exists (
+      select 1 from unnest(old.converted_enquiry_ids) eid
+      where exists (select 1 from public.enquiries where id = eid and cancelled_at is null)
     ) then
       raise exception 'This waitlist entry is linked to an active booking. Cancel the booking in Enquiries first.';
     end if;
   end if;
+
   return new;
 end;
 $function$;
@@ -654,6 +684,7 @@ as $function$
 declare
   waiting_count integer;
   target_link text;
+  recent_exists boolean;
 begin
   if new.seats_booked >= old.seats_booked then
     return new;
@@ -665,6 +696,21 @@ begin
      and status = 'waiting';
 
   if waiting_count = 0 then
+    return new;
+  end if;
+
+  -- Deduplication: skip if a seat_available notification for this same trip
+  -- was already created within the last 30 seconds (e.g. two concurrent
+  -- cancellations both firing this trigger). The admin still sees one
+  -- notification — just not a duplicate.
+  select exists (
+    select 1 from public.notifications
+     where type = 'seat_available'
+       and link like '%' || new.id::text || '%'
+       and created_at > now() - interval '30 seconds'
+  ) into recent_exists;
+
+  if recent_exists then
     return new;
   end if;
 
@@ -747,6 +793,7 @@ begin
        select count(*) from public.enquiries e
         where e.trip_id = p_trip_id
           and e.cancelled_at is null
+          and e.deleted_at  is null   -- exclude soft-deleted rows
           and e.amount_paid > 0
      )
    where t.id = p_trip_id;
@@ -793,15 +840,34 @@ returns trigger
 language plpgsql
 as $function$
 declare
-  found_trip_type text;
+  found_trip_type    text;
+  found_departure    date;
 begin
   if new.trip_id is not null and new.trip_type is null then
-    select trip_type into found_trip_type from upcoming_trips where id = new.trip_id
+    select trip_type, departure_date
+      into found_trip_type, found_departure
+      from upcoming_trips where id = new.trip_id
     union all
-    select trip_type from completed_trips where id = new.trip_id
+    select trip_type, departure_date
+      from completed_trips where id = new.trip_id
     limit 1;
 
     new.trip_type := found_trip_type;
+
+    -- Snapshot departure_date if the caller didn't supply one.
+    if new.departure_date is null then
+      new.departure_date := found_departure;
+    end if;
+
+    -- Auto-compute balance_due_date: 30 days before departure for domestic,
+    -- 45 days for international. Only set when not already provided.
+    if new.balance_due_date is null and new.departure_date is not null then
+      if found_trip_type = 'domestic' then
+        new.balance_due_date := (new.departure_date - interval '30 days')::date;
+      elsif found_trip_type = 'international' then
+        new.balance_due_date := (new.departure_date - interval '45 days')::date;
+      end if;
+    end if;
   end if;
   return new;
 end;

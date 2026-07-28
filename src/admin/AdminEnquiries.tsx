@@ -11,7 +11,7 @@ import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh, C
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, getEnquiry } from '../services/api';
 import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../types/types-index';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
@@ -752,13 +752,13 @@ export default function AdminEnquiries() {
   };
 
   // Permanently removes an enquiry. If it currently holds a seat, that seat
-  // is released first (handled inside deleteEnquiry) so trip counts stay
-  // accurate.
+  // Soft-deletes the enquiry (sets deleted_at, hides from list) so payment
+  // history is preserved and the record is recoverable from the DB if needed.
   const handleDelete = async (e: Enquiry) => {
     const ok = await confirm({
-      title: 'Delete this enquiry?',
-      message: 'This permanently removes the enquiry and its payment history. This cannot be undone.',
-      confirmLabel: 'Delete',
+      title: 'Remove this enquiry?',
+      message: 'This removes the enquiry from the list. Payment history is preserved and the record can be recovered from the database if needed.',
+      confirmLabel: 'Remove',
     });
     if (!ok) return;
     setUpdating(e.id);
@@ -789,6 +789,21 @@ export default function AdminEnquiries() {
     if (refundAmount > amountPaid) {
       alert("Refund amount can't be more than what was actually paid.");
       return;
+    }
+    // Concurrent-edit guard: re-fetch updated_at and compare to what we
+    // had when the payment form was opened. If another admin saved changes
+    // in the meantime, stop here so we don't silently overwrite their work.
+    try {
+      const fresh = await getEnquiry(paymentTarget.id);
+      if (fresh && fresh.updated_at && paymentTarget.updated_at &&
+          fresh.updated_at !== paymentTarget.updated_at) {
+        alert('This record was modified by someone else while the payment form was open. Close this form, refresh the page, then re-open the payment form to see the latest data before making changes.');
+        return;
+      }
+    } catch {
+      // If the staleness check itself fails (network hiccup), proceed
+      // rather than blocking the save entirely — a concurrent-edit race
+      // is rare; being unable to save at all is worse.
     }
     try {
       setSavingPayment(true);
@@ -1017,6 +1032,11 @@ export default function AdminEnquiries() {
         package_type: form.package_type,
         total_amount: totalAmount,
         amount_paid: amountPaid,
+        // Waitlist conversions bypass the capacity trigger — the admin
+        // already verified availability on the Waitlist page before
+        // navigating here, and a concurrent conversion elsewhere could
+        // cause a spurious rejection without this.
+        ...(convertingWaitlist ? { bypass_capacity_check: true } : {}),
         // Link this seat to the rest of its waitlist group (if any) so it
         // renders grouped in the list below instead of as a standalone
         // enquiry — see the convertingWaitlist state comment above.
@@ -1096,6 +1116,10 @@ export default function AdminEnquiries() {
     setSaving(true);
     const trip = trips.find(t => t.id === form.trip_id);
     let seated = 0;
+    // Track enquiry IDs created so far — if markWaitlistConverted fails
+    // mid-loop, we can retry linking any "orphaned" enquiries that were
+    // created but not yet registered on the waitlist row.
+    const createdIds: string[] = [];
     try {
       for (let i = 0; i < waitlistPeople.length; i++) {
         const p = waitlistPeople[i];
@@ -1115,10 +1139,12 @@ export default function AdminEnquiries() {
           package_type: form.package_type,
           total_amount: totalAmount,
           amount_paid: amountPaid,
+          bypass_capacity_check: true,
           group_id: convertingWaitlist.groupId ?? undefined,
           group_size: convertingWaitlist.groupSize ?? undefined,
           group_seq: convertingWaitlist.groupSeq + i,
         });
+        createdIds.push(created.id);
         await markWaitlistConverted(convertingWaitlist.id, created.id);
         seated++;
       }
@@ -1132,6 +1158,21 @@ export default function AdminEnquiries() {
       showToast(`Seated ${seated} of ${waitlistPeople.length} people from this group.`);
     } catch (err) {
       console.error(err);
+      // Best-effort: if markWaitlistConverted failed for an enquiry that
+      // WAS created (createdIds has more entries than seated), retry
+      // linking those orphaned enquiries so the waitlist row's
+      // converted_enquiry_ids stays in sync with reality.
+      if (createdIds.length > seated) {
+        for (let j = seated; j < createdIds.length; j++) {
+          try {
+            await markWaitlistConverted(convertingWaitlist.id, createdIds[j]);
+            seated++;
+          } catch {
+            // If even the retry fails, the enquiry still exists — admin
+            // will see it in Enquiries and can re-trigger manually.
+          }
+        }
+      }
       const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
       const partial = seated > 0 ? ` ${seated} of ${waitlistPeople.length} were saved before this happened.` : '';
       if (message === 'DUPLICATE_ENQUIRY') {
@@ -2785,6 +2826,14 @@ export default function AdminEnquiries() {
                   <p className="text-[11px] text-dark-muted mt-1">
                     They paid {formatPrice(paymentTarget.amount_paid || 0)} in total.
                   </p>
+                  {paymentTarget.suggested_refund_amount != null &&
+                    paymentForm.refund_amount !== '' &&
+                    Number(paymentForm.refund_amount) > paymentTarget.suggested_refund_amount && (
+                    <div className="flex items-start gap-1.5 mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 text-amber-700 text-xs">
+                      <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                      <span>Exceeds the auto-calculated policy refund of <span className="font-semibold">{formatPrice(paymentTarget.suggested_refund_amount)}</span>. Confirm this is intentional before saving.</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
