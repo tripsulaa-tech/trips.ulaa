@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Mail, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, Zap, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -1541,34 +1541,82 @@ export default function AdminEnquiries() {
         {/* Trip summary card — shows "All Trips" totals when no Trip filter
             is selected below, or that trip's own name/seats/food/money
             once one is picked from the Trip filter. */}
-        <div className="bg-white rounded-2xl p-4 shadow-card flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <p className="font-display font-bold text-dark">{activeGroup ? activeGroup.title : 'All Trips'}</p>
-            {activeGroup?.trip && (
-              <p className="text-dark-muted text-xs">
-                {activeGroup.trip.seats_booked}/{activeGroup.trip.total_seats} seats booked
-                {activeGroup.trip.start_date && activeGroup.trip.end_date && (
-                  <> · {formatDateRange(activeGroup.trip.start_date, activeGroup.trip.end_date)}</>
+        <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+          <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-background-warm">
+            {/* Section 1 — trip photo + name / date / seats booked · food split */}
+            <div className="flex items-center gap-3 p-4 flex-1 min-w-0 md:basis-1/3">
+              <div className="w-14 h-14 rounded-xl overflow-hidden bg-background-warm shrink-0">
+                {activeGroup?.trip?.cover_image && (
+                  <img src={activeGroup.trip.cover_image} alt={activeGroup.title} className="w-full h-full object-cover" />
                 )}
-              </p>
+              </div>
+              <div className="min-w-0 flex flex-col gap-1">
+                <p className="font-display font-bold text-dark truncate">{activeGroup ? activeGroup.title : 'All Trips'}</p>
+                {activeGroup?.trip?.start_date && activeGroup.trip.end_date && (
+                  <p className="text-dark-muted text-xs flex items-center gap-1">
+                    <CalendarDays size={11} className="shrink-0" /> {formatDateRange(activeGroup.trip.start_date, activeGroup.trip.end_date)}
+                  </p>
+                )}
+                {(() => {
+                  const food = foodTotals(scopedEnquiries);
+                  return (
+                    <p className="text-dark-muted text-xs flex items-center flex-wrap gap-1.5">
+                      {activeGroup?.trip && <span>{activeGroup.trip.seats_booked}/{activeGroup.trip.total_seats} seats booked</span>}
+                      {(food.veg > 0 || food.nonVeg > 0) && (
+                        <>
+                          {activeGroup?.trip && <span className="text-dark-muted/40" aria-hidden="true">|</span>}
+                          <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-600 shrink-0" /> {food.veg} Veg</span>
+                          <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" /> {food.nonVeg} Non-veg</span>
+                        </>
+                      )}
+                    </p>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Section 2 — seat utilization bar (only meaningful once a specific trip is picked) */}
+            {activeGroup?.trip && (
+              <div className="flex flex-col justify-center gap-1.5 p-4 flex-1 min-w-0 md:basis-1/3">
+                <p className="text-dark-muted text-xs font-medium">Seat Utilization</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 rounded-full bg-background-warm overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full"
+                      style={{ width: `${activeGroup.trip.total_seats ? Math.min(100, Math.round((activeGroup.trip.seats_booked / activeGroup.trip.total_seats) * 100)) : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-dark text-xs font-semibold shrink-0">
+                    {activeGroup.trip.total_seats ? Math.min(100, Math.round((activeGroup.trip.seats_booked / activeGroup.trip.total_seats) * 100)) : 0}%
+                  </span>
+                </div>
+                <p className="text-dark-muted text-xs">{activeGroup.trip.seats_booked} of {activeGroup.trip.total_seats} seats</p>
+              </div>
             )}
-            {(() => {
-              const food = foodTotals(scopedEnquiries);
-              return (food.veg > 0 || food.nonVeg > 0 || food.notSet > 0) ? (
-                <p className="text-dark-muted text-xs mt-1 inline-flex items-center gap-1">
-                  <Utensils size={11} className="shrink-0" />
-                  {food.veg} veg · {food.nonVeg} non-veg{food.notSet > 0 ? ` · ${food.notSet} not set` : ''}
-                </p>
-              ) : null;
-            })()}
-          </div>
-          <div className="text-right">
-            <p className="text-dark-muted text-xs">Collected · Pending</p>
-            <p className="text-sm font-semibold whitespace-nowrap">
-              <span className="text-green-700">{formatPrice(paymentTotals(scopedEnquiries).collected)}</span>
-              {' · '}
-              <span className="text-amber-600">{formatPrice(paymentTotals(scopedEnquiries).pending)}</span>
-            </p>
+
+            {/* Section 3 — payments collected/pending + link to the trip */}
+            <div className="flex flex-col justify-center gap-1.5 p-4 flex-1 min-w-0 md:basis-1/3">
+              <p className="text-dark-muted text-xs font-medium">Payments</p>
+              <div className="flex items-center gap-6">
+                <div>
+                  <p className="text-dark-muted text-xs">Collected</p>
+                  <p className="text-green-700 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries).collected)}</p>
+                </div>
+                <div>
+                  <p className="text-dark-muted text-xs">Pending</p>
+                  <p className="text-amber-600 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries).pending)}</p>
+                </div>
+                <div className="flex-1" />
+                {activeGroup?.trip && (
+                  <Link
+                    to="/admin/trips"
+                    className="shrink-0 text-xs font-button font-semibold px-3 py-1.5 rounded-lg border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap"
+                  >
+                    View Trip Details
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1988,20 +2036,18 @@ export default function AdminEnquiries() {
                             )}
                           </td>
                           <td className="px-2 py-3 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full shrink-0 whitespace-nowrap ${food.color}`}>
+                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
+                              e.food_preference === 'veg' ? 'text-green-700' : e.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark-muted'
+                            }`}>
                               <FoodMark type={foodPreferenceKey(e)} size={12} /> {food.label}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-dark-muted hidden sm:table-cell">
-                            <p className="flex items-center gap-1 text-xs truncate"><Mail size={11} className="shrink-0" /> <span className="truncate">{e.email}</span></p>
-                            <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" /> {e.phone}</p>
-                            <div className="mt-1.5">
-                              <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
-                            </div>
+                            <p className="text-xs truncate">{e.email}</p>
+                            <p className="text-xs mt-0.5">{e.phone}</p>
                           </td>
                           <td className="px-4 py-3 text-dark-muted hidden lg:table-cell truncate">
-                            <span className="inline-flex items-center gap-1 text-xs">
-                              <srcCfg.icon size={12} className="shrink-0" />
+                            <span className="text-xs">
                               {srcCfg.label}
                             </span>
                           </td>
@@ -2010,8 +2056,10 @@ export default function AdminEnquiries() {
                             <p className="text-[11px] text-dark-muted/80">{formatTime(e.created_at)}</p>
                           </td>
                           <td className="px-2 py-3 text-center">
-                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${PACKAGE_CONFIG[e.package_type || 'normal'].color}`}>
-                              {e.package_type === 'early_bird' && <Zap size={12} className="shrink-0" />}
+                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
+                              e.package_type === 'early_bird' ? 'text-purple-700' : 'text-slate-700'
+                            }`}>
+                              {e.package_type === 'early_bird' && <Bird size={12} className="shrink-0" />}
                               {PACKAGE_CONFIG[e.package_type || 'normal'].label}
                             </span>
                           </td>
