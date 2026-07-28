@@ -44,7 +44,7 @@ export default function AboutPage() {
             <img
               src="https://images.unsplash.com/photo-1502781252888-9143ba7f074e?w=800&q=80"
               alt="Women traveling"
-              className="rounded-3xl shadow-warm-lg w-full h-80 md:h-96 object-cover"
+              className="rounded-xl shadow-warm-lg w-full h-80 md:h-96 object-cover"
             />
           </motion.div>
           <div className="space-y-8">
@@ -107,9 +107,9 @@ export default function AboutPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="bg-white rounded-3xl p-8 shadow-card flex gap-6"
+                  className="bg-white rounded-xl p-8 shadow-card flex gap-6"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <div className="w-14 h-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <Icon size={26} strokeWidth={1.5} />
                   </div>
                   <div>

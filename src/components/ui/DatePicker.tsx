@@ -210,7 +210,7 @@ export default function DatePicker({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(o => !o)}
-        className={`w-full flex items-center justify-between gap-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-left outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'border-primary' : 'hover:border-primary/50'} ${sizeClasses} ${className}`}
+        className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-left outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'border-primary' : 'hover:border-primary/50'} ${sizeClasses} ${className}`}
       >
         <span className={value ? '' : 'text-dark-muted'}>
           {value ? formatDisplay(value) : placeholder}
@@ -236,7 +236,7 @@ export default function DatePicker({
             bottom: coords.openUp ? window.innerHeight - coords.top + 4 : undefined,
             left: coords.left,
           }}
-          className="z-[100] w-64 rounded-xl border-2 border-background-warm bg-white shadow-warm-lg p-3"
+          className="z-[100] w-64 rounded-lg border-2 border-background-warm bg-white shadow-warm-lg p-3"
         >
           {viewMode === 'days' && (
             <>
@@ -244,7 +244,7 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => goToMonth(new Date(year - 1, month, 1))}
-                  className="p-1.5 rounded-lg hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
+                  className="p-1.5 rounded-md hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
                   aria-label="Previous year"
                 >
                   <ChevronsLeft size={14} />
@@ -252,7 +252,7 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => goToMonth(new Date(year, month - 1, 1))}
-                  className="p-1.5 rounded-lg hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
+                  className="p-1.5 rounded-md hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
                   aria-label="Previous month"
                 >
                   <ChevronLeft size={16} />
@@ -260,14 +260,14 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => setViewMode('months')}
-                  className="font-body text-sm font-semibold text-dark px-2 py-0.5 rounded-lg hover:bg-background-warm transition-colors"
+                  className="font-body text-sm font-semibold text-dark px-2 py-0.5 rounded-md hover:bg-background-warm transition-colors"
                 >
                   {viewDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
                 </button>
                 <button
                   type="button"
                   onClick={() => goToMonth(new Date(year, month + 1, 1))}
-                  className="p-1.5 rounded-lg hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
+                  className="p-1.5 rounded-md hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
                   aria-label="Next month"
                 >
                   <ChevronRight size={16} />
@@ -275,7 +275,7 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => goToMonth(new Date(year + 1, month, 1))}
-                  className="p-1.5 rounded-lg hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
+                  className="p-1.5 rounded-md hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
                   aria-label="Next year"
                 >
                   <ChevronsRight size={14} />
@@ -309,7 +309,7 @@ export default function DatePicker({
                       disabled={disabledDay}
                       onClick={() => selectDate(date)}
                       onFocus={() => setFocusedDate(date)}
-                      className={`h-8 w-8 rounded-lg text-xs font-body transition-colors flex items-center justify-center
+                      className={`h-8 w-8 rounded-md text-xs font-body transition-colors flex items-center justify-center
                         ${active ? 'bg-primary text-white font-semibold' : 'text-dark hover:bg-background-warm'}
                         ${disabledDay ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}
                         ${!active && isToday ? 'ring-1 ring-primary/50' : ''}
@@ -328,7 +328,7 @@ export default function DatePicker({
                     type="button"
                     disabled={isPresetDisabled(p.date)}
                     onClick={() => selectDate(p.date)}
-                    className="text-[11px] font-body px-2 py-1 rounded-lg bg-background-warm/60 text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="text-[11px] font-body px-2 py-1 rounded-md bg-background-warm/60 text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     {p.label}
                   </button>
@@ -343,7 +343,7 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => setViewDate(new Date(year - 1, month, 1))}
-                  className="p-1.5 rounded-lg hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
+                  className="p-1.5 rounded-md hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
                   aria-label="Previous year"
                 >
                   <ChevronLeft size={16} />
@@ -351,14 +351,14 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => setViewMode('years')}
-                  className="font-body text-sm font-semibold text-dark px-2 py-0.5 rounded-lg hover:bg-background-warm transition-colors"
+                  className="font-body text-sm font-semibold text-dark px-2 py-0.5 rounded-md hover:bg-background-warm transition-colors"
                 >
                   {year}
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewDate(new Date(year + 1, month, 1))}
-                  className="p-1.5 rounded-lg hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
+                  className="p-1.5 rounded-md hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
                   aria-label="Next year"
                 >
                   <ChevronRight size={16} />
@@ -376,7 +376,7 @@ export default function DatePicker({
                       type="button"
                       disabled={!!monthDisabled}
                       onClick={() => { goToMonth(new Date(year, i, 1)); setViewMode('days'); }}
-                      className={`py-2 rounded-lg text-xs font-body transition-colors
+                      className={`py-2 rounded-md text-xs font-body transition-colors
                         ${isCurrent ? 'bg-primary text-white font-semibold' : 'text-dark hover:bg-background-warm'}
                         ${monthDisabled ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}`}
                     >
@@ -394,7 +394,7 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => setYearRangeStart(y => y - 12)}
-                  className="p-1.5 rounded-lg hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
+                  className="p-1.5 rounded-md hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
                   aria-label="Previous years"
                 >
                   <ChevronLeft size={16} />
@@ -405,7 +405,7 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => setYearRangeStart(y => y + 12)}
-                  className="p-1.5 rounded-lg hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
+                  className="p-1.5 rounded-md hover:bg-background-warm text-dark-muted hover:text-dark transition-colors"
                   aria-label="Next years"
                 >
                   <ChevronRight size={16} />
@@ -423,7 +423,7 @@ export default function DatePicker({
                       type="button"
                       disabled={!!yearDisabled}
                       onClick={() => { setViewDate(new Date(y, month, 1)); setViewMode('months'); }}
-                      className={`py-2 rounded-lg text-xs font-body transition-colors
+                      className={`py-2 rounded-md text-xs font-body transition-colors
                         ${isCurrent ? 'bg-primary text-white font-semibold' : 'text-dark hover:bg-background-warm'}
                         ${yearDisabled ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}`}
                     >

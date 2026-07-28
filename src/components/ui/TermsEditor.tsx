@@ -18,7 +18,7 @@ interface EditableSection {
   body: string;
 }
 
-const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+const inputClass = 'w-full px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 
 // Reconstructs a section's body text from its parsed blocks. Blocks are
 // joined with a blank line, except a subheading is kept glued to the block
@@ -103,21 +103,21 @@ export default function TermsEditor({ value, onChange }: TermsEditorProps) {
       </p>
 
       {sections.length === 0 ? (
-        <p className="text-sm text-dark-muted bg-background-warm rounded-xl px-4 py-3">No terms yet. Click "Add Section" to build the policy.</p>
+        <p className="text-sm text-dark-muted bg-background-warm rounded-lg px-4 py-3">No terms yet. Click "Add Section" to build the policy.</p>
       ) : (
         <div className="space-y-3">
           {sections.map((section, index) => (
-            <div key={index} className="bg-background-warm rounded-xl p-3 space-y-2">
+            <div key={index} className="bg-background-warm rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-button font-bold text-primary shrink-0">Section {index + 1}</span>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => moveSection(index, -1)} disabled={index === 0} className="p-1 rounded-lg hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
+                  <button type="button" onClick={() => moveSection(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
                     <ChevronUp size={14} />
                   </button>
-                  <button type="button" onClick={() => moveSection(index, 1)} disabled={index === sections.length - 1} className="p-1 rounded-lg hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
+                  <button type="button" onClick={() => moveSection(index, 1)} disabled={index === sections.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
                     <ChevronDown size={14} />
                   </button>
-                  <button type="button" onClick={() => removeSection(index)} className="p-1 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove section">
+                  <button type="button" onClick={() => removeSection(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove section">
                     <X size={14} />
                   </button>
                 </div>

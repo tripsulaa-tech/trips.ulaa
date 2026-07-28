@@ -6,7 +6,7 @@ interface FAQEditorProps {
   onChange: (faqs: FAQ[]) => void;
 }
 
-const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+const inputClass = 'w-full px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 
 export default function FAQEditor({ value, onChange }: FAQEditorProps) {
   const addFAQ = () => onChange([...value, { question: '', answer: '' }]);
@@ -31,14 +31,14 @@ export default function FAQEditor({ value, onChange }: FAQEditorProps) {
       </div>
 
       {value.length === 0 ? (
-        <p className="text-sm text-dark-muted bg-background-warm rounded-xl px-4 py-3">No FAQs yet.</p>
+        <p className="text-sm text-dark-muted bg-background-warm rounded-lg px-4 py-3">No FAQs yet.</p>
       ) : (
         <div className="space-y-3">
           {value.map((faq, index) => (
-            <div key={index} className="bg-background-warm rounded-xl p-3 space-y-2">
+            <div key={index} className="bg-background-warm rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-button font-bold text-dark-muted">Q{index + 1}</span>
-                <button type="button" onClick={() => removeFAQ(index)} className="p-1 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove">
+                <button type="button" onClick={() => removeFAQ(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove">
                   <X size={14} />
                 </button>
               </div>

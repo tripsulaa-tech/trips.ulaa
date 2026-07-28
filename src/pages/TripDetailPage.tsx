@@ -144,7 +144,7 @@ export default function TripDetailPage() {
             <Link to="/trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
             </Link>
-            <div className="flex w-fit items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-4 py-1.5 rounded-full mb-3">
+            <div className="flex w-fit items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-4 py-1.5 rounded-md mb-3">
               <MapPin size={14} /> {trip.destination}
             </div>
             <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">{trip.title}</h1>
@@ -158,7 +158,7 @@ export default function TripDetailPage() {
                 <span className="flex items-center gap-2"><UserCheck size={14} /> {formatAgeRange(trip.min_age, trip.max_age)}</span>
               )}
 			  {isEarlyBird && (
-				<span className="flex items-center gap-1.5 bg-secondary text-white text-xs font-button font-semibold px-3 py-1.5 rounded-full">
+				<span className="flex items-center gap-1.5 bg-secondary text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md">
 				Early Bird
 				</span>
 			  )}
@@ -174,7 +174,7 @@ export default function TripDetailPage() {
             <a
               href="#overview"
               ref={el => { navLinkRefs.current['overview'] = el; }}
-              className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'overview' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+              className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'overview' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
             >
               Overview
             </a>
@@ -182,7 +182,7 @@ export default function TripDetailPage() {
               <a
                 href="#itinerary"
                 ref={el => { navLinkRefs.current['itinerary'] = el; }}
-                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'itinerary' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+                className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'itinerary' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Itinerary
               </a>
@@ -190,7 +190,7 @@ export default function TripDetailPage() {
             <a
               href="#inclusions"
               ref={el => { navLinkRefs.current['inclusions'] = el; }}
-              className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'inclusions' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+              className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'inclusions' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
             >
               Inclusions
             </a>
@@ -198,7 +198,7 @@ export default function TripDetailPage() {
               <a
                 href="#gallery"
                 ref={el => { navLinkRefs.current['gallery'] = el; }}
-                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'gallery' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+                className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'gallery' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Gallery
               </a>
@@ -207,7 +207,7 @@ export default function TripDetailPage() {
               <a
                 href="#faqs"
                 ref={el => { navLinkRefs.current['faqs'] = el; }}
-                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'faqs' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+                className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'faqs' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 FAQs
               </a>
@@ -215,7 +215,7 @@ export default function TripDetailPage() {
             <a
               href="#cancellation"
               ref={el => { navLinkRefs.current['cancellation'] = el; }}
-              className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'cancellation' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+              className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'cancellation' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
             >
               Cancellation
             </a>
@@ -274,7 +274,7 @@ export default function TripDetailPage() {
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Trip Highlights</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {trip.highlights.map((h, i) => (
-                    <div key={i} className="flex items-start gap-3 bg-background-warm rounded-xl px-4 py-3">
+                    <div key={i} className="flex items-start gap-3 bg-background-warm rounded-lg px-4 py-3">
                       <CheckCircle size={18} className="text-primary shrink-0 mt-0.5" />
                       <span className="text-dark text-sm">{h}</span>
                     </div>
@@ -289,8 +289,8 @@ export default function TripDetailPage() {
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Detailed Itinerary</h2>
                 <div className="space-y-4">
                   {trip.itinerary.map((day) => (
-                    <div key={day.day} className="flex gap-4 bg-white rounded-2xl p-5 shadow-card border border-background-warm">
-                      <div className="w-12 h-12 rounded-2xl bg-primary text-white flex flex-col items-center justify-center shrink-0 text-xs font-button font-bold">
+                    <div key={day.day} className="flex gap-4 bg-white rounded-lg p-5 shadow-card border border-background-warm">
+                      <div className="w-12 h-12 rounded-lg bg-primary text-white flex flex-col items-center justify-center shrink-0 text-xs font-button font-bold">
                         <span className="text-xs">Day</span>
                         <span className="text-base leading-none">{day.day}</span>
                       </div>
@@ -312,7 +312,7 @@ export default function TripDetailPage() {
                   <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
                   <div className="flex flex-wrap gap-2">
                     {trip.included.map((item, i) => (
-                      <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-xl px-4 py-2 text-sm text-dark">
+                      <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
                         <CheckCircle size={14} className="text-green-500 shrink-0" />
                         {item}
                       </span>
@@ -325,7 +325,7 @@ export default function TripDetailPage() {
                   <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Not Included</h2>
                   <div className="flex flex-wrap gap-2">
                     {trip.not_included.map((item, i) => (
-                      <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-xl px-4 py-2 text-sm text-dark">
+                      <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
                         <XCircle size={14} className="text-red-400 shrink-0" />
                         {item}
                       </span>
@@ -343,7 +343,7 @@ export default function TripDetailPage() {
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {trip.things_to_carry.map((item, i) => (
-                    <span key={i} className="bg-background-warm rounded-xl px-4 py-2 text-sm text-dark">
+                    <span key={i} className="bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
                       {item}
                     </span>
                   ))}
@@ -353,7 +353,7 @@ export default function TripDetailPage() {
 
             {/* Meeting Point */}
             {trip.meeting_point && (
-              <section className="bg-background-warm rounded-2xl p-6">
+              <section className="bg-background-warm rounded-lg p-6">
                 <h2 className="font-display text-2xl font-bold text-dark mb-3 flex items-center gap-2">
                   <Navigation size={22} className="text-primary" /> Meeting Point
                 </h2>
@@ -380,7 +380,7 @@ export default function TripDetailPage() {
             {/* Eligibility — only shown when the admin has set an age
                 restriction on this trip (Admin → Trips → Basic Info). */}
             {(trip.min_age !== undefined || trip.max_age !== undefined) && (
-              <section className="bg-background-warm rounded-2xl p-6">
+              <section className="bg-background-warm rounded-lg p-6">
                 <h2 className="font-display text-2xl font-bold text-dark mb-2 flex items-center gap-2">
                   <UserCheck size={22} className="text-primary" /> Eligibility
                 </h2>
@@ -408,7 +408,7 @@ export default function TripDetailPage() {
           {/* Right sticky panel */}
           <div className="lg:col-span-1">
             <div className="sticky top-40">
-              <div className="bg-white rounded-3xl shadow-warm-lg p-8 border border-background-warm">
+              <div className="bg-white rounded-xl shadow-warm-lg p-8 border border-background-warm">
                 {activePrice != null && (
                   <div className="text-center mb-5 pb-5 border-b border-background-warm">
                     {strikeThroughPrice != null ? (
@@ -420,11 +420,11 @@ export default function TripDetailPage() {
                         <p className="text-dark-muted text-xs mt-1">per person</p>
 
                         <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-                          <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-button font-medium px-2.5 py-1 rounded-full">
+                          <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-button font-medium px-2.5 py-1 rounded-md">
                             Save {formatPrice(strikeThroughPrice - activePrice)}
                           </span>
                           {isEarlyBird && (
-                            <span className="bg-secondary text-white text-xs font-button font-semibold px-2.5 py-1 rounded-full">
+                            <span className="bg-secondary text-white text-xs font-button font-semibold px-2.5 py-1 rounded-md">
                               Early Bird
                             </span>
                           )}
@@ -450,15 +450,15 @@ export default function TripDetailPage() {
                 )}
                 <div className="text-center mb-6">
                   {isFull ? (
-                    <span className="inline-block bg-red-50 text-red-600 text-sm font-button font-semibold px-4 py-2 rounded-full">
+                    <span className="inline-block bg-red-50 text-red-600 text-sm font-button font-semibold px-4 py-2 rounded-md">
                       Sold Out
                     </span>
                   ) : isAlmostFull ? (
-                    <span className="inline-block bg-amber-50 text-amber-700 text-sm font-button font-semibold px-4 py-2 rounded-full">
+                    <span className="inline-block bg-amber-50 text-amber-700 text-sm font-button font-semibold px-4 py-2 rounded-md">
                       Only {remaining} seats left — almost full!
                     </span>
                   ) : (
-                    <span className="inline-block bg-green-50 text-green-700 text-sm font-button font-semibold px-4 py-2 rounded-full">
+                    <span className="inline-block bg-green-50 text-green-700 text-sm font-button font-semibold px-4 py-2 rounded-md">
                       Seats available
                     </span>
                   )}
@@ -503,7 +503,7 @@ export default function TripDetailPage() {
                   </button>
 
                   {calendarMenuOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-2 z-20 rounded-xl border-2 border-background-warm bg-white shadow-warm-lg py-1 overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 mt-2 z-20 rounded-lg border-2 border-background-warm bg-white shadow-warm-lg py-1 overflow-hidden">
                       <a
                         href={getGoogleCalendarUrl(trip)}
                         target="_blank"
@@ -564,7 +564,7 @@ export default function TripDetailPage() {
                   {strikeThroughPrice != null && (
                     <>
                       <span className="text-dark-muted line-through text-xs shrink-0">{formatPrice(strikeThroughPrice)}</span>
-                      <span className="bg-green-50 border border-green-200 text-green-700 text-[10px] font-button font-medium px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                      <span className="bg-green-50 border border-green-200 text-green-700 text-[10px] font-button font-medium px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                         Save {formatPrice(strikeThroughPrice - activePrice)}
                       </span>
                     </>
@@ -578,7 +578,7 @@ export default function TripDetailPage() {
             {/* Row 2: Early Bird + Ends date */}
             <div className="flex items-center gap-1.5 mt-1 overflow-x-auto no-scrollbar">
               {isEarlyBird && (
-                <span className="bg-secondary text-white text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                <span className="bg-secondary text-white text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                   Early Bird
                 </span>
               )}
@@ -596,7 +596,7 @@ export default function TripDetailPage() {
             variant="primary"
             size="sm"
             onClick={() => setBookingOpen(true)}
-            className="!rounded-xl !px-4 !py-2 shrink-0 flex flex-col items-center !gap-0 leading-tight"
+            className="!rounded-lg !px-4 !py-2 shrink-0 flex flex-col items-center !gap-0 leading-tight"
           >
             <span className="text-sm font-bold whitespace-nowrap">
               {isFull ? 'Join Waitlist' : 'Book Your Seat'}

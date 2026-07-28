@@ -66,13 +66,13 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
       />
 
       {value ? (
-        <div className="relative w-full h-32 rounded-xl overflow-hidden border-2 border-background-warm group">
+        <div className="relative w-full h-32 rounded-lg overflow-hidden border-2 border-background-warm group">
           <img src={value} alt="" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-dark/0 group-hover:bg-dark/40 transition-colors" />
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute top-2 right-2 p-1.5 rounded-lg bg-dark/70 text-white hover:bg-red-600 transition-colors"
+            className="absolute top-2 right-2 p-1.5 rounded-md bg-dark/70 text-white hover:bg-red-600 transition-colors"
             title="Remove image"
           >
             <X size={14} />
@@ -80,7 +80,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
           <label
             htmlFor={inputId}
             onClick={(e) => { e.preventDefault(); fileRef.current?.click(); }}
-            className="absolute bottom-2 right-2 px-2.5 py-1.5 rounded-lg bg-white/95 text-dark text-xs font-medium cursor-pointer hover:bg-white transition-colors flex items-center gap-1"
+            className="absolute bottom-2 right-2 px-2.5 py-1.5 rounded-md bg-white/95 text-dark text-xs font-medium cursor-pointer hover:bg-white transition-colors flex items-center gap-1"
           >
             <Upload size={12} />
             {uploading ? 'Uploading...' : 'Replace'}
@@ -90,7 +90,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
         <label
           htmlFor={inputId}
           onClick={(e) => { e.preventDefault(); fileRef.current?.click(); }}
-          className="flex flex-col items-center justify-center gap-1.5 w-full h-32 rounded-xl border-2 border-dashed border-background-warm bg-background hover:border-primary cursor-pointer transition-colors text-dark-muted"
+          className="flex flex-col items-center justify-center gap-1.5 w-full h-32 rounded-lg border-2 border-dashed border-background-warm bg-background hover:border-primary cursor-pointer transition-colors text-dark-muted"
         >
           {uploading ? (
             <span className="text-sm font-medium">Uploading...</span>

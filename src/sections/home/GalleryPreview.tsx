@@ -58,7 +58,7 @@ export default function GalleryPreview() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.06 }}
               onClick={() => open(i)}
-              className={`group relative overflow-hidden rounded-2xl cursor-pointer ${
+              className={`group relative overflow-hidden rounded-lg cursor-pointer ${
                 i === 0 || i === 4 ? 'row-span-2' : ''
               } ${i === 0 ? 'md:col-span-2 md:row-span-1' : ''}`}
             >

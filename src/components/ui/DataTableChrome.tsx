@@ -96,7 +96,7 @@ export function TableHeaderBar({
             value={searchValue}
             onChange={ev => onSearchChange(ev.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full pl-9 pr-8 py-1.5 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+            className="w-full pl-9 pr-8 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
           />
           {searchValue && (
             <button
@@ -113,7 +113,7 @@ export function TableHeaderBar({
             onClick={onExport}
             disabled={total === 0}
             title={total === 0 ? 'Nothing to export' : `${exportLabel} — exports exactly what's currently filtered`}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-background-warm text-dark text-sm font-button font-semibold hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:hover:border-background-warm disabled:hover:text-dark transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border-2 border-background-warm text-dark text-sm font-button font-semibold hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:hover:border-background-warm disabled:hover:text-dark transition-colors"
           >
             <Download size={14} />
             <span className="hidden sm:inline">{exportLabel}</span>
@@ -155,7 +155,7 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 h-9 rounded-lg border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
+        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 h-9 rounded-md border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
       >
         &lsaquo; Prev
       </button>
@@ -169,7 +169,7 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
             key={p}
             onClick={() => onPageChange(p)}
             aria-current={p === currentPage ? 'page' : undefined}
-            className={`min-w-[36px] h-9 px-2 inline-flex items-center justify-center text-xs font-button font-semibold rounded-lg border-2 transition-colors ${
+            className={`min-w-[36px] h-9 px-2 inline-flex items-center justify-center text-xs font-button font-semibold rounded-md border-2 transition-colors ${
               p === currentPage
                 ? 'bg-primary border-primary text-white'
                 : 'border-background-warm text-dark hover:border-primary/30'
@@ -182,7 +182,7 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 h-9 rounded-lg border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
+        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 h-9 rounded-md border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
       >
         Next &rsaquo;
       </button>

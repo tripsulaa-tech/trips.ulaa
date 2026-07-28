@@ -44,7 +44,7 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
       {value.length > 0 && (
         <ul className="space-y-2 mb-3">
           {value.map((item, index) => (
-            <li key={index} className="flex items-center gap-2 bg-background-warm rounded-xl px-3 py-2">
+            <li key={index} className="flex items-center gap-2 bg-background-warm rounded-lg px-3 py-2">
               <span className="flex-1 text-sm text-dark">{item}</span>
               <button
                 type="button"
@@ -66,12 +66,12 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           placeholder={placeholder || 'Type and press Enter to add'}
-          className="flex-1 px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+          className="flex-1 px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
         />
         <button
           type="button"
           onClick={addItem}
-          className="shrink-0 px-3 rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center"
+          className="shrink-0 px-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center"
           title="Add"
         >
           <Plus size={16} />

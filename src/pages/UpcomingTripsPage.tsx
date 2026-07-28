@@ -65,7 +65,7 @@ export default function UpcomingTripsPage() {
                 placeholder="Search destination or trip..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
+                className="w-full pl-12 pr-4 py-3 rounded-lg border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
               />
             </div>
             {/* Month filter - desktop */}
@@ -74,7 +74,7 @@ export default function UpcomingTripsPage() {
                 <button
                   key={m}
                   onClick={() => setMonth(m)}
-                  className={`px-4 py-2 rounded-xl text-sm font-button font-medium transition-all ${
+                  className={`px-4 py-2 rounded-lg text-sm font-button font-medium transition-all ${
                     month === m
                       ? 'bg-primary text-white'
                       : 'bg-background-warm text-dark hover:bg-primary/10 hover:text-primary'
@@ -87,7 +87,7 @@ export default function UpcomingTripsPage() {
             {/* Filter toggle - mobile */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="md:hidden flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-background-warm text-dark font-button text-sm"
+              className="md:hidden flex items-center gap-2 px-4 py-3 rounded-lg border-2 border-background-warm text-dark font-button text-sm"
             >
               <Filter size={16} />
               Filter
@@ -100,7 +100,7 @@ export default function UpcomingTripsPage() {
                 <button
                   key={m}
                   onClick={() => { setMonth(m); setShowFilters(false); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-button font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-button font-medium transition-all ${
                     month === m ? 'bg-primary text-white' : 'bg-background-warm text-dark'
                   }`}
                 >

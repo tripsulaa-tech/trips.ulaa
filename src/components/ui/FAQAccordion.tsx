@@ -19,7 +19,7 @@ export default function FAQAccordion({ faqs }: FAQProps) {
       {faqs.map((faq, index) => (
         <div
           key={index}
-          className="bg-white rounded-2xl border border-background-warm overflow-hidden"
+          className="bg-white rounded-lg border border-background-warm overflow-hidden"
         >
           <button
             onClick={() => toggle(index)}

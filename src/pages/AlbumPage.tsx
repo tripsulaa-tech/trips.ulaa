@@ -93,14 +93,14 @@ export default function AlbumPage() {
               href={album.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(album.destination)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex w-fit items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-4 py-1.5 rounded-full mb-3 hover:bg-white/25 transition-colors"
+              className="flex w-fit items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-4 py-1.5 rounded-md mb-3 hover:bg-white/25 transition-colors"
             >
               <MapPin size={14} /> {album.destination}
             </a>
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white">{album.title}</h1>
               {album.batch && (
-                <span className="shrink-0 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-3 py-1.5 rounded-full">
+                <span className="shrink-0 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-3 py-1.5 rounded-md">
                   {formatBatchLabel(album.batch)}
                 </span>
               )}

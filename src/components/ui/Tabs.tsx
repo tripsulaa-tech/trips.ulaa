@@ -126,7 +126,7 @@ export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
                 ref={el => { buttonRefs.current[i] = el; }}
                 type="button"
                 onClick={() => handleSelect(i)}
-                className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
                   active === i
                     ? 'bg-primary text-white'
                     : 'bg-background text-dark-muted hover:text-dark'

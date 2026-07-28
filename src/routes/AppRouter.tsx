@@ -114,7 +114,7 @@ export default function AppRouter() {
               <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center px-4">
                 <h1 className="font-display text-8xl font-bold text-primary mb-4">404</h1>
                 <p className="text-dark-muted text-xl mb-8">This page doesn't exist.</p>
-                <a href="/" className="bg-primary text-white px-6 py-3 rounded-xl font-button font-semibold hover:bg-primary-dark transition-colors">
+                <a href="/" className="bg-primary text-white px-6 py-3 rounded-lg font-button font-semibold hover:bg-primary-dark transition-colors">
                   Go Home
                 </a>
               </div>

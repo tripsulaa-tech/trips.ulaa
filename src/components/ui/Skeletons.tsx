@@ -5,14 +5,14 @@ const shimmer = `relative overflow-hidden before:absolute before:inset-0 before:
 
 export function TripCardSkeleton() {
   return (
-    <div className="bg-white rounded-3xl shadow-card">
-      <div className={`h-64 bg-background-warm rounded-t-3xl ${shimmer}`} />
+    <div className="bg-white rounded-xl shadow-card">
+      <div className={`h-64 bg-background-warm rounded-t-xl ${shimmer}`} />
       <div className="p-6 space-y-3">
-        <div className={`h-5 bg-background-warm rounded-lg w-3/4 ${shimmer}`} />
-        <div className={`h-4 bg-background-warm rounded-lg w-1/2 ${shimmer}`} />
-        <div className={`h-4 bg-background-warm rounded-lg w-full ${shimmer}`} />
-        <div className={`h-4 bg-background-warm rounded-lg w-5/6 ${shimmer}`} />
-        <div className={`h-10 bg-background-warm rounded-xl w-full mt-4 ${shimmer}`} />
+        <div className={`h-5 bg-background-warm rounded-md w-3/4 ${shimmer}`} />
+        <div className={`h-4 bg-background-warm rounded-md w-1/2 ${shimmer}`} />
+        <div className={`h-4 bg-background-warm rounded-md w-full ${shimmer}`} />
+        <div className={`h-4 bg-background-warm rounded-md w-5/6 ${shimmer}`} />
+        <div className={`h-10 bg-background-warm rounded-lg w-full mt-4 ${shimmer}`} />
       </div>
     </div>
   );
@@ -20,12 +20,12 @@ export function TripCardSkeleton() {
 
 export function AlbumCardSkeleton() {
   return (
-    <div className="bg-white rounded-3xl shadow-card">
-      <div className={`h-56 md:h-64 bg-background-warm rounded-t-3xl ${shimmer}`} />
+    <div className="bg-white rounded-xl shadow-card">
+      <div className={`h-56 md:h-64 bg-background-warm rounded-t-xl ${shimmer}`} />
       <div className="p-6 space-y-3">
-        <div className={`h-4 bg-background-warm rounded-lg w-full ${shimmer}`} />
-        <div className={`h-4 bg-background-warm rounded-lg w-4/5 ${shimmer}`} />
-        <div className={`h-10 bg-background-warm rounded-xl w-full mt-4 ${shimmer}`} />
+        <div className={`h-4 bg-background-warm rounded-md w-full ${shimmer}`} />
+        <div className={`h-4 bg-background-warm rounded-md w-4/5 ${shimmer}`} />
+        <div className={`h-10 bg-background-warm rounded-lg w-full mt-4 ${shimmer}`} />
       </div>
     </div>
   );

@@ -121,7 +121,7 @@ export default function Footer() {
         </div>
 
         {/* Contact box */}
-        <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] py-3.5 px-3 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
+        <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.03] py-3.5 px-3 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
           <a
             href="mailto:trips.ulaa@gmail.com"
             className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors whitespace-nowrap shrink-0"

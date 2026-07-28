@@ -319,7 +319,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   }
 
   const inputClass = `
-    w-full px-4 py-3 rounded-xl border-2 bg-background
+    w-full px-4 py-3 rounded-lg border-2 bg-background
     font-body text-dark placeholder-dark-muted/50
     transition-all duration-200 outline-none
     focus:border-primary focus:bg-white
@@ -332,7 +332,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     <>
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       {tripTitle && (
-        <div className="bg-background-warm rounded-xl px-4 py-3 mb-2">
+        <div className="bg-background-warm rounded-lg px-4 py-3 mb-2">
           <p className="text-sm text-dark-muted">
             Booking for: <span className="font-semibold text-dark">{tripTitle}</span>
           </p>
@@ -346,7 +346,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           <button
             type="button"
             onClick={() => setBookingMode('solo')}
-            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
               bookingMode === 'solo'
                 ? 'border-primary bg-primary/10 text-primary'
                 : 'border-background-warm text-dark-muted hover:border-primary/40'
@@ -357,7 +357,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           <button
             type="button"
             onClick={() => setBookingMode('group')}
-            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
               bookingMode === 'group'
                 ? 'border-primary bg-primary/10 text-primary'
                 : 'border-background-warm text-dark-muted hover:border-primary/40'
@@ -509,7 +509,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
               <button
                 type="button"
                 onClick={() => { setFoodPreference('veg'); setFoodPreferenceError(''); }}
-                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
                   foodPreference === 'veg'
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-background-warm text-dark-muted hover:border-primary/40'
@@ -520,7 +520,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
               <button
                 type="button"
                 onClick={() => { setFoodPreference('non_veg'); setFoodPreferenceError(''); }}
-                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm transition-colors ${
+                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
                   foodPreference === 'non_veg'
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-background-warm text-dark-muted hover:border-primary/40'
@@ -565,7 +565,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       </div>
 
       {/* Terms & Conditions */}
-      <div className="bg-background-warm rounded-xl p-3">
+      <div className="bg-background-warm rounded-lg p-3">
         <label className="flex items-start gap-2.5 cursor-pointer">
           <input
             type="checkbox"
@@ -588,7 +588,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
       {/* Error */}
       {status === 'error' && (
-        <div className="flex items-start gap-2 text-red-600 bg-red-50 rounded-xl p-3">
+        <div className="flex items-start gap-2 text-red-600 bg-red-50 rounded-lg p-3">
           <AlertCircle size={18} className="shrink-0 mt-0.5" />
           <p className="text-sm">{errorMsg}</p>
         </div>

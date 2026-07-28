@@ -69,13 +69,13 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
 
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
         {value.map((url, index) => (
-          <div key={`${url}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border-2 border-background-warm group">
+          <div key={`${url}-${index}`} className="relative aspect-square rounded-lg overflow-hidden border-2 border-background-warm group">
             <img src={url} alt="" className="w-full h-full object-cover" />
             <button
               type="button"
               onClick={() => removeAt(index)}
               disabled={removingUrl === url}
-              className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-dark/70 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-100 disabled:cursor-wait"
+              className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-dark/70 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-100 disabled:cursor-wait"
               title="Remove image"
             >
               {removingUrl === url ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
@@ -87,7 +87,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="flex flex-col items-center justify-center gap-1 aspect-square rounded-xl border-2 border-dashed border-background-warm bg-background hover:border-primary cursor-pointer transition-colors text-dark-muted disabled:opacity-60"
+          className="flex flex-col items-center justify-center gap-1 aspect-square rounded-lg border-2 border-dashed border-background-warm bg-background hover:border-primary cursor-pointer transition-colors text-dark-muted disabled:opacity-60"
         >
           {uploading ? (
             <>

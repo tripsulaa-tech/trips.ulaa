@@ -24,9 +24,9 @@ function SectionCard({
   children: ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-background-warm p-6">
+    <div className="bg-white rounded-lg border border-background-warm p-6">
       <h3 className="flex items-center gap-2.5 font-display font-bold text-dark text-lg mb-3">
-        <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        <span className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
           {icon}
         </span>
         {title}
@@ -57,7 +57,7 @@ export default function CancellationPolicyDisplay({ policy }: CancellationPolicy
       <SectionCard icon={<CalendarClock size={18} />} title="Cancellation by Participant">
         <div className="space-y-3">
           {policy.tiers.map((tier, i) => (
-            <div key={i} className="bg-background-warm rounded-xl p-4">
+            <div key={i} className="bg-background-warm rounded-lg p-4">
               <p className="font-button font-semibold text-dark text-sm mb-1">{tierLabel(tier)}</p>
               <p className="text-dark-muted text-sm leading-relaxed">{tier.description}</p>
             </div>
@@ -98,7 +98,7 @@ export default function CancellationPolicyDisplay({ policy }: CancellationPolicy
         </p>
       </SectionCard>
 
-      <p className="text-xs text-dark-muted bg-background-warm rounded-xl px-4 py-3">{STATIC.acceptance}</p>
+      <p className="text-xs text-dark-muted bg-background-warm rounded-lg px-4 py-3">{STATIC.acceptance}</p>
     </div>
   );
 }

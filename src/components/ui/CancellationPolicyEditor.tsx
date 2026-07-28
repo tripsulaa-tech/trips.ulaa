@@ -6,7 +6,7 @@ interface CancellationPolicyEditorProps {
   onChange: (policy: CancellationPolicy) => void;
 }
 
-const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+const inputClass = 'w-full px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 const numberClass = `${inputClass} sm:w-28`;
 
 function tierLabel(tier: CancellationTier): string {
@@ -47,7 +47,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
         things that usually change trip to trip — edit them freely; the rest of the policy wording is shared across all trips.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-background-warm rounded-xl p-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-background-warm rounded-lg p-3 mb-3">
         <div>
           <label className="block text-xs font-medium text-dark-muted mb-1">Balance due (days before departure)</label>
           <input
@@ -92,21 +92,21 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
       </div>
 
       {value.tiers.length === 0 ? (
-        <p className="text-sm text-dark-muted bg-background-warm rounded-xl px-4 py-3">No refund tiers yet. Click "Add Tier" to build the cancellation schedule.</p>
+        <p className="text-sm text-dark-muted bg-background-warm rounded-lg px-4 py-3">No refund tiers yet. Click "Add Tier" to build the cancellation schedule.</p>
       ) : (
         <div className="space-y-3">
           {value.tiers.map((tier, index) => (
-            <div key={index} className="bg-background-warm rounded-xl p-3 space-y-2">
+            <div key={index} className="bg-background-warm rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-button font-bold text-primary">{tierLabel(tier)}</span>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => moveTier(index, -1)} disabled={index === 0} className="p-1 rounded-lg hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
+                  <button type="button" onClick={() => moveTier(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
                     <ChevronUp size={14} />
                   </button>
-                  <button type="button" onClick={() => moveTier(index, 1)} disabled={index === value.tiers.length - 1} className="p-1 rounded-lg hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
+                  <button type="button" onClick={() => moveTier(index, 1)} disabled={index === value.tiers.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
                     <ChevronDown size={14} />
                   </button>
-                  <button type="button" onClick={() => removeTier(index)} className="p-1 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove tier">
+                  <button type="button" onClick={() => removeTier(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove tier">
                     <X size={14} />
                   </button>
                 </div>

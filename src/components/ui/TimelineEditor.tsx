@@ -6,7 +6,7 @@ interface TimelineEditorProps {
   onChange: (items: AboutTimelineItem[]) => void;
 }
 
-const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+const inputClass = 'w-full px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 
 export default function TimelineEditor({ value, onChange }: TimelineEditorProps) {
   const addItem = () => {
@@ -43,11 +43,11 @@ export default function TimelineEditor({ value, onChange }: TimelineEditorProps)
       </div>
 
       {value.length === 0 ? (
-        <p className="text-sm text-dark-muted bg-background-warm rounded-xl px-4 py-3">No milestones yet. Click "Add Milestone" to start the story.</p>
+        <p className="text-sm text-dark-muted bg-background-warm rounded-lg px-4 py-3">No milestones yet. Click "Add Milestone" to start the story.</p>
       ) : (
         <div className="space-y-3">
           {value.map((item, index) => (
-            <div key={index} className="bg-background-warm rounded-xl p-3 space-y-2">
+            <div key={index} className="bg-background-warm rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <input
                   value={item.year}
@@ -56,13 +56,13 @@ export default function TimelineEditor({ value, onChange }: TimelineEditorProps)
                   className={`${inputClass} w-28`}
                 />
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="p-1 rounded-lg hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
+                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
                     <ChevronUp size={14} />
                   </button>
-                  <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} className="p-1 rounded-lg hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
+                  <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
                     <ChevronDown size={14} />
                   </button>
-                  <button type="button" onClick={() => removeItem(index)} className="p-1 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove">
+                  <button type="button" onClick={() => removeItem(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove">
                     <X size={14} />
                   </button>
                 </div>

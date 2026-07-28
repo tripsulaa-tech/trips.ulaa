@@ -36,7 +36,7 @@ export default function ItineraryDayPhotos({ images }: ItineraryDayPhotosProps) 
               key={i}
               type="button"
               onClick={() => open(i)}
-              className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 group cursor-pointer"
+              className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden shrink-0 group cursor-pointer"
             >
               <img
                 src={url}

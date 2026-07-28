@@ -23,10 +23,10 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="group bg-white rounded-3xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
+      className="group bg-white rounded-xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
-      <div className="relative h-56 md:h-64 overflow-hidden rounded-t-3xl">
+      <div className="relative h-56 md:h-64 overflow-hidden rounded-t-xl">
         <img
           src={trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.destination}
@@ -38,16 +38,16 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         {/* Badges */}
         <div className="absolute top-4 left-4 flex gap-2">
           {isFull ? (
-            <span className="bg-red-500 text-white text-xs font-button font-semibold px-3 py-1 rounded-full">
+            <span className="bg-red-500 text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
               Sold Out
             </span>
           ) : isAlmostFull ? (
-            <span className="bg-amber-500 text-white text-xs font-button font-semibold px-3 py-1 rounded-full">
+            <span className="bg-amber-500 text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
               Only {remaining} left!
             </span>
           ) : null}
           {isEarlyBird && (
-            <span className="bg-secondary text-white text-xs font-button font-semibold px-3 py-1 rounded-full">
+            <span className="bg-secondary text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
               Early Bird
             </span>
           )}
@@ -81,7 +81,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
 
         {/* Destination overlay */}
         <div className="absolute bottom-4 left-4">
-          <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/30 text-white text-xs font-button font-semibold px-3 py-1.5 rounded-full">
+          <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/30 text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md">
             <MapPin size={13} />
             <span>{trip.destination}</span>
           </div>
@@ -102,7 +102,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 {strikeThroughPrice != null && (
                   <>
                     <span className="text-dark-muted line-through text-sm">{formatPrice(strikeThroughPrice)}</span>
-                    <span className="bg-green-50 border border-green-200 text-green-700 text-[11px] font-button font-medium px-2 py-0.5 rounded-full whitespace-nowrap">
+                    <span className="bg-green-50 border border-green-200 text-green-700 text-[11px] font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
                       Save {formatPrice(strikeThroughPrice - activePrice)}
                     </span>
                   </>

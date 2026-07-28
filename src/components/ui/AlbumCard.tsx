@@ -24,10 +24,10 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="group bg-white rounded-3xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
+      className="group bg-white rounded-xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
-      <div className="relative h-56 md:h-64 overflow-hidden rounded-t-3xl">
+      <div className="relative h-56 md:h-64 overflow-hidden rounded-t-xl">
         <img
           src={trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.destination}
@@ -45,7 +45,7 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
             {trip.title}
           </h3>
           {trip.batch && (
-            <span className="shrink-0 text-xs font-button font-semibold text-primary bg-background-warm px-2.5 py-1 rounded-full whitespace-nowrap">
+            <span className="shrink-0 text-xs font-button font-semibold text-primary bg-background-warm px-2.5 py-1 rounded-md whitespace-nowrap">
               {formatBatchLabel(trip.batch)}
             </span>
           )}

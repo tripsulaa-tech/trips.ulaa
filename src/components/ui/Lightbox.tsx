@@ -86,7 +86,7 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }: 
           </button>
 
           {/* Counter */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-cream/80 text-sm font-button tracking-wide bg-primary/20 px-3 py-1 rounded-full">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-cream/80 text-sm font-button tracking-wide bg-primary/20 px-3 py-1 rounded-md">
             {current + 1} / {images.length}
           </div>
 
@@ -110,7 +110,7 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }: 
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={e => e.stopPropagation()}
-              className="max-w-5xl max-h-[85vh] sm:max-h-[78vh] w-full touch-pan-y bg-dark-muted/30 rounded-2xl p-1.5 sm:p-2 shadow-warm-lg"
+              className="max-w-5xl max-h-[85vh] sm:max-h-[78vh] w-full touch-pan-y bg-dark-muted/30 rounded-lg p-1.5 sm:p-2 shadow-warm-lg"
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.6}
@@ -121,7 +121,7 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }: 
                 src={images[current]}
                 alt={`Gallery image ${current + 1}`}
                 draggable={false}
-                className="w-full h-full max-h-[82vh] sm:max-h-[74vh] object-contain rounded-xl select-none pointer-events-none"
+                className="w-full h-full max-h-[82vh] sm:max-h-[74vh] object-contain rounded-lg select-none pointer-events-none"
               />
             </motion.div>
           </AnimatePresence>
@@ -145,10 +145,10 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }: 
             >
               <div className="relative">
                 {/* edge fade masks */}
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-dark to-transparent z-10 rounded-l-2xl" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-dark to-transparent z-10 rounded-r-2xl" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-dark to-transparent z-10 rounded-l-lg" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-dark to-transparent z-10 rounded-r-lg" />
 
-                <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth bg-primary/15 border border-primary/25 backdrop-blur-md rounded-2xl px-3 py-2.5">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth bg-primary/15 border border-primary/25 backdrop-blur-md rounded-lg px-3 py-2.5">
                   {images.map((img, i) => (
                     <button
                       key={i}
@@ -156,7 +156,7 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }: 
                       onClick={() => setCurrent(i)}
                       aria-label={`Go to image ${i + 1}`}
                       aria-current={i === current}
-                      className={`relative w-12 h-12 rounded-xl overflow-hidden shrink-0 cursor-pointer transition-all duration-200 ${
+                      className={`relative w-12 h-12 rounded-lg overflow-hidden shrink-0 cursor-pointer transition-all duration-200 ${
                         i === current
                           ? 'ring-2 ring-secondary ring-offset-2 ring-offset-dark scale-105'
                           : 'opacity-50 hover:opacity-90'
@@ -199,7 +199,7 @@ export function GalleryGrid({ images }: GalleryGridProps) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: Math.min(i, 20) * 0.04 }}
-            className="masonry-item group relative cursor-pointer rounded-2xl overflow-hidden"
+            className="masonry-item group relative cursor-pointer rounded-lg overflow-hidden"
             onClick={() => open(i)}
           >
             <img

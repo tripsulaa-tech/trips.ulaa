@@ -1665,7 +1665,7 @@ export default function AdminEnquiries() {
                 <SlidersHorizontal size={16} className="text-dark shrink-0" />
                 <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1 text-left">Filters</span>
                 {activeFilterCount > 0 && (
-                  <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-full bg-primary/10 text-primary text-[11px] font-button font-semibold">
+                  <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-md bg-primary/10 text-primary text-[11px] font-button font-semibold">
                     {activeFilterCount} active
                   </span>
                 )}
@@ -1724,7 +1724,7 @@ export default function AdminEnquiries() {
                     >
                       <MessageCircle size={13} className="shrink-0" />
                       General Enquiries
-                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] ${
+                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-[10px] ${
                         selectedTripKey === UNLINKED_GROUP_KEY ? 'bg-white/20' : 'bg-background-warm'
                       }`}>
                         {enquiries.filter(e => !e.trip_id).length}
@@ -2011,7 +2011,7 @@ export default function AdminEnquiries() {
                                 {!e.trip_id && !activeGroup && (
                                   <span
                                     title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
-                                    className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted shrink-0"
+                                    className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
                                   >
                                     <MessageCircle size={9} className="shrink-0" /> General
                                   </span>
@@ -2024,14 +2024,14 @@ export default function AdminEnquiries() {
                             {e.group_size && e.group_size > 1 ? (
                               <span
                                 title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
-                                className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                                className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                               >
                                 <Users size={12} className="shrink-0" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
                               </span>
                             ) : (
                               <span
                                 title="Booked individually, not part of a group"
-                                className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
+                                className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
                               >
                                 <User size={12} className="shrink-0" /> Solo
                               </span>
@@ -2070,7 +2070,7 @@ export default function AdminEnquiries() {
                               <p className="text-dark font-medium text-xs">
                                 {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}
                               </p>
-                              <span className={`inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${paymentStatus(e).color}`}>
+                              <span className={`inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${paymentStatus(e).color}`}>
                                 {paymentStatus(e).label}
                               </span>
                               {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
@@ -2081,7 +2081,7 @@ export default function AdminEnquiries() {
                             </button>
                           </td>
                           <td className="px-2 py-3 text-center">
-                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
+                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
                               <cfg.icon size={12} className="shrink-0" />
                               {cfg.label}
                             </span>
@@ -2089,7 +2089,7 @@ export default function AdminEnquiries() {
                           <td className="px-2 py-3 text-center">
                             <span
                               title={isBooked(e) ? 'Seat booked automatically from payment' : e.cancelled_at ? 'Cancelled — seat released' : 'No payment recorded yet, so no seat is held'}
-                              className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
+                              className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
                                 isBooked(e) ? 'bg-green-100 text-green-700' : e.cancelled_at ? 'bg-red-100 text-red-700' : 'bg-background-warm text-dark-muted'
                               }`}
                             >
@@ -2097,7 +2097,7 @@ export default function AdminEnquiries() {
                               {isBooked(e) ? 'Booked' : e.cancelled_at ? 'Cancelled' : 'Not booked'}
                             </span>
                             {refundStatus(e) && (
-                              <p className={`text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-full inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
+                              <p className={`text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
                                 {refundStatus(e)!.label}
                               </p>
                             )}
@@ -2185,14 +2185,14 @@ export default function AdminEnquiries() {
                           {e.group_size && e.group_size > 1 ? (
                             <span
                               title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
-                              className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                              className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                             >
                               <Users size={9} /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
                             </span>
                           ) : (
                             <span
                               title="Booked individually, not part of a group"
-                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-slate-100 text-dark-muted"
+                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 bg-slate-100 text-dark-muted"
                             >
                               <User size={9} /> Solo
                             </span>
@@ -2200,20 +2200,20 @@ export default function AdminEnquiries() {
                           {e.package_type === 'early_bird' && (
                             <span
                               title="Early Bird"
-                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 shrink-0"
+                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 shrink-0"
                             >
                               <Bird size={11} />
                             </span>
                           )}
                           {e.cancelled_at && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-red-100 text-red-700 shrink-0">
                               <XCircle size={9} /> Cancelled
                             </span>
                           )}
                           {!e.trip_id && !activeGroup && (
                             <span
                               title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
-                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-dark-muted shrink-0"
+                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
                             >
                               <MessageCircle size={9} /> General
                             </span>
@@ -2222,7 +2222,7 @@ export default function AdminEnquiries() {
                         <p className="text-dark-muted text-xs truncate mt-0.5">{e.phone}</p>
                         <div className="flex items-center flex-wrap gap-1 mt-1.5">
                           {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                            <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap bg-green-100 text-green-700">
+                            <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-green-100 text-green-700">
                               Due {formatPrice(paymentBalance(e)!)}
                             </span>
                           )}
@@ -2237,7 +2237,7 @@ export default function AdminEnquiries() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
+                        <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
                           <cfg.icon size={12} className="shrink-0" />
                           {cfg.label}
                         </span>
@@ -2721,7 +2721,7 @@ export default function AdminEnquiries() {
                 <p className="font-medium text-dark truncate">{paymentTarget.full_name}</p>
                 <p className="text-dark-muted text-xs truncate">{paymentTarget.trip_title || 'No trip linked'}</p>
               </div>
-              <span className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${foodBadge(paymentTarget).color}`}>
+              <span className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap shrink-0 ${foodBadge(paymentTarget).color}`}>
                 <FoodMark type={foodPreferenceKey(paymentTarget)} size={11} /> {foodBadge(paymentTarget).label}
               </span>
             </div>
@@ -2862,19 +2862,19 @@ export default function AdminEnquiries() {
                 {detailsTarget.group_size && detailsTarget.group_size > 1 ? (
                   <span
                     title={`${groupLabel(detailsTarget)} — part of a group booking of ${detailsTarget.group_size}`}
-                    className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-dark-muted"
+                    className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
                   >
                     <Users size={10} /> {groupLabel(detailsTarget)} · {detailsTarget.group_seq}/{detailsTarget.group_size}
                   </span>
                 ) : (
                   <span
                     title="Booked individually, not part of a group"
-                    className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-dark-muted"
+                    className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
                   >
                     <User size={10} /> Solo
                   </span>
                 )}
-                <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${food.color}`}>
+                <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
                   <FoodMark type={foodPreferenceKey(detailsTarget)} size={10} /> {food.label}
                 </span>
               </div>

@@ -11,7 +11,7 @@ interface ItineraryEditorProps {
   tripSlug?: string;
 }
 
-const inputClass = 'w-full px-3 py-2 rounded-xl border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+const inputClass = 'w-full px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 
 // Minimum number of photos we ask admins to add per day. Not hard-enforced
 // (a day can still be saved with fewer/no photos), just nudges the UI.
@@ -55,21 +55,21 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
       <p className="text-xs text-dark-muted mb-3">Each day becomes its own card on the trip page instead of one long paragraph.</p>
 
       {value.length === 0 ? (
-        <p className="text-sm text-dark-muted bg-background-warm rounded-xl px-4 py-3">No itinerary days yet. Click "Add Day" to build a day-by-day plan.</p>
+        <p className="text-sm text-dark-muted bg-background-warm rounded-lg px-4 py-3">No itinerary days yet. Click "Add Day" to build a day-by-day plan.</p>
       ) : (
         <div className="space-y-3">
           {value.map((day, index) => (
-            <div key={index} className="bg-background-warm rounded-xl p-3 space-y-2">
+            <div key={index} className="bg-background-warm rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-button font-bold text-primary">Day {day.day}</span>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="p-1 rounded-lg hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
+                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
                     <ChevronUp size={14} />
                   </button>
-                  <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} className="p-1 rounded-lg hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
+                  <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
                     <ChevronDown size={14} />
                   </button>
-                  <button type="button" onClick={() => removeDay(index)} className="p-1 rounded-lg hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove day">
+                  <button type="button" onClick={() => removeDay(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove day">
                     <X size={14} />
                   </button>
                 </div>

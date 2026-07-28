@@ -89,7 +89,7 @@ export default function HeroSection() {
               <Button
                 variant="primary"
                 size="sm"
-                className="group/btn whitespace-nowrap sm:px-8 sm:py-4 sm:text-lg sm:rounded-xl"
+                className="group/btn whitespace-nowrap sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
               >
                 Explore Trips
                 <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />
@@ -99,7 +99,7 @@ export default function HeroSection() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="whitespace-nowrap text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-lg sm:rounded-xl"
+                className="whitespace-nowrap text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
               >
                 <Play size={14} className="fill-white sm:w-4 sm:h-4" />
                 View Gallery

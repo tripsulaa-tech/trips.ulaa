@@ -18,9 +18,9 @@ const variants = {
 
 const sizes = {
   sm: 'px-4 py-2.5 text-sm rounded-md min-h-[44px]',
-  md: 'px-6 py-3 text-base rounded-lg min-h-[48px]',
-  lg: 'px-6 py-3.5 text-base rounded-lg min-h-[48px] sm:px-8 sm:py-4 sm:text-lg sm:min-h-[56px]',
-  xl: 'px-6 py-3.5 text-base rounded-lg min-h-[48px] sm:px-10 sm:py-5 sm:text-xl sm:rounded-xl sm:min-h-[64px]',
+  md: 'px-6 py-3 text-base rounded-md min-h-[48px]',
+  lg: 'px-6 py-3.5 text-base rounded-md min-h-[48px] sm:px-8 sm:py-4 sm:text-lg sm:min-h-[56px]',
+  xl: 'px-6 py-3.5 text-base rounded-md min-h-[48px] sm:px-10 sm:py-5 sm:text-xl sm:rounded-lg sm:min-h-[64px]',
 };
 
 export default function Button({
