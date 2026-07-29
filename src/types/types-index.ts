@@ -310,42 +310,93 @@ export interface WaitlistFormData {
 // =============================================
 // About Page (editable via Admin)
 // =============================================
-export interface AboutValue {
+
+export interface AboutHaveYouEverItem {
+  text: string;
+}
+
+export interface AboutWelcomeItem {
   icon: string;
   title: string;
   description: string;
 }
 
-export interface AboutTimelineItem {
-  year: string;
-  title: string;
+export interface AboutWhyDifferentCard {
+  heading: string;
   description: string;
 }
 
+export interface AboutJourneyStep {
+  heading: string;
+  description: string;
+}
+
+export interface AboutFounderSocialLink {
+  platform: string;
+  url: string;
+}
+
 export interface AboutContent {
+  // 1. Hero Banner
   hero: {
-    label: string;
-    title: string;
-    subtitle: string;
+    image: string;
+    heading: string;
+    subheading: string;
+    cta_label: string;
+    cta_url: string;
   };
-  mission: {
-    label: string;
-    title: string;
-    text: string;
+  // 2. Our Story
+  our_story: {
+    heading: string;
+    description: string;
+    image: string;
   };
-  vision: {
-    label: string;
-    title: string;
-    text: string;
+  // 3. Have You Ever...
+  have_you_ever: {
+    heading: string;
+    items: AboutHaveYouEverItem[];
   };
-  philosophy: {
-    label: string;
-    quote_line1: string;
-    quote_line2: string;
-    text: string;
+  // 4. Welcome to Ulaa
+  welcome_to_ulaa: {
+    heading: string;
+    subheading: string;
+    items: AboutWelcomeItem[];
   };
-  values: AboutValue[];
-  timeline: AboutTimelineItem[];
+  // 5. Why Ulaa is Different (up to 6 cards)
+  why_different: {
+    heading: string;
+    subheading: string;
+    cards: AboutWhyDifferentCard[];
+  };
+  // 6. Our Community
+  community: {
+    heading: string;
+    subheading: string;
+    photos: string[];
+  };
+  // 7. Statistics (Girls Travelled, Destinations, Friendships Made, Avg Rating)
+  stats: {
+    girls_travelled: number;
+    destinations: number;
+    friendships_made: number;
+    avg_trip_rating: number;
+  };
+  // 8. What Our Girls Say — fetched from existing Testimonials module
+  testimonials_heading: string;
+  // 9. Your Ulaa Journey (5 steps)
+  journey: {
+    heading: string;
+    subheading: string;
+    steps: AboutJourneyStep[];
+  };
+  // 10. Meet the Founder
+  founder: {
+    photo: string;
+    name: string;
+    designation: string;
+    description: string;
+    social_links: AboutFounderSocialLink[];
+  };
 }
 
 // =============================================
