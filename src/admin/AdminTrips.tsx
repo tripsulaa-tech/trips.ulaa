@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload, Search } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -117,6 +117,9 @@ export default function AdminTrips() {
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalSearch, setModalSearch] = useState('');
+  const [modalSearchNoMatch, setModalSearchNoMatch] = useState(false);
+  const modalBodyRef = useRef<HTMLDivElement>(null);
   const [editingTrip, setEditingTrip] = useState<UpcomingTrip | null>(null);
   const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
   const [saving, setSaving] = useState(false);
@@ -129,9 +132,41 @@ export default function AdminTrips() {
 
   useEffect(() => { load(); }, []);
 
+  // Scans every field label / section heading currently rendered inside the
+  // Add/Edit Trip modal (Tabs renders every section in one continuous flow,
+  // so everything is always in the DOM) and scrolls the first text match
+  // into view with a brief highlight flash — a quick way to jump straight
+  // to a field (e.g. "meeting point", "pricing") without hunting through tabs.
+  const handleModalSearch = () => {
+    const query = modalSearch.trim().toLowerCase();
+    const container = modalBodyRef.current;
+    if (!query || !container) {
+      setModalSearchNoMatch(false);
+      return;
+    }
+    const candidates = Array.from(container.querySelectorAll<HTMLElement>('label, h4'));
+    const match = candidates.find(el => el.textContent?.toLowerCase().includes(query));
+    if (!match) {
+      setModalSearchNoMatch(true);
+      return;
+    }
+    setModalSearchNoMatch(false);
+    match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const previousBackground = match.style.backgroundColor;
+    const previousTransition = match.style.transition;
+    match.style.transition = 'background-color 0.3s ease';
+    match.style.backgroundColor = '#FDE9D9';
+    setTimeout(() => {
+      match.style.backgroundColor = previousBackground;
+      match.style.transition = previousTransition;
+    }, 1500);
+  };
+
   const openCreate = () => {
     setEditingTrip(null);
     setForm(emptyForm);
+    setModalSearch('');
+    setModalSearchNoMatch(false);
     setModalOpen(true);
   };
 
@@ -412,6 +447,8 @@ export default function AdminTrips() {
       meeting_address: trip.meeting_address || '',
       end_banner: trip.end_banner || emptyEndBanner,
     });
+    setModalSearch('');
+    setModalSearchNoMatch(false);
     setModalOpen(true);
   };
 
@@ -584,7 +621,25 @@ export default function AdminTrips() {
           </div>
         }
       >
-        <Tabs>
+        <div className="flex items-start gap-2 mb-4">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+            <input
+              type="text"
+              value={modalSearch}
+              onChange={e => { setModalSearch(e.target.value); setModalSearchNoMatch(false); }}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleModalSearch(); } }}
+              placeholder="Search fields (e.g. meeting point, pricing, media)..."
+              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+            />
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={handleModalSearch}>Search</Button>
+        </div>
+        {modalSearchNoMatch && (
+          <p className="text-xs text-red-500 -mt-3 mb-3">No matching field found for "{modalSearch}".</p>
+        )}
+        <div ref={modalBodyRef}>
+          <Tabs>
           <TabPanel label="Basic Info">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
@@ -1108,6 +1163,7 @@ export default function AdminTrips() {
             </div>
           </TabPanel>
         </Tabs>
+        </div>
       </Modal>
 
       {/* View-only details popup — no editable fields, just a clean read-out */}

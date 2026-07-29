@@ -9,6 +9,7 @@ import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import GalleryCarousel from '../components/ui/GalleryCarousel';
+import PagedCarousel, { useResponsiveItemsPerView, type PagedCarouselHandle } from '../components/ui/PagedCarousel';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getTripHighlightIcon, getTripHighlightPalette } from '../constants/tripHighlightIcons';
 import { getUpcomingTripBySlug } from '../services/api';
@@ -31,12 +32,15 @@ export default function TripDetailPage() {
   const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
-  const [showAllAccommodationPhotos, setShowAllAccommodationPhotos] = useState(false);
+  const accommodationCarouselRef = useRef<PagedCarouselHandle>(null);
   const [faqsOpen, setFaqsOpen] = useState(false);
   const [cancellationOpen, setCancellationOpen] = useState(false);
   const navBarRef = useRef<HTMLElement>(null);
   const navLinkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const calendarMenuRef = useRef<HTMLDivElement>(null);
+  const itineraryPerView = useResponsiveItemsPerView({ base: 1, sm: 2, md: 3, lg: 5 });
+  const accommodationPerView = useResponsiveItemsPerView({ base: 1, sm: 2, lg: 3 });
+  const fashionPerView = useResponsiveItemsPerView({ base: 2, sm: 3, md: 4, lg: 5 });
 
   useEffect(() => {
     if (!slug) return;
@@ -392,45 +396,44 @@ export default function TripDetailPage() {
 
             {/* Itinerary */}
             {trip.itinerary.length > 0 && (
-              <section id="itinerary" className="scroll-mt-44">
+              <section id="itinerary" className="scroll-mt-44 mb-[60px]">
                 <h2 className="font-display text-3xl font-bold text-dark mb-10 text-center">
                   {trip.itinerary.length} Day{trip.itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments
                 </h2>
-                <div
-                  className="grid gap-x-4 gap-y-10 justify-center"
-                  style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 240px))' }}
-                >
-                  {trip.itinerary.map((day, i) => {
-                    const meta = getTripHighlightIcon(day.icon);
-                    const palette = getTripHighlightPalette(i);
-                    return (
-                      <motion.div
-                        key={day.day}
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: Math.min(i, 8) * 0.07, duration: 0.5 }}
-                        className="relative"
-                      >
-                        {/* Circular badge — half in, half out of the card's top edge */}
-                        <div
-                          className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-sm font-button font-bold text-sm"
-                          style={meta
-                            ? { backgroundColor: palette.bg, color: palette.fg }
-                            : { backgroundColor: palette.fg, color: '#fff' }}
+                <div className="pt-6">
+                  <PagedCarousel
+                    items={trip.itinerary}
+                    itemsPerView={itineraryPerView}
+                    keyExtractor={day => day.day}
+                    renderItem={(day, i) => {
+                      const meta = getTripHighlightIcon(day.icon);
+                      const palette = getTripHighlightPalette(i);
+                      return (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: Math.min(i, 8) * 0.07, duration: 0.5 }}
+                          className="relative"
                         >
-                          {meta ? <meta.Icon size={20} /> : day.day}
-                        </div>
-                        <div className="w-full min-h-[380px] bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
-                          <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
-                          <p className="text-dark-muted text-xs leading-relaxed flex-1">{day.description}</p>
-                          {(day.images?.length ?? 0) > 0 && (
-                            <ItineraryDayPhotos images={day.images || []} className="h-40 mt-1" />
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                          {/* Circular badge — half in, half out of the card's top edge */}
+                          <div
+                            className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-md ring-4 ring-white font-button font-bold text-sm text-white"
+                            style={{ backgroundColor: palette.fg }}
+                          >
+                            {meta ? <meta.Icon size={20} color="#fff" strokeWidth={2.25} /> : day.day}
+                          </div>
+                          <div className="w-full min-h-[380px] bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
+                            <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
+                            <p className="text-dark-muted text-xs leading-relaxed flex-1">{day.description}</p>
+                            {(day.images?.length ?? 0) > 0 && (
+                              <ItineraryDayPhotos images={day.images || []} className="h-40 mt-1" />
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    }}
+                  />
                 </div>
               </section>
             )}
@@ -445,21 +448,24 @@ export default function TripDetailPage() {
                 {(trip.accommodation_photos?.length ?? 0) > 0 && (() => {
                   const photos = trip.accommodation_photos!;
                   const INITIAL_COUNT = 3;
-                  const visiblePhotos = showAllAccommodationPhotos ? photos : photos.slice(0, INITIAL_COUNT);
                   const hasMore = photos.length > INITIAL_COUNT;
                   return (
                     <>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {visiblePhotos.map((photo, i) => (
-                          <div key={i} className="aspect-video overflow-hidden rounded-xl">
+                      <PagedCarousel
+                        ref={accommodationCarouselRef}
+                        items={photos}
+                        itemsPerView={accommodationPerView}
+                        keyExtractor={(_photo, i) => i}
+                        renderItem={(photo, i) => (
+                          <div className="aspect-video overflow-hidden rounded-xl">
                             <img src={photo} alt={`Accommodation ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                           </div>
-                        ))}
-                      </div>
-                      {hasMore && !showAllAccommodationPhotos && (
+                        )}
+                      />
+                      {hasMore && (
                         <button
                           type="button"
-                          onClick={() => setShowAllAccommodationPhotos(true)}
+                          onClick={() => accommodationCarouselRef.current?.next()}
                           className="mt-4 inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary/80 transition-colors"
                         >
                           View Accommodation Details <ArrowRight size={15} />
@@ -472,24 +478,32 @@ export default function TripDetailPage() {
             )}
 
             {/* Included / Not Included */}
-            <section id="inclusions" className="scroll-mt-44 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <section id="inclusions" className="scroll-mt-44 space-y-10">
               {/* What's Included */}
               {((trip.included_items?.length ?? 0) > 0 || trip.included.length > 0) && (
                 <div>
                   <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {(trip.included_items?.length ?? 0) > 0
                       ? trip.included_items!.map((item: TripInclusionItem, i: number) => (
-                          <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
-                            {item.icon ? <span>{item.icon}</span> : <CheckCircle size={14} className="text-green-500 shrink-0" />}
-                            {item.description}
-                          </span>
+                          <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
+                            {item.icon ? (
+                              <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                <CheckCircle size={18} className="text-green-600" />
+                              </div>
+                            )}
+                            <span className="text-sm text-dark font-medium leading-snug">{item.description}</span>
+                          </div>
                         ))
                       : trip.included.map((item, i) => (
-                          <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
-                            <CheckCircle size={14} className="text-green-500 shrink-0" />
-                            {item}
-                          </span>
+                          <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
+                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                              <CheckCircle size={18} className="text-green-600" />
+                            </div>
+                            <span className="text-sm text-dark font-medium leading-snug">{item}</span>
+                          </div>
                         ))}
                   </div>
                 </div>
@@ -594,13 +608,16 @@ export default function TripDetailPage() {
             {(trip.fashion_photos?.length ?? 0) > 0 && (
               <section className="scroll-mt-44">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Fashion Aesthetics</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {trip.fashion_photos!.map((photo, i) => (
-                    <div key={i} className="aspect-[3/4] overflow-hidden rounded-xl">
+                <PagedCarousel
+                  items={trip.fashion_photos!}
+                  itemsPerView={fashionPerView}
+                  keyExtractor={(_photo, i) => i}
+                  renderItem={(photo, i) => (
+                    <div className="aspect-[3/4] overflow-hidden rounded-xl">
                       <img src={photo} alt={`Fashion ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                     </div>
-                  ))}
-                </div>
+                  )}
+                />
               </section>
             )}
 
