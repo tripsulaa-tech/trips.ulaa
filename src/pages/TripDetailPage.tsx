@@ -164,11 +164,8 @@ export default function TripDetailPage() {
             <Link to="/trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
             </Link>
-            <div className="flex w-fit items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-4 py-1.5 rounded-md mb-3">
-              <MapPin size={14} /> {trip.destination}
-            </div>
             <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">{trip.title}</h1>
-            <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm mb-5">
               <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
               <span className="flex items-center gap-2"><Clock size={14} /> {trip.duration}</span>
               <span className="flex items-center gap-2"><Users size={14} />
@@ -182,6 +179,28 @@ export default function TripDetailPage() {
 				Early Bird
 				</span>
 			  )}
+            </div>
+            {trip.description && (
+              <p className="text-white/85 text-base md:text-lg leading-relaxed max-w-2xl mb-6 line-clamp-3">
+                {trip.description}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-3 mb-5">
+              <Button variant="primary" size="md" onClick={() => setBookingOpen(true)}>
+                {isFull ? 'Join Waitlist' : 'Book Your Seat'}
+              </Button>
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={pdfLoading}
+                className="inline-flex items-center justify-center gap-2 font-button font-semibold tracking-wide px-6 py-3 min-h-[48px] rounded-md text-base bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+                {pdfLoading ? 'Preparing…' : 'Download Itinerary'}
+              </button>
+            </div>
+            <div className="flex w-fit items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-4 py-1.5 rounded-md">
+              <MapPin size={14} /> {trip.destination}
             </div>
           </motion.div>
         </div>
@@ -295,8 +314,7 @@ export default function TripDetailPage() {
             </a>
           </nav>
 
-          {/* Pinned actions — stay visible through the whole page scroll,
-              unlike the sidebar card below which only sticks on desktop. */}
+          {/* Pinned actions — stay visible through the whole page scroll. */}
           <div className="shrink-0 flex items-center gap-1 pl-1 border-l border-background-warm">
             <button
               type="button"
@@ -332,10 +350,7 @@ export default function TripDetailPage() {
 
       {/* Main Content */}
       <div className="relative isolate px-4 sm:px-6 lg:px-8 py-16 pb-28 lg:pb-16">
-        <div className="max-w-[1344px] mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Left column */}
-          <div className="lg:col-span-2 space-y-12">
+        <div className="max-w-[1344px] mx-auto space-y-12">
             {/* Overview */}
             <section id="overview" className="scroll-mt-44">
               <h2 className="font-display text-3xl font-bold text-dark mb-4">Trip Overview</h2>
@@ -345,7 +360,7 @@ export default function TripDetailPage() {
             {/* Highlights */}
             {(trip.highlight_cards?.length ?? 0) > 0 ? (
               <section id="highlights" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">Trip Highlights</h2>
+                <h2 className="font-display text-3xl font-bold text-dark mb-6">Why You'll Love This Trip</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {trip.highlight_cards!.map((card: TripHighlightCard, i: number) => (
                     <motion.div
@@ -637,14 +652,12 @@ export default function TripDetailPage() {
               <h2 className="font-display text-3xl font-bold text-dark mb-6">Cancellation Policy</h2>
               <CancellationPolicyDisplay policy={trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
             </section>
-          </div>
 
-          {/* Right sticky panel */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-40">
-              <div className="bg-white rounded-xl shadow-warm-lg p-8 border border-background-warm">
+            {/* Book Your Seat — moved here (was a right-hand sticky sidebar) so it reads as a final call-to-action before the End Banner. */}
+            <section className="bg-white rounded-2xl shadow-warm-lg border border-background-warm p-8 sm:p-10">
+              <div className="max-w-xl mx-auto text-center">
                 {activePrice != null && (
-                  <div className="text-center mb-5 pb-5 border-b border-background-warm">
+                  <div className="mb-5 pb-5 border-b border-background-warm">
                     {strikeThroughPrice != null ? (
                       <>
                         <div className="flex items-center justify-center gap-2">
@@ -682,7 +695,7 @@ export default function TripDetailPage() {
                     )}
                   </div>
                 )}
-                <div className="text-center mb-6">
+                <div className="mb-6">
                   {isFull ? (
                     <span className="inline-block bg-red-50 text-red-600 text-sm font-button font-semibold px-4 py-2 rounded-md">
                       Sold Out
@@ -698,7 +711,7 @@ export default function TripDetailPage() {
                   )}
                 </div>
 
-                <div className="space-y-3 mb-6">
+                <div className="space-y-3 mb-6 max-w-xs mx-auto">
                   <div className="flex justify-between text-sm">
                     <span className="text-dark-muted">Dates</span>
                     <span className="text-dark font-medium">{formatDateRange(trip.start_date, trip.end_date)}</span>
@@ -779,9 +792,7 @@ export default function TripDetailPage() {
                   No payment required to enquire. We'll contact you within 24 hours.
                 </p>
               </div>
-            </div>
-          </div>
-        </div>
+            </section>
         </div>
       </div>
 

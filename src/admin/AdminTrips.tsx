@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -119,6 +119,7 @@ export default function AdminTrips() {
   const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<TripForm>(emptyForm);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const load = () => {
     getAllUpcomingTripsAdmin().then(setTrips).catch(console.error).finally(() => setLoading(false));
@@ -130,6 +131,245 @@ export default function AdminTrips() {
     setEditingTrip(null);
     setForm(emptyForm);
     setModalOpen(true);
+  };
+
+  // Builds and downloads a blank, annotated JSON template mirroring every
+  // field on the Add Trip form. Meant to be handed to an external tool
+  // (e.g. ChatGPT, given trip photos) to fill in trip details, which the
+  // admin can then copy back into the Add Trip form by hand. This is an
+  // export-only helper — nothing here is read back into the app.
+  const handleExportTemplate = () => {
+    const template = {
+      _instructions:
+        'This is a blank template of the ULAA "Add Trip" admin form. Fill in every field ' +
+        'with trip details (use the provided trip photos/notes as source material). ' +
+        'Keep the JSON structure and key names exactly as-is — only replace the placeholder ' +
+        'values. Leave a field as an empty string "" if there is truly nothing to fill in. ' +
+        'Fields marked "(leave blank — uploaded manually)" are image uploads and cannot be ' +
+        'filled from this template; leave those as empty strings, the admin will upload the ' +
+        'actual photos in the app after pasting the rest of this back in.',
+      title: '<Trip title, e.g. "Spiti Valley Winter Expedition">',
+      destination: '<Destination, e.g. "Spiti, Himachal Pradesh">',
+      start_date: '<Start date, format YYYY-MM-DD>',
+      end_date: '<End date, format YYYY-MM-DD>',
+      duration: '(auto-computed from start_date/end_date — leave blank)',
+      description: '<Short 2-4 sentence overview. Day-by-day plan goes in itinerary below, not here>',
+      min_age: '<Minimum eligible age as a number, or "" for no restriction>',
+      max_age: '<Maximum eligible age as a number, or "" for no restriction>',
+      highlights: ['<Short trip highlight, e.g. "Sunset trek to Chandratal Lake">'],
+      itinerary: [
+        {
+          day: 1,
+          title: '<Short title for this day, e.g. "Arrival & Local Exploration">',
+          description: '<What happens this day>',
+          images: ['(leave blank — uploaded manually)'],
+        },
+      ],
+      included: ['<Short line item of what is included, e.g. "All meals">'],
+      not_included: ['<Short line item of what is NOT included, e.g. "Flights to base city">'],
+      things_to_carry: ['<Item traveller should pack, e.g. "Warm jacket">'],
+      meeting_point: '<Free-text meeting point label, e.g. "Delhi Airport Terminal 3">',
+      meeting_point_map_url: '<Google Maps link for the meeting point, or "">',
+      meeting_time: '<Meeting time, e.g. "6:00 AM">',
+      meeting_terminal: '<Terminal/gate/landmark detail, or "">',
+      meeting_address: '<Full street address of the meeting point, or "">',
+      meeting_details: '<Any extra logistics notes for the meeting point, or "">',
+      faqs: [
+        { question: '<Frequently asked question>', answer: '<Answer>' },
+      ],
+      total_seats: '<Total number of seats as a number, e.g. 15>',
+      seats_booked: 0,
+      price: '<Regular price per person in INR as a number>',
+      early_bird_price: '<Early bird price per person in INR as a number, or "">',
+      early_bird_deadline: '<Early bird deadline, format YYYY-MM-DD, or "">',
+      strike_through_price: '<Optional "was ₹X" marketing price as a number, or "">',
+      cover_image: '(leave blank — uploaded manually)',
+      gallery_images: ['(leave blank — uploaded manually)'],
+      terms_and_conditions: '(leave as default unless the trip needs custom terms)',
+      cancellation_policy: {
+        payment_due_days: '<Days before departure the remaining balance is due, as a number>',
+        tiers: [
+          {
+            min_days: '<Minimum days-before-departure for this tier (inclusive), or null for no lower bound>',
+            max_days: '<Maximum days-before-departure for this tier (inclusive), or null for no upper bound>',
+            description: '<Refund treatment for this window, e.g. "Full refund minus processing fee">',
+          },
+        ],
+        refund_min_days: '<Fastest number of working days an approved refund is processed in>',
+        refund_max_days: '<Slowest number of working days an approved refund is processed in>',
+      },
+      is_published: false,
+      // ── Extended content blocks ──────────────────────────────────────
+      highlight_cards: [
+        { icon: '<emoji or short icon label>', heading: '<Short heading>', description: '<1-2 sentence description>' },
+      ],
+      accommodation_description: '<"Stay. Relax. Repeat." section body — describe the accommodation>',
+      accommodation_photos: ['(leave blank — uploaded manually)'],
+      included_items: [
+        { icon: '<emoji or icon label>', description: '<Included item description>' },
+      ],
+      not_included_items: [
+        { icon: '<emoji or icon label>', description: '<Not-included item description>' },
+      ],
+      gallery_items: [
+        { photo: '(leave blank — uploaded manually)', description: '<Caption / place name for this photo>' },
+      ],
+      fashion_photos: ['(leave blank — uploaded manually)'],
+      trip_founder: {
+        photo: '(leave blank — uploaded manually)',
+        name: '<Founder/host name for this trip>',
+        description: '<Short founder bio/description for this trip>',
+      },
+      confidence_items: [
+        { icon: '<emoji or icon label>', description: '<"Travel with Confidence" point, e.g. "24/7 support during the trip">' },
+      ],
+      end_banner: {
+        image: '(leave blank — uploaded manually)',
+        heading: '<End banner heading>',
+        description: '<End banner description>',
+        cta_label: '<Call-to-action button text, e.g. "Book Now">',
+        cta_url: '<Call-to-action link, or "">',
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ulaa-add-trip-template.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  // Reads a filled-in export template (e.g. produced by ChatGPT from
+  // handleExportTemplate's output) and populates the Add Trip form so the
+  // admin only has to review/adjust and upload photos before saving —
+  // instead of retyping everything by hand.
+  const isPlaceholder = (v: unknown): boolean =>
+    typeof v !== 'string' || v.trim() === '' || v.trim().startsWith('<') || v.trim().startsWith('(');
+
+  const asStr = (v: unknown, fallback = ''): string => (isPlaceholder(v) ? fallback : String(v));
+
+  const asNum = (v: unknown): number | '' => {
+    if (isPlaceholder(v)) return '';
+    const n = Number(v);
+    return isNaN(n) ? '' : n;
+  };
+
+  const asNumOrNull = (v: unknown): number | null => {
+    if (v === null || isPlaceholder(v)) return null;
+    const n = Number(v);
+    return isNaN(n) ? null : n;
+  };
+
+  const asStrArray = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter(item => !isPlaceholder(item)).map(item => String(item)) : [];
+
+  const handleImportFile = async (file: File) => {
+    try {
+      const raw = JSON.parse(await file.text());
+      const imported: TripForm = {
+        title: asStr(raw.title),
+        destination: asStr(raw.destination),
+        start_date: asStr(raw.start_date),
+        end_date: asStr(raw.end_date),
+        duration: computeDuration(asStr(raw.start_date), asStr(raw.end_date)),
+        description: asStr(raw.description),
+        highlights: asStrArray(raw.highlights),
+        itinerary: Array.isArray(raw.itinerary)
+          ? raw.itinerary.map((d: Record<string, unknown>, i: number) => ({
+              day: asNum(d?.day) || i + 1,
+              title: asStr(d?.title),
+              description: asStr(d?.description),
+              images: asStrArray(d?.images),
+            }))
+          : [],
+        included: asStrArray(raw.included),
+        not_included: asStrArray(raw.not_included),
+        things_to_carry: asStrArray(raw.things_to_carry),
+        meeting_point: asStr(raw.meeting_point),
+        meeting_point_map_url: asStr(raw.meeting_point_map_url),
+        meeting_time: asStr(raw.meeting_time),
+        meeting_terminal: asStr(raw.meeting_terminal),
+        meeting_details: asStr(raw.meeting_details),
+        faqs: Array.isArray(raw.faqs)
+          ? raw.faqs
+              .filter((f: Record<string, unknown>) => !isPlaceholder(f?.question) || !isPlaceholder(f?.answer))
+              .map((f: Record<string, unknown>) => ({ question: asStr(f?.question), answer: asStr(f?.answer) }))
+          : [],
+        total_seats: asNum(raw.total_seats) || emptyForm.total_seats,
+        seats_booked: asNum(raw.seats_booked) || 0,
+        min_age: asNum(raw.min_age),
+        max_age: asNum(raw.max_age),
+        price: asNum(raw.price),
+        early_bird_price: asNum(raw.early_bird_price),
+        early_bird_deadline: asStr(raw.early_bird_deadline),
+        strike_through_price: asNum(raw.strike_through_price),
+        cover_image: '',
+        gallery_images: [],
+        terms_and_conditions: isPlaceholder(raw.terms_and_conditions) ? DEFAULT_TERMS_AND_CONDITIONS : raw.terms_and_conditions,
+        cancellation_policy: raw.cancellation_policy ? {
+          payment_due_days: asNum(raw.cancellation_policy.payment_due_days) || DEFAULT_CANCELLATION_POLICY.payment_due_days,
+          tiers: Array.isArray(raw.cancellation_policy.tiers)
+            ? raw.cancellation_policy.tiers.map((t: Record<string, unknown>) => ({
+                min_days: asNumOrNull(t?.min_days),
+                max_days: asNumOrNull(t?.max_days),
+                description: asStr(t?.description),
+              }))
+            : DEFAULT_CANCELLATION_POLICY.tiers,
+          refund_min_days: asNum(raw.cancellation_policy.refund_min_days) || DEFAULT_CANCELLATION_POLICY.refund_min_days,
+          refund_max_days: asNum(raw.cancellation_policy.refund_max_days) || DEFAULT_CANCELLATION_POLICY.refund_max_days,
+        } : DEFAULT_CANCELLATION_POLICY,
+        is_published: false,
+        highlight_cards: Array.isArray(raw.highlight_cards)
+          ? raw.highlight_cards.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), heading: asStr(c?.heading), description: asStr(c?.description) }))
+          : [],
+        accommodation_description: asStr(raw.accommodation_description),
+        accommodation_photos: [],
+        included_items: Array.isArray(raw.included_items)
+          ? raw.included_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
+          : [],
+        not_included_items: Array.isArray(raw.not_included_items)
+          ? raw.not_included_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
+          : [],
+        gallery_items: Array.isArray(raw.gallery_items)
+          ? raw.gallery_items.map((g: Record<string, unknown>) => ({ photo: '', description: asStr(g?.description) }))
+          : [],
+        fashion_photos: [],
+        trip_founder: raw.trip_founder
+          ? { photo: '', name: asStr(raw.trip_founder.name), description: asStr(raw.trip_founder.description) }
+          : emptyFounder,
+        confidence_items: Array.isArray(raw.confidence_items)
+          ? raw.confidence_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
+          : [],
+        meeting_address: asStr(raw.meeting_address),
+        end_banner: raw.end_banner
+          ? {
+              image: '',
+              heading: asStr(raw.end_banner.heading),
+              description: asStr(raw.end_banner.description),
+              cta_label: asStr(raw.end_banner.cta_label),
+              cta_url: asStr(raw.end_banner.cta_url),
+            }
+          : emptyEndBanner,
+      };
+      setEditingTrip(null);
+      setForm(imported);
+      setModalOpen(true);
+    } catch {
+      await alert({
+        title: 'Import failed',
+        message: 'That file could not be read as a valid trip template. Make sure it is the JSON file produced by Export Template (optionally filled in) and try again.',
+      });
+    }
+  };
+
+  const handleImportInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImportFile(file);
+    e.target.value = '';
   };
 
   const openEdit = (trip: UpcomingTrip) => {
@@ -234,9 +474,24 @@ export default function AdminTrips() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <p className="text-dark-muted">{trips.length} trips</p>
-          <Button variant="primary" size="sm" onClick={openCreate}>
-            <Plus size={16} /> Add Trip
-          </Button>
+          <div className="flex items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={handleImportInputChange}
+            />
+            <Button variant="outline" size="sm" onClick={() => importInputRef.current?.click()}>
+              <Upload size={16} /> Import Template
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportTemplate}>
+              <Download size={16} /> Export Template
+            </Button>
+            <Button variant="primary" size="sm" onClick={openCreate}>
+              <Plus size={16} /> Add Trip
+            </Button>
+          </div>
         </div>
 
         {loading ? (
@@ -505,7 +760,7 @@ export default function AdminTrips() {
             {/* Rich Highlight Cards */}
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-dark">Trip Highlight Cards (icon + heading + description)</label>
+                <label className="block text-sm font-semibold text-dark">Why You'll Love This Trip (icon + heading + description)</label>
                 <button
                   type="button"
                   onClick={() => setForm(f => ({ ...f, highlight_cards: [...f.highlight_cards, { icon: '', heading: '', description: '' }] }))}
