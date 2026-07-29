@@ -2,6 +2,45 @@
 // ULAA - TypeScript Types & Interfaces
 // =============================================
 
+// =============================================
+// Trip Detail Page — extended content blocks (Admin-managed, optional)
+// =============================================
+
+export interface TripHighlightCard {
+  icon: string;        // emoji or short icon label
+  heading: string;
+  description: string;
+}
+
+export interface TripInclusionItem {
+  icon: string;        // emoji or icon label shown next to the item
+  description: string;
+}
+
+export interface TripGalleryItem {
+  photo: string;       // uploaded image URL
+  description: string; // caption / place name
+}
+
+export interface TripFounder {
+  photo: string;
+  name: string;
+  description: string;
+}
+
+export interface TripConfidenceItem {
+  icon: string;
+  description: string;
+}
+
+export interface TripEndBanner {
+  image: string;
+  heading: string;
+  description: string;
+  cta_label: string;
+  cta_url: string;
+}
+
 export interface UpcomingTrip {
   id: string;
   title: string;
@@ -52,6 +91,19 @@ export interface UpcomingTrip {
   gallery_images: string[];
   terms_and_conditions?: string;
   cancellation_policy?: CancellationPolicy;
+  // ── Extended content blocks (Admin → Upcoming Trips → Add/Edit Trip) ──
+  // Each field is optional so existing trips keep working with no migration.
+  highlight_cards?: TripHighlightCard[];        // Rich highlight cards (icon+heading+desc)
+  accommodation_description?: string;           // "Stay. Relax. Repeat." section body
+  accommodation_photos?: string[];              // Accommodation photo gallery
+  included_items?: TripInclusionItem[];         // Included items with icons
+  not_included_items?: TripInclusionItem[];     // Not-included items with icons
+  gallery_items?: TripGalleryItem[];            // "Places You'll Post" — photo + caption
+  fashion_photos?: string[];                    // Fashion aesthetics inspiration photos
+  trip_founder?: TripFounder;                   // Per-trip founder block
+  confidence_items?: TripConfidenceItem[];      // "Travel with Confidence" items
+  meeting_address?: string;                     // Street/full address for meeting point
+  end_banner?: TripEndBanner;                   // End-of-page full-width banner
   is_published: boolean;
   created_at: string;
   updated_at: string;

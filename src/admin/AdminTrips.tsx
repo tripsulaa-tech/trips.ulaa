@@ -18,7 +18,11 @@ import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, delet
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
-import type { UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy } from '../types/types-index';
+import type {
+  UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy,
+  TripHighlightCard, TripInclusionItem, TripGalleryItem,
+  TripFounder, TripConfidenceItem, TripEndBanner,
+} from '../types/types-index';
 import { formatDate, slugify, formatAgeRange } from '../utils/utils-index';
 
 // Computes a "X Days / Y Nights" string from two yyyy-mm-dd date strings.
@@ -72,7 +76,22 @@ interface TripForm {
   terms_and_conditions: string;
   cancellation_policy: CancellationPolicy;
   is_published: boolean;
+  // ── Extended content blocks ──────────────────────────────────────────
+  highlight_cards: TripHighlightCard[];
+  accommodation_description: string;
+  accommodation_photos: string[];
+  included_items: TripInclusionItem[];
+  not_included_items: TripInclusionItem[];
+  gallery_items: TripGalleryItem[];
+  fashion_photos: string[];
+  trip_founder: TripFounder;
+  confidence_items: TripConfidenceItem[];
+  meeting_address: string;
+  end_banner: TripEndBanner;
 }
+
+const emptyFounder: TripFounder = { photo: '', name: '', description: '' };
+const emptyEndBanner: TripEndBanner = { image: '', heading: '', description: '', cta_label: '', cta_url: '' };
 
 const emptyForm: TripForm = {
   title: '', destination: '', start_date: '', end_date: '', duration: '',
@@ -83,6 +102,11 @@ const emptyForm: TripForm = {
   early_bird_price: '', early_bird_deadline: '', strike_through_price: '',
   cover_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
+  // Extended
+  highlight_cards: [], accommodation_description: '', accommodation_photos: [],
+  included_items: [], not_included_items: [], gallery_items: [],
+  fashion_photos: [], trip_founder: emptyFounder, confidence_items: [],
+  meeting_address: '', end_banner: emptyEndBanner,
 };
 
 export default function AdminTrips() {
@@ -129,6 +153,18 @@ export default function AdminTrips() {
       gallery_images: trip.gallery_images || [], is_published: trip.is_published,
       terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
       cancellation_policy: trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY,
+      // Extended
+      highlight_cards: trip.highlight_cards || [],
+      accommodation_description: trip.accommodation_description || '',
+      accommodation_photos: trip.accommodation_photos || [],
+      included_items: trip.included_items || [],
+      not_included_items: trip.not_included_items || [],
+      gallery_items: trip.gallery_items || [],
+      fashion_photos: trip.fashion_photos || [],
+      trip_founder: trip.trip_founder || emptyFounder,
+      confidence_items: trip.confidence_items || [],
+      meeting_address: trip.meeting_address || '',
+      end_banner: trip.end_banner || emptyEndBanner,
     });
     setModalOpen(true);
   };
@@ -425,11 +461,50 @@ export default function AdminTrips() {
             </div>
             <div className="md:col-span-2">
               <MultiImageUploadField
-                label="Photo Gallery"
+                label="Photo Gallery (simple — legacy)"
                 value={form.gallery_images}
                 onChange={urls => setForm(f => ({ ...f, gallery_images: urls }))}
                 bucket="ulaa"
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}`}
+              />
+            </div>
+
+            {/* Places You'll Post — gallery with captions */}
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-dark">Places You'll Definitely Post (photo + caption)</label>
+                <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: [...f.gallery_items, { photo: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+              </div>
+              {form.gallery_items.map((item, i) => (
+                <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Photo {i + 1}</span>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: f.gallery_items.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
+                  </div>
+                  <ImageUploadField
+                    label="Photo"
+                    value={item.photo}
+                    onChange={url => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, photo: url } : it) }))}
+                    bucket="ulaa"
+                    pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/gallery`}
+                  />
+                  <div>
+                    <label className="block text-xs font-medium text-dark mb-1">Caption / Place Name</label>
+                    <input value={item.description} onChange={e => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={inputClass} placeholder="e.g. Chandratal Lake at dawn" />
+                  </div>
+                </div>
+              ))}
+              {form.gallery_items.length === 0 && <p className="text-xs text-dark-muted">No gallery items yet.</p>}
+            </div>
+
+            {/* Fashion Aesthetics */}
+            <div className="md:col-span-2">
+              <MultiImageUploadField
+                label="Fashion Aesthetics (outfit inspiration photos)"
+                value={form.fashion_photos}
+                onChange={urls => setForm(f => ({ ...f, fashion_photos: urls }))}
+                bucket="ulaa"
+                pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/fashion`}
               />
             </div>
           </TabPanel>
@@ -437,12 +512,52 @@ export default function AdminTrips() {
           <TabPanel label="Overview & Itinerary">
             <div className="md:col-span-2">
               <TagListEditor
-                label="Trip Highlights"
+                label="Trip Highlights (simple list — legacy)"
                 value={form.highlights}
                 onChange={items => setForm(f => ({ ...f, highlights: items }))}
                 placeholder="e.g. Chandratal Lake at dawn"
               />
             </div>
+
+            {/* Rich Highlight Cards */}
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-dark">Trip Highlight Cards (icon + heading + description)</label>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, highlight_cards: [...f.highlight_cards, { icon: '', heading: '', description: '' }] }))}
+                  className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
+                >
+                  <Plus size={13} /> Add Card
+                </button>
+              </div>
+              {form.highlight_cards.map((card, i) => (
+                <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Card {i + 1}</span>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-dark mb-1">Icon / Emoji</label>
+                      <input value={card.icon} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, icon: e.target.value } : c) }))} className={inputClass} placeholder="🏔️" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-dark mb-1">Heading</label>
+                      <input value={card.heading} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, heading: e.target.value } : c) }))} className={inputClass} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-dark mb-1">Description</label>
+                    <textarea value={card.description} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, description: e.target.value } : c) }))} rows={2} className={`${inputClass} resize-none`} />
+                  </div>
+                </div>
+              ))}
+              {form.highlight_cards.length === 0 && (
+                <p className="text-xs text-dark-muted">No highlight cards yet. Click "Add Card" to begin.</p>
+              )}
+            </div>
+
             <div className="md:col-span-2">
               <ItineraryEditor
                 value={form.itinerary}
@@ -455,7 +570,7 @@ export default function AdminTrips() {
           <TabPanel label="Inclusions & Prep">
             <div>
               <TagListEditor
-                label="What's Included"
+                label="What's Included (simple list — legacy)"
                 value={form.included}
                 onChange={items => setForm(f => ({ ...f, included: items }))}
                 placeholder="e.g. All meals"
@@ -463,7 +578,7 @@ export default function AdminTrips() {
             </div>
             <div>
               <TagListEditor
-                label="What's Not Included"
+                label="What's Not Included (simple list — legacy)"
                 value={form.not_included}
                 onChange={items => setForm(f => ({ ...f, not_included: items }))}
                 placeholder="e.g. Flights"
@@ -477,11 +592,57 @@ export default function AdminTrips() {
                 placeholder="e.g. Warm jacket"
               />
             </div>
+
+            {/* Rich Included Items */}
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-dark">What's Included — Rich (icon + description)</label>
+                <button type="button" onClick={() => setForm(f => ({ ...f, included_items: [...f.included_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+              </div>
+              {form.included_items.map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input value={item.icon} onChange={e => setForm(f => ({ ...f, included_items: f.included_items.map((it, idx) => idx === i ? { ...it, icon: e.target.value } : it) }))} className={`${inputClass} w-20 flex-shrink-0`} placeholder="✅" />
+                  <input value={item.description} onChange={e => setForm(f => ({ ...f, included_items: f.included_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. All meals included" />
+                  <button type="button" onClick={() => setForm(f => ({ ...f, included_items: f.included_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
+                </div>
+              ))}
+            </div>
+
+            {/* Rich Not Included Items */}
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-dark">What's Not Included — Rich (icon + description)</label>
+                <button type="button" onClick={() => setForm(f => ({ ...f, not_included_items: [...f.not_included_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+              </div>
+              {form.not_included_items.map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input value={item.icon} onChange={e => setForm(f => ({ ...f, not_included_items: f.not_included_items.map((it, idx) => idx === i ? { ...it, icon: e.target.value } : it) }))} className={`${inputClass} w-20 flex-shrink-0`} placeholder="❌" />
+                  <input value={item.description} onChange={e => setForm(f => ({ ...f, not_included_items: f.not_included_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. Flights not included" />
+                  <button type="button" onClick={() => setForm(f => ({ ...f, not_included_items: f.not_included_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
+                </div>
+              ))}
+            </div>
+
+            {/* Travel with Confidence */}
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-dark">Travel with Confidence (icon + description)</label>
+                <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: [...f.confidence_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+              </div>
+              {form.confidence_items.map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input value={item.icon} onChange={e => setForm(f => ({ ...f, confidence_items: f.confidence_items.map((it, idx) => idx === i ? { ...it, icon: e.target.value } : it) }))} className={`${inputClass} w-20 flex-shrink-0`} placeholder="🛡️" />
+                  <input value={item.description} onChange={e => setForm(f => ({ ...f, confidence_items: f.confidence_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. 24/7 on-ground support" />
+                  <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: f.confidence_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
+                </div>
+              ))}
+              {form.confidence_items.length === 0 && <p className="text-xs text-dark-muted">No confidence items yet.</p>}
+            </div>
           </TabPanel>
 
           <TabPanel label="Meeting Point">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Meeting Point</label>
+              <label className="block text-sm font-medium text-dark mb-1">Location Name</label>
               <div className="flex gap-2">
                 <input
                   value={form.meeting_point}
@@ -500,7 +661,17 @@ export default function AdminTrips() {
                   Find on Maps ↗
                 </a>
               </div>
-              <p className="text-xs text-dark-muted mt-1.5">Shown as plain text on the trip page. Click "Find on Maps" to jump straight to a search for it.</p>
+              <p className="text-xs text-dark-muted mt-1.5">Shown as plain text on the trip page.</p>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Address</label>
+              <input
+                value={form.meeting_address}
+                onChange={e => setForm(f => ({ ...f, meeting_address: e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. Near HRTC Bus Terminal, Cart Road, Shimla - 171001"
+              />
             </div>
 
             <div className="md:col-span-2">
@@ -586,6 +757,108 @@ export default function AdminTrips() {
               <CancellationPolicyEditor
                 value={form.cancellation_policy}
                 onChange={cancellation_policy => setForm(f => ({ ...f, cancellation_policy }))}
+              />
+            </div>
+          </TabPanel>
+
+          <TabPanel label="Accommodation">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Section Description</label>
+              <textarea
+                value={form.accommodation_description}
+                onChange={e => setForm(f => ({ ...f, accommodation_description: e.target.value }))}
+                rows={4}
+                className={`${inputClass} resize-none`}
+                placeholder="Describe the accommodation experience for this trip..."
+              />
+            </div>
+            <div className="md:col-span-2">
+              <MultiImageUploadField
+                label="Accommodation Photos"
+                value={form.accommodation_photos}
+                onChange={urls => setForm(f => ({ ...f, accommodation_photos: urls }))}
+                bucket="ulaa"
+                pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/accommodation`}
+              />
+            </div>
+          </TabPanel>
+
+          <TabPanel label="Founder">
+            <div className="md:col-span-2">
+              <ImageUploadField
+                label="Founder Photo"
+                value={form.trip_founder.photo}
+                onChange={url => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, photo: url } }))}
+                bucket="ulaa"
+                pathPrefix="trip-founder"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Name</label>
+              <input
+                value={form.trip_founder.name}
+                onChange={e => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, name: e.target.value } }))}
+                className={inputClass}
+                placeholder="e.g. Priya Sharma"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Description / About</label>
+              <textarea
+                value={form.trip_founder.description}
+                onChange={e => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, description: e.target.value } }))}
+                rows={4}
+                className={`${inputClass} resize-none`}
+                placeholder="A short note from the founder about this trip..."
+              />
+            </div>
+          </TabPanel>
+
+          <TabPanel label="End Banner">
+            <div className="md:col-span-2">
+              <ImageUploadField
+                label="Banner Image"
+                value={form.end_banner.image}
+                onChange={url => setForm(f => ({ ...f, end_banner: { ...f.end_banner, image: url } }))}
+                bucket="ulaa"
+                pathPrefix="trip-end-banners"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Heading (left side)</label>
+              <input
+                value={form.end_banner.heading}
+                onChange={e => setForm(f => ({ ...f, end_banner: { ...f.end_banner, heading: e.target.value } }))}
+                className={inputClass}
+                placeholder="e.g. Ready to Experience the Magic?"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Description</label>
+              <textarea
+                value={form.end_banner.description}
+                onChange={e => setForm(f => ({ ...f, end_banner: { ...f.end_banner, description: e.target.value } }))}
+                rows={3}
+                className={`${inputClass} resize-none`}
+                placeholder="A short compelling call-to-action paragraph..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">CTA Button Label (optional)</label>
+              <input
+                value={form.end_banner.cta_label}
+                onChange={e => setForm(f => ({ ...f, end_banner: { ...f.end_banner, cta_label: e.target.value } }))}
+                className={inputClass}
+                placeholder="Book Your Seat"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">CTA URL (optional)</label>
+              <input
+                value={form.end_banner.cta_url}
+                onChange={e => setForm(f => ({ ...f, end_banner: { ...f.end_banner, cta_url: e.target.value } }))}
+                className={inputClass}
+                placeholder="#booking or /trips/..."
               />
             </div>
           </TabPanel>

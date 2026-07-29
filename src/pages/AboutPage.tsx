@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Star, ExternalLink } from 'lucide-react';
+import { Star, ExternalLink, X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import TestimonialCard from '../components/ui/TestimonialCard';
@@ -24,6 +24,15 @@ const fadeUp = (delay = 0) => ({
   viewport: { once: true },
   transition: { duration: 0.6, delay },
 });
+
+// "have_you_ever" items only store text, so we cycle through a fixed set of
+// icons to give each one a distinct visual mark, matching the reference design.
+const HAVE_YOU_EVER_ICONS = [X, ShieldCheck, HelpCircle, Frown];
+
+// "welcome_to_ulaa" items store a freeform emoji/icon string from the admin,
+// but to keep the visual language consistent with the app theme (single-color
+// line icons, matching weight/size) we render themed icons here instead.
+const WELCOME_ICONS = [Heart, Users, ShieldCheck, Sparkles];
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -136,60 +145,74 @@ export default function AboutPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════
-          3. HAVE YOU EVER...
+          3 & 4. HAVE YOU EVER... / WELCOME TO ULAA (merged split card)
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-dark">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.h2
-            {...fadeUp()}
-            className="font-display text-4xl md:text-5xl font-bold text-white mb-12"
-          >
-            {have_you_ever.heading}
-          </motion.h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => (
-              <motion.div
-                key={i}
-                {...fadeUp(i * 0.08)}
-                className="flex items-center gap-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-6 py-4 text-white text-left"
-              >
-                <span className="text-secondary text-xl flex-shrink-0">✓</span>
-                <span className="font-display text-lg font-semibold">{item.text}</span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════
-          4. WELCOME TO ULAA
-      ══════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto">
-          <motion.div {...fadeUp()} className="text-center mb-14">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4">
-              {welcome_to_ulaa.heading}
-            </h2>
-            {welcome_to_ulaa.subheading && (
-              <p className="text-dark-muted text-lg max-w-2xl mx-auto">
-                {welcome_to_ulaa.subheading}
-              </p>
-            )}
-          </motion.div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => (
-              <motion.div
-                key={i}
-                {...fadeUp(i * 0.1)}
-                className="bg-white rounded-2xl shadow-card p-7 text-center hover:shadow-card-hover transition-shadow duration-300"
-              >
-                {item.icon && (
-                  <div className="text-4xl mb-4">{item.icon}</div>
-                )}
-                <h3 className="font-display text-xl font-bold text-dark mb-3">{item.title}</h3>
-                <p className="text-dark-muted text-sm leading-relaxed">{item.description}</p>
-              </motion.div>
-            ))}
+          <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 p-8 md:p-14">
+            {/* Center connector arrow */}
+            <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-warm-lg">
+              <ArrowRight size={22} className="text-white" />
+            </div>
+            <div className="md:hidden flex justify-center -my-2 relative z-10">
+              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg">
+                <ArrowDown size={18} className="text-white" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-0 md:divide-x md:divide-dashed md:divide-dark/20">
+              {/* Have You Ever... */}
+              <div className="md:pr-20 text-center">
+                <motion.h2
+                  {...fadeUp()}
+                  className="font-display text-3xl md:text-4xl font-bold text-dark mb-2"
+                >
+                  {have_you_ever.heading}
+                </motion.h2>
+                <span className="inline-block h-1 w-16 bg-primary rounded-full mb-8" />
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-6">
+                  {have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => {
+                    const Icon = HAVE_YOU_EVER_ICONS[i % HAVE_YOU_EVER_ICONS.length];
+                    return (
+                      <motion.div
+                        key={i}
+                        {...fadeUp(i * 0.08)}
+                        className="flex flex-col items-center text-center gap-3"
+                      >
+                        <Icon size={30} className="text-primary flex-shrink-0" strokeWidth={1.75} />
+                        <span className="text-dark-muted text-sm leading-snug">{item.text}</span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Welcome to Ulaa */}
+              <div className="md:pl-20 text-center">
+                <motion.h2
+                  {...fadeUp()}
+                  className="font-display text-3xl md:text-4xl font-bold text-dark mb-2"
+                >
+                  {welcome_to_ulaa.heading}
+                </motion.h2>
+                <span className="inline-block h-1 w-16 bg-primary rounded-full mb-8" />
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-6">
+                  {welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => {
+                    const Icon = WELCOME_ICONS[i % WELCOME_ICONS.length];
+                    return (
+                      <motion.div
+                        key={i}
+                        {...fadeUp(i * 0.1)}
+                        className="flex flex-col items-center text-center gap-3"
+                      >
+                        <Icon size={30} className="text-primary flex-shrink-0" strokeWidth={1.75} />
+                        <span className="text-dark-muted text-sm leading-snug">{item.title}</span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

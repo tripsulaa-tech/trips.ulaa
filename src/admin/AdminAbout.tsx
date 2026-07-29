@@ -106,9 +106,6 @@ export default function AdminAbout() {
   const setCommunity = (field: string, value: unknown) =>
     setContent(p => ({ ...p, community: { ...p.community, [field]: value } }));
 
-  const setStats = (field: keyof AboutContent['stats'], value: number) =>
-    setContent(p => ({ ...p, stats: { ...p.stats, [field]: value } }));
-
   const setJourney = (field: string, value: unknown) =>
     setContent(p => ({ ...p, journey: { ...p.journey, [field]: value } }));
 
@@ -295,6 +292,9 @@ export default function AdminAbout() {
           </div>
           <div className="space-y-2">
             <label className={labelClass}>Items</label>
+            <p className="text-xs text-dark-muted -mt-1">
+              Icons are auto-assigned from the site's theme icon set and aren't editable per item.
+            </p>
             {content.have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => (
               <div key={i} className="flex items-center gap-2">
                 <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
@@ -325,68 +325,36 @@ export default function AdminAbout() {
         {/* ── 4. Welcome to ULAA ──────────────────────────────────────────── */}
         <div className={cardClass}>
           <h2 className="font-display text-lg font-bold text-dark">4 · Welcome to ULAA</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Section Heading</label>
-              <input
-                value={content.welcome_to_ulaa.heading}
-                onChange={e => setWTU('heading', e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Subheading</label>
-              <input
-                value={content.welcome_to_ulaa.subheading}
-                onChange={e => setWTU('subheading', e.target.value)}
-                className={inputClass}
-              />
-            </div>
+          <div>
+            <label className={labelClass}>Section Heading</label>
+            <input
+              value={content.welcome_to_ulaa.heading}
+              onChange={e => setWTU('heading', e.target.value)}
+              className={inputClass}
+            />
           </div>
-          <div className="space-y-4">
+          <div className="space-y-2">
             <label className={labelClass}>Feature Items</label>
+            <p className="text-xs text-dark-muted -mt-1">
+              Icons are auto-assigned from the site's theme icon set and aren't editable per item.
+            </p>
             {content.welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => (
-              <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">
-                    Item {i + 1}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeWTUItem(i)}
-                    className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className={labelClass}>Icon / Emoji</label>
-                    <input
-                      value={item.icon}
-                      onChange={e => updateWTUItem(i, 'icon', e.target.value)}
-                      className={inputClass}
-                      placeholder="🛡️"
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Title</label>
-                    <input
-                      value={item.title}
-                      onChange={e => updateWTUItem(i, 'title', e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className={labelClass}>Description</label>
-                  <textarea
-                    value={item.description}
-                    onChange={e => updateWTUItem(i, 'description', e.target.value)}
-                    rows={2}
-                    className={`${inputClass} resize-none`}
-                  />
-                </div>
+              <div key={i} className="flex items-center gap-2">
+                <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
+                <input
+                  value={item.title}
+                  onChange={e => updateWTUItem(i, 'title', e.target.value)}
+                  className={`${inputClass} flex-1`}
+                  placeholder={`Item ${i + 1}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeWTUItem(i)}
+                  className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Remove"
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             ))}
             {content.welcome_to_ulaa.items.length < 8 && (
@@ -494,82 +462,9 @@ export default function AdminAbout() {
           />
         </div>
 
-        {/* ── 7. Statistics ────────────────────────────────────────────────── */}
+        {/* ── 7. Your ULAA Journey ─────────────────────────────────────────── */}
         <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">7 · Statistics</h2>
-          <p className="text-sm text-dark-muted">
-            Average Trip Rating is also auto-calculated from live testimonials on the public page;
-            this value is used as a fallback when no testimonials exist.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <label className={labelClass}>Girls Travelled</label>
-              <input
-                type="number"
-                min={0}
-                value={content.stats.girls_travelled}
-                onChange={e => setStats('girls_travelled', Number(e.target.value))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Destinations</label>
-              <input
-                type="number"
-                min={0}
-                value={content.stats.destinations}
-                onChange={e => setStats('destinations', Number(e.target.value))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Friendships Made</label>
-              <input
-                type="number"
-                min={0}
-                value={content.stats.friendships_made}
-                onChange={e => setStats('friendships_made', Number(e.target.value))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Avg Rating (fallback)</label>
-              <input
-                type="number"
-                min={0}
-                max={5}
-                step={0.1}
-                value={content.stats.avg_trip_rating}
-                onChange={e => setStats('avg_trip_rating', Number(e.target.value))}
-                className={inputClass}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ── 8. Testimonials ──────────────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">8 · What Our Girls Say</h2>
-          <p className="text-sm text-dark-muted">
-            Testimonials are fetched dynamically from the{' '}
-            <a href="/admin/testimonials" className="text-primary underline">
-              Testimonials module
-            </a>
-            . Manage them there. Only the section heading is editable here.
-          </p>
-          <div>
-            <label className={labelClass}>Section Heading</label>
-            <input
-              value={content.testimonials_heading}
-              onChange={e => setContent(c => ({ ...c, testimonials_heading: e.target.value }))}
-              className={inputClass}
-            />
-          </div>
-        </div>
-
-        {/* ── 9. Your ULAA Journey ─────────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">9 · Your ULAA Journey</h2>
+          <h2 className="font-display text-lg font-bold text-dark">7 · Your ULAA Journey</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Section Heading</label>
@@ -631,9 +526,9 @@ export default function AdminAbout() {
           </div>
         </div>
 
-        {/* ── 10. Meet the Founder ─────────────────────────────────────────── */}
+        {/* ── 8. Meet the Founder ──────────────────────────────────────────── */}
         <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">10 · Meet the Founder</h2>
+          <h2 className="font-display text-lg font-bold text-dark">8 · Meet the Founder</h2>
           <ImageUploadField
             label="Founder Photo"
             value={content.founder.photo}
