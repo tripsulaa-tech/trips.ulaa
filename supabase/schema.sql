@@ -120,6 +120,20 @@ create table public.upcoming_trips (
   meeting_time            text,
   meeting_terminal        text,
   meeting_details         text,
+  -- Extended content blocks collected by Admin → Trips → Add/Edit Trip
+  -- (Overview & Itinerary / Accommodation / Founder / End Banner tabs).
+  -- See add_trip_extended_content_blocks.sql for the full rationale.
+  highlight_cards         jsonb default '[]'::jsonb,
+  accommodation_description text,
+  accommodation_photos    text[] default '{}'::text[],
+  included_items          jsonb default '[]'::jsonb,
+  not_included_items      jsonb default '[]'::jsonb,
+  gallery_items           jsonb default '[]'::jsonb,
+  fashion_photos          text[] default '{}'::text[],
+  trip_founder            jsonb,
+  confidence_items        jsonb default '[]'::jsonb,
+  meeting_address         text,
+  end_banner              jsonb,
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
   constraint upcoming_trips_trip_type_check

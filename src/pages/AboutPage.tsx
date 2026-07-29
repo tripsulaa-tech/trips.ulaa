@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import TestimonialCard from '../components/ui/TestimonialCard';
 import { getSiteContent, getTestimonials } from '../services/api';
-import { DEFAULT_ABOUT } from '../constants/about';
+import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import type {
   AboutContent,
   AboutHaveYouEverItem,
@@ -43,8 +43,8 @@ export default function AboutPage() {
 
   useEffect(() => {
     // Fetch about content
-    getSiteContent<AboutContent>('about')
-      .then(data => { if (data) setContent(data); })
+    getSiteContent<Partial<AboutContent>>('about')
+      .then(data => setContent(mergeWithDefaults(data)))
       .catch(() => {});
 
     // Fetch testimonials from existing module

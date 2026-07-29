@@ -11,6 +11,7 @@ import {
 } from '../services/api';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { Testimonial } from '../types/types-index';
+import { slugify } from '../utils/utils-index';
 
 interface TestimonialForm {
   name: string;
@@ -191,6 +192,7 @@ export default function AdminTestimonials() {
               onChange={url => setForm(f => ({ ...f, photo: url }))}
               bucket="ulaa"
               pathPrefix="testimonial-photos"
+              fileNamePrefix={slugify(form.name) || undefined}
             />
           </div>
           <div className="md:col-span-2">

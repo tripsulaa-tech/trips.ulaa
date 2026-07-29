@@ -99,3 +99,27 @@ export const DEFAULT_ABOUT: AboutContent = {
     ],
   },
 };
+
+// Merges data fetched from the DB with DEFAULT_ABOUT so that any section or
+// field missing from a partially-saved record (e.g. an older row that
+// predates a newly added section) safely falls back to its default instead
+// of being `undefined` and crashing — either the admin form
+// (content.our_story.heading) or, just as easily, the public About page
+// (have_you_ever.items.map(...)). Shared by src/admin/AdminAbout.tsx and
+// src/pages/AboutPage.tsx so both read the exact same DB row the exact same
+// defensive way.
+export function mergeWithDefaults(data: Partial<AboutContent> | null | undefined): AboutContent {
+  if (!data) return DEFAULT_ABOUT;
+  return {
+    hero: { ...DEFAULT_ABOUT.hero, ...data.hero },
+    our_story: { ...DEFAULT_ABOUT.our_story, ...data.our_story },
+    have_you_ever: { ...DEFAULT_ABOUT.have_you_ever, ...data.have_you_ever },
+    welcome_to_ulaa: { ...DEFAULT_ABOUT.welcome_to_ulaa, ...data.welcome_to_ulaa },
+    why_different: { ...DEFAULT_ABOUT.why_different, ...data.why_different },
+    community: { ...DEFAULT_ABOUT.community, ...data.community },
+    stats: { ...DEFAULT_ABOUT.stats, ...data.stats },
+    testimonials_heading: data.testimonials_heading ?? DEFAULT_ABOUT.testimonials_heading,
+    journey: { ...DEFAULT_ABOUT.journey, ...data.journey },
+    founder: { ...DEFAULT_ABOUT.founder, ...data.founder },
+  };
+}

@@ -457,6 +457,7 @@ export default function AdminTrips() {
                 onChange={url => setForm(f => ({ ...f, cover_image: url }))}
                 bucket="ulaa"
                 pathPrefix="trip-covers"
+                fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
               />
             </div>
 
@@ -743,6 +744,7 @@ export default function AdminTrips() {
                 onChange={url => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, photo: url } }))}
                 bucket="ulaa"
                 pathPrefix="trip-founder"
+                fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
               />
             </div>
             <div>
@@ -774,6 +776,7 @@ export default function AdminTrips() {
                 onChange={url => setForm(f => ({ ...f, end_banner: { ...f.end_banner, image: url } }))}
                 bucket="ulaa"
                 pathPrefix="trip-end-banners"
+                fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
               />
             </div>
             <div className="md:col-span-2">
@@ -878,6 +881,9 @@ export default function AdminTrips() {
                 <div className="col-span-2">
                   <p className="text-xs font-medium text-dark-muted mb-0.5">Meeting Point</p>
                   <p className="text-dark">{viewingTrip.meeting_point}</p>
+                  {viewingTrip.meeting_address && (
+                    <p className="text-dark-muted text-sm mt-0.5">{viewingTrip.meeting_address}</p>
+                  )}
                   {(viewingTrip.meeting_time || viewingTrip.meeting_terminal || viewingTrip.meeting_details) && (
                     <p className="text-dark-muted text-sm mt-1">
                       {[
@@ -904,6 +910,23 @@ export default function AdminTrips() {
                 <div className="flex flex-wrap gap-1.5">
                   {viewingTrip.highlights.map((h, i) => (
                     <span key={i} className="text-xs bg-background-warm text-dark px-2 py-1 rounded-full">{h}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(viewingTrip.highlight_cards?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Highlight Cards</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {viewingTrip.highlight_cards!.map((c, i) => (
+                    <div key={i} className="bg-background-warm/60 rounded-md p-2.5">
+                      <p className="text-sm text-dark">
+                        {c.icon && <span className="mr-1.5">{c.icon}</span>}
+                        <span className="font-medium">{c.heading}</span>
+                      </p>
+                      {c.description && <p className="text-dark-muted text-xs mt-0.5">{c.description}</p>}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -956,6 +979,31 @@ export default function AdminTrips() {
               </div>
             )}
 
+            {((viewingTrip.included_items?.length ?? 0) > 0 || (viewingTrip.not_included_items?.length ?? 0) > 0) && (
+              <div className="grid grid-cols-2 gap-4">
+                {(viewingTrip.included_items?.length ?? 0) > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-dark-muted mb-1">What's Included (icons)</p>
+                    <ul className="text-sm text-dark space-y-0.5">
+                      {viewingTrip.included_items!.map((item, i) => (
+                        <li key={i}>{item.icon && <span className="mr-1.5">{item.icon}</span>}{item.description}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(viewingTrip.not_included_items?.length ?? 0) > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-dark-muted mb-1">Not Included (icons)</p>
+                    <ul className="text-sm text-dark space-y-0.5">
+                      {viewingTrip.not_included_items!.map((item, i) => (
+                        <li key={i}>{item.icon && <span className="mr-1.5">{item.icon}</span>}{item.description}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
             {viewingTrip.things_to_carry?.length > 0 && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Things to Carry</p>
@@ -967,6 +1015,50 @@ export default function AdminTrips() {
               </div>
             )}
 
+            {(viewingTrip.confidence_items?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Travel with Confidence</p>
+                <ul className="text-sm text-dark space-y-0.5">
+                  {viewingTrip.confidence_items!.map((item, i) => (
+                    <li key={i}>{item.icon && <span className="mr-1.5">{item.icon}</span>}{item.description}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {viewingTrip.accommodation_description || (viewingTrip.accommodation_photos?.length ?? 0) > 0 ? (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Accommodation</p>
+                {viewingTrip.accommodation_description && (
+                  <p className="text-sm text-dark whitespace-pre-line mb-1.5">{viewingTrip.accommodation_description}</p>
+                )}
+                {(viewingTrip.accommodation_photos?.length ?? 0) > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {viewingTrip.accommodation_photos!.slice(0, 8).map((url, i) => (
+                      <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {viewingTrip.trip_founder && (viewingTrip.trip_founder.name || viewingTrip.trip_founder.photo) && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Trip Founder</p>
+                <div className="flex gap-3 items-start bg-background-warm/60 rounded-md p-3">
+                  {viewingTrip.trip_founder.photo && (
+                    <img src={viewingTrip.trip_founder.photo} alt="" className="w-14 h-14 rounded-full object-cover flex-shrink-0" />
+                  )}
+                  <div>
+                    {viewingTrip.trip_founder.name && <p className="text-sm font-medium text-dark">{viewingTrip.trip_founder.name}</p>}
+                    {viewingTrip.trip_founder.description && (
+                      <p className="text-dark-muted text-xs mt-0.5 whitespace-pre-line">{viewingTrip.trip_founder.description}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {viewingTrip.gallery_images?.length > 0 && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Gallery ({viewingTrip.gallery_images.length})</p>
@@ -974,6 +1066,51 @@ export default function AdminTrips() {
                   {viewingTrip.gallery_images.slice(0, 8).map((url, i) => (
                     <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
                   ))}
+                </div>
+              </div>
+            )}
+
+            {(viewingTrip.gallery_items?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Places You'll Post ({viewingTrip.gallery_items!.length})</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {viewingTrip.gallery_items!.slice(0, 8).map((item, i) => (
+                    <div key={i}>
+                      {item.photo && <img src={item.photo} alt="" className="w-full h-16 object-cover rounded" />}
+                      {item.description && <p className="text-dark-muted text-xs mt-0.5 truncate">{item.description}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(viewingTrip.fashion_photos?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Fashion Aesthetics ({viewingTrip.fashion_photos!.length})</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {viewingTrip.fashion_photos!.slice(0, 8).map((url, i) => (
+                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {viewingTrip.end_banner && (viewingTrip.end_banner.heading || viewingTrip.end_banner.image) && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">End Banner</p>
+                <div className="flex gap-3 items-start bg-background-warm/60 rounded-md p-3">
+                  {viewingTrip.end_banner.image && (
+                    <img src={viewingTrip.end_banner.image} alt="" className="w-20 h-14 rounded object-cover flex-shrink-0" />
+                  )}
+                  <div>
+                    {viewingTrip.end_banner.heading && <p className="text-sm font-medium text-dark">{viewingTrip.end_banner.heading}</p>}
+                    {viewingTrip.end_banner.description && (
+                      <p className="text-dark-muted text-xs mt-0.5">{viewingTrip.end_banner.description}</p>
+                    )}
+                    {viewingTrip.end_banner.cta_label && (
+                      <p className="text-xs text-primary mt-1">{viewingTrip.end_banner.cta_label}{viewingTrip.end_banner.cta_url ? ` → ${viewingTrip.end_banner.cta_url}` : ''}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
