@@ -285,6 +285,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       } else if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {
         setErrorMsg("Seats for this trip just sold out while you were booking. Please refresh the page and try again — you'll be offered the waitlist instead.");
       } else {
+        // Log whatever we actually got so the real DB rejection reason
+        // (visible here even though the UI keeps a friendly generic message)
+        // isn't lost — check this in devtools console when debugging a 400.
+        console.error('BookingForm submit failed:', err);
         setErrorMsg('Something went wrong. Please try again or contact us on WhatsApp.');
       }
     }

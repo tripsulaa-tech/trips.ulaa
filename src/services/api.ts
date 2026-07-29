@@ -398,6 +398,10 @@ function isSeatsUnavailableError(error: { message?: string }): boolean {
 export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
   const { error } = await supabase.from('enquiries').insert(enquiry);
   if (error) {
+    // Log the raw Postgrest error so the real cause (bad column, NOT NULL
+    // violation, check constraint, RLS, etc.) is visible in devtools instead
+    // of only surfacing as a generic "Something went wrong" in the UI.
+    console.error('submitEnquiry failed:', error.code, error.message, error.details, error.hint);
     if (error.code === '23505') {
       throw new Error('DUPLICATE_ENQUIRY');
     }
@@ -407,7 +411,10 @@ export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
     if (isSeatsUnavailableError(error)) {
       throw new Error('SEATS_UNAVAILABLE');
     }
-    throw error;
+    // error here is a PostgrestError, not a JS Error instance, so it's
+    // wrapped so BookingForm's `err instanceof Error` checks don't silently
+    // discard error.message on the way to its generic fallback copy.
+    throw new Error(error.message || 'ENQUIRY_INSERT_FAILED');
   }
 }
 

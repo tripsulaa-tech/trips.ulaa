@@ -1,15 +1,21 @@
--- Migration: Auto-derive balance_due_date in set_enquiry_trip_type trigger
--- -------------------------------------------------------------------------
--- Previously the trigger only set trip_type (and departure_date via the
--- trip snapshot). Now it also computes balance_due_date so that
--- computeBookingStatus() on the frontend can correctly distinguish between
--- "booking_confirmed" (balance already settled or due date still in future)
--- and "balance_pending" (due date has passed but full balance not yet paid).
+-- ============================================================================
+-- ULAA — Fix: set_enquiry_trip_type() references a nonexistent
+-- "departure_date" column on upcoming_trips / completed_trips.
 --
--- Rules (matching the cancellation policy tiers in cancellationPolicy.ts):
---   domestic     → balance due 30 days before departure
---   international → balance due 45 days before departure
---   other/null    → no balance_due_date set
+-- Bug: add_balance_due_date_derivation.sql's trigger function selects
+-- `departure_date` from upcoming_trips and completed_trips, but neither
+-- table has that column:
+--   - upcoming_trips has start_date / end_date
+--   - completed_trips has trip_date
+-- `departure_date` only exists on `enquiries` (as the snapshot column this
+-- trigger writes TO). Because this is a BEFORE INSERT trigger on
+-- `enquiries` and every public booking form submission sets trip_id, this
+-- fires — and fails with 42703 "column departure_date does not exist" —
+-- on every single enquiry insert.
+--
+-- Run this once in Supabase → SQL Editor. It replaces the function with
+-- one that selects the correct source columns, aliased as departure_date.
+-- ============================================================================
 
 create or replace function public.set_enquiry_trip_type()
 returns trigger
