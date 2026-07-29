@@ -8,6 +8,7 @@ import {
   Landmark, Castle, Building2,
   Plane, Car, TrainFront, CableCar,
   ShieldCheck, Shield, Phone, HeartHandshake, BadgeCheck, Clock, Headset, LifeBuoy, Lock, UserCheck,
+  Hotel, Venus, UserRoundCheck, PhoneCall, MapPinned,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -105,13 +106,19 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'shield-check', label: 'Verified Safety', Icon: ShieldCheck, keywords: ['safety', 'safe', 'verified', 'protection', 'secure'] },
   { key: 'shield', label: 'Shield', Icon: Shield, keywords: ['safety', 'protection', 'security'] },
   { key: 'phone', label: 'Phone Support', Icon: Phone, keywords: ['support', '24/7', 'helpline', 'call', 'contact'] },
+  { key: 'phone-call', label: 'Airport Assistance', Icon: PhoneCall, keywords: ['airport', 'assistance', 'airport assistance', 'airport pickup', 'airport transfer', 'pickup', 'transfer', 'arrival'] },
   { key: 'headset', label: '24/7 Support', Icon: Headset, keywords: ['support', '24/7', 'helpline', 'assistance', 'on-ground support'] },
-  { key: 'life-buoy', label: 'Emergency Support', Icon: LifeBuoy, keywords: ['emergency', 'support', 'assistance', 'rescue'] },
+  { key: 'life-buoy', label: 'Emergency Support', Icon: LifeBuoy, keywords: ['emergency', 'emergency support', 'support', 'assistance', 'rescue', 'sos'] },
   { key: 'heart-handshake', label: 'Trusted Care', Icon: HeartHandshake, keywords: ['trust', 'care', 'community', 'support'] },
+  { key: 'handshake-partners', label: 'Trusted Local Partners', Icon: Handshake, keywords: ['trusted local partners', 'local partners', 'trusted partners', 'partners', 'vendors', 'tour operators', 'ground team'] },
   { key: 'badge-check', label: 'Verified', Icon: BadgeCheck, keywords: ['verified', 'certified', 'trusted organizers', 'authentic'] },
+  { key: 'hotel', label: 'Verified Hotels', Icon: Hotel, keywords: ['verified hotels', 'hotels', 'hotel', 'accommodation', 'stay', 'resort', 'lodging'] },
   { key: 'clock', label: 'Always Available', Icon: Clock, keywords: ['24/7', 'always available', 'time', 'punctual'] },
   { key: 'lock', label: 'Secure', Icon: Lock, keywords: ['secure', 'privacy', 'data protection', 'safety'] },
   { key: 'user-check', label: 'Verified Guide', Icon: UserCheck, keywords: ['verified organizer', 'trip leader', 'guide', 'escort'] },
+  { key: 'user-round-check', label: 'Female Trip Captain', Icon: UserRoundCheck, keywords: ['female trip captain', 'trip captain', 'female guide', 'female leader', 'woman guide', 'captain'] },
+  { key: 'venus', label: 'Girls Only. Always.', Icon: Venus, keywords: ['girls only', 'girls only always', 'girls-only', 'women only', 'female only', 'ladies only', 'always'] },
+  { key: 'map-pinned', label: 'Local Ground Support', Icon: MapPinned, keywords: ['local support', 'ground support', 'on-ground', 'local partners'] },
 ];
 
 const TRIP_HIGHLIGHT_ICON_MAP: Record<string, TripHighlightIconMeta> = Object.fromEntries(

@@ -1,24 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import FAQAccordion from '../components/ui/FAQAccordion';
 import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDisplay';
 import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
-import { GalleryGrid } from '../components/ui/Lightbox';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
+import GalleryCarousel from '../components/ui/GalleryCarousel';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getTripHighlightIcon, getTripHighlightPalette } from '../constants/tripHighlightIcons';
 import { getUpcomingTripBySlug } from '../services/api';
-import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripGalleryItem, TripConfidenceItem } from '../types/types-index';
+import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripConfidenceItem } from '../types/types-index';
 import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice, getStrikeThroughPrice, formatAgeRange } from '../utils/utils-index';
 import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/calendar';
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
   MapPin, Calendar, Clock, Users, UserCheck, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart,
+  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight,
+  ChevronDown, ChevronUp,
 } from 'lucide-react';
 
 export default function TripDetailPage() {
@@ -26,10 +27,13 @@ export default function TripDetailPage() {
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeSection, setActiveSection] = useState('highlights');
   const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+  const [showAllAccommodationPhotos, setShowAllAccommodationPhotos] = useState(false);
+  const [faqsOpen, setFaqsOpen] = useState(false);
+  const [cancellationOpen, setCancellationOpen] = useState(false);
   const navBarRef = useRef<HTMLElement>(null);
   const navLinkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const calendarMenuRef = useRef<HTMLDivElement>(null);
@@ -64,7 +68,7 @@ export default function TripDetailPage() {
   // Highlight the quick-jump tab for whichever section is currently in view.
   useEffect(() => {
     if (!trip) return;
-    const ids = ['overview', 'highlights', 'itinerary', 'accommodation', 'inclusions', 'gallery', 'confidence', 'faqs', 'cancellation'];
+    const ids = ['highlights', 'itinerary', 'accommodation', 'inclusions', 'gallery', 'confidence', 'faqs', 'cancellation'];
     const sections = ids
       .map(id => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -239,13 +243,6 @@ export default function TripDetailPage() {
       <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1344px] mx-auto flex items-center gap-2">
           <nav ref={navBarRef} className="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar py-3">
-            <a
-              href="#overview"
-              ref={el => { navLinkRefs.current['overview'] = el; }}
-              className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'overview' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
-            >
-              Overview
-            </a>
             {(trip.highlight_cards?.length || trip.highlights.length) > 0 && (
               <a
                 href="#highlights"
@@ -353,16 +350,10 @@ export default function TripDetailPage() {
       {/* Main Content */}
       <div className="relative isolate px-4 sm:px-6 lg:px-8 py-16 pb-28 lg:pb-16">
         <div className="max-w-[1344px] mx-auto space-y-12">
-            {/* Overview */}
-            <section id="overview" className="scroll-mt-44">
-              <h2 className="font-display text-3xl font-bold text-dark mb-4">Trip Overview</h2>
-              <p className="text-dark-muted leading-relaxed text-lg">{trip.description}</p>
-            </section>
-
             {/* Highlights */}
             {(trip.highlight_cards?.length ?? 0) > 0 ? (
               <section id="highlights" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-8 flex items-center gap-2">
+                <h2 className="font-display text-3xl font-bold text-dark mb-8 flex items-center justify-center gap-2 text-center">
                   Why You'll Love This Trip
                   <Heart size={20} className="text-primary/70 -rotate-6" fill="currentColor" fillOpacity={0.15} />
                 </h2>
@@ -402,7 +393,7 @@ export default function TripDetailPage() {
             {/* Itinerary */}
             {trip.itinerary.length > 0 && (
               <section id="itinerary" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-10 text-center sm:text-left">
+                <h2 className="font-display text-3xl font-bold text-dark mb-10 text-center">
                   {trip.itinerary.length} Day{trip.itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments
                 </h2>
                 <div
@@ -451,15 +442,32 @@ export default function TripDetailPage() {
                 {trip.accommodation_description && (
                   <p className="text-dark-muted leading-relaxed text-base mb-6">{trip.accommodation_description}</p>
                 )}
-                {(trip.accommodation_photos?.length ?? 0) > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {trip.accommodation_photos!.map((photo, i) => (
-                      <div key={i} className="aspect-video overflow-hidden rounded-xl">
-                        <img src={photo} alt={`Accommodation ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                {(trip.accommodation_photos?.length ?? 0) > 0 && (() => {
+                  const photos = trip.accommodation_photos!;
+                  const INITIAL_COUNT = 3;
+                  const visiblePhotos = showAllAccommodationPhotos ? photos : photos.slice(0, INITIAL_COUNT);
+                  const hasMore = photos.length > INITIAL_COUNT;
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {visiblePhotos.map((photo, i) => (
+                          <div key={i} className="aspect-video overflow-hidden rounded-xl">
+                            <img src={photo} alt={`Accommodation ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {hasMore && !showAllAccommodationPhotos && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllAccommodationPhotos(true)}
+                          className="mt-4 inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+                        >
+                          View Accommodation Details <ArrowRight size={15} />
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </section>
             )}
 
@@ -494,7 +502,7 @@ export default function TripDetailPage() {
                     {(trip.not_included_items?.length ?? 0) > 0
                       ? trip.not_included_items!.map((item: TripInclusionItem, i: number) => (
                           <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
-                            {item.icon ? <span>{item.icon}</span> : <XCircle size={14} className="text-red-400 shrink-0" />}
+                            <XCircle size={14} className="text-red-400 shrink-0" />
                             {item.description}
                           </span>
                         ))
@@ -572,28 +580,13 @@ export default function TripDetailPage() {
             {((trip.gallery_items?.length ?? 0) > 0 || trip.gallery_images.length > 0) && (
               <section id="gallery" className="scroll-mt-44">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Places You'll Definitely Post</h2>
-                {(trip.gallery_items?.length ?? 0) > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {trip.gallery_items!.map((item: TripGalleryItem, i: number) => (
-                      <div key={i} className="group overflow-hidden rounded-xl shadow-card border border-background-warm">
-                        <div className="aspect-square overflow-hidden">
-                          <img
-                            src={item.photo || PLACEHOLDER_IMAGE}
-                            alt={item.description || `Gallery ${i + 1}`}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        </div>
-                        {item.description && (
-                          <div className="px-3 py-2">
-                            <p className="text-dark text-xs font-medium truncate">{item.description}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <GalleryGrid images={trip.gallery_images} />
-                )}
+                {(() => {
+                  const allItems: { photo: string; description?: string }[] =
+                    (trip.gallery_items?.length ?? 0) > 0
+                      ? trip.gallery_items!
+                      : trip.gallery_images.map(photo => ({ photo }));
+                  return <GalleryCarousel items={allItems} />;
+                })()}
               </section>
             )}
 
@@ -615,10 +608,10 @@ export default function TripDetailPage() {
             {(trip.confidence_items?.length ?? 0) > 0 && (
               <section id="confidence" className="scroll-mt-44">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Travel with Confidence</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
-                    <div key={i} className="flex items-center gap-4 bg-background-warm rounded-xl p-4">
-                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
+                    <div key={i} className="flex items-center gap-4 p-2">
+                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={0} size="lg" />}
                       <p className="text-dark text-sm leading-relaxed">{item.description}</p>
                     </div>
                   ))}
@@ -670,15 +663,63 @@ export default function TripDetailPage() {
             {/* FAQs */}
             {trip.faqs.length > 0 && (
               <section id="faqs" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">FAQs</h2>
-                <FAQAccordion faqs={trip.faqs} />
+                <button
+                  type="button"
+                  onClick={() => setFaqsOpen(o => !o)}
+                  aria-expanded={faqsOpen}
+                  className="w-full flex items-center justify-between gap-4 mb-6"
+                >
+                  <h2 className="font-display text-3xl font-bold text-dark">FAQs</h2>
+                  {faqsOpen ? (
+                    <ChevronUp size={24} className="text-primary shrink-0" />
+                  ) : (
+                    <ChevronDown size={24} className="text-primary shrink-0" />
+                  )}
+                </button>
+                <AnimatePresence initial={false}>
+                  {faqsOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <FAQAccordion faqs={trip.faqs} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </section>
             )}
 
             {/* Cancellation Policy */}
             <section id="cancellation" className="scroll-mt-44">
-              <h2 className="font-display text-3xl font-bold text-dark mb-6">Cancellation Policy</h2>
-              <CancellationPolicyDisplay policy={trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
+              <button
+                type="button"
+                onClick={() => setCancellationOpen(o => !o)}
+                aria-expanded={cancellationOpen}
+                className="w-full flex items-center justify-between gap-4 mb-6"
+              >
+                <h2 className="font-display text-3xl font-bold text-dark">Cancellation Policy</h2>
+                {cancellationOpen ? (
+                  <ChevronUp size={24} className="text-primary shrink-0" />
+                ) : (
+                  <ChevronDown size={24} className="text-primary shrink-0" />
+                )}
+              </button>
+              <AnimatePresence initial={false}>
+                {cancellationOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className="overflow-hidden"
+                  >
+                    <CancellationPolicyDisplay policy={trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </section>
 
             {/* Book Your Seat — moved here (was a right-hand sticky sidebar) so it reads as a final call-to-action before the End Banner. */}

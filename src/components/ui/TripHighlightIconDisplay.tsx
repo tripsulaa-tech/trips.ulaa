@@ -5,7 +5,7 @@ interface TripHighlightIconDisplayProps {
   icon: string;
   /** Position in the highlight cards list, used to rotate the circle color. */
   index?: number;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
 }
 
 /**
@@ -17,8 +17,8 @@ interface TripHighlightIconDisplayProps {
 export default function TripHighlightIconDisplay({ icon, index = 0, size = 'md' }: TripHighlightIconDisplayProps) {
   const meta = getTripHighlightIcon(icon);
   const { bg, fg } = getTripHighlightPalette(index);
-  const dims = size === 'sm' ? 'w-10 h-10' : 'w-16 h-16';
-  const iconSize = size === 'sm' ? 18 : 28;
+  const dims = size === 'sm' ? 'w-10 h-10' : size === 'lg' ? 'w-20 h-20' : 'w-16 h-16';
+  const iconSize = size === 'sm' ? 18 : size === 'lg' ? 36 : 28;
 
   if (!icon) return null;
 

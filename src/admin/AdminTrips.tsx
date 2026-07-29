@@ -401,7 +401,9 @@ export default function AdminTrips() {
       highlight_cards: trip.highlight_cards || [],
       accommodation_description: trip.accommodation_description || '',
       accommodation_photos: trip.accommodation_photos || [],
-      included_items: trip.included_items || [],
+      included_items: (trip.included_items && trip.included_items.length > 0)
+        ? trip.included_items
+        : (trip.included || []).map(description => ({ icon: '', description })),
       not_included_items: trip.not_included_items || [],
       gallery_items: trip.gallery_items || [],
       fashion_photos: trip.fashion_photos || [],
@@ -814,15 +816,27 @@ export default function AdminTrips() {
           </TabPanel>
 
           <TabPanel label="Inclusions & Prep">
-            <div>
-              <TagListEditor
-                label="What's Included"
-                value={form.included}
-                onChange={items => setForm(f => ({ ...f, included: items }))}
-                placeholder="e.g. All meals"
-              />
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-dark">What's Included (icon + description)</label>
+                <button type="button" onClick={() => setForm(f => ({ ...f, included_items: [...f.included_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+              </div>
+              {form.included_items.map((item, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="w-32 flex-shrink-0">
+                    <TripHighlightIconPicker
+                      value={item.icon}
+                      hintText={item.description}
+                      onChange={key => setForm(f => ({ ...f, included_items: f.included_items.map((it, idx) => idx === i ? { ...it, icon: key } : it) }))}
+                    />
+                  </div>
+                  <input value={item.description} onChange={e => setForm(f => ({ ...f, included_items: f.included_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. All meals" />
+                  <button type="button" onClick={() => setForm(f => ({ ...f, included_items: f.included_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
+                </div>
+              ))}
+              {form.included_items.length === 0 && <p className="text-xs text-dark-muted">No included items yet. Click "Add Item" to begin.</p>}
             </div>
-            <div>
+            <div className="md:col-span-2">
               <TagListEditor
                 label="What's Not Included"
                 value={form.not_included}
@@ -1256,9 +1270,12 @@ export default function AdminTrips() {
                 {(viewingTrip.included_items?.length ?? 0) > 0 && (
                   <div>
                     <p className="text-xs font-medium text-dark-muted mb-1">What's Included (icons)</p>
-                    <ul className="text-sm text-dark space-y-0.5">
+                    <ul className="text-sm text-dark space-y-1">
                       {viewingTrip.included_items!.map((item, i) => (
-                        <li key={i}>{item.icon && <span className="mr-1.5">{item.icon}</span>}{item.description}</li>
+                        <li key={i} className="flex items-center gap-1.5">
+                          {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
+                          {item.description}
+                        </li>
                       ))}
                     </ul>
                   </div>
