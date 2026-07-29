@@ -56,10 +56,16 @@ create table public.completed_trips (
   original_highlights    text[],
   original_included      text[],
   original_not_included  text[],
+  -- Public-facing like count on the album page — see
+  -- add_completed_trip_likes.sql for the increment/decrement RPCs that are
+  -- the only public-safe way to change this (direct updates still require
+  -- an admin session, same as every other column here).
+  likes_count            integer not null default 0,
   constraint completed_trips_pkey primary key (id),
   constraint completed_trips_slug_key unique (slug),
   constraint completed_trips_trip_type_check
-    check (trip_type = any (array['domestic'::text, 'international'::text]))
+    check (trip_type = any (array['domestic'::text, 'international'::text])),
+  constraint completed_trips_likes_count_check check (likes_count >= 0)
 );
 
 -- ----------------------------------------------------------------------------
@@ -769,6 +775,104 @@ begin
 end;
 $function$;
 
+-- Public Like button on the album page (AlbumPage.tsx), deduped per
+-- anonymous visitor since the public site has no login.
+--
+-- completed_trip_likes holds one row per (trip, visitor) — visitor_id is a
+-- random UUID the client generates once and keeps in localStorage (see
+-- getVisitorId in src/utils/utils-index.ts). The primary key on
+-- (trip_id, visitor_id) is what actually stops a second like from the same
+-- visitor: even a hand-crafted request re-using the same visitor_id gets
+-- rejected by the DB itself, not just by a client-side flag. Clearing
+-- localStorage does get a visitor a fresh id (and so a fresh like) — same
+-- inherent limit any anonymous, no-login like button has — but that's a
+-- meaningfully higher bar than trusting the browser alone.
+create table public.completed_trip_likes (
+  trip_id     uuid not null references public.completed_trips (id) on delete cascade,
+  visitor_id  text not null,
+  created_at  timestamptz not null default now(),
+  constraint completed_trip_likes_pkey primary key (trip_id, visitor_id)
+);
+
+alter table public.completed_trip_likes enable row level security;
+
+-- No accounts, so there's no user to scope these to — visitor_id itself is
+-- the "capability": the public can only insert/delete a row it already
+-- knows the id of, which in practice comes from the like RPCs below.
+create policy "Public insert completed trip likes" on public.completed_trip_likes
+  for insert with check (true);
+create policy "Public delete completed trip likes" on public.completed_trip_likes
+  for delete using (true);
+create policy "Admin read completed trip likes" on public.completed_trip_likes
+  for select using (auth.role() = 'authenticated');
+
+-- Recomputes completed_trips.likes_count for one trip from real rows in
+-- completed_trip_likes — mirrors recompute_trip_seats()'s "trust the
+-- actual rows, not incremental +/-1 calls" pattern, so the count self-heals
+-- even if some future code path forgets to adjust it manually.
+create or replace function public.recompute_completed_trip_likes(p_trip_id uuid)
+returns integer
+language plpgsql
+as $function$
+declare
+  new_count integer;
+begin
+  update public.completed_trips t
+     set likes_count = (
+       select count(*) from public.completed_trip_likes l
+        where l.trip_id = p_trip_id
+     )
+   where t.id = p_trip_id
+  returning likes_count into new_count;
+  return new_count;
+end;
+$function$;
+
+create or replace function public.trg_completed_trip_likes_sync()
+returns trigger
+language plpgsql
+as $function$
+begin
+  perform public.recompute_completed_trip_likes(coalesce(new.trip_id, old.trip_id));
+  return null;
+end;
+$function$;
+
+create trigger on_completed_trip_likes_sync
+  after insert or delete on public.completed_trip_likes
+  for each row execute function public.trg_completed_trip_likes_sync();
+
+-- Thin RPCs the client calls — insert/delete the dedupe row and hand back
+-- the freshly-recomputed count in the same round trip, rather than the
+-- client trusting its own optimistic math. "on conflict do nothing" means
+-- a same-visitor double-click is a harmless no-op, not an error.
+create or replace function public.like_completed_trip(p_trip_id uuid, p_visitor_id text)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $function$
+begin
+  insert into public.completed_trip_likes (trip_id, visitor_id)
+  values (p_trip_id, p_visitor_id)
+  on conflict (trip_id, visitor_id) do nothing;
+  return public.recompute_completed_trip_likes(p_trip_id);
+end;
+$function$;
+
+create or replace function public.unlike_completed_trip(p_trip_id uuid, p_visitor_id text)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $function$
+begin
+  delete from public.completed_trip_likes
+   where trip_id = p_trip_id and visitor_id = p_visitor_id;
+  return public.recompute_completed_trip_likes(p_trip_id);
+end;
+$function$;
+
 -- When an enquiry's cancelled_at transitions from null to set, computes and
 -- stamps the suggested refund amount and flips booking_status to cancelled.
 create or replace function public.on_enquiry_cancelled()
@@ -1203,3 +1307,9 @@ create policy "Admin all site content" on public.site_content
   for all using (auth.role() = 'authenticated');
 create policy "Public read site content" on public.site_content
   for select using (true);
+
+-- Grants for the public Like button RPCs above — SECURITY DEFINER bypasses
+-- RLS inside the function body, but EXECUTE still needs to be granted to
+-- the roles the public site actually connects as.
+grant execute on function public.like_completed_trip(uuid, text) to anon, authenticated;
+grant execute on function public.unlike_completed_trip(uuid, text) to anon, authenticated;

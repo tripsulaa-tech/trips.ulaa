@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Users, Images, ArrowLeft, Share2 } from 'lucide-react';
+import { MapPin, Calendar, Users, Images, ArrowLeft, Share2, Heart } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import { GalleryGrid } from '../components/ui/Lightbox';
-import { getCompletedTripBySlug } from '../services/api';
+import { getCompletedTripBySlug, likeCompletedTrip, unlikeCompletedTrip } from '../services/api';
 import type { CompletedTrip } from '../types/types-index';
-import { formatDate, formatBatchLabel, PLACEHOLDER_IMAGE } from '../utils/utils-index';
+import { formatDate, formatBatchLabel, PLACEHOLDER_IMAGE, getVisitorId } from '../utils/utils-index';
 
 const DEMO_ALBUM: CompletedTrip = {
   id: '1', title: 'Magical Meghalaya',
@@ -37,13 +37,22 @@ Meghalaya reminded us why we travel — not for Instagram, but for the moments t
     'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80',
     'https://images.unsplash.com/photo-1591017403997-beeee1ec6981?w=800&q=80',
   ],
-  is_published: true, created_at: '', updated_at: '',
+  is_published: true, likes_count: 0, created_at: '', updated_at: '',
 };
 
 export default function AlbumPage() {
   const { slug } = useParams<{ slug: string }>();
   const [album, setAlbum] = useState<CompletedTrip | null>(null);
   const [loading, setLoading] = useState(true);
+  // The like COUNT lives server-side on completed_trips.likes_count,
+  // derived from real rows in completed_trip_likes (one per visitor per
+  // trip — see like_completed_trip/unlike_completed_trip in api.ts). The
+  // DB itself enforces "one like per visitor" via that table's primary
+  // key; localStorage here only remembers this device's own visitor_id and
+  // its last-known liked state, purely to drive the button's filled/
+  // outline look on load — it's not what's doing the enforcing anymore.
+  const [liked, setLiked] = useState(false);
+  const [likeBusy, setLikeBusy] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -52,6 +61,41 @@ export default function AlbumPage() {
       .catch(() => setAlbum(DEMO_ALBUM))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  useEffect(() => {
+    if (!album) return;
+    setLiked(localStorage.getItem(`ulaa_liked_album_${album.id}`) === '1');
+  }, [album]);
+
+  const toggleLike = async () => {
+    if (!album || likeBusy) return;
+    const wasLiked = liked;
+    const next = !wasLiked;
+    const visitorId = getVisitorId();
+    // Optimistic update — flip the button and count immediately, roll back
+    // if the request fails.
+    setLiked(next);
+    setAlbum(a => a && { ...a, likes_count: Math.max(0, a.likes_count + (next ? 1 : -1)) });
+    setLikeBusy(true);
+    try {
+      const newCount = next
+        ? await likeCompletedTrip(album.id, visitorId)
+        : await unlikeCompletedTrip(album.id, visitorId);
+      setAlbum(a => a && { ...a, likes_count: newCount });
+      if (next) {
+        localStorage.setItem(`ulaa_liked_album_${album.id}`, '1');
+      } else {
+        localStorage.removeItem(`ulaa_liked_album_${album.id}`);
+      }
+    } catch {
+      // Roll back on failure so the button/count don't lie about what's
+      // actually saved.
+      setLiked(wasLiked);
+      setAlbum(a => a && { ...a, likes_count: Math.max(0, a.likes_count + (next ? -1 : 1)) });
+    } finally {
+      setLikeBusy(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -158,12 +202,25 @@ export default function AlbumPage() {
           <section>
             <div className="flex items-center justify-between mb-8">
               <h2 className="font-display text-3xl font-bold text-dark">Relive the Journey</h2>
-              <button
-                onClick={() => navigator.share?.({ title: album.title, url: window.location.href })}
-                className="flex items-center gap-2 text-sm text-dark-muted hover:text-primary transition-colors cursor-pointer"
-              >
-                <Share2 size={16} /> Share
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={toggleLike}
+                  disabled={likeBusy}
+                  aria-label={liked ? 'Unlike this album' : 'Like this album'}
+                  className={`flex items-center gap-2 text-sm transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-default ${
+                    liked ? 'text-red-500' : 'text-dark-muted hover:text-red-500'
+                  }`}
+                >
+                  <Heart size={16} className={liked ? 'fill-red-500' : ''} />
+                  {liked ? 'Liked' : 'Like'}{album.likes_count > 0 ? ` (${album.likes_count})` : ''}
+                </button>
+                <button
+                  onClick={() => navigator.share?.({ title: album.title, url: window.location.href })}
+                  className="flex items-center gap-2 text-sm text-dark-muted hover:text-primary transition-colors cursor-pointer"
+                >
+                  <Share2 size={16} /> Share
+                </button>
+              </div>
             </div>
             <GalleryGrid images={album.gallery_images} />
           </section>

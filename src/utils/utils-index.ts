@@ -266,3 +266,20 @@ export function downloadCsv(
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+// Anonymous per-device identifier used only for the public album Like
+// button (see completed_trip_likes / like_completed_trip in api.ts) — the
+// site has no visitor accounts, so this is what lets the DB enforce "one
+// like per visitor" instead of trusting a client-side flag alone. Created
+// once and reused from localStorage; a cleared browser gets a fresh one
+// (and so a fresh like), which is the same inherent ceiling any anonymous,
+// no-login like button has.
+const VISITOR_ID_KEY = 'ulaa_visitor_id';
+
+export function getVisitorId(): string {
+  let id = localStorage.getItem(VISITOR_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(VISITOR_ID_KEY, id);
+  }
+  return id;
+}

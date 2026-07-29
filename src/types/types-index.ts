@@ -73,6 +73,11 @@ export interface CompletedTrip {
   is_published: boolean;
   created_at: string;
   updated_at: string;
+  // Public-facing like count on the album page (AlbumPage.tsx). Stored
+  // server-side (not per-browser) so it persists across devices and shows
+  // a real total — see incrementCompletedTripLikes/decrementCompletedTripLikes
+  // in api.ts and add_completed_trip_likes.sql.
+  likes_count: number;
   // Snapshot of the upcoming trip's planning content, copied over
   // automatically when the album is created. Admin reference only — never
   // rendered on the public album page (AlbumPage.tsx).

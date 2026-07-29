@@ -189,6 +189,27 @@ export async function getAllCompletedTripsAdmin(): Promise<CompletedTrip[]> {
   return data || [];
 }
 
+// Public Like button on the album page (AlbumPage.tsx). completed_trips
+// otherwise only allows admin updates, so these go through
+// SECURITY DEFINER RPCs (see add_completed_trip_likes_dedupe.sql) that
+// insert/delete a row in completed_trip_likes keyed on (trip_id,
+// visitor_id) — the DB's primary key is what actually stops a repeat like
+// from the same visitor, not just the client remembering it already
+// liked. visitorId comes from getVisitorId() in utils-index.ts. Each call
+// returns the freshly-recomputed total so the UI shows the real count
+// straight away instead of guessing at prev ± 1.
+export async function likeCompletedTrip(tripId: string, visitorId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('like_completed_trip', { p_trip_id: tripId, p_visitor_id: visitorId });
+  if (error) throw error;
+  return data as number;
+}
+
+export async function unlikeCompletedTrip(tripId: string, visitorId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('unlike_completed_trip', { p_trip_id: tripId, p_visitor_id: visitorId });
+  if (error) throw error;
+  return data as number;
+}
+
 export async function createCompletedTrip(trip: Partial<CompletedTrip>): Promise<CompletedTrip> {
   const { data, error } = await supabase
     .from('completed_trips')
