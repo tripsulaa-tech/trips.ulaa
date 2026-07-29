@@ -53,6 +53,9 @@ interface TripForm {
   things_to_carry: string[];
   meeting_point: string;
   meeting_point_map_url: string;
+  meeting_time: string;
+  meeting_terminal: string;
+  meeting_details: string;
   faqs: FAQ[];
   total_seats: number;
   seats_booked: number;
@@ -74,7 +77,8 @@ interface TripForm {
 const emptyForm: TripForm = {
   title: '', destination: '', start_date: '', end_date: '', duration: '',
   description: '', highlights: [], itinerary: [], included: [], not_included: [],
-  things_to_carry: [], meeting_point: '', meeting_point_map_url: '', faqs: [], total_seats: 15, seats_booked: 0,
+  things_to_carry: [], meeting_point: '', meeting_point_map_url: '',
+  meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
   early_bird_price: '', early_bird_deadline: '', strike_through_price: '',
   cover_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
@@ -114,6 +118,8 @@ export default function AdminTrips() {
       included: trip.included || [], not_included: trip.not_included || [],
       things_to_carry: trip.things_to_carry || [], meeting_point: trip.meeting_point || '',
       meeting_point_map_url: trip.meeting_point_map_url || '',
+      meeting_time: trip.meeting_time || '', meeting_terminal: trip.meeting_terminal || '',
+      meeting_details: trip.meeting_details || '',
       faqs: trip.faqs || [], total_seats: trip.total_seats, seats_booked: trip.seats_booked || 0,
       min_age: trip.min_age ?? '', max_age: trip.max_age ?? '',
       price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
@@ -522,6 +528,39 @@ export default function AdminTrips() {
                 )}
               </p>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Time</label>
+              <input
+                value={form.meeting_time}
+                onChange={e => setForm(f => ({ ...f, meeting_time: e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 7:00 AM on Day 1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Terminal</label>
+              <input
+                value={form.meeting_terminal}
+                onChange={e => setForm(f => ({ ...f, meeting_terminal: e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. Terminal 2, Departure Gate"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Details</label>
+              <input
+                value={form.meeting_details}
+                onChange={e => setForm(f => ({ ...f, meeting_details: e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. Look for the ULAA placard near the arrivals gate"
+              />
+              <p className="text-xs text-dark-muted mt-1.5">
+                Time, Terminal, and Details are all optional — leave any of them blank and the trip page and PDF show a friendly "to be communicated" placeholder instead.
+              </p>
+            </div>
           </TabPanel>
 
           <TabPanel label="FAQs">
@@ -614,6 +653,15 @@ export default function AdminTrips() {
                 <div className="col-span-2">
                   <p className="text-xs font-medium text-dark-muted mb-0.5">Meeting Point</p>
                   <p className="text-dark">{viewingTrip.meeting_point}</p>
+                  {(viewingTrip.meeting_time || viewingTrip.meeting_terminal || viewingTrip.meeting_details) && (
+                    <p className="text-dark-muted text-sm mt-1">
+                      {[
+                        viewingTrip.meeting_time && `Time: ${viewingTrip.meeting_time}`,
+                        viewingTrip.meeting_terminal && `Terminal: ${viewingTrip.meeting_terminal}`,
+                        viewingTrip.meeting_details && `Details: ${viewingTrip.meeting_details}`,
+                      ].filter(Boolean).join(' \u00b7 ')}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

@@ -108,6 +108,12 @@ create table public.upcoming_trips (
   -- src/utils/formValidation.ts.
   min_age                 integer,
   max_age                 integer,
+  -- Optional structured assembly-point logistics shown alongside
+  -- meeting_point on the public trip page and the itinerary PDF. See
+  -- add_trip_meeting_point_details.sql.
+  meeting_time            text,
+  meeting_terminal        text,
+  meeting_details         text,
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
   constraint upcoming_trips_trip_type_check

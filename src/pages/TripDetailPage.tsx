@@ -358,6 +358,28 @@ export default function TripDetailPage() {
                   <Navigation size={22} className="text-primary" /> Meeting Point
                 </h2>
                 <p className="text-dark-muted mb-3">{trip.meeting_point}</p>
+                {(trip.meeting_time || trip.meeting_terminal || trip.meeting_details) && (
+                  <dl className="mb-3 space-y-1 text-sm">
+                    {trip.meeting_time && (
+                      <div className="flex gap-1.5">
+                        <dt className="font-semibold text-dark">Time:</dt>
+                        <dd className="text-dark-muted">{trip.meeting_time}</dd>
+                      </div>
+                    )}
+                    {trip.meeting_terminal && (
+                      <div className="flex gap-1.5">
+                        <dt className="font-semibold text-dark">Terminal:</dt>
+                        <dd className="text-dark-muted">{trip.meeting_terminal}</dd>
+                      </div>
+                    )}
+                    {trip.meeting_details && (
+                      <div className="flex gap-1.5">
+                        <dt className="font-semibold text-dark">Details:</dt>
+                        <dd className="text-dark-muted">{trip.meeting_details}</dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
                 <a
                   href={trip.meeting_point_map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.meeting_point)}`}
                   target="_blank"

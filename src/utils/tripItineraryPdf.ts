@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { UpcomingTrip, CancellationTier } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
-import { formatDateRange, getActivePrice } from './utils-index';
+import { formatDateRange } from './utils-index';
 
 // =============================================================================
 // "Download Itinerary PDF" — renders a trip's public detail page as a clean,
@@ -11,9 +11,9 @@ import { formatDateRange, getActivePrice } from './utils-index';
 // Admin — nothing about a specific trip is hardcoded here.
 //
 // Design intent: reproduce the 9-slide reference deck (cover → overview +
-// highlights → itinerary → inclusions/exclusions → things to carry →
-// meeting point → FAQs → cancellation policy → closing) while staying
-// fully data-driven:
+// highlights → itinerary → inclusions/exclusions + things to carry (one
+// combined slide when both fit) → meeting point → FAQs → cancellation
+// policy → closing) while staying fully data-driven:
 //   - Sections with no data are skipped entirely (no empty slides).
 //   - Sections whose content is longer than one slide (many itinerary days,
 //     many FAQs, many cancellation clauses...) automatically continue onto
@@ -65,12 +65,6 @@ const PAGE_H = 540;
 const MARGIN = 44;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 const CONTENT_BOTTOM = PAGE_H - 40; // leaves room for the page-number badge
-
-/** The core PDF fonts don't include the ₹ glyph, so we spell out the
- *  currency instead of risking it render as a missing-glyph box. */
-function formatINR(amount: number): string {
-  return `Rs. ${amount.toLocaleString('en-IN')}`;
-}
 
 /** Every piece of trip-authored text (description, FAQs, itinerary copy...)
  *  passes through here before it's measured or drawn. Two real problems
@@ -436,7 +430,94 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.circle(x + s / 2, y - s * 0.4, s * 0.4, 'F');
       drawCross(x + s / 2, y - s * 0.4, s * 0.3, COLORS.white, 2);
     },
+    // ---- Things-to-Carry item icons ----
+    idcard(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      setDraw(color);
+      doc.setLineWidth(1.3);
+      doc.roundedRect(x + s * 0.05, y - s * 0.85, s * 0.9, s * 0.7, 2.5, 2.5, 'S');
+      setFill(color);
+      doc.circle(x + s * 0.28, y - s * 0.58, s * 0.13, 'F');
+      doc.setLineWidth(1.1);
+      doc.line(x + s * 0.52, y - s * 0.62, x + s * 0.84, y - s * 0.62);
+      doc.line(x + s * 0.52, y - s * 0.48, x + s * 0.74, y - s * 0.48);
+    },
+    cash(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      setDraw(color);
+      doc.setLineWidth(1.4);
+      doc.roundedRect(x + s * 0.02, y - s * 0.62, s * 0.96, s * 0.5, 3, 3, 'S');
+      doc.circle(x + s * 0.5, y - s * 0.37, s * 0.14, 'S');
+      setFill(color);
+      doc.circle(x + s * 0.14, y - s * 0.37, s * 0.045, 'F');
+      doc.circle(x + s * 0.86, y - s * 0.37, s * 0.045, 'F');
+    },
+    shirt(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      setFill(color);
+      doc.roundedRect(x + s * 0.22, y - s * 0.78, s * 0.56, s * 0.7, 3, 3, 'F');
+      doc.triangle(x + s * 0.22, y - s * 0.7, x + s * 0.02, y - s * 0.5, x + s * 0.22, y - s * 0.4, 'F');
+      doc.triangle(x + s * 0.78, y - s * 0.7, x + s * 0.98, y - s * 0.5, x + s * 0.78, y - s * 0.4, 'F');
+    },
+    sun(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const cx = x + s * 0.5;
+      const cy = y - s * 0.5;
+      setFill(color);
+      doc.circle(cx, cy, s * 0.24, 'F');
+      setDraw(color);
+      doc.setLineWidth(1.5);
+      doc.setLineCap('round');
+      for (let i = 0; i < 8; i++) {
+        const ang = (Math.PI / 4) * i;
+        const r1 = s * 0.36;
+        const r2 = s * 0.48;
+        doc.line(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1, cx + Math.cos(ang) * r2, cy + Math.sin(ang) * r2);
+      }
+    },
+    pill(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const w = s * 0.8;
+      const h = s * 0.34;
+      const rx = x + (s - w) / 2;
+      const ry = y - s * 0.6;
+      setDraw(color);
+      doc.setLineWidth(1.3);
+      doc.roundedRect(rx, ry, w, h, h / 2, h / 2, 'S');
+      setFill(color);
+      doc.rect(rx + w * 0.06, ry + h * 0.1, w * 0.42, h * 0.8, 'F');
+      doc.line(rx + w / 2, ry, rx + w / 2, ry + h);
+    },
+    plug(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      setFill(color);
+      doc.roundedRect(x + s * 0.18, y - s * 0.62, s * 0.64, s * 0.5, 4, 4, 'F');
+      doc.rect(x + s * 0.32, y - s * 0.82, s * 0.1, s * 0.22, 'F');
+      doc.rect(x + s * 0.58, y - s * 0.82, s * 0.1, s * 0.22, 'F');
+      setFill(COLORS.white);
+      const cx = x + s * 0.5;
+      const cy = y - s * 0.38;
+      doc.triangle(cx + s * 0.06, cy - s * 0.16, cx - s * 0.08, cy + s * 0.02, cx + s * 0.02, cy + s * 0.02, 'F');
+      doc.triangle(cx + s * 0.02, cy + s * 0.02, cx - s * 0.06, cy + s * 0.2, cx + s * 0.08, cy - s * 0.02, 'F');
+    },
+    shoe(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      setFill(color);
+      doc.roundedRect(x + s * 0.05, y - s * 0.22, s * 0.9, s * 0.16, 3, 3, 'F');
+      doc.roundedRect(x + s * 0.08, y - s * 0.55, s * 0.5, s * 0.36, 4, 4, 'F');
+      doc.triangle(x + s * 0.5, y - s * 0.5, x + s * 0.95, y - s * 0.3, x + s * 0.55, y - s * 0.2, 'F');
+    },
   };
+
+  /** Keyword match from an admin-typed "Things to Carry" item to the icon
+   *  that best represents it, so the chip grid doesn't need a dedicated
+   *  icon field in the data — falls back to a plain checkmark for anything
+   *  that doesn't match a known category (still always correct, just less
+   *  specific). */
+  function carryIconFor(item: string): (x: number, y: number, s?: number, color?: RGB) => void {
+    const t = item.toLowerCase();
+    if (/passport|\bvisa\b|\bid\b|identity|documents?/.test(t)) return icons.idcard;
+    if (/\bcash\b|\bcards?\b|money|wallet|currency|forex/.test(t)) return icons.cash;
+    if (/sunscreen|sunglasses|shades|\bspf\b|lotion/.test(t)) return icons.sun;
+    if (/medicine|medication|\bpills?\b|first[\s-]?aid|health kit/.test(t)) return icons.pill;
+    if (/charger|power\s*bank|adapter|\bcable\b|battery|electronics?/.test(t)) return icons.plug;
+    if (/\bshoes?\b|footwear|sneakers?|sandals?|slippers?/.test(t)) return icons.shoe;
+    if (/clothes|clothing|jacket|sweater|\bwear\b|dress|outfit|apparel/.test(t)) return icons.shirt;
+    return icons.check;
+  }
 
   // ---------------------------------------------------------------------
   // Text primitive: draws left-aligned wrapped text and returns the y
@@ -851,6 +932,99 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   // =========================================================================
   // SLIDES — What's Included / What's Not Included (paired columns)
   // =========================================================================
+  // =========================================================================
+  // SLIDE — Inclusions/Exclusions + Things to Carry, combined onto one slide
+  // (left column: What's Included stacked above What's Not Included; right
+  // column: the carry chip grid) — this is the reference design's layout.
+  // Only attempted when BOTH sections have content; returns false if the
+  // combined content is too tall for one slide, so the caller falls back to
+  // `renderInclusions()` + `renderThingsToCarry()` below, which paginate
+  // each section independently and are always correct regardless of length.
+  // =========================================================================
+  function renderInclusionsAndCarryCombined(): boolean {
+    if ((trip.included.length === 0 && trip.not_included.length === 0) || trip.things_to_carry.length === 0) return false;
+
+    const top = 92;
+    const availH = CONTENT_BOTTOM - top;
+    const colGap = 44;
+    const leftW = CONTENT_W * 0.42;
+    const rightX = MARGIN + leftW + colGap;
+    const rightW = CONTENT_W - leftW - colGap;
+
+    const measureItem = (item: string) => measureParagraphHeight(item, leftW - 28, 9.8, 14) + 10;
+    const includedH = trip.included.length ? 34 + trip.included.reduce((s, it) => s + measureItem(it), 0) : 0;
+    const notIncludedH = trip.not_included.length ? 34 + trip.not_included.reduce((s, it) => s + measureItem(it), 0) : 0;
+    const leftGap = trip.included.length && trip.not_included.length ? 12 : 0;
+    const leftH = includedH + leftGap + notIncludedH;
+
+    const perRow = 2;
+    const chipGap = 14;
+    const chipH = 46;
+    const chipW = (rightW - chipGap * (perRow - 1)) / perRow;
+    const carryRows = Math.ceil(trip.things_to_carry.length / perRow);
+    const rightH = 34 + carryRows * chipH + Math.max(0, carryRows - 1) * chipGap;
+
+    if (Math.max(leftH, rightH) > availH) return false;
+
+    function drawColumn(x: number, startY: number, title: string, items: string[], color: RGB, kind: 'check' | 'cross') {
+      let y = startY;
+      setText(COLORS.dark);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13.5);
+      doc.text(title, x, y);
+      y += 24;
+      items.forEach(item => {
+        const lines = doc.splitTextToSize(item, leftW - 28);
+        if (kind === 'check') drawCheck(x + 6, y - 3, 7, color, 1.6);
+        else drawCross(x + 6, y - 3, 6, color, 1.6);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.8);
+        setText(COLORS.darkMuted);
+        doc.text(lines, x + 20, y);
+        y += lines.length * 14 + 10;
+      });
+    }
+
+    newSlide();
+    slideHeader((x, y) => icons.check(x, y, 20), "What's Included & Things to Carry");
+    const startY = centeredTop(top, CONTENT_BOTTOM, Math.max(leftH, rightH));
+
+    if (trip.included.length) drawColumn(MARGIN, startY, "What's Included", trip.included, COLORS.green, 'check');
+    if (trip.not_included.length) drawColumn(MARGIN, startY + includedH + leftGap, "What's Not Included", trip.not_included, COLORS.red, 'cross');
+
+    setText(COLORS.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13.5);
+    doc.text('Things to Carry', rightX, startY);
+    const gridTop = startY + 24;
+    trip.things_to_carry.forEach((item, i) => {
+      const row = Math.floor(i / perRow);
+      const col = i % perRow;
+      const cx = rightX + col * (chipW + chipGap);
+      const cy = gridTop + row * (chipH + chipGap);
+
+      setFill(COLORS.backgroundWarm);
+      doc.roundedRect(cx, cy, chipW, chipH, 8, 8, 'F');
+      setDraw(COLORS.grayLineSoft);
+      doc.setLineWidth(0.75);
+      doc.roundedRect(cx, cy, chipW, chipH, 8, 8, 'S');
+
+      const itemIcon = carryIconFor(item);
+      setFill(COLORS.primary);
+      doc.circle(cx + 20, cy + chipH / 2, 8, 'F');
+      itemIcon(cx + 20 - 7, cy + chipH / 2 + 7, 14, COLORS.white);
+
+      setText(COLORS.dark);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const lines = clampLines(item, chipW - 44, 2);
+      const lineY = cy + chipH / 2 - ((lines.length - 1) * 11) / 2 + 3;
+      doc.text(lines, cx + 34, lineY);
+    });
+
+    return true;
+  }
+
   function renderInclusions() {
     if (trip.included.length === 0 && trip.not_included.length === 0) return;
 
@@ -941,9 +1115,10 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         doc.setLineWidth(0.75);
         doc.roundedRect(x, y, chipW, chipH, 8, 8, 'S');
 
+        const itemIcon = carryIconFor(item);
         setFill(COLORS.primary);
         doc.circle(x + 20, y + chipH / 2, 8, 'F');
-        drawCheck(x + 20, y + chipH / 2 + 1, 6.5, COLORS.white, 1.5);
+        itemIcon(x + 20 - 7, y + chipH / 2 + 7, 14, COLORS.white);
 
         setText(COLORS.dark);
         doc.setFont('helvetica', 'normal');
@@ -986,7 +1161,26 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const pad = 34;
     const lines = doc.splitTextToSize(trip.meeting_point, textColW - pad * 2);
     const hasLink = !!trip.meeting_point_map_url;
-    const contentH = 30 /* badge row */ + lines.length * 16 + (hasLink ? 46 : 20);
+
+    // Structured logistics rows — real per-trip data once Admin fills them
+    // in; sensible boilerplate otherwise (this is genuinely often correct,
+    // since exact time/terminal for a trip months out often isn't final).
+    const detailRows: { label: string; value: string }[] = [
+      { label: 'Time', value: trip.meeting_time || 'To be communicated' },
+      { label: 'Terminal', value: trip.meeting_terminal || 'To be informed' },
+      { label: 'Details', value: trip.meeting_details || 'More info will be shared closer to the departure date.' },
+    ];
+    const rowMaxWidth = textColW - pad * 2;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    const rowHeights = detailRows.map(r => {
+      const labelW = doc.getTextWidth(`${r.label}:  `);
+      const valueLines = doc.splitTextToSize(r.value, rowMaxWidth - labelW);
+      return Math.max(1, valueLines.length) * 15;
+    });
+    const rowsH = rowHeights.reduce((a, b) => a + b, 0) + (detailRows.length - 1) * 8;
+
+    const contentH = 30 /* badge row */ + lines.length * 16 + 22 /* divider gap */ + rowsH + (hasLink ? 46 : 16);
     const boxH = Math.min(Math.max(200, contentH + pad * 2), availH);
     const boxTop = top + Math.max(0, (availH - boxH) / 2);
 
@@ -1021,7 +1215,27 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11.5);
     doc.text(lines, MARGIN + pad, ty);
-    ty += lines.length * 16 + 16;
+    ty += lines.length * 16 + 14;
+
+    setDraw(COLORS.grayLineSoft);
+    doc.setLineWidth(0.75);
+    doc.line(MARGIN + pad, ty, MARGIN + pad + rowMaxWidth, ty);
+    ty += 20;
+
+    detailRows.forEach((row, i) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      setText(COLORS.dark);
+      const labelText = `${row.label}:  `;
+      doc.text(labelText, MARGIN + pad, ty);
+      const labelW = doc.getTextWidth(labelText);
+      doc.setFont('helvetica', 'normal');
+      setText(COLORS.darkMuted);
+      const valueLines = doc.splitTextToSize(row.value, rowMaxWidth - labelW);
+      doc.text(valueLines, MARGIN + pad + labelW, ty);
+      ty += rowHeights[i] + 8;
+    });
+    ty += 6;
 
     if (hasLink) {
       const label = 'View on map';
@@ -1123,10 +1337,6 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       { title: 'Missed Services', body: [STATIC.missedServices] },
       { title: 'Trip Cancellation by Organizer', body: STATIC.organizerCancellation },
       {
-        title: 'Minimum Group Size',
-        body: [STATIC.minimumGroupSize.intro, ...STATIC.minimumGroupSize.options.map(o => `\u2022 ${o}`)],
-      },
-      {
         title: 'Refund Timeline',
         body: [
           `Where applicable, approved refunds will be processed within ${policy.refund_min_days}\u2013${policy.refund_max_days} working days, subject to the receipt of refunds from the respective third-party service providers.`,
@@ -1182,30 +1392,6 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       if (page.left.length) drawColumn(MARGIN, startY, page.left);
       if (page.right.length) drawColumn(MARGIN + colW + colGap, startY, page.right);
     });
-
-    // Acceptance note, appended as its own small closing strip.
-    newSlide();
-    slideHeader((x, y) => icons.shield(x, y, 20), 'Cancellation Policy', 'Acknowledgement');
-    const noteLines = doc.splitTextToSize(STATIC.acceptance, CONTENT_W - 60);
-    const noteH = noteLines.length * 15 + 40;
-    const { activePrice } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
-    const noteTop = centeredTop(top, CONTENT_BOTTOM, noteH + (activePrice != null ? 40 : 0));
-    setFill(COLORS.backgroundWarm);
-    doc.roundedRect(MARGIN, noteTop, CONTENT_W, noteH, 10, 10, 'F');
-    setDraw(COLORS.grayLine);
-    doc.setLineWidth(0.75);
-    doc.roundedRect(MARGIN, noteTop, CONTENT_W, noteH, 10, 10, 'S');
-    setText(COLORS.darkMuted);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(11);
-    doc.text(noteLines, MARGIN + 24, noteTop + 28);
-
-    if (activePrice != null) {
-      setText(COLORS.dark);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.5);
-      doc.text(`Advance / trip amount: ${formatINR(activePrice)} per person`, MARGIN + 24, noteTop + noteH + 30);
-    }
   }
 
   // =========================================================================
@@ -1271,8 +1457,10 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   await renderCover();
   renderOverviewAndHighlights();
   await renderItinerary();
-  renderInclusions();
-  renderThingsToCarry();
+  if (!renderInclusionsAndCarryCombined()) {
+    renderInclusions();
+    renderThingsToCarry();
+  }
   renderMeetingPoint();
   renderFaqs();
   renderCancellationPolicy();

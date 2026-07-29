@@ -18,6 +18,13 @@ export interface UpcomingTrip {
   things_to_carry: string[];
   meeting_point?: string;
   meeting_point_map_url?: string;
+  // Optional structured assembly-point logistics, shown on the public trip
+  // page and the itinerary PDF's Meeting Point section. All optional and
+  // independent of meeting_point (which stays the free-text location line)
+  // — see add_trip_meeting_point_details.sql.
+  meeting_time?: string;
+  meeting_terminal?: string;
+  meeting_details?: string;
   faqs: FAQ[];
   total_seats: number;
   seats_booked: number;
