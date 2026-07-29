@@ -977,12 +977,14 @@ begin
   insert into public.completed_trips (
     id, title, destination, slug, trip_date, description,
     cover_image, gallery_images, is_published, trip_type,
-    original_itinerary, original_highlights, original_included, original_not_included
+    original_itinerary, original_highlights, original_included, original_not_included,
+    participants
   )
   select
     ut.id, ut.title, ut.destination, ut.slug, ut.start_date, ut.description,
     ut.cover_image, ut.gallery_images, false, ut.trip_type,
-    ut.itinerary, ut.highlights, ut.included, ut.not_included
+    ut.itinerary, ut.highlights, ut.included, ut.not_included,
+    ut.seats_booked
   from public.upcoming_trips ut
   where ut.start_date <= current_date
     and not exists (
