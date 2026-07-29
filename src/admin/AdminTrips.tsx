@@ -459,15 +459,6 @@ export default function AdminTrips() {
                 pathPrefix="trip-covers"
               />
             </div>
-            <div className="md:col-span-2">
-              <MultiImageUploadField
-                label="Photo Gallery (simple — legacy)"
-                value={form.gallery_images}
-                onChange={urls => setForm(f => ({ ...f, gallery_images: urls }))}
-                bucket="ulaa"
-                pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}`}
-              />
-            </div>
 
             {/* Places You'll Post — gallery with captions */}
             <div className="md:col-span-2 space-y-3">
@@ -510,15 +501,6 @@ export default function AdminTrips() {
           </TabPanel>
 
           <TabPanel label="Overview & Itinerary">
-            <div className="md:col-span-2">
-              <TagListEditor
-                label="Trip Highlights (simple list — legacy)"
-                value={form.highlights}
-                onChange={items => setForm(f => ({ ...f, highlights: items }))}
-                placeholder="e.g. Chandratal Lake at dawn"
-              />
-            </div>
-
             {/* Rich Highlight Cards */}
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
@@ -570,7 +552,7 @@ export default function AdminTrips() {
           <TabPanel label="Inclusions & Prep">
             <div>
               <TagListEditor
-                label="What's Included (simple list — legacy)"
+                label="What's Included"
                 value={form.included}
                 onChange={items => setForm(f => ({ ...f, included: items }))}
                 placeholder="e.g. All meals"
@@ -578,7 +560,7 @@ export default function AdminTrips() {
             </div>
             <div>
               <TagListEditor
-                label="What's Not Included (simple list — legacy)"
+                label="What's Not Included"
                 value={form.not_included}
                 onChange={items => setForm(f => ({ ...f, not_included: items }))}
                 placeholder="e.g. Flights"
@@ -591,36 +573,6 @@ export default function AdminTrips() {
                 onChange={items => setForm(f => ({ ...f, things_to_carry: items }))}
                 placeholder="e.g. Warm jacket"
               />
-            </div>
-
-            {/* Rich Included Items */}
-            <div className="md:col-span-2 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-dark">What's Included — Rich (icon + description)</label>
-                <button type="button" onClick={() => setForm(f => ({ ...f, included_items: [...f.included_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
-              </div>
-              {form.included_items.map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input value={item.icon} onChange={e => setForm(f => ({ ...f, included_items: f.included_items.map((it, idx) => idx === i ? { ...it, icon: e.target.value } : it) }))} className={`${inputClass} w-20 flex-shrink-0`} placeholder="✅" />
-                  <input value={item.description} onChange={e => setForm(f => ({ ...f, included_items: f.included_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. All meals included" />
-                  <button type="button" onClick={() => setForm(f => ({ ...f, included_items: f.included_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
-                </div>
-              ))}
-            </div>
-
-            {/* Rich Not Included Items */}
-            <div className="md:col-span-2 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-dark">What's Not Included — Rich (icon + description)</label>
-                <button type="button" onClick={() => setForm(f => ({ ...f, not_included_items: [...f.not_included_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
-              </div>
-              {form.not_included_items.map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input value={item.icon} onChange={e => setForm(f => ({ ...f, not_included_items: f.not_included_items.map((it, idx) => idx === i ? { ...it, icon: e.target.value } : it) }))} className={`${inputClass} w-20 flex-shrink-0`} placeholder="❌" />
-                  <input value={item.description} onChange={e => setForm(f => ({ ...f, not_included_items: f.not_included_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. Flights not included" />
-                  <button type="button" onClick={() => setForm(f => ({ ...f, not_included_items: f.not_included_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
-                </div>
-              ))}
             </div>
 
             {/* Travel with Confidence */}
