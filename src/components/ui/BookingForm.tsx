@@ -34,8 +34,8 @@ interface BookingFormProps {
   // restriction on that side) or omitted entirely by the caller — in both
   // cases validateAge falls back to the app's default 18-65 range. See
   // src/utils/formValidation.ts.
-  minAge?: number;
-  maxAge?: number;
+  minAge?: number | null;
+  maxAge?: number | null;
 }
 
 export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge }: BookingFormProps) {

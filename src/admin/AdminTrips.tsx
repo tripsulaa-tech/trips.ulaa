@@ -162,6 +162,20 @@ export default function AdminTrips() {
     }, 1500);
   };
 
+  // Runs the field search automatically as the admin types, so there's no
+  // separate "Search" button to click — a short debounce avoids jumping/
+  // scrolling on every single keystroke.
+  useEffect(() => {
+    if (!modalOpen) return;
+    if (!modalSearch.trim()) {
+      setModalSearchNoMatch(false);
+      return;
+    }
+    const timeout = setTimeout(() => handleModalSearch(), 350);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalSearch, modalOpen]);
+
   const openCreate = () => {
     setEditingTrip(null);
     setForm(emptyForm);
@@ -473,11 +487,11 @@ export default function AdminTrips() {
         ...form,
         slug: slugify(form.title),
         price: form.price,
-        early_bird_price: form.early_bird_price === '' ? undefined : form.early_bird_price,
-        early_bird_deadline: form.early_bird_deadline || undefined,
-        strike_through_price: form.strike_through_price === '' ? undefined : form.strike_through_price,
-        min_age: form.min_age === '' ? undefined : form.min_age,
-        max_age: form.max_age === '' ? undefined : form.max_age,
+        early_bird_price: form.early_bird_price === '' ? null : form.early_bird_price,
+        early_bird_deadline: form.early_bird_deadline || null,
+        strike_through_price: form.strike_through_price === '' ? null : form.strike_through_price,
+        min_age: form.min_age === '' ? null : form.min_age,
+        max_age: form.max_age === '' ? null : form.max_age,
         seats_booked: Math.max(0, Math.min(form.seats_booked, form.total_seats)),
       };
       if (editingTrip) {
@@ -612,6 +626,18 @@ export default function AdminTrips() {
         onClose={() => setModalOpen(false)}
         title={editingTrip ? 'Edit Trip' : 'Add Trip'}
         size="xl"
+        headerContent={
+          <div className="relative w-full max-w-xs">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+            <input
+              type="text"
+              value={modalSearch}
+              onChange={e => setModalSearch(e.target.value)}
+              placeholder="Search fields (e.g. meeting point, pricing, media)..."
+              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+            />
+          </div>
+        }
         footer={
           <div className="flex gap-3">
             <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>Cancel</Button>
@@ -621,22 +647,8 @@ export default function AdminTrips() {
           </div>
         }
       >
-        <div className="flex items-start gap-2 mb-4">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
-            <input
-              type="text"
-              value={modalSearch}
-              onChange={e => { setModalSearch(e.target.value); setModalSearchNoMatch(false); }}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleModalSearch(); } }}
-              placeholder="Search fields (e.g. meeting point, pricing, media)..."
-              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-            />
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={handleModalSearch}>Search</Button>
-        </div>
         {modalSearchNoMatch && (
-          <p className="text-xs text-red-500 -mt-3 mb-3">No matching field found for "{modalSearch}".</p>
+          <p className="text-xs text-red-500 -mt-2 mb-3">No matching field found for "{modalSearch}".</p>
         )}
         <div ref={modalBodyRef}>
           <Tabs>
@@ -1195,7 +1207,7 @@ export default function AdminTrips() {
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-0.5">Age Range</p>
                 <p className="text-dark">
-                  {viewingTrip.min_age !== undefined || viewingTrip.max_age !== undefined
+                  {viewingTrip.min_age != null || viewingTrip.max_age != null
                     ? formatAgeRange(viewingTrip.min_age, viewingTrip.max_age)
                     : 'No restriction (default 18–65)'}
                 </p>

@@ -15,8 +15,8 @@ export function formatPrice(amount: number): string {
  */
 export function getActivePrice(
   price?: number,
-  earlyBirdPrice?: number,
-  earlyBirdDeadline?: string
+  earlyBirdPrice?: number | null,
+  earlyBirdDeadline?: string | null
 ): { activePrice?: number; isEarlyBird: boolean; deadlinePassed: boolean } {
   if (earlyBirdPrice && earlyBirdDeadline) {
     const deadline = new Date(earlyBirdDeadline);
@@ -72,7 +72,7 @@ export function getStrikeThroughPrice(
   activePrice: number | undefined,
   regularPrice: number | undefined,
   isEarlyBird: boolean,
-  strikeThroughPrice?: number
+  strikeThroughPrice?: number | null
 ): number | undefined {
   if (strikeThroughPrice && activePrice != null && strikeThroughPrice > activePrice) {
     return strikeThroughPrice;

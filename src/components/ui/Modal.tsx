@@ -12,6 +12,9 @@ interface ModalProps {
   /** Optional actions (e.g. Save/Cancel), rendered as a footer bar that
    *  stays pinned to the bottom of the modal while the body scrolls. */
   footer?: ReactNode;
+  /** Optional content (e.g. a search field) rendered in the header row,
+   *  between the title and the close button. Only shown when `title` is set. */
+  headerContent?: ReactNode;
 }
 
 const sizes = {
@@ -21,7 +24,7 @@ const sizes = {
   xl: 'max-w-4xl',
 };
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md', footer }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,11 +71,12 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
 
             {/* Header */}
             {title && (
-              <div className="flex items-center justify-between p-6 border-b border-background-warm flex-shrink-0">
-                <h3 className="font-display text-2xl font-bold text-dark">{title}</h3>
+              <div className="flex items-center gap-4 p-6 border-b border-background-warm flex-shrink-0">
+                <h3 className="font-display text-2xl font-bold text-dark flex-shrink-0">{title}</h3>
+                <div className="flex-1 min-w-0 flex justify-end">{headerContent}</div>
                 <button
                   onClick={onClose}
-                  className="text-dark-muted hover:text-dark bg-background rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
+                  className="text-dark-muted hover:text-dark bg-background rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors flex-shrink-0"
                   aria-label="Close"
                 >
                   <X size={20} />

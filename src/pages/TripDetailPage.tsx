@@ -175,20 +175,8 @@ export default function TripDetailPage() {
               <ArrowLeft size={16} /> All Trips
             </Link>
             <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">{trip.title}</h1>
-            <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm mb-5">
-              <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
-              <span className="flex items-center gap-2"><Clock size={14} /> {trip.duration}</span>
-              <span className="flex items-center gap-2"><Users size={14} />
-                {isFull ? 'Sold out' : isAlmostFull ? 'Almost full — hurry!' : `Group of ${trip.total_seats}`}
-              </span>
-              {(trip.min_age !== undefined || trip.max_age !== undefined) && (
-                <span className="flex items-center gap-2"><UserCheck size={14} /> {formatAgeRange(trip.min_age, trip.max_age)}</span>
-              )}
-			  {isEarlyBird && (
-				<span className="flex items-center gap-1.5 bg-secondary text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md">
-				Early Bird
-				</span>
-			  )}
+            <div className="flex w-fit items-center gap-2 text-white text-sm font-button font-semibold mb-3">
+              <MapPin size={14} /> {trip.destination}
             </div>
             {trip.description && (
               <p className="text-white/85 text-base md:text-lg leading-relaxed max-w-2xl mb-6 line-clamp-3">
@@ -196,21 +184,40 @@ export default function TripDetailPage() {
               </p>
             )}
             <div className="flex flex-wrap items-center gap-3 mb-5">
-              <Button variant="primary" size="md" onClick={() => setBookingOpen(true)}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setBookingOpen(true)}
+                className="whitespace-nowrap sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
+              >
                 {isFull ? 'Join Waitlist' : 'Book Your Seat'}
               </Button>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 type="button"
                 onClick={handleDownloadPdf}
                 disabled={pdfLoading}
-                className="inline-flex items-center justify-center gap-2 font-button font-semibold tracking-wide px-6 py-3 min-h-[48px] rounded-md text-base bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="whitespace-nowrap text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
               >
                 {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
                 {pdfLoading ? 'Preparing…' : 'Download Itinerary'}
-              </button>
+              </Button>
             </div>
-            <div className="flex w-fit items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-4 py-1.5 rounded-md">
-              <MapPin size={14} /> {trip.destination}
+            <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm">
+              <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
+              <span className="flex items-center gap-2"><Clock size={14} /> {trip.duration}</span>
+              <span className="flex items-center gap-2"><Users size={14} />
+                {isFull ? 'Sold out' : isAlmostFull ? 'Almost full — hurry!' : `Group of ${trip.total_seats}`}
+              </span>
+              {(trip.min_age != null || trip.max_age != null) && (
+                <span className="flex items-center gap-2"><UserCheck size={14} /> {formatAgeRange(trip.min_age, trip.max_age)}</span>
+              )}
+			  {isEarlyBird && (
+				<span className="flex items-center gap-1.5 bg-secondary text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md">
+				Early Bird
+				</span>
+			  )}
             </div>
           </motion.div>
         </div>
@@ -404,6 +411,7 @@ export default function TripDetailPage() {
                   <PagedCarousel
                     items={trip.itinerary}
                     itemsPerView={itineraryPerView}
+                    topOverflow={32}
                     keyExtractor={day => day.day}
                     renderItem={(day, i) => {
                       const meta = getTripHighlightIcon(day.icon);
@@ -666,7 +674,7 @@ export default function TripDetailPage() {
 
             {/* Eligibility — only shown when the admin has set an age
                 restriction on this trip (Admin → Trips → Basic Info). */}
-            {(trip.min_age !== undefined || trip.max_age !== undefined) && (
+            {(trip.min_age != null || trip.max_age != null) && (
               <section className="bg-background-warm rounded-lg p-6">
                 <h2 className="font-display text-2xl font-bold text-dark mb-2 flex items-center gap-2">
                   <UserCheck size={22} className="text-primary" /> Eligibility
@@ -810,7 +818,7 @@ export default function TripDetailPage() {
                     <span className="text-dark-muted">Group Size</span>
                     <span className="text-dark font-medium">Max {trip.total_seats}</span>
                   </div>
-                  {(trip.min_age !== undefined || trip.max_age !== undefined) && (
+                  {(trip.min_age != null || trip.max_age != null) && (
                     <div className="flex justify-between text-sm">
                       <span className="text-dark-muted">Age Range</span>
                       <span className="text-dark font-medium">{formatAgeRange(trip.min_age, trip.max_age)}</span>

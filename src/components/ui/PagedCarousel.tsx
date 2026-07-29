@@ -45,10 +45,16 @@ interface PagedCarouselProps<T> {
   itemsPerView: number;
   renderItem: (item: T, index: number) => ReactNode;
   keyExtractor?: (item: T, index: number) => string | number;
+  /** Extra space (px) reserved above the sliding track for content that
+   *  intentionally overflows a card's top edge (e.g. a circular badge that
+   *  straddles the border). Without this, the track's `overflow-hidden`
+   *  (needed to mask horizontal sliding) clips the top of that content.
+   *  A matching negative margin keeps the track's visual position unchanged. */
+  topOverflow?: number;
 }
 
 function PagedCarouselInner<T>(
-  { items, itemsPerView, renderItem, keyExtractor }: PagedCarouselProps<T>,
+  { items, itemsPerView, renderItem, keyExtractor, topOverflow = 0 }: PagedCarouselProps<T>,
   ref: React.Ref<PagedCarouselHandle>
 ) {
   const maxIndex = Math.max(0, items.length - itemsPerView);
@@ -77,7 +83,10 @@ function PagedCarouselInner<T>(
 
   return (
     <div>
-      <div className="overflow-hidden -mx-3">
+      <div
+        className="overflow-hidden -mx-3"
+        style={topOverflow ? { paddingTop: topOverflow, marginTop: -topOverflow } : undefined}
+      >
         <motion.div
           className="flex"
           drag={showControls ? 'x' : false}

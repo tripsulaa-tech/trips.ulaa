@@ -74,19 +74,19 @@ export interface UpcomingTrip {
   // someone who's already been waiting.
   waitlist_reserved?: number;
   price?: number;
-  early_bird_price?: number;
-  early_bird_deadline?: string;
+  early_bird_price?: number | null;
+  early_bird_deadline?: string | null;
   // Optional "was ₹X" marketing price, shown crossed out next to whichever
   // of price/early_bird_price is currently active. Independent of the
   // early-bird mechanism itself — see getStrikeThroughPrice in utils/index.ts
   // for how it combines with (and falls back around) early-bird pricing.
-  strike_through_price?: number;
+  strike_through_price?: number | null;
   // Optional age eligibility range for this trip. Either side can be left
   // unset (no restriction on that side); if both are unset, the public
   // forms fall back to the app's default 18-65 rule — see validateAge in
   // src/utils/formValidation.ts.
-  min_age?: number;
-  max_age?: number;
+  min_age?: number | null;
+  max_age?: number | null;
   cover_image?: string;
   gallery_images: string[];
   terms_and_conditions?: string;
