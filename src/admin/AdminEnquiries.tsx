@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird } from 'lucide-react';
@@ -427,6 +427,27 @@ export default function AdminEnquiries() {
   // whenever the admin drills into a different trip group, since the
   // checkboxes only ever reflect what's currently on screen.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Bulk Edit writes pricing fields (total_amount/amount_paid) as one flat
+  // value across every selected row — safe only when they all belong to
+  // the same trip (different trips have different prices). Group members
+  // share trip_id by construction, so this is really just guarding against
+  // a mixed selection made while the Trip filter is "All". Null trip_id
+  // (general enquiries) still counts as its own bucket so a mix of
+  // trip-linked and general enquiries is caught too.
+  const selectedTripIds = useMemo(
+    () => new Set(enquiries.filter(e => selectedIds.has(e.id)).map(e => e.trip_id ?? 'none')),
+    [enquiries, selectedIds]
+  );
+  const bulkEditAllowed = selectedTripIds.size <= 1;
+  // trip_title is snapshotted directly on each enquiry row at submit time
+  // (see submitEnquiry/createManualEnquiry in api.ts), so it's available
+  // here without needing to cross-reference the trips list — which only
+  // covers upcoming trips anyway, not completed ones.
+  const selectedTripName = useMemo(() => {
+    if (selectedTripIds.size !== 1) return null;
+    const selected = enquiries.find(e => selectedIds.has(e.id));
+    return selected?.trip_id ? selected.trip_title || 'Untitled trip' : 'General enquiry (no trip)';
+  }, [enquiries, selectedIds, selectedTripIds]);
   // Mobile only: filter panel is collapsed by default (it's 7 stacked
   // fields — always showing it pushes the actual list off-screen on a
   // phone) and is opened via the toggle in the Filters header. Desktop
@@ -1907,9 +1928,17 @@ export default function AdminEnquiries() {
                   {selectedIds.size} selected
                 </p>
                 <div className="flex items-center gap-2 ml-auto">
-                  <Button variant="outline" size="sm" onClick={openBulkEdit}>
-                    <Pencil size={14} /> Bulk Edit
-                  </Button>
+                  {bulkEditAllowed ? (
+                    <Button variant="outline" size="sm" onClick={openBulkEdit}>
+                      <Pencil size={14} /> Bulk Edit
+                    </Button>
+                  ) : (
+                    <span title="Bulk Edit is disabled when the selection spans more than one trip — pricing fields aren't safe to apply across trips with different prices.">
+                      <Button variant="outline" size="sm" disabled>
+                        <Pencil size={14} /> Bulk Edit
+                      </Button>
+                    </span>
+                  )}
                   <button
                     onClick={handleBulkDelete}
                     disabled={bulkDeleting}
@@ -3009,6 +3038,11 @@ export default function AdminEnquiries() {
       {/* Bulk Edit Modal */}
       <Modal isOpen={bulkEditOpen} onClose={() => setBulkEditOpen(false)} title={`Bulk Edit — ${selectedIds.size} selected`} size="sm">
         <div className="space-y-4">
+          {selectedTripName && (
+            <p className="text-xs font-medium text-primary bg-primary/10 rounded-md px-3 py-2">
+              Trip: {selectedTripName}
+            </p>
+          )}
           <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">
             Only fields you change here are applied — anything left on "No change" is left exactly as it is for every selected enquiry.
           </p>
