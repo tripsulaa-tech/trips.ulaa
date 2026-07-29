@@ -14,6 +14,8 @@ import CancellationPolicyEditor from '../components/ui/CancellationPolicyEditor'
 import TermsEditor from '../components/ui/TermsEditor';
 import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDisplay';
 import DatePicker from '../components/ui/DatePicker';
+import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
+import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
@@ -163,6 +165,7 @@ export default function AdminTrips() {
           title: '<Short title for this day, e.g. "Arrival & Local Exploration">',
           description: '<What happens this day>',
           images: ['(leave blank — uploaded manually)'],
+          icon: '<Optional icon-library key for this day\'s theme, e.g. "palmtree", "coffee", "paw-print", "mountain" — leave "" to just show the day number>',
         },
       ],
       included: ['<Short line item of what is included, e.g. "All meals">'],
@@ -284,6 +287,7 @@ export default function AdminTrips() {
               title: asStr(d?.title),
               description: asStr(d?.description),
               images: asStrArray(d?.images),
+              icon: asStr(d?.icon),
             }))
           : [],
         included: asStrArray(raw.included),
@@ -777,12 +781,16 @@ export default function AdminTrips() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-medium text-dark mb-1">Icon / Emoji</label>
-                      <input value={card.icon} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, icon: e.target.value } : c) }))} className={inputClass} placeholder="🏔️" />
+                      <label className="block text-xs font-medium text-dark mb-1">Icon</label>
+                      <TripHighlightIconPicker
+                        value={card.icon}
+                        hintText={card.heading}
+                        onChange={key => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, icon: key } : c) }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-dark mb-1">Heading</label>
-                      <input value={card.heading} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, heading: e.target.value } : c) }))} className={inputClass} />
+                      <input value={card.heading} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, heading: e.target.value } : c) }))} className={inputClass} placeholder="e.g. Dreamy Beaches" />
                     </div>
                   </div>
                   <div>
@@ -838,8 +846,14 @@ export default function AdminTrips() {
                 <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: [...f.confidence_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
               </div>
               {form.confidence_items.map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input value={item.icon} onChange={e => setForm(f => ({ ...f, confidence_items: f.confidence_items.map((it, idx) => idx === i ? { ...it, icon: e.target.value } : it) }))} className={`${inputClass} w-20 flex-shrink-0`} placeholder="🛡️" />
+                <div key={i} className="flex items-start gap-2">
+                  <div className="w-32 flex-shrink-0">
+                    <TripHighlightIconPicker
+                      value={item.icon}
+                      hintText={item.description}
+                      onChange={key => setForm(f => ({ ...f, confidence_items: f.confidence_items.map((it, idx) => idx === i ? { ...it, icon: key } : it) }))}
+                    />
+                  </div>
                   <input value={item.description} onChange={e => setForm(f => ({ ...f, confidence_items: f.confidence_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. 24/7 on-ground support" />
                   <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: f.confidence_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
                 </div>
@@ -1175,12 +1189,12 @@ export default function AdminTrips() {
                 <p className="text-xs font-medium text-dark-muted mb-1">Highlight Cards</p>
                 <div className="grid grid-cols-2 gap-2">
                   {viewingTrip.highlight_cards!.map((c, i) => (
-                    <div key={i} className="bg-background-warm/60 rounded-md p-2.5">
-                      <p className="text-sm text-dark">
-                        {c.icon && <span className="mr-1.5">{c.icon}</span>}
-                        <span className="font-medium">{c.heading}</span>
-                      </p>
-                      {c.description && <p className="text-dark-muted text-xs mt-0.5">{c.description}</p>}
+                    <div key={i} className="bg-background-warm/60 rounded-md p-2.5 flex items-start gap-2">
+                      {c.icon && <TripHighlightIconDisplay icon={c.icon} index={i} size="sm" />}
+                      <div>
+                        <p className="text-sm text-dark font-medium">{c.heading}</p>
+                        {c.description && <p className="text-dark-muted text-xs mt-0.5">{c.description}</p>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1192,21 +1206,24 @@ export default function AdminTrips() {
                 <p className="text-xs font-medium text-dark-muted mb-1">Itinerary</p>
                 <div className="space-y-2">
                   {viewingTrip.itinerary.map((d, i) => (
-                    <div key={i} className="text-sm">
-                      <p className="font-medium text-dark">Day {d.day || i + 1}: {d.title}</p>
-                      {d.description && <p className="text-dark-muted text-xs mt-0.5">{d.description}</p>}
-                      {d.images && d.images.length > 0 && (
-                        <div className="flex gap-1.5 mt-1.5">
-                          {d.images.slice(0, 6).map((url, j) => (
-                            <img key={j} src={url} alt="" className="w-10 h-10 object-cover rounded" />
-                          ))}
-                          {d.images.length > 6 && (
-                            <span className="w-10 h-10 rounded bg-background-warm text-dark-muted text-xs flex items-center justify-center">
-                              +{d.images.length - 6}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                    <div key={i} className="text-sm flex items-start gap-2">
+                      {d.icon && <TripHighlightIconDisplay icon={d.icon} index={i} size="sm" />}
+                      <div className="min-w-0">
+                        <p className="font-medium text-dark">Day {d.day || i + 1}: {d.title}</p>
+                        {d.description && <p className="text-dark-muted text-xs mt-0.5">{d.description}</p>}
+                        {d.images && d.images.length > 0 && (
+                          <div className="flex gap-1.5 mt-1.5">
+                            {d.images.slice(0, 6).map((url, j) => (
+                              <img key={j} src={url} alt="" className="w-10 h-10 object-cover rounded" />
+                            ))}
+                            {d.images.length > 6 && (
+                              <span className="w-10 h-10 rounded bg-background-warm text-dark-muted text-xs flex items-center justify-center">
+                                +{d.images.length - 6}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1273,9 +1290,12 @@ export default function AdminTrips() {
             {(viewingTrip.confidence_items?.length ?? 0) > 0 && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Travel with Confidence</p>
-                <ul className="text-sm text-dark space-y-0.5">
+                <ul className="text-sm text-dark space-y-1">
                   {viewingTrip.confidence_items!.map((item, i) => (
-                    <li key={i}>{item.icon && <span className="mr-1.5">{item.icon}</span>}{item.description}</li>
+                    <li key={i} className="flex items-center gap-1.5">
+                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
+                      {item.description}
+                    </li>
                   ))}
                 </ul>
               </div>

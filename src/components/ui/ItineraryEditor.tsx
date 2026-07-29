@@ -1,6 +1,7 @@
 import { Plus, X, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
 import type { ItineraryDay } from '../../types/types-index';
 import MultiImageUploadField from './MultiImageUploadField';
+import TripHighlightIconPicker from './TripHighlightIconPicker';
 
 interface ItineraryEditorProps {
   value: ItineraryDay[];
@@ -74,19 +75,34 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                   </button>
                 </div>
               </div>
-              <input
-                value={day.title}
-                onChange={e => updateDay(index, { title: e.target.value })}
-                placeholder="Day title, e.g. Shimla → Kaza"
-                className={inputClass}
-              />
-              <textarea
-                value={day.description}
-                onChange={e => updateDay(index, { description: e.target.value })}
-                placeholder="What happens on this day"
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
+              <div className="flex gap-2 items-start">
+                <div className="w-32 flex-shrink-0">
+                  <label className="block text-[11px] font-medium text-dark-muted mb-1">Icon (optional)</label>
+                  <TripHighlightIconPicker
+                    value={day.icon || ''}
+                    hintText={day.title}
+                    onChange={key => updateDay(index, { icon: key })}
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input
+                    value={day.title}
+                    onChange={e => updateDay(index, { title: e.target.value })}
+                    placeholder="Day title, e.g. Shimla → Kaza"
+                    className={inputClass}
+                  />
+                  <textarea
+                    value={day.description}
+                    onChange={e => updateDay(index, { description: e.target.value })}
+                    placeholder="What happens on this day"
+                    rows={2}
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
+              </div>
+              {!day.icon && (
+                <p className="text-[11px] text-dark-muted">No icon set — the trip page will just show "Day {day.day}".</p>
+              )}
 
               <div className="pt-1">
                 <MultiImageUploadField

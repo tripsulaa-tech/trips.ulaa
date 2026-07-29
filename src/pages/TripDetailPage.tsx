@@ -9,6 +9,8 @@ import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
 import { GalleryGrid } from '../components/ui/Lightbox';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
+import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
+import { getTripHighlightIcon, getTripHighlightPalette } from '../constants/tripHighlightIcons';
 import { getUpcomingTripBySlug } from '../services/api';
 import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripGalleryItem, TripConfidenceItem } from '../types/types-index';
 import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice, getStrikeThroughPrice, formatAgeRange } from '../utils/utils-index';
@@ -16,7 +18,7 @@ import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/c
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
   MapPin, Calendar, Clock, Users, UserCheck, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink,
+  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart,
 } from 'lucide-react';
 
 export default function TripDetailPage() {
@@ -360,8 +362,11 @@ export default function TripDetailPage() {
             {/* Highlights */}
             {(trip.highlight_cards?.length ?? 0) > 0 ? (
               <section id="highlights" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">Why You'll Love This Trip</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <h2 className="font-display text-3xl font-bold text-dark mb-8 flex items-center gap-2">
+                  Why You'll Love This Trip
+                  <Heart size={20} className="text-primary/70 -rotate-6" fill="currentColor" fillOpacity={0.15} />
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y divide-x-0 sm:divide-y-0 sm:divide-x divide-background-warm">
                   {trip.highlight_cards!.map((card: TripHighlightCard, i: number) => (
                     <motion.div
                       key={i}
@@ -369,12 +374,12 @@ export default function TripDetailPage() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.07, duration: 0.5 }}
-                      className="flex items-start gap-4 bg-white rounded-xl shadow-card border border-background-warm p-5 hover:shadow-card-hover transition-shadow"
+                      className="flex flex-col items-center text-center gap-3 px-4 py-5"
                     >
-                      {card.icon && <span className="text-3xl flex-shrink-0 mt-0.5">{card.icon}</span>}
+                      <TripHighlightIconDisplay icon={card.icon} index={i} />
                       <div>
-                        <h3 className="font-display font-bold text-dark text-base mb-1">{card.heading}</h3>
-                        <p className="text-dark-muted text-sm leading-relaxed">{card.description}</p>
+                        <h3 className="font-display font-bold text-dark text-sm mb-1">{card.heading}</h3>
+                        <p className="text-dark-muted text-xs leading-relaxed">{card.description}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -397,21 +402,44 @@ export default function TripDetailPage() {
             {/* Itinerary */}
             {trip.itinerary.length > 0 && (
               <section id="itinerary" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">Detailed Itinerary</h2>
-                <div className="space-y-4">
-                  {trip.itinerary.map((day) => (
-                    <div key={day.day} className="flex gap-4 bg-white rounded-lg p-5 shadow-card border border-background-warm">
-                      <div className="w-12 h-12 rounded-lg bg-primary text-white flex flex-col items-center justify-center shrink-0 text-xs font-button font-bold">
-                        <span className="text-xs">Day</span>
-                        <span className="text-base leading-none">{day.day}</span>
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-display font-bold text-dark text-lg mb-1">{day.title}</h3>
-                        <p className="text-dark-muted text-sm leading-relaxed">{day.description}</p>
-                        <ItineraryDayPhotos images={day.images || []} />
-                      </div>
-                    </div>
-                  ))}
+                <h2 className="font-display text-3xl font-bold text-dark mb-10 text-center sm:text-left">
+                  {trip.itinerary.length} Day{trip.itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments
+                </h2>
+                <div
+                  className="grid gap-x-4 gap-y-10 justify-center"
+                  style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 240px))' }}
+                >
+                  {trip.itinerary.map((day, i) => {
+                    const meta = getTripHighlightIcon(day.icon);
+                    const palette = getTripHighlightPalette(i);
+                    return (
+                      <motion.div
+                        key={day.day}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: Math.min(i, 8) * 0.07, duration: 0.5 }}
+                        className="relative"
+                      >
+                        {/* Circular badge — half in, half out of the card's top edge */}
+                        <div
+                          className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-sm font-button font-bold text-sm"
+                          style={meta
+                            ? { backgroundColor: palette.bg, color: palette.fg }
+                            : { backgroundColor: palette.fg, color: '#fff' }}
+                        >
+                          {meta ? <meta.Icon size={20} /> : day.day}
+                        </div>
+                        <div className="w-full min-h-[380px] bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
+                          <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
+                          <p className="text-dark-muted text-xs leading-relaxed flex-1">{day.description}</p>
+                          {(day.images?.length ?? 0) > 0 && (
+                            <ItineraryDayPhotos images={day.images || []} className="h-40 mt-1" />
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -589,8 +617,8 @@ export default function TripDetailPage() {
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Travel with Confidence</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
-                    <div key={i} className="flex items-start gap-4 bg-background-warm rounded-xl p-4">
-                      {item.icon && <span className="text-2xl flex-shrink-0">{item.icon}</span>}
+                    <div key={i} className="flex items-center gap-4 bg-background-warm rounded-xl p-4">
+                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
                       <p className="text-dark text-sm leading-relaxed">{item.description}</p>
                     </div>
                   ))}

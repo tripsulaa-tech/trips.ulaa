@@ -255,6 +255,10 @@ export interface ItineraryDay {
   title: string;
   description: string;
   images?: string[];
+  // Optional icon-library key (see src/constants/tripHighlightIcons.ts), e.g.
+  // "coffee" or "paw-print". Shown in the day's badge on the trip page and
+  // in admin; falls back to just showing the day number when unset.
+  icon?: string;
 }
 
 export interface FAQ {
