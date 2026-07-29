@@ -99,11 +99,6 @@ export default function AlbumPage() {
             </a>
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white">{album.title}</h1>
-              {album.batch && (
-                <span className="shrink-0 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-3 py-1.5 rounded-md">
-                  {formatBatchLabel(album.batch)}
-                </span>
-              )}
             </div>
             <div className="flex flex-wrap items-center gap-3 text-white/80 text-sm">
               <span className="flex items-center gap-1.5"><Calendar size={14} /> {formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</span>
@@ -113,6 +108,14 @@ export default function AlbumPage() {
                 <>
                   <span className="w-px h-4 bg-white/30" />
                   <span className="flex items-center gap-1.5"><Images size={14} /> {album.gallery_images.length} photos</span>
+                </>
+              )}
+              {album.batch && (
+                <>
+                  <span className="w-px h-4 bg-white/30" />
+                  <span className="shrink-0 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-3 py-1.5 rounded-md">
+                    {formatBatchLabel(album.batch)}
+                  </span>
                 </>
               )}
             </div>
@@ -142,11 +145,19 @@ export default function AlbumPage() {
           </section>
         )}
 
+        {/* Adventure Recap */}
+        {album.description && (
+          <section>
+            <h2 className="font-display text-3xl font-bold text-dark mb-6">Adventure Recap</h2>
+            <p className="text-dark-muted text-lg leading-relaxed font-body">{album.description}</p>
+          </section>
+        )}
+
         {/* Gallery */}
         {album.gallery_images.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-8">
-              <h2 className="font-display text-3xl font-bold text-dark">Photo Gallery</h2>
+              <h2 className="font-display text-3xl font-bold text-dark">Relive the Journey</h2>
               <button
                 onClick={() => navigator.share?.({ title: album.title, url: window.location.href })}
                 className="flex items-center gap-2 text-sm text-dark-muted hover:text-primary transition-colors cursor-pointer"
