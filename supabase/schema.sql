@@ -135,6 +135,12 @@ create table public.upcoming_trips (
   confidence_description  text,
   meeting_address         text,
   end_banner              jsonb,
+  -- Rich (icon + description) variant of things_to_carry, plus intro
+  -- paragraphs for the Fashion Aesthetics / Places You'll Definitely Post
+  -- sections. See add_things_to_carry_icons_and_section_descriptions.sql.
+  things_to_carry_items   jsonb default '[]'::jsonb,
+  fashion_description      text,
+  gallery_description      text,
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
   constraint upcoming_trips_trip_type_check

@@ -99,7 +99,10 @@ export interface UpcomingTrip {
   included_items?: TripInclusionItem[];         // Included items with icons
   not_included_items?: TripInclusionItem[];     // Not-included items with icons
   gallery_items?: TripGalleryItem[];            // "Places You'll Post" — photo + caption
+  gallery_description?: string;                 // "Places You'll Definitely Post" section intro paragraph
   fashion_photos?: string[];                    // Fashion aesthetics inspiration photos
+  fashion_description?: string;                 // "Fashion Aesthetics" section intro paragraph
+  things_to_carry_items?: TripInclusionItem[];  // Things to Carry with icon (rich variant of things_to_carry)
   trip_founder?: TripFounder;                   // Per-trip founder block
   confidence_items?: TripConfidenceItem[];      // "Travel with Confidence" items
   confidence_description?: string;              // "Travel with Confidence" section body

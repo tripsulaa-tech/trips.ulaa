@@ -91,6 +91,14 @@ function sanitizeForPdf(text: string): string {
 }
 
 function sanitizeTrip(trip: UpcomingTrip): UpcomingTrip {
+  // Things to Carry now has an icon-based rich variant (things_to_carry_items)
+  // that the admin form treats as the source of truth — see AdminTrips.tsx.
+  // The PDF only ever needed the description text, so prefer that when
+  // present rather than the legacy things_to_carry text[], which a trip
+  // edited purely through the new icon UI may leave empty.
+  const thingsToCarrySource = (trip.things_to_carry_items?.length ?? 0) > 0
+    ? trip.things_to_carry_items!.map(item => item.description)
+    : trip.things_to_carry;
   return {
     ...trip,
     title: sanitizeForPdf(trip.title),
@@ -105,7 +113,7 @@ function sanitizeTrip(trip: UpcomingTrip): UpcomingTrip {
     })),
     included: trip.included.map(sanitizeForPdf),
     not_included: trip.not_included.map(sanitizeForPdf),
-    things_to_carry: trip.things_to_carry.map(sanitizeForPdf),
+    things_to_carry: thingsToCarrySource.map(sanitizeForPdf),
     meeting_point: trip.meeting_point ? sanitizeForPdf(trip.meeting_point) : trip.meeting_point,
     faqs: trip.faqs.map(faq => ({
       ...faq,

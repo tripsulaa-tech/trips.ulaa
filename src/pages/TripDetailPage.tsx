@@ -45,9 +45,11 @@ function getItineraryGridClass(days: number): string {
   }
 }
 
-// Things to Carry is a free-text list (no stored icon per item), so this
-// matches common packing-list keywords to a representative icon. Falls back
-// to the Backpack icon for anything unrecognized.
+// Fallback icon matching for Things to Carry items that don't have an
+// admin-picked icon (things_to_carry_items with a blank icon, or the legacy
+// things_to_carry free-text list from before icons existed). Matches common
+// packing-list keywords to a representative icon, falling back to the
+// Backpack icon for anything unrecognized.
 const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
   [/jacket|sweater|hoodie|fleece|thermal/i, Shirt],
   [/shoe|boot|sandal|footwear|trek/i, Footprints],
@@ -586,7 +588,12 @@ export default function TripDetailPage() {
 
             {((trip.gallery_items?.length ?? 0) > 0 || trip.gallery_images.length > 0) && (
               <section id="gallery" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">Places You'll Definitely Post</h2>
+                <div className="mb-6">
+                  <h2 className="font-display text-3xl font-bold text-dark mb-2">Places You'll Definitely Post</h2>
+                  {trip.gallery_description && (
+                    <p className="text-dark-muted text-sm max-w-2xl">{trip.gallery_description}</p>
+                  )}
+                </div>
                 {(() => {
                   const allItems: { photo: string; description?: string }[] =
                     (trip.gallery_items?.length ?? 0) > 0
@@ -598,12 +605,15 @@ export default function TripDetailPage() {
             )}
 
             {/* Fashion Aesthetics & Things to Carry */}
-            {((trip.fashion_photos?.length ?? 0) > 0 || trip.things_to_carry.length > 0) && (
+            {((trip.fashion_photos?.length ?? 0) > 0 || (trip.things_to_carry_items?.length ?? 0) > 0 || trip.things_to_carry.length > 0) && (
               <section className="scroll-mt-44">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-0 lg:divide-x lg:divide-background-warm">
                   {(trip.fashion_photos?.length ?? 0) > 0 && (
                     <div className="lg:pr-10">
-                      <h2 className="font-display text-2xl font-bold text-dark mb-4">Fashion Aesthetics</h2>
+                      <h2 className="font-display text-2xl font-bold text-dark mb-2">Fashion Aesthetics</h2>
+                      {trip.fashion_description && (
+                        <p className="text-dark-muted text-sm mb-4">{trip.fashion_description}</p>
+                      )}
                       <div className="grid grid-cols-3 gap-2 auto-rows-[100px]">
                         {(() => {
                           const VISIBLE_COUNT = 7;
@@ -653,7 +663,7 @@ export default function TripDetailPage() {
                       />
                     </div>
                   )}
-                  {trip.things_to_carry.length > 0 && (
+                  {((trip.things_to_carry_items?.length ?? 0) > 0 || trip.things_to_carry.length > 0) && (
                     <div className="lg:pl-10">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
@@ -663,15 +673,29 @@ export default function TripDetailPage() {
                       </div>
                       <p className="text-dark-muted text-sm mb-4">Pack smart. Travel light. Stay ready.</p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {trip.things_to_carry.map((item, i) => {
-                          const Icon = getThingsToCarryIcon(item);
-                          return (
-                            <div key={i} className="flex items-center gap-2 bg-white border border-background-warm rounded-xl px-3 py-2.5 shadow-sm">
-                              <Icon size={18} className="text-primary shrink-0" />
-                              <span className="text-sm text-dark font-medium leading-snug">{item}</span>
-                            </div>
-                          );
-                        })}
+                        {(trip.things_to_carry_items?.length ?? 0) > 0
+                          ? trip.things_to_carry_items!.map((item: TripInclusionItem, i: number) => (
+                              <div key={i} className="flex items-center gap-2 bg-white border border-background-warm rounded-lg px-3 py-2.5 shadow-sm">
+                                {item.icon ? (
+                                  <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />
+                                ) : (
+                                  (() => {
+                                    const Icon = getThingsToCarryIcon(item.description);
+                                    return <Icon size={18} className="text-primary shrink-0" />;
+                                  })()
+                                )}
+                                <span className="text-sm text-dark font-medium leading-snug">{item.description}</span>
+                              </div>
+                            ))
+                          : trip.things_to_carry.map((item, i) => {
+                              const Icon = getThingsToCarryIcon(item);
+                              return (
+                                <div key={i} className="flex items-center gap-2 bg-white border border-background-warm rounded-lg px-3 py-2.5 shadow-sm">
+                                  <Icon size={18} className="text-primary shrink-0" />
+                                  <span className="text-sm text-dark font-medium leading-snug">{item}</span>
+                                </div>
+                              );
+                            })}
                       </div>
                     </div>
                   )}

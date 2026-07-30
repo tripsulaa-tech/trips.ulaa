@@ -85,7 +85,10 @@ interface TripForm {
   included_items: TripInclusionItem[];
   not_included_items: TripInclusionItem[];
   gallery_items: TripGalleryItem[];
+  gallery_description: string;
   fashion_photos: string[];
+  fashion_description: string;
+  things_to_carry_items: TripInclusionItem[];
   trip_founder: TripFounder;
   confidence_items: TripConfidenceItem[];
   confidence_description: string;
@@ -107,8 +110,9 @@ const emptyForm: TripForm = {
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
   // Extended
   highlight_cards: [], accommodation_description: '', accommodation_photos: [],
-  included_items: [], not_included_items: [], gallery_items: [],
-  fashion_photos: [], trip_founder: emptyFounder, confidence_items: [], confidence_description: '',
+  included_items: [], not_included_items: [], gallery_items: [], gallery_description: '',
+  fashion_photos: [], fashion_description: '', things_to_carry_items: [],
+  trip_founder: emptyFounder, confidence_items: [], confidence_description: '',
   meeting_address: '', end_banner: emptyEndBanner,
 };
 
@@ -265,7 +269,12 @@ export default function AdminTrips() {
       gallery_items: [
         { photo: '(leave blank — uploaded manually)', description: '<Caption / place name for this photo>' },
       ],
+      gallery_description: '<Short intro paragraph shown below the "Places You\'ll Definitely Post" heading, or "">',
       fashion_photos: ['(leave blank — uploaded manually)'],
+      fashion_description: '<Short intro paragraph shown below the "Fashion Aesthetics" heading, or "">',
+      things_to_carry_items: [
+        { icon: '<emoji or icon label>', description: '<Item traveller should pack, e.g. "Warm jacket">' },
+      ],
       trip_founder: {
         photo: '(leave blank — uploaded manually)',
         name: '<Founder/host name for this trip>',
@@ -390,7 +399,12 @@ export default function AdminTrips() {
         gallery_items: Array.isArray(raw.gallery_items)
           ? raw.gallery_items.map((g: Record<string, unknown>) => ({ photo: '', description: asStr(g?.description) }))
           : [],
+        gallery_description: asStr(raw.gallery_description),
         fashion_photos: [],
+        fashion_description: asStr(raw.fashion_description),
+        things_to_carry_items: Array.isArray(raw.things_to_carry_items)
+          ? raw.things_to_carry_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
+          : [],
         trip_founder: raw.trip_founder
           ? { photo: '', name: asStr(raw.trip_founder.name), description: asStr(raw.trip_founder.description) }
           : emptyFounder,
@@ -456,7 +470,12 @@ export default function AdminTrips() {
         : (trip.included || []).map(description => ({ icon: '', description })),
       not_included_items: trip.not_included_items || [],
       gallery_items: trip.gallery_items || [],
+      gallery_description: trip.gallery_description || '',
       fashion_photos: trip.fashion_photos || [],
+      fashion_description: trip.fashion_description || '',
+      things_to_carry_items: (trip.things_to_carry_items && trip.things_to_carry_items.length > 0)
+        ? trip.things_to_carry_items
+        : (trip.things_to_carry || []).map(description => ({ icon: '', description })),
       trip_founder: trip.trip_founder || emptyFounder,
       confidence_items: trip.confidence_items || [],
       confidence_description: trip.confidence_description || '',
@@ -488,6 +507,10 @@ export default function AdminTrips() {
       const data = {
         ...form,
         slug: slugify(form.title),
+        // Keep the legacy text[] column populated from the icon-based items
+        // so anything still reading things_to_carry directly (CSV export,
+        // older code) stays in sync with what the admin actually edited.
+        things_to_carry: form.things_to_carry_items.map(item => item.description),
         price: form.price,
         early_bird_price: form.early_bird_price === '' ? null : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || null,
@@ -792,6 +815,16 @@ export default function AdminTrips() {
             </div>
 
             {/* Places You'll Post — gallery with captions */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Places You'll Definitely Post — Section Description</label>
+              <textarea
+                value={form.gallery_description}
+                onChange={e => setForm(f => ({ ...f, gallery_description: e.target.value }))}
+                rows={2}
+                className={`${inputClass} resize-none`}
+                placeholder="Short intro paragraph shown below the &quot;Places You'll Definitely Post&quot; heading..."
+              />
+            </div>
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-semibold text-dark">Places You'll Definitely Post (photo + caption)</label>
@@ -820,6 +853,16 @@ export default function AdminTrips() {
             </div>
 
             {/* Fashion Aesthetics */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Fashion Aesthetics — Section Description</label>
+              <textarea
+                value={form.fashion_description}
+                onChange={e => setForm(f => ({ ...f, fashion_description: e.target.value }))}
+                rows={2}
+                className={`${inputClass} resize-none`}
+                placeholder="Short intro paragraph shown below the &quot;Fashion Aesthetics&quot; heading..."
+              />
+            </div>
             <div className="md:col-span-2">
               <MultiImageUploadField
                 label="Fashion Aesthetics (outfit inspiration photos)"
@@ -913,13 +956,25 @@ export default function AdminTrips() {
                 placeholder="e.g. Flights"
               />
             </div>
-            <div className="md:col-span-2">
-              <TagListEditor
-                label="Things to Carry"
-                value={form.things_to_carry}
-                onChange={items => setForm(f => ({ ...f, things_to_carry: items }))}
-                placeholder="e.g. Warm jacket"
-              />
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-dark">Things to Carry (icon + description)</label>
+                <button type="button" onClick={() => setForm(f => ({ ...f, things_to_carry_items: [...f.things_to_carry_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+              </div>
+              {form.things_to_carry_items.map((item, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="w-32 flex-shrink-0">
+                    <TripHighlightIconPicker
+                      value={item.icon}
+                      hintText={item.description}
+                      onChange={key => setForm(f => ({ ...f, things_to_carry_items: f.things_to_carry_items.map((it, idx) => idx === i ? { ...it, icon: key } : it) }))}
+                    />
+                  </div>
+                  <input value={item.description} onChange={e => setForm(f => ({ ...f, things_to_carry_items: f.things_to_carry_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. Warm jacket" />
+                  <button type="button" onClick={() => setForm(f => ({ ...f, things_to_carry_items: f.things_to_carry_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
+                </div>
+              ))}
+              {form.things_to_carry_items.length === 0 && <p className="text-xs text-dark-muted">No items yet. Click "Add Item" to begin.</p>}
             </div>
 
             {/* Travel with Confidence */}
@@ -1373,14 +1428,25 @@ export default function AdminTrips() {
               </div>
             )}
 
-            {viewingTrip.things_to_carry?.length > 0 && (
+            {((viewingTrip.things_to_carry_items?.length ?? 0) > 0 || viewingTrip.things_to_carry?.length > 0) && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Things to Carry</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {viewingTrip.things_to_carry.map((t, i) => (
-                    <span key={i} className="text-xs bg-background-warm text-dark px-2 py-1 rounded-full">{t}</span>
-                  ))}
-                </div>
+                {(viewingTrip.things_to_carry_items?.length ?? 0) > 0 ? (
+                  <ul className="text-sm text-dark space-y-1">
+                    {viewingTrip.things_to_carry_items!.map((item, i) => (
+                      <li key={i} className="flex items-center gap-1.5">
+                        {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
+                        {item.description}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {viewingTrip.things_to_carry.map((t, i) => (
+                      <span key={i} className="text-xs bg-background-warm text-dark px-2 py-1 rounded-full">{t}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1448,6 +1514,9 @@ export default function AdminTrips() {
             {(viewingTrip.gallery_items?.length ?? 0) > 0 && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Places You'll Post ({viewingTrip.gallery_items!.length})</p>
+                {viewingTrip.gallery_description && (
+                  <p className="text-sm text-dark whitespace-pre-line mb-1.5">{viewingTrip.gallery_description}</p>
+                )}
                 <div className="grid grid-cols-4 gap-2">
                   {viewingTrip.gallery_items!.slice(0, 8).map((item, i) => (
                     <div key={i}>
@@ -1462,6 +1531,9 @@ export default function AdminTrips() {
             {(viewingTrip.fashion_photos?.length ?? 0) > 0 && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Fashion Aesthetics ({viewingTrip.fashion_photos!.length})</p>
+                {viewingTrip.fashion_description && (
+                  <p className="text-sm text-dark whitespace-pre-line mb-1.5">{viewingTrip.fashion_description}</p>
+                )}
                 <div className="grid grid-cols-4 gap-2">
                   {viewingTrip.fashion_photos!.slice(0, 8).map((url, i) => (
                     <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
