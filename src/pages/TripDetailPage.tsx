@@ -219,8 +219,8 @@ export default function TripDetailPage() {
       {/* Hero */}
       <div className="relative min-h-[60vh] md:min-h-[70vh] overflow-hidden">
         <img src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.title} className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-dark/40 via-dark/30 to-dark/90" />
-        <div className="relative min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-12 max-w-[1344px] mx-auto left-0 right-0">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-dark)_0%,var(--color-dark)_32%,transparent_55%)] opacity-90" />
+        <div className="relative min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end pl-3 sm:pl-4 lg:pl-4 pr-4 sm:pr-6 lg:pr-8 pt-24 sm:pt-28 pb-12 max-w-[1344px] mx-auto left-0 right-0">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <Link to="/trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
@@ -228,9 +228,30 @@ export default function TripDetailPage() {
             <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">
               {(() => {
                 const hyphenIdx = trip.title.indexOf('-');
-                if (hyphenIdx === -1) return trip.title;
-                const firstLine = trip.title.slice(0, hyphenIdx + 1);
-                const secondLine = trip.title.slice(hyphenIdx + 1).trim();
+                let firstLine: string;
+                let secondLine: string;
+
+                if (hyphenIdx !== -1) {
+                  // Existing convention: a "-" in the title marks where the
+                  // second line should start (e.g. "Sri Lanka - Island Escape").
+                  firstLine = trip.title.slice(0, hyphenIdx + 1);
+                  secondLine = trip.title.slice(hyphenIdx + 1).trim();
+                } else {
+                  // No manual "-" in the title: automatically drop the last
+                  // word onto its own line so it doesn't get stranded at the
+                  // end of a wrapped line (e.g. "Manali Mountain Escape").
+                  const words = trip.title.trim().split(/\s+/);
+                  if (words.length > 1) {
+                    secondLine = words[words.length - 1];
+                    firstLine = words.slice(0, -1).join(' ');
+                  } else {
+                    firstLine = trip.title;
+                    secondLine = '';
+                  }
+                }
+
+                if (!secondLine) return firstLine;
+
                 return (
                   <>
                     {firstLine}
@@ -240,26 +261,26 @@ export default function TripDetailPage() {
                 );
               })()}
             </h1>
-            <div className="flex w-fit items-center gap-2 text-white text-sm font-button font-semibold mb-3">
+            <div className="flex w-fit items-center gap-2 text-secondary text-sm font-button font-semibold mb-3">
               <MapPin size={14} /> {trip.destination}
             </div>
             {trip.description && (
-              <div className="max-w-2xl mb-6">
-                <p className={`text-white/85 text-base md:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-3'}`}>
+              <div className="max-w-xl mb-6">
+                <p className={`text-white/80 text-base md:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-4'}`}>
                   {trip.description}
                 </p>
                 {trip.description.length > 150 && (
                   <button
                     type="button"
                     onClick={() => setDescriptionExpanded(v => !v)}
-                    className="mt-1 text-white text-sm font-button font-semibold underline underline-offset-2 hover:text-white/80 transition-colors"
+                    className="mt-1 text-primary text-sm font-button font-semibold underline underline-offset-2 hover:text-primary-dark transition-colors"
                   >
                     {descriptionExpanded ? 'Read less' : 'Read more'}
                   </button>
                 )}
               </div>
             )}
-            <div className="flex flex-wrap items-center gap-3 mb-5">
+            <div className="relative flex flex-wrap items-center gap-3 mb-5">
               <Button
                 variant="primary"
                 size="sm"
@@ -279,8 +300,54 @@ export default function TripDetailPage() {
                 {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
                 {pdfLoading ? 'Preparing…' : 'Download Itinerary'}
               </Button>
+              {countdown && (
+                <div className="flex flex-col items-center gap-2 mt-3 ml-auto md:mt-0 md:ml-0 md:absolute md:right-0 md:translate-x-10 md:top-0 bg-background-warm/95 backdrop-blur-md border border-dark/10 shadow-[0_10px_35px_-8px_rgba(45,33,24,0.35)] rounded-xl px-5 py-3.5">
+                  <p className="flex items-center gap-1.5 text-primary text-[10px] font-button font-bold uppercase tracking-[0.2em] whitespace-nowrap">
+                    <Clock size={11} /> Trip starts in
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {[
+                      { v: countdown.days, l: 'Days' },
+                      { v: countdown.hours, l: 'Hrs' },
+                      { v: countdown.minutes, l: 'Min' },
+                      { v: countdown.seconds, l: 'Sec' },
+                    ].map(({ v, l }, i) => (
+                      <div key={l} className="flex items-center gap-2">
+                        <div className="text-center">
+                          <div
+                            className="relative w-10 h-9 overflow-hidden rounded-md bg-gradient-to-b from-dark-muted to-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                            style={{ perspective: '80px' }}
+                          >
+                            <div className="absolute left-0 right-0 top-1/2 h-px bg-black/40 -translate-y-px z-10" />
+                            <AnimatePresence mode="popLayout" initial={false}>
+                              <motion.div
+                                key={v}
+                                initial={{ rotateX: 90, opacity: 0 }}
+                                animate={{ rotateX: 0, opacity: 1 }}
+                                exit={{ rotateX: -90, opacity: 0 }}
+                                transition={{ duration: 0.8, ease: 'easeInOut' }}
+                                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                                className="absolute inset-0 flex items-center justify-center font-display text-lg font-bold text-white tabular-nums"
+                              >
+                                {String(v).padStart(2, '0')}
+                              </motion.div>
+                            </AnimatePresence>
+                          </div>
+                          <div className="text-dark/50 text-[9px] uppercase tracking-widest text-center mt-1">{l}</div>
+                        </div>
+                        {i < 3 && (
+                          <div className="flex flex-col gap-1 self-start mt-3">
+                            <span className="w-1 h-1 rounded-full bg-primary/50" />
+                            <span className="w-1 h-1 rounded-full bg-primary/50" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-white/70 text-sm">
               <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
               <span className="flex items-center gap-2"><Clock size={14} /> {trip.duration}</span>
               <span className="flex items-center gap-2"><Users size={14} />
@@ -298,33 +365,6 @@ export default function TripDetailPage() {
           </motion.div>
         </div>
       </div>
-
-      {/* Countdown Timer */}
-      {countdown && (
-        <div className="bg-dark py-5 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-[1344px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
-            <p className="text-white/60 text-xs font-button font-semibold uppercase tracking-[0.15em]">Trip starts in</p>
-            <div className="flex items-center gap-3 sm:gap-6">
-              {[
-                { v: countdown.days, l: 'Days' },
-                { v: countdown.hours, l: 'Hours' },
-                { v: countdown.minutes, l: 'Minutes' },
-                { v: countdown.seconds, l: 'Seconds' },
-              ].map(({ v, l }, i) => (
-                <div key={l} className="flex items-start gap-3 sm:gap-6">
-                  <div className="text-center">
-                    <div className="font-display text-3xl sm:text-4xl font-bold text-white tabular-nums w-14 text-center">
-                      {String(v).padStart(2, '0')}
-                    </div>
-                    <div className="text-white/50 text-[10px] uppercase tracking-widest mt-1">{l}</div>
-                  </div>
-                  {i < 3 && <span className="font-display text-2xl font-bold text-white/30 mt-1">:</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Quick jump nav */}
       <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-4 sm:px-6 lg:px-8">
