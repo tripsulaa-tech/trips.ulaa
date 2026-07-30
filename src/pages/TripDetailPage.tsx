@@ -672,173 +672,8 @@ export default function TripDetailPage() {
               </section>
             )}
 
-            {/* Things to Carry — kept directly above Meeting Point */}
-            {((trip.things_to_carry_items?.length ?? 0) > 0) && (
-              <section className="scroll-mt-44">
-                <h2 className="font-display text-2xl font-bold text-dark mb-2">Things to Carry</h2>
-                <p className="text-dark-muted text-sm mb-4">Pack smart. Travel light. Stay ready.</p>
-                <div className="flex flex-wrap gap-2">
-                  {trip.things_to_carry_items!.map((item: TripInclusionItem, i: number) => {
-                    const Icon = (item.icon && getTripHighlightIcon(item.icon)?.Icon) || getThingsToCarryIcon(item.description);
-                    return (
-                      <span key={i} className="inline-flex items-center gap-1.5 bg-background-warm/60 rounded-lg px-3 py-2.5">
-                        <Icon size={18} className="text-primary shrink-0" />
-                        <span className="text-sm text-dark font-medium leading-snug whitespace-nowrap">{item.description}</span>
-                      </span>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {/* Meeting Point */}
-            {trip.meeting_point && (
-              <section className="bg-background-warm rounded-lg p-6">
-                <h2 className="font-display text-2xl font-bold text-dark mb-3 flex items-center gap-2">
-                  <Navigation size={22} className="text-primary" /> Meeting Point
-                </h2>
-                <p className="text-dark font-semibold mb-1">{trip.meeting_point}</p>
-                {trip.meeting_address && (
-                  <p className="text-dark-muted text-sm mb-3">{trip.meeting_address}</p>
-                )}
-                {(trip.meeting_time || trip.meeting_terminal || trip.meeting_details) && (
-                  <dl className="mb-3 space-y-1 text-sm">
-                    {trip.meeting_time && (
-                      <div className="flex gap-1.5">
-                        <dt className="font-semibold text-dark">Time:</dt>
-                        <dd className="text-dark-muted">{trip.meeting_time}</dd>
-                      </div>
-                    )}
-                    {trip.meeting_terminal && (
-                      <div className="flex gap-1.5">
-                        <dt className="font-semibold text-dark">Terminal:</dt>
-                        <dd className="text-dark-muted">{trip.meeting_terminal}</dd>
-                      </div>
-                    )}
-                    {trip.meeting_details && (
-                      <div className="flex gap-1.5">
-                        <dt className="font-semibold text-dark">Details:</dt>
-                        <dd className="text-dark-muted">{trip.meeting_details}</dd>
-                      </div>
-                    )}
-                  </dl>
-                )}
-                <a
-                  href={trip.meeting_point_map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.meeting_point)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary/80 transition-colors"
-                >
-                  <MapPin size={15} /> View on map
-                </a>
-              </section>
-            )}
-
-            {/* Founder */}
-            {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
-              <section className="scroll-mt-44 bg-dark rounded-2xl p-8">
-                <h2 className="font-display text-2xl font-bold text-white mb-6">Meet Your Trip Leader</h2>
-                <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-                  {trip.trip_founder.photo ? (
-                    <img
-                      src={trip.trip_founder.photo}
-                      alt={trip.trip_founder.name}
-                      className="w-24 h-24 rounded-full object-cover border-4 border-primary/30 flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-white/10 border-4 border-primary/30 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white/40 text-3xl font-display font-bold">{trip.trip_founder.name.charAt(0)}</span>
-                    </div>
-                  )}
-                  <div>
-                    {trip.trip_founder.name && (
-                      <h3 className="font-display text-xl font-bold text-white mb-1">{trip.trip_founder.name}</h3>
-                    )}
-                    {trip.trip_founder.description && (
-                      <p className="text-white/70 text-sm leading-relaxed">{trip.trip_founder.description}</p>
-                    )}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Eligibility — only shown when the admin has set an age
-                restriction on this trip (Admin → Trips → Basic Info). */}
-            {(trip.min_age != null || trip.max_age != null) && (
-              <section className="bg-background-warm rounded-lg p-6">
-                <h2 className="font-display text-2xl font-bold text-dark mb-2 flex items-center gap-2">
-                  <UserCheck size={22} className="text-primary" /> Eligibility
-                </h2>
-                <p className="text-dark-muted">
-                  This trip is open to travelers aged {formatAgeRange(trip.min_age, trip.max_age)}.
-                </p>
-              </section>
-            )}
-
-            {/* FAQs */}
-            {trip.faqs.length > 0 && (
-              <section id="faqs" className="scroll-mt-44">
-                <button
-                  type="button"
-                  onClick={() => setFaqsOpen(o => !o)}
-                  aria-expanded={faqsOpen}
-                  className="w-full flex items-center justify-between gap-4 mb-6"
-                >
-                  <h2 className="font-display text-3xl font-bold text-dark">FAQs</h2>
-                  {faqsOpen ? (
-                    <ChevronUp size={24} className="text-primary shrink-0" />
-                  ) : (
-                    <ChevronDown size={24} className="text-primary shrink-0" />
-                  )}
-                </button>
-                <AnimatePresence initial={false}>
-                  {faqsOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: 'easeInOut' }}
-                      className="overflow-hidden"
-                    >
-                      <FAQAccordion faqs={trip.faqs} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </section>
-            )}
-
-            {/* Cancellation Policy */}
-            <section id="cancellation" className="scroll-mt-44">
-              <button
-                type="button"
-                onClick={() => setCancellationOpen(o => !o)}
-                aria-expanded={cancellationOpen}
-                className="w-full flex items-center justify-between gap-4 mb-6"
-              >
-                <h2 className="font-display text-3xl font-bold text-dark">Cancellation Policy</h2>
-                {cancellationOpen ? (
-                  <ChevronUp size={24} className="text-primary shrink-0" />
-                ) : (
-                  <ChevronDown size={24} className="text-primary shrink-0" />
-                )}
-              </button>
-              <AnimatePresence initial={false}>
-                {cancellationOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: 'easeInOut' }}
-                    className="overflow-hidden"
-                  >
-                    <CancellationPolicyDisplay policy={trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </section>
-
-            {/* Book Your Seat — moved here (was a right-hand sticky sidebar) so it reads as a final call-to-action before the End Banner.
-                Travel with Confidence now sits to its left as its own separate card. */}
+            {/* Book Your Seat — sits directly below Fashion Aesthetics / Gallery, matching the quick-jump nav order.
+                Travel with Confidence sits to its left as its own separate card. */}
             <div className={`grid grid-cols-1 gap-6 ${hasConfidenceItems ? 'lg:grid-cols-[1fr_640px] lg:divide-x lg:divide-background-warm' : ''}`}>
             {hasConfidenceItems && (
               <section id="confidence" className="scroll-mt-44 flex flex-col justify-center lg:pr-10">
@@ -1004,6 +839,172 @@ export default function TripDetailPage() {
               </div>
             </section>
             </div>
+
+            {/* Things to Carry — kept directly above Meeting Point */}
+            {((trip.things_to_carry_items?.length ?? 0) > 0) && (
+              <section className="scroll-mt-44">
+                <h2 className="font-display text-2xl font-bold text-dark mb-2">Things to Carry</h2>
+                <p className="text-dark-muted text-sm mb-4">Pack smart. Travel light. Stay ready.</p>
+                <div className="flex flex-wrap gap-2">
+                  {trip.things_to_carry_items!.map((item: TripInclusionItem, i: number) => {
+                    const Icon = (item.icon && getTripHighlightIcon(item.icon)?.Icon) || getThingsToCarryIcon(item.description);
+                    return (
+                      <span key={i} className="inline-flex items-center gap-1.5 bg-background-warm/60 rounded-lg px-3 py-2.5">
+                        <Icon size={18} className="text-primary shrink-0" />
+                        <span className="text-sm text-dark font-medium leading-snug whitespace-nowrap">{item.description}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Meeting Point */}
+            {trip.meeting_point && (
+              <section className="bg-background-warm rounded-lg p-6">
+                <h2 className="font-display text-2xl font-bold text-dark mb-3 flex items-center gap-2">
+                  <Navigation size={22} className="text-primary" /> Meeting Point
+                </h2>
+                <p className="text-dark font-semibold mb-1">{trip.meeting_point}</p>
+                {trip.meeting_address && (
+                  <p className="text-dark-muted text-sm mb-3">{trip.meeting_address}</p>
+                )}
+                {(trip.meeting_time || trip.meeting_terminal || trip.meeting_details) && (
+                  <dl className="mb-3 space-y-1 text-sm">
+                    {trip.meeting_time && (
+                      <div className="flex gap-1.5">
+                        <dt className="font-semibold text-dark">Time:</dt>
+                        <dd className="text-dark-muted">{trip.meeting_time}</dd>
+                      </div>
+                    )}
+                    {trip.meeting_terminal && (
+                      <div className="flex gap-1.5">
+                        <dt className="font-semibold text-dark">Terminal:</dt>
+                        <dd className="text-dark-muted">{trip.meeting_terminal}</dd>
+                      </div>
+                    )}
+                    {trip.meeting_details && (
+                      <div className="flex gap-1.5">
+                        <dt className="font-semibold text-dark">Details:</dt>
+                        <dd className="text-dark-muted">{trip.meeting_details}</dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
+                <a
+                  href={trip.meeting_point_map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.meeting_point)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+                >
+                  <MapPin size={15} /> View on map
+                </a>
+              </section>
+            )}
+
+            {/* Founder */}
+            {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
+              <section className="scroll-mt-44 bg-dark rounded-2xl p-8">
+                <h2 className="font-display text-2xl font-bold text-white mb-6">Meet Your Trip Leader</h2>
+                <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+                  {trip.trip_founder.photo ? (
+                    <img
+                      src={trip.trip_founder.photo}
+                      alt={trip.trip_founder.name}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-primary/30 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-white/10 border-4 border-primary/30 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white/40 text-3xl font-display font-bold">{trip.trip_founder.name.charAt(0)}</span>
+                    </div>
+                  )}
+                  <div>
+                    {trip.trip_founder.name && (
+                      <h3 className="font-display text-xl font-bold text-white mb-1">{trip.trip_founder.name}</h3>
+                    )}
+                    {trip.trip_founder.description && (
+                      <p className="text-white/70 text-sm leading-relaxed">{trip.trip_founder.description}</p>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Eligibility — only shown when the admin has set an age
+                restriction on this trip (Admin → Trips → Basic Info). */}
+            {(trip.min_age != null || trip.max_age != null) && (
+              <section className="bg-background-warm rounded-lg p-6">
+                <h2 className="font-display text-2xl font-bold text-dark mb-2 flex items-center gap-2">
+                  <UserCheck size={22} className="text-primary" /> Eligibility
+                </h2>
+                <p className="text-dark-muted">
+                  This trip is open to travelers aged {formatAgeRange(trip.min_age, trip.max_age)}.
+                </p>
+              </section>
+            )}
+
+            {/* FAQs */}
+            {trip.faqs.length > 0 && (
+              <section id="faqs" className="scroll-mt-44">
+                <button
+                  type="button"
+                  onClick={() => setFaqsOpen(o => !o)}
+                  aria-expanded={faqsOpen}
+                  className="w-full flex items-center justify-between gap-4 mb-6"
+                >
+                  <h2 className="font-display text-3xl font-bold text-dark">FAQs</h2>
+                  {faqsOpen ? (
+                    <ChevronUp size={24} className="text-primary shrink-0" />
+                  ) : (
+                    <ChevronDown size={24} className="text-primary shrink-0" />
+                  )}
+                </button>
+                <AnimatePresence initial={false}>
+                  {faqsOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <FAQAccordion faqs={trip.faqs} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </section>
+            )}
+
+            {/* Cancellation Policy */}
+            <section id="cancellation" className="scroll-mt-44">
+              <button
+                type="button"
+                onClick={() => setCancellationOpen(o => !o)}
+                aria-expanded={cancellationOpen}
+                className="w-full flex items-center justify-between gap-4 mb-6"
+              >
+                <h2 className="font-display text-3xl font-bold text-dark">Cancellation Policy</h2>
+                {cancellationOpen ? (
+                  <ChevronUp size={24} className="text-primary shrink-0" />
+                ) : (
+                  <ChevronDown size={24} className="text-primary shrink-0" />
+                )}
+              </button>
+              <AnimatePresence initial={false}>
+                {cancellationOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className="overflow-hidden"
+                  >
+                    <CancellationPolicyDisplay policy={trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </section>
+
         </div>
       </div>
 
