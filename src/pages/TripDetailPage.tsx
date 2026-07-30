@@ -114,11 +114,15 @@ export default function TripDetailPage() {
       return next;
     });
   };
-  // Loving the heart expands every reason card at once, rather than
-  // requiring each one to be tapped individually.
+  // Tapping the heart expands every reason card at once, rather than
+  // requiring each one to be tapped individually. Tapping it again
+  // collapses everything back down.
   const handleHeartLove = (count: number) => {
-    setHeartLoved(true);
-    setExpandedHighlights(new Set(Array.from({ length: count }, (_, idx) => idx)));
+    setHeartLoved(prevLoved => {
+      const nextLoved = !prevLoved;
+      setExpandedHighlights(nextLoved ? new Set(Array.from({ length: count }, (_, idx) => idx)) : new Set());
+      return nextLoved;
+    });
   };
   // Generic helper for the small "tap to fill" icon toggles below (What's
   // Included / Travel with Confidence), which mirror the desktop hover-fill
@@ -590,9 +594,9 @@ export default function TripDetailPage() {
                   Why You'll Love This Trip
                   <button
                     type="button"
-                    onClick={() => !heartLoved && handleHeartLove(trip.highlight_cards!.length)}
+                    onClick={() => handleHeartLove(trip.highlight_cards!.length)}
                     aria-pressed={heartLoved}
-                    aria-label={heartLoved ? "You loved this trip — all reasons expanded" : "Tap to fall in love with this trip"}
+                    aria-label={heartLoved ? "Tap to collapse all reasons" : "Tap to fall in love with this trip"}
                     className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
                     {/* Minimal cue that the heart is tappable, before it's been loved */}
