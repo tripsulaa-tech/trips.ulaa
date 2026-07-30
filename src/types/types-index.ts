@@ -17,6 +17,12 @@ export interface TripInclusionItem {
   description: string;
 }
 
+export interface TripIncludedGroup {
+  icon: string;        // emoji or icon-library key shown next to the heading
+  heading: string;     // e.g. "Premium Stay Experience"
+  bullets: string[];   // sub-items shown as a bulleted list below the heading
+}
+
 export interface TripGalleryItem {
   photo: string;       // uploaded image URL
   description: string; // caption / place name
@@ -97,6 +103,7 @@ export interface UpcomingTrip {
   accommodation_description?: string;           // "Stay. Relax. Repeat." section body
   accommodation_photos?: string[];              // Accommodation photo gallery
   included_items?: TripInclusionItem[];         // Included items with icons
+  included_groups?: TripIncludedGroup[];        // Grouped "What's Included" — heading + bulleted sub-items; preferred over included_items when present
   not_included_items?: TripInclusionItem[];     // Not-included items with icons
   gallery_items?: TripGalleryItem[];            // "Places You'll Post" — photo + caption
   gallery_description?: string;                 // "Places You'll Definitely Post" section intro paragraph

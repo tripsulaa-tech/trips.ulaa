@@ -127,6 +127,7 @@ create table public.upcoming_trips (
   accommodation_description text,
   accommodation_photos    text[] default '{}'::text[],
   included_items          jsonb default '[]'::jsonb,
+  included_groups         jsonb default '[]'::jsonb,
   not_included_items      jsonb default '[]'::jsonb,
   gallery_items           jsonb default '[]'::jsonb,
   fashion_photos          text[] default '{}'::text[],

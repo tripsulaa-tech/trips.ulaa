@@ -22,7 +22,7 @@ import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
 import type {
   UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy,
-  TripHighlightCard, TripInclusionItem, TripGalleryItem,
+  TripHighlightCard, TripInclusionItem, TripIncludedGroup, TripGalleryItem,
   TripFounder, TripConfidenceItem, TripEndBanner,
 } from '../types/types-index';
 import { formatDate, slugify, formatAgeRange } from '../utils/utils-index';
@@ -83,6 +83,7 @@ interface TripForm {
   accommodation_description: string;
   accommodation_photos: string[];
   included_items: TripInclusionItem[];
+  included_groups: TripIncludedGroup[];
   not_included_items: TripInclusionItem[];
   gallery_items: TripGalleryItem[];
   gallery_description: string;
@@ -110,7 +111,7 @@ const emptyForm: TripForm = {
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
   // Extended
   highlight_cards: [], accommodation_description: '', accommodation_photos: [],
-  included_items: [], not_included_items: [], gallery_items: [], gallery_description: '',
+  included_items: [], included_groups: [], not_included_items: [], gallery_items: [], gallery_description: '',
   fashion_photos: [], fashion_description: '', things_to_carry_items: [],
   trip_founder: emptyFounder, confidence_items: [], confidence_description: '',
   meeting_address: '', end_banner: emptyEndBanner,
@@ -263,6 +264,13 @@ export default function AdminTrips() {
       included_items: [
         { icon: '<emoji or icon label>', description: '<Included item description>' },
       ],
+      included_groups: [
+        {
+          icon: '<emoji or icon label>',
+          heading: '<Group heading, e.g. "Premium Stay Experience">',
+          bullets: ['<Bulleted sub-item under this heading, e.g. "5 Nights accommodation at carefully selected 4-star and beachfront properties">'],
+        },
+      ],
       not_included_items: [
         { icon: '<emoji or icon label>', description: '<Not-included item description>' },
       ],
@@ -393,6 +401,13 @@ export default function AdminTrips() {
         included_items: Array.isArray(raw.included_items)
           ? raw.included_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
           : [],
+        included_groups: Array.isArray(raw.included_groups)
+          ? raw.included_groups.map((g: Record<string, unknown>) => ({
+              icon: asStr(g?.icon),
+              heading: asStr(g?.heading),
+              bullets: asStrArray(g?.bullets),
+            }))
+          : [],
         not_included_items: Array.isArray(raw.not_included_items)
           ? raw.not_included_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
           : [],
@@ -468,6 +483,7 @@ export default function AdminTrips() {
       included_items: (trip.included_items && trip.included_items.length > 0)
         ? trip.included_items
         : (trip.included || []).map(description => ({ icon: '', description })),
+      included_groups: trip.included_groups || [],
       not_included_items: trip.not_included_items || [],
       gallery_items: trip.gallery_items || [],
       gallery_description: trip.gallery_description || '',
@@ -928,26 +944,52 @@ export default function AdminTrips() {
           </TabPanel>
 
           <TabPanel label="Inclusions & Prep">
+            {/* Grouped What's Included — heading + bulleted sub-items (e.g. "Premium Stay Experience") */}
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-dark">What's Included (icon + description)</label>
-                <button type="button" onClick={() => setForm(f => ({ ...f, included_items: [...f.included_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+                <div>
+                  <label className="block text-sm font-semibold text-dark">What's Included — Grouped (heading + bullet points)</label>
+                  <p className="text-xs text-dark-muted mt-0.5">Shown instead of the icon grid above when at least one group is added, e.g. a "Premium Stay Experience" heading with bulleted details below it.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, included_groups: [...f.included_groups, { icon: '', heading: '', bullets: [] }] }))}
+                  className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors shrink-0"
+                >
+                  <Plus size={13} /> Add Group
+                </button>
               </div>
-              {form.included_items.map((item, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <div className="w-32 flex-shrink-0">
-                    <TripHighlightIconPicker
-                      value={item.icon}
-                      hintText={item.description}
-                      onChange={key => setForm(f => ({ ...f, included_items: f.included_items.map((it, idx) => idx === i ? { ...it, icon: key } : it) }))}
-                    />
+              {form.included_groups.map((group, gi) => (
+                <div key={gi} className="border border-background-warm rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Group {gi + 1}</span>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, included_groups: f.included_groups.filter((_, idx) => idx !== gi) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
                   </div>
-                  <input value={item.description} onChange={e => setForm(f => ({ ...f, included_items: f.included_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. All meals" />
-                  <button type="button" onClick={() => setForm(f => ({ ...f, included_items: f.included_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-dark mb-1">Icon</label>
+                      <TripHighlightIconPicker
+                        value={group.icon}
+                        hintText={group.heading}
+                        onChange={key => setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, icon: key } : g) }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-dark mb-1">Heading</label>
+                      <input value={group.heading} onChange={e => setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, heading: e.target.value } : g) }))} className={inputClass} placeholder="e.g. Premium Stay Experience" />
+                    </div>
+                  </div>
+                  <TagListEditor
+                    label="Bullet Points"
+                    value={group.bullets}
+                    onChange={bullets => setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, bullets } : g) }))}
+                    placeholder="e.g. 5 Nights accommodation at carefully selected 4-star and beachfront properties"
+                  />
                 </div>
               ))}
-              {form.included_items.length === 0 && <p className="text-xs text-dark-muted">No included items yet. Click "Add Item" to begin.</p>}
+              {form.included_groups.length === 0 && <p className="text-xs text-dark-muted">No groups yet. Click "Add Group" to begin.</p>}
             </div>
+
             <div className="md:col-span-2">
               <TagListEditor
                 label="What's Not Included"
@@ -1397,6 +1439,25 @@ export default function AdminTrips() {
                     </ul>
                   </div>
                 )}
+              </div>
+            )}
+
+            {(viewingTrip.included_groups?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">What's Included — Grouped</p>
+                <div className="space-y-2">
+                  {viewingTrip.included_groups!.map((group, gi) => (
+                    <div key={gi}>
+                      <p className="text-sm font-semibold text-dark flex items-center gap-1.5">
+                        {group.icon && <TripHighlightIconDisplay icon={group.icon} index={gi} size="sm" />}
+                        {group.heading}
+                      </p>
+                      <ul className="text-sm text-dark list-disc list-inside ml-1">
+                        {group.bullets.map((bullet, bi) => <li key={bi}>{bullet}</li>)}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

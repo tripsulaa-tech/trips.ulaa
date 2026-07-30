@@ -864,14 +864,14 @@ export default function TripDetailPage() {
 
             {/* Book Your Seat — moved here (was a right-hand sticky sidebar) so it reads as a final call-to-action before the End Banner.
                 Travel with Confidence now sits to its left as its own separate card. */}
-            <div className={`grid grid-cols-1 gap-6 ${hasConfidenceItems ? 'lg:grid-cols-[1fr_640px] lg:divide-x lg:divide-background-warm' : ''}`}>
+            <div className={`grid grid-cols-1 gap-6 ${hasConfidenceItems ? 'lg:grid-cols-[1fr_640px]' : ''}`}>
             {hasConfidenceItems && (
-              <section id="confidence" className="scroll-mt-44 flex flex-col justify-center lg:pr-10">
-                <h2 className="font-display text-3xl font-bold text-dark mb-3">Travel with Confidence</h2>
+              <section id="confidence" className="scroll-mt-44 flex flex-col justify-center">
+                <h2 className="font-display text-3xl font-bold text-dark mb-3 text-center">Travel with Confidence</h2>
                 {trip.confidence_description && (
-                  <p className="text-dark-muted text-sm leading-relaxed mb-6">{trip.confidence_description}</p>
+                  <p className="text-dark-muted text-sm leading-relaxed text-center mb-6">{trip.confidence_description}</p>
                 )}
-                <div className="grid grid-cols-1 gap-4 w-fit">
+                <div className="grid grid-cols-1 gap-4 w-fit mx-auto">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
                     <div key={i} className="flex items-center justify-start gap-3 p-2">
                       {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
@@ -882,7 +882,7 @@ export default function TripDetailPage() {
               </section>
             )}
 
-            <section className={`bg-white rounded-2xl shadow-warm-lg border border-background-warm p-8 sm:py-10 sm:pl-10 sm:pr-14 ${hasConfidenceItems ? 'lg:ml-10' : 'max-w-2xl mx-auto w-full'}`}>
+            <section className={`bg-white rounded-2xl shadow-warm-lg border border-background-warm p-8 sm:py-10 sm:pl-10 sm:pr-14 ${hasConfidenceItems ? '' : 'max-w-2xl mx-auto w-full'}`}>
               <div className="max-w-xl mx-auto text-center">
                 {activePrice != null && (
                   <div className="mb-5 pb-5 border-b border-background-warm">
