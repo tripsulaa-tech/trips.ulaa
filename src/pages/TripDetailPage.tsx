@@ -26,6 +26,22 @@ import {
   Cookie, Sparkles, FileText, IdCard, Hand, type LucideIcon,
 } from 'lucide-react';
 
+// Tracks whether the viewport is at/above the `sm` breakpoint (640px) so
+// scroll-triggered entrance animations can be skipped on mobile (per design
+// request) while remaining on larger screens.
+function useIsDesktop(): boolean {
+  const getValue = () => (typeof window === 'undefined' ? true : window.innerWidth >= 640);
+  const [isDesktop, setIsDesktop] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setIsDesktop(getValue());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  return isDesktop;
+}
+
 // Maps the number of itinerary days to a responsive grid so the cards always
 // land in the requested row pattern on larger screens (2→one row of 2,
 // 3→one row of 3, 4→2+2, 5→3+2, 6→3+3) while still stacking to fewer
@@ -86,6 +102,7 @@ export default function TripDetailPage() {
   const [cancellationOpen, setCancellationOpen] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [expandedHighlights, setExpandedHighlights] = useState<Set<number>>(new Set());
+  const isDesktop = useIsDesktop();
   const toggleHighlight = (i: number) => {
     setExpandedHighlights(prev => {
       const next = new Set(prev);
@@ -93,6 +110,19 @@ export default function TripDetailPage() {
       return next;
     });
   };
+  // Generic helper for the small "tap to fill" icon toggles below (What's
+  // Included / Travel with Confidence), which mirror the desktop hover-fill
+  // effect but need an explicit tap target on mobile since there's no hover.
+  const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<number>>>, i: number) => {
+    setter(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  };
+  const [activeIncludedGroups, setActiveIncludedGroups] = useState<Set<number>>(new Set());
+  const [activeIncludedItems, setActiveIncludedItems] = useState<Set<number>>(new Set());
+  const [activeConfidenceItems, setActiveConfidenceItems] = useState<Set<number>>(new Set());
   const [expandedItineraryDays, setExpandedItineraryDays] = useState<Set<number>>(new Set());
   const toggleItineraryDay = (i: number) => {
     setExpandedItineraryDays(prev => {
@@ -556,37 +586,28 @@ export default function TripDetailPage() {
                     return (
                       <motion.div
                         key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
+                        initial={isDesktop ? { opacity: 0, y: 20 } : false}
+                        whileInView={isDesktop ? { opacity: 1, y: 0 } : undefined}
                         viewport={{ once: true }}
-                        transition={{ delay: i * 0.07, duration: 0.5 }}
-                        className="flex flex-col items-center text-center gap-2 sm:gap-3 px-3 sm:px-4 py-4 sm:py-5 w-1/2 sm:w-1/3 lg:w-1/6"
+                        transition={isDesktop ? { delay: i * 0.07, duration: 0.5 } : undefined}
+                        className="group flex flex-col items-center text-center gap-2 sm:gap-3 px-3 sm:px-4 py-4 sm:py-5 w-1/2 sm:w-1/3 lg:w-1/6"
                       >
                         <button
                           type="button"
                           onClick={() => toggleHighlight(i)}
                           aria-expanded={isOpen}
                           aria-label={`${card.heading} — tap for details`}
-                          className={`rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${!isOpen ? 'highlight-icon-glow-mobile' : ''} sm:pointer-events-none`}
+                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
                         >
-                          <TripHighlightIconDisplay icon={card.icon} index={i} filled={isOpen} />
+                          <TripHighlightIconDisplay icon={card.icon} index={i} filled={isOpen} hoverFill />
                         </button>
                         <div className="w-full">
                           <h3 className="font-display font-bold text-dark text-sm mb-1">{card.heading}</h3>
-                          <AnimatePresence initial={false}>
-                            {isOpen && (
-                              <motion.p
-                                key="desc-mobile"
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="sm:hidden overflow-hidden text-dark-muted text-xs leading-relaxed"
-                              >
-                                {card.description}
-                              </motion.p>
-                            )}
-                          </AnimatePresence>
+                          {isOpen && (
+                            <p className="sm:hidden overflow-hidden text-dark-muted text-xs leading-relaxed">
+                              {card.description}
+                            </p>
+                          )}
                           <p className="hidden sm:block text-dark-muted text-xs leading-relaxed">{card.description}</p>
                         </div>
                       </motion.div>
@@ -714,9 +735,18 @@ export default function TripDetailPage() {
                     {(trip.included_groups?.length ?? 0) > 0 ? (
                       <div className="grid sm:grid-cols-2 gap-4">
                         {trip.included_groups!.map((group, gi) => (
-                          <div key={gi} className="bg-background-warm rounded-lg p-6">
+                          <div key={gi} className="group bg-background-warm rounded-lg p-6">
                             <div className="flex items-center gap-2 mb-2">
-                              {group.icon && <TripHighlightIconDisplay icon={group.icon} index={gi} size="md" />}
+                              {group.icon && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleInSet(setActiveIncludedGroups, gi)}
+                                  aria-label={`${group.heading} icon`}
+                                  className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                                >
+                                  <TripHighlightIconDisplay icon={group.icon} index={gi} size="md" filled={activeIncludedGroups.has(gi)} hoverFill />
+                                </button>
+                              )}
                               <h3 className="font-display text-lg font-bold text-dark">{group.heading}</h3>
                             </div>
                             <ul className="space-y-1.5">
@@ -733,9 +763,16 @@ export default function TripDetailPage() {
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {trip.included_items!.map((item: TripInclusionItem, i: number) => (
-                          <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm rounded-xl px-4 py-5">
+                          <div key={i} className="group flex flex-col items-center text-center gap-2 bg-background-warm rounded-xl px-4 py-5">
                             {item.icon ? (
-                              <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />
+                              <button
+                                type="button"
+                                onClick={() => toggleInSet(setActiveIncludedItems, i)}
+                                aria-label={`${item.description} icon`}
+                                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                              >
+                                <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" filled={activeIncludedItems.has(i)} hoverFill />
+                              </button>
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                                 <CheckCircle size={18} className="text-green-600" />
@@ -846,8 +883,17 @@ export default function TripDetailPage() {
                 )}
                 <div className="grid grid-cols-1 gap-4 w-fit">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
-                    <div key={i} className="flex items-center justify-start gap-3 p-2">
-                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="md" />}
+                    <div key={i} className="group flex items-center justify-start gap-3 p-2">
+                      {item.icon && (
+                        <button
+                          type="button"
+                          onClick={() => toggleInSet(setActiveConfidenceItems, i)}
+                          aria-label={`${item.description} icon`}
+                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                        >
+                          <TripHighlightIconDisplay icon={item.icon} index={i} size="md" filled={activeConfidenceItems.has(i)} hoverFill />
+                        </button>
+                      )}
                       <p className="text-dark text-sm leading-relaxed">{item.description}</p>
                     </div>
                   ))}

@@ -176,28 +176,6 @@ button, .btn {
   display: none;
 }
 
-/* Subtle "tap me" cue for the highlight icons on mobile — a gentle
-   breathe + tilt so the icon itself signals it's interactive without
-   needing a separate ring or chevron. Disabled once expanded, and
-   disabled entirely from sm breakpoint up where the card isn't tappable. */
-@keyframes highlight-icon-tap-cue {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(168, 90, 42, 0.55), 0 0 10px 2px rgba(168, 90, 42, 0.5);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 0 10px rgba(168, 90, 42, 0), 0 0 18px 6px rgba(168, 90, 42, 0.15);
-    transform: scale(1.08);
-  }
-}
-.highlight-icon-glow-mobile {
-  animation: highlight-icon-tap-cue 1.6s ease-in-out infinite;
-}
-@media (min-width: 640px) {
-  .highlight-icon-glow-mobile {
-    animation: none;
-  }
-}
 @keyframes itinerary-icon-glow {
   0%, 100% {
     box-shadow: 0 0 0 0 rgba(168, 90, 42, 0.55), 0 0 10px 2px rgba(168, 90, 42, 0.5);
