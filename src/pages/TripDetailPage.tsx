@@ -265,11 +265,11 @@ export default function TripDetailPage() {
               <MapPin size={14} /> {trip.destination}
             </div>
             {trip.description && (
-              <div className="hidden sm:block sm:order-4 max-w-xl mb-4 sm:mb-6">
-                <p className={`text-white/80 text-sm sm:text-base md:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-3 sm:line-clamp-4'}`}>
+              <div className="order-5 sm:order-4 max-w-xl mb-4 sm:mb-6">
+                <p className={`text-white/80 text-sm sm:text-base md:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-2 sm:line-clamp-4'}`}>
                   {trip.description}
                 </p>
-                {trip.description.length > 150 && (
+                {trip.description.length > 100 && (
                   <button
                     type="button"
                     onClick={() => setDescriptionExpanded(v => !v)}
@@ -347,7 +347,7 @@ export default function TripDetailPage() {
                 </div>
               )}
             </div>
-            <div className="order-5 sm:order-6 flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 text-white/70 text-xs sm:text-sm mb-4 sm:mb-0">
+            <div className="order-7 sm:order-6 mt-1 sm:mt-0 flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 text-white/70 text-xs sm:text-sm mb-4 sm:mb-0">
               <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
               <span className="flex items-center gap-2"><Clock size={14} /> {trip.duration}</span>
               <span className="flex items-center gap-2"><Users size={14} />
