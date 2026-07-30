@@ -499,57 +499,59 @@ export default function TripDetailPage() {
             )}
 
             {/* Included / Not Included */}
-            <section id="inclusions" className="scroll-mt-44 space-y-10">
-              {/* What's Included */}
-              {((trip.included_items?.length ?? 0) > 0 || trip.included.length > 0) && (
-                <div>
-                  <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {(trip.included_items?.length ?? 0) > 0
-                      ? trip.included_items!.map((item: TripInclusionItem, i: number) => (
-                          <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
-                            {item.icon ? (
-                              <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />
-                            ) : (
+            <section id="inclusions" className="scroll-mt-44">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-0 lg:divide-x lg:divide-background-warm">
+                {/* What's Included */}
+                {((trip.included_items?.length ?? 0) > 0 || trip.included.length > 0) && (
+                  <div className="lg:pr-10">
+                    <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {(trip.included_items?.length ?? 0) > 0
+                        ? trip.included_items!.map((item: TripInclusionItem, i: number) => (
+                            <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
+                              {item.icon ? (
+                                <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                  <CheckCircle size={18} className="text-green-600" />
+                                </div>
+                              )}
+                              <span className="text-sm text-dark font-medium leading-snug">{item.description}</span>
+                            </div>
+                          ))
+                        : trip.included.map((item, i) => (
+                            <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
                               <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                                 <CheckCircle size={18} className="text-green-600" />
                               </div>
-                            )}
-                            <span className="text-sm text-dark font-medium leading-snug">{item.description}</span>
-                          </div>
-                        ))
-                      : trip.included.map((item, i) => (
-                          <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
-                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                              <CheckCircle size={18} className="text-green-600" />
+                              <span className="text-sm text-dark font-medium leading-snug">{item}</span>
                             </div>
-                            <span className="text-sm text-dark font-medium leading-snug">{item}</span>
-                          </div>
-                        ))}
+                          ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              {/* What's Not Included */}
-              {((trip.not_included_items?.length ?? 0) > 0 || trip.not_included.length > 0) && (
-                <div>
-                  <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Not Included</h2>
-                  <div className="flex flex-wrap gap-2">
-                    {(trip.not_included_items?.length ?? 0) > 0
-                      ? trip.not_included_items!.map((item: TripInclusionItem, i: number) => (
-                          <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
-                            <XCircle size={14} className="text-red-400 shrink-0" />
-                            {item.description}
-                          </span>
-                        ))
-                      : trip.not_included.map((item, i) => (
-                          <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
-                            <XCircle size={14} className="text-red-400 shrink-0" />
-                            {item}
-                          </span>
-                        ))}
+                )}
+                {/* What's Not Included */}
+                {((trip.not_included_items?.length ?? 0) > 0 || trip.not_included.length > 0) && (
+                  <div className="lg:pl-10">
+                    <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Not Included</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {(trip.not_included_items?.length ?? 0) > 0
+                        ? trip.not_included_items!.map((item: TripInclusionItem, i: number) => (
+                            <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
+                              <XCircle size={14} className="text-red-400 shrink-0" />
+                              {item.description}
+                            </span>
+                          ))
+                        : trip.not_included.map((item, i) => (
+                            <span key={i} className="flex items-center gap-1.5 bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
+                              <XCircle size={14} className="text-red-400 shrink-0" />
+                              {item}
+                            </span>
+                          ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </section>
 
             {/* Things to carry */}
