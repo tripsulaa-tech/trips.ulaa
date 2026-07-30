@@ -23,6 +23,25 @@ import {
   ChevronDown, ChevronUp,
 } from 'lucide-react';
 
+// Maps the number of itinerary days to a responsive grid so the cards always
+// land in the requested row pattern on larger screens (2→one row of 2,
+// 3→one row of 3, 4→2+2, 5→3+2, 6→3+3) while still stacking to fewer
+// columns on narrow screens instead of ever scrolling horizontally.
+function getItineraryGridClass(days: number): string {
+  switch (days) {
+    case 1:
+      return 'grid-cols-1';
+    case 2:
+      return 'grid-cols-1 sm:grid-cols-2';
+    case 4:
+      return 'grid-cols-1 sm:grid-cols-2';
+    default:
+      // 3, 5, 6, and anything larger: 3 per row on large screens, which
+      // naturally wraps into the 3+2 / 3+3 pattern for 5/6-day trips.
+      return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+  }
+}
+
 export default function TripDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
@@ -38,7 +57,6 @@ export default function TripDetailPage() {
   const navBarRef = useRef<HTMLElement>(null);
   const navLinkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const calendarMenuRef = useRef<HTMLDivElement>(null);
-  const itineraryPerView = useResponsiveItemsPerView({ base: 1, sm: 2, md: 3, lg: 5 });
   const accommodationPerView = useResponsiveItemsPerView({ base: 1, sm: 2, lg: 3 });
   const fashionPerView = useResponsiveItemsPerView({ base: 2, sm: 3, md: 4, lg: 5 });
 
@@ -368,7 +386,7 @@ export default function TripDetailPage() {
                   Why You'll Love This Trip
                   <Heart size={20} className="text-primary/70 -rotate-6" fill="currentColor" fillOpacity={0.15} />
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y divide-x-0 sm:divide-y-0 sm:divide-x divide-background-warm">
+                <div className="flex flex-wrap justify-center divide-y divide-x-0 sm:divide-y-0 sm:divide-x divide-background-warm">
                   {trip.highlight_cards!.map((card: TripHighlightCard, i: number) => (
                     <motion.div
                       key={i}
@@ -376,7 +394,7 @@ export default function TripDetailPage() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.07, duration: 0.5 }}
-                      className="flex flex-col items-center text-center gap-3 px-4 py-5"
+                      className="flex flex-col items-center text-center gap-3 px-4 py-5 w-1/2 sm:w-1/3 lg:w-1/6"
                     >
                       <TripHighlightIconDisplay icon={card.icon} index={i} />
                       <div>
@@ -407,41 +425,36 @@ export default function TripDetailPage() {
                 <h2 className="font-display text-3xl font-bold text-dark mb-10 text-center">
                   {trip.itinerary.length} Day{trip.itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments
                 </h2>
-                <div className="pt-6">
-                  <PagedCarousel
-                    items={trip.itinerary}
-                    itemsPerView={itineraryPerView}
-                    topOverflow={32}
-                    keyExtractor={day => day.day}
-                    renderItem={(day, i) => {
-                      const meta = getTripHighlightIcon(day.icon);
-                      const palette = getTripHighlightPalette(i);
-                      return (
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true }}
-                          transition={{ delay: Math.min(i, 8) * 0.07, duration: 0.5 }}
-                          className="relative"
+                <div className={`grid gap-x-6 gap-y-12 pt-6 ${getItineraryGridClass(trip.itinerary.length)}`}>
+                  {trip.itinerary.map((day, i) => {
+                    const meta = getTripHighlightIcon(day.icon);
+                    const palette = getTripHighlightPalette(i);
+                    return (
+                      <motion.div
+                        key={day.day}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: Math.min(i, 8) * 0.07, duration: 0.5 }}
+                        className="relative"
+                      >
+                        {/* Circular badge — half in, half out of the card's top edge */}
+                        <div
+                          className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-md ring-4 ring-white font-button font-bold text-sm text-white"
+                          style={{ backgroundColor: palette.fg }}
                         >
-                          {/* Circular badge — half in, half out of the card's top edge */}
-                          <div
-                            className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-md ring-4 ring-white font-button font-bold text-sm text-white"
-                            style={{ backgroundColor: palette.fg }}
-                          >
-                            {meta ? <meta.Icon size={20} color="#fff" strokeWidth={2.25} /> : day.day}
-                          </div>
-                          <div className="w-full min-h-[380px] bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
-                            <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
-                            <p className="text-dark-muted text-xs leading-relaxed flex-1">{day.description}</p>
-                            {(day.images?.length ?? 0) > 0 && (
-                              <ItineraryDayPhotos images={day.images || []} className="h-40 mt-1" />
-                            )}
-                          </div>
-                        </motion.div>
-                      );
-                    }}
-                  />
+                          {meta ? <meta.Icon size={20} color="#fff" strokeWidth={2.25} /> : day.day}
+                        </div>
+                        <div className="w-full min-h-[380px] bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
+                          <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
+                          <p className="text-dark-muted text-xs leading-relaxed flex-1">{day.description}</p>
+                          {(day.images?.length ?? 0) > 0 && (
+                            <ItineraryDayPhotos images={day.images || []} className="h-40 mt-1" />
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </section>
             )}

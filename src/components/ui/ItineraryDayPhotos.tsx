@@ -1,53 +1,40 @@
-import { useState } from 'react';
-import { ZoomIn } from 'lucide-react';
-import Lightbox from './Lightbox';
-
 interface ItineraryDayPhotosProps {
   images: string[];
   className?: string;
 }
 
-// Shows a single cover photo for the day (matching the "one photo per card"
-// itinerary design) with a small "+N" badge when more photos exist. Clicking
-// it opens the full Lightbox — starting on that first photo — so the rest
-// are just a click away instead of cluttering the card with a thumbnail strip.
+// Shows up to 3 of the day's photos directly in the card as a static
+// collage — no click-to-expand lightbox/carousel, per the itinerary
+// redesign (cards must be fully readable without any interaction).
 export default function ItineraryDayPhotos({ images, className = '' }: ItineraryDayPhotosProps) {
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-
   if (!images || images.length === 0) return null;
 
-  const remaining = images.length - 1;
+  const shown = images.slice(0, 3);
 
+  if (shown.length === 1) {
+    return (
+      <div className={`w-full rounded-lg overflow-hidden shrink-0 ${className}`}>
+        <img src={shown[0]} alt="" loading="lazy" className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+
+  if (shown.length === 2) {
+    return (
+      <div className={`w-full grid grid-cols-2 gap-1 shrink-0 ${className}`}>
+        {shown.map((src, i) => (
+          <img key={i} src={src} alt="" loading="lazy" className="w-full h-full object-cover rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  // 3 photos: one tall image on the left, two stacked on the right.
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setLightboxOpen(true)}
-        className={`relative w-full rounded-lg overflow-hidden shrink-0 group cursor-pointer ${className}`}
-      >
-        <img
-          src={images[0]}
-          alt=""
-          loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-        />
-        <div className="absolute inset-0 bg-dark/0 group-hover:bg-dark/20 transition-colors flex items-center justify-center">
-          <ZoomIn size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-        {remaining > 0 && (
-          <span className="absolute bottom-1.5 right-1.5 bg-dark/70 text-white text-[11px] font-button font-semibold px-1.5 py-0.5 rounded">
-            +{remaining}
-          </span>
-        )}
-      </button>
-
-      <Lightbox
-        images={images}
-        initialIndex={0}
-        isOpen={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-      />
-    </>
+    <div className={`w-full grid grid-cols-2 grid-rows-2 gap-1 shrink-0 ${className}`}>
+      <img src={shown[0]} alt="" loading="lazy" className="row-span-2 w-full h-full object-cover rounded-lg" />
+      <img src={shown[1]} alt="" loading="lazy" className="w-full h-full object-cover rounded-lg" />
+      <img src={shown[2]} alt="" loading="lazy" className="w-full h-full object-cover rounded-lg" />
+    </div>
   );
 }
-
