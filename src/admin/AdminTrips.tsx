@@ -52,11 +52,8 @@ interface TripForm {
   end_date: string;
   duration: string;
   description: string;
-  highlights: string[];
   itinerary: ItineraryDay[];
-  included: string[];
   not_included: string[];
-  things_to_carry: string[];
   meeting_point: string;
   meeting_point_map_url: string;
   meeting_time: string;
@@ -102,8 +99,8 @@ const emptyEndBanner: TripEndBanner = { image: '', heading: '', description: '',
 
 const emptyForm: TripForm = {
   title: '', destination: '', start_date: '', end_date: '', duration: '',
-  description: '', highlights: [], itinerary: [], included: [], not_included: [],
-  things_to_carry: [], meeting_point: '', meeting_point_map_url: '',
+  description: '', itinerary: [], not_included: [],
+  meeting_point: '', meeting_point_map_url: '',
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
   early_bird_price: '', early_bird_deadline: '', strike_through_price: '',
@@ -211,7 +208,6 @@ export default function AdminTrips() {
       description: '<Short 2-4 sentence overview. Day-by-day plan goes in itinerary below, not here>',
       min_age: '<Minimum eligible age as a number, or "" for no restriction>',
       max_age: '<Maximum eligible age as a number, or "" for no restriction>',
-      highlights: ['<Short trip highlight, e.g. "Sunset trek to Chandratal Lake">'],
       itinerary: [
         {
           day: 1,
@@ -221,9 +217,7 @@ export default function AdminTrips() {
           icon: '<Optional icon-library key for this day\'s theme, e.g. "palmtree", "coffee", "paw-print", "mountain" — leave "" to just show the day number>',
         },
       ],
-      included: ['<Short line item of what is included, e.g. "All meals">'],
       not_included: ['<Short line item of what is NOT included, e.g. "Flights to base city">'],
-      things_to_carry: ['<Item traveller should pack, e.g. "Warm jacket">'],
       meeting_point: '<Free-text meeting point label, e.g. "Delhi Airport Terminal 3">',
       meeting_point_map_url: '<Google Maps link for the meeting point, or "">',
       meeting_time: '<Meeting time, e.g. "6:00 AM">',
@@ -346,7 +340,6 @@ export default function AdminTrips() {
         end_date: asStr(raw.end_date),
         duration: computeDuration(asStr(raw.start_date), asStr(raw.end_date)),
         description: asStr(raw.description),
-        highlights: asStrArray(raw.highlights),
         itinerary: Array.isArray(raw.itinerary)
           ? raw.itinerary.map((d: Record<string, unknown>, i: number) => ({
               day: asNum(d?.day) || i + 1,
@@ -356,9 +349,7 @@ export default function AdminTrips() {
               icon: asStr(d?.icon),
             }))
           : [],
-        included: asStrArray(raw.included),
         not_included: asStrArray(raw.not_included),
-        things_to_carry: asStrArray(raw.things_to_carry),
         meeting_point: asStr(raw.meeting_point),
         meeting_point_map_url: asStr(raw.meeting_point_map_url),
         meeting_time: asStr(raw.meeting_time),
@@ -461,9 +452,9 @@ export default function AdminTrips() {
       title: trip.title, destination: trip.destination,
       start_date: trip.start_date, end_date: trip.end_date,
       duration: computeDuration(trip.start_date, trip.end_date) || trip.duration, description: trip.description,
-      highlights: trip.highlights || [], itinerary: trip.itinerary || [],
-      included: trip.included || [], not_included: trip.not_included || [],
-      things_to_carry: trip.things_to_carry || [], meeting_point: trip.meeting_point || '',
+      itinerary: trip.itinerary || [],
+      not_included: trip.not_included || [],
+      meeting_point: trip.meeting_point || '',
       meeting_point_map_url: trip.meeting_point_map_url || '',
       meeting_time: trip.meeting_time || '', meeting_terminal: trip.meeting_terminal || '',
       meeting_details: trip.meeting_details || '',
@@ -480,18 +471,14 @@ export default function AdminTrips() {
       highlight_cards: trip.highlight_cards || [],
       accommodation_description: trip.accommodation_description || '',
       accommodation_photos: trip.accommodation_photos || [],
-      included_items: (trip.included_items && trip.included_items.length > 0)
-        ? trip.included_items
-        : (trip.included || []).map(description => ({ icon: '', description })),
+      included_items: trip.included_items || [],
       included_groups: trip.included_groups || [],
       not_included_items: trip.not_included_items || [],
       gallery_items: trip.gallery_items || [],
       gallery_description: trip.gallery_description || '',
       fashion_photos: trip.fashion_photos || [],
       fashion_description: trip.fashion_description || '',
-      things_to_carry_items: (trip.things_to_carry_items && trip.things_to_carry_items.length > 0)
-        ? trip.things_to_carry_items
-        : (trip.things_to_carry || []).map(description => ({ icon: '', description })),
+      things_to_carry_items: trip.things_to_carry_items || [],
       trip_founder: trip.trip_founder || emptyFounder,
       confidence_items: trip.confidence_items || [],
       confidence_description: trip.confidence_description || '',
@@ -1364,17 +1351,6 @@ export default function AdminTrips() {
               </div>
             )}
 
-            {viewingTrip.highlights?.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-dark-muted mb-1">Highlights</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {viewingTrip.highlights.map((h, i) => (
-                    <span key={i} className="text-xs bg-background-warm text-dark px-2 py-1 rounded-full">{h}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {(viewingTrip.highlight_cards?.length ?? 0) > 0 && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Highlight Cards</p>
@@ -1421,24 +1397,12 @@ export default function AdminTrips() {
               </div>
             )}
 
-            {(viewingTrip.included?.length > 0 || viewingTrip.not_included?.length > 0) && (
-              <div className="grid grid-cols-2 gap-4">
-                {viewingTrip.included?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-dark-muted mb-1">What's Included</p>
-                    <ul className="text-sm text-dark list-disc list-inside space-y-0.5">
-                      {viewingTrip.included.map((item, i) => <li key={i}>{item}</li>)}
-                    </ul>
-                  </div>
-                )}
-                {viewingTrip.not_included?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-dark-muted mb-1">Not Included</p>
-                    <ul className="text-sm text-dark list-disc list-inside space-y-0.5">
-                      {viewingTrip.not_included.map((item, i) => <li key={i}>{item}</li>)}
-                    </ul>
-                  </div>
-                )}
+            {(viewingTrip.not_included?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Not Included</p>
+                <ul className="text-sm text-dark list-disc list-inside space-y-0.5">
+                  {viewingTrip.not_included.map((item, i) => <li key={i}>{item}</li>)}
+                </ul>
               </div>
             )}
 
@@ -1489,25 +1453,17 @@ export default function AdminTrips() {
               </div>
             )}
 
-            {((viewingTrip.things_to_carry_items?.length ?? 0) > 0 || viewingTrip.things_to_carry?.length > 0) && (
+            {((viewingTrip.things_to_carry_items?.length ?? 0) > 0) && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Things to Carry</p>
-                {(viewingTrip.things_to_carry_items?.length ?? 0) > 0 ? (
-                  <ul className="text-sm text-dark space-y-1">
-                    {viewingTrip.things_to_carry_items!.map((item, i) => (
-                      <li key={i} className="flex items-center gap-1.5">
-                        {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
-                        {item.description}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {viewingTrip.things_to_carry.map((t, i) => (
-                      <span key={i} className="text-xs bg-background-warm text-dark px-2 py-1 rounded-full">{t}</span>
-                    ))}
-                  </div>
-                )}
+                <ul className="text-sm text-dark space-y-1">
+                  {viewingTrip.things_to_carry_items!.map((item, i) => (
+                    <li key={i} className="flex items-center gap-1.5">
+                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
+                      {item.description}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 

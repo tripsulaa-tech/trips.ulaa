@@ -90,28 +90,40 @@ function sanitizeForPdf(text: string): string {
     .trim();
 }
 
-function sanitizeTrip(trip: UpcomingTrip): UpcomingTrip {
+// The PDF renderer still lays out "Highlights" and "What's Included" as flat
+// text lists (see drawColumn / the highlights slide below). highlights and
+// included were dropped from UpcomingTrip — the admin form has no manual
+// input for them anymore, superseded by highlight_cards / included_items /
+// included_groups — so there's currently no data source to populate these
+// PDF sections from. Left as empty arrays for now (those slides just won't
+// render); wiring the PDF to the rich fields is a follow-up, not done here.
+type PdfTrip = UpcomingTrip & {
+  highlights: string[];
+  included: string[];
+  things_to_carry: string[];
+};
+
+function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
   // Things to Carry now has an icon-based rich variant (things_to_carry_items)
   // that the admin form treats as the source of truth — see AdminTrips.tsx.
   // The PDF only ever needed the description text, so prefer that when
-  // present rather than the legacy things_to_carry text[], which a trip
-  // edited purely through the new icon UI may leave empty.
+  // present.
   const thingsToCarrySource = (trip.things_to_carry_items?.length ?? 0) > 0
     ? trip.things_to_carry_items!.map(item => item.description)
-    : trip.things_to_carry;
+    : [];
   return {
     ...trip,
     title: sanitizeForPdf(trip.title),
     destination: sanitizeForPdf(trip.destination),
     duration: sanitizeForPdf(trip.duration),
     description: sanitizeForPdf(trip.description),
-    highlights: trip.highlights.map(sanitizeForPdf),
+    highlights: [],
     itinerary: trip.itinerary.map(day => ({
       ...day,
       title: sanitizeForPdf(day.title),
       description: sanitizeForPdf(day.description),
     })),
-    included: trip.included.map(sanitizeForPdf),
+    included: [],
     not_included: trip.not_included.map(sanitizeForPdf),
     things_to_carry: thingsToCarrySource.map(sanitizeForPdf),
     meeting_point: trip.meeting_point ? sanitizeForPdf(trip.meeting_point) : trip.meeting_point,

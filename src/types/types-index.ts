@@ -56,11 +56,8 @@ export interface UpcomingTrip {
   end_date: string;
   duration: string;
   description: string;
-  highlights: string[];
   itinerary: ItineraryDay[];
-  included: string[];
   not_included: string[];
-  things_to_carry: string[];
   meeting_point?: string;
   meeting_point_map_url?: string;
   // Optional structured assembly-point logistics, shown on the public trip

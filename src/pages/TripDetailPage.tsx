@@ -46,10 +46,9 @@ function getItineraryGridClass(days: number): string {
 }
 
 // Fallback icon matching for Things to Carry items that don't have an
-// admin-picked icon (things_to_carry_items with a blank icon, or the legacy
-// things_to_carry free-text list from before icons existed). Matches common
-// packing-list keywords to a representative icon, falling back to the
-// Backpack icon for anything unrecognized.
+// admin-picked icon. Matches common packing-list keywords to a
+// representative icon, falling back to the Backpack icon for anything
+// unrecognized.
 const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
   [/jacket|sweater|hoodie|fleece|thermal/i, Shirt],
   [/shoe|boot|sandal|footwear|trek/i, Footprints],
@@ -304,7 +303,7 @@ export default function TripDetailPage() {
       <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1344px] mx-auto flex items-center gap-2">
           <nav ref={navBarRef} className="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar py-3">
-            {(trip.highlight_cards?.length || trip.highlights.length) > 0 && (
+            {(trip.highlight_cards?.length ?? 0) > 0 && (
               <a
                 href="#highlights"
                 ref={el => { navLinkRefs.current['highlights'] = el; }}
@@ -437,18 +436,6 @@ export default function TripDetailPage() {
                   ))}
                 </div>
               </section>
-            ) : trip.highlights.length > 0 ? (
-              <section id="highlights" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">Trip Highlights</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {trip.highlights.map((h, i) => (
-                    <div key={i} className="flex items-start gap-3 bg-background-warm rounded-lg px-4 py-3">
-                      <CheckCircle size={18} className="text-primary shrink-0 mt-0.5" />
-                      <span className="text-dark text-sm">{h}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
             ) : null}
 
             {/* Itinerary */}
@@ -534,7 +521,7 @@ export default function TripDetailPage() {
             <section id="inclusions" className="scroll-mt-44">
               <div className="space-y-10">
                 {/* What's Included */}
-                {((trip.included_groups?.length ?? 0) > 0 || (trip.included_items?.length ?? 0) > 0 || trip.included.length > 0) && (
+                {((trip.included_groups?.length ?? 0) > 0 || (trip.included_items?.length ?? 0) > 0) && (
                   <div>
                     <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
                     {(trip.included_groups?.length ?? 0) > 0 ? (
@@ -558,27 +545,18 @@ export default function TripDetailPage() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {(trip.included_items?.length ?? 0) > 0
-                          ? trip.included_items!.map((item: TripInclusionItem, i: number) => (
-                              <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
-                                {item.icon ? (
-                                  <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                    <CheckCircle size={18} className="text-green-600" />
-                                  </div>
-                                )}
-                                <span className="text-sm text-dark font-medium leading-snug">{item.description}</span>
+                        {trip.included_items!.map((item: TripInclusionItem, i: number) => (
+                          <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
+                            {item.icon ? (
+                              <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                <CheckCircle size={18} className="text-green-600" />
                               </div>
-                            ))
-                          : trip.included.map((item, i) => (
-                              <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
-                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                  <CheckCircle size={18} className="text-green-600" />
-                                </div>
-                                <span className="text-sm text-dark font-medium leading-snug">{item}</span>
-                              </div>
-                            ))}
+                            )}
+                            <span className="text-sm text-dark font-medium leading-snug">{item.description}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -683,30 +661,20 @@ export default function TripDetailPage() {
             )}
 
             {/* Things to Carry — kept directly above Meeting Point */}
-            {((trip.things_to_carry_items?.length ?? 0) > 0 || trip.things_to_carry.length > 0) && (
+            {((trip.things_to_carry_items?.length ?? 0) > 0) && (
               <section className="scroll-mt-44">
                 <h2 className="font-display text-2xl font-bold text-dark mb-2">Things to Carry</h2>
                 <p className="text-dark-muted text-sm mb-4">Pack smart. Travel light. Stay ready.</p>
                 <div className="flex flex-wrap gap-2">
-                  {(trip.things_to_carry_items?.length ?? 0) > 0
-                    ? trip.things_to_carry_items!.map((item: TripInclusionItem, i: number) => {
-                        const Icon = (item.icon && getTripHighlightIcon(item.icon)?.Icon) || getThingsToCarryIcon(item.description);
-                        return (
-                          <span key={i} className="inline-flex items-center gap-1.5 bg-background-warm/60 rounded-lg px-3 py-2.5">
-                            <Icon size={18} className="text-primary shrink-0" />
-                            <span className="text-sm text-dark font-medium leading-snug whitespace-nowrap">{item.description}</span>
-                          </span>
-                        );
-                      })
-                    : trip.things_to_carry.map((item, i) => {
-                        const Icon = getThingsToCarryIcon(item);
-                        return (
-                          <span key={i} className="inline-flex items-center gap-1.5 bg-background-warm/60 rounded-lg px-3 py-2.5">
-                            <Icon size={18} className="text-primary shrink-0" />
-                            <span className="text-sm text-dark font-medium leading-snug whitespace-nowrap">{item}</span>
-                          </span>
-                        );
-                      })}
+                  {trip.things_to_carry_items!.map((item: TripInclusionItem, i: number) => {
+                    const Icon = (item.icon && getTripHighlightIcon(item.icon)?.Icon) || getThingsToCarryIcon(item.description);
+                    return (
+                      <span key={i} className="inline-flex items-center gap-1.5 bg-background-warm/60 rounded-lg px-3 py-2.5">
+                        <Icon size={18} className="text-primary shrink-0" />
+                        <span className="text-sm text-dark font-medium leading-snug whitespace-nowrap">{item.description}</span>
+                      </span>
+                    );
+                  })}
                 </div>
               </section>
             )}
