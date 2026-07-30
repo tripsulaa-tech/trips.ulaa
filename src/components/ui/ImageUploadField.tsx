@@ -15,9 +15,14 @@ interface ImageUploadFieldProps {
   // so the filename alone tells you "1784...-attapadi-IMG_8255.webp"
   // belongs to Attapadi, instead of being an anonymous timestamp+filename.
   fileNamePrefix?: string;
+  // Overrides the default ~100KB compression target (see compressImage in
+  // services/api.ts) for fields where quality matters more than shaving
+  // storage — e.g. the trip cover image, which passes
+  // COVER_IMAGE_TARGET_SIZE_BYTES (2MB) so it stays crisp at full width.
+  maxSizeBytes?: number;
 }
 
-export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix }: ImageUploadFieldProps) {
+export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix, maxSizeBytes }: ImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputId = `upload-${pathPrefix}-${label.replace(/\s+/g, '-').toLowerCase()}`;
@@ -30,7 +35,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
       setUploading(true);
       const namePart = fileNamePrefix ? `${fileNamePrefix}-${file.name}` : file.name;
       const path = `${pathPrefix}/${Date.now()}-${namePart}`;
-      const url = await uploadImage(bucket, file, path);
+      const url = await uploadImage(bucket, file, path, maxSizeBytes);
       onChange(url);
       // Replacing an existing image — clean up the file it's replacing so
       // it doesn't sit around as an orphan in storage.

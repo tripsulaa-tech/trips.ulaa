@@ -84,6 +84,7 @@ export default function TripDetailPage() {
   const accommodationCarouselRef = useRef<PagedCarouselHandle>(null);
   const [faqsOpen, setFaqsOpen] = useState(false);
   const [cancellationOpen, setCancellationOpen] = useState(false);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [fashionLightboxOpen, setFashionLightboxOpen] = useState(false);
   const [fashionLightboxIndex, setFashionLightboxIndex] = useState(0);
   const navBarRef = useRef<HTMLElement>(null);
@@ -216,22 +217,47 @@ export default function TripDetailPage() {
   return (
     <Layout>
       {/* Hero */}
-      <div className="relative h-[60vh] md:h-[70vh] overflow-hidden">
-        <img src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.title} className="w-full h-full object-cover" />
+      <div className="relative min-h-[60vh] md:min-h-[70vh] overflow-hidden">
+        <img src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.title} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/40 via-dark/30 to-dark/90" />
-        <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-12 max-w-[1344px] mx-auto left-0 right-0">
+        <div className="relative min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-12 max-w-[1344px] mx-auto left-0 right-0">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <Link to="/trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
             </Link>
-            <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">{trip.title}</h1>
+            <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">
+              {(() => {
+                const hyphenIdx = trip.title.indexOf('-');
+                if (hyphenIdx === -1) return trip.title;
+                const firstLine = trip.title.slice(0, hyphenIdx + 1);
+                const secondLine = trip.title.slice(hyphenIdx + 1).trim();
+                return (
+                  <>
+                    {firstLine}
+                    <br />
+                    {secondLine}
+                  </>
+                );
+              })()}
+            </h1>
             <div className="flex w-fit items-center gap-2 text-white text-sm font-button font-semibold mb-3">
               <MapPin size={14} /> {trip.destination}
             </div>
             {trip.description && (
-              <p className="text-white/85 text-base md:text-lg leading-relaxed max-w-2xl mb-6 line-clamp-3">
-                {trip.description}
-              </p>
+              <div className="max-w-2xl mb-6">
+                <p className={`text-white/85 text-base md:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-3'}`}>
+                  {trip.description}
+                </p>
+                {trip.description.length > 150 && (
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionExpanded(v => !v)}
+                    className="mt-1 text-white text-sm font-button font-semibold underline underline-offset-2 hover:text-white/80 transition-colors"
+                  >
+                    {descriptionExpanded ? 'Read less' : 'Read more'}
+                  </button>
+                )}
+              </div>
             )}
             <div className="flex flex-wrap items-center gap-3 mb-5">
               <Button

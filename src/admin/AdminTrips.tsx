@@ -16,7 +16,7 @@ import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDispla
 import DatePicker from '../components/ui/DatePicker';
 import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
-import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip } from '../services/api';
+import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip, COVER_IMAGE_TARGET_SIZE_BYTES } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
@@ -816,6 +816,7 @@ export default function AdminTrips() {
                 bucket="ulaa"
                 pathPrefix="trip-covers"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
+                maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
               />
             </div>
 

@@ -269,16 +269,22 @@ export async function getGalleryImages(): Promise<GalleryImage[]> {
 // crisp rather than full-size and blocky. Animated GIFs and files already
 // under the target are left untouched (nothing to gain, and canvas
 // re-encoding would kill the animation).
-const TARGET_SIZE_BYTES = 100 * 1024; // 100KB
+const TARGET_SIZE_BYTES = 100 * 1024; // 100KB — default target for most uploads
+// Trip cover images are the large hero photo on the trip detail page, so they're
+// allowed to stay much bigger (up to 2MB) than the default target — that's the
+// difference between "compressed until it's visibly soft" and "still crisp at
+// full width". See COVER_IMAGE_TARGET_SIZE_BYTES usage on the Cover Image field
+// in Admin → Upcoming Trips → Media.
+export const COVER_IMAGE_TARGET_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
 const MAX_DIMENSION = 1920; // px, longest side — plenty for any use in this app
 const MIN_QUALITY = 0.5; // quality floor for any single pass; resize instead of going lower
 const QUALITY_STEP = 0.05; // fine-grained steps so we don't overshoot past a good size/quality tradeoff
 const MAX_RESIZE_ATTEMPTS = 8; // each pass shrinks by 10%, so 8 passes ≈ 43% of original linear size at most
 const RESIZE_FACTOR = 0.9;
 
-async function compressImage(file: File): Promise<File> {
+async function compressImage(file: File, targetSizeBytes: number = TARGET_SIZE_BYTES): Promise<File> {
   if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
-  if (file.size <= TARGET_SIZE_BYTES) return file;
+  if (file.size <= targetSizeBytes) return file;
 
   let bitmap: ImageBitmap;
   try {
@@ -319,7 +325,7 @@ async function compressImage(file: File): Promise<File> {
   const searchQuality = async (): Promise<Blob | null> => {
     let quality = 0.85;
     let best = await toBlob(quality);
-    while (best && best.size > TARGET_SIZE_BYTES && quality > MIN_QUALITY) {
+    while (best && best.size > targetSizeBytes && quality > MIN_QUALITY) {
       quality = Math.max(quality - QUALITY_STEP, MIN_QUALITY);
       best = await toBlob(quality);
       if (quality === MIN_QUALITY) break;
@@ -331,7 +337,7 @@ async function compressImage(file: File): Promise<File> {
   let blob = await searchQuality();
 
   let attempts = 0;
-  while (blob && blob.size > TARGET_SIZE_BYTES && attempts < MAX_RESIZE_ATTEMPTS) {
+  while (blob && blob.size > targetSizeBytes && attempts < MAX_RESIZE_ATTEMPTS) {
     width = Math.round(width * RESIZE_FACTOR);
     height = Math.round(height * RESIZE_FACTOR);
     draw(width, height);
@@ -347,8 +353,8 @@ async function compressImage(file: File): Promise<File> {
   return new File([blob], newName, { type: 'image/webp' });
 }
 
-export async function uploadImage(bucket: string, file: File, path: string): Promise<string> {
-  const compressed = await compressImage(file);
+export async function uploadImage(bucket: string, file: File, path: string, targetSizeBytes?: number): Promise<string> {
+  const compressed = await compressImage(file, targetSizeBytes);
   // If the file got re-encoded to webp, the storage path's extension needs
   // to match, or the browser will guess the wrong content-type on download.
   const finalPath = compressed !== file
