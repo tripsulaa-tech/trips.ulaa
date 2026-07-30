@@ -85,6 +85,14 @@ export default function TripDetailPage() {
   const [faqsOpen, setFaqsOpen] = useState(false);
   const [cancellationOpen, setCancellationOpen] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [expandedHighlights, setExpandedHighlights] = useState<Set<number>>(new Set());
+  const toggleHighlight = (i: number) => {
+    setExpandedHighlights(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  };
   const [fashionLightboxOpen, setFashionLightboxOpen] = useState(false);
   const [fashionLightboxIndex, setFashionLightboxIndex] = useState(0);
   const navBarRef = useRef<HTMLElement>(null);
@@ -265,7 +273,7 @@ export default function TripDetailPage() {
               <MapPin size={14} /> {trip.destination}
             </div>
             {trip.description && (
-              <div className="order-5 sm:order-4 max-w-xl mb-4 sm:mb-6">
+              <div className="hidden sm:block order-5 sm:order-4 max-w-xl mb-4 sm:mb-6">
                 <p className={`text-white/80 text-sm sm:text-base md:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-2 sm:line-clamp-4'}`}>
                   {trip.description}
                 </p>
@@ -357,7 +365,7 @@ export default function TripDetailPage() {
                 <span className="flex items-center gap-2"><UserCheck size={14} /> {formatAgeRange(trip.min_age, trip.max_age)}</span>
               )}
 			  {isEarlyBird && (
-				<span className="flex items-center gap-1.5 bg-secondary text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md">
+				<span className="hidden sm:flex items-center gap-1.5 bg-secondary text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md">
 				Early Bird
 				</span>
 			  )}
@@ -535,22 +543,47 @@ export default function TripDetailPage() {
                   <Heart size={20} className="text-primary/70 -rotate-6" fill="currentColor" fillOpacity={0.15} />
                 </h2>
                 <div className="flex flex-wrap justify-center divide-y divide-x-0 sm:divide-y-0 sm:divide-x divide-background-warm">
-                  {trip.highlight_cards!.map((card: TripHighlightCard, i: number) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.07, duration: 0.5 }}
-                      className="flex flex-col items-center text-center gap-2 sm:gap-3 px-3 sm:px-4 py-4 sm:py-5 w-1/2 sm:w-1/3 lg:w-1/6"
-                    >
-                      <TripHighlightIconDisplay icon={card.icon} index={i} />
-                      <div>
-                        <h3 className="font-display font-bold text-dark text-sm mb-1">{card.heading}</h3>
-                        <p className="text-dark-muted text-xs leading-relaxed">{card.description}</p>
-                      </div>
-                    </motion.div>
-                  ))}
+                  {trip.highlight_cards!.map((card: TripHighlightCard, i: number) => {
+                    const isOpen = expandedHighlights.has(i);
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: i * 0.07, duration: 0.5 }}
+                        className="flex flex-col items-center text-center gap-2 sm:gap-3 px-3 sm:px-4 py-4 sm:py-5 w-1/2 sm:w-1/3 lg:w-1/6"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleHighlight(i)}
+                          aria-expanded={isOpen}
+                          aria-label={`${card.heading} — tap for details`}
+                          className={`rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${!isOpen ? 'highlight-icon-tap-cue' : ''} sm:pointer-events-none`}
+                        >
+                          <TripHighlightIconDisplay icon={card.icon} index={i} />
+                        </button>
+                        <div className="w-full">
+                          <h3 className="font-display font-bold text-dark text-sm mb-1">{card.heading}</h3>
+                          <AnimatePresence initial={false}>
+                            {isOpen && (
+                              <motion.p
+                                key="desc-mobile"
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="sm:hidden overflow-hidden text-dark-muted text-xs leading-relaxed"
+                              >
+                                {card.description}
+                              </motion.p>
+                            )}
+                          </AnimatePresence>
+                          <p className="hidden sm:block text-dark-muted text-xs leading-relaxed">{card.description}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </section>
             ) : null}
@@ -658,7 +691,7 @@ export default function TripDetailPage() {
                         {trip.included_groups!.map((group, gi) => (
                           <div key={gi} className="bg-background-warm rounded-lg p-6">
                             <div className="flex items-center gap-2 mb-2">
-                              {group.icon && <TripHighlightIconDisplay icon={group.icon} index={gi} size="sm" />}
+                              {group.icon && <TripHighlightIconDisplay icon={group.icon} index={gi} size="md" />}
                               <h3 className="font-display text-lg font-bold text-dark">{group.heading}</h3>
                             </div>
                             <ul className="space-y-1.5">
@@ -789,7 +822,7 @@ export default function TripDetailPage() {
                 <div className="grid grid-cols-1 gap-4 w-fit">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
                     <div key={i} className="flex items-center justify-start gap-3 p-2">
-                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
+                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="md" />}
                       <p className="text-dark text-sm leading-relaxed">{item.description}</p>
                     </div>
                   ))}

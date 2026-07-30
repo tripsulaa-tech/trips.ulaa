@@ -175,3 +175,20 @@ button, .btn {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Subtle "tap me" cue for the highlight icons on mobile — a gentle
+   breathe + tilt so the icon itself signals it's interactive without
+   needing a separate ring or chevron. Disabled once expanded, and
+   disabled entirely from sm breakpoint up where the card isn't tappable. */
+@keyframes highlight-icon-tap-cue {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.08) rotate(-4deg); }
+}
+.highlight-icon-tap-cue {
+  animation: highlight-icon-tap-cue 2.2s ease-in-out infinite;
+}
+@media (min-width: 640px) {
+  .highlight-icon-tap-cue {
+    animation: none;
+  }
+}
