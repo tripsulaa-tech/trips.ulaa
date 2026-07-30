@@ -217,18 +217,14 @@ export default function TripDetailPage() {
   return (
     <Layout>
       {/* Hero */}
-      <div className="relative min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] overflow-hidden">
+      <div className="relative min-h-[80vh] sm:min-h-[60vh] md:min-h-[70vh] overflow-hidden">
         <img src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.title} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,var(--color-dark)_85%)] sm:bg-[linear-gradient(to_right,var(--color-dark)_0%,var(--color-dark)_32%,transparent_55%)] opacity-90" />
-        <div className="relative w-full min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-20 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
+        <div className="relative w-full min-h-[80vh] sm:min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-32 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
           <motion.div className="flex flex-col" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <Link to="/trips" className="order-1 inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-3 sm:mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
             </Link>
-            {/* Duration badge — mobile only; desktop already shows duration in the meta row below */}
-            <span className="order-2 sm:hidden text-white/70 text-xs font-button font-semibold uppercase tracking-[0.15em] mb-2">
-              {trip.duration}
-            </span>
             <h1 className="order-3 sm:order-2 font-display text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-3 sm:mb-4 leading-tight">
               {(() => {
                 const hyphenIdx = trip.title.indexOf('-');
@@ -284,12 +280,12 @@ export default function TripDetailPage() {
                 )}
               </div>
             )}
-            <div className="order-6 sm:order-5 relative flex flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 mb-5">
+            <div className="order-6 sm:order-5 relative flex flex-row flex-wrap items-center gap-2.5 sm:gap-3 mb-5">
               <Button
                 variant="primary"
                 size="sm"
                 onClick={() => setBookingOpen(true)}
-                className="flex-1 sm:flex-none sm:whitespace-nowrap sm:w-auto sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
+                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto !px-3 !py-2 !text-xs !min-h-[36px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
               >
                 {isFull ? 'Join Waitlist' : 'Book Your Seat'}
               </Button>
@@ -299,7 +295,7 @@ export default function TripDetailPage() {
                 type="button"
                 onClick={handleDownloadPdf}
                 disabled={pdfLoading}
-                className="flex-1 sm:flex-none sm:whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
+                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 !px-3 !py-2 !text-xs !min-h-[36px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
               >
                 {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
                 {pdfLoading ? 'Preparing…' : 'Download Itinerary'}
