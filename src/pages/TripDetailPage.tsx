@@ -277,10 +277,10 @@ export default function TripDetailPage() {
   return (
     <Layout>
       {/* Hero */}
-      <div className="relative min-h-[80vh] sm:min-h-[60vh] md:min-h-[70vh] overflow-hidden">
+      <div className="relative min-h-[80vh] sm:min-h-[60vh] md:min-h-[90vh] overflow-hidden">
         <img src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.title} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,var(--color-dark)_85%)] sm:bg-[linear-gradient(to_right,var(--color-dark)_0%,var(--color-dark)_32%,transparent_55%)] opacity-90" />
-        <div className="relative w-full min-h-[80vh] sm:min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-32 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
+        <div className="relative w-full min-h-[80vh] sm:min-h-[60vh] md:min-h-[90vh] flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-32 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
           <motion.div className="flex flex-col" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <Link to="/trips" className="order-1 inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-3 sm:mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
@@ -617,6 +617,9 @@ export default function TripDetailPage() {
                     </motion.span>
                   </button>
                 </h2>
+                <p className="sm:hidden text-center text-dark-muted text-xs -mt-3 mb-4">
+                  Tap the heart to reveal all reasons
+                </p>
                 <div className="flex flex-wrap justify-center divide-y divide-x-0 sm:divide-y-0 sm:divide-x divide-background-warm">
                   {trip.highlight_cards!.map((card: TripHighlightCard, i: number) => {
                     const isOpen = expandedHighlights.has(i);
@@ -660,6 +663,9 @@ export default function TripDetailPage() {
                 <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-6 sm:mb-10 text-center px-2">
                   {trip.itinerary.length} Day{trip.itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments
                 </h2>
+                <p className="text-center text-dark-muted text-xs -mt-4 mb-6">
+                  Tap a day's icon to see the details
+                </p>
                 <div className={`grid gap-x-6 gap-y-9 sm:gap-y-12 pt-6 ${getItineraryGridClass(trip.itinerary.length)}`}>
                   {trip.itinerary.map((day, i) => {
                     const meta = getTripHighlightIcon(day.icon);
