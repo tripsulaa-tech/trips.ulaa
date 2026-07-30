@@ -102,6 +102,7 @@ export interface UpcomingTrip {
   fashion_photos?: string[];                    // Fashion aesthetics inspiration photos
   trip_founder?: TripFounder;                   // Per-trip founder block
   confidence_items?: TripConfidenceItem[];      // "Travel with Confidence" items
+  confidence_description?: string;              // "Travel with Confidence" section body
   meeting_address?: string;                     // Street/full address for meeting point
   end_banner?: TripEndBanner;                   // End-of-page full-width banner
   is_published: boolean;

@@ -20,7 +20,7 @@ import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
   MapPin, Calendar, Clock, Users, UserCheck, CheckCircle, XCircle,
   Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, BadgeCheck,
 } from 'lucide-react';
 
 // Maps the number of itinerary days to a responsive grid so the cards always
@@ -164,6 +164,7 @@ export default function TripDetailPage() {
   const isAlmostFull = remaining > 0 && remaining <= 5;
   const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
+  const hasConfidenceItems = (trip.confidence_items?.length ?? 0) > 0;
 
   async function handleDownloadPdf() {
     if (!trip || pdfLoading) return;
@@ -644,21 +645,7 @@ export default function TripDetailPage() {
               </section>
             )}
 
-            {/* Travel with Confidence */}
-            {(trip.confidence_items?.length ?? 0) > 0 && (
-              <section id="confidence" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">Travel with Confidence</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
-                    <div key={i} className="flex items-center gap-4 p-2">
-                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={0} size="lg" />}
-                      <p className="text-dark text-sm leading-relaxed">{item.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
+            
             {/* Founder */}
             {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
               <section className="scroll-mt-44 bg-dark rounded-2xl p-8">
@@ -762,8 +749,10 @@ export default function TripDetailPage() {
               </AnimatePresence>
             </section>
 
-            {/* Book Your Seat — moved here (was a right-hand sticky sidebar) so it reads as a final call-to-action before the End Banner. */}
-            <section className="bg-white rounded-2xl shadow-warm-lg border border-background-warm p-8 sm:p-10">
+            {/* Book Your Seat — moved here (was a right-hand sticky sidebar) so it reads as a final call-to-action before the End Banner.
+                Travel with Confidence sits alongside it as its own separate card. */}
+            <div className={`grid grid-cols-1 gap-6 ${hasConfidenceItems ? 'lg:grid-cols-[640px_1fr]' : ''}`}>
+            <section className={`bg-white rounded-2xl shadow-warm-lg border border-background-warm p-8 sm:py-10 sm:pl-10 sm:pr-14 ${hasConfidenceItems ? '' : 'max-w-2xl mx-auto w-full'}`}>
               <div className="max-w-xl mx-auto text-center">
                 {activePrice != null && (
                   <div className="mb-5 pb-5 border-b border-background-warm">
@@ -850,58 +839,83 @@ export default function TripDetailPage() {
                   {isFull ? 'Join Waitlist' : 'Book Your Seat'}
                 </Button>
 
-                <div ref={calendarMenuRef} className="relative">
+                <div className="flex items-center justify-center flex-nowrap gap-x-3 mt-3">
+                  <div ref={calendarMenuRef} className="relative">
+                    <button
+                      onClick={() => setCalendarMenuOpen(o => !o)}
+                      className="flex items-center gap-1.5 whitespace-nowrap text-sm text-dark-muted hover:text-primary transition-colors"
+                    >
+                      <CalendarPlus size={14} /> Add to calendar
+                    </button>
+
+                    {calendarMenuOpen && (
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-20 w-56 rounded-lg border-2 border-background-warm bg-white shadow-warm-lg py-1 overflow-hidden">
+                        <a
+                          href={getGoogleCalendarUrl(trip)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setCalendarMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-dark text-left hover:bg-background-warm transition-colors"
+                        >
+                          <Calendar size={14} className="shrink-0" /> Google Calendar
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => { downloadTripIcs(trip); setCalendarMenuOpen(false); }}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-dark text-left hover:bg-background-warm transition-colors"
+                        >
+                          <Download size={14} className="shrink-0" /> Apple / Outlook (.ics)
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="text-background-warm">|</span>
+
                   <button
-                    onClick={() => setCalendarMenuOpen(o => !o)}
-                    className="w-full flex items-center justify-center gap-2 mt-3 text-sm text-dark-muted hover:text-primary transition-colors"
+                    onClick={() => navigator.share?.({ title: trip.title, url: window.location.href })}
+                    className="flex items-center gap-1.5 whitespace-nowrap text-sm text-dark-muted hover:text-primary transition-colors"
                   >
-                    <CalendarPlus size={14} /> Add to calendar
+                    <Share2 size={14} /> Share this trip
                   </button>
 
-                  {calendarMenuOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-2 z-20 rounded-lg border-2 border-background-warm bg-white shadow-warm-lg py-1 overflow-hidden">
-                      <a
-                        href={getGoogleCalendarUrl(trip)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => setCalendarMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-dark text-left hover:bg-background-warm transition-colors"
-                      >
-                        <Calendar size={14} className="shrink-0" /> Google Calendar
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => { downloadTripIcs(trip); setCalendarMenuOpen(false); }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-dark text-left hover:bg-background-warm transition-colors"
-                      >
-                        <Download size={14} className="shrink-0" /> Apple / Outlook (.ics)
-                      </button>
-                    </div>
-                  )}
+                  <span className="text-background-warm">|</span>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={pdfLoading}
+                    className="flex items-center gap-1.5 whitespace-nowrap text-sm text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
+                  >
+                    {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+                    {pdfLoading ? 'Preparing PDF…' : 'Download itinerary'}
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => navigator.share?.({ title: trip.title, url: window.location.href })}
-                  className="w-full flex items-center justify-center gap-2 mt-2 text-sm text-dark-muted hover:text-primary transition-colors"
-                >
-                  <Share2 size={14} /> Share this trip
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDownloadPdf}
-                  disabled={pdfLoading}
-                  className="w-full flex items-center justify-center gap-2 mt-2 text-sm text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
-                >
-                  {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-                  {pdfLoading ? 'Preparing PDF…' : 'Download itinerary PDF'}
-                </button>
-
-                <p className="text-xs text-dark-muted text-center mt-4">
+                <p className="flex items-center justify-center gap-1.5 text-xs text-dark-muted text-center mt-4">
+                  <BadgeCheck size={14} className="text-green-600 shrink-0" />
                   No payment required to enquire. We'll contact you within 24 hours.
                 </p>
               </div>
             </section>
+
+            {hasConfidenceItems && (
+              <section id="confidence" className="scroll-mt-44 flex flex-col justify-center">
+                <h2 className="font-display text-3xl font-bold text-dark mb-3 text-center">Travel with Confidence</h2>
+                {trip.confidence_description && (
+                  <p className="text-dark-muted text-sm leading-relaxed text-center mb-6">{trip.confidence_description}</p>
+                )}
+                <div className="grid grid-cols-1 gap-6">
+                  {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
+                    <div key={i} className="flex items-center gap-4 p-2">
+                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={0} size="md" />}
+                      <p className="text-dark text-sm leading-relaxed">{item.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+            </div>
         </div>
       </div>
 

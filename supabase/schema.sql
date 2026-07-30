@@ -132,6 +132,7 @@ create table public.upcoming_trips (
   fashion_photos          text[] default '{}'::text[],
   trip_founder            jsonb,
   confidence_items        jsonb default '[]'::jsonb,
+  confidence_description  text,
   meeting_address         text,
   end_banner              jsonb,
   constraint upcoming_trips_pkey primary key (id),

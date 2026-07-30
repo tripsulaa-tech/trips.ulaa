@@ -88,6 +88,7 @@ interface TripForm {
   fashion_photos: string[];
   trip_founder: TripFounder;
   confidence_items: TripConfidenceItem[];
+  confidence_description: string;
   meeting_address: string;
   end_banner: TripEndBanner;
 }
@@ -107,7 +108,7 @@ const emptyForm: TripForm = {
   // Extended
   highlight_cards: [], accommodation_description: '', accommodation_photos: [],
   included_items: [], not_included_items: [], gallery_items: [],
-  fashion_photos: [], trip_founder: emptyFounder, confidence_items: [],
+  fashion_photos: [], trip_founder: emptyFounder, confidence_items: [], confidence_description: '',
   meeting_address: '', end_banner: emptyEndBanner,
 };
 
@@ -164,14 +165,12 @@ export default function AdminTrips() {
 
   // Runs the field search automatically as the admin types, so there's no
   // separate "Search" button to click — a short debounce avoids jumping/
-  // scrolling on every single keystroke.
+  // scrolling on every single keystroke. Clearing the box resolves via the
+  // same debounced call (handleModalSearch resets the no-match flag itself
+  // when the query is empty), so nothing needs to run synchronously here.
   useEffect(() => {
     if (!modalOpen) return;
-    if (!modalSearch.trim()) {
-      setModalSearchNoMatch(false);
-      return;
-    }
-    const timeout = setTimeout(() => handleModalSearch(), 350);
+    const timeout = setTimeout(() => handleModalSearch(), modalSearch.trim() ? 350 : 0);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalSearch, modalOpen]);
@@ -275,6 +274,7 @@ export default function AdminTrips() {
       confidence_items: [
         { icon: '<emoji or icon label>', description: '<"Travel with Confidence" point, e.g. "24/7 support during the trip">' },
       ],
+      confidence_description: '<Short intro paragraph shown below the "Travel with Confidence" heading, or "">',
       end_banner: {
         image: '(leave blank — uploaded manually)',
         heading: '<End banner heading>',
@@ -397,6 +397,7 @@ export default function AdminTrips() {
         confidence_items: Array.isArray(raw.confidence_items)
           ? raw.confidence_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
           : [],
+        confidence_description: asStr(raw.confidence_description),
         meeting_address: asStr(raw.meeting_address),
         end_banner: raw.end_banner
           ? {
@@ -458,6 +459,7 @@ export default function AdminTrips() {
       fashion_photos: trip.fashion_photos || [],
       trip_founder: trip.trip_founder || emptyFounder,
       confidence_items: trip.confidence_items || [],
+      confidence_description: trip.confidence_description || '',
       meeting_address: trip.meeting_address || '',
       end_banner: trip.end_banner || emptyEndBanner,
     });
@@ -501,7 +503,7 @@ export default function AdminTrips() {
       }
       setModalOpen(false);
       load();
-    } catch (err) {
+    } catch {
       alert('Failed to save trip.');
     } finally {
       setSaving(false);
@@ -922,6 +924,16 @@ export default function AdminTrips() {
 
             {/* Travel with Confidence */}
             <div className="md:col-span-2 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Travel with Confidence — Section Description</label>
+                <textarea
+                  value={form.confidence_description}
+                  onChange={e => setForm(f => ({ ...f, confidence_description: e.target.value }))}
+                  rows={3}
+                  className={`${inputClass} resize-none`}
+                  placeholder="Short intro paragraph shown below the &quot;Travel with Confidence&quot; heading..."
+                />
+              </div>
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-semibold text-dark">Travel with Confidence (icon + description)</label>
                 <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: [...f.confidence_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
@@ -1375,6 +1387,9 @@ export default function AdminTrips() {
             {(viewingTrip.confidence_items?.length ?? 0) > 0 && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Travel with Confidence</p>
+                {viewingTrip.confidence_description && (
+                  <p className="text-sm text-dark whitespace-pre-line mb-1.5">{viewingTrip.confidence_description}</p>
+                )}
                 <ul className="text-sm text-dark space-y-1">
                   {viewingTrip.confidence_items!.map((item, i) => (
                     <li key={i} className="flex items-center gap-1.5">
