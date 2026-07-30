@@ -102,6 +102,10 @@ export default function TripDetailPage() {
   const [cancellationOpen, setCancellationOpen] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [expandedHighlights, setExpandedHighlights] = useState<Set<number>>(new Set());
+  // Tracks whether the "Why You'll Love This Trip" heart has been tapped —
+  // once loved, the heart stays filled pink (with a soft glow) and all
+  // reason cards are expanded in one go.
+  const [heartLoved, setHeartLoved] = useState(false);
   const isDesktop = useIsDesktop();
   const toggleHighlight = (i: number) => {
     setExpandedHighlights(prev => {
@@ -109,6 +113,12 @@ export default function TripDetailPage() {
       next.has(i) ? next.delete(i) : next.add(i);
       return next;
     });
+  };
+  // Loving the heart expands every reason card at once, rather than
+  // requiring each one to be tapped individually.
+  const handleHeartLove = (count: number) => {
+    setHeartLoved(true);
+    setExpandedHighlights(new Set(Array.from({ length: count }, (_, idx) => idx)));
   };
   // Generic helper for the small "tap to fill" icon toggles below (What's
   // Included / Travel with Confidence), which mirror the desktop hover-fill
@@ -578,7 +588,30 @@ export default function TripDetailPage() {
               <section id="highlights" className="scroll-mt-44">
                 <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-5 sm:mb-8 flex items-center justify-center gap-2 text-center">
                   Why You'll Love This Trip
-                  <Heart size={20} className="text-primary/70 -rotate-6" fill="currentColor" fillOpacity={0.15} />
+                  <button
+                    type="button"
+                    onClick={() => !heartLoved && handleHeartLove(trip.highlight_cards!.length)}
+                    aria-pressed={heartLoved}
+                    aria-label={heartLoved ? "You loved this trip — all reasons expanded" : "Tap to fall in love with this trip"}
+                    className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  >
+                    {/* Minimal cue that the heart is tappable, before it's been loved */}
+                    {!heartLoved && (
+                      <span className="absolute inset-0 -m-1 rounded-full border border-primary/30 animate-ping" />
+                    )}
+                    <motion.span
+                      className="inline-flex"
+                      animate={heartLoved ? { scale: [1, 1.2, 1] } : {}}
+                      transition={heartLoved ? { duration: 0.4, ease: 'easeOut' } : {}}
+                    >
+                      <Heart
+                        size={20}
+                        className={`-rotate-6 transition-colors duration-300 ${heartLoved ? 'text-pink-500 heart-glow' : 'text-primary/70'}`}
+                        fill={heartLoved ? '#ec4899' : 'currentColor'}
+                        fillOpacity={heartLoved ? 1 : 0.15}
+                      />
+                    </motion.span>
+                  </button>
                 </h2>
                 <div className="flex flex-wrap justify-center divide-y divide-x-0 sm:divide-y-0 sm:divide-x divide-background-warm">
                   {trip.highlight_cards!.map((card: TripHighlightCard, i: number) => {
@@ -735,17 +768,20 @@ export default function TripDetailPage() {
                     {(trip.included_groups?.length ?? 0) > 0 ? (
                       <div className="grid sm:grid-cols-2 gap-4">
                         {trip.included_groups!.map((group, gi) => (
-                          <div key={gi} className="group bg-background-warm rounded-lg p-6">
+                          <div key={gi} className="group relative bg-background-warm rounded-lg p-6">
+                            {/* Full-card tap target on mobile so the fill animation triggers
+                                from anywhere on the card; on desktop it's inert (pointer-events-none)
+                                so the existing hover-fill on the card keeps working as before. */}
+                            <button
+                              type="button"
+                              onClick={() => toggleInSet(setActiveIncludedGroups, gi)}
+                              aria-expanded={activeIncludedGroups.has(gi)}
+                              aria-label={`${group.heading} — tap for details`}
+                              className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                            />
                             <div className="flex items-center gap-2 mb-2">
                               {group.icon && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleInSet(setActiveIncludedGroups, gi)}
-                                  aria-label={`${group.heading} icon`}
-                                  className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
-                                >
-                                  <TripHighlightIconDisplay icon={group.icon} index={gi} size="md" filled={activeIncludedGroups.has(gi)} hoverFill />
-                                </button>
+                                <TripHighlightIconDisplay icon={group.icon} index={gi} size="md" filled={activeIncludedGroups.has(gi)} hoverFill />
                               )}
                               <h3 className="font-display text-lg font-bold text-dark">{group.heading}</h3>
                             </div>
@@ -763,16 +799,16 @@ export default function TripDetailPage() {
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {trip.included_items!.map((item: TripInclusionItem, i: number) => (
-                          <div key={i} className="group flex flex-col items-center text-center gap-2 bg-background-warm rounded-xl px-4 py-5">
+                          <div key={i} className="group relative flex flex-col items-center text-center gap-2 bg-background-warm rounded-xl px-4 py-5">
+                            <button
+                              type="button"
+                              onClick={() => toggleInSet(setActiveIncludedItems, i)}
+                              aria-expanded={activeIncludedItems.has(i)}
+                              aria-label={`${item.description} — tap for details`}
+                              className="absolute inset-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                            />
                             {item.icon ? (
-                              <button
-                                type="button"
-                                onClick={() => toggleInSet(setActiveIncludedItems, i)}
-                                aria-label={`${item.description} icon`}
-                                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
-                              >
-                                <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" filled={activeIncludedItems.has(i)} hoverFill />
-                              </button>
+                              <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" filled={activeIncludedItems.has(i)} hoverFill />
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                                 <CheckCircle size={18} className="text-green-600" />
@@ -883,16 +919,16 @@ export default function TripDetailPage() {
                 )}
                 <div className="grid grid-cols-1 gap-4 w-fit">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
-                    <div key={i} className="group flex items-center justify-start gap-3 p-2">
+                    <div key={i} className="group relative flex items-center justify-start gap-3 p-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleInSet(setActiveConfidenceItems, i)}
+                        aria-expanded={activeConfidenceItems.has(i)}
+                        aria-label={`${item.description} — tap for details`}
+                        className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                      />
                       {item.icon && (
-                        <button
-                          type="button"
-                          onClick={() => toggleInSet(setActiveConfidenceItems, i)}
-                          aria-label={`${item.description} icon`}
-                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
-                        >
-                          <TripHighlightIconDisplay icon={item.icon} index={i} size="md" filled={activeConfidenceItems.has(i)} hoverFill />
-                        </button>
+                        <TripHighlightIconDisplay icon={item.icon} index={i} size="md" filled={activeConfidenceItems.has(i)} hoverFill />
                       )}
                       <p className="text-dark text-sm leading-relaxed">{item.description}</p>
                     </div>

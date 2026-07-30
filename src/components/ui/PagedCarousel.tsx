@@ -51,10 +51,15 @@ interface PagedCarouselProps<T> {
    *  (needed to mask horizontal sliding) clips the top of that content.
    *  A matching negative margin keeps the track's visual position unchanged. */
   topOverflow?: number;
+  /** Forces the horizontal drag/swipe gesture to stay enabled even when
+   *  there's only a single page (i.e. items.length <= itemsPerView), so
+   *  touch swipes are always available rather than only appearing once
+   *  prev/next controls show up. */
+  alwaysDrag?: boolean;
 }
 
 function PagedCarouselInner<T>(
-  { items, itemsPerView, renderItem, keyExtractor, topOverflow = 0 }: PagedCarouselProps<T>,
+  { items, itemsPerView, renderItem, keyExtractor, topOverflow = 0, alwaysDrag = false }: PagedCarouselProps<T>,
   ref: React.Ref<PagedCarouselHandle>
 ) {
   const maxIndex = Math.max(0, items.length - itemsPerView);
@@ -80,6 +85,7 @@ function PagedCarouselInner<T>(
   const slideWidthPct = 100 / itemsPerView;
   const pageCount = maxIndex + 1;
   const showControls = items.length > itemsPerView;
+  const enableDrag = showControls || alwaysDrag;
 
   return (
     <div>
@@ -89,7 +95,7 @@ function PagedCarouselInner<T>(
       >
         <motion.div
           className="flex"
-          drag={showControls ? 'x' : false}
+          drag={enableDrag ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.08}
           onDragEnd={handleDragEnd}

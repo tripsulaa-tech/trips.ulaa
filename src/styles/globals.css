@@ -189,3 +189,16 @@ button, .btn {
 .itinerary-icon-glow {
   animation: itinerary-icon-glow 1.6s ease-in-out infinite;
 }
+
+/* Subtle pulsing pink glow for the "Why You'll Love This Trip" heart once tapped/loved */
+@keyframes heart-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 0px rgba(236, 72, 153, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.75));
+  }
+}
+.heart-glow {
+  animation: heart-glow 1.8s ease-in-out infinite;
+}
