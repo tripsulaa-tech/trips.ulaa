@@ -9,6 +9,7 @@ import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import GalleryCarousel from '../components/ui/GalleryCarousel';
+import Lightbox from '../components/ui/Lightbox';
 import PagedCarousel, { useResponsiveItemsPerView, type PagedCarouselHandle } from '../components/ui/PagedCarousel';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getTripHighlightIcon, getTripHighlightPalette } from '../constants/tripHighlightIcons';
@@ -21,6 +22,8 @@ import {
   MapPin, Calendar, Clock, Users, UserCheck, CheckCircle, XCircle,
   Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight,
   ChevronDown, ChevronUp, BadgeCheck,
+  Shirt, Footprints, Glasses, HatGlasses, Headphones, BatteryCharging, Pill, SprayCan, Droplet, GlassWater,
+  Cookie, Sparkles, FileText, IdCard, type LucideIcon,
 } from 'lucide-react';
 
 // Maps the number of itinerary days to a responsive grid so the cards always
@@ -42,6 +45,31 @@ function getItineraryGridClass(days: number): string {
   }
 }
 
+// Things to Carry is a free-text list (no stored icon per item), so this
+// matches common packing-list keywords to a representative icon. Falls back
+// to the Backpack icon for anything unrecognized.
+const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
+  [/jacket|sweater|hoodie|fleece|thermal/i, Shirt],
+  [/shoe|boot|sandal|footwear|trek/i, Footprints],
+  [/sunglass|goggle/i, Glasses],
+  [/cap|hat/i, HatGlasses],
+  [/earphone|headphone|earbud/i, Headphones],
+  [/power ?bank|charger|battery/i, BatteryCharging],
+  [/medicine|medication|pill|first aid/i, Pill],
+  [/sunscreen|spf/i, SprayCan],
+  [/moistur|lotion|cream/i, Droplet],
+  [/water ?bottle|bottle/i, GlassWater],
+  [/snack|food/i, Cookie],
+  [/wipe|sanitiz|towel/i, Sparkles],
+  [/tissue|paper/i, FileText],
+  [/id proof|passport|aadhar|adhar|govern|voter|licen/i, IdCard],
+];
+
+function getThingsToCarryIcon(item: string): LucideIcon {
+  const rule = THINGS_TO_CARRY_ICON_RULES.find(([pattern]) => pattern.test(item));
+  return rule ? rule[1] : Backpack;
+}
+
 export default function TripDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
@@ -54,11 +82,12 @@ export default function TripDetailPage() {
   const accommodationCarouselRef = useRef<PagedCarouselHandle>(null);
   const [faqsOpen, setFaqsOpen] = useState(false);
   const [cancellationOpen, setCancellationOpen] = useState(false);
+  const [fashionLightboxOpen, setFashionLightboxOpen] = useState(false);
+  const [fashionLightboxIndex, setFashionLightboxIndex] = useState(0);
   const navBarRef = useRef<HTMLElement>(null);
   const navLinkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const calendarMenuRef = useRef<HTMLDivElement>(null);
   const accommodationPerView = useResponsiveItemsPerView({ base: 1, sm: 2, lg: 3 });
-  const fashionPerView = useResponsiveItemsPerView({ base: 2, sm: 3, md: 4, lg: 5 });
 
   useEffect(() => {
     if (!slug) return;
@@ -555,22 +584,6 @@ export default function TripDetailPage() {
               </div>
             </section>
 
-            {/* Things to carry */}
-            {trip.things_to_carry.length > 0 && (
-              <section>
-                <h2 className="font-display text-2xl font-bold text-dark mb-4 flex items-center gap-2">
-                  <Backpack size={24} className="text-primary" /> Things to Carry
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {trip.things_to_carry.map((item, i) => (
-                    <span key={i} className="bg-background-warm rounded-lg px-4 py-2 text-sm text-dark">
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
             {((trip.gallery_items?.length ?? 0) > 0 || trip.gallery_images.length > 0) && (
               <section id="gallery" className="scroll-mt-44">
                 <h2 className="font-display text-3xl font-bold text-dark mb-6">Places You'll Definitely Post</h2>
@@ -584,20 +597,85 @@ export default function TripDetailPage() {
               </section>
             )}
 
-            {/* Fashion Aesthetics */}
-            {(trip.fashion_photos?.length ?? 0) > 0 && (
+            {/* Fashion Aesthetics & Things to Carry */}
+            {((trip.fashion_photos?.length ?? 0) > 0 || trip.things_to_carry.length > 0) && (
               <section className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">Fashion Aesthetics</h2>
-                <PagedCarousel
-                  items={trip.fashion_photos!}
-                  itemsPerView={fashionPerView}
-                  keyExtractor={(_photo, i) => i}
-                  renderItem={(photo, i) => (
-                    <div className="aspect-[3/4] overflow-hidden rounded-xl">
-                      <img src={photo} alt={`Fashion ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-0 lg:divide-x lg:divide-background-warm">
+                  {(trip.fashion_photos?.length ?? 0) > 0 && (
+                    <div className="lg:pr-10">
+                      <h2 className="font-display text-2xl font-bold text-dark mb-4">Fashion Aesthetics</h2>
+                      <div className="grid grid-cols-3 gap-2 auto-rows-[100px]">
+                        {(() => {
+                          const VISIBLE_COUNT = 7;
+                          const photos = trip.fashion_photos!;
+                          const visible = photos.slice(0, VISIBLE_COUNT);
+                          const remaining = photos.length - visible.length;
+                          return visible.map((photo, i) => {
+                            // Repeating 8-tile bento pattern: 1 big (2x2), a couple of
+                            // regular tiles, two tall tiles, another regular tile, then
+                            // a wide tile — mirrors the reference mosaic. CSS Grid's
+                            // default auto-placement slots each span into the next open
+                            // cell, so no manual row/col positions are needed.
+                            const spanClass = [
+                              'col-span-2 row-span-2',
+                              '',
+                              '',
+                              '',
+                              'row-span-2',
+                              'row-span-2',
+                              '',
+                              'col-span-2',
+                            ][i % 8];
+                            const isLastVisible = i === visible.length - 1;
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => { setFashionLightboxIndex(i); setFashionLightboxOpen(true); }}
+                                className={`relative overflow-hidden rounded-lg group ${spanClass}`}
+                              >
+                                <img src={photo} alt={`Fashion ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                {isLastVisible && remaining > 0 && (
+                                  <div className="absolute inset-0 bg-dark/50 flex items-center justify-center">
+                                    <span className="text-white font-display font-bold text-lg">+{remaining}</span>
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          });
+                        })()}
+                      </div>
+                      <Lightbox
+                        images={trip.fashion_photos!}
+                        initialIndex={fashionLightboxIndex}
+                        isOpen={fashionLightboxOpen}
+                        onClose={() => setFashionLightboxOpen(false)}
+                      />
                     </div>
                   )}
-                />
+                  {trip.things_to_carry.length > 0 && (
+                    <div className="lg:pl-10">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                          <Backpack size={20} />
+                        </div>
+                        <h2 className="font-display text-2xl font-bold text-dark">Things to Carry</h2>
+                      </div>
+                      <p className="text-dark-muted text-sm mb-4">Pack smart. Travel light. Stay ready.</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {trip.things_to_carry.map((item, i) => {
+                          const Icon = getThingsToCarryIcon(item);
+                          return (
+                            <div key={i} className="flex items-center gap-2 bg-white border border-background-warm rounded-xl px-3 py-2.5 shadow-sm">
+                              <Icon size={18} className="text-primary shrink-0" />
+                              <span className="text-sm text-dark font-medium leading-snug">{item}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </section>
             )}
 
