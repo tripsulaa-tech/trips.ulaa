@@ -905,10 +905,10 @@ export default function TripDetailPage() {
                 {trip.confidence_description && (
                   <p className="text-dark-muted text-sm leading-relaxed text-center mb-6">{trip.confidence_description}</p>
                 )}
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-4 w-fit mx-auto">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
-                    <div key={i} className="flex items-center gap-4 p-2">
-                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={0} size="md" />}
+                    <div key={i} className="flex items-center justify-start gap-3 p-2">
+                      {item.icon && <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />}
                       <p className="text-dark text-sm leading-relaxed">{item.description}</p>
                     </div>
                   ))}
