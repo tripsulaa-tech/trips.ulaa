@@ -571,6 +571,37 @@ export default function TripDetailPage() {
               </section>
             )}
 
+            {((trip.gallery_items?.length ?? 0) > 0 || trip.gallery_images.length > 0) && (
+              <section id="gallery" className="scroll-mt-44">
+                <h2 className="font-display text-3xl font-bold text-dark mb-6">Places You'll Definitely Post</h2>
+                {(() => {
+                  const allItems: { photo: string; description?: string }[] =
+                    (trip.gallery_items?.length ?? 0) > 0
+                      ? trip.gallery_items!
+                      : trip.gallery_images.map(photo => ({ photo }));
+                  return <GalleryCarousel items={allItems} />;
+                })()}
+              </section>
+            )}
+
+            {/* Fashion Aesthetics */}
+            {(trip.fashion_photos?.length ?? 0) > 0 && (
+              <section className="scroll-mt-44">
+                <h2 className="font-display text-3xl font-bold text-dark mb-6">Fashion Aesthetics</h2>
+                <PagedCarousel
+                  items={trip.fashion_photos!}
+                  itemsPerView={fashionPerView}
+                  keyExtractor={(_photo, i) => i}
+                  renderItem={(photo, i) => (
+                    <div className="aspect-[3/4] overflow-hidden rounded-xl">
+                      <img src={photo} alt={`Fashion ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    </div>
+                  )}
+                />
+              </section>
+            )}
+
+            
             {/* Meeting Point */}
             {trip.meeting_point && (
               <section className="bg-background-warm rounded-lg p-6">
@@ -614,38 +645,6 @@ export default function TripDetailPage() {
               </section>
             )}
 
-            {/* Gallery — "Places You'll Definitely Post" */}
-            {((trip.gallery_items?.length ?? 0) > 0 || trip.gallery_images.length > 0) && (
-              <section id="gallery" className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">Places You'll Definitely Post</h2>
-                {(() => {
-                  const allItems: { photo: string; description?: string }[] =
-                    (trip.gallery_items?.length ?? 0) > 0
-                      ? trip.gallery_items!
-                      : trip.gallery_images.map(photo => ({ photo }));
-                  return <GalleryCarousel items={allItems} />;
-                })()}
-              </section>
-            )}
-
-            {/* Fashion Aesthetics */}
-            {(trip.fashion_photos?.length ?? 0) > 0 && (
-              <section className="scroll-mt-44">
-                <h2 className="font-display text-3xl font-bold text-dark mb-6">Fashion Aesthetics</h2>
-                <PagedCarousel
-                  items={trip.fashion_photos!}
-                  itemsPerView={fashionPerView}
-                  keyExtractor={(_photo, i) => i}
-                  renderItem={(photo, i) => (
-                    <div className="aspect-[3/4] overflow-hidden rounded-xl">
-                      <img src={photo} alt={`Fashion ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                    </div>
-                  )}
-                />
-              </section>
-            )}
-
-            
             {/* Founder */}
             {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
               <section className="scroll-mt-44 bg-dark rounded-2xl p-8">
