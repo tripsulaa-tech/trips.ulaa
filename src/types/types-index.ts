@@ -267,6 +267,10 @@ export interface ItineraryDay {
   // "coffee" or "paw-print". Shown in the day's badge on the trip page and
   // in admin; falls back to just showing the day number when unset.
   icon?: string;
+  // Optional bulleted sub-items for this day (e.g. "Breakfast at the resort",
+  // "Guided trek to the viewpoint") — same "heading + bullets" pattern used
+  // by TripIncludedGroup, shown below the day's description when present.
+  bullets?: string[];
 }
 
 export interface FAQ {

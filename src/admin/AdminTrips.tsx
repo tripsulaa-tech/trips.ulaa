@@ -215,6 +215,7 @@ export default function AdminTrips() {
           description: '<What happens this day>',
           images: ['(leave blank — uploaded manually)'],
           icon: '<Optional icon-library key for this day\'s theme, e.g. "palmtree", "coffee", "paw-print", "mountain" — leave "" to just show the day number>',
+          bullets: ['<Optional bulleted sub-item for this day, e.g. "Guided trek to the viewpoint">'],
         },
       ],
       not_included: ['<Short line item of what is NOT included, e.g. "Flights to base city">'],
@@ -347,6 +348,7 @@ export default function AdminTrips() {
               description: asStr(d?.description),
               images: asStrArray(d?.images),
               icon: asStr(d?.icon),
+              bullets: asStrArray(d?.bullets),
             }))
           : [],
         not_included: asStrArray(raw.not_included),
@@ -1378,6 +1380,11 @@ export default function AdminTrips() {
                       <div className="min-w-0">
                         <p className="font-medium text-dark">Day {d.day || i + 1}: {d.title}</p>
                         {d.description && <p className="text-dark-muted text-xs mt-0.5">{d.description}</p>}
+                        {(d.bullets?.length ?? 0) > 0 && (
+                          <ul className="text-dark-muted text-xs list-disc list-inside mt-0.5">
+                            {d.bullets!.map((bullet, bi) => <li key={bi}>{bullet}</li>)}
+                          </ul>
+                        )}
                         {d.images && d.images.length > 0 && (
                           <div className="flex gap-1.5 mt-1.5">
                             {d.images.slice(0, 6).map((url, j) => (

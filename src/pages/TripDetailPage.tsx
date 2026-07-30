@@ -466,7 +466,19 @@ export default function TripDetailPage() {
                         </div>
                         <div className="w-full min-h-[380px] bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
                           <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
-                          <p className="text-dark-muted text-xs leading-relaxed flex-1">{day.description}</p>
+                          <div className="flex-1">
+                            <p className="text-dark-muted text-xs leading-relaxed">{day.description}</p>
+                            {(day.bullets?.length ?? 0) > 0 && (
+                              <ul className="text-left space-y-1 mt-2">
+                                {day.bullets!.map((bullet, bi) => (
+                                  <li key={bi} className="flex items-start gap-2 text-dark-muted text-xs leading-relaxed">
+                                    <span className="mt-1.5 w-1 h-1 rounded-full bg-primary shrink-0" />
+                                    <span>{bullet}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
                           {(day.images?.length ?? 0) > 0 && (
                             <ItineraryDayPhotos images={day.images || []} className="h-40 mt-1" />
                           )}

@@ -2,6 +2,7 @@ import { Plus, X, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
 import type { ItineraryDay } from '../../types/types-index';
 import MultiImageUploadField from './MultiImageUploadField';
 import TripHighlightIconPicker from './TripHighlightIconPicker';
+import TagListEditor from './TagListEditor';
 
 interface ItineraryEditorProps {
   value: ItineraryDay[];
@@ -103,6 +104,16 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
               {!day.icon && (
                 <p className="text-[11px] text-dark-muted">No icon set — the trip page will just show "Day {day.day}".</p>
               )}
+
+              <div className="pt-1">
+                <TagListEditor
+                  label="Bullet Points (optional)"
+                  value={day.bullets || []}
+                  onChange={bullets => updateDay(index, { bullets })}
+                  placeholder="e.g. Guided trek to the viewpoint"
+                  helperText="Shown as a bulleted list below the day's description, e.g. individual activities or stops."
+                />
+              </div>
 
               <div className="pt-1">
                 <MultiImageUploadField
