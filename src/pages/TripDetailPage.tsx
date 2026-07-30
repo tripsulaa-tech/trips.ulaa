@@ -93,6 +93,14 @@ export default function TripDetailPage() {
       return next;
     });
   };
+  const [expandedItineraryDays, setExpandedItineraryDays] = useState<Set<number>>(new Set());
+  const toggleItineraryDay = (i: number) => {
+    setExpandedItineraryDays(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  };
   const [fashionLightboxOpen, setFashionLightboxOpen] = useState(false);
   const [fashionLightboxIndex, setFashionLightboxIndex] = useState(0);
   const navBarRef = useRef<HTMLElement>(null);
@@ -559,9 +567,9 @@ export default function TripDetailPage() {
                           onClick={() => toggleHighlight(i)}
                           aria-expanded={isOpen}
                           aria-label={`${card.heading} — tap for details`}
-                          className={`rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${!isOpen ? 'highlight-icon-tap-cue' : ''} sm:pointer-events-none`}
+                          className={`rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${!isOpen ? 'highlight-icon-glow-mobile' : ''} sm:pointer-events-none`}
                         >
-                          <TripHighlightIconDisplay icon={card.icon} index={i} />
+                          <TripHighlightIconDisplay icon={card.icon} index={i} filled={isOpen} />
                         </button>
                         <div className="w-full">
                           <h3 className="font-display font-bold text-dark text-sm mb-1">{card.heading}</h3>
@@ -598,6 +606,8 @@ export default function TripDetailPage() {
                   {trip.itinerary.map((day, i) => {
                     const meta = getTripHighlightIcon(day.icon);
                     const palette = getTripHighlightPalette(i);
+                    const isDayOpen = expandedItineraryDays.has(i);
+                    const hasDetails = Boolean(day.description) || (day.bullets?.length ?? 0) > 0;
                     return (
                       <motion.div
                         key={day.day}
@@ -608,27 +618,42 @@ export default function TripDetailPage() {
                         className="relative"
                       >
                         {/* Circular badge — half in, half out of the card's top edge */}
-                        <div
-                          className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-md ring-4 ring-white font-button font-bold text-sm text-white"
+                        <button
+                          type="button"
+                          onClick={() => hasDetails && toggleItineraryDay(i)}
+                          aria-expanded={isDayOpen}
+                          aria-label={`${day.title} — tap for details`}
+                          className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-md ring-4 ring-white font-button font-bold text-sm text-white focus:outline-none focus-visible:ring-primary/50 ${hasDetails ? 'cursor-pointer' : 'cursor-default'} ${hasDetails && !isDayOpen ? 'itinerary-icon-glow' : ''}`}
                           style={{ backgroundColor: palette.fg }}
                         >
                           {meta ? <meta.Icon size={20} color="#fff" strokeWidth={2.25} /> : day.day}
-                        </div>
-                        <div className="w-full sm:min-h-[380px] bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
+                        </button>
+                        <div className="w-full bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
                           <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
-                          <div className="flex-1">
-                            <p className="text-dark-muted text-xs leading-relaxed">{day.description}</p>
-                            {(day.bullets?.length ?? 0) > 0 && (
-                              <ul className="text-left space-y-1 mt-2">
-                                {day.bullets!.map((bullet, bi) => (
-                                  <li key={bi} className="flex items-start gap-2 text-dark-muted text-xs leading-relaxed">
-                                    <span className="mt-1.5 w-1 h-1 rounded-full bg-primary shrink-0" />
-                                    <span>{bullet}</span>
-                                  </li>
-                                ))}
-                              </ul>
+                          <AnimatePresence initial={false}>
+                            {isDayOpen && hasDetails && (
+                              <motion.div
+                                key="day-details"
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="overflow-hidden"
+                              >
+                                <p className="text-dark-muted text-xs leading-relaxed">{day.description}</p>
+                                {(day.bullets?.length ?? 0) > 0 && (
+                                  <ul className="text-left space-y-1 mt-2">
+                                    {day.bullets!.map((bullet, bi) => (
+                                      <li key={bi} className="flex items-start gap-2 text-dark-muted text-xs leading-relaxed">
+                                        <span className="mt-1.5 w-1 h-1 rounded-full bg-primary shrink-0" />
+                                        <span>{bullet}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </motion.div>
                             )}
-                          </div>
+                          </AnimatePresence>
                           {(day.images?.length ?? 0) > 0 && (
                             <ItineraryDayPhotos images={day.images || []} className="h-40 mt-1" />
                           )}

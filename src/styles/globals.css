@@ -181,14 +181,33 @@ button, .btn {
    needing a separate ring or chevron. Disabled once expanded, and
    disabled entirely from sm breakpoint up where the card isn't tappable. */
 @keyframes highlight-icon-tap-cue {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.08) rotate(-4deg); }
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(168, 90, 42, 0.55), 0 0 10px 2px rgba(168, 90, 42, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(168, 90, 42, 0), 0 0 18px 6px rgba(168, 90, 42, 0.15);
+    transform: scale(1.08);
+  }
 }
-.highlight-icon-tap-cue {
-  animation: highlight-icon-tap-cue 2.2s ease-in-out infinite;
+.highlight-icon-glow-mobile {
+  animation: highlight-icon-tap-cue 1.6s ease-in-out infinite;
 }
 @media (min-width: 640px) {
-  .highlight-icon-tap-cue {
+  .highlight-icon-glow-mobile {
     animation: none;
   }
+}
+@keyframes itinerary-icon-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(168, 90, 42, 0.55), 0 0 10px 2px rgba(168, 90, 42, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(168, 90, 42, 0), 0 0 18px 6px rgba(168, 90, 42, 0.15);
+    transform: scale(1.08);
+  }
+}
+.itinerary-icon-glow {
+  animation: itinerary-icon-glow 1.6s ease-in-out infinite;
 }
