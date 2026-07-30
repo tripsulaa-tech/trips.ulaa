@@ -217,19 +217,15 @@ export default function TripDetailPage() {
   return (
     <Layout>
       {/* Hero */}
-      <div className="relative min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] overflow-hidden">
+      <div className="relative min-h-[60vh] md:min-h-[70vh] overflow-hidden">
         <img src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.title} className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,var(--color-dark)_85%)] sm:bg-[linear-gradient(to_right,var(--color-dark)_0%,var(--color-dark)_32%,transparent_55%)] opacity-90" />
-        <div className="relative w-full min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-20 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
-          <motion.div className="flex flex-col" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <Link to="/trips" className="order-1 inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-3 sm:mb-4 transition-colors">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-dark)_0%,var(--color-dark)_32%,transparent_55%)] opacity-90" />
+        <div className="relative w-full min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end pl-5 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-24 sm:pt-28 pb-12 max-w-[1344px] mx-auto">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
+            <Link to="/trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
             </Link>
-            {/* Duration badge — mobile only; desktop already shows duration in the meta row below */}
-            <span className="order-2 sm:hidden text-white/70 text-xs font-button font-semibold uppercase tracking-[0.15em] mb-2">
-              {trip.duration}
-            </span>
-            <h1 className="order-3 sm:order-2 font-display text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-3 sm:mb-4 leading-tight">
+            <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">
               {(() => {
                 const hyphenIdx = trip.title.indexOf('-');
                 let firstLine: string;
@@ -265,12 +261,12 @@ export default function TripDetailPage() {
                 );
               })()}
             </h1>
-            <div className="order-4 sm:order-3 flex w-fit items-center gap-2 text-secondary text-sm font-button font-semibold mb-3">
+            <div className="flex w-fit items-center gap-2 text-secondary text-sm font-button font-semibold mb-3">
               <MapPin size={14} /> {trip.destination}
             </div>
             {trip.description && (
-              <div className="hidden sm:block sm:order-4 max-w-xl mb-4 sm:mb-6">
-                <p className={`text-white/80 text-sm sm:text-base md:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-3 sm:line-clamp-4'}`}>
+              <div className="max-w-xl mb-6">
+                <p className={`text-white/80 text-base md:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-4'}`}>
                   {trip.description}
                 </p>
                 {trip.description.length > 150 && (
@@ -284,12 +280,12 @@ export default function TripDetailPage() {
                 )}
               </div>
             )}
-            <div className="order-6 sm:order-5 relative flex flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 mb-5">
+            <div className="relative flex flex-wrap items-center gap-3 mb-5">
               <Button
                 variant="primary"
                 size="sm"
                 onClick={() => setBookingOpen(true)}
-                className="flex-1 sm:flex-none sm:whitespace-nowrap sm:w-auto sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
+                className="whitespace-nowrap sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
               >
                 {isFull ? 'Join Waitlist' : 'Book Your Seat'}
               </Button>
@@ -299,13 +295,13 @@ export default function TripDetailPage() {
                 type="button"
                 onClick={handleDownloadPdf}
                 disabled={pdfLoading}
-                className="flex-1 sm:flex-none sm:whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
+                className="whitespace-nowrap text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
               >
                 {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
                 {pdfLoading ? 'Preparing…' : 'Download Itinerary'}
               </Button>
               {countdown && (
-                <div className="hidden md:flex flex-col items-center gap-2 md:absolute md:right-0 md:translate-x-10 md:top-0 bg-background-warm/95 backdrop-blur-md border border-dark/10 shadow-[0_10px_35px_-8px_rgba(45,33,24,0.35)] rounded-xl px-5 py-3.5">
+                <div className="flex flex-col items-center gap-2 mt-3 ml-auto md:mt-0 md:ml-0 md:absolute md:right-0 md:translate-x-10 md:top-0 bg-background-warm/95 backdrop-blur-md border border-dark/10 shadow-[0_10px_35px_-8px_rgba(45,33,24,0.35)] rounded-xl px-5 py-3.5">
                   <p className="flex items-center gap-1.5 text-primary text-[10px] font-button font-bold uppercase tracking-[0.2em] whitespace-nowrap">
                     <Clock size={11} /> Trip starts in
                   </p>
@@ -351,7 +347,7 @@ export default function TripDetailPage() {
                 </div>
               )}
             </div>
-            <div className="order-5 sm:order-6 flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 text-white/70 text-xs sm:text-sm mb-4 sm:mb-0">
+            <div className="flex flex-wrap items-center gap-4 text-white/70 text-sm">
               <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
               <span className="flex items-center gap-2"><Clock size={14} /> {trip.duration}</span>
               <span className="flex items-center gap-2"><Users size={14} />
@@ -371,9 +367,9 @@ export default function TripDetailPage() {
       </div>
 
       {/* Quick jump nav */}
-      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-3 sm:px-6 lg:px-8">
-        <div className="max-w-[1344px] mx-auto flex items-center gap-1 sm:gap-2">
-          <nav ref={navBarRef} className="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar py-2.5 sm:py-3">
+      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1344px] mx-auto flex items-center gap-2">
+          <nav ref={navBarRef} className="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar py-3">
             {(trip.highlight_cards?.length ?? 0) > 0 && (
               <a
                 href="#highlights"
@@ -445,23 +441,22 @@ export default function TripDetailPage() {
           </nav>
 
           {/* Pinned actions — stay visible through the whole page scroll. */}
-          <div className="shrink-0 flex items-center gap-0.5 sm:gap-1 pl-1 border-l border-background-warm">
+          <div className="shrink-0 flex items-center gap-1 pl-1 border-l border-background-warm">
             <button
               type="button"
               onClick={() => navigator.share?.({ title: trip.title, url: window.location.href })}
               aria-label="Share this trip"
               title="Share this trip"
-              className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
+              className="h-9 w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
             >
-              <Share2 size={15} className="sm:hidden" />
-              <Share2 size={16} className="hidden sm:block" />
+              <Share2 size={16} />
             </button>
             <button
               type="button"
               onClick={() => addToCalendar(trip)}
               aria-label="Add to calendar"
               title="Add to calendar"
-              className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
+              className="h-9 w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
             >
               <CalendarPlus size={16} />
             </button>
@@ -471,70 +466,21 @@ export default function TripDetailPage() {
               disabled={pdfLoading}
               aria-label="Download itinerary PDF"
               title="Download itinerary PDF"
-              className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors disabled:opacity-50"
+              className="h-9 w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors disabled:opacity-50"
             >
-              {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <><FileDown size={15} className="sm:hidden" /><FileDown size={16} className="hidden sm:block" /></>}
+              {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
             </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-8 sm:py-16 pb-28 lg:pb-16">
-        <div className="max-w-[1344px] mx-auto space-y-9 sm:space-y-12">
-            {/* Countdown — mobile only; desktop keeps its original spot in the hero */}
-            {countdown && (
-              <div className="flex justify-center sm:hidden">
-                <div className="inline-flex flex-col items-center gap-2 bg-background-warm border border-dark/10 shadow-card rounded-xl px-5 py-3.5">
-                  <p className="flex items-center gap-1.5 text-primary text-[10px] font-button font-bold uppercase tracking-[0.2em] whitespace-nowrap">
-                    <Clock size={11} /> Trip starts in
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {[
-                      { v: countdown.days, l: 'Days' },
-                      { v: countdown.hours, l: 'Hrs' },
-                      { v: countdown.minutes, l: 'Min' },
-                      { v: countdown.seconds, l: 'Sec' },
-                    ].map(({ v, l }, i) => (
-                      <div key={l} className="flex items-center gap-2">
-                        <div className="text-center">
-                          <div
-                            className="relative w-10 h-9 overflow-hidden rounded-md bg-gradient-to-b from-dark-muted to-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                            style={{ perspective: '80px' }}
-                          >
-                            <div className="absolute left-0 right-0 top-1/2 h-px bg-black/40 -translate-y-px z-10" />
-                            <AnimatePresence mode="popLayout" initial={false}>
-                              <motion.div
-                                key={v}
-                                initial={{ rotateX: 90, opacity: 0 }}
-                                animate={{ rotateX: 0, opacity: 1 }}
-                                exit={{ rotateX: -90, opacity: 0 }}
-                                transition={{ duration: 0.8, ease: 'easeInOut' }}
-                                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-                                className="absolute inset-0 flex items-center justify-center font-display text-lg font-bold text-white tabular-nums"
-                              >
-                                {String(v).padStart(2, '0')}
-                              </motion.div>
-                            </AnimatePresence>
-                          </div>
-                          <div className="text-dark/50 text-[9px] uppercase tracking-widest text-center mt-1">{l}</div>
-                        </div>
-                        {i < 3 && (
-                          <div className="flex flex-col gap-1 self-start mt-3">
-                            <span className="w-1 h-1 rounded-full bg-primary/50" />
-                            <span className="w-1 h-1 rounded-full bg-primary/50" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-16 pb-28 lg:pb-16">
+        <div className="max-w-[1344px] mx-auto space-y-12">
             {/* Highlights */}
             {(trip.highlight_cards?.length ?? 0) > 0 ? (
               <section id="highlights" className="scroll-mt-44">
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-5 sm:mb-8 flex items-center justify-center gap-2 text-center">
+                <h2 className="font-display text-3xl font-bold text-dark mb-8 flex items-center justify-center gap-2 text-center">
                   Why You'll Love This Trip
                   <Heart size={20} className="text-primary/70 -rotate-6" fill="currentColor" fillOpacity={0.15} />
                 </h2>
@@ -546,7 +492,7 @@ export default function TripDetailPage() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.07, duration: 0.5 }}
-                      className="flex flex-col items-center text-center gap-2 sm:gap-3 px-3 sm:px-4 py-4 sm:py-5 w-1/2 sm:w-1/3 lg:w-1/6"
+                      className="flex flex-col items-center text-center gap-3 px-4 py-5 w-1/2 sm:w-1/3 lg:w-1/6"
                     >
                       <TripHighlightIconDisplay icon={card.icon} index={i} />
                       <div>
@@ -561,11 +507,11 @@ export default function TripDetailPage() {
 
             {/* Itinerary */}
             {trip.itinerary.length > 0 && (
-              <section id="itinerary" className="scroll-mt-44 mb-10 sm:mb-[60px]">
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-6 sm:mb-10 text-center px-2">
+              <section id="itinerary" className="scroll-mt-44 mb-[60px]">
+                <h2 className="font-display text-3xl font-bold text-dark mb-10 text-center">
                   {trip.itinerary.length} Day{trip.itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments
                 </h2>
-                <div className={`grid gap-x-6 gap-y-9 sm:gap-y-12 pt-6 ${getItineraryGridClass(trip.itinerary.length)}`}>
+                <div className={`grid gap-x-6 gap-y-12 pt-6 ${getItineraryGridClass(trip.itinerary.length)}`}>
                   {trip.itinerary.map((day, i) => {
                     const meta = getTripHighlightIcon(day.icon);
                     const palette = getTripHighlightPalette(i);
@@ -614,9 +560,9 @@ export default function TripDetailPage() {
             {/* Accommodation — Stay. Relax. Repeat. */}
             {(trip.accommodation_description || (trip.accommodation_photos?.length ?? 0) > 0) && (
               <section id="accommodation" className="scroll-mt-44">
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-2">Stay. Relax. Repeat.</h2>
+                <h2 className="font-display text-3xl font-bold text-dark mb-2">Stay. Relax. Repeat.</h2>
                 {trip.accommodation_description && (
-                  <p className="text-dark-muted leading-relaxed text-sm sm:text-base mb-4 sm:mb-6">{trip.accommodation_description}</p>
+                  <p className="text-dark-muted leading-relaxed text-base mb-6">{trip.accommodation_description}</p>
                 )}
                 {(trip.accommodation_photos?.length ?? 0) > 0 && (() => {
                   const photos = trip.accommodation_photos!;
@@ -721,7 +667,7 @@ export default function TripDetailPage() {
             {((trip.gallery_items?.length ?? 0) > 0 || trip.gallery_images.length > 0) && (
               <section id="gallery" className="scroll-mt-44">
                 <div className="mb-6">
-                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-2">Places You'll Definitely Post</h2>
+                  <h2 className="font-display text-3xl font-bold text-dark mb-2">Places You'll Definitely Post</h2>
                   {trip.gallery_description && (
                     <p className="text-dark-muted text-sm max-w-2xl">{trip.gallery_description}</p>
                   )}
@@ -783,12 +729,12 @@ export default function TripDetailPage() {
 
             {/* Book Your Seat — sits directly below Fashion Aesthetics / Gallery, matching the quick-jump nav order.
                 Travel with Confidence sits to its left as its own separate card. */}
-            <div className={`grid grid-cols-1 gap-5 sm:gap-6 ${hasConfidenceItems ? 'lg:grid-cols-[1fr_640px] lg:divide-x lg:divide-background-warm' : ''}`}>
+            <div className={`grid grid-cols-1 gap-6 ${hasConfidenceItems ? 'lg:grid-cols-[1fr_640px] lg:divide-x lg:divide-background-warm' : ''}`}>
             {hasConfidenceItems && (
               <section id="confidence" className="scroll-mt-44 flex flex-col justify-center lg:pr-10">
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-3">Travel with Confidence</h2>
+                <h2 className="font-display text-3xl font-bold text-dark mb-3">Travel with Confidence</h2>
                 {trip.confidence_description && (
-                  <p className="text-dark-muted text-sm leading-relaxed mb-4 sm:mb-6">{trip.confidence_description}</p>
+                  <p className="text-dark-muted text-sm leading-relaxed mb-6">{trip.confidence_description}</p>
                 )}
                 <div className="grid grid-cols-1 gap-4 w-fit">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
@@ -801,7 +747,7 @@ export default function TripDetailPage() {
               </section>
             )}
 
-            <section className={`bg-white rounded-2xl shadow-warm-lg border border-background-warm p-5 py-6 sm:p-8 sm:py-10 sm:pl-10 sm:pr-14 ${hasConfidenceItems ? 'lg:ml-10' : 'max-w-2xl mx-auto w-full'}`}>
+            <section className={`bg-white rounded-2xl shadow-warm-lg border border-background-warm p-8 sm:py-10 sm:pl-10 sm:pr-14 ${hasConfidenceItems ? 'lg:ml-10' : 'max-w-2xl mx-auto w-full'}`}>
               <div className="max-w-xl mx-auto text-center">
                 {activePrice != null && (
                   <div className="mb-5 pb-5 border-b border-background-warm">
@@ -952,8 +898,8 @@ export default function TripDetailPage() {
             {/* Things to Carry — kept directly above Meeting Point */}
             {((trip.things_to_carry_items?.length ?? 0) > 0) && (
               <section className="scroll-mt-44">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-dark mb-2">Things to Carry</h2>
-                <p className="text-dark-muted text-sm mb-3 sm:mb-4">Pack smart. Travel light. Stay ready.</p>
+                <h2 className="font-display text-2xl font-bold text-dark mb-2">Things to Carry</h2>
+                <p className="text-dark-muted text-sm mb-4">Pack smart. Travel light. Stay ready.</p>
                 <div className="flex flex-wrap gap-2">
                   {trip.things_to_carry_items!.map((item: TripInclusionItem, i: number) => {
                     const Icon = (item.icon && getTripHighlightIcon(item.icon)?.Icon) || getThingsToCarryIcon(item.description);
@@ -970,8 +916,8 @@ export default function TripDetailPage() {
 
             {/* Meeting Point */}
             {trip.meeting_point && (
-              <section className="bg-background-warm rounded-lg p-5 sm:p-6">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-dark mb-3 flex items-center gap-2">
+              <section className="bg-background-warm rounded-lg p-6">
+                <h2 className="font-display text-2xl font-bold text-dark mb-3 flex items-center gap-2">
                   <Navigation size={22} className="text-primary" /> Meeting Point
                 </h2>
                 <p className="text-dark font-semibold mb-1">{trip.meeting_point}</p>
@@ -1013,8 +959,8 @@ export default function TripDetailPage() {
 
             {/* Founder */}
             {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
-              <section className="scroll-mt-44 bg-dark rounded-2xl p-5 sm:p-8">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Meet Your Trip Leader</h2>
+              <section className="scroll-mt-44 bg-dark rounded-2xl p-8">
+                <h2 className="font-display text-2xl font-bold text-white mb-6">Meet Your Trip Leader</h2>
                 <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
                   {trip.trip_founder.photo ? (
                     <img
@@ -1042,8 +988,8 @@ export default function TripDetailPage() {
             {/* Eligibility — only shown when the admin has set an age
                 restriction on this trip (Admin → Trips → Basic Info). */}
             {(trip.min_age != null || trip.max_age != null) && (
-              <section className="bg-background-warm rounded-lg p-5 sm:p-6">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-dark mb-2 flex items-center gap-2">
+              <section className="bg-background-warm rounded-lg p-6">
+                <h2 className="font-display text-2xl font-bold text-dark mb-2 flex items-center gap-2">
                   <UserCheck size={22} className="text-primary" /> Eligibility
                 </h2>
                 <p className="text-dark-muted">
@@ -1061,7 +1007,7 @@ export default function TripDetailPage() {
                   aria-expanded={faqsOpen}
                   className="w-full flex items-center justify-between gap-4 mb-6"
                 >
-                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark">FAQs</h2>
+                  <h2 className="font-display text-3xl font-bold text-dark">FAQs</h2>
                   {faqsOpen ? (
                     <ChevronUp size={24} className="text-primary shrink-0" />
                   ) : (
@@ -1092,7 +1038,7 @@ export default function TripDetailPage() {
                 aria-expanded={cancellationOpen}
                 className="w-full flex items-center justify-between gap-4 mb-6"
               >
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark">Cancellation Policy</h2>
+                <h2 className="font-display text-3xl font-bold text-dark">Cancellation Policy</h2>
                 {cancellationOpen ? (
                   <ChevronUp size={24} className="text-primary shrink-0" />
                 ) : (
@@ -1182,16 +1128,16 @@ export default function TripDetailPage() {
           {trip.end_banner.image && (
             <img src={trip.end_banner.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
           )}
-          <div className={`relative ${trip.end_banner.image ? 'bg-dark/70' : 'bg-dark'} py-12 sm:py-20 px-4 sm:px-6 lg:px-8`}>
+          <div className={`relative ${trip.end_banner.image ? 'bg-dark/70' : 'bg-dark'} py-20 px-4 sm:px-6 lg:px-8`}>
             <div className="max-w-[1344px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
               <div>
                 {trip.end_banner.heading && (
-                  <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
+                  <h2 className="font-display text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
                     {trip.end_banner.heading}
                   </h2>
                 )}
                 {trip.end_banner.description && (
-                  <p className="text-white/70 text-base sm:text-lg leading-relaxed mb-6">{trip.end_banner.description}</p>
+                  <p className="text-white/70 text-lg leading-relaxed mb-6">{trip.end_banner.description}</p>
                 )}
                 {trip.end_banner.cta_label && (
                   trip.end_banner.cta_url ? (
