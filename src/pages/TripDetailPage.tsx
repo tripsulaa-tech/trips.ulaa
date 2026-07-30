@@ -537,9 +537,9 @@ export default function TripDetailPage() {
                   <div>
                     <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
                     {(trip.included_groups?.length ?? 0) > 0 ? (
-                      <div className="space-y-5">
+                      <div className="grid sm:grid-cols-2 gap-4">
                         {trip.included_groups!.map((group, gi) => (
-                          <div key={gi}>
+                          <div key={gi} className="bg-background-warm rounded-lg p-6">
                             <div className="flex items-center gap-2 mb-2">
                               {group.icon && <TripHighlightIconDisplay icon={group.icon} index={gi} size="sm" />}
                               <h3 className="font-display text-lg font-bold text-dark">{group.heading}</h3>
@@ -558,7 +558,7 @@ export default function TripDetailPage() {
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {trip.included_items!.map((item: TripInclusionItem, i: number) => (
-                          <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm/60 border border-background-warm rounded-xl px-4 py-5">
+                          <div key={i} className="flex flex-col items-center text-center gap-2 bg-background-warm rounded-xl px-4 py-5">
                             {item.icon ? (
                               <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" />
                             ) : (
