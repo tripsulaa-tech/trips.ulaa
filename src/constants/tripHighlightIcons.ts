@@ -9,6 +9,7 @@ import {
   Plane, Car, TrainFront, CableCar,
   ShieldCheck, Shield, Phone, HeartHandshake, BadgeCheck, Clock, Headset, LifeBuoy, Lock, UserCheck,
   Hotel, Venus, UserRoundCheck, PhoneCall, MapPinned,
+  Shirt, Footprints, Hand, Glasses, HatGlasses, BatteryCharging, Pill, IdCard, GlassWater,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -119,6 +120,17 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'user-round-check', label: 'Female Trip Captain', Icon: UserRoundCheck, keywords: ['female trip captain', 'trip captain', 'female guide', 'female leader', 'woman guide', 'captain'] },
   { key: 'venus', label: 'Girls Only. Always.', Icon: Venus, keywords: ['girls only', 'girls only always', 'girls-only', 'women only', 'female only', 'ladies only', 'always'] },
   { key: 'map-pinned', label: 'Local Ground Support', Icon: MapPinned, keywords: ['local support', 'ground support', 'on-ground', 'local partners'] },
+
+  // Things to Carry / travel essentials
+  { key: 'shirt', label: 'Warm Jacket', Icon: Shirt, keywords: ['warm jacket', 'jacket', 'thermal wear', 'thermal', 'sweater', 'hoodie', 'fleece', 'winter clothing', 'clothing'] },
+  { key: 'footprints', label: 'Comfortable Shoes', Icon: Footprints, keywords: ['comfortable shoes', 'shoes', 'shoe', 'boots', 'boot', 'sandals', 'footwear', 'trek shoes', 'walking shoes'] },
+  { key: 'hand', label: 'Gloves', Icon: Hand, keywords: ['gloves', 'glove', 'hand warmers', 'mittens'] },
+  { key: 'hat-glasses', label: 'Woollen Cap', Icon: HatGlasses, keywords: ['woollen cap', 'wool cap', 'cap', 'hat', 'beanie', 'headwear'] },
+  { key: 'glasses', label: 'Sunglasses', Icon: Glasses, keywords: ['sunglasses', 'sunglass', 'goggles', 'goggle', 'shades'] },
+  { key: 'battery-charging', label: 'Power Bank', Icon: BatteryCharging, keywords: ['power bank', 'powerbank', 'charger', 'battery', 'charging'] },
+  { key: 'pill', label: 'Personal Medicines', Icon: Pill, keywords: ['personal medicines', 'medicines', 'medicine', 'medication', 'pills', 'first aid'] },
+  { key: 'id-card', label: 'Government ID Proof', Icon: IdCard, keywords: ['government id proof', 'id proof', 'id card', 'passport', 'aadhar', 'adhar', 'voter id', 'license', 'documents'] },
+  { key: 'glass-water', label: 'Water Bottle', Icon: GlassWater, keywords: ['water bottle', 'bottle', 'water', 'hydration', 'flask'] },
 ];
 
 const TRIP_HIGHLIGHT_ICON_MAP: Record<string, TripHighlightIconMeta> = Object.fromEntries(

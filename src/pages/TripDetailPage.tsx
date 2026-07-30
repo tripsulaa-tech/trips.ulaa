@@ -23,7 +23,7 @@ import {
   Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight,
   ChevronDown, ChevronUp, BadgeCheck,
   Shirt, Footprints, Glasses, HatGlasses, Headphones, BatteryCharging, Pill, SprayCan, Droplet, GlassWater,
-  Cookie, Sparkles, FileText, IdCard, type LucideIcon,
+  Cookie, Sparkles, FileText, IdCard, Hand, type LucideIcon,
 } from 'lucide-react';
 
 // Maps the number of itinerary days to a responsive grid so the cards always
@@ -54,6 +54,7 @@ const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
   [/shoe|boot|sandal|footwear|trek/i, Footprints],
   [/sunglass|goggle/i, Glasses],
   [/cap|hat/i, HatGlasses],
+  [/glove|mitten/i, Hand],
   [/earphone|headphone|earbud/i, Headphones],
   [/power ?bank|charger|battery/i, BatteryCharging],
   [/medicine|medication|pill|first aid/i, Pill],
@@ -622,37 +623,25 @@ export default function TripDetailPage() {
                 {trip.fashion_description && (
                   <p className="text-dark-muted text-sm mb-4">{trip.fashion_description}</p>
                 )}
-                <div className="grid grid-cols-3 gap-2 auto-rows-[100px]">
+                <div className="columns-2 sm:columns-3 gap-2 [&>*]:mb-2">
                   {(() => {
                     const VISIBLE_COUNT = 7;
                     const photos = trip.fashion_photos!;
                     const visible = photos.slice(0, VISIBLE_COUNT);
                     const remaining = photos.length - visible.length;
                     return visible.map((photo, i) => {
-                      // Repeating 8-tile bento pattern: 1 big (2x2), a couple of
-                      // regular tiles, two tall tiles, another regular tile, then
-                      // a wide tile — mirrors the reference mosaic. CSS Grid's
-                      // default auto-placement slots each span into the next open
-                      // cell, so no manual row/col positions are needed.
-                      const spanClass = [
-                        'col-span-2 row-span-2',
-                        '',
-                        '',
-                        '',
-                        'row-span-2',
-                        'row-span-2',
-                        '',
-                        'col-span-2',
-                      ][i % 8];
                       const isLastVisible = i === visible.length - 1;
                       return (
                         <button
                           key={i}
                           type="button"
                           onClick={() => { setFashionLightboxIndex(i); setFashionLightboxOpen(true); }}
-                          className={`relative overflow-hidden rounded-lg group ${spanClass}`}
+                          className="relative block w-full overflow-hidden rounded-lg break-inside-avoid group"
                         >
-                          <img src={photo} alt={`Fashion ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          {/* h-auto (no object-cover) lets each tile take the photo's own
+                              aspect ratio, so admin-uploaded images are never cropped —
+                              portrait, landscape, and square photos all show in full. */}
+                          <img src={photo} alt={`Fashion ${i + 1}`} className="w-full h-auto block group-hover:scale-105 transition-transform duration-500" />
                           {isLastVisible && remaining > 0 && (
                             <div className="absolute inset-0 bg-dark/50 flex items-center justify-center">
                               <span className="text-white font-display font-bold text-lg">+{remaining}</span>
