@@ -220,7 +220,7 @@ export default function TripDetailPage() {
       <div className="relative min-h-[60vh] md:min-h-[70vh] overflow-hidden">
         <img src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.title} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-dark)_0%,var(--color-dark)_32%,transparent_55%)] opacity-90" />
-        <div className="relative min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end pl-3 sm:pl-4 lg:pl-4 pr-4 sm:pr-6 lg:pr-8 pt-24 sm:pt-28 pb-12 max-w-[1344px] mx-auto left-0 right-0">
+        <div className="relative w-full min-h-[60vh] md:min-h-[70vh] flex flex-col justify-end pl-5 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-24 sm:pt-28 pb-12 max-w-[1344px] mx-auto">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <Link to="/trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
@@ -531,7 +531,7 @@ export default function TripDetailPage() {
                         >
                           {meta ? <meta.Icon size={20} color="#fff" strokeWidth={2.25} /> : day.day}
                         </div>
-                        <div className="w-full min-h-[380px] bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
+                        <div className="w-full sm:min-h-[380px] bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
                           <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
                           <div className="flex-1">
                             <p className="text-dark-muted text-xs leading-relaxed">{day.description}</p>
@@ -834,7 +834,7 @@ export default function TripDetailPage() {
                   {isFull ? 'Join Waitlist' : 'Book Your Seat'}
                 </Button>
 
-                <div className="flex items-center justify-center flex-nowrap gap-x-3 mt-3">
+                <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-2 mt-3">
                   <div ref={calendarMenuRef} className="relative">
                     <button
                       onClick={() => setCalendarMenuOpen(o => !o)}
