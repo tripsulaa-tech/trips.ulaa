@@ -163,7 +163,7 @@ export default function AboutPage() {
       ══════════════════════════════════════════════════════════════ */}
       <section className="pt-12 pb-12 sm:pb-24 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto">
-          <motion.div {...fadeUp()} className="text-center mb-14">
+          <motion.div {...fadeUp()} className="text-center mb-6 sm:mb-14">
             {journey_intro.sub_heading && (
               <p className="font-script text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
                 {journey_intro.sub_heading}
@@ -254,7 +254,7 @@ export default function AboutPage() {
       ══════════════════════════════════════════════════════════════ */}
       <section className="py-12 px-4 sm:px-6 lg:px-8 bg-background-warm">
         <div className="max-w-[1344px] mx-auto">
-          <motion.div {...fadeUp()} className="text-center mb-14">
+          <motion.div {...fadeUp()} className="text-center mb-6 sm:mb-14">
             <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
               {why_different.heading}
             </h2>
@@ -296,7 +296,7 @@ export default function AboutPage() {
           6. OUR COMMUNITY
       ══════════════════════════════════════════════════════════════ */}
       {(community.photos.length > 0 || community.heading) && (
-        <section className="py-12 sm:py-24 px-4 sm:px-6 lg:px-8 bg-background">
+        <section className="pt-12 sm:pt-24 pb-12 sm:pb-24 px-4 sm:px-6 lg:px-8 bg-background">
           <div className="max-w-[1344px] mx-auto">
             {community.photos.length > 0 ? (
               <div className="flex flex-col lg:flex-row gap-4 lg:h-[560px]">
@@ -389,7 +389,7 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           7. STATISTICS
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-primary">
+      <section className="py-6 sm:py-12 px-4 sm:px-6 lg:px-8 bg-primary">
         <div className="max-w-[1344px] mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
             {[
@@ -423,7 +423,7 @@ export default function AboutPage() {
           8. WHAT OUR GIRLS SAY (dynamic testimonials)
       ══════════════════════════════════════════════════════════════ */}
       {testimonials.length > 0 && (
-        <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background-warm">
+        <section className="py-12 sm:py-24 px-4 sm:px-6 lg:px-8 bg-background-warm">
           <div className="max-w-[1344px] mx-auto">
             <motion.div {...fadeUp()} className="text-center mb-12">
               <h2 className="font-display text-4xl md:text-5xl font-bold text-dark whitespace-pre-line">
@@ -486,7 +486,7 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           10. MEET THE FOUNDER
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-dark">
+      <section className="py-12 sm:py-24 px-4 sm:px-6 lg:px-8 bg-dark">
         <div className="max-w-[1344px] mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-12">
             <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-4">
