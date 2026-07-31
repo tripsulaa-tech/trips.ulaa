@@ -11,6 +11,7 @@ import {
   Hotel, Venus, UserRoundCheck, PhoneCall, MapPinned,
   Shirt, Footprints, Hand, Glasses, HatGlasses, BatteryCharging, Pill, IdCard, GlassWater,
   X, HelpCircle, Frown, Smile, AlertCircle, Meh,
+  UserRoundX, HeartHandshake as PeopleHeart, ShieldX, MapPinned as MapAlert,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -121,6 +122,12 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'user-round-check', label: 'Female Trip Captain', Icon: UserRoundCheck, keywords: ['female trip captain', 'trip captain', 'female guide', 'female leader', 'woman guide', 'captain'] },
   { key: 'venus', label: 'Girls Only. Always.', Icon: Venus, keywords: ['girls only', 'girls only always', 'girls-only', 'women only', 'female only', 'ladies only', 'always'] },
   { key: 'map-pinned', label: 'Local Ground Support', Icon: MapPinned, keywords: ['local support', 'ground support', 'on-ground', 'local partners'] },
+
+  // Status states (unavailable / matched / declined etc.)
+  { key: 'user-round-x', label: 'Not a Match', Icon: UserRoundX, keywords: ['not a match', 'declined', 'unmatched', 'no match', 'remove', 'blocked'] },
+  { key: 'people-heart', label: 'Companion Match', Icon: PeopleHeart, keywords: ['companion', 'travel buddy', 'matched', 'connection', 'friendship', 'love'] },
+  { key: 'shield-x', label: 'Not Protected', Icon: ShieldX, keywords: ['not protected', 'unprotected', 'no insurance', 'unsafe', 'declined protection'] },
+  { key: 'map-alert', label: 'Location Alert', Icon: MapAlert, keywords: ['location alert', 'travel advisory', 'map warning', 'area alert'] },
 
   // Things to Carry / travel essentials
   { key: 'shirt', label: 'Warm Jacket', Icon: Shirt, keywords: ['warm jacket', 'jacket', 'thermal wear', 'thermal', 'sweater', 'hoodie', 'fleece', 'winter clothing', 'clothing'] },

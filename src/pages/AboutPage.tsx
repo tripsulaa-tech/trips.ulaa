@@ -132,7 +132,7 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           2. OUR STORY
       ══════════════════════════════════════════════════════════════ */}
-      <section className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-background">
+      <section className="pt-6 pb-0 sm:pt-24 sm:pb-12 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <motion.div {...fadeUp()}>
             {our_story.image ? (
@@ -161,11 +161,11 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           3 & 4. HAVE YOU EVER... / WELCOME TO ULAA (merged split card)
       ══════════════════════════════════════════════════════════════ */}
-      <section className="pt-12 pb-24 px-4 sm:px-6 lg:px-8 bg-background">
+      <section className="pt-12 pb-12 sm:pb-24 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-14">
             {journey_intro.sub_heading && (
-              <p className="font-display italic text-xl md:text-2xl text-primary mb-2 whitespace-pre-line">
+              <p className="font-script text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
                 {journey_intro.sub_heading}
               </p>
             )}
@@ -178,15 +178,10 @@ export default function AboutPage() {
               </p>
             )}
           </motion.div>
-          <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 p-12">
+          <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 px-6 py-12 sm:p-12">
             {/* Center connector arrow */}
             <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-warm-lg">
               <ArrowRight size={22} className="text-white" />
-            </div>
-            <div className="md:hidden flex justify-center -my-2 relative z-10">
-              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg">
-                <ArrowDown size={18} className="text-white" />
-              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-0 md:divide-x md:divide-dashed md:divide-dark/20">
@@ -194,7 +189,7 @@ export default function AboutPage() {
               <div className="md:pr-20 text-center">
                 <motion.h2
                   {...fadeUp()}
-                  className="font-display text-3xl md:text-4xl font-bold text-dark mb-2 whitespace-pre-line"
+                  className="font-display text-2xl md:text-3xl font-bold text-dark mb-2 whitespace-pre-line"
                 >
                   {have_you_ever.heading}
                 </motion.h2>
@@ -219,9 +214,15 @@ export default function AboutPage() {
 
               {/* Welcome to Ulaa */}
               <div className="md:pl-20 text-center">
+                <div className="md:hidden relative flex items-center justify-center -mt-2 mb-6">
+                  <span className="absolute left-0 right-0 border-t border-dashed border-dark/20" />
+                  <div className="relative z-10 w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg">
+                    <ArrowDown size={18} className="text-white" />
+                  </div>
+                </div>
                 <motion.h2
                   {...fadeUp()}
-                  className="font-display text-3xl md:text-4xl font-bold text-dark mb-2 whitespace-pre-line"
+                  className="font-display text-2xl md:text-3xl font-bold text-dark mb-2 whitespace-pre-line"
                 >
                   {welcome_to_ulaa.heading}
                 </motion.h2>
@@ -295,7 +296,7 @@ export default function AboutPage() {
           6. OUR COMMUNITY
       ══════════════════════════════════════════════════════════════ */}
       {(community.photos.length > 0 || community.heading) && (
-        <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
+        <section className="py-12 sm:py-24 px-4 sm:px-6 lg:px-8 bg-background">
           <div className="max-w-[1344px] mx-auto">
             {community.photos.length > 0 ? (
               <div className="flex flex-col lg:flex-row gap-4 lg:h-[560px]">
