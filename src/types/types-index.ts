@@ -96,6 +96,13 @@ export interface UpcomingTrip {
   // early-bird mechanism itself — see getStrikeThroughPrice in utils/index.ts
   // for how it combines with (and falls back around) early-bird pricing.
   strike_through_price?: number | null;
+  // Domestic vs. international, used by the DB's set_enquiry_trip_type()
+  // trigger to auto-fill enquiries.trip_type on new bookings, which in turn
+  // drives calculate_suggested_refund()'s domestic/international-specific
+  // cancellation windows. Left null means "not set" — the trigger then
+  // leaves enquiries.trip_type null too, so set it for accurate refund
+  // suggestions.
+  trip_type?: 'domestic' | 'international' | null;
   // Optional age eligibility range for this trip. Either side can be left
   // unset (no restriction on that side); if both are unset, the public
   // forms fall back to the app's default 18-65 rule — see validateAge in
@@ -162,6 +169,14 @@ export interface CompletedTrip {
   // automatically when the album is created. Admin reference only — never
   // rendered on the public album page (AlbumPage.tsx).
   original_itinerary?: ItineraryDay[];
+  // Rich (icon-based) snapshot, fed from upcoming_trips' highlight_cards /
+  // included_items. Preferred over the legacy plain-text fields below when
+  // present — see AdminAlbums.tsx and fix_completed_trip_snapshot_source.sql.
+  original_highlight_cards?: TripHighlightCard[];
+  original_included_items?: TripInclusionItem[];
+  // Legacy plain-text snapshot. Only trips completed before
+  // fix_completed_trip_snapshot_source.sql have real data here — kept as a
+  // fallback so their history isn't lost, not written to for new albums.
   original_highlights?: string[];
   original_included?: string[];
   original_not_included?: string[];

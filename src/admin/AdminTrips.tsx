@@ -71,6 +71,9 @@ interface TripForm {
   early_bird_price: number | '';
   early_bird_deadline: string;
   strike_through_price: number | '';
+  // '' means "not set" (stored as null) — see UpcomingTrip.trip_type in
+  // types-index.ts for why this matters to the DB's refund logic.
+  trip_type: 'domestic' | 'international' | '';
   cover_image: string;
   // Saved position/zoom for cover_image (see CoverImageCrop in
   // types-index.ts). null means "no crop saved" — every layout falls back
@@ -108,14 +111,14 @@ const emptyForm: TripForm = {
   meeting_point: '', meeting_point_map_url: '',
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
-  early_bird_price: '', early_bird_deadline: '', strike_through_price: '',
+  early_bird_price: '', early_bird_deadline: '', strike_through_price: '', trip_type: '',
   cover_image: '', cover_image_crop: null, gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
   // Extended
   highlight_cards: [], accommodation_description: '', accommodation_photos: [],
-  included_items: [], included_groups: [], not_included_items: [], gallery_items: [], gallery_description: '',
-  fashion_photos: [], fashion_description: '', things_to_carry_items: [],
-  trip_founder: emptyFounder, confidence_items: [], confidence_description: '',
+  included_items: [], included_groups: [], not_included_items: [], gallery_items: [], gallery_description: "Views worth every post. Memories worth even more.",
+  fashion_photos: [], fashion_description: 'Styles that speaks, moments that stay.', things_to_carry_items: [],
+  trip_founder: emptyFounder, confidence_items: [], confidence_description: 'We take care of Everything, so you can Enjoy Every Moment!',
   meeting_address: '', end_banner: emptyEndBanner,
 };
 
@@ -239,6 +242,7 @@ export default function AdminTrips() {
       early_bird_price: '<Early bird price per person in INR as a number, or "">',
       early_bird_deadline: '<Early bird deadline, format YYYY-MM-DD, or "">',
       strike_through_price: '<Optional "was ₹X" marketing price as a number, or "">',
+      trip_type: '<"domestic" or "international", or "" if not set>',
       cover_image: '(leave blank — uploaded manually)',
       gallery_images: ['(leave blank — uploaded manually)'],
       terms_and_conditions: '(leave as default unless the trip needs custom terms)',
@@ -375,6 +379,7 @@ export default function AdminTrips() {
         early_bird_price: asNum(raw.early_bird_price),
         early_bird_deadline: asStr(raw.early_bird_deadline),
         strike_through_price: asNum(raw.strike_through_price),
+        trip_type: raw.trip_type === 'domestic' || raw.trip_type === 'international' ? raw.trip_type : '',
         cover_image: '',
         cover_image_crop: null,
         gallery_images: [],
@@ -471,6 +476,7 @@ export default function AdminTrips() {
       price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
       early_bird_deadline: trip.early_bird_deadline || '',
       strike_through_price: trip.strike_through_price ?? '',
+      trip_type: trip.trip_type || '',
       cover_image: trip.cover_image || '',
       cover_image_crop: trip.cover_image_crop || null,
       gallery_images: trip.gallery_images || [], is_published: trip.is_published,
@@ -519,14 +525,11 @@ export default function AdminTrips() {
       const data = {
         ...form,
         slug: slugify(form.title),
-        // Keep the legacy text[] column populated from the icon-based items
-        // so anything still reading things_to_carry directly (CSV export,
-        // older code) stays in sync with what the admin actually edited.
-        things_to_carry: form.things_to_carry_items.map(item => item.description),
         price: form.price,
         early_bird_price: form.early_bird_price === '' ? null : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || null,
         strike_through_price: form.strike_through_price === '' ? null : form.strike_through_price,
+        trip_type: form.trip_type === '' ? null : form.trip_type,
         min_age: form.min_age === '' ? null : form.min_age,
         max_age: form.max_age === '' ? null : form.max_age,
         seats_booked: Math.max(0, Math.min(form.seats_booked, form.total_seats)),
@@ -829,6 +832,19 @@ export default function AdminTrips() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-dark mb-1">Trip Type</label>
+              <select
+                value={form.trip_type}
+                onChange={e => setForm(f => ({ ...f, trip_type: e.target.value as TripForm['trip_type'] }))}
+                className={inputClass}
+              >
+                <option value="">Not set</option>
+                <option value="domestic">Domestic</option>
+                <option value="international">International</option>
+              </select>
+              <p className="text-xs text-dark-muted mt-1">Used to auto-fill the correct cancellation-window rules on bookings for this trip.</p>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-dark mb-1">Early-Bird Deadline</label>
               <DatePicker
                 value={form.early_bird_deadline}
@@ -863,20 +879,20 @@ export default function AdminTrips() {
             </div>
 
             {/* Places You'll Post — gallery with captions */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Places You'll Definitely Post — Section Description</label>
-              <textarea
-                value={form.gallery_description}
-                onChange={e => setForm(f => ({ ...f, gallery_description: e.target.value }))}
-                rows={2}
-                className={`${inputClass} resize-none`}
-                placeholder="Short intro paragraph shown below the &quot;Places You'll Definitely Post&quot; heading..."
-              />
-            </div>
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-semibold text-dark">Places You'll Definitely Post</label>
                 <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: [...f.gallery_items, { photo: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Section Description</label>
+                <textarea
+                  value={form.gallery_description}
+                  onChange={e => setForm(f => ({ ...f, gallery_description: e.target.value }))}
+                  rows={2}
+                  className={`${inputClass} resize-none`}
+                  placeholder="Short intro paragraph shown below the &quot;Places You'll Definitely Post&quot; heading..."
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {form.gallery_items.map((item, i) => (
@@ -906,16 +922,6 @@ export default function AdminTrips() {
 
             {/* Fashion Aesthetics */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Fashion Aesthetics — Section Description</label>
-              <textarea
-                value={form.fashion_description}
-                onChange={e => setForm(f => ({ ...f, fashion_description: e.target.value }))}
-                rows={2}
-                className={`${inputClass} resize-none`}
-                placeholder="Short intro paragraph shown below the &quot;Fashion Aesthetics&quot; heading..."
-              />
-            </div>
-            <div className="md:col-span-2">
               <MultiImageUploadField
                 label="Fashion Aesthetics (outfit inspiration photos)"
                 value={form.fashion_photos}
@@ -923,7 +929,16 @@ export default function AdminTrips() {
                 bucket="ulaa"
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/fashion`}
                 hint="Shown uncropped in a masonry grid, so portrait, landscape, or square all work — just keep each photo at least 800px on its shortest side."
-              />
+              >
+                <label className="block text-sm font-medium text-dark mb-1">Section Description</label>
+                <textarea
+                  value={form.fashion_description}
+                  onChange={e => setForm(f => ({ ...f, fashion_description: e.target.value }))}
+                  rows={2}
+                  className={`${inputClass} resize-none`}
+                  placeholder="Short intro paragraph shown below the &quot;Fashion Aesthetics&quot; heading..."
+                />
+              </MultiImageUploadField>
             </div>
           </TabPanel>
           <TabPanel label="Overview & Itinerary">
@@ -1094,8 +1109,12 @@ export default function AdminTrips() {
 
             {/* Travel with Confidence */}
             <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-dark">Travel with Confidence</label>
+                <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: [...f.confidence_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+              </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Travel with Confidence — Section Description</label>
+                <label className="block text-sm font-medium text-dark mb-1">Section Description</label>
                 <textarea
                   value={form.confidence_description}
                   onChange={e => setForm(f => ({ ...f, confidence_description: e.target.value }))}
@@ -1103,10 +1122,6 @@ export default function AdminTrips() {
                   className={`${inputClass} resize-none`}
                   placeholder="Short intro paragraph shown below the &quot;Travel with Confidence&quot; heading..."
                 />
-              </div>
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-dark">Travel with Confidence</label>
-                <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: [...f.confidence_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
               </div>
               {form.confidence_items.map((item, i) => (
                 <div key={i} className="flex items-start gap-2">

@@ -56,6 +56,13 @@ create table public.completed_trips (
   original_highlights    text[],
   original_included      text[],
   original_not_included  text[],
+  -- Rich (icon-based) snapshot equivalents, fed from upcoming_trips'
+  -- highlight_cards / included_items. Preferred by AdminAlbums.tsx over
+  -- the legacy plain-text original_highlights / original_included above,
+  -- which are kept only so trips completed before this existed keep their
+  -- historical data. See fix_completed_trip_snapshot_source.sql.
+  original_highlight_cards jsonb default '[]'::jsonb,
+  original_included_items  jsonb default '[]'::jsonb,
   -- Public-facing like count on the album page — see
   -- add_completed_trip_likes.sql for the increment/decrement RPCs that are
   -- the only public-safe way to change this (direct updates still require
@@ -80,11 +87,8 @@ create table public.upcoming_trips (
   end_date                date not null,
   duration                text not null,
   description             text not null,
-  highlights              text[] default '{}'::text[],
   itinerary               jsonb default '[]'::jsonb,
-  included                text[] default '{}'::text[],
   not_included            text[] default '{}'::text[],
-  things_to_carry         text[] default '{}'::text[],
   meeting_point           text,
   faqs                    jsonb default '[]'::jsonb,
   total_seats             integer not null default 20,
@@ -1106,13 +1110,13 @@ begin
   insert into public.completed_trips (
     id, title, destination, slug, trip_date, description,
     cover_image, gallery_images, is_published, trip_type,
-    original_itinerary, original_highlights, original_included, original_not_included,
+    original_itinerary, original_highlight_cards, original_included_items, original_not_included,
     participants
   )
   select
     ut.id, ut.title, ut.destination, ut.slug, ut.start_date, ut.description,
     ut.cover_image, ut.gallery_images, false, ut.trip_type,
-    ut.itinerary, ut.highlights, ut.included, ut.not_included,
+    ut.itinerary, ut.highlight_cards, ut.included_items, ut.not_included,
     ut.seats_booked
   from public.upcoming_trips ut
   where ut.start_date <= current_date

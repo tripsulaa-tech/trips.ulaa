@@ -11,9 +11,13 @@ interface MultiImageUploadFieldProps {
   // Short recommended-size/aspect note shown under the label, same purpose
   // as ImageUploadField's hint.
   hint?: string;
+  // Optional extra content rendered after the label/hint and before the
+  // upload grid — e.g. a section-description textarea that belongs
+  // visually inside this field rather than as a separate block above it.
+  children?: React.ReactNode;
 }
 
-export default function MultiImageUploadField({ label, value, onChange, bucket, pathPrefix, hint }: MultiImageUploadFieldProps) {
+export default function MultiImageUploadField({ label, value, onChange, bucket, pathPrefix, hint, children }: MultiImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +65,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
     <div>
       <label className="block text-sm font-medium text-dark mb-1">{label}</label>
       {hint && <p className="text-[11px] text-dark-muted leading-snug mb-1.5">{hint}</p>}
+      {children && <div className="mb-3">{children}</div>}
 
       <input
         ref={fileRef}
