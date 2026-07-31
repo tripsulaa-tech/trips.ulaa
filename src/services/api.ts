@@ -894,12 +894,15 @@ export async function recordPayment(
 // a SUGGESTION only, never authoritative; the admin still enters the real
 // refund_amount via recordRefund. Pass thirdPartyCharges if known at
 // cancellation time (airline/hotel penalties aren't derivable from stored
-// data) so the suggestion accounts for them.
+// data) so the suggestion accounts for them. Pass isNoShow if the admin is
+// cancelling *because* the guest was a no-show — the DB trigger forces the
+// suggested refund to 0 in that case, per the site's no-refund-for-no-shows
+// policy, overriding the normal cancellation-window math.
 //
 // The trip's seats_booked count frees up on its own: the
 // on_enquiries_seat_sync DB trigger recomputes it from real enquiries data
 // right after this update commits, so no manual adjustment is made here.
-export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number): Promise<Enquiry> {
+export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number, isNoShow?: boolean): Promise<Enquiry> {
   if (thirdPartyCharges !== undefined) {
     const { error: chargesError } = await supabase
       .from('enquiries')
@@ -910,7 +913,28 @@ export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number
 
   const { data, error } = await supabase
     .from('enquiries')
-    .update({ cancelled_at: new Date().toISOString() })
+    .update({
+      cancelled_at: new Date().toISOString(),
+      ...(isNoShow !== undefined ? { is_no_show: isNoShow } : {}),
+    })
+    .eq('id', enquiry.id)
+    .select()
+    .single();
+  if (error) throw error;
+
+  return data;
+}
+
+// Toggles is_no_show on its own, independent of cancellation — an admin may
+// only realize/decide a booking was a no-show after the fact (e.g. once the
+// trip has already departed), whether or not the booking was ever formally
+// cancelled. The on_enquiry_cancelled DB trigger reacts to this update and
+// recomputes suggested_refund_amount: forced to 0 while is_no_show is true,
+// or back to the normal cancellation-window math when unmarked.
+export async function setEnquiryNoShow(enquiry: Enquiry, isNoShow: boolean): Promise<Enquiry> {
+  const { data, error } = await supabase
+    .from('enquiries')
+    .update({ is_no_show: isNoShow })
     .eq('id', enquiry.id)
     .select()
     .single();
@@ -987,6 +1011,12 @@ export async function recordRefund(
   }
   if (newRefundAmount > (current.amount_paid || 0)) {
     throw new Error("Refund amount can't exceed what was actually paid.");
+  }
+  // No-shows forfeit the full amount paid, no exceptions — the UI already
+  // locks this field to 0, but guard here too since this is the one choke
+  // point every refund path calls.
+  if (current.is_no_show && newRefundAmount > 0) {
+    throw new Error('No refund is permitted for a no-show.');
   }
 
   const delta = newRefundAmount - (current.refund_amount || 0);

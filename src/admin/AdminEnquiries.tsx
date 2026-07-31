@@ -11,7 +11,7 @@ import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh, C
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow } from '../services/api';
 import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../types/types-index';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
@@ -177,6 +177,23 @@ function isBooked(e: Enquiry): boolean {
 // enquiries that were simply never paid.
 function isCancelled(e: Enquiry): boolean {
   return !!e.cancelled_at;
+}
+
+// Seat-status badge shown in the table/card — same underlying
+// booked/cancelled/not-booked states as before, but a cancelled booking
+// marked is_no_show gets its own label/color so admins can tell a no-show
+// apart from an ordinary cancellation at a glance (it forfeits the refund,
+// per policy, where a normal cancellation doesn't).
+function seatStatus(e: Enquiry): { label: string; title: string; color: string; icon: typeof CheckCircle2 } {
+  if (isBooked(e)) {
+    return { label: 'Booked', title: 'Seat booked automatically from payment', color: 'bg-green-100 text-green-700', icon: CheckCircle2 };
+  }
+  if (e.cancelled_at) {
+    return e.is_no_show
+      ? { label: 'No Show', title: 'No-show — seat released, forfeits refund per policy', color: 'bg-orange-100 text-orange-700', icon: XCircle }
+      : { label: 'Cancelled', title: 'Cancelled — seat released', color: 'bg-red-100 text-red-700', icon: XCircle };
+  }
+  return { label: 'Not booked', title: 'No payment recorded yet, so no seat is held', color: 'bg-background-warm text-dark-muted', icon: Circle };
 }
 
 // Group vs Solo is purely about whether this row is part of a multi-seat
@@ -410,6 +427,8 @@ export default function AdminEnquiries() {
   const [savingPayment, setSavingPayment] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<Enquiry | null>(null);
   const [cancelCharges, setCancelCharges] = useState<number | ''>('');
+  const [cancelIsNoShow, setCancelIsNoShow] = useState(false);
+  const [togglingNoShow, setTogglingNoShow] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   // How many waitlist signups — and how many actual people, since a group
   // signup (group_size > 1) is one signup but several people — are
@@ -716,7 +735,9 @@ export default function AdminEnquiries() {
       package_type: packageType,
       total_amount: suggested ?? '',
       amount_paid: enquiry.amount_paid ?? 0,
-      refund_amount: enquiry.refund_amount ?? 0,
+      // No-shows forfeit the full amount paid, no exceptions — refund
+      // amount is locked at 0 rather than showing whatever was last on record.
+      refund_amount: enquiry.is_no_show ? 0 : enquiry.refund_amount ?? 0,
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
     });
   };
@@ -748,18 +769,20 @@ export default function AdminEnquiries() {
     } else {
       setCancelTarget(e);
       setCancelCharges('');
+      setCancelIsNoShow(false);
     }
   };
 
   // Cancels an enquiry. Frees the trip seat immediately but never touches
   // amount_paid — that stays as the record of what was actually collected,
-  // separate from whatever gets refunded.
+  // separate from whatever gets refunded. isNoShow forces the suggested
+  // refund to 0 server-side (see cancelEnquiry).
   const handleConfirmCancel = async () => {
     if (!cancelTarget) return;
     setCancelling(true);
     try {
       const charges = cancelCharges === '' ? undefined : Number(cancelCharges);
-      await cancelEnquiry(cancelTarget, charges);
+      await cancelEnquiry(cancelTarget, charges, cancelIsNoShow);
       setCancelTarget(null);
       const freshTrips = await getAllUpcomingTripsAdmin();
       setTrips(freshTrips);
@@ -769,6 +792,29 @@ export default function AdminEnquiries() {
       alert('Failed to cancel booking.');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  // Toggles is_no_show independent of cancellation — e.g. an admin
+  // realizing after the trip departed that a still-"confirmed" booking was
+  // actually a no-show. The DB trigger recomputes suggested_refund_amount
+  // in response, so refresh paymentTarget from the returned row.
+  const handleToggleNoShow = async (e: Enquiry, isNoShow: boolean) => {
+    setTogglingNoShow(true);
+    try {
+      const updated = await setEnquiryNoShow(e, isNoShow);
+      setPaymentTarget(updated);
+      // No refund for no-shows — clear whatever was in the field so it
+      // can't be saved through by accident.
+      if (isNoShow) {
+        setPaymentForm(f => ({ ...f, refund_amount: 0 }));
+      }
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update no-show status.');
+    } finally {
+      setTogglingNoShow(false);
     }
   };
 
@@ -2005,6 +2051,7 @@ export default function AdminEnquiries() {
                     {paginatedEnquiries.map((e, pageIdx) => {
                       const idx = (enquiriesSafePage - 1) * ENQUIRIES_PAGE_SIZE + pageIdx;
                       const cfg = STATUS_CONFIG[e.status];
+                      const seat = seatStatus(e);
                       const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                       const isHighlighted = highlightId === e.id;
                       const clr = groupColor(e);
@@ -2117,13 +2164,11 @@ export default function AdminEnquiries() {
                           </td>
                           <td className="px-2 py-3 text-center">
                             <span
-                              title={isBooked(e) ? 'Seat booked automatically from payment' : e.cancelled_at ? 'Cancelled — seat released' : 'No payment recorded yet, so no seat is held'}
-                              className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
-                                isBooked(e) ? 'bg-green-100 text-green-700' : e.cancelled_at ? 'bg-red-100 text-red-700' : 'bg-background-warm text-dark-muted'
-                              }`}
+                              title={seat.title}
+                              className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${seat.color}`}
                             >
-                              {isBooked(e) ? <CheckCircle2 size={12} /> : e.cancelled_at ? <XCircle size={12} /> : <Circle size={12} />}
-                              {isBooked(e) ? 'Booked' : e.cancelled_at ? 'Cancelled' : 'Not booked'}
+                              <seat.icon size={12} className="shrink-0" />
+                              {seat.label}
                             </span>
                             {refundStatus(e) && (
                               <p className={`text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
@@ -2179,6 +2224,7 @@ export default function AdminEnquiries() {
             <div className="sm:hidden space-y-3">
               {paginatedEnquiries.map((e, idx) => {
                 const cfg = STATUS_CONFIG[e.status];
+                const seat = seatStatus(e);
                 const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                 const isOpen = expandedId === e.id;
                 const isHighlighted = highlightId === e.id;
@@ -2235,8 +2281,8 @@ export default function AdminEnquiries() {
                             </span>
                           )}
                           {e.cancelled_at && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-red-100 text-red-700 shrink-0">
-                              <XCircle size={9} /> Cancelled
+                            <span className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${e.is_no_show ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+                              <XCircle size={9} /> {e.is_no_show ? 'No Show' : 'Cancelled'}
                             </span>
                           )}
                           {!e.trip_id && !activeGroup && (
@@ -2417,13 +2463,11 @@ export default function AdminEnquiries() {
                             <IndianRupee size={14} /> Payment
                           </button>
                           <span
-                            title={isBooked(e) ? 'Seat booked automatically from payment' : e.cancelled_at ? 'Cancelled — seat released' : 'No payment recorded yet, so no seat is held'}
-                            className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap ${
-                              isBooked(e) ? 'bg-green-100 text-green-700' : e.cancelled_at ? 'bg-red-100 text-red-700' : 'bg-background-warm text-dark-muted'
-                            }`}
+                            title={seat.title}
+                            className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap ${seat.color}`}
                           >
-                            {isBooked(e) ? <CheckCircle2 size={14} /> : e.cancelled_at ? <XCircle size={14} /> : <Circle size={14} />}
-                            {isBooked(e) ? 'Booked' : e.cancelled_at ? 'Cancelled' : 'Not booked'}
+                            <seat.icon size={14} />
+                            {seat.label}
                           </span>
                           <div className="flex-1">
                             <Select
@@ -2847,7 +2891,24 @@ export default function AdminEnquiries() {
             {paymentTarget.cancelled_at && (
               <div className="bg-red-50 rounded-md p-3 space-y-2">
                 <p className="text-red-700 text-xs font-medium">This booking is cancelled. Track any refund here as you process it.</p>
-                {paymentTarget.suggested_refund_amount != null && (
+                <label className="flex items-start gap-2 text-xs text-dark cursor-pointer bg-white/60 rounded px-2 py-1.5">
+                  <input
+                    type="checkbox"
+                    checked={paymentTarget.is_no_show}
+                    disabled={togglingNoShow}
+                    onChange={ev => handleToggleNoShow(paymentTarget, ev.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Mark as <span className="font-medium">no-show</span>
+                    <span className="block text-[11px] text-dark-muted">No refund is given for no-shows, per policy — this locks the refund amount to ₹0. Unchecking unlocks it and recalculates the suggestion from the cancellation window.</span>
+                  </span>
+                </label>
+                {paymentTarget.is_no_show ? (
+                  <p className="text-xs text-dark-muted bg-white/60 rounded px-2 py-1.5">
+                    No refund — no-shows forfeit the full amount paid, per policy.
+                  </p>
+                ) : paymentTarget.suggested_refund_amount != null && (
                   <p className="text-xs text-dark-muted bg-white/60 rounded px-2 py-1.5">
                     Suggested refund (estimate — not binding, confirm before use): <span className="font-semibold text-dark">{formatPrice(paymentTarget.suggested_refund_amount)}</span>
                     {paymentTarget.third_party_charges ? ` — after ${formatPrice(paymentTarget.third_party_charges)} in third-party charges` : ''}
@@ -2859,12 +2920,15 @@ export default function AdminEnquiries() {
                     type="number"
                     min={0}
                     value={paymentForm.refund_amount}
+                    disabled={paymentTarget.is_no_show}
                     onChange={e => setPaymentForm(f => ({ ...f, refund_amount: parseNonNegative(e.target.value) }))}
-                    className={inputClass}
+                    className={`${inputClass} ${paymentTarget.is_no_show ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="How much has been refunded so far"
                   />
                   <p className="text-[11px] text-dark-muted mt-1">
-                    They paid {formatPrice(paymentTarget.amount_paid || 0)} in total.
+                    {paymentTarget.is_no_show
+                      ? 'Locked at ₹0 for no-shows. Uncheck "no-show" above to enter a refund.'
+                      : `They paid ${formatPrice(paymentTarget.amount_paid || 0)} in total.`}
                   </p>
                 </div>
               </div>
@@ -3010,6 +3074,19 @@ export default function AdminEnquiries() {
                 Used to compute the suggested refund estimate. You can leave this blank and add it later.
               </p>
             </div>
+
+            <label className="flex items-start gap-2 text-sm text-dark cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cancelIsNoShow}
+                onChange={ev => setCancelIsNoShow(ev.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                This is a <span className="font-medium">no-show</span> (didn't report at the meeting point/date/time).
+                <span className="block text-[11px] text-dark-muted">Per policy, no-shows forfeit the full amount paid — the refund amount will be locked at ₹0.</span>
+              </span>
+            </label>
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" size="md" onClick={() => setCancelTarget(null)}>Back</Button>

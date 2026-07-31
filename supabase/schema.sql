@@ -902,17 +902,31 @@ begin
 end;
 $function$;
 
--- When an enquiry's cancelled_at transitions from null to set, computes and
--- stamps the suggested refund amount and flips booking_status to cancelled.
+-- When an enquiry's cancelled_at transitions from null to set, flips
+-- booking_status to cancelled. Also (re)computes the suggested refund
+-- amount on either that same transition or a standalone is_no_show
+-- toggle (an admin may mark a no-show after the trip departs, independent
+-- of whether the booking was ever formally cancelled) — is_no_show forces
+-- the suggestion to 0, per the site's no-refund-for-no-shows policy;
+-- unmarking it falls back to the normal cancellation-window math.
 create or replace function public.on_enquiry_cancelled()
 returns trigger
 language plpgsql
 as $function$
 begin
   if new.cancelled_at is not null and old.cancelled_at is null then
-    new.suggested_refund_amount := public.suggest_refund_amount(new.id, new.cancelled_at::date);
     new.booking_status := 'cancelled';
   end if;
+
+  if (new.cancelled_at is not null and old.cancelled_at is null)
+     or (new.is_no_show is distinct from old.is_no_show) then
+    if new.is_no_show then
+      new.suggested_refund_amount := 0;
+    else
+      new.suggested_refund_amount := public.suggest_refund_amount(new.id, coalesce(new.cancelled_at, now())::date);
+    end if;
+  end if;
+
   return new;
 end;
 $function$;

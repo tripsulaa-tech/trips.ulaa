@@ -95,12 +95,16 @@ export default function AboutPage() {
           <div className="w-full h-full bg-gradient-to-br from-primary/80 to-dark" />
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-dark/40 via-dark/50 to-dark/80" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-20">
-          <motion.div {...fadeUp()}>
+        <div className="absolute inset-0 flex flex-col items-start justify-center text-left text-white px-6 sm:px-10 lg:px-20 pt-20">
+          <motion.div {...fadeUp()} className="max-w-3xl">
             <h1 className="font-display text-5xl md:text-7xl font-bold leading-tight mb-6">
-              {hero.heading}
+              {hero.heading.split('. ').map((sentence, i, arr) => (
+                <span key={i} className="block">
+                  {sentence}{i < arr.length - 1 ? '.' : ''}
+                </span>
+              ))}
             </h1>
-            <p className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed">
+            <p className="text-white/80 text-lg md:text-xl max-w-2xl mb-8 leading-relaxed">
               {hero.subheading}
             </p>
             {hero.cta_label && hero.cta_url && (
