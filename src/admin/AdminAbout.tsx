@@ -81,11 +81,26 @@ export default function AdminAbout() {
   const setStory = (field: keyof AboutContent['our_story'], value: string) =>
     setContent(p => ({ ...p, our_story: { ...p.our_story, [field]: value } }));
 
+  const setJourneyIntro = (field: 'sub_heading' | 'heading' | 'description', value: string) =>
+    setContent(p => ({ ...p, journey_intro: { ...p.journey_intro, [field]: value } }));
+
   const setHYE = (field: string, value: unknown) =>
-    setContent(p => ({ ...p, have_you_ever: { ...p.have_you_ever, [field]: value } }));
+    setContent(p => ({
+      ...p,
+      journey_intro: {
+        ...p.journey_intro,
+        have_you_ever: { ...p.journey_intro.have_you_ever, [field]: value },
+      },
+    }));
 
   const setWTU = (field: string, value: unknown) =>
-    setContent(p => ({ ...p, welcome_to_ulaa: { ...p.welcome_to_ulaa, [field]: value } }));
+    setContent(p => ({
+      ...p,
+      journey_intro: {
+        ...p.journey_intro,
+        welcome_to_ulaa: { ...p.journey_intro.welcome_to_ulaa, [field]: value },
+      },
+    }));
 
   const setWHY = (field: string, value: unknown) =>
     setContent(p => ({ ...p, why_different: { ...p.why_different, [field]: value } }));
@@ -102,35 +117,35 @@ export default function AdminAbout() {
   // ── have_you_ever items ────────────────────────────────────────────────────
 
   const updateHYEItem = (i: number, field: keyof AboutHaveYouEverItem, value: string) => {
-    const items: AboutHaveYouEverItem[] = content.have_you_ever.items.map(
+    const items: AboutHaveYouEverItem[] = content.journey_intro.have_you_ever.items.map(
       (item: AboutHaveYouEverItem, idx: number) => (idx === i ? { ...item, [field]: value } : item),
     );
     setHYE('items', items);
   };
   const addHYEItem = () => {
-    if (content.have_you_ever.items.length >= 8) return;
-    setHYE('items', [...content.have_you_ever.items, { text: '', icon: '' }]);
+    if (content.journey_intro.have_you_ever.items.length >= 8) return;
+    setHYE('items', [...content.journey_intro.have_you_ever.items, { text: '', icon: '' }]);
   };
   const removeHYEItem = (i: number) => {
-    if (content.have_you_ever.items.length <= 1) return;
-    setHYE('items', content.have_you_ever.items.filter((_: unknown, idx: number) => idx !== i));
+    if (content.journey_intro.have_you_ever.items.length <= 1) return;
+    setHYE('items', content.journey_intro.have_you_ever.items.filter((_: unknown, idx: number) => idx !== i));
   };
 
   // ── welcome_to_ulaa items ──────────────────────────────────────────────────
 
   const updateWTUItem = (i: number, field: keyof AboutWelcomeItem, value: string) => {
-    const items: AboutWelcomeItem[] = content.welcome_to_ulaa.items.map(
+    const items: AboutWelcomeItem[] = content.journey_intro.welcome_to_ulaa.items.map(
       (item: AboutWelcomeItem, idx: number) => (idx === i ? { ...item, [field]: value } : item),
     );
     setWTU('items', items);
   };
   const addWTUItem = () => {
-    if (content.welcome_to_ulaa.items.length >= 8) return;
-    setWTU('items', [...content.welcome_to_ulaa.items, { icon: '', title: '', description: '' }]);
+    if (content.journey_intro.welcome_to_ulaa.items.length >= 8) return;
+    setWTU('items', [...content.journey_intro.welcome_to_ulaa.items, { icon: '', title: '', description: '' }]);
   };
   const removeWTUItem = (i: number) => {
-    if (content.welcome_to_ulaa.items.length <= 1) return;
-    setWTU('items', content.welcome_to_ulaa.items.filter((_: unknown, idx: number) => idx !== i));
+    if (content.journey_intro.welcome_to_ulaa.items.length <= 1) return;
+    setWTU('items', content.journey_intro.welcome_to_ulaa.items.filter((_: unknown, idx: number) => idx !== i));
   };
 
   // ── why_different cards ────────────────────────────────────────────────────
@@ -282,115 +297,154 @@ export default function AdminAbout() {
           />
         </div>
 
-        {/* ── 3. Have You Ever... ──────────────────────────────────────────── */}
+        {/* ── 3. To Unforgettable Journeys (Have You Ever... + Welcome to ULAA) ── */}
         <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">3 · Have You Ever…</h2>
+          <h2 className="font-display text-lg font-bold text-dark">3 · To Unforgettable Journeys</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Sub Heading</label>
+              <input
+                value={content.journey_intro.sub_heading}
+                onChange={e => setJourneyIntro('sub_heading', e.target.value)}
+                className={inputClass}
+                placeholder="From Worries"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Heading</label>
+              <input
+                value={content.journey_intro.heading}
+                onChange={e => setJourneyIntro('heading', e.target.value)}
+                className={inputClass}
+                placeholder="To Unforgettable Journeys"
+              />
+            </div>
+          </div>
           <div>
-            <label className={labelClass}>Section Heading</label>
+            <label className={labelClass}>Description</label>
             <textarea
-              value={content.have_you_ever.heading}
-              onChange={e => setHYE('heading', e.target.value)}
+              value={content.journey_intro.description}
+              onChange={e => setJourneyIntro('description', e.target.value)}
               rows={2}
               className={`${inputClass} resize-none`}
+              placeholder="We turn your travel worries into beautiful experiences."
             />
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className={`${labelClass} mb-0`}>Items</label>
-              {content.have_you_ever.items.length < 8 && (
-                <Button variant="outline" size="sm" onClick={addHYEItem}>
-                  <Plus size={14} /> Add Item
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-dark-muted -mt-1">
-              Pick an icon for each item, or leave it unset to use the default rotation.
-            </p>
-            {content.have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => (
-              <div key={i} className="flex items-center gap-2">
-                <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
-                <div className="w-40 flex-shrink-0">
-                  <TripHighlightIconPicker
-                    value={item.icon ?? ''}
-                    onChange={key => updateHYEItem(i, 'icon', key)}
-                    hintText={item.text}
-                  />
-                </div>
-                <input
-                  value={item.text}
-                  onChange={e => updateHYEItem(i, 'text', e.target.value)}
-                  className={`${inputClass} flex-1`}
-                  placeholder={`Item ${i + 1}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeHYEItem(i)}
-                  className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  title="Remove"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* ── 4. Welcome to ULAA ──────────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">4 · Welcome to ULAA</h2>
-          <div>
-            <label className={labelClass}>Section Heading</label>
-            <textarea
-              value={content.welcome_to_ulaa.heading}
-              onChange={e => setWTU('heading', e.target.value)}
-              rows={2}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className={`${labelClass} mb-0`}>Feature Items</label>
-              {content.welcome_to_ulaa.items.length < 8 && (
-                <Button variant="outline" size="sm" onClick={addWTUItem}>
-                  <Plus size={14} /> Add Item
-                </Button>
-              )}
+          {/* Have You Ever... (nested) */}
+          <div className="border-t border-background-warm pt-4 space-y-3">
+            <h3 className="font-display text-sm font-bold text-dark uppercase tracking-wide">
+              Have You Ever…
+            </h3>
+            <div>
+              <label className={labelClass}>Section Heading</label>
+              <textarea
+                value={content.journey_intro.have_you_ever.heading}
+                onChange={e => setHYE('heading', e.target.value)}
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
             </div>
-            <p className="text-xs text-dark-muted -mt-1">
-              Pick an icon for each item, or leave it unset to use the default rotation.
-            </p>
-            {content.welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => (
-              <div key={i} className="flex items-center gap-2">
-                <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
-                <div className="w-40 flex-shrink-0">
-                  <TripHighlightIconPicker
-                    value={item.icon ?? ''}
-                    onChange={key => updateWTUItem(i, 'icon', key)}
-                    hintText={item.title}
-                  />
-                </div>
-                <input
-                  value={item.title}
-                  onChange={e => updateWTUItem(i, 'title', e.target.value)}
-                  className={`${inputClass} flex-1`}
-                  placeholder={`Item ${i + 1}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeWTUItem(i)}
-                  className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  title="Remove"
-                >
-                  <Trash2 size={15} />
-                </button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className={`${labelClass} mb-0`}>Items</label>
+                {content.journey_intro.have_you_ever.items.length < 8 && (
+                  <Button variant="outline" size="sm" onClick={addHYEItem}>
+                    <Plus size={14} /> Add Item
+                  </Button>
+                )}
               </div>
-            ))}
+              <p className="text-xs text-dark-muted -mt-1">
+                Pick an icon for each item, or leave it unset to use the default rotation.
+              </p>
+              {content.journey_intro.have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => (
+                <div key={i} className="flex items-center gap-2">
+                  <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
+                  <div className="w-40 flex-shrink-0">
+                    <TripHighlightIconPicker
+                      value={item.icon ?? ''}
+                      onChange={key => updateHYEItem(i, 'icon', key)}
+                      hintText={item.text}
+                    />
+                  </div>
+                  <input
+                    value={item.text}
+                    onChange={e => updateHYEItem(i, 'text', e.target.value)}
+                    className={`${inputClass} flex-1`}
+                    placeholder={`Item ${i + 1}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeHYEItem(i)}
+                    className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Remove"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Welcome to ULAA (nested) */}
+          <div className="border-t border-background-warm pt-4 space-y-3">
+            <h3 className="font-display text-sm font-bold text-dark uppercase tracking-wide">
+              Welcome to ULAA
+            </h3>
+            <div>
+              <label className={labelClass}>Section Heading</label>
+              <textarea
+                value={content.journey_intro.welcome_to_ulaa.heading}
+                onChange={e => setWTU('heading', e.target.value)}
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className={`${labelClass} mb-0`}>Feature Items</label>
+                {content.journey_intro.welcome_to_ulaa.items.length < 8 && (
+                  <Button variant="outline" size="sm" onClick={addWTUItem}>
+                    <Plus size={14} /> Add Item
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-dark-muted -mt-1">
+                Pick an icon for each item, or leave it unset to use the default rotation.
+              </p>
+              {content.journey_intro.welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => (
+                <div key={i} className="flex items-center gap-2">
+                  <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
+                  <div className="w-40 flex-shrink-0">
+                    <TripHighlightIconPicker
+                      value={item.icon ?? ''}
+                      onChange={key => updateWTUItem(i, 'icon', key)}
+                      hintText={item.title}
+                    />
+                  </div>
+                  <input
+                    value={item.title}
+                    onChange={e => updateWTUItem(i, 'title', e.target.value)}
+                    className={`${inputClass} flex-1`}
+                    placeholder={`Item ${i + 1}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeWTUItem(i)}
+                    className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Remove"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* ── 5. Why ULAA is Different ─────────────────────────────────────── */}
         <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">5 · Why ULAA is Different</h2>
+          <h2 className="font-display text-lg font-bold text-dark">4 · Why ULAA is Different</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Section Heading</label>
@@ -473,7 +527,7 @@ export default function AdminAbout() {
 
         {/* ── 6. Our Community ─────────────────────────────────────────────── */}
         <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">6 · Our Community</h2>
+          <h2 className="font-display text-lg font-bold text-dark">5 · Our Community</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Section Heading</label>
@@ -507,7 +561,7 @@ export default function AdminAbout() {
 
         {/* ── 7. Your ULAA Journey ─────────────────────────────────────────── */}
         <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">7 · Your ULAA Journey</h2>
+          <h2 className="font-display text-lg font-bold text-dark">6 · Your ULAA Journey</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Section Heading</label>
@@ -591,7 +645,7 @@ export default function AdminAbout() {
 
         {/* ── 8. Meet the Founder ──────────────────────────────────────────── */}
         <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">8 · Meet the Founder</h2>
+          <h2 className="font-display text-lg font-bold text-dark">7 · Meet the Founder</h2>
           <ImageUploadField
             label="Founder Photo"
             value={content.founder.photo}

@@ -19,27 +19,30 @@ export const DEFAULT_ABOUT: AboutContent = {
     image: '',
   },
 
-  // 3. Have You Ever...
-  have_you_ever: {
-    heading: 'Have You Ever...',
-    items: [
-      { text: 'Friends cancelled?', icon: 'x' },
-      { text: 'Worried about safety?', icon: 'shield-check' },
-      { text: 'Felt too nervous to travel alone?', icon: 'help-circle' },
-      { text: 'Wanted to explore but had no one to go with?', icon: 'frown' },
-    ],
-  },
-
-  // 4. Welcome to Ulaa
-  welcome_to_ulaa: {
-    heading: 'Welcome to ULAA',
-    subheading: 'Your home for safe, soulful, sisterhood travel.',
-    items: [
-      { icon: 'shield-check', title: 'Safety First', description: 'Every destination, accommodation, and guide is vetted with women\'s safety as the top priority.' },
-      { icon: 'compass', title: 'Curated Experiences', description: 'No tourist traps. Only real, raw, soulful adventures off the beaten path.' },
-      { icon: 'users', title: 'Instant Sisterhood', description: 'Join a group of like-minded women and leave with friendships that last a lifetime.' },
-      { icon: 'plane', title: 'Stress-Free Planning', description: 'We handle everything — stays, transport, meals — so you just show up and explore.' },
-    ],
+  // 3. To Unforgettable Journeys (contains Have You Ever... and Welcome to Ulaa)
+  journey_intro: {
+    sub_heading: 'From Worries',
+    heading: 'To Unforgettable Journeys',
+    description: 'We turn your travel worries into beautiful experiences.',
+    have_you_ever: {
+      heading: 'Have You Ever...',
+      items: [
+        { text: 'Friends cancelled?', icon: 'x' },
+        { text: 'Worried about safety?', icon: 'shield-check' },
+        { text: 'Felt too nervous to travel alone?', icon: 'help-circle' },
+        { text: 'Wanted to explore but had no one to go with?', icon: 'frown' },
+      ],
+    },
+    welcome_to_ulaa: {
+      heading: 'Welcome to ULAA',
+      subheading: 'Your home for safe, soulful, sisterhood travel.',
+      items: [
+        { icon: 'shield-check', title: 'Safety First', description: 'Every destination, accommodation, and guide is vetted with women\'s safety as the top priority.' },
+        { icon: 'compass', title: 'Curated Experiences', description: 'No tourist traps. Only real, raw, soulful adventures off the beaten path.' },
+        { icon: 'users', title: 'Instant Sisterhood', description: 'Join a group of like-minded women and leave with friendships that last a lifetime.' },
+        { icon: 'plane', title: 'Stress-Free Planning', description: 'We handle everything — stays, transport, meals — so you just show up and explore.' },
+      ],
+    },
   },
 
   // 5. Why Ulaa is Different
@@ -114,8 +117,18 @@ export function mergeWithDefaults(data: Partial<AboutContent> | null | undefined
   return {
     hero: { ...DEFAULT_ABOUT.hero, ...data.hero },
     our_story: { ...DEFAULT_ABOUT.our_story, ...data.our_story },
-    have_you_ever: { ...DEFAULT_ABOUT.have_you_ever, ...data.have_you_ever },
-    welcome_to_ulaa: { ...DEFAULT_ABOUT.welcome_to_ulaa, ...data.welcome_to_ulaa },
+    journey_intro: {
+      ...DEFAULT_ABOUT.journey_intro,
+      ...data.journey_intro,
+      have_you_ever: {
+        ...DEFAULT_ABOUT.journey_intro.have_you_ever,
+        ...data.journey_intro?.have_you_ever,
+      },
+      welcome_to_ulaa: {
+        ...DEFAULT_ABOUT.journey_intro.welcome_to_ulaa,
+        ...data.journey_intro?.welcome_to_ulaa,
+      },
+    },
     why_different: { ...DEFAULT_ABOUT.why_different, ...data.why_different },
     community: { ...DEFAULT_ABOUT.community, ...data.community },
     stats: { ...DEFAULT_ABOUT.stats, ...data.stats },

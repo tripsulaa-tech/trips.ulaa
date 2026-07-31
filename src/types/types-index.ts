@@ -469,16 +469,23 @@ export interface AboutContent {
     description: string;
     image: string;
   };
-  // 3. Have You Ever...
-  have_you_ever: {
+  // 3. To Unforgettable Journeys (contains Have You Ever... and Welcome to Ulaa)
+  journey_intro: {
+    /** Small italic line above the heading, e.g. "From Worries" */
+    sub_heading: string;
+    /** Main heading, e.g. "To Unforgettable Journeys" */
     heading: string;
-    items: AboutHaveYouEverItem[];
-  };
-  // 4. Welcome to Ulaa
-  welcome_to_ulaa: {
-    heading: string;
-    subheading: string;
-    items: AboutWelcomeItem[];
+    /** Supporting sentence under the heading, e.g. "We turn your travel worries into beautiful experiences." */
+    description: string;
+    have_you_ever: {
+      heading: string;
+      items: AboutHaveYouEverItem[];
+    };
+    welcome_to_ulaa: {
+      heading: string;
+      subheading: string;
+      items: AboutWelcomeItem[];
+    };
   };
   // 5. Why Ulaa is Different (up to 6 cards)
   why_different: {

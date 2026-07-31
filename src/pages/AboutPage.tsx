@@ -68,8 +68,7 @@ export default function AboutPage() {
   const {
     hero,
     our_story,
-    have_you_ever,
-    welcome_to_ulaa,
+    journey_intro,
     why_different,
     community,
     stats,
@@ -77,6 +76,7 @@ export default function AboutPage() {
     journey,
     founder,
   } = content;
+  const { have_you_ever, welcome_to_ulaa } = journey_intro;
 
   // Use live avg rating from DB if available, fall back to admin-set value
   const displayRating = liveRating ?? stats.avg_trip_rating;
@@ -163,6 +163,21 @@ export default function AboutPage() {
       ══════════════════════════════════════════════════════════════ */}
       <section className="pt-12 pb-24 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto">
+          <motion.div {...fadeUp()} className="text-center mb-14">
+            {journey_intro.sub_heading && (
+              <p className="font-display italic text-xl md:text-2xl text-primary mb-2 whitespace-pre-line">
+                {journey_intro.sub_heading}
+              </p>
+            )}
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark leading-tight mb-4 whitespace-pre-line">
+              {journey_intro.heading}
+            </h2>
+            {journey_intro.description && (
+              <p className="text-dark-muted text-lg whitespace-pre-line">
+                {journey_intro.description}
+              </p>
+            )}
+          </motion.div>
           <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 p-12">
             {/* Center connector arrow */}
             <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-warm-lg">
