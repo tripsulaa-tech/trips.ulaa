@@ -371,7 +371,7 @@ export default function TripDetailPage() {
                 variant="primary"
                 size="sm"
                 onClick={() => setBookingOpen(true)}
-                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto !px-3 !py-2 !text-xs !min-h-[36px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
+                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto !px-3 !py-2 !text-xs !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
               >
                 {isFull ? 'Join Waitlist' : 'Book Your Seat'}
               </Button>
@@ -381,10 +381,10 @@ export default function TripDetailPage() {
                 type="button"
                 onClick={handleDownloadPdf}
                 disabled={pdfLoading}
-                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 !px-3 !py-2 !text-xs !min-h-[36px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
+                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 !px-3 !py-2 !text-xs !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
               >
                 {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
-                {pdfLoading ? 'Preparing…' : 'Download Itinerary'}
+                {pdfLoading ? 'Preparing…' : 'Download'}
               </Button>
               {countdown && (
                 <div className="hidden md:flex flex-col items-center gap-2 md:absolute md:right-0 md:translate-x-10 md:top-0 bg-background-warm/95 backdrop-blur-md border border-dark/10 shadow-[0_10px_35px_-8px_rgba(45,33,24,0.35)] rounded-xl px-5 py-3.5">
