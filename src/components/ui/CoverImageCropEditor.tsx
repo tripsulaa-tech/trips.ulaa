@@ -86,73 +86,81 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-dark mb-1 flex items-center gap-1.5">
-          <Move size={14} className="text-primary" /> Position &amp; Zoom
-        </label>
-        <div
-          ref={stageRef}
-          onPointerDown={startDrag}
-          className={`relative w-full max-w-sm aspect-[16/9] mx-auto sm:mx-0 overflow-hidden rounded-lg border-2 border-background-warm bg-dark/5 select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-        >
-          <img
-            src={imageUrl}
-            alt="Cover preview"
-            draggable={false}
-            className="w-full h-full object-cover pointer-events-none"
-            style={getCoverImageStyle(crop)}
-          />
-          <div className="absolute inset-0 border border-white/20 pointer-events-none" />
-          {!dragging && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-dark/70 text-white text-[11px] font-medium px-2.5 py-1 rounded-md pointer-events-none">
-              Drag to reposition
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 max-w-sm">
-        <ZoomIn size={16} className="text-dark-muted shrink-0" />
-        <input
-          type="range"
-          min={MIN_ZOOM}
-          max={MAX_ZOOM}
-          step={0.02}
-          value={crop.zoom}
-          onChange={e => handleZoom(Number(e.target.value))}
-          className="flex-1 accent-primary"
-          aria-label="Zoom"
-        />
-        <button
-          type="button"
-          onClick={handleReset}
-          className="flex items-center gap-1 text-xs font-medium text-dark-muted hover:text-primary transition-colors shrink-0"
-          title="Reset to original position and zoom"
-        >
-          <RotateCcw size={13} /> Reset
-        </button>
-      </div>
-
-      <div>
-        <p className="text-xs font-semibold text-dark-muted uppercase tracking-wide mb-2">Live Preview</p>
-        <div className="flex flex-wrap gap-4">
-          {PREVIEW_LAYOUTS.map(layout => (
-            <div key={layout.label} className="w-32">
-              <div
-                className="relative w-full overflow-hidden rounded-md border border-background-warm bg-dark/5"
-                style={{ aspectRatio: layout.ratio }}
-              >
-                <img
-                  src={imageUrl}
-                  alt={`${layout.label} preview`}
-                  className="w-full h-full object-cover"
-                  style={getCoverImageStyle(crop)}
-                />
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+        <div>
+          <label className="block text-sm font-medium text-dark mb-1 flex items-center gap-1.5">
+            <Move size={14} className="text-primary" /> Position &amp; Zoom
+          </label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-2 max-w-sm">
+            For a sharp, well-framed result in all three previews below, upload a
+            landscape image at least <span className="font-medium text-dark">1600×1200px</span>,
+            with the main subject centered — the crop below trims more or less off
+            the sides depending on the layout.
+          </p>
+          <div
+            ref={stageRef}
+            onPointerDown={startDrag}
+            className={`relative w-full max-w-sm aspect-[16/9] mx-auto sm:mx-0 overflow-hidden rounded-lg border-2 border-background-warm bg-dark/5 select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          >
+            <img
+              src={imageUrl}
+              alt="Cover preview"
+              draggable={false}
+              className="w-full h-full object-cover pointer-events-none"
+              style={getCoverImageStyle(crop)}
+            />
+            <div className="absolute inset-0 border border-white/20 pointer-events-none" />
+            {!dragging && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-dark/70 text-white text-[11px] font-medium px-2.5 py-1 rounded-md pointer-events-none">
+                Drag to reposition
               </div>
-              <p className="text-[11px] font-medium text-dark mt-1">{layout.label}</p>
-              <p className="text-[10px] text-dark-muted leading-tight">{layout.sub}</p>
-            </div>
-          ))}
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 max-w-sm mt-4">
+            <ZoomIn size={16} className="text-dark-muted shrink-0" />
+            <input
+              type="range"
+              min={MIN_ZOOM}
+              max={MAX_ZOOM}
+              step={0.02}
+              value={crop.zoom}
+              onChange={e => handleZoom(Number(e.target.value))}
+              className="flex-1 accent-primary"
+              aria-label="Zoom"
+            />
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center gap-1 text-xs font-medium text-dark-muted hover:text-primary transition-colors shrink-0"
+              title="Reset to original position and zoom"
+            >
+              <RotateCcw size={13} /> Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 lg:mt-0">
+          <p className="text-xs font-semibold text-dark-muted uppercase tracking-wide mb-2">Live Preview</p>
+          <div className="flex flex-wrap gap-4">
+            {PREVIEW_LAYOUTS.map(layout => (
+              <div key={layout.label} className="w-32">
+                <div
+                  className="relative w-full overflow-hidden rounded-md border border-background-warm bg-dark/5"
+                  style={{ aspectRatio: layout.ratio }}
+                >
+                  <img
+                    src={imageUrl}
+                    alt={`${layout.label} preview`}
+                    className="w-full h-full object-cover"
+                    style={getCoverImageStyle(crop)}
+                  />
+                </div>
+                <p className="text-[11px] font-medium text-dark mt-1">{layout.label}</p>
+                <p className="text-[10px] text-dark-muted leading-tight">{layout.sub}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

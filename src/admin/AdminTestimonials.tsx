@@ -193,6 +193,7 @@ export default function AdminTestimonials() {
               bucket="ulaa"
               pathPrefix="testimonial-photos"
               fileNamePrefix={slugify(form.name) || undefined}
+              hint="Square, at least 200×200px, with the face centered — shown as a small circular avatar."
             />
           </div>
           <div className="md:col-span-2">

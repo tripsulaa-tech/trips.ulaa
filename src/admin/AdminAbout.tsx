@@ -196,6 +196,7 @@ export default function AdminAbout() {
             onChange={url => setHero('image', url)}
             bucket="ulaa"
             pathPrefix="about/hero"
+            hint="Wide landscape, at least 1920×1080px — shown full-bleed as the page's top banner."
           />
           <div>
             <label className={labelClass}>Heading</label>
@@ -262,6 +263,7 @@ export default function AdminAbout() {
             onChange={url => setStory('image', url)}
             bucket="ulaa"
             pathPrefix="about/story"
+            hint="Landscape, at least 1000×880px — shown in a cropped rounded panel."
           />
         </div>
 
@@ -445,6 +447,7 @@ export default function AdminAbout() {
             onChange={photos => setCommunity('photos', photos)}
             bucket="ulaa"
             pathPrefix="about/community"
+            hint="Square, at least 600×600px — shown in a cropped grid."
           />
         </div>
 
@@ -521,6 +524,7 @@ export default function AdminAbout() {
             onChange={url => setFounder('photo', url)}
             bucket="ulaa"
             pathPrefix="about/founder"
+            hint="Square, at least 600×600px, with the face centered — shown as a large circular photo."
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

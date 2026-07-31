@@ -20,9 +20,13 @@ interface ImageUploadFieldProps {
   // storage — e.g. the trip cover image, which passes
   // COVER_IMAGE_TARGET_SIZE_BYTES (2MB) so it stays crisp at full width.
   maxSizeBytes?: number;
+  // Short recommended-size/aspect note shown under the label (e.g. "Square,
+  // at least 800×800px") so admins know what to upload before they pick a
+  // file, instead of finding out it looks cropped/blurry after saving.
+  hint?: string;
 }
 
-export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix, maxSizeBytes }: ImageUploadFieldProps) {
+export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix, maxSizeBytes, hint }: ImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputId = `upload-${pathPrefix}-${label.replace(/\s+/g, '-').toLowerCase()}`;
@@ -59,6 +63,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
       <label className="block text-sm font-medium text-dark mb-1">
         {label}{required && ' *'}
       </label>
+      {hint && <p className="text-[11px] text-dark-muted leading-snug mb-1.5">{hint}</p>}
 
       {/* Native file picker: opens gallery/camera on mobile, file browser on desktop */}
       <input

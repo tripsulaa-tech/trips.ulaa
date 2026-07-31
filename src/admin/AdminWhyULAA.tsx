@@ -75,6 +75,7 @@ export default function AdminWhyULAA() {
               bucket="ulaa"
               pathPrefix="why-ulaa"
               required
+              hint="4:3 landscape, at least 800×600px — shown in a cropped card."
             />
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Title</label>

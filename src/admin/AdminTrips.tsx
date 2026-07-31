@@ -828,6 +828,7 @@ export default function AdminTrips() {
                 pathPrefix="trip-covers"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
+                hint="Landscape, at least 1600×1200px, with the main subject centered — this same photo is reused for the trip card, desktop hero, and mobile hero, so you'll reposition/zoom it for each after uploading."
               />
               {form.cover_image && (
                 <CoverImageCropEditor
@@ -866,6 +867,7 @@ export default function AdminTrips() {
                     onChange={url => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, photo: url } : it) }))}
                     bucket="ulaa"
                     pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/gallery`}
+                    hint="4:3 landscape works best (e.g. 1200×900px) — shown in a cropped carousel tile."
                   />
                   <div>
                     <label className="block text-xs font-medium text-dark mb-1">Caption / Place Name</label>
@@ -894,6 +896,7 @@ export default function AdminTrips() {
                 onChange={urls => setForm(f => ({ ...f, fashion_photos: urls }))}
                 bucket="ulaa"
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/fashion`}
+                hint="Shown uncropped in a masonry grid, so portrait, landscape, or square all work — just keep each photo at least 800px on its shortest side."
               />
             </div>
           </TabPanel>
@@ -1199,6 +1202,7 @@ export default function AdminTrips() {
                 onChange={urls => setForm(f => ({ ...f, accommodation_photos: urls }))}
                 bucket="ulaa"
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/accommodation`}
+                hint="16:9 landscape works best (e.g. 1280×720px) — shown in cropped cards."
               />
             </div>
           </TabPanel>
@@ -1212,6 +1216,7 @@ export default function AdminTrips() {
                 bucket="ulaa"
                 pathPrefix="trip-founder"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
+                hint="Square, at least 400×400px, with the face centered — shown as a circular avatar."
               />
             </div>
             <div>
@@ -1244,6 +1249,7 @@ export default function AdminTrips() {
                 bucket="ulaa"
                 pathPrefix="trip-end-banners"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
+                hint="Wide landscape, at least 1600×900px — shown full-bleed behind the closing CTA text."
               />
             </div>
             <div className="md:col-span-2">

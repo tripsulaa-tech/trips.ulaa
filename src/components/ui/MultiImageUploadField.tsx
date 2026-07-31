@@ -8,9 +8,12 @@ interface MultiImageUploadFieldProps {
   onChange: (urls: string[]) => void;
   bucket: string;
   pathPrefix: string;
+  // Short recommended-size/aspect note shown under the label, same purpose
+  // as ImageUploadField's hint.
+  hint?: string;
 }
 
-export default function MultiImageUploadField({ label, value, onChange, bucket, pathPrefix }: MultiImageUploadFieldProps) {
+export default function MultiImageUploadField({ label, value, onChange, bucket, pathPrefix, hint }: MultiImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -57,6 +60,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
   return (
     <div>
       <label className="block text-sm font-medium text-dark mb-1">{label}</label>
+      {hint && <p className="text-[11px] text-dark-muted leading-snug mb-1.5">{hint}</p>}
 
       <input
         ref={fileRef}

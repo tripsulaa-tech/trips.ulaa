@@ -266,6 +266,7 @@ export default function AdminAlbums() {
               bucket="ulaa"
               pathPrefix="album-covers"
               fileNamePrefix={editing ? editing.slug : (slugify(form.title) || undefined)}
+              hint="Wide landscape, at least 1600×1200px — shown full-bleed as the album's hero banner."
             />
           </div>
           <div className="md:col-span-2">
@@ -281,6 +282,7 @@ export default function AdminAlbums() {
               // being typed, falling back to "new" only if the title is
               // still empty.
               pathPrefix={`albums/${editing ? editing.slug : (slugify(form.title) || 'new')}`}
+              hint="Shown uncropped in a masonry grid, so any aspect works — just keep each photo at least 800px on its shortest side."
             />
           </div>
           <div className="md:col-span-2">

@@ -61,7 +61,7 @@ export default function AdminGallery() {
           <div className="text-center">
             <Upload size={32} className="mx-auto text-primary mb-3" />
             <p className="font-display text-lg font-bold text-dark mb-1">Upload Images</p>
-            <p className="text-dark-muted text-sm mb-4">PNG, JPG, WEBP up to 10MB each. Select multiple files at once.</p>
+            <p className="text-dark-muted text-sm mb-4">PNG, JPG, WEBP up to 10MB each. Select multiple files at once. Square photos work best (e.g. 800×800px) — shown in a cropped grid.</p>
             <input ref={fileRef} type="file" multiple accept="image/*" onChange={handleUpload} className="hidden" id="gallery-upload" />
             <Button
               type="button"
