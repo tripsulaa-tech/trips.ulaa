@@ -24,9 +24,14 @@ interface ImageUploadFieldProps {
   // at least 800×800px") so admins know what to upload before they pick a
   // file, instead of finding out it looks cropped/blurry after saving.
   hint?: string;
+  // CSS aspect-ratio (e.g. "4/3") for the preview box, so what the admin
+  // sees while framing the shot matches the actual crop shown on the live
+  // site. Omit to keep the default fixed h-32 strip (used where the field
+  // isn't shown in a fixed-ratio tile elsewhere on the site).
+  aspectRatio?: string;
 }
 
-export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix, maxSizeBytes, hint }: ImageUploadFieldProps) {
+export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix, maxSizeBytes, hint, aspectRatio }: ImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputId = `upload-${pathPrefix}-${label.replace(/\s+/g, '-').toLowerCase()}`;
@@ -60,9 +65,11 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
 
   return (
     <div>
-      <label className="block text-sm font-medium text-dark mb-1">
-        {label}{required && ' *'}
-      </label>
+      {label && (
+        <label className="block text-sm font-medium text-dark mb-1">
+          {label}{required && ' *'}
+        </label>
+      )}
       {hint && <p className="text-[11px] text-dark-muted leading-snug mb-1.5">{hint}</p>}
 
       {/* Native file picker: opens gallery/camera on mobile, file browser on desktop */}
@@ -76,7 +83,10 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
       />
 
       {value ? (
-        <div className="relative w-full h-32 rounded-lg overflow-hidden border-2 border-background-warm group">
+        <div
+          className={`relative w-full rounded-lg overflow-hidden border-2 border-background-warm group ${aspectRatio ? '' : 'h-32'}`}
+          style={aspectRatio ? { aspectRatio } : undefined}
+        >
           <img src={value} alt="" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-dark/0 group-hover:bg-dark/40 transition-colors" />
           <button
@@ -100,7 +110,8 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
         <label
           htmlFor={inputId}
           onClick={(e) => { e.preventDefault(); fileRef.current?.click(); }}
-          className="flex flex-col items-center justify-center gap-1.5 w-full h-32 rounded-lg border-2 border-dashed border-background-warm bg-background hover:border-primary cursor-pointer transition-colors text-dark-muted"
+          className={`flex flex-col items-center justify-center gap-1.5 w-full rounded-lg border-2 border-dashed border-background-warm bg-background hover:border-primary cursor-pointer transition-colors text-dark-muted ${aspectRatio ? '' : 'h-32'}`}
+          style={aspectRatio ? { aspectRatio } : undefined}
         >
           {uploading ? (
             <span className="text-sm font-medium">Uploading...</span>

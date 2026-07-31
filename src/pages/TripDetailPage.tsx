@@ -291,7 +291,7 @@ export default function TripDetailPage() {
         (tablet/desktop) keep their existing viewport-height sizing with
         the image filling the whole box, unaffected.
       */}
-      <div className="relative mt-24 aspect-[9/16] sm:aspect-auto sm:min-h-[60vh] md:min-h-[90vh] overflow-hidden bg-dark">
+      <div className="relative mt-[81px] aspect-[9/16] sm:aspect-[21/9] overflow-hidden bg-dark">
         {/*
           Same <img> serves both the Desktop and Mobile Hero. On mobile it's
           pinned to the top at aspect-[9/8] (see comment above); at sm+ it
@@ -306,7 +306,8 @@ export default function TripDetailPage() {
           style={getCoverImageStyle(trip.cover_image_crop)}
         />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,transparent_35%,var(--color-dark)_50%)] sm:bg-[linear-gradient(to_right,var(--color-dark)_0%,var(--color-dark)_32%,transparent_55%)] sm:opacity-90" />
-        <div className="relative w-full h-full sm:h-auto sm:min-h-[60vh] md:min-h-[90vh] flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-32 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
+        <div className="relative sm:absolute sm:inset-0 w-full h-full">
+          <div className="relative w-full h-full flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-32 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
           <motion.div className="flex flex-col" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <Link to="/trips" className="order-1 inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-3 sm:mb-4 transition-colors">
               <ArrowLeft size={16} /> All Trips
@@ -371,7 +372,7 @@ export default function TripDetailPage() {
                 variant="primary"
                 size="sm"
                 onClick={() => setBookingOpen(true)}
-                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto !px-3 !py-2 !text-xs !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
+                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto !px-3 !py-2 !text-sm !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
               >
                 {isFull ? 'Join Waitlist' : 'Book Your Seat'}
               </Button>
@@ -381,7 +382,7 @@ export default function TripDetailPage() {
                 type="button"
                 onClick={handleDownloadPdf}
                 disabled={pdfLoading}
-                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 !px-3 !py-2 !text-xs !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
+                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 !px-3 !py-2 !text-sm !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
               >
                 {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
                 {pdfLoading ? 'Preparing…' : 'Download'}
@@ -449,6 +450,7 @@ export default function TripDetailPage() {
 			  )}
             </div>
           </motion.div>
+          </div>
         </div>
       </div>
 

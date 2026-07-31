@@ -855,26 +855,29 @@ export default function AdminTrips() {
                 <label className="block text-sm font-semibold text-dark">Places You'll Definitely Post (photo + caption)</label>
                 <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: [...f.gallery_items, { photo: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
               </div>
-              {form.gallery_items.map((item, i) => (
-                <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Photo {i + 1}</span>
-                    <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: f.gallery_items.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {form.gallery_items.map((item, i) => (
+                  <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Photo {i + 1}</span>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: f.gallery_items.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
+                    </div>
+                    <ImageUploadField
+                      label=""
+                      value={item.photo}
+                      onChange={url => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, photo: url } : it) }))}
+                      bucket="ulaa"
+                      pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/gallery`}
+                      hint="4:3 landscape works best (e.g. 1200×900px) — shown in a cropped carousel tile."
+                      aspectRatio="3/2"
+                    />
+                    <div>
+                      <label className="block text-xs font-medium text-dark mb-1">Caption / Place Name</label>
+                      <input value={item.description} onChange={e => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={inputClass} placeholder="e.g. Chandratal Lake at dawn" />
+                    </div>
                   </div>
-                  <ImageUploadField
-                    label="Photo"
-                    value={item.photo}
-                    onChange={url => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, photo: url } : it) }))}
-                    bucket="ulaa"
-                    pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/gallery`}
-                    hint="4:3 landscape works best (e.g. 1200×900px) — shown in a cropped carousel tile."
-                  />
-                  <div>
-                    <label className="block text-xs font-medium text-dark mb-1">Caption / Place Name</label>
-                    <input value={item.description} onChange={e => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={inputClass} placeholder="e.g. Chandratal Lake at dawn" />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
               {form.gallery_items.length === 0 && <p className="text-xs text-dark-muted">No gallery items yet.</p>}
             </div>
 

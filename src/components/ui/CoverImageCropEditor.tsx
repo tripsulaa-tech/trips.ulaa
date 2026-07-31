@@ -19,7 +19,7 @@ const MAX_ZOOM = 2.5;
 // a future redesign.
 const PREVIEW_LAYOUTS: { label: string; sub: string; ratio: string }[] = [
   { label: 'Trip Card', sub: 'Home & Trips listing', ratio: '4 / 3' },
-  { label: 'Desktop Cover', sub: 'Trip page hero banner', ratio: '16 / 9' },
+  { label: 'Desktop Cover', sub: 'Trip page hero banner', ratio: '21 / 9' },
   { label: 'Mobile Cover', sub: 'Trip page hero, mobile', ratio: '9 / 8' },
 ];
 
@@ -93,14 +93,14 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
           </label>
           <p className="text-[11px] text-dark-muted leading-snug mb-2 max-w-sm">
             For a sharp, well-framed result in all three previews below, upload a
-            landscape image at least <span className="font-medium text-dark">1600×1200px</span>,
-            with the main subject centered — the crop below trims more or less off
-            the sides depending on the layout.
+            wide landscape image at least <span className="font-medium text-dark">2400×1029px</span> (a
+            21:9 widescreen shape), with the main subject centered — the crop below
+            trims more or less off the sides depending on the layout.
           </p>
           <div
             ref={stageRef}
             onPointerDown={startDrag}
-            className={`relative w-full max-w-sm aspect-[16/9] mx-auto sm:mx-0 overflow-hidden rounded-lg border-2 border-background-warm bg-dark/5 select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`relative w-full max-w-sm aspect-[21/9] mx-auto sm:mx-0 overflow-hidden rounded-lg border-2 border-background-warm bg-dark/5 select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
           >
             <img
               src={imageUrl}
