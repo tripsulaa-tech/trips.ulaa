@@ -41,10 +41,26 @@ const WELCOME_ICONS = [Heart, Users, ShieldCheck, Sparkles];
 // This fallback set covers legacy steps saved before the picker existed.
 const JOURNEY_ICONS = [Compass, Ticket, Backpack, Plane, Heart];
 
+// Background color palette for icons — cycling through warm brand tones
+const HAVE_YOU_EVER_BG = [
+  'rgba(168, 90, 42, 0.10)',
+  'rgba(217, 138, 58, 0.10)',
+  'rgba(200, 150, 42, 0.10)',
+  'rgba(45, 33, 24, 0.07)',
+];
+
+const WELCOME_BG = [
+  'rgba(168, 90, 42, 0.13)',
+  'rgba(217, 138, 58, 0.13)',
+  'rgba(200, 150, 42, 0.13)',
+  'rgba(168, 90, 42, 0.09)',
+];
+
 export default function AboutPage() {
   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [liveRating, setLiveRating] = useState<number | null>(null);
+  const [arrowGlowing, setArrowGlowing] = useState(false);
 
   useEffect(() => {
     // Fetch about content
@@ -179,10 +195,15 @@ export default function AboutPage() {
             )}
           </motion.div>
           <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 px-6 py-12 sm:p-12">
-            {/* Center connector arrow */}
-            <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-warm-lg">
+            {/* Center connector arrow — glows when clicked */}
+            <button
+              type="button"
+              aria-label="See the ULAA difference"
+              onClick={() => setArrowGlowing(v => !v)}
+              className={`hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-warm-lg cursor-pointer transition-transform duration-200 hover:scale-110 focus:outline-none ${arrowGlowing ? 'itinerary-icon-glow' : ''}`}
+            >
               <ArrowRight size={22} className="text-white" />
-            </div>
+            </button>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-0 md:divide-x md:divide-dashed md:divide-dark/20">
               {/* Have You Ever... */}
@@ -204,7 +225,13 @@ export default function AboutPage() {
                         {...fadeUp(i * 0.08)}
                         className="flex flex-col items-center text-center gap-3"
                       >
-                        <Icon size={30} className="text-primary flex-shrink-0" strokeWidth={1.75} />
+                        {/* Icon with coloured background bubble */}
+                        <div
+                          className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                          style={{ background: HAVE_YOU_EVER_BG[i % HAVE_YOU_EVER_BG.length] }}
+                        >
+                          <Icon size={26} className="text-primary" strokeWidth={1.75} />
+                        </div>
                         <span className="text-dark-muted text-sm leading-snug">{item.text}</span>
                       </motion.div>
                     );
@@ -216,9 +243,14 @@ export default function AboutPage() {
               <div className="md:pl-20 text-center">
                 <div className="md:hidden relative flex items-center justify-center -mt-2 mb-6">
                   <span className="absolute left-0 right-0 border-t border-dashed border-dark/20" />
-                  <div className="relative z-10 w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg">
+                  <button
+                    type="button"
+                    aria-label="See the ULAA difference"
+                    onClick={() => setArrowGlowing(v => !v)}
+                    className={`relative z-10 w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg cursor-pointer transition-transform duration-200 hover:scale-110 focus:outline-none ${arrowGlowing ? 'itinerary-icon-glow' : ''}`}
+                  >
                     <ArrowDown size={18} className="text-white" />
-                  </div>
+                  </button>
                 </div>
                 <motion.h2
                   {...fadeUp()}
@@ -237,7 +269,20 @@ export default function AboutPage() {
                         {...fadeUp(i * 0.1)}
                         className="flex flex-col items-center text-center gap-3"
                       >
-                        <Icon size={30} className="text-primary flex-shrink-0" strokeWidth={1.75} />
+                        {/* Mobile: outline icon with coloured bg */}
+                        <div
+                          className="md:hidden w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                          style={{ background: WELCOME_BG[i % WELCOME_BG.length] }}
+                        >
+                          <Icon size={26} className="text-primary" strokeWidth={1.75} />
+                        </div>
+                        {/* Desktop: filled icon with coloured bg */}
+                        <div
+                          className="hidden md:flex w-14 h-14 rounded-2xl items-center justify-center flex-shrink-0 shadow-sm"
+                          style={{ background: WELCOME_BG[i % WELCOME_BG.length] }}
+                        >
+                          <Icon size={26} className="text-primary" fill="currentColor" strokeWidth={0} />
+                        </div>
                         <span className="text-dark-muted text-sm leading-snug">{item.title}</span>
                       </motion.div>
                     );
