@@ -132,7 +132,7 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           2. OUR STORY
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-background">
+      <section className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <motion.div {...fadeUp()}>
             {our_story.image ? (
@@ -163,7 +163,7 @@ export default function AboutPage() {
       ══════════════════════════════════════════════════════════════ */}
       <section className="pt-12 pb-24 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto">
-          <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 p-8 md:p-14">
+          <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 p-12">
             {/* Center connector arrow */}
             <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-warm-lg">
               <ArrowRight size={22} className="text-white" />
