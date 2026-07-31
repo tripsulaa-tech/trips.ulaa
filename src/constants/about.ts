@@ -79,11 +79,11 @@ export const DEFAULT_ABOUT: AboutContent = {
     heading: 'Your ULAA Journey',
     subheading: 'Every adventure begins with a single step.',
     steps: [
-      { heading: 'Discover Your Trip', description: 'Browse our carefully curated calendar of upcoming women-only trips across India and beyond.' },
-      { heading: 'Book Your Spot', description: 'Reserve your seat with a simple booking form. Our team confirms within 24 hours.' },
-      { heading: 'Prepare & Connect', description: 'Get your trip kit, connect with your travel sisters in our WhatsApp group, and pack your excitement.' },
-      { heading: 'Live the Experience', description: 'Arrive, explore, laugh, push boundaries, and soak in every single moment.' },
-      { heading: 'Come Home Changed', description: 'Return with new friends, new stories, and a version of yourself you didn\'t know existed.' },
+      { heading: 'Discover Your Trip', description: 'Browse our carefully curated calendar of upcoming women-only trips across India and beyond.', icon: 'compass' },
+      { heading: 'Book Your Spot', description: 'Reserve your seat with a simple booking form. Our team confirms within 24 hours.', icon: 'ticket' },
+      { heading: 'Prepare & Connect', description: 'Get your trip kit, connect with your travel sisters in our WhatsApp group, and pack your excitement.', icon: 'backpack' },
+      { heading: 'Live the Experience', description: 'Arrive, explore, laugh, push boundaries, and soak in every single moment.', icon: 'plane' },
+      { heading: 'Come Home Changed', description: 'Return with new friends, new stories, and a version of yourself you didn\'t know existed.', icon: 'heart' },
     ],
   },
 

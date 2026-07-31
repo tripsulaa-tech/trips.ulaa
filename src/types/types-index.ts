@@ -444,6 +444,8 @@ export interface AboutWhyDifferentCard {
 export interface AboutJourneyStep {
   heading: string;
   description: string;
+  /** Icon-library key (see constants/tripHighlightIcons.ts). Falls back to a default rotation if unset. */
+  icon?: string;
 }
 
 export interface AboutFounderSocialLink {

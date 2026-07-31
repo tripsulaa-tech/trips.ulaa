@@ -160,7 +160,7 @@ export default function AdminAbout() {
   };
   const addStep = () => {
     if (content.journey.steps.length >= 10) return;
-    setJourney('steps', [...content.journey.steps, { heading: '', description: '' }]);
+    setJourney('steps', [...content.journey.steps, { heading: '', description: '', icon: '' }]);
   };
   const removeStep = (i: number) => {
     if (content.journey.steps.length <= 1) return;
@@ -295,7 +295,14 @@ export default function AdminAbout() {
             />
           </div>
           <div className="space-y-2">
-            <label className={labelClass}>Items</label>
+            <div className="flex items-center justify-between">
+              <label className={`${labelClass} mb-0`}>Items</label>
+              {content.have_you_ever.items.length < 8 && (
+                <Button variant="outline" size="sm" onClick={addHYEItem}>
+                  <Plus size={14} /> Add Item
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-dark-muted -mt-1">
               Pick an icon for each item, or leave it unset to use the default rotation.
             </p>
@@ -325,11 +332,6 @@ export default function AdminAbout() {
                 </button>
               </div>
             ))}
-            {content.have_you_ever.items.length < 8 && (
-              <Button variant="outline" size="sm" onClick={addHYEItem}>
-                <Plus size={14} /> Add Item
-              </Button>
-            )}
           </div>
         </div>
 
@@ -346,7 +348,14 @@ export default function AdminAbout() {
             />
           </div>
           <div className="space-y-2">
-            <label className={labelClass}>Feature Items</label>
+            <div className="flex items-center justify-between">
+              <label className={`${labelClass} mb-0`}>Feature Items</label>
+              {content.welcome_to_ulaa.items.length < 8 && (
+                <Button variant="outline" size="sm" onClick={addWTUItem}>
+                  <Plus size={14} /> Add Item
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-dark-muted -mt-1">
               Pick an icon for each item, or leave it unset to use the default rotation.
             </p>
@@ -376,11 +385,6 @@ export default function AdminAbout() {
                 </button>
               </div>
             ))}
-            {content.welcome_to_ulaa.items.length < 8 && (
-              <Button variant="outline" size="sm" onClick={addWTUItem}>
-                <Plus size={14} /> Add Item
-              </Button>
-            )}
           </div>
         </div>
 
@@ -410,7 +414,14 @@ export default function AdminAbout() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <label className={`${labelClass} mb-0`}>Cards (max 6)</label>
-              <span className="text-xs text-dark-muted">{content.why_different.cards.length} / 6</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-dark-muted">{content.why_different.cards.length} / 6</span>
+                {content.why_different.cards.length < 6 && (
+                  <Button variant="outline" size="sm" onClick={addWhyCard}>
+                    <Plus size={14} /> Add Card
+                  </Button>
+                )}
+              </div>
             </div>
             {content.why_different.cards.map((card: AboutWhyDifferentCard, i: number) => (
               <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
@@ -457,11 +468,6 @@ export default function AdminAbout() {
                 />
               </div>
             ))}
-            {content.why_different.cards.length < 6 && (
-              <Button variant="outline" size="sm" onClick={addWhyCard}>
-                <Plus size={14} /> Add Card
-              </Button>
-            )}
           </div>
         </div>
 
@@ -523,46 +529,63 @@ export default function AdminAbout() {
             </div>
           </div>
           <div className="space-y-4">
-            <label className={labelClass}>Journey Steps</label>
-            {content.journey.steps.map((step: AboutJourneyStep, i: number) => (
-              <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">
-                    Step {i + 1}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeStep(i)}
-                    className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+            <div className="flex items-center justify-between">
+              <label className={`${labelClass} mb-0`}>Journey Steps</label>
+              {content.journey.steps.length < 10 && (
+                <Button variant="outline" size="sm" onClick={addStep}>
+                  <Plus size={14} /> Add Step
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {content.journey.steps.map((step: AboutJourneyStep, i: number) => (
+                <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">
+                      Step {i + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeStep(i)}
+                      className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Icon</label>
+                    <p className="text-xs text-dark-muted -mt-0.5 mb-1.5">
+                      Pick an icon for this step, or leave it unset to use the default rotation.
+                    </p>
+                    <div className="w-40">
+                      <TripHighlightIconPicker
+                        value={step.icon ?? ''}
+                        onChange={key => updateStep(i, 'icon', key)}
+                        hintText={step.heading}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Heading</label>
+                    <textarea
+                      value={step.heading}
+                      onChange={e => updateStep(i, 'heading', e.target.value)}
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Description</label>
+                    <textarea
+                      value={step.description}
+                      onChange={e => updateStep(i, 'description', e.target.value)}
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className={labelClass}>Heading</label>
-                  <textarea
-                    value={step.heading}
-                    onChange={e => updateStep(i, 'heading', e.target.value)}
-                    rows={2}
-                    className={`${inputClass} resize-none`}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Description</label>
-                  <textarea
-                    value={step.description}
-                    onChange={e => updateStep(i, 'description', e.target.value)}
-                    rows={2}
-                    className={`${inputClass} resize-none`}
-                  />
-                </div>
-              </div>
-            ))}
-            {content.journey.steps.length < 10 && (
-              <Button variant="outline" size="sm" onClick={addStep}>
-                <Plus size={14} /> Add Step
-              </Button>
-            )}
+              ))}
+            </div>
           </div>
         </div>
 

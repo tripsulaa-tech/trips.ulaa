@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Star, ExternalLink, X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown } from 'lucide-react';
+import { Star, ExternalLink, X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown, Compass, Ticket, Backpack, Plane, Image as ImageIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import TestimonialCard from '../components/ui/TestimonialCard';
@@ -37,7 +37,9 @@ const HAVE_YOU_EVER_ICONS = [X, ShieldCheck, HelpCircle, Frown];
 // before the picker existed (e.g. rows that still hold a raw emoji string).
 const WELCOME_ICONS = [Heart, Users, ShieldCheck, Sparkles];
 
-// ─────────────────────────────────────────────────────────────────────────────
+// "journey" steps likewise store an icon-library key (AboutJourneyStep.icon).
+// This fallback set covers legacy steps saved before the picker existed.
+const JOURNEY_ICONS = [Compass, Ticket, Backpack, Plane, Heart];
 
 export default function AboutPage() {
   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
@@ -130,7 +132,7 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           2. OUR STORY
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
+      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <motion.div {...fadeUp()}>
             {our_story.image ? (
@@ -159,7 +161,7 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           3 & 4. HAVE YOU EVER... / WELCOME TO ULAA (merged split card)
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
+      <section className="pt-12 pb-24 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto">
           <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 p-8 md:p-14">
             {/* Center connector arrow */}
@@ -234,7 +236,7 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           5. WHY ULAA IS DIFFERENT
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background-warm">
+      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-background-warm">
         <div className="max-w-[1344px] mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-14">
             <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
@@ -251,23 +253,22 @@ export default function AboutPage() {
               <motion.div
                 key={i}
                 {...fadeUp(i * 0.08)}
-                className="bg-white rounded-2xl shadow-card overflow-hidden hover:shadow-card-hover transition-shadow duration-300 group"
+                className="relative rounded-2xl shadow-card overflow-hidden hover:shadow-card-hover transition-shadow duration-300 group aspect-[4/3]"
               >
-                {card.image && (
-                  <div className="w-full aspect-video overflow-hidden">
-                    <img
-                      src={card.image}
-                      alt={card.heading}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
+                {card.image ? (
+                  <img
+                    src={card.image}
+                    alt={card.heading}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div className="absolute inset-0 w-full h-full bg-background-warm" />
                 )}
-                <div className="p-7">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors">
-                    <span className="text-primary font-bold text-lg">{i + 1}</span>
-                  </div>
-                  <h3 className="font-display text-xl font-bold text-dark mb-3 whitespace-pre-line">{card.heading}</h3>
-                  <p className="text-dark-muted text-sm leading-relaxed whitespace-pre-line">{card.description}</p>
+                {/* Dark bottom gradient for text readability */}
+                <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-7">
+                  <h3 className="font-display text-xl font-bold text-white mb-3 whitespace-pre-line">{card.heading}</h3>
+                  <p className="text-white/85 text-sm leading-relaxed whitespace-pre-line">{card.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -281,36 +282,89 @@ export default function AboutPage() {
       {(community.photos.length > 0 || community.heading) && (
         <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
           <div className="max-w-[1344px] mx-auto">
-            <motion.div {...fadeUp()} className="text-center mb-12">
-              <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
-                {community.heading}
-              </h2>
-              {community.subheading && (
-                <p className="text-dark-muted text-lg max-w-2xl mx-auto whitespace-pre-line">
-                  {community.subheading}
-                </p>
-              )}
-            </motion.div>
             {community.photos.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {community.photos.map((photo, i) => (
+              <div className="flex flex-col lg:flex-row gap-4 lg:h-[560px]">
+                {/* Left column: heading card + hero photo */}
+                <div className="lg:w-[30%] flex flex-col gap-4 lg:h-full">
                   <motion.div
-                    key={i}
-                    {...fadeUp(i * 0.04)}
-                    className="aspect-square overflow-hidden rounded-xl"
+                    {...fadeUp()}
+                    className="flex-shrink-0 bg-gradient-to-br from-background-warm to-primary/10 rounded-2xl p-6"
                   >
-                    <img
-                      src={photo}
-                      alt={`Community photo ${i + 1}`}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                    />
+                    <div className="flex items-center gap-2 mb-2">
+                      <h2 className="font-display text-4xl font-bold text-dark whitespace-nowrap">
+                        {community.heading}
+                      </h2>
+                      <Heart size={26} className="text-primary flex-shrink-0" fill="currentColor" strokeWidth={0} />
+                    </div>
+                    {community.subheading && (
+                      <p className="text-dark-muted text-base leading-relaxed whitespace-pre-line">
+                        {community.subheading}
+                      </p>
+                    )}
                   </motion.div>
-                ))}
+                  {community.photos[0] && (
+                    <motion.div
+                      {...fadeUp(0.1)}
+                      className="flex-1 aspect-[4/3] lg:aspect-auto rounded-2xl overflow-hidden group"
+                    >
+                      <img
+                        src={community.photos[0]}
+                        alt="Our community"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </motion.div>
+                  )}
+                </div>
+
+                {/* Right: photo grid */}
+                {community.photos.length > 1 && (
+                  <div className="lg:w-[70%] grid grid-cols-2 sm:grid-cols-3 lg:grid-rows-2 gap-4 lg:h-full">
+                    {community.photos.slice(1, 7).map((photo, i) => {
+                      const isLast = i === 5 && community.photos.length > 7;
+                      return (
+                        <motion.div
+                          key={i}
+                          {...fadeUp(i * 0.06)}
+                          className="relative aspect-square lg:aspect-auto rounded-2xl overflow-hidden group"
+                        >
+                          <img
+                            src={photo}
+                            alt={`Community photo ${i + 2}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          {isLast && (
+                            <Link
+                              to="/completed-trips"
+                              className="absolute inset-0 bg-gradient-to-t from-dark/50 via-transparent to-transparent hover:from-dark/60 transition-colors flex items-end justify-end p-4"
+                            >
+                              <span className="inline-flex items-center gap-2 bg-primary text-white font-button font-semibold text-sm px-4 py-2.5 rounded-full shadow-warm whitespace-nowrap">
+                                See More Memories
+                                <ImageIcon size={16} />
+                              </span>
+                            </Link>
+                          )}
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="text-center text-dark-muted py-10">
-                Community photos will appear here once uploaded.
-              </div>
+              <>
+                <motion.div {...fadeUp()} className="text-center mb-12">
+                  <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
+                    {community.heading}
+                  </h2>
+                  {community.subheading && (
+                    <p className="text-dark-muted text-lg max-w-2xl mx-auto whitespace-pre-line">
+                      {community.subheading}
+                    </p>
+                  )}
+                </motion.div>
+                <div className="text-center text-dark-muted py-10">
+                  Community photos will appear here once uploaded.
+                </div>
+              </>
             )}
           </div>
         </section>
@@ -319,7 +373,7 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           7. STATISTICS
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primary">
+      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-primary">
         <div className="max-w-[1344px] mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
             {[
@@ -372,8 +426,8 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           9. YOUR ULAA JOURNEY
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
-        <div className="max-w-4xl mx-auto">
+      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-background">
+        <div className="max-w-5xl mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-16">
             <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
               {journey.heading}
@@ -383,25 +437,31 @@ export default function AboutPage() {
             )}
           </motion.div>
           <div className="relative">
-            {/* Vertical connector line */}
-            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-primary/20 hidden sm:block" />
-            <div className="space-y-8">
-              {journey.steps.map((step: AboutJourneyStep, i: number) => (
-                <motion.div
-                  key={i}
-                  {...fadeUp(i * 0.1)}
-                  className="flex items-start gap-6 relative"
-                >
-                  {/* Step number bubble */}
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-display font-bold text-lg z-10 shadow-md">
-                    {i + 1}
-                  </div>
-                  <div className="bg-white rounded-2xl shadow-card p-6 flex-1 hover:shadow-card-hover transition-shadow duration-300">
-                    <h3 className="font-display text-xl font-bold text-dark mb-2 whitespace-pre-line">{step.heading}</h3>
-                    <p className="text-dark-muted text-sm leading-relaxed whitespace-pre-line">{step.description}</p>
-                  </div>
-                </motion.div>
-              ))}
+            {/* Horizontal connector line (desktop) */}
+            <div className="hidden md:block absolute top-8 left-8 right-8 h-0.5 bg-primary/30" />
+            <div className="flex flex-col md:flex-row md:justify-between gap-10 md:gap-4">
+              {journey.steps.map((step: AboutJourneyStep, i: number) => {
+                const meta = getTripHighlightIcon(step.icon);
+                const Icon = meta ? meta.Icon : JOURNEY_ICONS[i % JOURNEY_ICONS.length];
+                return (
+                  <motion.div
+                    key={i}
+                    {...fadeUp(i * 0.1)}
+                    className="relative z-10 flex flex-col items-center text-center md:flex-1 md:px-2"
+                  >
+                    {/* Step icon bubble */}
+                    <div className="flex-shrink-0 w-16 h-16 rounded-full bg-white border-2 border-primary flex items-center justify-center shadow-md mb-4">
+                      <Icon size={26} className="text-primary" strokeWidth={1.75} />
+                    </div>
+                    <h3 className="font-display text-base font-bold text-primary mb-1.5 whitespace-pre-line">
+                      {step.heading}
+                    </h3>
+                    <p className="text-dark-muted text-sm leading-snug whitespace-pre-line max-w-[200px]">
+                      {step.description}
+                    </p>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </div>

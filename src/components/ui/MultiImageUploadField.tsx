@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Upload, X, ImagePlus, Loader2, Link2 } from 'lucide-react';
 import { uploadImage, deleteImageByUrl } from '../../services/api';
+import Button from './Button';
 
 interface MultiImageUploadFieldProps {
   label: string;
@@ -80,68 +81,36 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
 
   return (
     <div>
-      <label className="block text-sm font-medium text-dark mb-1">{label}</label>
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <label className="block text-sm font-medium text-dark">{label}</label>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
+            {uploading ? 'Uploading...' : 'Add Photos'}
+          </Button>
+          {allowUrl && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowUrlInput(true)}
+            >
+              <Link2 size={14} /> Add by URL
+            </Button>
+          )}
+        </div>
+      </div>
       {hint && <p className="text-[11px] text-dark-muted leading-snug mb-1.5">{hint}</p>}
       {children && <div className="mb-3">{children}</div>}
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleUpload}
-        className="hidden"
-      />
-
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-        {value.map((url, index) => (
-          <div key={`${url}-${index}`} className="relative aspect-square rounded-lg overflow-hidden border-2 border-background-warm group">
-            <img src={url} alt="" className="w-full h-full object-cover" />
-            <button
-              type="button"
-              onClick={() => removeAt(index)}
-              disabled={removingUrl === url}
-              className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-dark/70 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-100 disabled:cursor-wait"
-              title="Remove image"
-            >
-              {removingUrl === url ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
-            </button>
-          </div>
-        ))}
-
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          className="flex flex-col items-center justify-center gap-1 aspect-square rounded-lg border-2 border-dashed border-background-warm bg-background hover:border-primary cursor-pointer transition-colors text-dark-muted disabled:opacity-60"
-        >
-          {uploading ? (
-            <>
-              <Loader2 size={20} className="text-primary animate-spin" />
-              <span className="text-xs font-medium">Uploading...</span>
-            </>
-          ) : (
-            <>
-              <ImagePlus size={20} className="text-primary" />
-              <span className="text-xs font-medium text-dark text-center px-1">Add Photos</span>
-            </>
-          )}
-        </button>
-
-        {allowUrl && (
-          <button
-            type="button"
-            onClick={() => setShowUrlInput(true)}
-            className="flex flex-col items-center justify-center gap-1 aspect-square rounded-lg border-2 border-dashed border-background-warm bg-background hover:border-primary cursor-pointer transition-colors text-dark-muted"
-          >
-            <Link2 size={20} className="text-primary" />
-            <span className="text-xs font-medium text-dark text-center px-1">Add by URL</span>
-          </button>
-        )}
-      </div>
-
       {allowUrl && showUrlInput && (
-        <div className="flex items-center gap-1.5 mt-2">
+        <div className="flex items-center gap-1.5 mb-3">
           <div className="relative flex-1">
             <Link2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-muted" />
             <input
@@ -169,6 +138,34 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
           >
             Cancel
           </button>
+        </div>
+      )}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleUpload}
+        className="hidden"
+      />
+
+      {value.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          {value.map((url, index) => (
+            <div key={`${url}-${index}`} className="relative aspect-square rounded-lg overflow-hidden border-2 border-background-warm group">
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeAt(index)}
+                disabled={removingUrl === url}
+                className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-dark/70 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-100 disabled:cursor-wait"
+                title="Remove image"
+              >
+                {removingUrl === url ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
