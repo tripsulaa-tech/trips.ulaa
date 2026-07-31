@@ -182,7 +182,7 @@ export default function TripDetailPage() {
   // Highlight the quick-jump tab for whichever section is currently in view.
   useEffect(() => {
     if (!trip) return;
-    const ids = ['highlights', 'itinerary', 'accommodation', 'inclusions', 'gallery', 'confidence', 'faqs', 'cancellation'];
+    const ids = ['highlights', 'itinerary', 'accommodation', 'inclusions', 'gallery', 'confidence', 'details', 'faqs', 'cancellation'];
     const sections = ids
       .map(id => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -508,6 +508,15 @@ export default function TripDetailPage() {
                 className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'confidence' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Confidence
+              </a>
+            )}
+            {((trip.things_to_carry_items?.length ?? 0) > 0 || !!trip.meeting_point || !!(trip.trip_founder?.name || trip.trip_founder?.photo)) && (
+              <a
+                href="#details"
+                ref={el => { navLinkRefs.current['details'] = el; }}
+                className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'details' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
+              >
+                Details
               </a>
             )}
             {trip.faqs.length > 0 && (
@@ -955,9 +964,9 @@ export default function TripDetailPage() {
                 {trip.confidence_description && (
                   <p className="text-dark-muted text-sm leading-relaxed mb-4 sm:mb-6">{trip.confidence_description}</p>
                 )}
-                <div className="grid grid-cols-1 gap-4 w-fit">
+                <div className="grid grid-cols-1 gap-0.5 w-fit">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
-                    <div key={i} className="group relative flex items-center justify-start gap-3 p-2">
+                    <div key={i} className="group relative flex items-center justify-start gap-3 p-1">
                       <button
                         type="button"
                         onClick={() => toggleInSet(setActiveConfidenceItems, i)}
@@ -966,7 +975,7 @@ export default function TripDetailPage() {
                         className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
                       />
                       {item.icon && (
-                        <TripHighlightIconDisplay icon={item.icon} index={i} size="md" filled={activeConfidenceItems.has(i)} hoverFill />
+                        <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" filled={activeConfidenceItems.has(i)} hoverFill />
                       )}
                       <p className="text-dark text-sm leading-relaxed">{item.description}</p>
                     </div>
@@ -1123,6 +1132,12 @@ export default function TripDetailPage() {
             </section>
             </div>
 
+            {/* Details — Things to Carry, Meeting Point, Trip Leader, grouped
+                under one quick-jump anchor since none is substantial enough
+                to warrant its own nav tab. */}
+            {((trip.things_to_carry_items?.length ?? 0) > 0 || trip.meeting_point || (trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo))) && (
+              <div id="details" className="scroll-mt-44 space-y-9 sm:space-y-12">
+
             {/* Things to Carry — kept directly above Meeting Point */}
             {((trip.things_to_carry_items?.length ?? 0) > 0) && (
               <section className="scroll-mt-44">
@@ -1211,6 +1226,9 @@ export default function TripDetailPage() {
                   </div>
                 </div>
               </section>
+            )}
+
+              </div>
             )}
 
             {/* Eligibility — only shown when the admin has set an age

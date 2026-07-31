@@ -26,6 +26,18 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text');
+    // Multi-line/paragraph paste (e.g. a list copied from a doc) — split it
+    // into separate items instead of dumping it all into one entry.
+    const lines = text.split(/\r?\n\s*\n|\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length > 1) {
+      e.preventDefault();
+      onChange([...value, ...lines]);
+      setDraft('');
+    }
+  };
+
   const handleBlur = () => {
     // Commit whatever was typed even if the admin clicks away or hits Save
     // instead of pressing Enter or the + button.
@@ -64,6 +76,7 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           onBlur={handleBlur}
           placeholder={placeholder || 'Type and press Enter to add'}
           className="flex-1 px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"

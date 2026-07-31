@@ -17,10 +17,13 @@ const MAX_ZOOM = 2.5;
 // Where each layout is used across the site, kept here so the preview
 // labels stay meaningful if the ratios below ever need tweaking to match
 // a future redesign.
-const PREVIEW_LAYOUTS: { label: string; sub: string; ratio: string }[] = [
-  { label: 'Trip Card', sub: 'Home & Trips listing', ratio: '4 / 3' },
-  { label: 'Desktop Cover', sub: 'Trip page hero banner', ratio: '21 / 9' },
-  { label: 'Mobile Cover', sub: 'Trip page hero, mobile', ratio: '9 / 8' },
+const PREVIEW_LAYOUTS: { label: string; sub: string; ratio: string; width: number }[] = [
+  { label: 'Trip Card', sub: 'Home & Trips listing', ratio: '4 / 3', width: 128 },
+  // Width bumped up so its rendered height (128 * 9/21 ≈ 55px) instead
+  // matches Trip Card's height (128 * 3/4 = 96px) — same height, wider box,
+  // instead of both boxes sharing a width and the 21:9 one looking squashed.
+  { label: 'Desktop Cover', sub: 'Trip page hero banner', ratio: '21 / 9', width: 224 },
+  { label: 'Mobile Cover', sub: 'Trip page hero, mobile', ratio: '9 / 8', width: 128 },
 ];
 
 /**
@@ -144,7 +147,7 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
           <p className="text-xs font-semibold text-dark-muted uppercase tracking-wide mb-2">Live Preview</p>
           <div className="flex flex-wrap gap-4">
             {PREVIEW_LAYOUTS.map(layout => (
-              <div key={layout.label} className="w-32">
+              <div key={layout.label} style={{ width: layout.width }}>
                 <div
                   className="relative w-full overflow-hidden rounded-md border border-background-warm bg-dark/5"
                   style={{ aspectRatio: layout.ratio }}

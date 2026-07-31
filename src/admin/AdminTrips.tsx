@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload, Search, ClipboardList, X } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -562,12 +562,36 @@ export default function AdminTrips() {
   };
 
   const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+  // Commits whatever's typed/pasted in a group's bullet-draft textarea as one
+  // or more bullets, then clears the box. Handles the case where a paste
+  // didn't contain multiple lines (so wasn't auto-split) and needs Enter/blur
+  // to be added as a single bullet.
+  const commitGroupBulletDraft = (gi: number, el: HTMLTextAreaElement) => {
+    const lines = el.value.split(/\r?\n\s*\n|\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return;
+    setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, bullets: [...g.bullets, ...lines] } : g) }));
+    el.value = '';
+  };
+  const publishedCount = trips.filter(t => t.is_published).length;
+  const draftCount = trips.length - publishedCount;
 
   return (
     <AdminLayout title="Upcoming Trips">
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <p className="text-dark-muted">{trips.length} trips</p>
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button variant="primary" size="sm" onClick={openCreate}>
+              <Plus size={16} /> Add Trip
+            </Button>
+          </div>
+          <div className="flex items-center">
+            <p className="flex items-center gap-2 text-dark-muted text-sm">
+              <ClipboardList size={20} className="text-primary flex-shrink-0" />
+              <span className="font-semibold text-green-700">{publishedCount}</span> Published
+              <span className="text-dark-muted/50">•</span>
+              <span className="font-semibold text-dark">{draftCount}</span> Draft
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             <input
               ref={importInputRef}
@@ -576,15 +600,12 @@ export default function AdminTrips() {
               className="hidden"
               onChange={handleImportInputChange}
             />
-            <Button variant="outline" size="sm" onClick={() => importInputRef.current?.click()}>
-              <Upload size={16} /> Import Template
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportTemplate}>
-              <Download size={16} /> Export Template
-            </Button>
-            <Button variant="primary" size="sm" onClick={openCreate}>
-              <Plus size={16} /> Add Trip
-            </Button>
+            <button onClick={() => importInputRef.current?.click()} className="p-2 rounded-md border-2 border-primary/30 text-primary hover:bg-primary/5 transition-colors" title="Import Template">
+              <Upload size={16} />
+            </button>
+            <button onClick={handleExportTemplate} className="p-2 rounded-md border-2 border-primary/30 text-primary hover:bg-primary/5 transition-colors" title="Export Template">
+              <Download size={16} />
+            </button>
           </div>
         </div>
 
@@ -606,7 +627,7 @@ export default function AdminTrips() {
                     <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
                     <th className="px-4 py-3 text-left hidden md:table-cell">Seats</th>
                     <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
-                    <th className="px-3 py-3 text-right whitespace-nowrap">Actions</th>
+                    <th className="px-3 py-3 text-right whitespace-nowrap w-[112px] sm:w-auto">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-background-warm">
@@ -634,15 +655,15 @@ export default function AdminTrips() {
                           {trip.is_published ? 'Published' : 'Draft'}
                         </span>
                       </td>
-                      <td className="pl-4 pr-3 py-3">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => togglePublish(trip)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.is_published ? 'Unpublish' : 'Publish'}>
+                      <td className="pl-2 pr-2 sm:pl-4 sm:pr-3 py-3 whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-0.5 sm:gap-1.5">
+                          <button onClick={() => togglePublish(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.is_published ? 'Unpublish' : 'Publish'}>
                             {trip.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
                           </button>
-                          <button onClick={() => openEdit(trip)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                          <button onClick={() => openEdit(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title="Edit">
                             <Edit2 size={15} />
                           </button>
-                          <button onClick={() => handleDelete(trip.id)} className="p-1.5 rounded hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors">
+                          <button onClick={() => handleDelete(trip.id)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-red-50 active:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Delete">
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -708,71 +729,74 @@ export default function AdminTrips() {
               />
               <p className="text-xs text-dark-muted mt-1">Calculated automatically from the Start and End Date fields.</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Start Date *</label>
-              <DatePicker
-                value={form.start_date}
-                onChange={start_date => setForm(f => ({ ...f, start_date, duration: computeDuration(start_date, f.end_date) || f.duration }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">End Date *</label>
-              <DatePicker
-                value={form.end_date}
-                onChange={end_date => setForm(f => ({ ...f, end_date, duration: computeDuration(f.start_date, end_date) || f.duration }))}
-                min={form.start_date || undefined}
-              />
+            <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Start Date *</label>
+                <DatePicker
+                  value={form.start_date}
+                  onChange={start_date => setForm(f => ({ ...f, start_date, duration: computeDuration(start_date, f.end_date) || f.duration }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">End Date *</label>
+                <DatePicker
+                  value={form.end_date}
+                  onChange={end_date => setForm(f => ({ ...f, end_date, duration: computeDuration(f.start_date, end_date) || f.duration }))}
+                  min={form.start_date || undefined}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Min Age</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.min_age}
+                  onChange={e => setForm(f => ({ ...f, min_age: e.target.value === '' ? '' : +e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 18 (optional)"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Max Age</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.max_age}
+                  onChange={e => setForm(f => ({ ...f, max_age: e.target.value === '' ? '' : +e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 65 (optional)"
+                />
+              </div>
+              <p className="col-span-2 md:col-span-4 text-xs text-dark-muted -mt-2">
+                Default: 18–65 years. Leave blank for no restriction.
+              </p>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-dark mb-1">Description *</label>
               <p className="text-xs text-dark-muted mb-1">Short overview only — put the day-by-day plan in Itinerary below, not here.</p>
               <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Min Age</label>
-              <input
-                type="number"
-                min={0}
-                value={form.min_age}
-                onChange={e => setForm(f => ({ ...f, min_age: e.target.value === '' ? '' : +e.target.value }))}
-                className={inputClass}
-                placeholder="e.g. 18 (optional)"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Max Age</label>
-              <input
-                type="number"
-                min={0}
-                value={form.max_age}
-                onChange={e => setForm(f => ({ ...f, max_age: e.target.value === '' ? '' : +e.target.value }))}
-                className={inputClass}
-                placeholder="e.g. 65 (optional)"
-              />
-              <p className="text-xs text-dark-muted mt-1">
-                Leave either blank for no restriction on that side. Leave both blank to use the default 18–65 rule.
-              </p>
-            </div>
           </TabPanel>
-
           <TabPanel label="Pricing & Availability">
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Total Seats</label>
-              <input type="number" min={0} value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Seats Filled</label>
-              <input
-                type="number"
-                min={0}
-                max={form.total_seats}
-                value={form.seats_booked}
-                onChange={e => setForm(f => ({ ...f, seats_booked: Math.max(0, Math.min(+e.target.value, f.total_seats)) }))}
-                className={inputClass}
-              />
-              <p className="text-xs text-dark-muted mt-1">
-                {Math.max(0, form.total_seats - form.seats_booked)} of {form.total_seats} seats left
-              </p>
+            <div className="md:col-span-2 grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Total Seats</label>
+                <input type="number" min={0} value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Seats Filled</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={form.total_seats}
+                  value={form.seats_booked}
+                  onChange={e => setForm(f => ({ ...f, seats_booked: Math.max(0, Math.min(+e.target.value, f.total_seats)) }))}
+                  className={inputClass}
+                />
+                <p className="text-xs text-dark-muted mt-1">
+                  {Math.max(0, form.total_seats - form.seats_booked)} of {form.total_seats} seats left
+                </p>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹) *</label>
@@ -813,7 +837,6 @@ export default function AdminTrips() {
               <p className="text-xs text-dark-muted mt-1">The early-bird price shows automatically until this date, then the page switches to the regular price on its own.</p>
             </div>
           </TabPanel>
-
           <TabPanel label="Media">
             <div className="md:col-span-2 space-y-3">
               <ImageUploadField
@@ -852,7 +875,7 @@ export default function AdminTrips() {
             </div>
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-dark">Places You'll Definitely Post (photo + caption)</label>
+                <label className="block text-sm font-semibold text-dark">Places You'll Definitely Post</label>
                 <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: [...f.gallery_items, { photo: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -903,12 +926,11 @@ export default function AdminTrips() {
               />
             </div>
           </TabPanel>
-
           <TabPanel label="Overview & Itinerary">
             {/* Rich Highlight Cards */}
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-dark">Why You'll Love This Trip (icon + heading + description)</label>
+                <label className="block text-sm font-semibold text-dark">Why You'll Love This Trip</label>
                 <button
                   type="button"
                   onClick={() => setForm(f => ({ ...f, highlight_cards: [...f.highlight_cards, { icon: '', heading: '', description: '' }] }))}
@@ -917,32 +939,34 @@ export default function AdminTrips() {
                   <Plus size={13} /> Add Card
                 </button>
               </div>
-              {form.highlight_cards.map((card, i) => (
-                <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Card {i + 1}</span>
-                    <button type="button" onClick={() => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs font-medium text-dark mb-1">Icon</label>
-                      <TripHighlightIconPicker
-                        value={card.icon}
-                        hintText={card.heading}
-                        onChange={key => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, icon: key } : c) }))}
-                      />
+              <div className="grid md:grid-cols-2 gap-3">
+                {form.highlight_cards.map((card, i) => (
+                  <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Card {i + 1}</span>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-dark mb-1">Icon</label>
+                        <TripHighlightIconPicker
+                          value={card.icon}
+                          hintText={card.heading}
+                          onChange={key => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, icon: key } : c) }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-dark mb-1">Heading</label>
+                        <input value={card.heading} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, heading: e.target.value } : c) }))} className={inputClass} placeholder="e.g. Dreamy Beaches" />
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-dark mb-1">Heading</label>
-                      <input value={card.heading} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, heading: e.target.value } : c) }))} className={inputClass} placeholder="e.g. Dreamy Beaches" />
+                      <label className="block text-xs font-medium text-dark mb-1">Description</label>
+                      <textarea value={card.description} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, description: e.target.value } : c) }))} rows={2} className={`${inputClass} resize-none`} />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-dark mb-1">Description</label>
-                    <textarea value={card.description} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, description: e.target.value } : c) }))} rows={2} className={`${inputClass} resize-none`} />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
               {form.highlight_cards.length === 0 && (
                 <p className="text-xs text-dark-muted">No highlight cards yet. Click "Add Card" to begin.</p>
               )}
@@ -956,23 +980,21 @@ export default function AdminTrips() {
               />
             </div>
           </TabPanel>
-
           <TabPanel label="Inclusions & Prep">
             {/* Grouped What's Included — heading + bulleted sub-items (e.g. "Premium Stay Experience") */}
-            <div className="md:col-span-2 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="block text-sm font-semibold text-dark">What's Included — Grouped (heading + bullet points)</label>
-                  <p className="text-xs text-dark-muted mt-0.5">Shown instead of the icon grid above when at least one group is added, e.g. a "Premium Stay Experience" heading with bulleted details below it.</p>
-                </div>
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-dark">What's Included</label>
                 <button
                   type="button"
                   onClick={() => setForm(f => ({ ...f, included_groups: [...f.included_groups, { icon: '', heading: '', bullets: [] }] }))}
-                  className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors shrink-0"
+                  className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
-                  <Plus size={13} /> Add Group
+                  <Plus size={14} /> Add Group
                 </button>
               </div>
+              <p className="text-xs text-dark-muted mb-3">Shown instead of the icon grid above when at least one group is added, e.g. a "Premium Stay Experience" heading with bulleted details below it.</p>
+              <div className="space-y-3">
               {form.included_groups.map((group, gi) => (
                 <div key={gi} className="border border-background-warm rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between mb-1">
@@ -993,15 +1015,52 @@ export default function AdminTrips() {
                       <input value={group.heading} onChange={e => setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, heading: e.target.value } : g) }))} className={inputClass} placeholder="e.g. Premium Stay Experience" />
                     </div>
                   </div>
-                  <TagListEditor
-                    label="Bullet Points"
-                    value={group.bullets}
-                    onChange={bullets => setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, bullets } : g) }))}
-                    placeholder="e.g. 5 Nights accommodation at carefully selected 4-star and beachfront properties"
-                  />
+                  <div>
+                    <label className="block text-xs font-medium text-dark mb-1">Bullet Points</label>
+                    <textarea
+                      placeholder="Paste bullet points here — one per line or paragraph. Press Enter or click away to add."
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          commitGroupBulletDraft(gi, e.currentTarget);
+                        }
+                      }}
+                      onBlur={e => commitGroupBulletDraft(gi, e.currentTarget)}
+                      onPaste={e => {
+                        const text = e.clipboardData.getData('text');
+                        const lines = text.split(/\r?\n\s*\n|\r?\n/).map(l => l.trim()).filter(Boolean);
+                        if (lines.length > 1) {
+                          e.preventDefault();
+                          setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, bullets: [...g.bullets, ...lines] } : g) }));
+                          e.currentTarget.value = '';
+                        }
+                      }}
+                    />
+                    <p className="text-[11px] text-dark-muted mt-1">Paste a list — each line or paragraph automatically becomes its own bullet below.</p>
+                    {group.bullets.length > 0 && (
+                      <ul className="space-y-2 mt-2">
+                        {group.bullets.map((bullet, bi) => (
+                          <li key={bi} className="flex items-center gap-2 bg-background-warm rounded-lg px-3 py-2">
+                            <span className="flex-1 text-sm text-dark">{bullet}</span>
+                            <button
+                              type="button"
+                              onClick={() => setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, bullets: g.bullets.filter((_, i) => i !== bi) } : g) }))}
+                              className="text-dark-muted hover:text-red-600 transition-colors shrink-0"
+                              title="Remove"
+                            >
+                              <X size={15} />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
               ))}
               {form.included_groups.length === 0 && <p className="text-xs text-dark-muted">No groups yet. Click "Add Group" to begin.</p>}
+              </div>
             </div>
 
             <div className="md:col-span-2">
@@ -1014,7 +1073,7 @@ export default function AdminTrips() {
             </div>
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-dark">Things to Carry (icon + description)</label>
+                <label className="block text-sm font-semibold text-dark">Things to Carry</label>
                 <button type="button" onClick={() => setForm(f => ({ ...f, things_to_carry_items: [...f.things_to_carry_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
               </div>
               {form.things_to_carry_items.map((item, i) => (
@@ -1046,7 +1105,7 @@ export default function AdminTrips() {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-dark">Travel with Confidence (icon + description)</label>
+                <label className="block text-sm font-semibold text-dark">Travel with Confidence</label>
                 <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: [...f.confidence_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
               </div>
               {form.confidence_items.map((item, i) => (
@@ -1065,7 +1124,28 @@ export default function AdminTrips() {
               {form.confidence_items.length === 0 && <p className="text-xs text-dark-muted">No confidence items yet.</p>}
             </div>
           </TabPanel>
-
+          <TabPanel label="Accommodation">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Section Description</label>
+              <textarea
+                value={form.accommodation_description}
+                onChange={e => setForm(f => ({ ...f, accommodation_description: e.target.value }))}
+                rows={4}
+                className={`${inputClass} resize-none`}
+                placeholder="Describe the accommodation experience for this trip..."
+              />
+            </div>
+            <div className="md:col-span-2">
+              <MultiImageUploadField
+                label="Accommodation Photos"
+                value={form.accommodation_photos}
+                onChange={urls => setForm(f => ({ ...f, accommodation_photos: urls }))}
+                bucket="ulaa"
+                pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/accommodation`}
+                hint="16:9 landscape works best (e.g. 1280×720px) — shown in cropped cards."
+              />
+            </div>
+          </TabPanel>
           <TabPanel label="Meeting Point">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-dark mb-1">Location Name</label>
@@ -1159,57 +1239,6 @@ export default function AdminTrips() {
               </p>
             </div>
           </TabPanel>
-
-          <TabPanel label="FAQs">
-            <div className="md:col-span-2">
-              <FAQEditor
-                value={form.faqs}
-                onChange={faqs => setForm(f => ({ ...f, faqs }))}
-              />
-            </div>
-          </TabPanel>
-
-          <TabPanel label="Terms & Conditions">
-            <div className="md:col-span-2">
-              <TermsEditor
-                value={form.terms_and_conditions}
-                onChange={terms_and_conditions => setForm(f => ({ ...f, terms_and_conditions }))}
-              />
-            </div>
-          </TabPanel>
-
-          <TabPanel label="Cancellation Policy">
-            <div className="md:col-span-2">
-              <CancellationPolicyEditor
-                value={form.cancellation_policy}
-                onChange={cancellation_policy => setForm(f => ({ ...f, cancellation_policy }))}
-              />
-            </div>
-          </TabPanel>
-
-          <TabPanel label="Accommodation">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Section Description</label>
-              <textarea
-                value={form.accommodation_description}
-                onChange={e => setForm(f => ({ ...f, accommodation_description: e.target.value }))}
-                rows={4}
-                className={`${inputClass} resize-none`}
-                placeholder="Describe the accommodation experience for this trip..."
-              />
-            </div>
-            <div className="md:col-span-2">
-              <MultiImageUploadField
-                label="Accommodation Photos"
-                value={form.accommodation_photos}
-                onChange={urls => setForm(f => ({ ...f, accommodation_photos: urls }))}
-                bucket="ulaa"
-                pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/accommodation`}
-                hint="16:9 landscape works best (e.g. 1280×720px) — shown in cropped cards."
-              />
-            </div>
-          </TabPanel>
-
           <TabPanel label="Founder">
             <div className="md:col-span-2">
               <ImageUploadField
@@ -1242,7 +1271,6 @@ export default function AdminTrips() {
               />
             </div>
           </TabPanel>
-
           <TabPanel label="End Banner">
             <div className="md:col-span-2">
               <ImageUploadField
@@ -1293,7 +1321,30 @@ export default function AdminTrips() {
               />
             </div>
           </TabPanel>
-
+          <TabPanel label="Terms & Conditions">
+            <div className="md:col-span-2">
+              <TermsEditor
+                value={form.terms_and_conditions}
+                onChange={terms_and_conditions => setForm(f => ({ ...f, terms_and_conditions }))}
+              />
+            </div>
+          </TabPanel>
+          <TabPanel label="FAQs">
+            <div className="md:col-span-2">
+              <FAQEditor
+                value={form.faqs}
+                onChange={faqs => setForm(f => ({ ...f, faqs }))}
+              />
+            </div>
+          </TabPanel>
+          <TabPanel label="Cancellation Policy">
+            <div className="md:col-span-2">
+              <CancellationPolicyEditor
+                value={form.cancellation_policy}
+                onChange={cancellation_policy => setForm(f => ({ ...f, cancellation_policy }))}
+              />
+            </div>
+          </TabPanel>
           <TabPanel label="Publish">
             <div className="md:col-span-2 flex items-center gap-3">
               <input type="checkbox" id="is_published" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />

@@ -2,7 +2,6 @@ import { Plus, X, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
 import type { ItineraryDay } from '../../types/types-index';
 import MultiImageUploadField from './MultiImageUploadField';
 import TripHighlightIconPicker from './TripHighlightIconPicker';
-import TagListEditor from './TagListEditor';
 
 interface ItineraryEditorProps {
   value: ItineraryDay[];
@@ -61,14 +60,14 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
       ) : (
         <div className="space-y-3">
           {value.map((day, index) => (
-            <div key={index} className="bg-background-warm rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-button font-bold text-primary">Day {day.day}</span>
+            <div key={index} className="border border-background-warm rounded-lg p-4 space-y-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Day {day.day}</span>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
+                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-background-warm disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
                     <ChevronUp size={14} />
                   </button>
-                  <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
+                  <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} className="p-1 rounded-md hover:bg-background-warm disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
                     <ChevronDown size={14} />
                   </button>
                   <button type="button" onClick={() => removeDay(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove day">
@@ -78,7 +77,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
               </div>
               <div className="flex gap-2 items-start">
                 <div className="w-32 flex-shrink-0">
-                  <label className="block text-[11px] font-medium text-dark-muted mb-1">Icon (optional)</label>
+                  <label className="block text-xs font-medium text-dark mb-1">Icon (optional)</label>
                   <TripHighlightIconPicker
                     value={day.icon || ''}
                     hintText={day.title}
@@ -86,34 +85,63 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                   />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <input
-                    value={day.title}
-                    onChange={e => updateDay(index, { title: e.target.value })}
-                    placeholder="Day title, e.g. Shimla → Kaza"
-                    className={inputClass}
-                  />
-                  <textarea
-                    value={day.description}
-                    onChange={e => updateDay(index, { description: e.target.value })}
-                    placeholder="What happens on this day"
-                    rows={2}
-                    className={`${inputClass} resize-none`}
-                  />
+                  <div>
+                    <label className="block text-xs font-medium text-dark mb-1">Title</label>
+                    <input
+                      value={day.title}
+                      onChange={e => updateDay(index, { title: e.target.value })}
+                      placeholder="Day title, e.g. Shimla → Kaza"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-dark mb-1">Description</label>
+                    <textarea
+                      value={day.description}
+                      onChange={e => updateDay(index, { description: e.target.value })}
+                      onPaste={e => {
+                        const text = e.clipboardData.getData('text');
+                        // Blank-line-separated paragraphs = the admin pasted a
+                        // structured multi-paragraph day plan. Auto-split it into
+                        // bullets instead of dumping it all into one paragraph.
+                        const paragraphs = text.split(/\n\s*\n+/).map(p => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
+                        if (paragraphs.length > 1) {
+                          e.preventDefault();
+                          updateDay(index, { bullets: [...(day.bullets || []), ...paragraphs] });
+                        }
+                      }}
+                      placeholder="What happens on this day"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    <p className="text-[11px] text-dark-muted mt-1">Paste a list — each paragraph (separated by a blank line) automatically becomes its own bullet below.</p>
+                  </div>
                 </div>
               </div>
               {!day.icon && (
                 <p className="text-[11px] text-dark-muted">No icon set — the trip page will just show "Day {day.day}".</p>
               )}
 
-              <div className="pt-1">
-                <TagListEditor
-                  label="Bullet Points (optional)"
-                  value={day.bullets || []}
-                  onChange={bullets => updateDay(index, { bullets })}
-                  placeholder="e.g. Guided trek to the viewpoint"
-                  helperText="Shown as a bulleted list below the day's description, e.g. individual activities or stops."
-                />
-              </div>
+              {(day.bullets?.length || 0) > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-dark mb-1">Bullet Points</label>
+                  <ul className="space-y-2">
+                    {(day.bullets || []).map((bullet, bi) => (
+                      <li key={bi} className="flex items-center gap-2 bg-background-warm rounded-lg px-3 py-2">
+                        <span className="flex-1 text-sm text-dark">{bullet}</span>
+                        <button
+                          type="button"
+                          onClick={() => updateDay(index, { bullets: (day.bullets || []).filter((_, i) => i !== bi) })}
+                          className="text-dark-muted hover:text-red-600 transition-colors shrink-0"
+                          title="Remove"
+                        >
+                          <X size={15} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <div className="pt-1">
                 <MultiImageUploadField
