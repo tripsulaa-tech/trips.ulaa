@@ -2,6 +2,9 @@
 // ULAA - Utility Functions
 // =============================================
 
+import type { CSSProperties } from 'react';
+import type { CoverImageCrop } from '../types/types-index';
+
 /** Format a number as Indian Rupees, e.g. 39999 -> "₹39,999" */
 export function formatPrice(amount: number): string {
   return `₹${amount.toLocaleString('en-IN')}`;
@@ -163,6 +166,29 @@ export function formatMonthYear(dateStr: string): string {
 
 /** Image placeholder */
 export const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80';
+
+/**
+ * Turns a saved cover_image_crop (focal point + zoom, see CoverImageCrop in
+ * types-index.ts) into inline styles for an <img className="object-cover">
+ * element. object-position places the focal point inside whatever
+ * object-fit: cover container the image sits in (Trip Card, Desktop Hero,
+ * or Mobile Hero — each has its own aspect ratio); the extra scale()
+ * transform, anchored at the same point via transform-origin, applies the
+ * saved zoom on top without changing which part of the image is centered.
+ *
+ * With no saved crop (existing trips, or a trip whose cover was never
+ * repositioned), this returns {} so the image keeps the plain
+ * object-cover / centered default it always had — no migration needed.
+ */
+export function getCoverImageStyle(crop?: CoverImageCrop | null): CSSProperties {
+  if (!crop) return {};
+  const pos = `${crop.x}% ${crop.y}%`;
+  return {
+    objectPosition: pos,
+    transform: crop.zoom !== 1 ? `scale(${crop.zoom})` : undefined,
+    transformOrigin: pos,
+  };
+}
 
 /** WhatsApp link */
 export function getWhatsAppLink(phone: string, message?: string): string {

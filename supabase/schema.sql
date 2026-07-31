@@ -142,6 +142,9 @@ create table public.upcoming_trips (
   things_to_carry_items   jsonb default '[]'::jsonb,
   fashion_description      text,
   gallery_description      text,
+  -- Saved position/zoom for cover_image, set via Admin → Add/Edit Trip →
+  -- Media → Cover Image Editor. See add_trip_cover_image_crop.sql.
+  cover_image_crop        jsonb,
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
   constraint upcoming_trips_trip_type_check

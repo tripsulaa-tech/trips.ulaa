@@ -7,6 +7,7 @@ import Modal from '../components/ui/Modal';
 import Tabs, { TabPanel } from '../components/ui/Tabs';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import MultiImageUploadField from '../components/ui/MultiImageUploadField';
+import CoverImageCropEditor from '../components/ui/CoverImageCropEditor';
 import TagListEditor from '../components/ui/TagListEditor';
 import ItineraryEditor from '../components/ui/ItineraryEditor';
 import FAQEditor from '../components/ui/FAQEditor';
@@ -23,7 +24,7 @@ import { useAlert } from '../components/ui/AlertDialog';
 import type {
   UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy,
   TripHighlightCard, TripInclusionItem, TripIncludedGroup, TripGalleryItem,
-  TripFounder, TripConfidenceItem, TripEndBanner,
+  TripFounder, TripConfidenceItem, TripEndBanner, CoverImageCrop,
 } from '../types/types-index';
 import { formatDate, slugify, formatAgeRange } from '../utils/utils-index';
 
@@ -71,6 +72,10 @@ interface TripForm {
   early_bird_deadline: string;
   strike_through_price: number | '';
   cover_image: string;
+  // Saved position/zoom for cover_image (see CoverImageCrop in
+  // types-index.ts). null means "no crop saved" — every layout falls back
+  // to its plain centered object-cover, so existing trips are unaffected.
+  cover_image_crop: CoverImageCrop | null;
   gallery_images: string[];
   terms_and_conditions: string;
   cancellation_policy: CancellationPolicy;
@@ -104,7 +109,7 @@ const emptyForm: TripForm = {
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
   early_bird_price: '', early_bird_deadline: '', strike_through_price: '',
-  cover_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
+  cover_image: '', cover_image_crop: null, gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
   // Extended
   highlight_cards: [], accommodation_description: '', accommodation_photos: [],
@@ -371,6 +376,7 @@ export default function AdminTrips() {
         early_bird_deadline: asStr(raw.early_bird_deadline),
         strike_through_price: asNum(raw.strike_through_price),
         cover_image: '',
+        cover_image_crop: null,
         gallery_images: [],
         terms_and_conditions: isPlaceholder(raw.terms_and_conditions) ? DEFAULT_TERMS_AND_CONDITIONS : raw.terms_and_conditions,
         cancellation_policy: raw.cancellation_policy ? {
@@ -466,6 +472,7 @@ export default function AdminTrips() {
       early_bird_deadline: trip.early_bird_deadline || '',
       strike_through_price: trip.strike_through_price ?? '',
       cover_image: trip.cover_image || '',
+      cover_image_crop: trip.cover_image_crop || null,
       gallery_images: trip.gallery_images || [], is_published: trip.is_published,
       terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
       cancellation_policy: trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY,
@@ -808,16 +815,27 @@ export default function AdminTrips() {
           </TabPanel>
 
           <TabPanel label="Media">
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 space-y-3">
               <ImageUploadField
                 label="Cover Image"
                 value={form.cover_image}
-                onChange={url => setForm(f => ({ ...f, cover_image: url }))}
+                // A new/replaced image invalidates any saved position — the
+                // old focal point/zoom was framed for a different photo —
+                // so it resets to null (falls back to centered, no zoom)
+                // rather than silently misapplying to the new one.
+                onChange={url => setForm(f => ({ ...f, cover_image: url, cover_image_crop: null }))}
                 bucket="ulaa"
                 pathPrefix="trip-covers"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
               />
+              {form.cover_image && (
+                <CoverImageCropEditor
+                  imageUrl={form.cover_image}
+                  value={form.cover_image_crop}
+                  onChange={cover_image_crop => setForm(f => ({ ...f, cover_image_crop }))}
+                />
+              )}
             </div>
 
             {/* Places You'll Post — gallery with captions */}

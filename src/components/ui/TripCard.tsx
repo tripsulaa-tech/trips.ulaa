@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { MapPin, Calendar, Clock, Users, UserCheck, ArrowRight, CalendarPlus, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
 import Button from './Button';
 
@@ -27,12 +27,23 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
     >
       {/* Image */}
       <div className="relative h-56 md:h-64 overflow-hidden rounded-t-xl">
-        <img
-          src={trip.cover_image || PLACEHOLDER_IMAGE}
-          alt={trip.destination}
-          loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-        />
+        {/*
+          The hover-zoom (group-hover:scale-110) lives on this wrapper div
+          rather than the <img> itself, because the saved cover_image_crop
+          (see CoverImageCrop in types-index.ts) applies its own zoom via an
+          inline transform on the <img> — an inline style would otherwise
+          override the Tailwind hover transform outright. Keeping them on
+          separate elements lets both scales apply together.
+        */}
+        <div className="w-full h-full transition-transform duration-700 group-hover:scale-110">
+          <img
+            src={trip.cover_image || PLACEHOLDER_IMAGE}
+            alt={trip.destination}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            style={getCoverImageStyle(trip.cover_image_crop)}
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent" />
 
         {/* Badges */}

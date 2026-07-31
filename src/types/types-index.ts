@@ -47,6 +47,18 @@ export interface TripEndBanner {
   cta_url: string;
 }
 
+// Saved position/zoom for a trip's cover_image, set via the Cover Image
+// Editor (Admin → Add/Edit Trip → Media → CoverImageCropEditor). A single
+// focal point + zoom is stored — not a separate crop per layout — and gets
+// applied on top of each layout's own object-fit: cover container, so the
+// same composition holds across the Trip Card, Desktop Hero, and Mobile
+// Hero. See getCoverImageStyle in utils/utils-index.ts.
+export interface CoverImageCrop {
+  x: number;    // 0-100, focal point as % of image width (object-position x)
+  y: number;    // 0-100, focal point as % of image height (object-position y)
+  zoom: number; // >=1, extra scale on top of object-fit: cover (1 = no zoom)
+}
+
 export interface UpcomingTrip {
   id: string;
   title: string;
@@ -91,6 +103,14 @@ export interface UpcomingTrip {
   min_age?: number | null;
   max_age?: number | null;
   cover_image?: string;
+  // Optional saved position/zoom for cover_image, set via the Cover Image
+  // Editor in Admin → Add/Edit Trip → Media. Stores a single focal point +
+  // zoom level (not per-layout crops) that TripCard, and the desktop/mobile
+  // hero in TripDetailPage, all apply on top of their own object-fit: cover
+  // container — see getCoverImageStyle in utils/utils-index.ts. Optional so
+  // existing trips with no saved crop keep using plain object-cover
+  // (unchanged default behaviour), no migration required.
+  cover_image_crop?: CoverImageCrop | null;
   gallery_images: string[];
   terms_and_conditions?: string;
   cancellation_policy?: CancellationPolicy;
