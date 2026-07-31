@@ -79,6 +79,10 @@ interface TripForm {
   // types-index.ts). null means "no crop saved" — every layout falls back
   // to its plain centered object-cover, so existing trips are unaffected.
   cover_image_crop: CoverImageCrop | null;
+  // Separately-uploaded image for the Mobile Hero banner (see
+  // hero_mobile_image in types-index.ts). '' means "not set" — falls
+  // back to the cropped cover_image on mobile.
+  hero_mobile_image: string;
   gallery_images: string[];
   terms_and_conditions: string;
   cancellation_policy: CancellationPolicy;
@@ -112,7 +116,7 @@ const emptyForm: TripForm = {
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
   early_bird_price: '', early_bird_deadline: '', strike_through_price: '', trip_type: '',
-  cover_image: '', cover_image_crop: null, gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
+  cover_image: '', cover_image_crop: null, hero_mobile_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
   // Extended
   highlight_cards: [], accommodation_description: '', accommodation_photos: [],
@@ -244,6 +248,7 @@ export default function AdminTrips() {
       strike_through_price: '<Optional "was ₹X" marketing price as a number, or "">',
       trip_type: '<"domestic" or "international", or "" if not set>',
       cover_image: '(leave blank — uploaded manually)',
+      hero_mobile_image: '(leave blank — uploaded manually)',
       gallery_images: ['(leave blank — uploaded manually)'],
       terms_and_conditions: '(leave as default unless the trip needs custom terms)',
       cancellation_policy: {
@@ -382,6 +387,7 @@ export default function AdminTrips() {
         trip_type: raw.trip_type === 'domestic' || raw.trip_type === 'international' ? raw.trip_type : '',
         cover_image: '',
         cover_image_crop: null,
+        hero_mobile_image: '',
         gallery_images: [],
         terms_and_conditions: isPlaceholder(raw.terms_and_conditions) ? DEFAULT_TERMS_AND_CONDITIONS : raw.terms_and_conditions,
         cancellation_policy: raw.cancellation_policy ? {
@@ -479,6 +485,7 @@ export default function AdminTrips() {
       trip_type: trip.trip_type || '',
       cover_image: trip.cover_image || '',
       cover_image_crop: trip.cover_image_crop || null,
+      hero_mobile_image: trip.hero_mobile_image || '',
       gallery_images: trip.gallery_images || [], is_published: trip.is_published,
       terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
       cancellation_policy: trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY,
@@ -867,7 +874,7 @@ export default function AdminTrips() {
                 pathPrefix="trip-covers"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
-                hint="Landscape, at least 1600×1200px, with the main subject centered — this same photo is reused for the trip card, desktop hero, and mobile hero, so you'll reposition/zoom it for each after uploading."
+                hint="Landscape, at least 1600×1200px, with the main subject centered — this same photo is reused for the trip card and desktop hero, so you'll reposition/zoom it for each after uploading. The mobile hero uses its own separate image, uploaded below."
                 allowUrl
               />
               {form.cover_image && (
@@ -877,6 +884,17 @@ export default function AdminTrips() {
                   onChange={cover_image_crop => setForm(f => ({ ...f, cover_image_crop }))}
                 />
               )}
+              <ImageUploadField
+                label="Hero Banner Image (Mobile)"
+                value={form.hero_mobile_image}
+                onChange={url => setForm(f => ({ ...f, hero_mobile_image: url }))}
+                bucket="ulaa"
+                pathPrefix="trip-covers/hero-mobile"
+                fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
+                maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
+                hint="Tall portrait, 9:16 ratio, at least 1080×1920px — fills the full-height banner on phone screens edge to edge, in place of the cropped cover image. Optional: falls back to the Cover Image (repositioned above) if left empty."
+                allowUrl
+              />
             </div>
 
             {/* Places You'll Post — gallery with captions */}
@@ -1382,6 +1400,12 @@ export default function AdminTrips() {
           <div className="space-y-5">
             {viewingTrip.cover_image && (
               <img src={viewingTrip.cover_image} alt={viewingTrip.title} className="w-full h-48 object-cover rounded-md" />
+            )}
+            {viewingTrip.hero_mobile_image && (
+              <div>
+                <p className="text-xs font-medium text-dark-muted mb-1">Mobile Hero Banner</p>
+                <img src={viewingTrip.hero_mobile_image} alt="" className="w-28 h-40 object-cover rounded-md" />
+              </div>
             )}
 
             <div className="flex flex-wrap items-center gap-2">

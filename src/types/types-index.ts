@@ -112,12 +112,20 @@ export interface UpcomingTrip {
   cover_image?: string;
   // Optional saved position/zoom for cover_image, set via the Cover Image
   // Editor in Admin → Add/Edit Trip → Media. Stores a single focal point +
-  // zoom level (not per-layout crops) that TripCard, and the desktop/mobile
-  // hero in TripDetailPage, all apply on top of their own object-fit: cover
+  // zoom level (not per-layout crops) that TripCard and the desktop hero
+  // in TripDetailPage apply on top of their own object-fit: cover
   // container — see getCoverImageStyle in utils/utils-index.ts. Optional so
   // existing trips with no saved crop keep using plain object-cover
-  // (unchanged default behaviour), no migration required.
+  // (unchanged default behaviour), no migration required. The mobile hero
+  // does NOT use this crop — see hero_mobile_image below.
   cover_image_crop?: CoverImageCrop | null;
+  // Optional separate image for the mobile hero banner on the trip detail
+  // page (Admin → Add/Edit Trip → Media). Same pattern as About page's
+  // hero.mobile_image — an independently uploaded tall/portrait photo
+  // rather than a crop of cover_image. Falls back to the cropped
+  // cover_image on mobile when left empty, so existing trips with no
+  // separate mobile image keep working unchanged.
+  hero_mobile_image?: string;
   gallery_images: string[];
   terms_and_conditions?: string;
   cancellation_policy?: CancellationPolicy;

@@ -278,34 +278,45 @@ export default function TripDetailPage() {
     <Layout>
       {/* Hero */}
       {/*
-        Mobile (<sm) banner box stays a fixed aspect-[9/16] — this is what
-        keeps the text overlay (title, meta row, buttons) at the same
-        bottom-anchored position as before. What changed: the cover image
-        itself is no longer stretched to fill that whole tall box (that's
-        what was over-zooming/over-cropping photos, see CoverImageCropEditor
-        preview vs. actual render). It's now sized to aspect-[9/8] — the
-        ratio uploaded/cropped images are framed at, see the Cover Image
-        Editor's "Mobile Cover" preview in CoverImageCropEditor.tsx — and
-        anchored to the top of the banner; bg-dark fills the remainder
-        below it, blending into the existing gradient overlay. sm/md+
-        (tablet/desktop) keep their existing viewport-height sizing with
-        the image filling the whole box, unaffected.
+        Mobile (<sm) banner box stays a fixed aspect-[9/16] to match the
+        Hero Banner Image (Mobile) upload's recommended 9:16 portrait shape
+        (Admin → Add/Edit Trip → Media) — the image fills the box edge to
+        edge via object-cover, same as the desktop hero does at sm+.
+
+        When no hero_mobile_image is uploaded, the mobile element falls back
+        to the landscape cover_image instead. Stretching a landscape photo
+        across a tall 9:16 box with plain object-cover would over-crop it,
+        so that fallback case keeps the old behaviour: sized to aspect-[9/8]
+        (the ratio the Cover Image Editor's crop is actually framed at) and
+        anchored to the top, with bg-dark filling the remainder below,
+        blending into the existing gradient overlay.
       */}
       <div className="relative mt-[81px] aspect-[9/16] sm:aspect-[21/9] overflow-hidden bg-dark">
         {/*
-          Same <img> serves both the Desktop and Mobile Hero. On mobile it's
-          pinned to the top at aspect-[9/8] (see comment above); at sm+ it
-          reverts to the original full-bleed absolute inset-0 w-full h-full
-          object-cover. Either way the saved cover_image_crop (position +
-          zoom, set in Admin → Add/Edit Trip → Media) applies once here.
+          Two <img> elements, one shown at a time via sm:hidden / hidden sm:block,
+          rather than a single element swapping `src` — the mobile hero uses an
+          optional, separately-uploaded hero_mobile_image (Admin → Add/Edit
+          Trip → Media) with no crop applied, while the sm+ hero always uses
+          cover_image with the saved cover_image_crop (position + zoom, set
+          in the same place).
         */}
+        <img
+          src={trip.hero_mobile_image || trip.cover_image || PLACEHOLDER_IMAGE}
+          alt={trip.title}
+          className={
+            trip.hero_mobile_image
+              ? 'absolute inset-0 w-full h-full object-cover sm:hidden'
+              : 'absolute inset-x-0 top-0 w-full aspect-[9/8] object-cover sm:hidden'
+          }
+          style={trip.hero_mobile_image ? undefined : getCoverImageStyle(trip.cover_image_crop)}
+        />
         <img
           src={trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.title}
-          className="absolute inset-x-0 top-0 w-full aspect-[9/8] object-cover sm:inset-0 sm:h-full sm:aspect-auto"
+          className="hidden sm:block absolute inset-0 w-full h-full object-cover"
           style={getCoverImageStyle(trip.cover_image_crop)}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,transparent_35%,var(--color-dark)_50%)] sm:bg-[linear-gradient(to_right,var(--color-dark)_0%,var(--color-dark)_32%,transparent_55%)] sm:opacity-90" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,transparent_55%,var(--color-dark)_78%)] sm:bg-[linear-gradient(to_right,var(--color-dark)_0%,var(--color-dark)_32%,transparent_55%)] sm:opacity-90" />
         <div className="relative sm:absolute sm:inset-0 w-full h-full">
           <div className="relative w-full h-full flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-32 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
           <motion.div className="flex flex-col" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
@@ -578,24 +589,24 @@ export default function TripDetailPage() {
             {/* Countdown — mobile only; desktop keeps its original spot in the hero */}
             {countdown && (
               <div className="flex justify-center sm:hidden">
-                <div className="inline-flex flex-col items-center gap-2 bg-background-warm border border-dark/10 shadow-card rounded-xl px-5 py-3.5">
-                  <p className="flex items-center gap-1.5 text-primary text-[10px] font-button font-bold uppercase tracking-[0.2em] whitespace-nowrap">
-                    <Clock size={11} /> Trip starts in
+                <div className="inline-flex flex-col items-center gap-2.5 bg-dark border border-white/10 shadow-card rounded-xl px-6 py-4">
+                  <p className="flex items-center gap-1.5 text-primary-light text-[11px] font-button font-bold uppercase tracking-[0.2em] whitespace-nowrap">
+                    <Clock size={12} /> Trip starts in
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     {[
                       { v: countdown.days, l: 'Days' },
                       { v: countdown.hours, l: 'Hrs' },
                       { v: countdown.minutes, l: 'Min' },
                       { v: countdown.seconds, l: 'Sec' },
                     ].map(({ v, l }, i) => (
-                      <div key={l} className="flex items-center gap-2">
+                      <div key={l} className="flex items-center gap-2.5">
                         <div className="text-center">
                           <div
-                            className="relative w-10 h-9 overflow-hidden rounded-md bg-gradient-to-b from-dark-muted to-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                            className="relative w-14 h-12 overflow-hidden rounded-md bg-gradient-to-b from-background to-background-warm shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
                             style={{ perspective: '80px' }}
                           >
-                            <div className="absolute left-0 right-0 top-1/2 h-px bg-black/40 -translate-y-px z-10" />
+                            <div className="absolute left-0 right-0 top-1/2 h-px bg-dark/15 -translate-y-px z-10" />
                             <AnimatePresence mode="popLayout" initial={false}>
                               <motion.div
                                 key={v}
@@ -603,19 +614,19 @@ export default function TripDetailPage() {
                                 animate={{ rotateX: 0, opacity: 1 }}
                                 exit={{ rotateX: -90, opacity: 0 }}
                                 transition={{ duration: 0.8, ease: 'easeInOut' }}
-                                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-                                className="absolute inset-0 flex items-center justify-center font-display text-lg font-bold text-white tabular-nums"
+                                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+                                className="absolute inset-0 flex items-center justify-center font-display text-2xl font-bold text-dark tabular-nums"
                               >
                                 {String(v).padStart(2, '0')}
                               </motion.div>
                             </AnimatePresence>
                           </div>
-                          <div className="text-dark/50 text-[9px] uppercase tracking-widest text-center mt-1">{l}</div>
+                          <div className="text-white/60 text-[10px] uppercase tracking-widest text-center mt-1.5">{l}</div>
                         </div>
                         {i < 3 && (
-                          <div className="flex flex-col gap-1 self-start mt-3">
-                            <span className="w-1 h-1 rounded-full bg-primary/50" />
-                            <span className="w-1 h-1 rounded-full bg-primary/50" />
+                          <div className="flex flex-col gap-1 self-start mt-4">
+                            <span className="w-1 h-1 rounded-full bg-primary-light/70" />
+                            <span className="w-1 h-1 rounded-full bg-primary-light/70" />
                           </div>
                         )}
                       </div>

@@ -17,23 +17,28 @@ const MAX_ZOOM = 2.5;
 // Where each layout is used across the site, kept here so the preview
 // labels stay meaningful if the ratios below ever need tweaking to match
 // a future redesign.
+//
+// Mobile Hero is intentionally NOT listed here — it now uses its own
+// separately-uploaded image (see the "Hero Banner Image (Mobile)" field
+// in AdminTrips.tsx, hero_mobile_image in types-index.ts) instead of a
+// crop of this cover image, so previewing it here would be misleading.
 const PREVIEW_LAYOUTS: { label: string; sub: string; ratio: string; width: number }[] = [
   { label: 'Trip Card', sub: 'Home & Trips listing', ratio: '4 / 3', width: 128 },
   // Width bumped up so its rendered height (128 * 9/21 ≈ 55px) instead
   // matches Trip Card's height (128 * 3/4 = 96px) — same height, wider box,
   // instead of both boxes sharing a width and the 21:9 one looking squashed.
   { label: 'Desktop Cover', sub: 'Trip page hero banner', ratio: '21 / 9', width: 224 },
-  { label: 'Mobile Cover', sub: 'Trip page hero, mobile', ratio: '9 / 8', width: 128 },
 ];
 
 /**
  * Cover Image Editor for Admin → Add/Edit Trip → Media.
  *
  * Lets the admin drag to reposition and zoom a single cover image, then
- * shows live previews of that same composition across the three places it
- * actually renders on the site (Trip Card, Desktop Hero, Mobile Hero).
- * Rather than generating separate cropped images per layout, this only
- * saves a focal point (x/y %) + zoom — see CoverImageCrop in
+ * shows live previews of that same composition across the places it
+ * actually renders on the site (Trip Card, Desktop Hero). The Mobile Hero
+ * banner is uploaded separately (see hero_mobile_image) and isn't part of
+ * this crop. Rather than generating separate cropped images per layout,
+ * this only saves a focal point (x/y %) + zoom — see CoverImageCrop in
  * types-index.ts — which every layout applies on top of its own
  * object-fit: cover container via getCoverImageStyle().
  */
@@ -95,7 +100,7 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
             <Move size={14} className="text-primary" /> Position &amp; Zoom
           </label>
           <p className="text-[11px] text-dark-muted leading-snug mb-2 max-w-sm">
-            For a sharp, well-framed result in all three previews below, upload a
+            For a sharp, well-framed result in both previews below, upload a
             wide landscape image at least <span className="font-medium text-dark">2400×1029px</span> (a
             21:9 widescreen shape), with the main subject centered — the crop below
             trims more or less off the sides depending on the layout.
