@@ -41,26 +41,23 @@ const WELCOME_ICONS = [Heart, Users, ShieldCheck, Sparkles];
 // This fallback set covers legacy steps saved before the picker existed.
 const JOURNEY_ICONS = [Compass, Ticket, Backpack, Plane, Heart];
 
-// Background color palette for icons — cycling through warm brand tones
-const HAVE_YOU_EVER_BG = [
-  'rgba(168, 90, 42, 0.10)',
-  'rgba(217, 138, 58, 0.10)',
-  'rgba(200, 150, 42, 0.10)',
-  'rgba(45, 33, 24, 0.07)',
-];
-
-const WELCOME_BG = [
-  'rgba(168, 90, 42, 0.13)',
-  'rgba(217, 138, 58, 0.13)',
-  'rgba(200, 150, 42, 0.13)',
-  'rgba(168, 90, 42, 0.09)',
-];
+// Have You Ever / Welcome to Ulaa icon circles: every icon shares one base
+// pastel color (rather than rotating through the trip-card palette), and
+// tapping the connector arrow fills the whole "Have You Ever" side red and
+// the whole "Welcome to Ulaa" side green.
+const JOURNEY_BASE_BG = '#FBEAD9';
+const JOURNEY_BASE_FG = '#C4703A';
+const HAVE_YOU_EVER_FILL = '#DC2626';
+const WELCOME_FILL = '#16A34A';
 
 export default function AboutPage() {
   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [liveRating, setLiveRating] = useState<number | null>(null);
-  const [arrowGlowing, setArrowGlowing] = useState(false);
+  // Tapping the glowing connector arrow fills every "Have You Ever" icon red
+  // and every "Welcome to Ulaa" icon green, all at once (tap again to
+  // revert). Mirrors the heart-tap-to-reveal pattern on the trip details page.
+  const [journeyActivated, setJourneyActivated] = useState(false);
 
   useEffect(() => {
     // Fetch about content
@@ -195,12 +192,13 @@ export default function AboutPage() {
             )}
           </motion.div>
           <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 px-6 py-12 sm:p-12">
-            {/* Center connector arrow — glows when clicked */}
+            {/* Center connector arrow — glows continuously to invite a tap; tapping fills every icon on both sides */}
             <button
               type="button"
-              aria-label="See the ULAA difference"
-              onClick={() => setArrowGlowing(v => !v)}
-              className={`hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-warm-lg cursor-pointer transition-transform duration-200 hover:scale-110 focus:outline-none ${arrowGlowing ? 'itinerary-icon-glow' : ''}`}
+              onClick={() => setJourneyActivated(v => !v)}
+              aria-pressed={journeyActivated}
+              aria-label={journeyActivated ? 'Tap to reset icon colors' : 'Tap to reveal icon colors'}
+              className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-warm-lg itinerary-icon-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <ArrowRight size={22} className="text-white" />
             </button>
@@ -225,12 +223,21 @@ export default function AboutPage() {
                         {...fadeUp(i * 0.08)}
                         className="flex flex-col items-center text-center gap-3"
                       >
-                        {/* Icon with coloured background bubble */}
-                        <div
-                          className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
-                          style={{ background: HAVE_YOU_EVER_BG[i % HAVE_YOU_EVER_BG.length] }}
-                        >
-                          <Icon size={26} className="text-primary" strokeWidth={1.75} />
+                        <div className="relative w-16 h-16 rounded-full flex-shrink-0">
+                          {/* base state — same pastel bg/color for every icon */}
+                          <span
+                            className="absolute inset-0 rounded-full flex items-center justify-center transition-opacity duration-300"
+                            style={{ backgroundColor: JOURNEY_BASE_BG, opacity: journeyActivated ? 0 : 1 }}
+                          >
+                            <Icon size={28} color={JOURNEY_BASE_FG} strokeWidth={1.75} />
+                          </span>
+                          {/* red fill state, triggered by the connector arrow */}
+                          <span
+                            className="absolute inset-0 rounded-full flex items-center justify-center transition-opacity duration-300"
+                            style={{ backgroundColor: HAVE_YOU_EVER_FILL, opacity: journeyActivated ? 1 : 0 }}
+                          >
+                            <Icon size={28} color="#fff" strokeWidth={1.75} />
+                          </span>
                         </div>
                         <span className="text-dark-muted text-sm leading-snug">{item.text}</span>
                       </motion.div>
@@ -245,9 +252,10 @@ export default function AboutPage() {
                   <span className="absolute left-0 right-0 border-t border-dashed border-dark/20" />
                   <button
                     type="button"
-                    aria-label="See the ULAA difference"
-                    onClick={() => setArrowGlowing(v => !v)}
-                    className={`relative z-10 w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg cursor-pointer transition-transform duration-200 hover:scale-110 focus:outline-none ${arrowGlowing ? 'itinerary-icon-glow' : ''}`}
+                    onClick={() => setJourneyActivated(v => !v)}
+                    aria-pressed={journeyActivated}
+                    aria-label={journeyActivated ? 'Tap to reset icon colors' : 'Tap to reveal icon colors'}
+                    className="relative z-10 w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg itinerary-icon-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
                     <ArrowDown size={18} className="text-white" />
                   </button>
@@ -269,19 +277,21 @@ export default function AboutPage() {
                         {...fadeUp(i * 0.1)}
                         className="flex flex-col items-center text-center gap-3"
                       >
-                        {/* Mobile: outline icon with coloured bg */}
-                        <div
-                          className="md:hidden w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
-                          style={{ background: WELCOME_BG[i % WELCOME_BG.length] }}
-                        >
-                          <Icon size={26} className="text-primary" strokeWidth={1.75} />
-                        </div>
-                        {/* Desktop: filled icon with coloured bg */}
-                        <div
-                          className="hidden md:flex w-14 h-14 rounded-2xl items-center justify-center flex-shrink-0 shadow-sm"
-                          style={{ background: WELCOME_BG[i % WELCOME_BG.length] }}
-                        >
-                          <Icon size={26} className="text-primary" fill="currentColor" strokeWidth={0} />
+                        <div className="relative w-16 h-16 rounded-full flex-shrink-0">
+                          {/* base state — same pastel bg/color for every icon */}
+                          <span
+                            className="absolute inset-0 rounded-full flex items-center justify-center transition-opacity duration-300"
+                            style={{ backgroundColor: JOURNEY_BASE_BG, opacity: journeyActivated ? 0 : 1 }}
+                          >
+                            <Icon size={28} color={JOURNEY_BASE_FG} strokeWidth={1.75} />
+                          </span>
+                          {/* green fill state, triggered by the connector arrow */}
+                          <span
+                            className="absolute inset-0 rounded-full flex items-center justify-center transition-opacity duration-300"
+                            style={{ backgroundColor: WELCOME_FILL, opacity: journeyActivated ? 1 : 0 }}
+                          >
+                            <Icon size={28} color="#fff" strokeWidth={1.75} />
+                          </span>
                         </div>
                         <span className="text-dark-muted text-sm leading-snug">{item.title}</span>
                       </motion.div>
