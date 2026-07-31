@@ -150,6 +150,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                   onChange={urls => updateDay(index, { images: urls })}
                   bucket="ulaa"
                   pathPrefix={`trips/${tripSlug || 'new-trip'}/itinerary/day-${day.day}`}
+                  allowUrl
                 />
                 {(day.images?.length || 0) < MIN_RECOMMENDED_PHOTOS && (
                   <p className="flex items-center gap-1 text-xs text-amber-600 mt-1.5">

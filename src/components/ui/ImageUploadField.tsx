@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Upload, X, ImagePlus } from 'lucide-react';
+import { Upload, X, ImagePlus, Link2 } from 'lucide-react';
 import { uploadImage, deleteImageByUrl } from '../../services/api';
 
 interface ImageUploadFieldProps {
@@ -29,10 +29,18 @@ interface ImageUploadFieldProps {
   // site. Omit to keep the default fixed h-32 strip (used where the field
   // isn't shown in a fixed-ratio tile elsewhere on the site).
   aspectRatio?: string;
+  // When true, also offers a "paste an image URL" option alongside the file
+  // upload dropzone. The pasted URL is stored as-is and rendered directly
+  // (<img src={url}>) — nothing is downloaded or re-hosted, so it stays live
+  // exactly as long as the source URL does. Off by default so existing
+  // upload-only fields are unaffected.
+  allowUrl?: boolean;
 }
 
-export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix, maxSizeBytes, hint, aspectRatio }: ImageUploadFieldProps) {
+export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix, maxSizeBytes, hint, aspectRatio, allowUrl }: ImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlDraft, setUrlDraft] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const inputId = `upload-${pathPrefix}-${label.replace(/\s+/g, '-').toLowerCase()}`;
 
@@ -47,8 +55,9 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
       const url = await uploadImage(bucket, file, path, maxSizeBytes);
       onChange(url);
       // Replacing an existing image — clean up the file it's replacing so
-      // it doesn't sit around as an orphan in storage.
-      if (previousUrl) await deleteImageByUrl(bucket, previousUrl).catch(() => {});
+      // it doesn't sit around as an orphan in storage. Skipped for pasted
+      // URLs, which were never uploaded to our bucket in the first place.
+      if (previousUrl && previousUrl.includes(`/${bucket}/`)) await deleteImageByUrl(bucket, previousUrl).catch(() => {});
     } catch {
       alert(`Failed to upload. Make sure the Supabase storage bucket "${bucket}" exists and is public.`);
     } finally {
@@ -60,7 +69,15 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
   const handleRemove = async () => {
     const previousUrl = value;
     onChange('');
-    if (previousUrl) await deleteImageByUrl(bucket, previousUrl).catch(() => {});
+    if (previousUrl && previousUrl.includes(`/${bucket}/`)) await deleteImageByUrl(bucket, previousUrl).catch(() => {});
+  };
+
+  const applyUrl = () => {
+    const trimmed = urlDraft.trim();
+    if (!trimmed) return;
+    onChange(trimmed);
+    setUrlDraft('');
+    setShowUrlInput(false);
   };
 
   return (
@@ -97,14 +114,27 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
           >
             <X size={14} />
           </button>
-          <label
-            htmlFor={inputId}
-            onClick={(e) => { e.preventDefault(); fileRef.current?.click(); }}
-            className="absolute bottom-2 right-2 px-2.5 py-1.5 rounded-md bg-white/95 text-dark text-xs font-medium cursor-pointer hover:bg-white transition-colors flex items-center gap-1"
-          >
-            <Upload size={12} />
-            {uploading ? 'Uploading...' : 'Replace'}
-          </label>
+          <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+            {allowUrl && (
+              <button
+                type="button"
+                onClick={() => setShowUrlInput(s => !s)}
+                className="px-2.5 py-1.5 rounded-md bg-white/95 text-dark text-xs font-medium cursor-pointer hover:bg-white transition-colors flex items-center gap-1"
+                title="Replace with an image URL"
+              >
+                <Link2 size={12} />
+                URL
+              </button>
+            )}
+            <label
+              htmlFor={inputId}
+              onClick={(e) => { e.preventDefault(); fileRef.current?.click(); }}
+              className="px-2.5 py-1.5 rounded-md bg-white/95 text-dark text-xs font-medium cursor-pointer hover:bg-white transition-colors flex items-center gap-1"
+            >
+              <Upload size={12} />
+              {uploading ? 'Uploading...' : 'Replace'}
+            </label>
+          </div>
         </div>
       ) : (
         <label
@@ -123,6 +153,43 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
             </>
           )}
         </label>
+      )}
+
+      {allowUrl && (
+        <div className="mt-2">
+          {showUrlInput || !value ? (
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex-1">
+                <Link2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-muted" />
+                <input
+                  type="text"
+                  value={urlDraft}
+                  onChange={e => setUrlDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyUrl(); } }}
+                  placeholder="Or paste an image URL…"
+                  className="w-full pl-7 pr-2 py-1.5 text-xs border-2 border-background-warm rounded-md bg-background focus:border-primary outline-none transition-colors"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={applyUrl}
+                disabled={!urlDraft.trim()}
+                className="px-2.5 py-1.5 rounded-md bg-primary text-white text-xs font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Use URL
+              </button>
+              {value && (
+                <button
+                  type="button"
+                  onClick={() => { setShowUrlInput(false); setUrlDraft(''); }}
+                  className="px-2 py-1.5 rounded-md text-dark-muted text-xs hover:bg-background-warm transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          ) : null}
+        </div>
       )}
     </div>
   );

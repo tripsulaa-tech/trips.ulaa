@@ -416,6 +416,8 @@ export interface WaitlistFormData {
 
 export interface AboutHaveYouEverItem {
   text: string;
+  /** Icon library key (see constants/tripHighlightIcons.ts). Optional for legacy items saved before the picker existed. */
+  icon?: string;
 }
 
 export interface AboutWelcomeItem {
@@ -427,6 +429,8 @@ export interface AboutWelcomeItem {
 export interface AboutWhyDifferentCard {
   heading: string;
   description: string;
+  /** Optional image shown on the card — either uploaded or a pasted external URL (e.g. Unsplash). */
+  image?: string;
 }
 
 export interface AboutJourneyStep {
@@ -443,6 +447,7 @@ export interface AboutContent {
   // 1. Hero Banner
   hero: {
     image: string;
+    mobile_image: string;
     heading: string;
     subheading: string;
     cta_label: string;

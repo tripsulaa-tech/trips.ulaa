@@ -6,6 +6,7 @@ import Layout from '../components/layout/Layout';
 import TestimonialCard from '../components/ui/TestimonialCard';
 import { getSiteContent, getTestimonials } from '../services/api';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
+import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
 import type {
   AboutContent,
   AboutHaveYouEverItem,
@@ -25,13 +26,15 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.6, delay },
 });
 
-// "have_you_ever" items only store text, so we cycle through a fixed set of
-// icons to give each one a distinct visual mark, matching the reference design.
+// "have_you_ever" items store an icon-library key chosen in the admin
+// (AboutHaveYouEverItem.icon, see constants/tripHighlightIcons.ts). This
+// fallback set is only used for legacy items saved before the picker
+// existed, so they still render something instead of a blank slot.
 const HAVE_YOU_EVER_ICONS = [X, ShieldCheck, HelpCircle, Frown];
 
-// "welcome_to_ulaa" items store a freeform emoji/icon string from the admin,
-// but to keep the visual language consistent with the app theme (single-color
-// line icons, matching weight/size) we render themed icons here instead.
+// "welcome_to_ulaa" items likewise store an icon-library key
+// (AboutWelcomeItem.icon). This fallback set covers legacy items saved
+// before the picker existed (e.g. rows that still hold a raw emoji string).
 const WELCOME_ICONS = [Heart, Users, ShieldCheck, Sparkles];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -85,26 +88,31 @@ export default function AboutPage() {
           1. HERO BANNER
       ══════════════════════════════════════════════════════════════ */}
       <div className="relative h-[70vh] min-h-[480px] overflow-hidden">
-        {hero.image ? (
-          <img
-            src={hero.image}
-            alt={hero.heading}
-            className="w-full h-full object-cover"
-          />
+        {(hero.image || hero.mobile_image) ? (
+          <>
+            {/* Mobile banner (falls back to desktop image if no mobile-specific one was uploaded) */}
+            <img
+              src={hero.mobile_image || hero.image}
+              alt={hero.heading}
+              className="w-full h-full object-cover md:hidden"
+            />
+            {/* Desktop/tablet banner (falls back to mobile image if no desktop-specific one was uploaded) */}
+            <img
+              src={hero.image || hero.mobile_image}
+              alt={hero.heading}
+              className="w-full h-full object-cover hidden md:block"
+            />
+          </>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/80 to-dark" />
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-dark/40 via-dark/50 to-dark/80" />
         <div className="absolute inset-0 flex flex-col items-start justify-center text-left text-white px-6 sm:px-10 lg:px-20 pt-20">
           <motion.div {...fadeUp()} className="max-w-3xl">
-            <h1 className="font-display text-5xl md:text-7xl font-bold leading-tight mb-6">
-              {hero.heading.split('. ').map((sentence, i, arr) => (
-                <span key={i} className="block">
-                  {sentence}{i < arr.length - 1 ? '.' : ''}
-                </span>
-              ))}
+            <h1 className="font-display text-4xl sm:text-5xl md:text-7xl font-bold leading-tight mb-6 whitespace-pre-line">
+              {hero.heading}
             </h1>
-            <p className="text-white/80 text-lg md:text-xl max-w-2xl mb-8 leading-relaxed">
+            <p className="text-white/80 text-lg md:text-xl max-w-2xl mb-8 leading-relaxed whitespace-pre-line">
               {hero.subheading}
             </p>
             {hero.cta_label && hero.cta_url && (
@@ -138,10 +146,10 @@ export default function AboutPage() {
             )}
           </motion.div>
           <motion.div {...fadeUp(0.15)} className="space-y-6">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark leading-tight">
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark leading-tight whitespace-pre-line">
               {our_story.heading}
             </h2>
-            <p className="text-dark-muted text-lg leading-relaxed">
+            <p className="text-dark-muted text-lg leading-relaxed whitespace-pre-line">
               {our_story.description}
             </p>
           </motion.div>
@@ -169,14 +177,15 @@ export default function AboutPage() {
               <div className="md:pr-20 text-center">
                 <motion.h2
                   {...fadeUp()}
-                  className="font-display text-3xl md:text-4xl font-bold text-dark mb-2"
+                  className="font-display text-3xl md:text-4xl font-bold text-dark mb-2 whitespace-pre-line"
                 >
                   {have_you_ever.heading}
                 </motion.h2>
                 <span className="inline-block h-1 w-16 bg-primary rounded-full mb-8" />
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-6">
                   {have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => {
-                    const Icon = HAVE_YOU_EVER_ICONS[i % HAVE_YOU_EVER_ICONS.length];
+                    const meta = getTripHighlightIcon(item.icon);
+                    const Icon = meta ? meta.Icon : HAVE_YOU_EVER_ICONS[i % HAVE_YOU_EVER_ICONS.length];
                     return (
                       <motion.div
                         key={i}
@@ -195,14 +204,15 @@ export default function AboutPage() {
               <div className="md:pl-20 text-center">
                 <motion.h2
                   {...fadeUp()}
-                  className="font-display text-3xl md:text-4xl font-bold text-dark mb-2"
+                  className="font-display text-3xl md:text-4xl font-bold text-dark mb-2 whitespace-pre-line"
                 >
                   {welcome_to_ulaa.heading}
                 </motion.h2>
                 <span className="inline-block h-1 w-16 bg-primary rounded-full mb-8" />
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-6">
                   {welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => {
-                    const Icon = WELCOME_ICONS[i % WELCOME_ICONS.length];
+                    const meta = getTripHighlightIcon(item.icon);
+                    const Icon = meta ? meta.Icon : WELCOME_ICONS[i % WELCOME_ICONS.length];
                     return (
                       <motion.div
                         key={i}
@@ -227,11 +237,11 @@ export default function AboutPage() {
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background-warm">
         <div className="max-w-[1344px] mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-14">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4">
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
               {why_different.heading}
             </h2>
             {why_different.subheading && (
-              <p className="text-dark-muted text-lg max-w-2xl mx-auto">
+              <p className="text-dark-muted text-lg max-w-2xl mx-auto whitespace-pre-line">
                 {why_different.subheading}
               </p>
             )}
@@ -241,13 +251,24 @@ export default function AboutPage() {
               <motion.div
                 key={i}
                 {...fadeUp(i * 0.08)}
-                className="bg-white rounded-2xl shadow-card p-7 hover:shadow-card-hover transition-shadow duration-300 group"
+                className="bg-white rounded-2xl shadow-card overflow-hidden hover:shadow-card-hover transition-shadow duration-300 group"
               >
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors">
-                  <span className="text-primary font-bold text-lg">{i + 1}</span>
+                {card.image && (
+                  <div className="w-full aspect-video overflow-hidden">
+                    <img
+                      src={card.image}
+                      alt={card.heading}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                )}
+                <div className="p-7">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors">
+                    <span className="text-primary font-bold text-lg">{i + 1}</span>
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-dark mb-3 whitespace-pre-line">{card.heading}</h3>
+                  <p className="text-dark-muted text-sm leading-relaxed whitespace-pre-line">{card.description}</p>
                 </div>
-                <h3 className="font-display text-xl font-bold text-dark mb-3">{card.heading}</h3>
-                <p className="text-dark-muted text-sm leading-relaxed">{card.description}</p>
               </motion.div>
             ))}
           </div>
@@ -261,11 +282,11 @@ export default function AboutPage() {
         <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
           <div className="max-w-[1344px] mx-auto">
             <motion.div {...fadeUp()} className="text-center mb-12">
-              <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4">
+              <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
                 {community.heading}
               </h2>
               {community.subheading && (
-                <p className="text-dark-muted text-lg max-w-2xl mx-auto">
+                <p className="text-dark-muted text-lg max-w-2xl mx-auto whitespace-pre-line">
                   {community.subheading}
                 </p>
               )}
@@ -335,7 +356,7 @@ export default function AboutPage() {
         <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background-warm">
           <div className="max-w-[1344px] mx-auto">
             <motion.div {...fadeUp()} className="text-center mb-12">
-              <h2 className="font-display text-4xl md:text-5xl font-bold text-dark">
+              <h2 className="font-display text-4xl md:text-5xl font-bold text-dark whitespace-pre-line">
                 {testimonials_heading}
               </h2>
             </motion.div>
@@ -354,11 +375,11 @@ export default function AboutPage() {
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-4xl mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-16">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4">
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
               {journey.heading}
             </h2>
             {journey.subheading && (
-              <p className="text-dark-muted text-lg">{journey.subheading}</p>
+              <p className="text-dark-muted text-lg whitespace-pre-line">{journey.subheading}</p>
             )}
           </motion.div>
           <div className="relative">
@@ -376,8 +397,8 @@ export default function AboutPage() {
                     {i + 1}
                   </div>
                   <div className="bg-white rounded-2xl shadow-card p-6 flex-1 hover:shadow-card-hover transition-shadow duration-300">
-                    <h3 className="font-display text-xl font-bold text-dark mb-2">{step.heading}</h3>
-                    <p className="text-dark-muted text-sm leading-relaxed">{step.description}</p>
+                    <h3 className="font-display text-xl font-bold text-dark mb-2 whitespace-pre-line">{step.heading}</h3>
+                    <p className="text-dark-muted text-sm leading-relaxed whitespace-pre-line">{step.description}</p>
                   </div>
                 </motion.div>
               ))}
@@ -419,7 +440,7 @@ export default function AboutPage() {
                   <p className="text-primary text-base font-semibold mt-1">{founder.designation}</p>
                 )}
               </div>
-              <p className="text-white/70 text-lg leading-relaxed">{founder.description}</p>
+              <p className="text-white/70 text-lg leading-relaxed whitespace-pre-line">{founder.description}</p>
               {founder.social_links.length > 0 && (
                 <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                   {founder.social_links.map((link: AboutFounderSocialLink, i: number) =>

@@ -4,6 +4,7 @@ export const DEFAULT_ABOUT: AboutContent = {
   // 1. Hero Banner
   hero: {
     image: '',
+    mobile_image: '',
     heading: 'About ULAA',
     subheading: 'Unseen. Local. Adventures. Activities. — A girls-only travel revolution.',
     cta_label: 'Explore Trips',
@@ -22,10 +23,10 @@ export const DEFAULT_ABOUT: AboutContent = {
   have_you_ever: {
     heading: 'Have You Ever...',
     items: [
-      { text: 'Friends cancelled?' },
-      { text: 'Worried about safety?' },
-      { text: 'Felt too nervous to travel alone?' },
-      { text: 'Wanted to explore but had no one to go with?' },
+      { text: 'Friends cancelled?', icon: 'x' },
+      { text: 'Worried about safety?', icon: 'shield-check' },
+      { text: 'Felt too nervous to travel alone?', icon: 'help-circle' },
+      { text: 'Wanted to explore but had no one to go with?', icon: 'frown' },
     ],
   },
 
@@ -34,10 +35,10 @@ export const DEFAULT_ABOUT: AboutContent = {
     heading: 'Welcome to ULAA',
     subheading: 'Your home for safe, soulful, sisterhood travel.',
     items: [
-      { icon: '🛡️', title: 'Safety First', description: 'Every destination, accommodation, and guide is vetted with women\'s safety as the top priority.' },
-      { icon: '🌿', title: 'Curated Experiences', description: 'No tourist traps. Only real, raw, soulful adventures off the beaten path.' },
-      { icon: '👯', title: 'Instant Sisterhood', description: 'Join a group of like-minded women and leave with friendships that last a lifetime.' },
-      { icon: '✈️', title: 'Stress-Free Planning', description: 'We handle everything — stays, transport, meals — so you just show up and explore.' },
+      { icon: 'shield-check', title: 'Safety First', description: 'Every destination, accommodation, and guide is vetted with women\'s safety as the top priority.' },
+      { icon: 'compass', title: 'Curated Experiences', description: 'No tourist traps. Only real, raw, soulful adventures off the beaten path.' },
+      { icon: 'users', title: 'Instant Sisterhood', description: 'Join a group of like-minded women and leave with friendships that last a lifetime.' },
+      { icon: 'plane', title: 'Stress-Free Planning', description: 'We handle everything — stays, transport, meals — so you just show up and explore.' },
     ],
   },
 
@@ -46,12 +47,12 @@ export const DEFAULT_ABOUT: AboutContent = {
     heading: 'Why ULAA is Different',
     subheading: 'We\'re not just a travel company. We\'re a movement.',
     cards: [
-      { heading: 'Women-Only Safe Spaces', description: 'Every trip is exclusively for women, creating an environment where you can truly let your guard down.' },
-      { heading: 'Handpicked Hidden Gems', description: 'We seek out destinations Instagram hasn\'t discovered yet — raw, authentic, and unforgettable.' },
-      { heading: 'Small Groups, Big Connections', description: 'Our groups are intentionally small so everyone gets personal attention and real bonds form.' },
-      { heading: 'Local & Sustainable', description: 'We partner with local guides, homestays, and businesses to keep travel meaningful and responsible.' },
-      { heading: 'Solo-Friendly by Design', description: 'Whether you\'re a seasoned solo traveller or stepping out for the first time, you\'re in the right place.' },
-      { heading: 'End-to-End Support', description: 'From the moment you book to the moment you\'re home, our team is with you every step of the way.' },
+      { heading: 'Women-Only Safe Spaces', description: 'Every trip is exclusively for women, creating an environment where you can truly let your guard down.', image: '' },
+      { heading: 'Handpicked Hidden Gems', description: 'We seek out destinations Instagram hasn\'t discovered yet — raw, authentic, and unforgettable.', image: '' },
+      { heading: 'Small Groups, Big Connections', description: 'Our groups are intentionally small so everyone gets personal attention and real bonds form.', image: '' },
+      { heading: 'Local & Sustainable', description: 'We partner with local guides, homestays, and businesses to keep travel meaningful and responsible.', image: '' },
+      { heading: 'Solo-Friendly by Design', description: 'Whether you\'re a seasoned solo traveller or stepping out for the first time, you\'re in the right place.', image: '' },
+      { heading: 'End-to-End Support', description: 'From the moment you book to the moment you\'re home, our team is with you every step of the way.', image: '' },
     ],
   },
 

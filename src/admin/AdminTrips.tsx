@@ -868,6 +868,7 @@ export default function AdminTrips() {
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
                 hint="Landscape, at least 1600×1200px, with the main subject centered — this same photo is reused for the trip card, desktop hero, and mobile hero, so you'll reposition/zoom it for each after uploading."
+                allowUrl
               />
               {form.cover_image && (
                 <CoverImageCropEditor
@@ -909,6 +910,7 @@ export default function AdminTrips() {
                       pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/gallery`}
                       hint="4:3 landscape works best (e.g. 1200×900px) — shown in a cropped carousel tile."
                       aspectRatio="3/2"
+                      allowUrl
                     />
                     <div>
                       <label className="block text-xs font-medium text-dark mb-1">Caption / Place Name</label>
@@ -929,6 +931,7 @@ export default function AdminTrips() {
                 bucket="ulaa"
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/fashion`}
                 hint="Shown uncropped in a masonry grid, so portrait, landscape, or square all work — just keep each photo at least 800px on its shortest side."
+                allowUrl
               >
                 <label className="block text-sm font-medium text-dark mb-1">Section Description</label>
                 <textarea
@@ -1158,6 +1161,7 @@ export default function AdminTrips() {
                 bucket="ulaa"
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/accommodation`}
                 hint="16:9 landscape works best (e.g. 1280×720px) — shown in cropped cards."
+                allowUrl
               />
             </div>
           </TabPanel>
@@ -1264,6 +1268,7 @@ export default function AdminTrips() {
                 pathPrefix="trip-founder"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 hint="Square, at least 400×400px, with the face centered — shown as a circular avatar."
+                allowUrl
               />
             </div>
             <div>
@@ -1296,6 +1301,7 @@ export default function AdminTrips() {
                 pathPrefix="trip-end-banners"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 hint="Wide landscape, at least 1600×900px — shown full-bleed behind the closing CTA text."
+                allowUrl
               />
             </div>
             <div className="md:col-span-2">

@@ -10,6 +10,7 @@ import {
   ShieldCheck, Shield, Phone, HeartHandshake, BadgeCheck, Clock, Headset, LifeBuoy, Lock, UserCheck,
   Hotel, Venus, UserRoundCheck, PhoneCall, MapPinned,
   Shirt, Footprints, Hand, Glasses, HatGlasses, BatteryCharging, Pill, IdCard, GlassWater,
+  X, HelpCircle, Frown, Smile, AlertCircle, Meh,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -131,6 +132,14 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'pill', label: 'Personal Medicines', Icon: Pill, keywords: ['personal medicines', 'medicines', 'medicine', 'medication', 'pills', 'first aid'] },
   { key: 'id-card', label: 'Government ID Proof', Icon: IdCard, keywords: ['government id proof', 'id proof', 'id card', 'passport', 'aadhar', 'adhar', 'voter id', 'license', 'documents'] },
   { key: 'glass-water', label: 'Water Bottle', Icon: GlassWater, keywords: ['water bottle', 'bottle', 'water', 'hydration', 'flask'] },
+
+  // Moods & questions (mainly for "Have You Ever…" style prompts)
+  { key: 'x', label: 'Cancelled', Icon: X, keywords: ['cancelled', 'cancel', 'no', 'plans fell through', 'let down'] },
+  { key: 'help-circle', label: 'Unsure', Icon: HelpCircle, keywords: ['unsure', 'question', 'confused', 'worried', 'uncertain', 'doubt'] },
+  { key: 'frown', label: 'Disappointed', Icon: Frown, keywords: ['disappointed', 'sad', 'nervous', 'upset', 'frown'] },
+  { key: 'smile', label: 'Happy', Icon: Smile, keywords: ['happy', 'excited', 'joy', 'positive', 'smile'] },
+  { key: 'alert-circle', label: 'Concern', Icon: AlertCircle, keywords: ['concern', 'worried', 'anxious', 'alert', 'caution'] },
+  { key: 'meh', label: 'Indifferent', Icon: Meh, keywords: ['indifferent', 'unsure', 'meh', 'neutral', 'nervous'] },
 ];
 
 const TRIP_HIGHLIGHT_ICON_MAP: Record<string, TripHighlightIconMeta> = Object.fromEntries(

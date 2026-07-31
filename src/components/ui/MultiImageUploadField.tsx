@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Upload, X, ImagePlus, Loader2 } from 'lucide-react';
+import { Upload, X, ImagePlus, Loader2, Link2 } from 'lucide-react';
 import { uploadImage, deleteImageByUrl } from '../../services/api';
 
 interface MultiImageUploadFieldProps {
@@ -15,10 +15,17 @@ interface MultiImageUploadFieldProps {
   // upload grid — e.g. a section-description textarea that belongs
   // visually inside this field rather than as a separate block above it.
   children?: React.ReactNode;
+  // When true, also offers a "paste an image URL" option next to the
+  // upload tile. Pasted URLs are stored as-is and rendered directly
+  // (<img src={url}>) — nothing is downloaded or re-hosted. Off by default
+  // so existing upload-only fields are unaffected.
+  allowUrl?: boolean;
 }
 
-export default function MultiImageUploadField({ label, value, onChange, bucket, pathPrefix, hint, children }: MultiImageUploadFieldProps) {
+export default function MultiImageUploadField({ label, value, onChange, bucket, pathPrefix, hint, children, allowUrl }: MultiImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlDraft, setUrlDraft] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,7 +57,9 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
     // ...then clean up the actual file in storage. If this fails, the file
     // becomes an orphan in the bucket (harmless but wastes quota) — we
     // don't re-add it to the form on failure since the user already asked
-    // for it gone from the album.
+    // for it gone from the album. Skipped for pasted URLs, which were never
+    // uploaded to our bucket in the first place.
+    if (!url.includes(`/${bucket}/`)) return;
     try {
       setRemovingUrl(url);
       await deleteImageByUrl(bucket, url);
@@ -59,6 +68,14 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
     } finally {
       setRemovingUrl(null);
     }
+  };
+
+  const applyUrl = () => {
+    const trimmed = urlDraft.trim();
+    if (!trimmed) return;
+    onChange([...value, trimmed]);
+    setUrlDraft('');
+    setShowUrlInput(false);
   };
 
   return (
@@ -110,7 +127,50 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
             </>
           )}
         </button>
+
+        {allowUrl && (
+          <button
+            type="button"
+            onClick={() => setShowUrlInput(true)}
+            className="flex flex-col items-center justify-center gap-1 aspect-square rounded-lg border-2 border-dashed border-background-warm bg-background hover:border-primary cursor-pointer transition-colors text-dark-muted"
+          >
+            <Link2 size={20} className="text-primary" />
+            <span className="text-xs font-medium text-dark text-center px-1">Add by URL</span>
+          </button>
+        )}
       </div>
+
+      {allowUrl && showUrlInput && (
+        <div className="flex items-center gap-1.5 mt-2">
+          <div className="relative flex-1">
+            <Link2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-muted" />
+            <input
+              type="text"
+              autoFocus
+              value={urlDraft}
+              onChange={e => setUrlDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyUrl(); } }}
+              placeholder="Paste an image URL…"
+              className="w-full pl-7 pr-2 py-1.5 text-xs border-2 border-background-warm rounded-md bg-background focus:border-primary outline-none transition-colors"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={applyUrl}
+            disabled={!urlDraft.trim()}
+            className="px-2.5 py-1.5 rounded-md bg-primary text-white text-xs font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowUrlInput(false); setUrlDraft(''); }}
+            className="px-2 py-1.5 rounded-md text-dark-muted text-xs hover:bg-background-warm transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       <p className="text-xs text-dark-muted mt-2 flex items-center gap-1">
         <Upload size={12} />

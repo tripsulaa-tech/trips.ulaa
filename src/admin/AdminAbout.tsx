@@ -4,6 +4,7 @@ import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import MultiImageUploadField from '../components/ui/MultiImageUploadField';
+import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
 import { getSiteContent, upsertSiteContent } from '../services/api';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { useConfirm } from '../components/ui/ConfirmDialog';
@@ -100,14 +101,15 @@ export default function AdminAbout() {
 
   // ── have_you_ever items ────────────────────────────────────────────────────
 
-  const updateHYEItem = (i: number, text: string) => {
-    const items = [...content.have_you_ever.items];
-    items[i] = { text };
+  const updateHYEItem = (i: number, field: keyof AboutHaveYouEverItem, value: string) => {
+    const items: AboutHaveYouEverItem[] = content.have_you_ever.items.map(
+      (item: AboutHaveYouEverItem, idx: number) => (idx === i ? { ...item, [field]: value } : item),
+    );
     setHYE('items', items);
   };
   const addHYEItem = () => {
     if (content.have_you_ever.items.length >= 8) return;
-    setHYE('items', [...content.have_you_ever.items, { text: '' }]);
+    setHYE('items', [...content.have_you_ever.items, { text: '', icon: '' }]);
   };
   const removeHYEItem = (i: number) => {
     if (content.have_you_ever.items.length <= 1) return;
@@ -141,7 +143,7 @@ export default function AdminAbout() {
   };
   const addWhyCard = () => {
     if (content.why_different.cards.length >= 6) return;
-    setWHY('cards', [...content.why_different.cards, { heading: '', description: '' }]);
+    setWHY('cards', [...content.why_different.cards, { heading: '', description: '', image: '' }]);
   };
   const removeWhyCard = (i: number) => {
     if (content.why_different.cards.length <= 1) return;
@@ -191,19 +193,30 @@ export default function AdminAbout() {
         <div className={cardClass}>
           <h2 className="font-display text-lg font-bold text-dark">1 · Hero Banner</h2>
           <ImageUploadField
-            label="Banner Image"
+            label="Banner Image (Desktop)"
             value={content.hero.image}
             onChange={url => setHero('image', url)}
             bucket="ulaa"
             pathPrefix="about/hero"
-            hint="Wide landscape, at least 1920×1080px — shown full-bleed as the page's top banner."
+            hint="Wide landscape, at least 1920×1080px — shown full-bleed as the page's top banner on tablet & desktop screens."
+            allowUrl
+          />
+          <ImageUploadField
+            label="Banner Image (Mobile)"
+            value={content.hero.mobile_image}
+            onChange={url => setHero('mobile_image', url)}
+            bucket="ulaa"
+            pathPrefix="about/hero-mobile"
+            hint="Tall portrait, at least 1080×1350px — shown on phone screens instead of the desktop banner. Falls back to the desktop banner if left empty."
+            allowUrl
           />
           <div>
             <label className={labelClass}>Heading</label>
-            <input
+            <textarea
               value={content.hero.heading}
               onChange={e => setHero('heading', e.target.value)}
-              className={inputClass}
+              rows={2}
+              className={`${inputClass} resize-none`}
             />
           </div>
           <div>
@@ -242,10 +255,11 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark">2 · Our Story</h2>
           <div>
             <label className={labelClass}>Section Heading</label>
-            <input
+            <textarea
               value={content.our_story.heading}
               onChange={e => setStory('heading', e.target.value)}
-              className={inputClass}
+              rows={2}
+              className={`${inputClass} resize-none`}
             />
           </div>
           <div>
@@ -264,6 +278,7 @@ export default function AdminAbout() {
             bucket="ulaa"
             pathPrefix="about/story"
             hint="Landscape, at least 1000×880px — shown in a cropped rounded panel."
+            allowUrl
           />
         </div>
 
@@ -272,23 +287,31 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark">3 · Have You Ever…</h2>
           <div>
             <label className={labelClass}>Section Heading</label>
-            <input
+            <textarea
               value={content.have_you_ever.heading}
               onChange={e => setHYE('heading', e.target.value)}
-              className={inputClass}
+              rows={2}
+              className={`${inputClass} resize-none`}
             />
           </div>
           <div className="space-y-2">
             <label className={labelClass}>Items</label>
             <p className="text-xs text-dark-muted -mt-1">
-              Icons are auto-assigned from the site's theme icon set and aren't editable per item.
+              Pick an icon for each item, or leave it unset to use the default rotation.
             </p>
             {content.have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => (
               <div key={i} className="flex items-center gap-2">
                 <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
+                <div className="w-40 flex-shrink-0">
+                  <TripHighlightIconPicker
+                    value={item.icon ?? ''}
+                    onChange={key => updateHYEItem(i, 'icon', key)}
+                    hintText={item.text}
+                  />
+                </div>
                 <input
                   value={item.text}
-                  onChange={e => updateHYEItem(i, e.target.value)}
+                  onChange={e => updateHYEItem(i, 'text', e.target.value)}
                   className={`${inputClass} flex-1`}
                   placeholder={`Item ${i + 1}`}
                 />
@@ -315,20 +338,28 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark">4 · Welcome to ULAA</h2>
           <div>
             <label className={labelClass}>Section Heading</label>
-            <input
+            <textarea
               value={content.welcome_to_ulaa.heading}
               onChange={e => setWTU('heading', e.target.value)}
-              className={inputClass}
+              rows={2}
+              className={`${inputClass} resize-none`}
             />
           </div>
           <div className="space-y-2">
             <label className={labelClass}>Feature Items</label>
             <p className="text-xs text-dark-muted -mt-1">
-              Icons are auto-assigned from the site's theme icon set and aren't editable per item.
+              Pick an icon for each item, or leave it unset to use the default rotation.
             </p>
             {content.welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => (
               <div key={i} className="flex items-center gap-2">
                 <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
+                <div className="w-40 flex-shrink-0">
+                  <TripHighlightIconPicker
+                    value={item.icon ?? ''}
+                    onChange={key => updateWTUItem(i, 'icon', key)}
+                    hintText={item.title}
+                  />
+                </div>
                 <input
                   value={item.title}
                   onChange={e => updateWTUItem(i, 'title', e.target.value)}
@@ -359,18 +390,20 @@ export default function AdminAbout() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Section Heading</label>
-              <input
+              <textarea
                 value={content.why_different.heading}
                 onChange={e => setWHY('heading', e.target.value)}
-                className={inputClass}
+                rows={2}
+                className={`${inputClass} resize-none`}
               />
             </div>
             <div>
               <label className={labelClass}>Subheading</label>
-              <input
+              <textarea
                 value={content.why_different.subheading}
                 onChange={e => setWHY('subheading', e.target.value)}
-                className={inputClass}
+                rows={2}
+                className={`${inputClass} resize-none`}
               />
             </div>
           </div>
@@ -395,10 +428,11 @@ export default function AdminAbout() {
                 </div>
                 <div>
                   <label className={labelClass}>Heading</label>
-                  <input
+                  <textarea
                     value={card.heading}
                     onChange={e => updateWhyCard(i, 'heading', e.target.value)}
-                    className={inputClass}
+                    rows={2}
+                    className={`${inputClass} resize-none`}
                   />
                 </div>
                 <div>
@@ -410,6 +444,17 @@ export default function AdminAbout() {
                     className={`${inputClass} resize-none`}
                   />
                 </div>
+                <ImageUploadField
+                  label="Card Image (optional)"
+                  value={card.image ?? ''}
+                  onChange={url => updateWhyCard(i, 'image', url)}
+                  bucket="ulaa"
+                  pathPrefix="about/why-different"
+                  fileNamePrefix={`card-${i + 1}`}
+                  hint="Upload a photo, or paste an image URL (e.g. from Unsplash) — it'll show on this card as-is."
+                  aspectRatio="16/9"
+                  allowUrl
+                />
               </div>
             ))}
             {content.why_different.cards.length < 6 && (
@@ -426,18 +471,20 @@ export default function AdminAbout() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Section Heading</label>
-              <input
+              <textarea
                 value={content.community.heading}
                 onChange={e => setCommunity('heading', e.target.value)}
-                className={inputClass}
+                rows={2}
+                className={`${inputClass} resize-none`}
               />
             </div>
             <div>
               <label className={labelClass}>Subheading</label>
-              <input
+              <textarea
                 value={content.community.subheading}
                 onChange={e => setCommunity('subheading', e.target.value)}
-                className={inputClass}
+                rows={2}
+                className={`${inputClass} resize-none`}
               />
             </div>
           </div>
@@ -448,6 +495,7 @@ export default function AdminAbout() {
             bucket="ulaa"
             pathPrefix="about/community"
             hint="Square, at least 600×600px — shown in a cropped grid."
+            allowUrl
           />
         </div>
 
@@ -457,18 +505,20 @@ export default function AdminAbout() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Section Heading</label>
-              <input
+              <textarea
                 value={content.journey.heading}
                 onChange={e => setJourney('heading', e.target.value)}
-                className={inputClass}
+                rows={2}
+                className={`${inputClass} resize-none`}
               />
             </div>
             <div>
               <label className={labelClass}>Subheading</label>
-              <input
+              <textarea
                 value={content.journey.subheading}
                 onChange={e => setJourney('subheading', e.target.value)}
-                className={inputClass}
+                rows={2}
+                className={`${inputClass} resize-none`}
               />
             </div>
           </div>
@@ -490,10 +540,11 @@ export default function AdminAbout() {
                 </div>
                 <div>
                   <label className={labelClass}>Heading</label>
-                  <input
+                  <textarea
                     value={step.heading}
                     onChange={e => updateStep(i, 'heading', e.target.value)}
-                    className={inputClass}
+                    rows={2}
+                    className={`${inputClass} resize-none`}
                   />
                 </div>
                 <div>
@@ -525,6 +576,7 @@ export default function AdminAbout() {
             bucket="ulaa"
             pathPrefix="about/founder"
             hint="Square, at least 600×600px, with the face centered — shown as a large circular photo."
+            allowUrl
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
