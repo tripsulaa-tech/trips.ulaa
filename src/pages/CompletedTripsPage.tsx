@@ -4,7 +4,6 @@ import { Search, Filter } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
 import AlbumCard from '../components/ui/AlbumCard';
-import AlbumCarousel from '../components/ui/AlbumCarousel';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getCompletedTrips } from '../services/api';
 import type { CompletedTrip } from '../types/types-index';
@@ -220,32 +219,10 @@ export default function CompletedTripsPage() {
             <p className="text-dark-muted text-sm mb-8">
               Showing <span className="font-semibold text-dark">{filtered.length}</span> album{filtered.length !== 1 ? 's' : ''}
             </p>
-            {/* Mobile: first 2 albums static, 3rd onward in a swipeable carousel */}
-            <div className="md:hidden">
-              <div className="grid grid-cols-1 gap-6">
-                {filtered.slice(0, 2).map((trip, i) => (
-                  <AlbumCard key={trip.id} trip={trip} index={i} />
-                ))}
-              </div>
-              {filtered.length > 2 && (
-                <div className="mt-6">
-                  <AlbumCarousel items={filtered.slice(2)} />
-                </div>
-              )}
-            </div>
-
-            {/* Desktop: first 3 albums static, 4th onward in a swipeable carousel */}
-            <div className="hidden md:block">
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                {filtered.slice(0, 3).map((trip, i) => (
-                  <AlbumCard key={trip.id} trip={trip} index={i} />
-                ))}
-              </div>
-              {filtered.length > 3 && (
-                <div className="mt-8 max-w-sm mx-auto">
-                  <AlbumCarousel items={filtered.slice(3)} />
-                </div>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {filtered.map((trip, i) => (
+                <AlbumCard key={trip.id} trip={trip} index={i} />
+              ))}
             </div>
           </>
         )}
