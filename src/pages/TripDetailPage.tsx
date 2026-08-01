@@ -1294,20 +1294,20 @@ export default function TripDetailPage() {
             {/* Founder */}
             {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
               <section className="scroll-mt-44 bg-dark rounded-2xl p-5 sm:p-8">
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-6 sm:mb-8 text-center">Meet Your Trip Leader</h2>
-                <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start w-fit max-w-3xl mx-auto">
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4 sm:mb-6 text-center">Meet Your Trip Leader</h2>
+                <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-center sm:items-start">
                   {trip.trip_founder.photo ? (
                     <img
                       src={trip.trip_founder.photo}
                       alt={trip.trip_founder.name}
-                      className="w-48 h-48 rounded-full object-cover border-4 border-primary/30 flex-shrink-0"
+                      className="w-40 h-40 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-primary/30 flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-48 h-48 rounded-full bg-white/10 border-4 border-primary/30 flex items-center justify-center flex-shrink-0">
+                    <div className="w-40 h-40 sm:w-44 sm:h-44 rounded-full bg-white/10 border-4 border-primary/30 flex items-center justify-center flex-shrink-0">
                       <span className="text-white/40 text-6xl font-display font-bold">{trip.trip_founder.name.charAt(0)}</span>
                     </div>
                   )}
-                  <div className="text-center sm:text-left max-w-md">
+                  <div className="text-center sm:text-left flex-1">
                     {trip.trip_founder.name && (
                       <h3 className="font-display text-xl font-bold text-white mb-0.5">{trip.trip_founder.name}</h3>
                     )}
@@ -1467,22 +1467,30 @@ export default function TripDetailPage() {
                   <p className="text-white/70 text-base sm:text-lg leading-relaxed mb-6">{trip.end_banner.description}</p>
                 )}
                 {trip.end_banner.cta_label && (
-                  trip.end_banner.cta_url ? (
+                  <div className="flex flex-row flex-wrap items-center gap-3">
+                    {trip.end_banner.cta_url ? (
+                      <a
+                        href={trip.end_banner.cta_url}
+                        className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-lg transition-colors"
+                      >
+                        {trip.end_banner.cta_label} <ExternalLink size={15} />
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setBookingOpen(true)}
+                        className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-lg transition-colors"
+                      >
+                        {trip.end_banner.cta_label}
+                      </button>
+                    )}
                     <a
-                      href={trip.end_banner.cta_url}
-                      className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-full transition-colors"
+                      href="#highlights"
+                      className="inline-flex items-center gap-2 bg-transparent text-white border-2 border-white/40 hover:border-white hover:bg-white/10 font-button font-semibold px-8 py-3 rounded-lg transition-colors"
                     >
-                      {trip.end_banner.cta_label} <ExternalLink size={15} />
+                      Explore Trip
                     </a>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setBookingOpen(true)}
-                      className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-full transition-colors"
-                    >
-                      {trip.end_banner.cta_label}
-                    </button>
-                  )
+                  </div>
                 )}
               </div>
             </div>
