@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
-import type { UpcomingTrip, CancellationTier } from '../types/types-index';
+import type { UpcomingTrip, CancellationTier, TripHighlightCard, ItineraryDay } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
-import { formatDateRange } from './utils-index';
+import { formatDateRange, formatAgeRange, formatPrice, getActivePrice } from './utils-index';
 
 // =============================================================================
 // "Download Itinerary PDF" — renders a trip's public detail page as a clean,
@@ -90,15 +90,15 @@ function sanitizeForPdf(text: string): string {
     .trim();
 }
 
-// The PDF renderer still lays out "Highlights" and "What's Included" as flat
-// text lists (see drawColumn / the highlights slide below). highlights and
-// included were dropped from UpcomingTrip — the admin form has no manual
-// input for them anymore, superseded by highlight_cards / included_items /
-// included_groups — so there's currently no data source to populate these
-// PDF sections from. Left as empty arrays for now (those slides just won't
-// render); wiring the PDF to the rich fields is a follow-up, not done here.
+// The PDF renderer still lays out "What's Included" as a flat text list (see
+// drawColumn below). `included`/`things_to_carry` were dropped from
+// UpcomingTrip — the admin form has no manual input for them anymore,
+// superseded by included_items / included_groups / things_to_carry_items —
+// so there's currently no data source to populate those two from. Left as
+// empty arrays for now (those slides just won't render). `highlight_cards`
+// IS wired below — it's the "Why You'll Love This Trip" source of truth.
 type PdfTrip = UpcomingTrip & {
-  highlights: string[];
+  highlight_cards: TripHighlightCard[];
   included: string[];
   things_to_carry: string[];
 };
@@ -117,7 +117,11 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
     destination: sanitizeForPdf(trip.destination),
     duration: sanitizeForPdf(trip.duration),
     description: sanitizeForPdf(trip.description),
-    highlights: [],
+    highlight_cards: (trip.highlight_cards ?? []).map(card => ({
+      ...card,
+      heading: sanitizeForPdf(card.heading),
+      description: sanitizeForPdf(card.description),
+    })),
     itinerary: trip.itinerary.map(day => ({
       ...day,
       title: sanitizeForPdf(day.title),
@@ -669,7 +673,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   // =========================================================================
   async function renderCover() {
     newSlide();
-    const heroH = PAGE_H * 0.62;
+    const heroH = PAGE_H * 0.56;
 
     let heroDrawn = false;
     if (trip.cover_image) {
@@ -725,36 +729,67 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.circle(PAGE_W - 80, PAGE_H - 26, 16, 'S');
     });
 
-    let ty = heroH + 46;
+    let ty = heroH + 34;
     setText(COLORS.dark);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(27);
+    doc.setFontSize(24);
     const titleMaxW = CONTENT_W - 130;
     const titleLines: string[] = clampLines(trip.title, titleMaxW, 2);
     doc.text(titleLines, MARGIN, ty);
-    ty += titleLines.length * 30 + 6;
+    ty += titleLines.length * 27 + 4;
 
-    // Meta row: duration • destination • dates
+    // Destination line, directly under the title.
+    if (trip.destination) {
+      icons.pin(MARGIN, ty + 11, 13);
+      setText(COLORS.darkMuted);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.text(trip.destination, MARGIN + 17, ty + 7);
+      ty += 22;
+    }
+
+    // Meta row: dates • duration • total seats • age eligibility • early bird.
+    // Pills auto-wrap onto a second row if the full set doesn't fit one line
+    // (long destinations/durations, or an early-bird pill, can push it over).
+    const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
+    const metaParts = [
+      formatDateRange(trip.start_date, trip.end_date),
+      trip.duration,
+      trip.total_seats ? `Group of ${trip.total_seats}` : '',
+      formatAgeRange(trip.min_age, trip.max_age),
+      isEarlyBird && activePrice ? `Early Bird ${formatPrice(activePrice)}` : '',
+    ]
+      .filter(Boolean)
+      .map(sanitizeForPdf);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    const metaParts = [trip.duration, trip.destination, formatDateRange(trip.start_date, trip.end_date)].filter(Boolean);
+    doc.setFontSize(10);
+    const pillH = 20;
+    const pillGap = 8;
+    const rowGap = 8;
     let mx = MARGIN;
     metaParts.forEach((part, i) => {
       const w = doc.getTextWidth(part) + 16;
+      if (mx + w > MARGIN + CONTENT_W && mx > MARGIN) {
+        mx = MARGIN;
+        ty += pillH + rowGap;
+      }
       setFill(i === 0 ? COLORS.primary : COLORS.backgroundWarm);
-      doc.roundedRect(mx, ty, w, 20, 10, 10, 'F');
+      doc.roundedRect(mx, ty, w, pillH, 10, 10, 'F');
       setText(i === 0 ? COLORS.white : COLORS.darkMuted);
       doc.text(part, mx + 8, ty + 13.5);
-      mx += w + 8;
+      mx += w + pillGap;
     });
-    ty += 34;
+    ty += pillH + 16;
 
     if (trip.description) {
+      const descBottom = PAGE_H - 34;
+      const descLineHeight = 14;
+      const maxLines = Math.max(1, Math.floor((descBottom - ty) / descLineHeight));
       drawParagraph(trip.description, MARGIN, ty, CONTENT_W - 130, {
-        size: 11,
+        size: 10,
         color: COLORS.darkMuted,
-        maxLines: 3,
-        lineHeight: 15.5,
+        maxLines,
+        lineHeight: descLineHeight,
       });
     }
 
@@ -776,75 +811,169 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
-  // SLIDE — Trip Overview + Trip Highlights
+  // SLIDE — "Why You'll Love This Trip" (highlight cards) + "N Days of
+  // Unforgettable Moments" (day badge strip). Mirrors the two sections that
+  // sit back-to-back on the public Trip Detail page. Both are short by
+  // nature (a handful of cards, a handful of days) so they normally share
+  // one slide; if a trip has an unusually long list of either, each section
+  // gets its own paginated slide(s) instead of squeezing/overflowing.
   // =========================================================================
-  function renderOverviewAndHighlights() {
-    if (!trip.description && trip.highlights.length === 0) return;
-    newSlide();
+  const CARD_PALETTE: RGB[] = [COLORS.primary, COLORS.secondary, COLORS.gold, COLORS.green];
 
-    const hasBoth = !!trip.description && trip.highlights.length > 0;
-    const leftW = hasBoth ? CONTENT_W * 0.48 : CONTENT_W;
-    const gap = 40;
-    const rightX = MARGIN + leftW + gap;
-    const rightW = CONTENT_W - leftW - gap;
+  function drawSectionTitle(title: string, top: number): number {
+    setText(COLORS.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(19);
+    doc.text(title, PAGE_W / 2, top + 14, { align: 'center' });
+    return top + 34;
+  }
 
-    if (trip.description) {
-      const y0 = MARGIN;
-      icons.mountain(MARGIN, y0 + 20, 18);
+  function drawHighlightCard(card: TripHighlightCard, x: number, y: number, w: number, h: number, color: RGB) {
+    setFill(COLORS.cream);
+    doc.roundedRect(x, y, w, h, 10, 10, 'F');
+    setDraw(COLORS.grayLineSoft);
+    doc.setLineWidth(0.75);
+    doc.roundedRect(x, y, w, h, 10, 10, 'S');
+
+    const cx = x + w / 2;
+    const iconCy = y + 28;
+    setFill(color);
+    doc.circle(cx, iconCy, 15, 'F');
+    icons.star(cx - 7, iconCy + 5.6, 14, COLORS.white);
+
+    let ty = iconCy + 32;
+    setText(COLORS.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11.5);
+    const headingLines = clampLines(card.heading, w - 24, 1);
+    doc.text(headingLines, cx, ty, { align: 'center' });
+    ty += 16;
+
+    setText(COLORS.darkMuted);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const descLines = clampLines(card.description, w - 28, 3);
+    doc.text(descLines, cx, ty, { align: 'center', lineHeightFactor: 1.35 });
+  }
+
+  const HIGHLIGHT_CARD_H = 110;
+  const HIGHLIGHT_ROW_GAP = 16;
+  const HIGHLIGHT_PER_ROW = 3;
+
+  /** Draws up to `cards.length` highlight cards as a wrapping 3-across grid
+   *  and returns the y position immediately below the grid. */
+  function drawHighlightGrid(cards: TripHighlightCard[], top: number): number {
+    const colGap = 20;
+    const cardW = (CONTENT_W - colGap * (HIGHLIGHT_PER_ROW - 1)) / HIGHLIGHT_PER_ROW;
+    cards.forEach((card, i) => {
+      const row = Math.floor(i / HIGHLIGHT_PER_ROW);
+      const col = i % HIGHLIGHT_PER_ROW;
+      const x = MARGIN + col * (cardW + colGap);
+      const y = top + row * (HIGHLIGHT_CARD_H + HIGHLIGHT_ROW_GAP);
+      drawHighlightCard(card, x, y, cardW, HIGHLIGHT_CARD_H, CARD_PALETTE[i % CARD_PALETTE.length]);
+    });
+    const rows = Math.ceil(cards.length / HIGHLIGHT_PER_ROW);
+    return top + rows * HIGHLIGHT_CARD_H + Math.max(0, rows - 1) * HIGHLIGHT_ROW_GAP;
+  }
+
+  const DAY_ROW_PITCH = 100;
+  const DAY_PER_ROW = 6;
+
+  /** Draws the "N Days of Unforgettable Moments" heading plus a row (or
+   *  wrapped rows) of day badges — a circle with the day number, connected
+   *  by a dotted line, with the day's title underneath — echoing the
+   *  itinerary-day strip at the top of the public trip page. `totalLabel`
+   *  lets a continuation slide keep showing the true overall day count
+   *  while only laying out its own chunk of days. */
+  function drawDaysSection(days: ItineraryDay[], top: number, totalLabel?: string) {
+    setText(COLORS.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    const heading = totalLabel ?? `${days.length} Day${days.length === 1 ? '' : 's'} of Unforgettable Moments`;
+    doc.text(heading, PAGE_W / 2, top + 12, { align: 'center' });
+
+    const rowTop = top + 40;
+    const perRow = Math.min(days.length, DAY_PER_ROW);
+    const cellW = CONTENT_W / perRow;
+    const circleR = 20;
+
+    days.forEach((day, i) => {
+      const row = Math.floor(i / perRow);
+      const col = i % perRow;
+      const cx = MARGIN + col * cellW + cellW / 2;
+      const cy = rowTop + row * DAY_ROW_PITCH + circleR;
+
+      // Dotted connector to the next badge in the same row.
+      if (col < perRow - 1 && i < days.length - 1) {
+        setDraw(COLORS.grayLine);
+        doc.setLineWidth(1);
+        doc.setLineDashPattern([2, 2], 0);
+        doc.line(cx + circleR, cy, cx + cellW - circleR, cy);
+        doc.setLineDashPattern([], 0);
+      }
+
+      setFill(COLORS.primary);
+      doc.circle(cx, cy, circleR, 'F');
+      setText(COLORS.white);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.text('DAY', cx, cy - 4, { align: 'center' });
+      doc.setFontSize(13);
+      doc.text(String(day.day), cx, cy + 9, { align: 'center' });
+
       setText(COLORS.dark);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text('Trip Overview', MARGIN + 26, y0 + 16);
+      doc.setFontSize(9.5);
+      const titleLines = clampLines(day.title, cellW - 12, 2);
+      doc.text(titleLines, cx, cy + circleR + 16, { align: 'center' });
+    });
+  }
 
-      const textX = MARGIN + 18;
-      const textW = leftW - 18;
-      const paraTop = y0 + 48;
-      const paraBottom = drawParagraph(trip.description, textX, paraTop, textW, {
-        size: 13,
-        color: COLORS.darkMuted,
-        lineHeight: 21,
-      });
-      // A slim accent rule alongside the paragraph gives the column visual
-      // weight even when the description itself is short.
-      setFill(COLORS.secondary);
-      doc.roundedRect(MARGIN, paraTop - 14, 3, Math.max(40, paraBottom - (paraTop - 14) - 6), 1.5, 1.5, 'F');
+  function renderHighlightCardsSlides(cards: TripHighlightCard[]) {
+    const perSlide = HIGHLIGHT_PER_ROW * 2;
+    for (let i = 0; i < cards.length; i += perSlide) {
+      newSlide();
+      const top = drawSectionTitle("Why You'll Love This Trip", MARGIN);
+      drawHighlightGrid(cards.slice(i, i + perSlide), top);
     }
+  }
 
-    if (trip.highlights.length > 0) {
-      const x = hasBoth ? rightX : MARGIN;
-      const w = hasBoth ? rightW : CONTENT_W;
+  function renderDaySlides(days: ItineraryDay[]) {
+    const perSlide = DAY_PER_ROW * 2;
+    for (let i = 0; i < days.length; i += perSlide) {
+      newSlide();
+      const label = `${days.length} Day${days.length === 1 ? '' : 's'} of Unforgettable Moments`;
+      drawDaysSection(days.slice(i, i + perSlide), MARGIN, label);
+    }
+  }
+
+  function renderHighlightsAndDays() {
+    const cards = trip.highlight_cards;
+    const days = trip.itinerary;
+    if (cards.length === 0 && days.length === 0) return;
+
+    const cardRows = cards.length ? Math.ceil(cards.length / HIGHLIGHT_PER_ROW) : 0;
+    const cardsBlockH = cards.length ? 34 + cardRows * HIGHLIGHT_CARD_H + Math.max(0, cardRows - 1) * HIGHLIGHT_ROW_GAP : 0;
+    const dayPerRow = Math.min(days.length, DAY_PER_ROW);
+    const dayRows = dayPerRow ? Math.ceil(days.length / dayPerRow) : 0;
+    const daysBlockH = days.length ? 40 + dayRows * DAY_ROW_PITCH : 0;
+    const gapBetween = cards.length && days.length ? 28 : 0;
+    const availH = CONTENT_BOTTOM - MARGIN;
+
+    if (cardsBlockH + gapBetween + daysBlockH <= availH) {
+      newSlide();
       let y = MARGIN;
-      icons.star(x, y + 18, 16);
-      setText(COLORS.dark);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text('Trip Highlights', x + 24, y + 16);
-      y += 44;
-
-      const rowGap = 12;
-      const rowPad = 12;
-      trip.highlights.forEach(h => {
-        const lines = clampLines(h, w - rowPad * 2 - 30, 2);
-        const rowH = Math.max(lines.length * 15 + rowPad * 2 - 6, 40);
-        if (y + rowH > CONTENT_BOTTOM) return; // safety net; highlight lists are short by nature
-
-        setFill(COLORS.cream);
-        doc.roundedRect(x, y, w, rowH, 8, 8, 'F');
-        setDraw(COLORS.grayLineSoft);
-        doc.setLineWidth(0.75);
-        doc.roundedRect(x, y, w, rowH, 8, 8, 'S');
-
-        const iconR = 9;
-        setFill(COLORS.primary);
-        doc.circle(x + rowPad + iconR, y + rowH / 2, iconR, 'F');
-        drawCheck(x + rowPad + iconR, y + rowH / 2 + 1, iconR * 0.75, COLORS.white, 1.7);
-        setText(COLORS.dark);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11.5);
-        const textY = y + rowH / 2 - ((lines.length - 1) * 15) / 2 + 4;
-        doc.text(lines, x + rowPad + iconR * 2 + 12, textY);
-        y += rowH + rowGap;
-      });
+      if (cards.length) {
+        y = drawSectionTitle("Why You'll Love This Trip", y);
+        y = drawHighlightGrid(cards, y);
+        y += gapBetween;
+      }
+      if (days.length) {
+        drawDaysSection(days, y);
+      }
+    } else {
+      if (cards.length) renderHighlightCardsSlides(cards);
+      if (days.length) renderDaySlides(days);
     }
   }
 
@@ -895,27 +1024,17 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         doc.roundedRect(cx, cy, cardW, cardH, 8, 8, 'S');
 
         const pad = 14;
-        // Day badge
-        const badgeLabel = `DAY ${String(day.day).padStart(2, '0')}`;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        const badgeW = doc.getTextWidth(badgeLabel) + 18;
-        setFill(COLORS.primary);
-        doc.roundedRect(cx + pad, cy + pad, badgeW, 20, 10, 10, 'F');
-        setText(COLORS.white);
-        doc.text(badgeLabel, cx + pad + 9, cy + pad + 13.5);
-
         const hasImages = !!day.images && day.images.length > 0;
         const thumbH = hasImages ? Math.min(160, cardH * 0.34) : 0;
         const textBottom = cy + cardH - pad - thumbH - (hasImages ? 10 : 0);
-        let ty = cy + pad + 20 + 16;
+        let ty = cy + pad + 12;
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11.5);
         setText(COLORS.dark);
-        const titleLines = clampLines(day.title, cardW - pad * 2, 1);
+        const titleLines = clampLines(day.title, cardW - pad * 2, 2);
         doc.text(titleLines, cx + pad, ty);
-        ty += 17;
+        ty += titleLines.length * 15 + 8;
 
         const descMaxLines = Math.max(1, Math.floor((textBottom - ty) / 12.5));
         drawParagraph(day.description, cx + pad, ty, cardW - pad * 2, {
@@ -1475,7 +1594,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   // always exactly what this specific trip's content needs.
   // =========================================================================
   await renderCover();
-  renderOverviewAndHighlights();
+  renderHighlightsAndDays();
   await renderItinerary();
   if (!renderInclusionsAndCarryCombined()) {
     renderInclusions();

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload, Search, ClipboardList, X } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
+import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
 import Tabs, { TabPanel } from '../components/ui/Tabs';
 import ImageUploadField from '../components/ui/ImageUploadField';
@@ -849,15 +850,15 @@ export default function AdminTrips() {
             </div>
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Trip Type</label>
-              <select
+              <Select
                 value={form.trip_type}
-                onChange={e => setForm(f => ({ ...f, trip_type: e.target.value as TripForm['trip_type'] }))}
-                className={inputClass}
-              >
-                <option value="">Not set</option>
-                <option value="domestic">Domestic</option>
-                <option value="international">International</option>
-              </select>
+                onChange={val => setForm(f => ({ ...f, trip_type: val as TripForm['trip_type'] }))}
+                options={[
+                  { value: '', label: 'Not set' },
+                  { value: 'domestic', label: 'Domestic' },
+                  { value: 'international', label: 'International' },
+                ]}
+              />
               <p className="text-xs text-dark-muted mt-1">Used to auto-fill the correct cancellation-window rules on bookings for this trip.</p>
             </div>
             <div>
