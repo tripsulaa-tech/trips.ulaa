@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import type { UpcomingTrip, CancellationTier, TripHighlightCard, ItineraryDay } from '../types/types-index';
+import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, ItineraryDay } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
 import { formatDateRange, formatAgeRange, formatPrice, getActivePrice } from './utils-index';
 
@@ -90,17 +90,20 @@ function sanitizeForPdf(text: string): string {
     .trim();
 }
 
-// The PDF renderer still lays out "What's Included" as a flat text list (see
-// drawColumn below). `included`/`things_to_carry` were dropped from
-// UpcomingTrip — the admin form has no manual input for them anymore,
-// superseded by included_items / included_groups / things_to_carry_items —
-// so there's currently no data source to populate those two from. Left as
-// empty arrays for now (those slides just won't render). `highlight_cards`
-// IS wired below — it's the "Why You'll Love This Trip" source of truth.
+// `included_groups` carries the site's grouped "What's Included" content
+// (icon + heading + bulleted sub-items) straight through so the PDF can draw
+// the same heading-card layout as TripDetailPage. `included` is a flattened
+// fallback (just descriptions) used only when a trip has no groups, drawn as
+// the plain icon-card grid instead. `not_included` prefers not_included_items'
+// descriptions when present, else the legacy plain-text list — same
+// precedence TripDetailPage itself uses.
 type PdfTrip = UpcomingTrip & {
   highlight_cards: TripHighlightCard[];
+  included_groups: TripIncludedGroup[];
   included: string[];
   things_to_carry: string[];
+  gallery_photos: string[];
+  gallery_description: string;
 };
 
 function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
@@ -111,6 +114,16 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
   const thingsToCarrySource = (trip.things_to_carry_items?.length ?? 0) > 0
     ? trip.things_to_carry_items!.map(item => item.description)
     : [];
+  const hasIncludedGroups = (trip.included_groups?.length ?? 0) > 0;
+  const notIncludedSource = (trip.not_included_items?.length ?? 0) > 0
+    ? trip.not_included_items!.map(item => item.description)
+    : trip.not_included;
+  // "Places You'll Definitely Post" gallery — prefers gallery_items' photos
+  // (captions aren't shown in the PDF grid) over the legacy plain
+  // gallery_images list, same precedence TripDetailPage uses.
+  const galleryPhotos = (trip.gallery_items?.length ?? 0) > 0
+    ? trip.gallery_items!.map(item => item.photo)
+    : trip.gallery_images;
   return {
     ...trip,
     title: sanitizeForPdf(trip.title),
@@ -126,10 +139,20 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
       ...day,
       title: sanitizeForPdf(day.title),
       description: sanitizeForPdf(day.description),
+      bullets: (day.bullets ?? []).map(sanitizeForPdf),
     })),
-    included: [],
-    not_included: trip.not_included.map(sanitizeForPdf),
+    included_groups: hasIncludedGroups
+      ? trip.included_groups!.map(group => ({
+          ...group,
+          heading: sanitizeForPdf(group.heading),
+          bullets: group.bullets.map(sanitizeForPdf),
+        }))
+      : [],
+    included: hasIncludedGroups ? [] : (trip.included_items ?? []).map(item => sanitizeForPdf(item.description)),
+    not_included: notIncludedSource.map(sanitizeForPdf),
     things_to_carry: thingsToCarrySource.map(sanitizeForPdf),
+    gallery_photos: galleryPhotos,
+    gallery_description: trip.gallery_description ? sanitizeForPdf(trip.gallery_description) : '',
     meeting_point: trip.meeting_point ? sanitizeForPdf(trip.meeting_point) : trip.meeting_point,
     faqs: trip.faqs.map(faq => ({
       ...faq,
@@ -567,6 +590,48 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     return y + lines.length * lh;
   }
 
+  // ---------------------------------------------------------------------
+  // Bullet list primitive: draws a small dot-marker + wrapped text for
+  // each item, sharing one line budget (`opts.maxLines`) across the whole
+  // list so it truncates gracefully (with an ellipsis on the last line
+  // drawn) instead of overflowing its container. Returns the y position
+  // immediately below the last line drawn.
+  // ---------------------------------------------------------------------
+  function drawBulletList(
+    items: string[],
+    x: number,
+    y: number,
+    maxWidth: number,
+    opts?: { size?: number; color?: RGB; lineHeight?: number; maxLines?: number }
+  ): number {
+    const size = opts?.size ?? 8.8;
+    const color = opts?.color ?? COLORS.darkMuted;
+    const lh = opts?.lineHeight ?? size * 1.42;
+    const markerIndent = 10;
+    const textWidth = maxWidth - markerIndent;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(size);
+
+    let remaining = opts?.maxLines ?? Infinity;
+    let cy = y;
+    for (const item of items) {
+      if (remaining <= 0) break;
+      const wrapped: string[] = doc.splitTextToSize(item, textWidth);
+      const lines = wrapped.length > remaining ? clampLines(item, textWidth, remaining) : wrapped;
+      if (lines.length === 0) break;
+
+      setFill(COLORS.secondary);
+      doc.circle(x + 2.5, cy - size * 0.35, 1.4, 'F');
+      setText(color);
+      doc.text(lines, x + markerIndent, cy);
+
+      cy += lines.length * lh;
+      remaining -= lines.length;
+    }
+    return cy;
+  }
+
   function measureParagraphHeight(
     text: string,
     maxWidth: number,
@@ -984,12 +1049,12 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     if (trip.itinerary.length === 0) return;
 
     const cols = 2;
-    const rows = 2;
+    const rows = 1;
     const perPage = cols * rows;
     const gridTop = 92;
     const colGap = 20;
     const rowGap = 16;
-    const cardW = (CONTENT_W - colGap) / cols;
+    const cardW = cols > 1 ? (CONTENT_W - colGap * (cols - 1)) / cols : CONTENT_W;
     const fullAvailH = CONTENT_BOTTOM - gridTop;
 
     for (let pageStart = 0; pageStart < trip.itinerary.length; pageStart += perPage) {
@@ -1036,13 +1101,36 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         doc.text(titleLines, cx + pad, ty);
         ty += titleLines.length * 15 + 8;
 
-        const descMaxLines = Math.max(1, Math.floor((textBottom - ty) / 12.5));
-        drawParagraph(day.description, cx + pad, ty, cardW - pad * 2, {
-          size: 8.8,
-          color: COLORS.darkMuted,
-          lineHeight: 12.5,
-          maxLines: descMaxLines,
-        });
+        const lineH = 12.5;
+        const availLines = Math.max(1, Math.floor((textBottom - ty) / lineH));
+        let usedLines = 0;
+        const hasDescription = !!day.description && day.description.trim().length > 0;
+        const dayBullets = day.bullets ?? [];
+        const hasBullets = dayBullets.length > 0;
+
+        if (hasDescription) {
+          const beforeTy = ty;
+          ty = drawParagraph(day.description, cx + pad, ty, cardW - pad * 2, {
+            size: 8.8,
+            color: COLORS.darkMuted,
+            lineHeight: lineH,
+            maxLines: availLines,
+          });
+          usedLines += Math.round((ty - beforeTy) / lineH);
+          if (hasBullets && usedLines < availLines) ty += 4;
+        }
+
+        if (hasBullets) {
+          const remainingLines = availLines - usedLines;
+          if (remainingLines > 0) {
+            ty = drawBulletList(dayBullets, cx + pad, ty, cardW - pad * 2, {
+              size: 8.8,
+              color: COLORS.darkMuted,
+              lineHeight: lineH,
+              maxLines: remainingLines,
+            });
+          }
+        }
 
         if (hasImages) {
           const imgs = (day.images || []).slice(0, 3);
@@ -1069,147 +1157,251 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
-  // SLIDES — What's Included / What's Not Included (paired columns)
+  // SLIDE — What's Included / What's Not Included, matching the live trip
+  // page's own layout:
+  //   - What's Included: when the trip has grouped content (included_groups
+  //     — icon + heading + bulleted sub-items), draw those as 2-up cards.
+  //     Falls back to a plain icon-card grid of included_items when the
+  //     trip has no groups.
+  //   - What's Not Included: wrapped pill chips (icon + label), same as the
+  //     flex-wrap chip row on the site.
+  // "What's Included" renders first, "What's Not Included" directly below
+  // it, on the same slide when both fit — otherwise each section paginates
+  // onto its own slide(s) independently.
   // =========================================================================
-  // =========================================================================
-  // SLIDE — Inclusions/Exclusions + Things to Carry, combined onto one slide
-  // (left column: What's Included stacked above What's Not Included; right
-  // column: the carry chip grid) — this is the reference design's layout.
-  // Only attempted when BOTH sections have content; returns false if the
-  // combined content is too tall for one slide, so the caller falls back to
-  // `renderInclusions()` + `renderThingsToCarry()` below, which paginate
-  // each section independently and are always correct regardless of length.
-  // =========================================================================
-  function renderInclusionsAndCarryCombined(): boolean {
-    if ((trip.included.length === 0 && trip.not_included.length === 0) || trip.things_to_carry.length === 0) return false;
+  const SECTION_TITLE_H = 26;
+  const SECTION_GAP = 18;
 
-    const top = 92;
-    const availH = CONTENT_BOTTOM - top;
-    const colGap = 44;
-    const leftW = CONTENT_W * 0.42;
-    const rightX = MARGIN + leftW + colGap;
-    const rightW = CONTENT_W - leftW - colGap;
+  function drawSectionHeading(title: string, y: number) {
+    setText(COLORS.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text(title, MARGIN, y + 11);
+  }
 
-    const measureItem = (item: string) => measureParagraphHeight(item, leftW - 28, 9.8, 14) + 10;
-    const includedH = trip.included.length ? 34 + trip.included.reduce((s, it) => s + measureItem(it), 0) : 0;
-    const notIncludedH = trip.not_included.length ? 34 + trip.not_included.reduce((s, it) => s + measureItem(it), 0) : 0;
-    const leftGap = trip.included.length && trip.not_included.length ? 12 : 0;
-    const leftH = includedH + leftGap + notIncludedH;
+  // ---- "What's Included" — grouped cards (heading + bullets, no icon) ----
+  const GROUP_COLS = 2;
+  const GROUP_COL_GAP = 16;
+  const GROUP_ROW_GAP = 10;
+  const GROUP_CARD_PAD = 12;
 
-    const perRow = 2;
-    const chipGap = 14;
-    const chipH = 46;
-    const chipW = (rightW - chipGap * (perRow - 1)) / perRow;
-    const carryRows = Math.ceil(trip.things_to_carry.length / perRow);
-    const rightH = 34 + carryRows * chipH + Math.max(0, carryRows - 1) * chipGap;
+  function groupCardW(): number {
+    return (CONTENT_W - GROUP_COL_GAP * (GROUP_COLS - 1)) / GROUP_COLS;
+  }
 
-    if (Math.max(leftH, rightH) > availH) return false;
+  function measureGroupCardH(group: TripIncludedGroup, cardW: number): number {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.8);
+    const bulletsW = cardW - GROUP_CARD_PAD * 2 - 10;
+    const bulletsH = group.bullets.reduce((sum, item) => sum + doc.splitTextToSize(item, bulletsW).length * 12, 0);
+    const headingBlockH = 28;
+    return GROUP_CARD_PAD * 2 + headingBlockH + bulletsH;
+  }
 
-    function drawColumn(x: number, startY: number, title: string, items: string[], color: RGB, kind: 'check' | 'cross') {
-      let y = startY;
-      setText(COLORS.dark);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13.5);
-      doc.text(title, x, y);
-      y += 24;
-      items.forEach(item => {
-        const lines = doc.splitTextToSize(item, leftW - 28);
-        if (kind === 'check') drawCheck(x + 6, y - 3, 7, color, 1.6);
-        else drawCross(x + 6, y - 3, 6, color, 1.6);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.8);
-        setText(COLORS.darkMuted);
-        doc.text(lines, x + 20, y);
-        y += lines.length * 14 + 10;
-      });
-    }
-
-    newSlide();
-    slideHeader((x, y) => icons.check(x, y, 20), "What's Included & Things to Carry");
-    const startY = centeredTop(top, CONTENT_BOTTOM, Math.max(leftH, rightH));
-
-    if (trip.included.length) drawColumn(MARGIN, startY, "What's Included", trip.included, COLORS.green, 'check');
-    if (trip.not_included.length) drawColumn(MARGIN, startY + includedH + leftGap, "What's Not Included", trip.not_included, COLORS.red, 'cross');
+  function drawGroupCard(group: TripIncludedGroup, x: number, y: number, w: number, h: number) {
+    setFill(COLORS.backgroundWarm);
+    doc.roundedRect(x, y, w, h, 10, 10, 'F');
 
     setText(COLORS.dark);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13.5);
-    doc.text('Things to Carry', rightX, startY);
-    const gridTop = startY + 24;
-    trip.things_to_carry.forEach((item, i) => {
-      const row = Math.floor(i / perRow);
-      const col = i % perRow;
-      const cx = rightX + col * (chipW + chipGap);
-      const cy = gridTop + row * (chipH + chipGap);
+    doc.setFontSize(11.5);
+    doc.text(group.heading, x + GROUP_CARD_PAD, y + GROUP_CARD_PAD + 10);
 
+    const bulletsTop = y + GROUP_CARD_PAD + 28;
+    drawBulletList(group.bullets, x + GROUP_CARD_PAD, bulletsTop, w - GROUP_CARD_PAD * 2, {
+      size: 8.8,
+      color: COLORS.darkMuted,
+      lineHeight: 12,
+    });
+  }
+
+  function groupGridH(groups: TripIncludedGroup[]): number {
+    if (groups.length === 0) return 0;
+    const cardW = groupCardW();
+    let total = 0;
+    for (let i = 0; i < groups.length; i += GROUP_COLS) {
+      const rowGroups = groups.slice(i, i + GROUP_COLS);
+      const rowH = Math.max(...rowGroups.map(g => measureGroupCardH(g, cardW)));
+      total += rowH + GROUP_ROW_GAP;
+    }
+    return total - GROUP_ROW_GAP;
+  }
+
+  function drawGroupGrid(groups: TripIncludedGroup[], top: number): number {
+    const cardW = groupCardW();
+    let y = top;
+    for (let i = 0; i < groups.length; i += GROUP_COLS) {
+      const rowGroups = groups.slice(i, i + GROUP_COLS);
+      const rowH = Math.max(...rowGroups.map(g => measureGroupCardH(g, cardW)));
+      rowGroups.forEach((group, idx) => {
+        const x = MARGIN + idx * (cardW + GROUP_COL_GAP);
+        drawGroupCard(group, x, y, cardW, rowH);
+      });
+      y += rowH + GROUP_ROW_GAP;
+    }
+    return y - GROUP_ROW_GAP;
+  }
+
+  // ---- "What's Included" fallback — flat icon-card grid, used only when
+  // the trip has no included_groups (just included_items descriptions) ----
+  const FLAT_CARD_H = 78;
+  const FLAT_ROW_GAP = 10;
+  const FLAT_PER_ROW = 3;
+
+  function drawFlatIncludedCard(text: string, x: number, y: number, w: number, h: number) {
+    setFill(COLORS.backgroundWarm);
+    doc.roundedRect(x, y, w, h, 10, 10, 'F');
+
+    const cx = x + w / 2;
+    const iconCy = y + 22;
+    setFill(COLORS.green);
+    doc.circle(cx, iconCy, 11, 'F');
+    drawCheck(cx, iconCy, 7, COLORS.white, 1.7);
+
+    setText(COLORS.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.2);
+    const lines = clampLines(text, w - 20, 3);
+    doc.text(lines, cx, iconCy + 22, { align: 'center', lineHeightFactor: 1.3 });
+  }
+
+  function flatGridH(count: number): number {
+    if (count === 0) return 0;
+    const rows = Math.ceil(count / FLAT_PER_ROW);
+    return rows * FLAT_CARD_H + Math.max(0, rows - 1) * FLAT_ROW_GAP;
+  }
+
+  function drawFlatGrid(items: string[], top: number): number {
+    const colGap = 20;
+    const cardW = (CONTENT_W - colGap * (FLAT_PER_ROW - 1)) / FLAT_PER_ROW;
+    items.forEach((item, i) => {
+      const row = Math.floor(i / FLAT_PER_ROW);
+      const col = i % FLAT_PER_ROW;
+      const x = MARGIN + col * (cardW + colGap);
+      const y = top + row * (FLAT_CARD_H + FLAT_ROW_GAP);
+      drawFlatIncludedCard(item, x, y, cardW, FLAT_CARD_H);
+    });
+    const rows = Math.ceil(items.length / FLAT_PER_ROW);
+    return top + rows * FLAT_CARD_H + Math.max(0, rows - 1) * FLAT_ROW_GAP;
+  }
+
+  // ---- "What's Not Included" — wrapped pill chips ----
+  const CHIP_H = 24;
+  const CHIP_GAP_X = 8;
+  const CHIP_GAP_Y = 8;
+  const CHIP_PAD_X = 12;
+  const CHIP_ICON_R = 5.5;
+
+  function chipWidth(text: string): number {
+    return doc.getTextWidth(text) + CHIP_PAD_X * 2 + CHIP_ICON_R * 2 + 6;
+  }
+
+  function measureChipRowH(items: string[]): number {
+    if (items.length === 0) return 0;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    let x = 0;
+    let rows = 1;
+    items.forEach(item => {
+      const w = chipWidth(item);
+      if (x > 0 && x + w > CONTENT_W) {
+        rows++;
+        x = 0;
+      }
+      x += w + CHIP_GAP_X;
+    });
+    return rows * CHIP_H + Math.max(0, rows - 1) * CHIP_GAP_Y;
+  }
+
+  function drawChipRow(items: string[], top: number): number {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    let x = MARGIN;
+    let y = top;
+    items.forEach(item => {
+      const w = chipWidth(item);
+      if (x > MARGIN && x + w > MARGIN + CONTENT_W) {
+        x = MARGIN;
+        y += CHIP_H + CHIP_GAP_Y;
+      }
       setFill(COLORS.backgroundWarm);
-      doc.roundedRect(cx, cy, chipW, chipH, 8, 8, 'F');
-      setDraw(COLORS.grayLineSoft);
-      doc.setLineWidth(0.75);
-      doc.roundedRect(cx, cy, chipW, chipH, 8, 8, 'S');
+      doc.roundedRect(x, y, w, CHIP_H, CHIP_H / 2, CHIP_H / 2, 'F');
 
-      const itemIcon = carryIconFor(item);
-      setFill(COLORS.primary);
-      doc.circle(cx + 20, cy + chipH / 2, 8, 'F');
-      itemIcon(cx + 20 - 7, cy + chipH / 2 + 7, 14, COLORS.white);
+      const iconCx = x + CHIP_PAD_X + CHIP_ICON_R;
+      const iconCy = y + CHIP_H / 2;
+      setFill(COLORS.red);
+      doc.circle(iconCx, iconCy, CHIP_ICON_R, 'F');
+      drawCross(iconCx, iconCy, CHIP_ICON_R * 0.68, COLORS.white, 1.4);
 
       setText(COLORS.dark);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      const lines = clampLines(item, chipW - 44, 2);
-      const lineY = cy + chipH / 2 - ((lines.length - 1) * 11) / 2 + 3;
-      doc.text(lines, cx + 34, lineY);
+      doc.text(item, iconCx + CHIP_ICON_R + 8, iconCy + 3.2);
+      x += w + CHIP_GAP_X;
     });
-
-    return true;
+    return y + CHIP_H;
   }
 
   function renderInclusions() {
-    if (trip.included.length === 0 && trip.not_included.length === 0) return;
+    const hasGroups = trip.included_groups.length > 0;
+    const hasFlatIncluded = !hasGroups && trip.included.length > 0;
+    const hasIncluded = hasGroups || hasFlatIncluded;
+    const hasNotIncluded = trip.not_included.length > 0;
+    if (!hasIncluded && !hasNotIncluded) return;
 
-    const colGap = 40;
-    const colW = (CONTENT_W - colGap) / 2;
     const top = 92;
-    const titleH = 34;
-    const availH = CONTENT_BOTTOM - top - titleH;
+    const availH = CONTENT_BOTTOM - top;
+    const includedH = hasIncluded
+      ? SECTION_TITLE_H + (hasGroups ? groupGridH(trip.included_groups) : flatGridH(trip.included.length))
+      : 0;
+    const notIncludedH = hasNotIncluded ? SECTION_TITLE_H + measureChipRowH(trip.not_included) : 0;
+    const gapBetween = hasIncluded && hasNotIncluded ? SECTION_GAP : 0;
 
-    const measureItem = (item: string) => measureParagraphHeight(item, colW - 28, 9.8, 14) + 10;
-    const columnHeight = (items: string[]) => (items.length === 0 ? 0 : titleH + items.reduce((s, it) => s + measureItem(it), 0));
-
-    const includedPages = paginateRows(trip.included, measureItem, availH);
-    const notIncludedPages = paginateRows(trip.not_included, measureItem, availH);
-    const pageCount = Math.max(includedPages.length, notIncludedPages.length, 1);
-
-    function drawColumn(x: number, startY: number, title: string, items: string[], color: RGB, kind: 'check' | 'cross') {
-      let y = startY;
-      setText(COLORS.dark);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13.5);
-      doc.text(title, x, y);
-      y += 24;
-      items.forEach(item => {
-        const lines = doc.splitTextToSize(item, colW - 28);
-        if (kind === 'check') drawCheck(x + 6, y - 3, 7, color, 1.6);
-        else drawCross(x + 6, y - 3, 6, color, 1.6);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.8);
-        setText(COLORS.darkMuted);
-        doc.text(lines, x + 20, y);
-        y += lines.length * 14 + 10;
-      });
+    // Both sections fit stacked on one slide — the common case.
+    if (includedH + gapBetween + notIncludedH <= availH) {
+      newSlide();
+      slideHeader((x, y) => icons.check(x, y, 20), "What's Included & Not Included");
+      let y = top;
+      if (hasIncluded) {
+        drawSectionHeading("What's Included", y);
+        y += SECTION_TITLE_H;
+        y = hasGroups ? drawGroupGrid(trip.included_groups, y) : drawFlatGrid(trip.included, y);
+        y += gapBetween;
+      }
+      if (hasNotIncluded) {
+        drawSectionHeading("What's Not Included", y);
+        y += SECTION_TITLE_H;
+        drawChipRow(trip.not_included, y);
+      }
+      return;
     }
 
-    for (let p = 0; p < pageCount; p++) {
+    // Too tall for one slide — paginate each section independently, each
+    // getting its own slide(s), so long lists never overflow or get cut off.
+    if (hasGroups) {
+      const cardW = groupCardW();
+      const rowH = trip.included_groups.length
+        ? Math.max(...trip.included_groups.map(g => measureGroupCardH(g, cardW)))
+        : 0;
+      const rowsPerPage = Math.max(1, Math.floor((availH - SECTION_TITLE_H) / (rowH + GROUP_ROW_GAP)));
+      const perPage = rowsPerPage * GROUP_COLS;
+      for (let i = 0; i < trip.included_groups.length; i += perPage) {
+        newSlide();
+        slideHeader((x, y) => icons.check(x, y, 20), i === 0 ? "What's Included" : "What's Included (continued)");
+        drawGroupGrid(trip.included_groups.slice(i, i + perPage), top);
+      }
+    } else if (hasFlatIncluded) {
+      const rowsPerPage = Math.max(1, Math.floor((availH - SECTION_TITLE_H) / (FLAT_CARD_H + FLAT_ROW_GAP)));
+      const perPage = rowsPerPage * FLAT_PER_ROW;
+      for (let i = 0; i < trip.included.length; i += perPage) {
+        newSlide();
+        slideHeader((x, y) => icons.check(x, y, 20), i === 0 ? "What's Included" : "What's Included (continued)");
+        drawFlatGrid(trip.included.slice(i, i + perPage), top);
+      }
+    }
+
+    if (hasNotIncluded) {
       newSlide();
-      slideHeader(
-        (x, y) => icons.check(x, y, 20),
-        p === 0 ? "What's Included & Not Included" : "What's Included & Not Included (continued)"
-      );
-      const leftItems = includedPages[p] || [];
-      const rightItems = notIncludedPages[p] || [];
-      const startY = centeredTop(top, CONTENT_BOTTOM, Math.max(columnHeight(leftItems), columnHeight(rightItems)));
-      if (leftItems.length) drawColumn(MARGIN, startY, "What's Included", leftItems, COLORS.green, 'check');
-      if (rightItems.length) drawColumn(MARGIN + colW + colGap, startY, "What's Not Included", rightItems, COLORS.red, 'cross');
+      slideHeader((x, y) => icons.cross(x, y, 20), "What's Not Included");
+      drawChipRow(trip.not_included, top);
     }
   }
 
@@ -1265,6 +1457,54 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         const lines = clampLines(item, chipW - 44, 2);
         const lineY = y + chipH / 2 - ((lines.length - 1) * 11) / 2 + 3;
         doc.text(lines, x + 34, lineY);
+      });
+    }
+  }
+
+  // =========================================================================
+  // SLIDES — "Places You'll Definitely Post" gallery. 8 square photos per
+  // slide (4 across, 2 down), filling the full content area — long galleries
+  // spill onto extra slides, 8 at a time.
+  // =========================================================================
+  async function renderGallery() {
+    if (trip.gallery_photos.length === 0) return;
+
+    const cols = 4;
+    const rows = 2;
+    const perPage = cols * rows;
+    const gap = 12;
+
+    for (let pageStart = 0; pageStart < trip.gallery_photos.length; pageStart += perPage) {
+      newSlide();
+      const isFirst = pageStart === 0;
+      slideHeader(
+        (x, y) => icons.camera(x, y, 20),
+        "Places You'll Definitely Post",
+        isFirst ? trip.gallery_description || undefined : undefined
+      );
+
+      const gridTop = 92;
+      const tileW = (CONTENT_W - gap * (cols - 1)) / cols;
+      const tileH = Math.min(tileW, (CONTENT_BOTTOM - gridTop - gap) / rows);
+
+      const pageItems = trip.gallery_photos.slice(pageStart, pageStart + perPage);
+      const crops = await Promise.all(pageItems.map(url => loadCoverCroppedImage(url, tileW, tileH, 6)));
+
+      crops.forEach((cropped, i) => {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const x = MARGIN + col * (tileW + gap);
+        const y = gridTop + row * (tileH + gap);
+        if (cropped) {
+          try {
+            doc.addImage(cropped, 'JPEG', x, y, tileW, tileH);
+            return;
+          } catch {
+            /* fall through to placeholder */
+          }
+        }
+        setFill(COLORS.backgroundWarm);
+        doc.roundedRect(x, y, tileW, tileH, 6, 6, 'F');
       });
     }
   }
@@ -1596,10 +1836,8 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   await renderCover();
   renderHighlightsAndDays();
   await renderItinerary();
-  if (!renderInclusionsAndCarryCombined()) {
-    renderInclusions();
-    renderThingsToCarry();
-  }
+  renderInclusions();
+  renderThingsToCarry();
   renderMeetingPoint();
   renderFaqs();
   renderCancellationPolicy();
