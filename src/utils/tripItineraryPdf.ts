@@ -47,6 +47,19 @@ const COLORS = {
   grayLineSoft: [232, 224, 213] as RGB,
 } as const;
 
+// Mirrors TRIP_HIGHLIGHT_ICON_PALETTE in src/constants/tripHighlightIcons.ts —
+// the same rotating pastel-circle colors the site uses for highlight cards
+// and Travel with Confidence items. Kept in sync manually, same as COLORS
+// above being kept in sync with @theme in globals.css.
+const CONFIDENCE_PALETTE: { bg: RGB; fg: RGB }[] = [
+  { bg: [251, 234, 217], fg: [196, 112, 58] },
+  { bg: [243, 231, 220], fg: [139, 72, 32] },
+  { bg: [233, 240, 228], fg: [91, 122, 74] },
+  { bg: [253, 241, 220], fg: [200, 150, 42] },
+  { bg: [251, 234, 217], fg: [217, 138, 58] },
+  { bg: [247, 227, 224], fg: [194, 74, 74] },
+];
+
 // Static, site-wide brand info (not trip data) shown on the cover strip and
 // the closing slide — the same constants used in the site footer/contact page.
 const BRAND = {
@@ -147,6 +160,8 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
     gallery_description: trip.gallery_description ? sanitizeForPdf(trip.gallery_description) : trip.gallery_description,
     gallery_items: trip.gallery_items?.map(item => ({ ...item, description: sanitizeForPdf(item.description) })),
     fashion_description: trip.fashion_description ? sanitizeForPdf(trip.fashion_description) : trip.fashion_description,
+    confidence_description: trip.confidence_description ? sanitizeForPdf(trip.confidence_description) : trip.confidence_description,
+    confidence_items: trip.confidence_items?.map(item => ({ ...item, description: sanitizeForPdf(item.description) })),
     faqs: trip.faqs.map(faq => ({
       ...faq,
       question: sanitizeForPdf(faq.question),
@@ -1375,39 +1390,110 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
-  // SLIDES — Things to Carry (icon chip grid, paginated by row)
+  // SLIDE — Travel with Confidence (left) | Things to Carry (right)
   // =========================================================================
-  function renderThingsToCarry() {
-    if (trip.things_to_carry.length === 0) return;
+  // A single split slide rather than two separate ones — divided by a
+  // vertical rule down the middle, matching the two reference screenshots.
+  // Falls back to a single full-width column if only one side has content,
+  // and to nothing at all if neither does. Icon circles on the left rotate
+  // through CONFIDENCE_PALETTE, mirroring the site's own rotating pastel
+  // circles for these items (see TripHighlightIconDisplay's base/unfilled
+  // state). Doesn't paginate — if either list is too long to fit, drawing
+  // simply stops at the bottom edge rather than overflowing the slide.
+  function renderConfidenceAndCarry() {
+    const confidenceItems = trip.confidence_items ?? [];
+    const hasConfidence = confidenceItems.length > 0;
+    const hasCarry = trip.things_to_carry.length > 0;
+    if (!hasConfidence && !hasCarry) return;
 
-    const perRow = 5;
-    const gap = 14;
-    const chipW = (CONTENT_W - gap * (perRow - 1)) / perRow;
-    const chipH = 46;
+    newSlide();
     const top = 92;
-    const rowsPerPage = Math.max(1, Math.floor((CONTENT_BOTTOM - top) / (chipH + gap)));
-    const itemsPerPage = perRow * rowsPerPage;
+    const colGap = 40;
+    const hasBoth = hasConfidence && hasCarry;
+    const leftW = hasBoth ? (CONTENT_W - colGap) / 2 : CONTENT_W;
+    const rightW = leftW;
+    const rightX = MARGIN + leftW + colGap;
 
-    for (let pageStart = 0; pageStart < trip.things_to_carry.length; pageStart += itemsPerPage) {
-      newSlide();
-      slideHeader(
-        (x, y) => icons.backpack(x, y, 20),
-        'Things to Carry',
-        pageStart === 0 ? 'Pack smart \u2014 here\u2019s what to bring along' : undefined
-      );
+    if (hasConfidence) {
+      setText(COLORS.dark);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(19);
+      doc.text('Travel with Confidence', MARGIN, 46);
+      setDraw(COLORS.grayLine);
+      doc.setLineWidth(1);
+      doc.line(MARGIN, 66, MARGIN + leftW, 66);
 
-      const pageItems = trip.things_to_carry.slice(pageStart, pageStart + itemsPerPage);
-      const rowsThisPage = Math.ceil(pageItems.length / perRow);
-      const gridH = rowsThisPage * chipH + (rowsThisPage - 1) * gap;
-      const gridTop = centeredTop(top, CONTENT_BOTTOM, gridH);
+      let y = top;
+      if (trip.confidence_description) {
+        y = drawParagraph(trip.confidence_description, MARGIN, y, leftW, {
+          size: 9.5,
+          color: COLORS.darkMuted,
+          lineHeight: 13.5,
+          maxLines: 3,
+        }) + 16;
+      }
 
-      pageItems.forEach((item, i) => {
-        const row = Math.floor(i / perRow);
-        const itemsInRow = Math.min(perRow, pageItems.length - row * perRow);
-        const rowOffset = ((perRow - itemsInRow) * (chipW + gap)) / 2; // centers a short/incomplete row
-        const col = i % perRow;
-        const x = MARGIN + rowOffset + col * (chipW + gap);
-        const y = gridTop + row * (chipH + gap);
+      const circleR = 14;
+      const itemGap = 8;
+      const textX = MARGIN + circleR * 2 + 14;
+      const textW = leftW - (circleR * 2 + 14);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      for (let i = 0; i < confidenceItems.length; i++) {
+        const lines: string[] = doc.splitTextToSize(confidenceItems[i].description, textW);
+        const rowH = Math.max(circleR * 2, lines.length * 13);
+        if (y + rowH > CONTENT_BOTTOM) break;
+
+        const { bg, fg } = CONFIDENCE_PALETTE[i % CONFIDENCE_PALETTE.length];
+        const cx = MARGIN + circleR;
+        const cy = y + rowH / 2;
+        setFill(bg);
+        doc.circle(cx, cy, circleR, 'F');
+        drawCheck(cx, cy, circleR * 0.55, fg, 1.8);
+
+        setText(COLORS.dark);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.text(lines, textX, cy - ((lines.length - 1) * 13) / 2 + 3.5);
+
+        y += rowH + itemGap;
+      }
+    }
+
+    if (hasBoth) {
+      setDraw(COLORS.grayLine);
+      doc.setLineWidth(1);
+      doc.line(rightX - colGap / 2, top - 26, rightX - colGap / 2, CONTENT_BOTTOM);
+    }
+
+    if (hasCarry) {
+      setText(COLORS.dark);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(hasBoth ? 15 : 19);
+      doc.text('Things to Carry', rightX, hasBoth ? 106 : 46);
+      setText(COLORS.darkMuted);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.text('Pack smart. Travel light. Stay ready.', rightX, hasBoth ? 122 : 58);
+      if (!hasBoth) {
+        setDraw(COLORS.grayLine);
+        doc.setLineWidth(1);
+        doc.line(MARGIN, 66, PAGE_W - MARGIN, 66);
+      }
+
+      const perRow = hasBoth ? 2 : 5;
+      const gap = 14;
+      const chipW = (rightW - gap * (perRow - 1)) / perRow;
+      const chipH = 46;
+      const gridTop = (hasBoth ? 140 : top);
+
+      let y = gridTop;
+      let col = 0;
+      for (let i = 0; i < trip.things_to_carry.length; i++) {
+        if (col === 0 && y + chipH > CONTENT_BOTTOM) break;
+
+        const item = trip.things_to_carry[i];
+        const x = rightX + col * (chipW + gap);
 
         setFill(COLORS.backgroundWarm);
         doc.roundedRect(x, y, chipW, chipH, 8, 8, 'F');
@@ -1426,7 +1512,13 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         const lines = clampLines(item, chipW - 44, 2);
         const lineY = y + chipH / 2 - ((lines.length - 1) * 11) / 2 + 3;
         doc.text(lines, x + 34, lineY);
-      });
+
+        col++;
+        if (col >= perRow) {
+          col = 0;
+          y += chipH + gap;
+        }
+      }
     }
   }
 
@@ -1917,9 +2009,9 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   renderHighlightsAndDays();
   await renderItinerary();
   renderInclusions();
-  renderThingsToCarry();
   await renderGallery();
   await renderFashion();
+  renderConfidenceAndCarry();
   renderMeetingPoint();
   renderFaqs();
   renderCancellationPolicy();
