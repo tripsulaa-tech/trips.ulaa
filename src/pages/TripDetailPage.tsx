@@ -1294,8 +1294,8 @@ export default function TripDetailPage() {
             {/* Founder */}
             {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
               <section className="scroll-mt-44 bg-dark rounded-2xl p-5 sm:p-8">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center sm:text-left">Meet Your Trip Leader</h2>
-                <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start max-w-3xl mx-auto">
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-6 sm:mb-8 text-center">Meet Your Trip Leader</h2>
+                <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start w-fit max-w-3xl mx-auto">
                   {trip.trip_founder.photo ? (
                     <img
                       src={trip.trip_founder.photo}
@@ -1307,7 +1307,7 @@ export default function TripDetailPage() {
                       <span className="text-white/40 text-6xl font-display font-bold">{trip.trip_founder.name.charAt(0)}</span>
                     </div>
                   )}
-                  <div className="text-center sm:text-left">
+                  <div className="text-center sm:text-left max-w-md">
                     {trip.trip_founder.name && (
                       <h3 className="font-display text-xl font-bold text-white mb-0.5">{trip.trip_founder.name}</h3>
                     )}
