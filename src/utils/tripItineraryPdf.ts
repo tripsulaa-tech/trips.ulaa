@@ -144,6 +144,8 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
     not_included: notIncludedSource.map(sanitizeForPdf),
     things_to_carry: thingsToCarrySource.map(sanitizeForPdf),
     meeting_point: trip.meeting_point ? sanitizeForPdf(trip.meeting_point) : trip.meeting_point,
+    gallery_description: trip.gallery_description ? sanitizeForPdf(trip.gallery_description) : trip.gallery_description,
+    gallery_items: trip.gallery_items?.map(item => ({ ...item, description: sanitizeForPdf(item.description) })),
     faqs: trip.faqs.map(faq => ({
       ...faq,
       question: sanitizeForPdf(faq.question),
@@ -637,31 +639,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     return count * lh;
   }
 
-  // ---------------------------------------------------------------------
-  // Generic pager: greedily bins items into "pages" (arrays of items) that
-  // each fit within `availH`, based on a caller-supplied height estimate
-  // per item. Used everywhere a list might be longer than one slide.
-  // ---------------------------------------------------------------------
-  function paginateRows<T>(items: T[], measure: (item: T) => number, availH: number): T[][] {
-    if (items.length === 0) return [];
-    const pages: T[][] = [];
-    let page: T[] = [];
-    let used = 0;
-    for (const item of items) {
-      const h = measure(item);
-      if (used + h > availH && page.length > 0) {
-        pages.push(page);
-        page = [];
-        used = 0;
-      }
-      page.push(item);
-      used += h;
-    }
-    if (page.length) pages.push(page);
-    return pages;
-  }
-
-  /** Like `paginateRows`, but spreads one shared list across two side-by-side
+  /** Spreads one shared list across two side-by-side
    *  columns, always dropping the next item into whichever column is
    *  currently shorter. This keeps both columns filled evenly (rather than
    *  a naive odd/even split, which can leave a continuation page with a
@@ -1452,6 +1430,77 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
+  // SLIDE — Places You'll Definitely Post (photo grid)
+  // =========================================================================
+  // Falls back to the plain `gallery_images` string list when the richer
+  // `gallery_items` (photo + caption) field is empty, matching the same
+  // fallback TripDetailPage.tsx uses for this section on the public site.
+  // Only the first 8 photos are shown — the reference layout is a fixed
+  // 4-across, 2-row wall of square photos, not a paginated list.
+  async function renderGallery() {
+    const allPhotos: string[] =
+      (trip.gallery_items?.length ?? 0) > 0
+        ? trip.gallery_items!.map(item => item.photo)
+        : trip.gallery_images;
+    if (allPhotos.length === 0) return;
+
+    newSlide();
+    slideHeader((x, y) => icons.pin(x, y, 20), "Places You'll Definitely Post");
+
+    let contentTop = 92;
+    if (trip.gallery_description) {
+      contentTop = drawParagraph(trip.gallery_description, MARGIN, contentTop, CONTENT_W, {
+        size: 10,
+        color: COLORS.darkMuted,
+        lineHeight: 14,
+        maxLines: 2,
+      }) + 14;
+    }
+
+    const cols = 4;
+    const rows = 2;
+    const colGap = 14;
+    const rowGap = 14;
+    const photos = allPhotos.slice(0, cols * rows);
+
+    // Square size is whichever of width- or height-driven fits smaller, so
+    // the grid always stays made of true squares; centeredTop/horizontal
+    // centering below then spreads that grid evenly across whatever space
+    // is left over in the other dimension.
+    const squareByWidth = (CONTENT_W - colGap * (cols - 1)) / cols;
+    const availH = CONTENT_BOTTOM - contentTop;
+    const squareByHeight = (availH - rowGap * (rows - 1)) / rows;
+    const square = Math.min(squareByWidth, squareByHeight);
+
+    const gridW = cols * square + colGap * (cols - 1);
+    const gridH = rows * square + rowGap * (rows - 1);
+    const gridX = MARGIN + (CONTENT_W - gridW) / 2;
+    const gridY = centeredTop(contentTop, CONTENT_BOTTOM, gridH);
+
+    const crops = await Promise.all(photos.map(url => loadCoverCroppedImage(url, square, square, 8)));
+
+    crops.forEach((cropped, i) => {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const x = gridX + col * (square + colGap);
+      const y = gridY + row * (square + rowGap);
+      if (cropped) {
+        try {
+          doc.addImage(cropped, 'JPEG', x, y, square, square);
+          return;
+        } catch {
+          /* fall through to placeholder */
+        }
+      }
+      setFill(COLORS.backgroundWarm);
+      doc.roundedRect(x, y, square, square, 8, 8, 'F');
+      setDraw(COLORS.grayLineSoft);
+      doc.setLineWidth(0.75);
+      doc.roundedRect(x, y, square, square, 8, 8, 'S');
+    });
+  }
+
+  // =========================================================================
   // SLIDE — Meeting Point
   // =========================================================================
   /** Looks for a handful of common assembly-point keywords in the trip's own
@@ -1780,6 +1829,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   await renderItinerary();
   renderInclusions();
   renderThingsToCarry();
+  await renderGallery();
   renderMeetingPoint();
   renderFaqs();
   renderCancellationPolicy();
@@ -1824,8 +1874,9 @@ export async function downloadTripItineraryPdf(trip: UpcomingTrip): Promise<void
 //   2. Add a `render<Section>()` function here following the shape of
 //      `renderThingsToCarry` (simple list) or `renderInclusions` (paired
 //      columns) or `renderFaqs` (question/answer columns) — whichever is
-//      the closest match — using `paginateRows` so it automatically
-//      spills onto extra slides if the list is long.
+//      the closest match — computing a `rowsPerPage`/`itemsPerPage` split
+//      (as `renderThingsToCarry` does) so it automatically spills onto
+//      extra slides if the list is long.
 //   3. Call it from the assembly block above, guarded by the same
 //      `if (list.length === 0) return;` pattern so trips without that
 //      field don't get an empty slide.
