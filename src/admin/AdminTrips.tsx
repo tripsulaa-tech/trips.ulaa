@@ -87,7 +87,6 @@ interface TripForm {
   // hero_mobile_image in types-index.ts). '' means "not set" — falls
   // back to the cropped cover_image on mobile.
   hero_mobile_image: string;
-  gallery_images: string[];
   terms_and_conditions: string;
   cancellation_policy: CancellationPolicy;
   is_published: boolean;
@@ -95,9 +94,7 @@ interface TripForm {
   highlight_cards: TripHighlightCard[];
   accommodation_description: string;
   accommodation_photos: string[];
-  included_items: TripInclusionItem[];
   included_groups: TripIncludedGroup[];
-  not_included_items: TripInclusionItem[];
   gallery_items: TripGalleryItem[];
   gallery_description: string;
   fashion_photos: string[];
@@ -120,11 +117,11 @@ const emptyForm: TripForm = {
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
   early_bird_price: '', early_bird_deadline: '', strike_through_price: '', advance_amount: '', trip_type: '',
-  cover_image: '', cover_image_crop: null, hero_mobile_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
+  cover_image: '', cover_image_crop: null, hero_mobile_image: '', terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
   // Extended
   highlight_cards: [], accommodation_description: '', accommodation_photos: [],
-  included_items: [], included_groups: [], not_included_items: [], gallery_items: [], gallery_description: "Views worth every post. Memories worth even more.",
+  included_groups: [], gallery_items: [], gallery_description: "Views worth every post. Memories worth even more.",
   fashion_photos: [], fashion_description: 'Styles that speaks, moments that stay.', things_to_carry_items: [],
   trip_founder: emptyFounder, confidence_items: [], confidence_description: 'We take care of Everything, so you can Enjoy Every Moment!',
   meeting_address: '', end_banner: emptyEndBanner,
@@ -254,7 +251,6 @@ export default function AdminTrips() {
       trip_type: '<"domestic" or "international", or "" if not set>',
       cover_image: '(leave blank — uploaded manually)',
       hero_mobile_image: '(leave blank — uploaded manually)',
-      gallery_images: ['(leave blank — uploaded manually)'],
       terms_and_conditions: '(leave as default unless the trip needs custom terms)',
       cancellation_policy: {
         payment_due_days: '<Days before departure the remaining balance is due, as a number>',
@@ -270,23 +266,23 @@ export default function AdminTrips() {
       },
       is_published: false,
       // ── Extended content blocks ──────────────────────────────────────
+      // Note: included_items, not_included_items, and gallery_images are
+      // deliberately left out of this template. They're legacy fallback
+      // fields (see UpcomingTrip in types-index.ts) with no editor in the
+      // current Add Trip form — included_groups, the plain "not_included"
+      // tag list, and gallery_items replaced them — so there'd be no way
+      // to review a filled-in value before saving.
       highlight_cards: [
         { icon: '<emoji or short icon label>', heading: '<Short heading>', description: '<1-2 sentence description>' },
       ],
       accommodation_description: '<"Stay. Relax. Repeat." section body — describe the accommodation>',
       accommodation_photos: ['(leave blank — uploaded manually)'],
-      included_items: [
-        { icon: '<emoji or icon label>', description: '<Included item description>' },
-      ],
       included_groups: [
         {
           icon: '<emoji or icon label>',
           heading: '<Group heading, e.g. "Premium Stay Experience">',
           bullets: ['<Bulleted sub-item under this heading, e.g. "5 Nights accommodation at carefully selected 4-star and beachfront properties">'],
         },
-      ],
-      not_included_items: [
-        { icon: '<emoji or icon label>', description: '<Not-included item description>' },
       ],
       gallery_items: [
         { photo: '(leave blank — uploaded manually)', description: '<Caption / place name for this photo>' },
@@ -394,7 +390,6 @@ export default function AdminTrips() {
         cover_image: '',
         cover_image_crop: null,
         hero_mobile_image: '',
-        gallery_images: [],
         terms_and_conditions: isPlaceholder(raw.terms_and_conditions) ? DEFAULT_TERMS_AND_CONDITIONS : raw.terms_and_conditions,
         cancellation_policy: raw.cancellation_policy ? {
           payment_due_days: asNum(raw.cancellation_policy.payment_due_days) || DEFAULT_CANCELLATION_POLICY.payment_due_days,
@@ -414,18 +409,12 @@ export default function AdminTrips() {
           : [],
         accommodation_description: asStr(raw.accommodation_description),
         accommodation_photos: [],
-        included_items: Array.isArray(raw.included_items)
-          ? raw.included_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
-          : [],
         included_groups: Array.isArray(raw.included_groups)
           ? raw.included_groups.map((g: Record<string, unknown>) => ({
               icon: asStr(g?.icon),
               heading: asStr(g?.heading),
               bullets: asStrArray(g?.bullets),
             }))
-          : [],
-        not_included_items: Array.isArray(raw.not_included_items)
-          ? raw.not_included_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
           : [],
         gallery_items: Array.isArray(raw.gallery_items)
           ? raw.gallery_items.map((g: Record<string, unknown>) => ({ photo: '', description: asStr(g?.description) }))
@@ -493,16 +482,14 @@ export default function AdminTrips() {
       cover_image: trip.cover_image || '',
       cover_image_crop: trip.cover_image_crop || null,
       hero_mobile_image: trip.hero_mobile_image || '',
-      gallery_images: trip.gallery_images || [], is_published: trip.is_published,
+      is_published: trip.is_published,
       terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
       cancellation_policy: trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY,
       // Extended
       highlight_cards: trip.highlight_cards || [],
       accommodation_description: trip.accommodation_description || '',
       accommodation_photos: trip.accommodation_photos || [],
-      included_items: trip.included_items || [],
       included_groups: trip.included_groups || [],
-      not_included_items: trip.not_included_items || [],
       gallery_items: trip.gallery_items || [],
       gallery_description: trip.gallery_description || '',
       fashion_photos: trip.fashion_photos || [],
