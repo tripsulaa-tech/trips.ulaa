@@ -247,3 +247,16 @@ button, .btn {
 .countdown-border-glow {
   animation: countdown-border-glow 2.4s ease-in-out infinite;
 }
+
+/* Faint noise texture layered over the premium countdown card so the dark
+   gradient reads as brushed/matte rather than a flat digital fill. */
+.countdown-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.9) 0.6px, transparent 0.6px);
+  background-size: 3px 3px;
+}

@@ -548,84 +548,109 @@ export default function TripDetailPage() {
       {/* Main Content */}
       <div className="relative isolate px-4 sm:px-6 lg:px-8 py-8 sm:py-16 pb-12 lg:pb-16">
         <div className="max-w-[1344px] mx-auto space-y-9 sm:space-y-12">
-            {/* Countdown — premium flip-clock card, shown at all breakpoints */}
+            {/* Countdown — premium flip-clock card, shown at all breakpoints.
+                Below `lg` this keeps its original centered/stacked mobile
+                layout untouched; at `lg`+ it spans the full content width
+                (matching every other section on the page) and reflows into
+                a horizontal banner so the extra width reads as intentional,
+                not just stretched. */}
             {countdown && (
-              <div className="sm:max-w-xl sm:mx-auto">
-                <button
-                  type="button"
-                  onClick={() => setBookingOpen(true)}
-                  aria-label="Trip starts soon — tap to book your seat"
-                  className="countdown-border-glow relative overflow-hidden w-full text-left bg-gradient-to-br from-dark via-primary-dark/70 to-dark countdown-gradient border border-primary-light/25 rounded-2xl px-5 py-5 sm:px-8 sm:py-8 active:scale-[0.99] transition-transform"
-                >
-                  {/* Decorative ambient glows */}
-                  <div className="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/25 blur-3xl" />
-                  <div className="pointer-events-none absolute -bottom-12 -left-8 w-32 h-32 rounded-full bg-primary-light/15 blur-3xl" />
-                  {/* Diagonal shimmer sweep */}
-                  <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent countdown-shimmer" />
-                  {/* Floating sparkles */}
-                  <Sparkles size={14} className="countdown-float pointer-events-none absolute top-4 right-8 text-primary-light/50" style={{ animationDelay: '0.4s' }} />
-                  <Sparkles size={10} className="countdown-float pointer-events-none absolute bottom-6 left-6 text-primary-light/40" style={{ animationDelay: '1.6s' }} />
+              <div>
+                <div className="relative rounded-[28px] p-px bg-gradient-to-br from-primary-light/50 via-white/10 to-primary/40 shadow-[0_28px_60px_-20px_rgba(15,9,5,0.55)]">
+                  <motion.button
+                    type="button"
+                    onClick={() => setBookingOpen(true)}
+                    aria-label="Trip starts soon — tap to book your seat"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.985 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    className="countdown-grain group/btn relative overflow-hidden block w-full text-left bg-gradient-to-br from-[#1B120B] via-[#2C1D12] to-[#170F09] countdown-gradient rounded-[27px] px-6 py-7 sm:px-10 sm:py-10 lg:px-14 lg:py-11"
+                  >
+                    {/* Soft radial spotlight + ambient glows for depth */}
+                    <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 lg:w-[36rem] rounded-full bg-primary-light/20 blur-[90px]" />
+                    <div className="pointer-events-none absolute -bottom-16 -left-10 w-40 h-40 rounded-full bg-primary/15 blur-3xl" />
+                    <div className="pointer-events-none absolute -bottom-16 -right-10 w-40 h-40 rounded-full bg-primary/15 blur-3xl hidden lg:block" />
+                    {/* Diagonal shimmer sweep — has more room to read as a
+                        deliberate effect now the card spans full width */}
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-white/[0.06] to-transparent countdown-shimmer hidden lg:block" />
+                    {/* Floating sparkles */}
+                    <Sparkles size={14} className="countdown-float pointer-events-none absolute top-5 right-9 text-primary-light/40" style={{ animationDelay: '0.4s' }} />
+                    <Sparkles size={10} className="countdown-float pointer-events-none absolute bottom-7 left-7 text-primary-light/30" style={{ animationDelay: '1.6s' }} />
 
-                  {(isAlmostFull || isFull) && (
-                    <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-white/10 backdrop-blur-sm border border-white/15 text-amber-300 text-[10px] font-button font-bold uppercase tracking-wide px-2 py-1 rounded-full">
-                      <Flame size={11} className="text-amber-300" />
-                      {isFull ? 'Sold out' : `${remaining} seats left`}
-                    </span>
-                  )}
-
-                  <div className="relative flex flex-col items-center gap-3">
-                    <p className="flex items-center gap-1.5 text-primary-light text-[11px] font-button font-bold uppercase tracking-[0.2em] whitespace-nowrap">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-light opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-light" />
+                    {(isAlmostFull || isFull) && (
+                      <span className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10 inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-[10px] font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
+                        <Flame size={11} className="text-amber-300" />
+                        {isFull ? 'Sold out' : `${remaining} seats left`}
                       </span>
-                      Trip starts in
-                    </p>
-                    <div className="flex items-center gap-2.5">
-                      {[
-                        { v: countdown.days, l: 'Days' },
-                        { v: countdown.hours, l: 'Hrs' },
-                        { v: countdown.minutes, l: 'Min' },
-                        { v: countdown.seconds, l: 'Sec' },
-                      ].map(({ v, l }, i) => (
-                        <div key={l} className="flex items-center gap-2.5">
-                          <div className="text-center">
-                            <div
-                              className={`relative w-16 h-14 overflow-hidden rounded-lg bg-gradient-to-b from-background to-background-warm shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_4px_12px_-2px_rgba(0,0,0,0.4)] ring-1 ring-white/10 ${l === 'Sec' ? 'countdown-tick' : ''}`}
-                              style={{ perspective: '80px' }}
-                            >
-                              <div className="absolute left-0 right-0 top-1/2 h-px bg-dark/15 -translate-y-px z-10" />
-                              <AnimatePresence mode="popLayout" initial={false}>
-                                <motion.div
-                                  key={v}
-                                  initial={{ rotateX: 90, opacity: 0 }}
-                                  animate={{ rotateX: 0, opacity: 1 }}
-                                  exit={{ rotateX: -90, opacity: 0 }}
-                                  transition={{ duration: 0.8, ease: 'easeInOut' }}
-                                  style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
-                                  className="absolute inset-0 flex items-center justify-center font-display text-3xl font-bold text-dark tabular-nums"
-                                >
-                                  {String(v).padStart(2, '0')}
-                                </motion.div>
-                              </AnimatePresence>
+                    )}
+
+                    <div className="relative flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+                      <div className="flex flex-col items-center lg:items-start gap-1.5 lg:w-56 lg:shrink-0">
+                        <p className="flex items-center gap-2 text-[11px] lg:text-xs font-button font-bold uppercase tracking-[0.25em] whitespace-nowrap bg-gradient-to-r from-primary-light to-amber-200 bg-clip-text text-transparent">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-light opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-light" />
+                          </span>
+                          Trip starts in
+                        </p>
+                        <p className="hidden lg:block text-white/35 text-xs font-medium">
+                          {trip.destination} &middot; {formatDateRange(trip.start_date, trip.end_date)}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                        {[
+                          { v: countdown.days, l: 'Days' },
+                          { v: countdown.hours, l: 'Hrs' },
+                          { v: countdown.minutes, l: 'Min' },
+                          { v: countdown.seconds, l: 'Sec' },
+                        ].map(({ v, l }, i) => (
+                          <div key={l} className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                            <div className="text-center">
+                              <div
+                                className={`relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] lg:w-24 lg:h-24 overflow-hidden rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_28px_-10px_rgba(0,0,0,0.65)] ${l === 'Sec' ? 'countdown-tick' : ''}`}
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent" />
+                                <div className="absolute left-0 right-0 top-1/2 h-px bg-white/[0.06] -translate-y-px z-10" />
+                                <AnimatePresence mode="popLayout" initial={false}>
+                                  <motion.div
+                                    key={v}
+                                    initial={{ rotateX: 90, opacity: 0 }}
+                                    animate={{ rotateX: 0, opacity: 1 }}
+                                    exit={{ rotateX: -90, opacity: 0 }}
+                                    transition={{ duration: 0.7, ease: 'easeInOut' }}
+                                    style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', perspective: '400px' }}
+                                    className="absolute inset-0 flex items-center justify-center font-display text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-b from-white to-primary-light/90 bg-clip-text text-transparent tabular-nums"
+                                  >
+                                    {String(v).padStart(2, '0')}
+                                  </motion.div>
+                                </AnimatePresence>
+                              </div>
+                              <div className="text-white/45 text-[10px] lg:text-xs font-medium uppercase tracking-[0.2em] text-center mt-2">{l}</div>
                             </div>
-                            <div className="text-white/60 text-[10px] uppercase tracking-widest text-center mt-1.5">{l}</div>
+                            {i < 3 && (
+                              <span className="text-primary-light/40 font-display text-xl sm:text-2xl lg:text-3xl font-bold pb-4 sm:pb-5 lg:pb-6 select-none">:</span>
+                            )}
                           </div>
-                          {i < 3 && (
-                            <div className="flex flex-col gap-1 self-start mt-5">
-                              <span className="w-1 h-1 rounded-full bg-primary-light/70 animate-pulse" />
-                              <span className="w-1 h-1 rounded-full bg-primary-light/70 animate-pulse" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+
+                      <div className="flex flex-col items-center lg:items-end gap-2 lg:w-56 lg:shrink-0">
+                        <span className="hidden lg:inline-flex items-center gap-2 bg-gradient-to-r from-primary-light/20 to-amber-300/10 border border-primary-light/30 text-primary-light font-button font-bold text-sm px-5 py-2.5 rounded-full transition-colors group-hover/btn:from-primary-light/30 group-hover/btn:to-amber-300/20">
+                          Book Your Seat
+                          <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
+                        </span>
+                        <p className="flex items-center gap-1.5 text-white/55 text-[11px] font-medium lg:hidden">
+                          Don't miss out — tap to secure your spot
+                          <ArrowRight size={12} className="text-primary-light transition-transform group-hover/btn:translate-x-1" />
+                        </p>
+                        <p className="hidden lg:block text-white/35 text-xs">
+                          Don't miss out — tap to secure your spot
+                        </p>
+                      </div>
                     </div>
-                    <p className="flex items-center gap-1.5 text-white/60 text-[11px] font-medium">
-                      Don't miss out — tap to secure your spot
-                      <ArrowRight size={12} className="text-primary-light" />
-                    </p>
-                  </div>
-                </button>
+                  </motion.button>
+                </div>
               </div>
             )}
             {/* Highlights */}

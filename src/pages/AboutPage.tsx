@@ -626,7 +626,7 @@ export default function AboutPage() {
       {testimonials.length > 0 && (
         <section className="py-12 sm:py-24 px-4 sm:px-6 lg:px-8 bg-background-warm">
           <div className="max-w-[1344px] mx-auto">
-            <motion.div {...fadeUp()} className="text-center mb-12">
+            <motion.div {...fadeUp()} className="text-center mb-6">
               {testimonialsContent.sub_heading && (
                 <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
                   {testimonialsContent.sub_heading}
