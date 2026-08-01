@@ -2,6 +2,9 @@ import type { WhyUlaaContent } from '../types/types-index';
 
 // Placeholder images — replace via /admin/why-us once real trip photos are ready.
 export const DEFAULT_WHY_ULAA: WhyUlaaContent = {
+  sub_heading: 'Why Choose Us',
+  heading: 'Travel differently.',
+  subheading: "ULAA isn't just a travel company. We're a sisterhood of fearless explorers who believe every woman deserves to see the world safely.",
   features: [
     {
       image: 'https://picsum.photos/seed/ulaa-girls-only/600/800',

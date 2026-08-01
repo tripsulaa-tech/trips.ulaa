@@ -27,8 +27,13 @@ export default function AdminWhyULAA() {
 
   const updateFeature = (index: number, patch: Partial<WhyUlaaContent['features'][number]>) => {
     setContent(c => ({
+      ...c,
       features: c.features.map((f, i) => (i === index ? { ...f, ...patch } : f)),
     }));
+  };
+
+  const setField = (key: 'sub_heading' | 'heading' | 'subheading', value: string) => {
+    setContent(c => ({ ...c, [key]: value }));
   };
 
   const handleSave = async () => {
@@ -65,6 +70,39 @@ export default function AdminWhyULAA() {
   return (
     <AdminLayout title="Why ULAA" subtitle='Edit the 6 image cards shown in the "Travel differently." section on the home page.'>
       <div className="space-y-6 max-w-4xl">
+        <div className={cardClass}>
+          <h2 className="font-display text-lg font-bold text-dark">Section Text</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Sub Heading</label>
+              <input
+                value={content.sub_heading}
+                onChange={e => setField('sub_heading', e.target.value)}
+                className={inputClass}
+                placeholder="Why Choose Us"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Section Heading</label>
+              <input
+                value={content.heading}
+                onChange={e => setField('heading', e.target.value)}
+                className={inputClass}
+                placeholder="Travel differently."
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Subheading</label>
+              <textarea
+                value={content.subheading}
+                onChange={e => setField('subheading', e.target.value)}
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+          </div>
+        </div>
+
         {content.features.map((feature, index) => (
           <div key={index} className={cardClass}>
             <h2 className="font-display text-lg font-bold text-dark">Card {index + 1}</h2>

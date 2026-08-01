@@ -552,6 +552,9 @@ export interface WhyUlaaFeature {
 }
 
 export interface WhyUlaaContent {
+  sub_heading: string;
+  heading: string;
+  subheading: string;
   features: WhyUlaaFeature[];
 }
 

@@ -14,16 +14,16 @@ export default function WhyULAA() {
       .catch(() => {});
   }, []);
 
-  const { features } = content;
+  const { features, sub_heading, heading, subheading } = content;
 
   return (
     <section className="relative isolate pt-12 pb-12 sm:py-12 px-4 sm:px-6 lg:px-8 bg-cream">
       <div className="max-w-[1344px] mx-auto">
         <div className="mb-8 sm:mb-16 flex justify-center">
           <SectionTitle
-            label="Why Choose Us"
-            title="Travel differently."
-            subtitle="ULAA isn't just a travel company. We're a sisterhood of fearless explorers who believe every woman deserves to see the world safely."
+            label={sub_heading}
+            title={heading}
+            subtitle={subheading}
             align="center"
           />
         </div>
