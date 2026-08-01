@@ -18,6 +18,7 @@ import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDispla
 import DatePicker from '../components/ui/DatePicker';
 import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
+import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
 import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip, COVER_IMAGE_TARGET_SIZE_BYTES } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
@@ -274,13 +275,13 @@ export default function AdminTrips() {
       // tag list, and gallery_items replaced them — so there'd be no way
       // to review a filled-in value before saving.
       highlight_cards: [
-        { icon: '<emoji or short icon label>', heading: '<Short heading>', description: '<1-2 sentence description>' },
+        { icon: '<Icon-library key, NOT an emoji — same key system as itinerary.icon, e.g. "mountain-snow", "camera", "car", "palmtree". See src/constants/tripHighlightIcons.ts for the full list. An emoji here silently falls back to plain text instead of the colored icon circle used elsewhere on the page. Include at least 6 cards — this section looks sparse with fewer than 6>', heading: '<Short heading>', description: '<1-2 sentence description>' },
       ],
       accommodation_description: '<"Stay. Relax. Repeat." section body — describe the accommodation>',
-      accommodation_photos: ['(leave blank — uploaded manually)'],
+      accommodation_photos: ['(leave blank — uploaded manually, or paste at least 6 source photo URLs — this gallery looks sparse with fewer than 6)'],
       included_groups: [
         {
-          icon: '<emoji or icon label>',
+          icon: '<Icon-library key, NOT an emoji — e.g. "hotel", "utensils", "car". See src/constants/tripHighlightIcons.ts. Include at least 4 groups — this section looks sparse with fewer than 4>',
           heading: '<Group heading, e.g. "Premium Stay Experience">',
           bullets: ['<Bulleted sub-item under this heading, e.g. "5 Nights accommodation at carefully selected 4-star and beachfront properties">'],
         },
@@ -289,10 +290,10 @@ export default function AdminTrips() {
         { photo: '(leave blank — uploaded manually)', description: '<Caption / place name for this photo>' },
       ],
       gallery_description: '<Short intro paragraph shown below the "Places You\'ll Definitely Post" heading, or "">',
-      fashion_photos: ['(leave blank — uploaded manually)'],
+      fashion_photos: ['(leave blank — uploaded manually, or paste at least 6 source photo URLs — this gallery looks sparse with fewer than 6)'],
       fashion_description: '<Short intro paragraph shown below the "Fashion Aesthetics" heading, or "">',
       things_to_carry_items: [
-        { icon: '<emoji or icon label>', description: '<Item traveller should pack, e.g. "Warm jacket">' },
+        { icon: '<Icon-library key, NOT an emoji — e.g. "shirt", "footprints", "hand", "glasses", "pill". See src/constants/tripHighlightIcons.ts>', description: '<Item traveller should pack, e.g. "Warm jacket">' },
       ],
       trip_founder: {
         photo: '(leave blank — uploaded manually)',
@@ -300,7 +301,7 @@ export default function AdminTrips() {
         description: '<Short founder bio/description for this trip>',
       },
       confidence_items: [
-        { icon: '<emoji or icon label>', description: '<"Travel with Confidence" point, e.g. "24/7 support during the trip">' },
+        { icon: '<Icon-library key, NOT an emoji — e.g. "shield-check", "headset", "users". See src/constants/tripHighlightIcons.ts. Include at least 6 items — this section looks sparse with fewer than 6>', description: '<"Travel with Confidence" point, e.g. "24/7 support during the trip">' },
       ],
       confidence_description: '<Short intro paragraph shown below the "Travel with Confidence" heading, or "">',
       end_banner: {
@@ -356,6 +357,41 @@ export default function AdminTrips() {
   const asStrArray = (v: unknown): string[] =>
     Array.isArray(v) ? v.filter(item => !isPlaceholder(item)).map(item => String(item)) : [];
 
+  // Imported JSON is a common source of `icon` values that bypass the
+  // TripHighlightIconPicker (e.g. an externally-drafted template filled in
+  // with emoji). TripHighlightIconDisplay only renders the colored icon
+  // circle for a recognized icon-library key — anything else silently
+  // falls back to plain text/emoji. Map the emoji admins have actually used
+  // in past templates to their nearest icon-library key on import, so the
+  // trip renders correctly without the admin having to notice and fix it
+  // by hand afterwards. Anything already a valid key, or not in this map,
+  // passes through unchanged (preserving today's fallback behavior).
+  const LEGACY_EMOJI_TO_ICON_KEY: Record<string, string> = {
+    '🏔️': 'mountain-snow', '🏔': 'mountain-snow', '⛰️': 'mountain', '⛰': 'mountain',
+    '🚐': 'car', '🚌': 'car', '🚗': 'car', '🚕': 'car', '✈️': 'plane', '✈': 'plane',
+    '🚂': 'train-front', '🚡': 'cable-car', '📸': 'camera', '📷': 'camera',
+    '🏨': 'hotel', '🛏️': 'hotel', '🛏': 'hotel', '🍽️': 'utensils', '🍽': 'utensils',
+    '🍳': 'utensils', '☕': 'coffee', '🍷': 'wine', '🍺': 'beer',
+    '🛡️': 'shield-check', '🛡': 'shield-check', '📞': 'headset', '☎️': 'phone', '☎': 'phone',
+    '👭': 'users', '👥': 'users', '🤝': 'handshake', '✅': 'badge-check',
+    '🏕️': 'tent', '🏕': 'tent', '⛺': 'tent', '🌲': 'trees', '🌳': 'tree-deciduous',
+    '🏖️': 'palmtree', '🏖': 'palmtree', '🌴': 'palmtree', '🌊': 'waves', '⛱️': 'umbrella', '⛱': 'umbrella',
+    '🛍️': 'shopping-bag', '🛍': 'shopping-bag', '🎁': 'gift', '🎫': 'ticket', '🎵': 'music',
+    '❄️': 'snowflake', '❄': 'snowflake', '☀️': 'sun', '☀': 'sun', '🏛️': 'landmark', '🏛': 'landmark',
+    '🏠': 'building-2', '🏡': 'building-2', '🕐': 'clock', '🔒': 'lock',
+    '🧥': 'shirt', '🥾': 'footprints', '👢': 'footprints', '🧤': 'hand',
+    '🕶️': 'glasses', '🕶': 'glasses', '🧢': 'hat-glasses', '👒': 'hat-glasses',
+    '🔋': 'battery-charging', '💊': 'pill', '🆔': 'id-card', '🪪': 'id-card',
+    '💧': 'glass-water', '🥤': 'glass-water', '🎒': 'backpack',
+  };
+
+  const asIconKey = (v: unknown): string => {
+    const s = asStr(v);
+    if (!s) return s;
+    if (getTripHighlightIcon(s)) return s; // already a valid key
+    return LEGACY_EMOJI_TO_ICON_KEY[s] ?? s; // map known legacy emoji, else pass through unchanged
+  };
+
   const handleImportFile = async (file: File) => {
     try {
       const raw = JSON.parse(await file.text());
@@ -372,7 +408,7 @@ export default function AdminTrips() {
               title: asStr(d?.title),
               description: asStr(d?.description),
               images: asStrArray(d?.images),
-              icon: asStr(d?.icon),
+              icon: asIconKey(d?.icon),
               bullets: asStrArray(d?.bullets),
             }))
           : [],
@@ -420,13 +456,13 @@ export default function AdminTrips() {
         } : DEFAULT_CANCELLATION_POLICY,
         is_published: false,
         highlight_cards: Array.isArray(raw.highlight_cards)
-          ? raw.highlight_cards.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), heading: asStr(c?.heading), description: asStr(c?.description) }))
+          ? raw.highlight_cards.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), heading: asStr(c?.heading), description: asStr(c?.description) }))
           : [],
         accommodation_description: asStr(raw.accommodation_description),
         accommodation_photos: asStrArray(raw.accommodation_photos),
         included_groups: Array.isArray(raw.included_groups)
           ? raw.included_groups.map((g: Record<string, unknown>) => ({
-              icon: asStr(g?.icon),
+              icon: asIconKey(g?.icon),
               heading: asStr(g?.heading),
               bullets: asStrArray(g?.bullets),
             }))
@@ -438,13 +474,13 @@ export default function AdminTrips() {
         fashion_photos: asStrArray(raw.fashion_photos),
         fashion_description: asStr(raw.fashion_description),
         things_to_carry_items: Array.isArray(raw.things_to_carry_items)
-          ? raw.things_to_carry_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
+          ? raw.things_to_carry_items.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) }))
           : [],
         trip_founder: raw.trip_founder
           ? { photo: asStr(raw.trip_founder.photo), name: asStr(raw.trip_founder.name), description: asStr(raw.trip_founder.description) }
           : emptyFounder,
         confidence_items: Array.isArray(raw.confidence_items)
-          ? raw.confidence_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
+          ? raw.confidence_items.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) }))
           : [],
         confidence_description: asStr(raw.confidence_description),
         meeting_address: asStr(raw.meeting_address),
