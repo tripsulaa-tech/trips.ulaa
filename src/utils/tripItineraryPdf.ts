@@ -102,8 +102,6 @@ type PdfTrip = UpcomingTrip & {
   included_groups: TripIncludedGroup[];
   included: string[];
   things_to_carry: string[];
-  gallery_photos: string[];
-  gallery_description: string;
 };
 
 function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
@@ -118,12 +116,6 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
   const notIncludedSource = (trip.not_included_items?.length ?? 0) > 0
     ? trip.not_included_items!.map(item => item.description)
     : trip.not_included;
-  // "Places You'll Definitely Post" gallery — prefers gallery_items' photos
-  // (captions aren't shown in the PDF grid) over the legacy plain
-  // gallery_images list, same precedence TripDetailPage uses.
-  const galleryPhotos = (trip.gallery_items?.length ?? 0) > 0
-    ? trip.gallery_items!.map(item => item.photo)
-    : trip.gallery_images;
   return {
     ...trip,
     title: sanitizeForPdf(trip.title),
@@ -151,8 +143,6 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
     included: hasIncludedGroups ? [] : (trip.included_items ?? []).map(item => sanitizeForPdf(item.description)),
     not_included: notIncludedSource.map(sanitizeForPdf),
     things_to_carry: thingsToCarrySource.map(sanitizeForPdf),
-    gallery_photos: galleryPhotos,
-    gallery_description: trip.gallery_description ? sanitizeForPdf(trip.gallery_description) : '',
     meeting_point: trip.meeting_point ? sanitizeForPdf(trip.meeting_point) : trip.meeting_point,
     faqs: trip.faqs.map(faq => ({
       ...faq,
@@ -1457,54 +1447,6 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         const lines = clampLines(item, chipW - 44, 2);
         const lineY = y + chipH / 2 - ((lines.length - 1) * 11) / 2 + 3;
         doc.text(lines, x + 34, lineY);
-      });
-    }
-  }
-
-  // =========================================================================
-  // SLIDES — "Places You'll Definitely Post" gallery. 8 square photos per
-  // slide (4 across, 2 down), filling the full content area — long galleries
-  // spill onto extra slides, 8 at a time.
-  // =========================================================================
-  async function renderGallery() {
-    if (trip.gallery_photos.length === 0) return;
-
-    const cols = 4;
-    const rows = 2;
-    const perPage = cols * rows;
-    const gap = 12;
-
-    for (let pageStart = 0; pageStart < trip.gallery_photos.length; pageStart += perPage) {
-      newSlide();
-      const isFirst = pageStart === 0;
-      slideHeader(
-        (x, y) => icons.camera(x, y, 20),
-        "Places You'll Definitely Post",
-        isFirst ? trip.gallery_description || undefined : undefined
-      );
-
-      const gridTop = 92;
-      const tileW = (CONTENT_W - gap * (cols - 1)) / cols;
-      const tileH = Math.min(tileW, (CONTENT_BOTTOM - gridTop - gap) / rows);
-
-      const pageItems = trip.gallery_photos.slice(pageStart, pageStart + perPage);
-      const crops = await Promise.all(pageItems.map(url => loadCoverCroppedImage(url, tileW, tileH, 6)));
-
-      crops.forEach((cropped, i) => {
-        const row = Math.floor(i / cols);
-        const col = i % cols;
-        const x = MARGIN + col * (tileW + gap);
-        const y = gridTop + row * (tileH + gap);
-        if (cropped) {
-          try {
-            doc.addImage(cropped, 'JPEG', x, y, tileW, tileH);
-            return;
-          } catch {
-            /* fall through to placeholder */
-          }
-        }
-        setFill(COLORS.backgroundWarm);
-        doc.roundedRect(x, y, tileW, tileH, 6, 6, 'F');
       });
     }
   }
