@@ -555,6 +555,24 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.roundedRect(x + s * 0.08, y - s * 0.55, s * 0.5, s * 0.36, 4, 4, 'F');
       doc.triangle(x + s * 0.5, y - s * 0.5, x + s * 0.95, y - s * 0.3, x + s * 0.55, y - s * 0.2, 'F');
     },
+    // ---- Info-box icons (Meeting Point / Eligibility compact cards) ----
+    navigation(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      setFill(color);
+      const cx = x + s * 0.5;
+      const cy = y - s * 0.5;
+      // Compass-arrow / "get directions" kite shape, pointing up-right.
+      doc.triangle(cx - s * 0.04, cy - s * 0.48, cx + s * 0.4, cy + s * 0.42, cx - s * 0.04, cy + s * 0.14, 'F');
+      doc.triangle(cx - s * 0.04, cy - s * 0.48, cx - s * 0.04, cy + s * 0.14, cx - s * 0.44, cy + s * 0.42, 'F');
+    },
+    userCheck(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      setFill(color);
+      const cx = x + s * 0.36;
+      doc.circle(cx, y - s * 0.76, s * 0.19, 'F');
+      doc.roundedRect(cx - s * 0.3, y - s * 0.5, s * 0.6, s * 0.44, s * 0.2, s * 0.2, 'F');
+      setFill(COLORS.green);
+      doc.circle(x + s * 0.84, y - s * 0.2, s * 0.22, 'F');
+      drawCheck(x + s * 0.84, y - s * 0.2, s * 0.16, COLORS.white, 1.6);
+    },
   };
 
   /** Keyword match from an admin-typed "Things to Carry" item to the icon
@@ -1390,29 +1408,46 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
-  // SLIDE — Travel with Confidence (left) | Things to Carry (right)
+  // SLIDE — Travel with Confidence (left) | Things to Carry (right), with
+  // compact Meeting Point / Eligibility cards anchored along the bottom.
   // =========================================================================
-  // A single split slide rather than two separate ones — divided by a
-  // vertical rule down the middle, matching the two reference screenshots.
-  // Falls back to a single full-width column if only one side has content,
-  // and to nothing at all if neither does. Icon circles on the left rotate
-  // through CONFIDENCE_PALETTE, mirroring the site's own rotating pastel
-  // circles for these items (see TripHighlightIconDisplay's base/unfilled
-  // state). Doesn't paginate — if either list is too long to fit, drawing
-  // simply stops at the bottom edge rather than overflowing the slide.
+  // A single split slide rather than several separate ones — divided by a
+  // vertical rule down the middle, matching the reference screenshot. Falls
+  // back to a single full-width column if only one side has content, and to
+  // nothing at all if none of the four sections have data. Icon circles on
+  // the left rotate through CONFIDENCE_PALETTE, mirroring the site's own
+  // rotating pastel circles for these items (see TripHighlightIconDisplay's
+  // base/unfilled state). The two checklist/chip columns don't paginate —
+  // if a list is too long to fit above the bottom cards, drawing simply
+  // stops rather than overflowing the slide.
   function renderConfidenceAndCarry() {
     const confidenceItems = trip.confidence_items ?? [];
     const hasConfidence = confidenceItems.length > 0;
     const hasCarry = trip.things_to_carry.length > 0;
-    if (!hasConfidence && !hasCarry) return;
+    const hasMeetingPoint = !!trip.meeting_point;
+    const hasEligibility = trip.min_age != null || trip.max_age != null;
+    if (!hasConfidence && !hasCarry && !hasMeetingPoint && !hasEligibility) return;
 
     newSlide();
     const top = 92;
     const colGap = 40;
-    const hasBoth = hasConfidence && hasCarry;
-    const leftW = hasBoth ? (CONTENT_W - colGap) / 2 : CONTENT_W;
+    // Either row (checklist/chips up top, or the two info cards along the
+    // bottom) can independently need a two-column split, so the shared
+    // column geometry reacts to whichever row actually needs it — keeping
+    // the vertical rule and column edges aligned across the whole slide.
+    const topTwoCol = hasConfidence && hasCarry;
+    const cardsTwoCol = hasMeetingPoint && hasEligibility;
+    const twoCol = topTwoCol || cardsTwoCol;
+    const leftW = twoCol ? (CONTENT_W - colGap) / 2 : CONTENT_W;
     const rightW = leftW;
     const rightX = MARGIN + leftW + colGap;
+
+    // Bottom info cards reserve their own band; the checklist/chip content
+    // above is capped to whatever's left so nothing overlaps.
+    const hasCards = hasMeetingPoint || hasEligibility;
+    const cardH = 116;
+    const cardGap = 22;
+    const listBottom = hasCards ? CONTENT_BOTTOM - cardH - cardGap : CONTENT_BOTTOM;
 
     if (hasConfidence) {
       setText(COLORS.dark);
@@ -1442,7 +1477,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       for (let i = 0; i < confidenceItems.length; i++) {
         const lines: string[] = doc.splitTextToSize(confidenceItems[i].description, textW);
         const rowH = Math.max(circleR * 2, lines.length * 13);
-        if (y + rowH > CONTENT_BOTTOM) break;
+        if (y + rowH > listBottom) break;
 
         const { bg, fg } = CONFIDENCE_PALETTE[i % CONFIDENCE_PALETTE.length];
         const cx = MARGIN + circleR;
@@ -1460,40 +1495,39 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       }
     }
 
-    if (hasBoth) {
+    if (twoCol) {
       setDraw(COLORS.grayLine);
       doc.setLineWidth(1);
       doc.line(rightX - colGap / 2, top - 26, rightX - colGap / 2, CONTENT_BOTTOM);
     }
 
     if (hasCarry) {
+      const carryX = twoCol ? rightX : MARGIN;
+      const carryW = twoCol ? rightW : CONTENT_W;
       setText(COLORS.dark);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(hasBoth ? 15 : 19);
-      doc.text('Things to Carry', rightX, hasBoth ? 106 : 46);
+      doc.setFontSize(19);
+      doc.text('Things to Carry', carryX, 46);
       setText(COLORS.darkMuted);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
-      doc.text('Pack smart. Travel light. Stay ready.', rightX, hasBoth ? 122 : 58);
-      if (!hasBoth) {
-        setDraw(COLORS.grayLine);
-        doc.setLineWidth(1);
-        doc.line(MARGIN, 66, PAGE_W - MARGIN, 66);
-      }
+      doc.text('Pack smart. Travel light. Stay ready.', carryX, 58);
+      setDraw(COLORS.grayLine);
+      doc.setLineWidth(1);
+      doc.line(carryX, 66, carryX + carryW, 66);
 
-      const perRow = hasBoth ? 2 : 5;
+      const perRow = twoCol ? 2 : 5;
       const gap = 14;
-      const chipW = (rightW - gap * (perRow - 1)) / perRow;
+      const chipW = (carryW - gap * (perRow - 1)) / perRow;
       const chipH = 46;
-      const gridTop = (hasBoth ? 140 : top);
 
-      let y = gridTop;
+      let y = top;
       let col = 0;
       for (let i = 0; i < trip.things_to_carry.length; i++) {
-        if (col === 0 && y + chipH > CONTENT_BOTTOM) break;
+        if (col === 0 && y + chipH > listBottom) break;
 
         const item = trip.things_to_carry[i];
-        const x = rightX + col * (chipW + gap);
+        const x = carryX + col * (chipW + gap);
 
         setFill(COLORS.backgroundWarm);
         doc.roundedRect(x, y, chipW, chipH, 8, 8, 'F');
@@ -1519,6 +1553,71 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
           y += chipH + gap;
         }
       }
+    }
+
+    if (!hasCards) return;
+
+    // ---------------------------------------------------------------------
+    // Bottom band — compact Meeting Point / Eligibility cards. Each sits in
+    // its own column slot (left under "Travel with Confidence", right under
+    // "Things to Carry") when both are present; a lone card takes the full
+    // slot width it would otherwise share.
+    // ---------------------------------------------------------------------
+    const cardTop = CONTENT_BOTTOM - cardH;
+    const cardPad = 18;
+
+    function drawInfoCard(x: number, w: number, icon: (px: number, py: number, s?: number, c?: RGB) => void, title: string, drawBody: (bx: number, by: number, bw: number) => void) {
+      setFill(COLORS.backgroundWarm);
+      doc.roundedRect(x, cardTop, w, cardH, 10, 10, 'F');
+      setDraw(COLORS.grayLineSoft);
+      doc.setLineWidth(0.75);
+      doc.roundedRect(x, cardTop, w, cardH, 10, 10, 'S');
+
+      const tx = x + cardPad;
+      let ty = cardTop + cardPad + 4;
+      icon(tx, ty + 13, 18);
+      setText(COLORS.dark);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(title, tx + 26, ty + 10);
+      ty += 30;
+
+      drawBody(tx, ty, w - cardPad * 2);
+    }
+
+    if (hasMeetingPoint) {
+      const w = cardsTwoCol ? leftW : (hasEligibility ? leftW : CONTENT_W);
+      drawInfoCard(MARGIN, w, icons.navigation, 'Meeting Point', (bx, by, bw) => {
+        setText(COLORS.dark);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11.5);
+        const lines = clampLines(trip.meeting_point!, bw, 2);
+        doc.text(lines, bx, by);
+        const linkY = by + lines.length * 15 + 6;
+
+        if (trip.meeting_point_map_url) {
+          const label = 'View on map';
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9.5);
+          icons.pin(bx, linkY + 7, 12, COLORS.secondary);
+          setText(COLORS.secondary);
+          doc.text(label, bx + 16, linkY + 4);
+          doc.link(bx, linkY - 8, doc.getTextWidth(label) + 16, 16, { url: trip.meeting_point_map_url });
+        }
+      });
+    }
+
+    if (hasEligibility) {
+      const x = cardsTwoCol ? rightX : (hasMeetingPoint ? rightX : MARGIN);
+      const w = cardsTwoCol ? rightW : (hasMeetingPoint ? rightW : CONTENT_W);
+      drawInfoCard(x, w, icons.userCheck, 'Eligibility', (bx, by, bw) => {
+        drawParagraph(`This trip is open to travelers aged ${formatAgeRange(trip.min_age, trip.max_age)}.`, bx, by, bw, {
+          size: 10,
+          color: COLORS.darkMuted,
+          lineHeight: 14,
+          maxLines: 3,
+        });
+      });
     }
   }
 
@@ -1679,139 +1778,6 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         doc.text(`+${remaining}`, tile.x + tile.w / 2, tile.y + tile.h / 2 + 5, { align: 'center' });
       }
     });
-  }
-
-  // =========================================================================
-  // SLIDE — Meeting Point
-  // =========================================================================
-  /** Looks for a handful of common assembly-point keywords in the trip's own
-   *  meeting-point text so the icon/label on this slide matches the actual
-   *  location type (airport / railway station / bus stand) — derived purely
-   *  from what Admin typed for this trip, never hardcoded per trip. */
-  function detectMeetingPointKind(text: string): 'airport' | 'railway' | 'bus' | 'other' {
-    const t = text.toLowerCase();
-    if (/\bairport\b/.test(t)) return 'airport';
-    if (/\brailway\b|\btrain station\b|\brail station\b/.test(t)) return 'railway';
-    if (/\bbus stand\b|\bbus station\b|\bbus stop\b|\bbus terminus\b/.test(t)) return 'bus';
-    return 'other';
-  }
-
-  function renderMeetingPoint() {
-    if (!trip.meeting_point) return;
-    newSlide();
-    slideHeader((x, y) => icons.pin(x, y, 20), 'Meeting Point');
-
-    const kind = detectMeetingPointKind(trip.meeting_point);
-    const kindLabel =
-      kind === 'airport' ? 'Airport' : kind === 'railway' ? 'Railway Station' : kind === 'bus' ? 'Bus Stand' : 'Assembly Point';
-    const kindIcon = kind === 'airport' ? icons.plane : kind === 'railway' ? icons.train : kind === 'bus' ? icons.bus : icons.pin;
-
-    const top = 92;
-    const availH = CONTENT_BOTTOM - top;
-    const textColW = CONTENT_W * 0.56;
-    const pad = 34;
-    const lines = doc.splitTextToSize(trip.meeting_point, textColW - pad * 2);
-    const hasLink = !!trip.meeting_point_map_url;
-
-    // Structured logistics rows — real per-trip data once Admin fills them
-    // in; sensible boilerplate otherwise (this is genuinely often correct,
-    // since exact time/terminal for a trip months out often isn't final).
-    const detailRows: { label: string; value: string }[] = [
-      { label: 'Time', value: trip.meeting_time || 'To be communicated' },
-      { label: 'Terminal', value: trip.meeting_terminal || 'To be informed' },
-      { label: 'Details', value: trip.meeting_details || 'More info will be shared closer to the departure date.' },
-    ];
-    const rowMaxWidth = textColW - pad * 2;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    const rowHeights = detailRows.map(r => {
-      const labelW = doc.getTextWidth(`${r.label}:  `);
-      const valueLines = doc.splitTextToSize(r.value, rowMaxWidth - labelW);
-      return Math.max(1, valueLines.length) * 15;
-    });
-    const rowsH = rowHeights.reduce((a, b) => a + b, 0) + (detailRows.length - 1) * 8;
-
-    const contentH = 30 /* badge row */ + lines.length * 16 + 22 /* divider gap */ + rowsH + (hasLink ? 46 : 16);
-    const boxH = Math.min(Math.max(200, contentH + pad * 2), availH);
-    const boxTop = top + Math.max(0, (availH - boxH) / 2);
-
-    setFill(COLORS.backgroundWarm);
-    doc.roundedRect(MARGIN, boxTop, CONTENT_W, boxH, 12, 12, 'F');
-    setDraw(COLORS.grayLine);
-    doc.setLineWidth(0.75);
-    doc.roundedRect(MARGIN, boxTop, CONTENT_W, boxH, 12, 12, 'S');
-
-    // Large, low-opacity watermark of the location-type icon fills the
-    // right side of the card instead of leaving it visually empty.
-    withOpacity(0.08, () => {
-      kindIcon(MARGIN + CONTENT_W - 260, boxTop + boxH / 2 + 90, 220, COLORS.primaryDark);
-    });
-
-    let ty = boxTop + pad;
-    setFill(COLORS.primary);
-    doc.circle(MARGIN + pad + 18, ty, 18, 'F');
-    kindIcon(MARGIN + pad + 4, ty + 14, 18, COLORS.white);
-
-    setText(COLORS.primary);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.text(kindLabel.toUpperCase(), MARGIN + pad + 46, ty - 4);
-    setText(COLORS.dark);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14.5);
-    doc.text('Assembly Location', MARGIN + pad + 46, ty + 12);
-
-    ty += 34;
-    setText(COLORS.darkMuted);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11.5);
-    doc.text(lines, MARGIN + pad, ty);
-    ty += lines.length * 16 + 14;
-
-    setDraw(COLORS.grayLineSoft);
-    doc.setLineWidth(0.75);
-    doc.line(MARGIN + pad, ty, MARGIN + pad + rowMaxWidth, ty);
-    ty += 20;
-
-    detailRows.forEach((row, i) => {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.5);
-      setText(COLORS.dark);
-      const labelText = `${row.label}:  `;
-      doc.text(labelText, MARGIN + pad, ty);
-      const labelW = doc.getTextWidth(labelText);
-      doc.setFont('helvetica', 'normal');
-      setText(COLORS.darkMuted);
-      const valueLines = doc.splitTextToSize(row.value, rowMaxWidth - labelW);
-      doc.text(valueLines, MARGIN + pad + labelW, ty);
-      ty += rowHeights[i] + 8;
-    });
-    ty += 6;
-
-    if (hasLink) {
-      const label = 'View on map';
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      const labelW = doc.getTextWidth(label);
-      const btnW = labelW + 44;
-      const btnH = 26;
-      setFill(COLORS.primary);
-      doc.roundedRect(MARGIN + pad, ty, btnW, btnH, 13, 13, 'F');
-      setText(COLORS.white);
-      doc.text(label, MARGIN + pad + 16, ty + 17);
-      // Small vector arrow instead of a unicode glyph — the core PDF fonts
-      // don't include arrow characters, so drawing it avoids a rendering
-      // artifact where the arrow glyph would otherwise fail to render.
-      const ax = MARGIN + pad + 16 + labelW + 10;
-      const ay = ty + 13;
-      doc.setDrawColor(255, 255, 255);
-      doc.setLineWidth(1.4);
-      doc.setLineCap('round');
-      doc.line(ax, ay, ax + 8, ay);
-      doc.line(ax + 4, ay - 4, ax + 8, ay);
-      doc.line(ax + 4, ay + 4, ax + 8, ay);
-      doc.link(MARGIN + pad, ty, btnW, btnH, { url: trip.meeting_point_map_url });
-    }
   }
 
   // =========================================================================
@@ -2012,7 +1978,6 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   await renderGallery();
   await renderFashion();
   renderConfidenceAndCarry();
-  renderMeetingPoint();
   renderFaqs();
   renderCancellationPolicy();
   await renderClosing();
