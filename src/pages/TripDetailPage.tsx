@@ -728,13 +728,13 @@ export default function TripDetailPage() {
                           <TripHighlightIconDisplay icon={card.icon} index={i} filled={isOpen} hoverFill />
                         </button>
                         <div className="w-full">
-                          <h3 className="font-display font-bold text-dark text-sm mb-1">{card.heading}</h3>
+                          <h3 className="font-display font-bold text-dark text-base mb-1">{card.heading}</h3>
                           {isOpen && (
-                            <p className="sm:hidden overflow-hidden text-dark-muted text-xs leading-relaxed">
+                            <p className="sm:hidden overflow-hidden text-dark-muted text-sm leading-relaxed">
                               {card.description}
                             </p>
                           )}
-                          <p className="hidden sm:block text-dark-muted text-xs leading-relaxed">{card.description}</p>
+                          <p className="hidden sm:block text-dark-muted text-sm leading-relaxed">{card.description}</p>
                         </div>
                       </motion.div>
                     );
@@ -1011,7 +1011,7 @@ export default function TripDetailPage() {
               <section id="confidence" className="scroll-mt-44 flex flex-col justify-center lg:pr-10">
                 <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-3">Travel with Confidence</h2>
                 {trip.confidence_description && (
-                  <p className="text-dark-muted text-sm leading-relaxed mb-4 sm:mb-6">{trip.confidence_description}</p>
+                  <p className="text-dark-muted text-base leading-relaxed mb-4 sm:mb-6">{trip.confidence_description}</p>
                 )}
                 <div className="grid grid-cols-1 gap-0.5 w-fit">
                   {trip.confidence_items!.map((item: TripConfidenceItem, i: number) => (
@@ -1026,7 +1026,7 @@ export default function TripDetailPage() {
                       {item.icon && (
                         <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" filled={activeConfidenceItems.has(i)} hoverFill />
                       )}
-                      <p className="text-dark text-sm leading-relaxed">{item.description}</p>
+                      <p className="text-dark text-base leading-relaxed">{item.description}</p>
                     </div>
                   ))}
                 </div>
@@ -1278,11 +1278,24 @@ export default function TripDetailPage() {
               </section>
             )}
 
+            {/* Eligibility — only shown when the admin has set an age
+                restriction on this trip (Admin → Trips → Basic Info). */}
+            {(trip.min_age != null || trip.max_age != null) && (
+              <section className="bg-background-warm rounded-lg p-5 sm:p-6">
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-dark mb-2 flex items-center gap-2">
+                  <UserCheck size={22} className="text-primary" /> Eligibility
+                </h2>
+                <p className="text-dark-muted">
+                  This trip is open to travelers aged {formatAgeRange(trip.min_age, trip.max_age)}.
+                </p>
+              </section>
+            )}
+
             {/* Founder */}
             {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
               <section className="scroll-mt-44 bg-dark rounded-2xl p-5 sm:p-8">
                 <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center sm:text-left">Meet Your Trip Leader</h2>
-                <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+                <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start max-w-3xl mx-auto">
                   {trip.trip_founder.photo ? (
                     <img
                       src={trip.trip_founder.photo}
@@ -1310,19 +1323,6 @@ export default function TripDetailPage() {
             )}
 
               </div>
-            )}
-
-            {/* Eligibility — only shown when the admin has set an age
-                restriction on this trip (Admin → Trips → Basic Info). */}
-            {(trip.min_age != null || trip.max_age != null) && (
-              <section className="bg-background-warm rounded-lg p-5 sm:p-6">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-dark mb-2 flex items-center gap-2">
-                  <UserCheck size={22} className="text-primary" /> Eligibility
-                </h2>
-                <p className="text-dark-muted">
-                  This trip is open to travelers aged {formatAgeRange(trip.min_age, trip.max_age)}.
-                </p>
-              </section>
             )}
 
             {/* FAQs */}
