@@ -111,6 +111,12 @@ create table public.upcoming_trips (
   -- see add_strike_through_price.sql and getStrikeThroughPrice in
   -- src/utils/index.ts for the fallback when it's left unset.
   strike_through_price    numeric(10, 2),
+  -- Optional advance/reservation amount shown on the public trip page's
+  -- booking panel in place of the "Seats available" badge, e.g. "Reserve
+  -- today with only ₹8,999 — Remaining ₹8,000 payable before the trip".
+  -- Left null falls back to the old seats-availability badge. See
+  -- add_trip_advance_amount.sql.
+  advance_amount          numeric(10, 2),
   -- Optional per-trip age eligibility range shown/enforced on the public
   -- Book Your Seat / Join Waitlist forms. Either side left null means that
   -- side is unrestricted; both null falls back to the app's default 18-65
@@ -155,6 +161,8 @@ create table public.upcoming_trips (
     check (trip_type = any (array['domestic'::text, 'international'::text])),
   constraint upcoming_trips_strike_through_price_check
     check (strike_through_price is null or strike_through_price >= 0),
+  constraint upcoming_trips_advance_amount_check
+    check (advance_amount is null or advance_amount >= 0),
   constraint upcoming_trips_min_age_check
     check (min_age is null or min_age >= 0),
   constraint upcoming_trips_max_age_check

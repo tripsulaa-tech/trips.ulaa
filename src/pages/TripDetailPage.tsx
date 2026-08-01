@@ -23,7 +23,7 @@ import {
   Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight,
   ChevronDown, ChevronUp, BadgeCheck,
   Shirt, Footprints, Glasses, HatGlasses, Headphones, BatteryCharging, Pill, SprayCan, Droplet, GlassWater,
-  Cookie, Sparkles, FileText, IdCard, Hand, type LucideIcon,
+  Cookie, Sparkles, FileText, IdCard, Hand, ShieldCheck, type LucideIcon,
 } from 'lucide-react';
 
 // Tracks whether the viewport is at/above the `sm` breakpoint (640px) so
@@ -256,6 +256,13 @@ export default function TripDetailPage() {
   const isAlmostFull = remaining > 0 && remaining <= 5;
   const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
+  // Amount still payable before the trip once the advance/reservation
+  // amount is paid — powers the "Reserve today with only ₹X" panel below,
+  // which replaces the old plain "Seats available" badge when the admin
+  // has set advance_amount for this trip (see add_trip_advance_amount.sql).
+  const remainingAfterAdvance = activePrice != null && trip.advance_amount != null
+    ? Math.max(0, activePrice - trip.advance_amount)
+    : null;
   const hasConfidenceItems = (trip.confidence_items?.length ?? 0) > 0;
 
   async function handleDownloadPdf() {
@@ -1045,6 +1052,22 @@ export default function TripDetailPage() {
                     <span className="inline-block bg-amber-50 text-amber-700 text-sm font-button font-semibold px-4 py-2 rounded-md">
                       Only {remaining} seats left — almost full!
                     </span>
+                  ) : trip.advance_amount != null ? (
+                    <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 justify-center">
+                      <span className="shrink-0 w-9 h-9 rounded-full bg-green-600 flex items-center justify-center">
+                        <ShieldCheck size={18} className="text-white" strokeWidth={2.5} />
+                      </span>
+                      <div className="text-left">
+                        <p className="text-dark font-semibold text-sm sm:text-base">
+                          Reserve today with only <span className="text-green-600 font-bold">{formatPrice(trip.advance_amount)}</span>
+                        </p>
+                        {remainingAfterAdvance != null && (
+                          <p className="text-dark-muted text-xs sm:text-sm mt-0.5">
+                            Remaining <span className="font-bold">{formatPrice(remainingAfterAdvance)}</span> payable before the trip.
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   ) : (
                     <span className="inline-block bg-green-50 text-green-700 text-sm font-button font-semibold px-4 py-2 rounded-md">
                       Seats available
@@ -1054,20 +1077,20 @@ export default function TripDetailPage() {
 
                 <div className="space-y-3 mb-6 max-w-xs mx-auto">
                   <div className="flex justify-between text-sm">
-                    <span className="text-dark-muted">Dates</span>
+                    <span className="flex items-center gap-2 text-dark-muted"><Calendar size={14} className="text-primary shrink-0" /> Dates</span>
                     <span className="text-dark font-medium">{formatDateRange(trip.start_date, trip.end_date)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-dark-muted">Duration</span>
+                    <span className="flex items-center gap-2 text-dark-muted"><Clock size={14} className="text-primary shrink-0" /> Duration</span>
                     <span className="text-dark font-medium">{trip.duration}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-dark-muted">Group Size</span>
+                    <span className="flex items-center gap-2 text-dark-muted"><Users size={14} className="text-primary shrink-0" /> Group Size</span>
                     <span className="text-dark font-medium">Max {trip.total_seats}</span>
                   </div>
                   {(trip.min_age != null || trip.max_age != null) && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-dark-muted">Age Range</span>
+                      <span className="flex items-center gap-2 text-dark-muted"><UserCheck size={14} className="text-primary shrink-0" /> Age Range</span>
                       <span className="text-dark font-medium">{formatAgeRange(trip.min_age, trip.max_age)}</span>
                     </div>
                   )}
@@ -1079,7 +1102,18 @@ export default function TripDetailPage() {
                   fullWidth
                   onClick={() => setBookingOpen(true)}
                 >
-                  {isFull ? 'Join Waitlist' : 'Book Your Seat'}
+                  {isFull ? (
+                    'Join Waitlist'
+                  ) : trip.advance_amount != null ? (
+                    <span className="flex flex-col items-center leading-tight">
+                      <span>Secure Your Spot</span>
+                      <span className="text-xs font-medium opacity-90 mt-0.5">
+                        At only {formatPrice(trip.advance_amount)} today
+                      </span>
+                    </span>
+                  ) : (
+                    'Book Your Seat'
+                  )}
                 </Button>
 
                 <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-2 mt-3">
@@ -1135,10 +1169,12 @@ export default function TripDetailPage() {
                   </button>
                 </div>
 
-                <p className="flex items-center justify-center gap-1.5 text-xs text-dark-muted text-center mt-4">
-                  <BadgeCheck size={14} className="text-green-600 shrink-0" />
-                  No payment required to enquire. We'll contact you within 24 hours.
-                </p>
+                <div className="flex items-start justify-center gap-1.5 text-xs text-dark-muted mt-4">
+                  <BadgeCheck size={14} className="text-green-600 shrink-0 mt-0.5" />
+                  <span className="text-left max-w-[15.5rem]">
+                    No payment required to enquire. We'll contact you within 24 hours.
+                  </span>
+                </div>
               </div>
             </section>
             </div>

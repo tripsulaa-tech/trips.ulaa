@@ -96,6 +96,12 @@ export interface UpcomingTrip {
   // early-bird mechanism itself — see getStrikeThroughPrice in utils/index.ts
   // for how it combines with (and falls back around) early-bird pricing.
   strike_through_price?: number | null;
+  // Optional advance/reservation amount (in ₹) shown on the public trip page
+  // in place of the "Seats available" badge, e.g. "Reserve today with only
+  // ₹8,999 — Remaining ₹8,000 payable before the trip." Left null/unset
+  // falls back to the old seats-availability badge. See
+  // add_trip_advance_amount.sql.
+  advance_amount?: number | null;
   // Domestic vs. international, used by the DB's set_enquiry_trip_type()
   // trigger to auto-fill enquiries.trip_type on new bookings, which in turn
   // drives calculate_suggested_refund()'s domestic/international-specific

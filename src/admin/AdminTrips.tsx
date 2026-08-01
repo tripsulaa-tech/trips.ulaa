@@ -71,6 +71,10 @@ interface TripForm {
   early_bird_price: number | '';
   early_bird_deadline: string;
   strike_through_price: number | '';
+  // Optional advance/reservation amount (₹) shown on the public trip page's
+  // booking panel instead of the "Seats available" badge. '' means "not
+  // set" (stored as null) — see add_trip_advance_amount.sql.
+  advance_amount: number | '';
   // '' means "not set" (stored as null) — see UpcomingTrip.trip_type in
   // types-index.ts for why this matters to the DB's refund logic.
   trip_type: 'domestic' | 'international' | '';
@@ -115,7 +119,7 @@ const emptyForm: TripForm = {
   meeting_point: '', meeting_point_map_url: '',
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
-  early_bird_price: '', early_bird_deadline: '', strike_through_price: '', trip_type: '',
+  early_bird_price: '', early_bird_deadline: '', strike_through_price: '', advance_amount: '', trip_type: '',
   cover_image: '', cover_image_crop: null, hero_mobile_image: '', gallery_images: [], terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false,
   // Extended
@@ -482,6 +486,7 @@ export default function AdminTrips() {
       price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
       early_bird_deadline: trip.early_bird_deadline || '',
       strike_through_price: trip.strike_through_price ?? '',
+      advance_amount: trip.advance_amount ?? '',
       trip_type: trip.trip_type || '',
       cover_image: trip.cover_image || '',
       cover_image_crop: trip.cover_image_crop || null,
@@ -536,6 +541,7 @@ export default function AdminTrips() {
         early_bird_price: form.early_bird_price === '' ? null : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || null,
         strike_through_price: form.strike_through_price === '' ? null : form.strike_through_price,
+        advance_amount: form.advance_amount === '' ? null : form.advance_amount,
         trip_type: form.trip_type === '' ? null : form.trip_type,
         min_age: form.min_age === '' ? null : form.min_age,
         max_age: form.max_age === '' ? null : form.max_age,
@@ -837,6 +843,20 @@ export default function AdminTrips() {
                 className={inputClass}
                 placeholder="e.g. 39999 (optional)"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Advance/Reservation Amount (₹)</label>
+              <input
+                type="number"
+                min={0}
+                value={form.advance_amount}
+                onChange={e => setForm(f => ({ ...f, advance_amount: e.target.value === '' ? '' : +e.target.value }))}
+                className={inputClass}
+                placeholder="e.g. 8999 (optional)"
+              />
+              <p className="text-xs text-dark-muted mt-1">
+                Shown on the public trip page as "Reserve today with only ₹{form.advance_amount || 'X'}". Leave blank to show the seats-available badge instead.
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Trip Type</label>
