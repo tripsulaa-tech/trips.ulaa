@@ -332,14 +332,23 @@ export default function AdminTrips() {
 
   const asStr = (v: unknown, fallback = ''): string => (isPlaceholder(v) ? fallback : String(v));
 
+  // Real numbers (e.g. price: 18999 filled in directly as JSON, not as a
+  // string) are valid, filled-in values — only strings need the
+  // isPlaceholder check, since that's the only shape unfilled template
+  // placeholders ("<...>") ever take. Without this, any correctly-filled
+  // numeric field was wrongly treated as an unfilled placeholder and wiped
+  // to '' on import.
   const asNum = (v: unknown): number | '' => {
+    if (typeof v === 'number') return isNaN(v) ? '' : v;
     if (isPlaceholder(v)) return '';
     const n = Number(v);
     return isNaN(n) ? '' : n;
   };
 
   const asNumOrNull = (v: unknown): number | null => {
-    if (v === null || isPlaceholder(v)) return null;
+    if (v === null) return null;
+    if (typeof v === 'number') return isNaN(v) ? null : v;
+    if (isPlaceholder(v)) return null;
     const n = Number(v);
     return isNaN(n) ? null : n;
   };
