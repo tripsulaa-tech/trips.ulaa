@@ -17,7 +17,7 @@ export default function WhyULAA() {
   const { features } = content;
 
   return (
-    <section className="relative isolate py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-cream">
+    <section className="relative isolate pt-12 pb-12 sm:py-12 px-4 sm:px-6 lg:px-8 bg-cream">
       <div className="max-w-[1344px] mx-auto">
         <div className="mb-8 sm:mb-16 flex justify-center">
           <SectionTitle

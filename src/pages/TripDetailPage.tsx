@@ -591,7 +591,7 @@ export default function TripDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-8 sm:py-16 pb-28 lg:pb-16">
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-8 sm:py-16 pb-12 lg:pb-16">
         <div className="max-w-[1344px] mx-auto space-y-9 sm:space-y-12">
             {/* Countdown — mobile only; desktop keeps its original spot in the hero */}
             {countdown && (
@@ -790,11 +790,11 @@ export default function TripDetailPage() {
                                 transition={{ duration: 0.3 }}
                                 className="overflow-hidden"
                               >
-                                <p className="text-dark-muted text-xs leading-relaxed">{day.description}</p>
+                                <p className="text-dark-muted text-sm leading-relaxed">{day.description}</p>
                                 {(day.bullets?.length ?? 0) > 0 && (
                                   <ul className="text-left space-y-1 mt-2">
                                     {day.bullets!.map((bullet, bi) => (
-                                      <li key={bi} className="flex items-start gap-2 text-dark-muted text-xs leading-relaxed">
+                                      <li key={bi} className="flex items-start gap-2 text-dark-muted text-sm leading-relaxed">
                                         <span className="mt-1.5 w-1 h-1 rounded-full bg-primary shrink-0" />
                                         <span>{bullet}</span>
                                       </li>
@@ -1281,20 +1281,20 @@ export default function TripDetailPage() {
             {/* Founder */}
             {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
               <section className="scroll-mt-44 bg-dark rounded-2xl p-5 sm:p-8">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Meet Your Trip Leader</h2>
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center sm:text-left">Meet Your Trip Leader</h2>
                 <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
                   {trip.trip_founder.photo ? (
                     <img
                       src={trip.trip_founder.photo}
                       alt={trip.trip_founder.name}
-                      className="w-24 h-24 rounded-full object-cover border-4 border-primary/30 flex-shrink-0"
+                      className="w-48 h-48 rounded-full object-cover border-4 border-primary/30 flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-24 h-24 rounded-full bg-white/10 border-4 border-primary/30 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white/40 text-3xl font-display font-bold">{trip.trip_founder.name.charAt(0)}</span>
+                    <div className="w-48 h-48 rounded-full bg-white/10 border-4 border-primary/30 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white/40 text-6xl font-display font-bold">{trip.trip_founder.name.charAt(0)}</span>
                     </div>
                   )}
-                  <div>
+                  <div className="text-center sm:text-left">
                     {trip.trip_founder.name && (
                       <h3 className="font-display text-xl font-bold text-white mb-0.5">{trip.trip_founder.name}</h3>
                     )}

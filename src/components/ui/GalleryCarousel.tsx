@@ -36,7 +36,7 @@ export default function GalleryCarousel({ items }: GalleryCarouselProps) {
           </div>
           {item.description && (
             <div className="px-2.5 py-2">
-              <p className="text-dark text-xs font-medium truncate">{item.description}</p>
+              <p className="text-dark text-sm font-medium truncate">{item.description}</p>
             </div>
           )}
         </div>

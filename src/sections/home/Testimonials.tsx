@@ -71,7 +71,7 @@ export default function Testimonials() {
   };
 
   return (
-    <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-dark overflow-hidden">
+    <section className="pt-12 pb-12 sm:py-12 px-4 sm:px-6 lg:px-8 bg-dark overflow-hidden">
       <div className="max-w-[1344px] mx-auto">
         <div className="text-center mb-8 sm:mb-16">
           <SectionTitle

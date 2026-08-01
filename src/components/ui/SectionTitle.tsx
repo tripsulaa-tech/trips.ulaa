@@ -29,14 +29,11 @@ export default function SectionTitle({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
           className={`
-            inline-flex items-center gap-2 text-sm font-button font-semibold
-            tracking-[0.2em] uppercase
+            font-script font-medium text-3xl md:text-4xl
             ${light ? 'text-secondary' : 'text-primary'}
           `}
         >
-          <span className={`w-6 h-px ${light ? 'bg-secondary' : 'bg-primary'}`} />
           {label}
-          <span className={`w-6 h-px ${light ? 'bg-secondary' : 'bg-primary'}`} />
         </motion.span>
       )}
       <motion.h2

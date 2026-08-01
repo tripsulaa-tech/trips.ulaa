@@ -38,7 +38,7 @@ export default function GalleryPreview() {
   };
 
   return (
-    <section className="py-14 sm:py-24 px-4 sm:px-6 lg:px-8 bg-background">
+    <section className="pt-12 pb-12 sm:py-12 px-4 sm:px-6 lg:px-8 bg-background">
       <div className="max-w-[1344px] mx-auto">
         <div className="flex flex-col items-center mb-8 sm:mb-16">
           <SectionTitle

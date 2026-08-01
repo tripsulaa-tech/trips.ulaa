@@ -46,6 +46,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   const [termsOpen, setTermsOpen] = useState(false);
   const [bookingMode, setBookingMode] = useState<BookingMode>('solo');
   const [groupSize, setGroupSize] = useState(MIN_GROUP_SIZE);
+  // Raw text the user is typing into the "Number of People" input. Kept
+  // separate from the numeric groupSize so the field can be emptied out
+  // (e.g. via backspace) while the user is mid-edit, instead of snapping
+  // back to a number on every keystroke. Reconciled into groupSize on blur.
+  const [groupSizeInput, setGroupSizeInput] = useState(String(MIN_GROUP_SIZE));
   const [groupSizeError, setGroupSizeError] = useState('');
   const [successCount, setSuccessCount] = useState(1);
   // Which path the most recent successful submission actually took —
@@ -68,6 +73,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // [0, groupSize] whenever groupSize changes (see the Number of People
   // input below).
   const [groupVegCount, setGroupVegCount] = useState(MIN_GROUP_SIZE);
+  // Raw text for the veg-count input — same reasoning as groupSizeInput
+  // above. Kept in sync with groupVegCount whenever it changes elsewhere
+  // (e.g. clamped down when groupSize shrinks) via the effect below.
+  const [vegCountInput, setVegCountInput] = useState(String(MIN_GROUP_SIZE));
 
   // Whether what's currently selected/entered actually fits in the seats
   // left. When it doesn't, submitting still succeeds — it just becomes a
@@ -76,6 +85,14 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   const soloFits = remainingSeats === undefined || remainingSeats >= 1;
   const groupFits = remainingSeats === undefined || groupSize <= remainingSeats;
   const willWaitlist = bookingMode === 'solo' ? !soloFits : !groupFits;
+
+  // Keeps the veg-count text field's displayed value in sync whenever
+  // groupVegCount is changed programmatically elsewhere (clamped down when
+  // groupSize shrinks, reset after a successful submit, etc.) rather than
+  // by the user typing directly into this field.
+  useEffect(() => {
+    setVegCountInput(String(Math.min(groupVegCount, groupSize)));
+  }, [groupVegCount, groupSize]);
 
   const termsText = (terms || '').trim() || DEFAULT_TERMS_AND_CONDITIONS;
   const termsSections = useMemo(() => parseTerms(termsText), [termsText]);
@@ -271,6 +288,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       reset();
       setBookingMode('solo');
       setGroupSize(MIN_GROUP_SIZE);
+      setGroupSizeInput(String(MIN_GROUP_SIZE));
       setGroupVegCount(MIN_GROUP_SIZE);
       setFoodPreference(null);
       onSuccess?.();
@@ -387,19 +405,34 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             inputMode="numeric"
             min={MIN_GROUP_SIZE}
             max={MAX_GROUP_SIZE}
-            value={groupSize}
+            value={groupSizeInput}
             onChange={e => {
               setGroupSizeError('');
-              const val = e.target.value === '' ? MIN_GROUP_SIZE : Math.round(Number(e.target.value));
-              setGroupSize(val);
-              setGroupVegCount(prev => Math.min(prev, val));
+              const raw = e.target.value;
+              // Let the field be empty or mid-edit (e.g. after backspace)
+              // without immediately forcing it back to a number — only
+              // commit a numeric groupSize once we have real digits.
+              setGroupSizeInput(raw);
+              if (raw !== '' && !Number.isNaN(Number(raw))) {
+                const val = Math.round(Number(raw));
+                setGroupSize(val);
+                setGroupVegCount(prev => Math.min(prev, val));
+              }
+            }}
+            onBlur={() => {
+              const parsed = Math.round(Number(groupSizeInput));
+              const clamped = groupSizeInput === '' || Number.isNaN(parsed)
+                ? MIN_GROUP_SIZE
+                : Math.min(Math.max(parsed, MIN_GROUP_SIZE), MAX_GROUP_SIZE);
+              setGroupSize(clamped);
+              setGroupSizeInput(String(clamped));
+              setGroupVegCount(prev => Math.min(prev, clamped));
             }}
             className={inputClass}
           />
           {groupFits ? (
             <p className="text-xs text-dark-muted mt-1">
               We'll create one entry per person under this name and contact — {groupSize} {groupSize === 1 ? 'entry' : 'entries'} in total.
-              {remainingSeats !== undefined && ` ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left on this trip.`}
             </p>
           ) : (
             <p className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
@@ -543,10 +576,24 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
               inputMode="numeric"
               min={0}
               max={groupSize}
-              value={Math.min(groupVegCount, groupSize)}
+              value={vegCountInput}
               onChange={e => {
-                const val = e.target.value === '' ? 0 : Math.round(Number(e.target.value));
-                setGroupVegCount(Math.min(Math.max(val, 0), groupSize));
+                const raw = e.target.value;
+                // Same fix as Number of People below: don't force a number
+                // back into the field the instant it's emptied, so the
+                // user can actually clear it and type a replacement digit.
+                setVegCountInput(raw);
+                if (raw !== '' && !Number.isNaN(Number(raw))) {
+                  setGroupVegCount(Math.min(Math.max(Math.round(Number(raw)), 0), groupSize));
+                }
+              }}
+              onBlur={() => {
+                const parsed = Math.round(Number(vegCountInput));
+                const clamped = vegCountInput === '' || Number.isNaN(parsed)
+                  ? 0
+                  : Math.min(Math.max(parsed, 0), groupSize);
+                setGroupVegCount(clamped);
+                setVegCountInput(String(clamped));
               }}
               className={inputClass}
             />

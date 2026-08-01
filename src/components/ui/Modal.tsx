@@ -26,6 +26,13 @@ const sizes = {
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  // Tracks whether the mousedown that started this click also happened on
+  // the overlay itself. Without this, selecting text inside the modal
+  // (mousedown on an input, drag outside, mouseup on the backdrop) fires a
+  // click whose target is the overlay — since that's the nearest common
+  // ancestor of the mousedown/mouseup targets — which closed the modal
+  // even though the user never actually clicked the backdrop.
+  const mouseDownOnOverlay = useRef(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -50,7 +57,10 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/60 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+          onMouseDown={(e) => { mouseDownOnOverlay.current = e.target === overlayRef.current; }}
+          onClick={(e) => {
+            if (e.target === overlayRef.current && mouseDownOnOverlay.current) onClose();
+          }}
         >
           <motion.div
             initial={{ scale: 0.92, opacity: 0, y: 20 }}
