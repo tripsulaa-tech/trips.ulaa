@@ -146,6 +146,7 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
     meeting_point: trip.meeting_point ? sanitizeForPdf(trip.meeting_point) : trip.meeting_point,
     gallery_description: trip.gallery_description ? sanitizeForPdf(trip.gallery_description) : trip.gallery_description,
     gallery_items: trip.gallery_items?.map(item => ({ ...item, description: sanitizeForPdf(item.description) })),
+    fashion_description: trip.fashion_description ? sanitizeForPdf(trip.fashion_description) : trip.fashion_description,
     faqs: trip.faqs.map(faq => ({
       ...faq,
       question: sanitizeForPdf(faq.question),
@@ -1501,6 +1502,94 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
+  // SLIDE — Fashion Aesthetics (bento-grid photo layout)
+  // =========================================================================
+  // Same shape as `renderGallery` above (optional intro paragraph + a fixed,
+  // non-paginated photo layout) but laid out as an asymmetric "bento" grid
+  // instead of a uniform wall of squares: one large feature tile on the
+  // left, plus a 3-column x 2-row grid of smaller tiles filling the rest.
+  // Caps at 7 visible photos — the same VISIBLE_COUNT the site itself uses
+  // for this section (see TripDetailPage.tsx) — and shows a "+N" overlay
+  // on the last tile when there are more, mirroring that same site behavior.
+  async function renderFashion() {
+    const allPhotos = trip.fashion_photos ?? [];
+    if (allPhotos.length === 0) return;
+
+    newSlide();
+    slideHeader((x, y) => icons.shirt(x, y, 20), 'Fashion Aesthetics');
+
+    let contentTop = 92;
+    if (trip.fashion_description) {
+      contentTop = drawParagraph(trip.fashion_description, MARGIN, contentTop, CONTENT_W, {
+        size: 10,
+        color: COLORS.darkMuted,
+        lineHeight: 14,
+        maxLines: 2,
+      }) + 14;
+    }
+
+    const VISIBLE = 7;
+    const photos = allPhotos.slice(0, VISIBLE);
+    const remaining = allPhotos.length - photos.length;
+    const availH = CONTENT_BOTTOM - contentTop;
+    const gap = 12;
+
+    const gridCols = 3;
+    const gridRows = 2;
+    const bigW = CONTENT_W * 0.4;
+    const gridX0 = MARGIN + bigW + gap;
+    const gridColW = (CONTENT_W - bigW - gap - gap * (gridCols - 1)) / gridCols;
+    const rowH = (availH - gap * (gridRows - 1)) / gridRows;
+
+    const tiles: { x: number; y: number; w: number; h: number }[] = [
+      { x: MARGIN, y: contentTop, w: bigW, h: availH },
+    ];
+    for (let r = 0; r < gridRows; r++) {
+      for (let c = 0; c < gridCols; c++) {
+        tiles.push({
+          x: gridX0 + c * (gridColW + gap),
+          y: contentTop + r * (rowH + gap),
+          w: gridColW,
+          h: rowH,
+        });
+      }
+    }
+
+    const crops = await Promise.all(photos.map((url, i) => loadCoverCroppedImage(url, tiles[i].w, tiles[i].h, 8)));
+
+    crops.forEach((cropped, i) => {
+      const tile = tiles[i];
+      let drawn = false;
+      if (cropped) {
+        try {
+          doc.addImage(cropped, 'JPEG', tile.x, tile.y, tile.w, tile.h);
+          drawn = true;
+        } catch {
+          drawn = false;
+        }
+      }
+      if (!drawn) {
+        setFill(COLORS.backgroundWarm);
+        doc.roundedRect(tile.x, tile.y, tile.w, tile.h, 8, 8, 'F');
+        setDraw(COLORS.grayLineSoft);
+        doc.setLineWidth(0.75);
+        doc.roundedRect(tile.x, tile.y, tile.w, tile.h, 8, 8, 'S');
+      }
+
+      if (i === photos.length - 1 && remaining > 0) {
+        withOpacity(0.55, () => {
+          setFill(COLORS.dark);
+          doc.roundedRect(tile.x, tile.y, tile.w, tile.h, 8, 8, 'F');
+        });
+        setText(COLORS.white);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text(`+${remaining}`, tile.x + tile.w / 2, tile.y + tile.h / 2 + 5, { align: 'center' });
+      }
+    });
+  }
+
+  // =========================================================================
   // SLIDE — Meeting Point
   // =========================================================================
   /** Looks for a handful of common assembly-point keywords in the trip's own
@@ -1830,6 +1919,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   renderInclusions();
   renderThingsToCarry();
   await renderGallery();
+  await renderFashion();
   renderMeetingPoint();
   renderFaqs();
   renderCancellationPolicy();
