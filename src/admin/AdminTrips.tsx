@@ -388,9 +388,14 @@ export default function AdminTrips() {
         strike_through_price: asNum(raw.strike_through_price),
         advance_amount: asNum(raw.advance_amount),
         trip_type: raw.trip_type === 'domestic' || raw.trip_type === 'international' ? raw.trip_type : '',
-        cover_image: '',
+        // Imported the same way itinerary images always were: real URLs
+        // (e.g. Wikimedia/Unsplash links an admin filled in) come through
+        // as-is; leftover template placeholders like "(leave blank —
+        // uploaded manually)" still resolve to '' via isPlaceholder/asStr,
+        // so an untouched export template still opens with blank fields.
+        cover_image: asStr(raw.cover_image),
         cover_image_crop: null,
-        hero_mobile_image: '',
+        hero_mobile_image: asStr(raw.hero_mobile_image),
         terms_and_conditions: isPlaceholder(raw.terms_and_conditions) ? DEFAULT_TERMS_AND_CONDITIONS : raw.terms_and_conditions,
         cancellation_policy: raw.cancellation_policy ? {
           payment_due_days: asNum(raw.cancellation_policy.payment_due_days) || DEFAULT_CANCELLATION_POLICY.payment_due_days,
@@ -409,7 +414,7 @@ export default function AdminTrips() {
           ? raw.highlight_cards.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), heading: asStr(c?.heading), description: asStr(c?.description) }))
           : [],
         accommodation_description: asStr(raw.accommodation_description),
-        accommodation_photos: [],
+        accommodation_photos: asStrArray(raw.accommodation_photos),
         included_groups: Array.isArray(raw.included_groups)
           ? raw.included_groups.map((g: Record<string, unknown>) => ({
               icon: asStr(g?.icon),
@@ -418,16 +423,16 @@ export default function AdminTrips() {
             }))
           : [],
         gallery_items: Array.isArray(raw.gallery_items)
-          ? raw.gallery_items.map((g: Record<string, unknown>) => ({ photo: '', description: asStr(g?.description) }))
+          ? raw.gallery_items.map((g: Record<string, unknown>) => ({ photo: asStr(g?.photo), description: asStr(g?.description) }))
           : [],
         gallery_description: asStr(raw.gallery_description),
-        fashion_photos: [],
+        fashion_photos: asStrArray(raw.fashion_photos),
         fashion_description: asStr(raw.fashion_description),
         things_to_carry_items: Array.isArray(raw.things_to_carry_items)
           ? raw.things_to_carry_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
           : [],
         trip_founder: raw.trip_founder
-          ? { photo: '', name: asStr(raw.trip_founder.name), description: asStr(raw.trip_founder.description) }
+          ? { photo: asStr(raw.trip_founder.photo), name: asStr(raw.trip_founder.name), description: asStr(raw.trip_founder.description) }
           : emptyFounder,
         confidence_items: Array.isArray(raw.confidence_items)
           ? raw.confidence_items.map((c: Record<string, unknown>) => ({ icon: asStr(c?.icon), description: asStr(c?.description) }))
@@ -436,7 +441,7 @@ export default function AdminTrips() {
         meeting_address: asStr(raw.meeting_address),
         end_banner: raw.end_banner
           ? {
-              image: '',
+              image: asStr(raw.end_banner.image),
               heading: asStr(raw.end_banner.heading),
               description: asStr(raw.end_banner.description),
               cta_label: asStr(raw.end_banner.cta_label),
