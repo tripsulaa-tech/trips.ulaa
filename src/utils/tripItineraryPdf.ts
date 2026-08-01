@@ -1,7 +1,8 @@
 import { jsPDF } from 'jspdf';
 import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, ItineraryDay } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
-import { formatDateRange, formatAgeRange, formatPrice, getActivePrice } from './utils-index';
+import { formatDateRange, formatAgeRange, formatPrice, formatDate, getActivePrice, getStrikeThroughPrice, publicSeatsLeft } from './utils-index';
+import { PARISIENNE_FONT_BASE64 } from './parisienneFont';
 
 // =============================================================================
 // "Download Itinerary PDF" — renders a trip's public detail page as a clean,
@@ -290,6 +291,26 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   const trip = sanitizeTrip(rawTrip);
   const doc = new jsPDF({ unit: 'pt', format: [PAGE_W, PAGE_H], orientation: 'landscape' });
 
+  // Register the cursive "Parisienne" script font (site-wide --font-script,
+  // see globals.css) for the closing slide's handwritten-style headings.
+  // jsPDF only knows fonts it's been given directly — the @font-face import
+  // in globals.css has no effect here — so the TTF bytes are embedded as
+  // base64 (parisienneFont.ts) and registered once, up front. Best-effort:
+  // if this ever fails, every doc.setFont('Parisienne', ...) call below
+  // silently falls back to jsPDF's default font instead of breaking PDF
+  // generation.
+  try {
+    doc.addFileToVFS('Parisienne-Regular.ttf', PARISIENNE_FONT_BASE64);
+    doc.addFont('Parisienne-Regular.ttf', 'Parisienne', 'normal');
+  } catch {
+    /* falls back to the default font — see comment above */
+  }
+
+  // First word of the trip title — used on the closing slide in place of
+  // the hardcoded "Sri Lanka" in the reference design ("We can't wait to
+  // welcome you to <word>!" / "See you in <word>!").
+  const destinationFirstWord = (trip.title || '').trim().split(/\s+/)[0] || trip.destination || 'there';
+
   // ---------------------------------------------------------------------
   // Low-level drawing helpers
   // ---------------------------------------------------------------------
@@ -572,6 +593,170 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       setFill(COLORS.green);
       doc.circle(x + s * 0.84, y - s * 0.2, s * 0.22, 'F');
       drawCheck(x + s * 0.84, y - s * 0.2, s * 0.16, COLORS.white, 1.6);
+    },
+    // ---- Closing-slide icons (booking card meta row, contact bar, footer) ----
+    clock(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const cx = x + s * 0.5;
+      const cy = y - s * 0.5;
+      const r = s * 0.42;
+      setDraw(color);
+      doc.setLineWidth(1.4);
+      doc.circle(cx, cy, r, 'S');
+      doc.setLineWidth(1.2);
+      doc.setLineCap('round');
+      doc.line(cx, cy, cx, cy - r * 0.55);
+      doc.line(cx, cy, cx + r * 0.42, cy + r * 0.08);
+    },
+    users(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      setFill(color);
+      const r1 = s * 0.17;
+      const cx1 = x + s * 0.32;
+      const cy1 = y - s * 0.7;
+      doc.circle(cx1, cy1, r1, 'F');
+      doc.roundedRect(cx1 - s * 0.24, y - s * 0.44, s * 0.48, s * 0.34, s * 0.17, s * 0.17, 'F');
+      const r2 = s * 0.14;
+      const cx2 = x + s * 0.74;
+      const cy2 = y - s * 0.6;
+      doc.circle(cx2, cy2, r2, 'F');
+      doc.roundedRect(cx2 - s * 0.2, y - s * 0.38, s * 0.4, s * 0.3, s * 0.14, s * 0.14, 'F');
+    },
+    phone(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const cx = x + s * 0.5;
+      const cy = y - s * 0.5;
+      setFill(color);
+      doc.circle(cx - s * 0.18, cy - s * 0.18, s * 0.15, 'F');
+      doc.circle(cx + s * 0.18, cy + s * 0.18, s * 0.15, 'F');
+      setDraw(color);
+      doc.setLineWidth(s * 0.2);
+      doc.setLineCap('round');
+      doc.line(cx - s * 0.1, cy - s * 0.1, cx + s * 0.1, cy + s * 0.1);
+    },
+    mail(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const w = s * 0.9;
+      const h = s * 0.62;
+      const rx = x + (s - w) / 2;
+      const ry = y - s * 0.72;
+      setDraw(color);
+      doc.setLineWidth(1.4);
+      doc.roundedRect(rx, ry, w, h, 2, 2, 'S');
+      doc.line(rx, ry, rx + w / 2, ry + h * 0.55);
+      doc.line(rx + w, ry, rx + w / 2, ry + h * 0.55);
+    },
+    globe(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const cx = x + s * 0.5;
+      const cy = y - s * 0.5;
+      const r = s * 0.42;
+      setDraw(color);
+      doc.setLineWidth(1.3);
+      doc.circle(cx, cy, r, 'S');
+      doc.ellipse(cx, cy, r * 0.42, r, 'S');
+      doc.line(cx - r, cy, cx + r, cy);
+    },
+    instagram(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const w = s * 0.72;
+      const rx = x + (s - w) / 2;
+      const ry = y - s * 0.82;
+      setDraw(color);
+      doc.setLineWidth(1.3);
+      doc.roundedRect(rx, ry, w, w, w * 0.28, w * 0.28, 'S');
+      doc.circle(rx + w / 2, ry + w / 2, w * 0.24, 'S');
+      setFill(color);
+      doc.circle(rx + w * 0.78, ry + w * 0.22, w * 0.06, 'F');
+    },
+    headset(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const cx = x + s * 0.5;
+      const cy = y - s * 0.6;
+      const r = s * 0.4;
+      setDraw(color);
+      doc.setLineWidth(1.6);
+      doc.setLineCap('round');
+      for (let i = 0; i < 8; i++) {
+        const a1 = Math.PI + (Math.PI * i) / 8;
+        const a2 = Math.PI + (Math.PI * (i + 1)) / 8;
+        doc.line(cx + Math.cos(a1) * r, cy + Math.sin(a1) * r, cx + Math.cos(a2) * r, cy + Math.sin(a2) * r);
+      }
+      setFill(color);
+      doc.roundedRect(cx - r - s * 0.06, cy - s * 0.02, s * 0.14, s * 0.26, 3, 3, 'F');
+      doc.roundedRect(cx + r - s * 0.08, cy - s * 0.02, s * 0.14, s * 0.26, 3, 3, 'F');
+    },
+    lock(x: number, y: number, s = 20, color: RGB = COLORS.white) {
+      const bw = s * 0.62;
+      const bh = s * 0.48;
+      const bx = x + (s - bw) / 2;
+      const by = y - bh;
+      setFill(color);
+      doc.roundedRect(bx, by, bw, bh, 2.5, 2.5, 'F');
+      setDraw(color);
+      doc.setLineWidth(s * 0.09);
+      const cx = x + s / 2;
+      const r = s * 0.2;
+      for (let i = 0; i < 8; i++) {
+        const a1 = Math.PI + (Math.PI * i) / 8;
+        const a2 = Math.PI + (Math.PI * (i + 1)) / 8;
+        doc.line(cx + Math.cos(a1) * r, by + Math.sin(a1) * r, cx + Math.cos(a2) * r, by + Math.sin(a2) * r);
+      }
+      setFill(COLORS.primary);
+      doc.circle(cx, by + bh * 0.42, s * 0.05, 'F');
+    },
+    /** Small hand-drawn-style heart, used next to the cursive closing-slide
+     *  headings. style 'F' fills it solid, 'S' draws an outline only. */
+    heart(x: number, y: number, s = 20, color: RGB = COLORS.primary, style: 'F' | 'S' = 'F') {
+      const cx = x + s * 0.5;
+      const topY = y - s * 0.62;
+      const r = s * 0.26;
+      if (style === 'F') {
+        setFill(color);
+      } else {
+        setDraw(color);
+        doc.setLineWidth(1.3);
+      }
+      doc.circle(cx - r * 0.7, topY, r, style);
+      doc.circle(cx + r * 0.7, topY, r, style);
+      doc.triangle(cx - r * 1.55, topY + r * 0.32, cx + r * 1.55, topY + r * 0.32, cx, y, style);
+    },
+    /** Simple palm-silhouette doodle for the closing slide's footer band. */
+    palm(x: number, y: number, s = 20, color: RGB = COLORS.white) {
+      setDraw(color);
+      doc.setLineWidth(1.6);
+      doc.setLineCap('round');
+      doc.line(x + s * 0.5, y, x + s * 0.42, y - s * 0.5);
+      doc.line(x + s * 0.42, y - s * 0.5, x + s * 0.55, y - s * 0.88);
+      setFill(color);
+      const tipX = x + s * 0.55;
+      const tipY = y - s * 0.88;
+      [-0.9, -0.45, 0, 0.45, 0.9].forEach(a => {
+        const ang = -Math.PI / 2 + a;
+        const ex = tipX + Math.cos(ang) * s * 0.42;
+        const ey = tipY + Math.sin(ang) * s * 0.42;
+        const ex2 = tipX + Math.cos(ang + 0.32) * s * 0.26;
+        const ey2 = tipY + Math.sin(ang + 0.32) * s * 0.26;
+        doc.triangle(tipX, tipY, ex, ey, ex2, ey2, 'F');
+      });
+    },
+    share(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const cx = x + s * 0.5;
+      const cy = y - s * 0.5;
+      const pts: [number, number][] = [
+        [cx - s * 0.32, cy],
+        [cx + s * 0.3, cy - s * 0.3],
+        [cx + s * 0.3, cy + s * 0.3],
+      ];
+      setDraw(color);
+      doc.setLineWidth(1.3);
+      doc.line(pts[0][0], pts[0][1], pts[1][0], pts[1][1]);
+      doc.line(pts[0][0], pts[0][1], pts[2][0], pts[2][1]);
+      setFill(color);
+      pts.forEach(p => doc.circle(p[0], p[1], s * 0.11, 'F'));
+    },
+    download(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const cx = x + s * 0.5;
+      setDraw(color);
+      doc.setLineWidth(1.4);
+      doc.setLineCap('round');
+      doc.line(cx, y - s * 0.9, cx, y - s * 0.3);
+      doc.line(cx - s * 0.22, y - s * 0.5, cx, y - s * 0.28);
+      doc.line(cx + s * 0.22, y - s * 0.5, cx, y - s * 0.28);
+      doc.line(x + s * 0.12, y, x + s * 0.88, y);
     },
   };
 
@@ -1912,58 +2097,492 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
-  // SLIDE — Closing / Contact
+  // SLIDE — Closing: tagline, Meet Your Trip Leader, booking card, contact
+  // bar, and footer. Reproduces the reference "last page" design — the
+  // cursive tagline/heart and the footer's "Travel. Laugh. Connect." /
+  // "Thank you for choosing ULAA." lines are hardcoded per the design brief;
+  // everything else (leader, price, dates, contact details) is read
+  // straight off `trip`/`BRAND` so it stays accurate for any trip.
   // =========================================================================
   async function renderClosing() {
     newSlide();
 
-    // Soft decorative arcs, echoing the cover slide, bottom of page.
-    withOpacity(0.5, () => {
-      setDraw(COLORS.grayLine);
-      doc.setLineWidth(1);
-      doc.circle(PAGE_W / 2 - 140, PAGE_H - 30, 40, 'S');
-      doc.circle(PAGE_W / 2 + 160, PAGE_H - 20, 24, 'S');
-    });
     setFill(COLORS.secondary);
     doc.rect(0, 0, PAGE_W, 4, 'F');
 
+    // Quiet corner doodles, echoing the cover slide's travel motifs.
+    withOpacity(0.3, () => {
+      icons.plane(MARGIN - 4, 34, 20, COLORS.primary);
+      icons.train(PAGE_W - MARGIN - 24, 40, 20, COLORS.primary);
+    });
+
+    // ---- Header: logo, cursive tagline + heart, welcome line ----
+    const LOGO_Y = 16;
+    const LOGO_H = 42;
     const logo = await loadContainImage('/ULAA-logo-navbar.png');
-    const cy = PAGE_H * 0.36;
     if (logo) {
-      const logoH = 70;
-      const logoW = logoH * logo.ratio;
+      const logoW = LOGO_H * logo.ratio;
       try {
-        doc.addImage(logo.dataUrl, 'PNG', PAGE_W / 2 - logoW / 2, cy - logoH / 2, logoW, logoH);
+        doc.addImage(logo.dataUrl, 'PNG', PAGE_W / 2 - logoW / 2, LOGO_Y, logoW, LOGO_H);
       } catch {
-        drawTextLogo(PAGE_W / 2 - 60, cy - 15, false);
+        drawTextLogo(PAGE_W / 2 - 60, LOGO_Y, false);
       }
     } else {
-      drawTextLogo(PAGE_W / 2 - 60, cy - 15, false);
+      drawTextLogo(PAGE_W / 2 - 60, LOGO_Y, false);
     }
 
-    setText(COLORS.darkMuted);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.text('Thank you for choosing ULAA. We can\u2019t wait to travel with you.', PAGE_W / 2, cy + 58, { align: 'center' });
+    // Cursive heading (hardcoded per the reference design) with a small
+    // hand-drawn-style heart right after it.
+    doc.setFont('Parisienne', 'normal');
+    doc.setFontSize(25);
+    setText(COLORS.primaryDark);
+    const headingText = 'Your next adventure begins with one decision.';
+    const headingW = doc.getTextWidth(headingText);
+    const headingX = PAGE_W / 2 - headingW / 2;
+    const HEADING_Y = 90;
+    doc.text(headingText, headingX, HEADING_Y);
+    icons.heart(headingX + headingW + 4, HEADING_Y + 4, 15, COLORS.primaryDark, 'S');
 
-    const contacts = [
-      { label: BRAND.website, url: `https://${BRAND.website.replace('www.', '')}` },
-      { label: BRAND.instagram, url: `https://instagram.com/${BRAND.instagram.replace('@', '')}` },
-      { label: BRAND.email, url: `mailto:${BRAND.email}` },
-      { label: BRAND.phone, url: `tel:${BRAND.phone.replace(/\s/g, '')}` },
+    // "We can't wait to welcome you to <first word of trip title>!" — the
+    // destination word swaps in per-trip; a small palm doodle echoes the
+    // reference design's emoji.
+    const WELCOME_Y = 114;
+    const prefix = "We can\u2019t wait to welcome you to ";
+    const destText = `${destinationFirstWord}!`;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(13.5);
+    const prefixW = doc.getTextWidth(prefix);
+    doc.setFont('helvetica', 'bold');
+    const destW = doc.getTextWidth(destText);
+    const welcomeLineW = prefixW + destW + 18;
+    let wx = PAGE_W / 2 - welcomeLineW / 2;
+    setText(COLORS.dark);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(13.5);
+    doc.text(prefix, wx, WELCOME_Y);
+    wx += prefixW;
+    setText(COLORS.secondary);
+    doc.setFont('helvetica', 'bold');
+    doc.text(destText, wx, WELCOME_Y);
+    wx += destW + 4;
+    icons.palm(wx, WELCOME_Y + 5, 15, COLORS.secondary);
+
+    // ---- Meet Your Trip Leader + Booking cards ----
+    const CARDS_TOP = 132;
+    const CARDS_BOTTOM = 388;
+    const PAD = 20;
+    const leftW = 300;
+    const colGapCards = 20;
+    const leftX = MARGIN;
+    const rightX = leftX + leftW + colGapCards;
+    const rightW = CONTENT_W - leftW - colGapCards;
+
+    function cardShell(x: number, w: number) {
+      setFill(COLORS.cream);
+      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 14, 14, 'F');
+      setDraw(COLORS.grayLine);
+      doc.setLineWidth(1);
+      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 14, 14, 'S');
+    }
+    cardShell(leftX, leftW);
+    cardShell(rightX, rightW);
+
+    // -- Left: Meet Your Trip Leader (from trip.trip_founder) --
+    setText(COLORS.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14.5);
+    doc.text('Meet Your Trip Leader', leftX + PAD, CARDS_TOP + PAD + 6);
+
+    const founder = trip.trip_founder;
+    if (founder && (founder.name || founder.photo)) {
+      const photoD = 92;
+      const photoX = leftX + PAD;
+      const photoY = CARDS_TOP + PAD + 22;
+      let photoDrawn = false;
+      if (founder.photo) {
+        const cropped = await loadCoverCroppedImage(founder.photo, photoD, photoD, photoD / 2);
+        if (cropped) {
+          try {
+            doc.addImage(cropped, 'JPEG', photoX, photoY, photoD, photoD);
+            photoDrawn = true;
+          } catch {
+            photoDrawn = false;
+          }
+        }
+      }
+      if (!photoDrawn) {
+        setFill(COLORS.backgroundWarm);
+        doc.circle(photoX + photoD / 2, photoY + photoD / 2, photoD / 2, 'F');
+        setText(COLORS.primary);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(28);
+        doc.text((founder.name || '?').charAt(0).toUpperCase(), photoX + photoD / 2, photoY + photoD / 2 + 10, { align: 'center' });
+      }
+      setDraw(COLORS.secondary);
+      doc.setLineWidth(2);
+      doc.circle(photoX + photoD / 2, photoY + photoD / 2, photoD / 2, 'S');
+
+      const textX = photoX + photoD + 14;
+      const textW = leftX + leftW - PAD - textX;
+      let ny = photoY + 16;
+      setText(COLORS.dark);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12.5);
+      const nameLines = clampLines(founder.name || '', textW, 2);
+      doc.text(nameLines, textX, ny);
+      ny += nameLines.length * 14 + 2;
+      setText(COLORS.secondary);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Founder & Trip Leader', textX, ny);
+      ny += 12;
+      setDraw(COLORS.grayLineSoft);
+      doc.setLineWidth(1);
+      doc.line(textX, ny, leftX + leftW - PAD, ny);
+
+      const paragraphs = (founder.description || '').split(/\n+/).map(p => p.trim()).filter(Boolean);
+      const descTop = Math.max(ny + 12, photoY + photoD + 12);
+      const descBottom = CARDS_BOTTOM - PAD;
+      let dy = descTop;
+      let linesLeft = Math.max(2, Math.floor((descBottom - descTop) / 12.2));
+      for (const para of paragraphs) {
+        if (linesLeft <= 0) break;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.6);
+        const lines = clampLines(para, leftW - PAD * 2, linesLeft);
+        setText(COLORS.darkMuted);
+        doc.text(lines, leftX + PAD, dy);
+        dy += lines.length * 12.2 + 5;
+        linesLeft -= lines.length;
+      }
+    } else {
+      setText(COLORS.darkMuted);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text('Trip leader details coming soon.', leftX + PAD, CARDS_TOP + PAD + 40);
+    }
+
+    // -- Right: Booking card (price, reserve badge, meta row, CTA, links) --
+    const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
+    const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
+    const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
+    const isFull = remaining === 0;
+    const isAlmostFull = remaining > 0 && remaining <= 5;
+    const remainingAfterAdvance =
+      activePrice != null && trip.advance_amount != null ? Math.max(0, activePrice - trip.advance_amount) : null;
+
+    const priceColW = rightW * 0.58;
+    const reserveColX = rightX + PAD + priceColW + 18;
+    const reserveColW = rightX + rightW - PAD - reserveColX;
+
+    // Price stack (left sub-column)
+    if (activePrice != null) {
+      let ry = CARDS_TOP + PAD;
+      setText(COLORS.primary);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(27);
+      const priceStr = formatPrice(activePrice);
+      doc.text(priceStr, rightX + PAD, ry + 20);
+      const px = rightX + PAD + doc.getTextWidth(priceStr) + 10;
+      if (strikeThroughPrice != null) {
+        setText(COLORS.darkMuted);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(13);
+        const strikeStr = formatPrice(strikeThroughPrice);
+        doc.text(strikeStr, px, ry + 20);
+        const sw = doc.getTextWidth(strikeStr);
+        setDraw(COLORS.darkMuted);
+        doc.setLineWidth(1);
+        doc.line(px, ry + 15, px + sw, ry + 15);
+      }
+      ry += 26;
+      setText(COLORS.darkMuted);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text('per person', rightX + PAD, ry);
+      ry += 18;
+
+      let bx = rightX + PAD;
+      const badgeY = ry;
+      if (strikeThroughPrice != null) {
+        const saveLabel = `Save ${formatPrice(strikeThroughPrice - activePrice)}`;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        const w = doc.getTextWidth(saveLabel) + 16;
+        setFill([232, 247, 237] as RGB);
+        doc.roundedRect(bx, badgeY - 12, w, 18, 5, 5, 'F');
+        setText(COLORS.green);
+        doc.text(saveLabel, bx + 8, badgeY + 1);
+        bx += w + 8;
+      }
+      if (isEarlyBird) {
+        const label = 'Early Bird';
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        const w = doc.getTextWidth(label) + 16;
+        setFill(COLORS.secondary);
+        doc.roundedRect(bx, badgeY - 12, w, 18, 5, 5, 'F');
+        setText(COLORS.white);
+        doc.text(label, bx + 8, badgeY + 1);
+      }
+      ry += 22;
+
+      if (isEarlyBird && trip.early_bird_deadline) {
+        icons.clock(rightX + PAD, ry + 8, 11, COLORS.secondary);
+        setText(COLORS.secondary);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.6);
+        doc.text(
+          `Offer ends ${formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}`,
+          rightX + PAD + 15,
+          ry + 6
+        );
+      } else if (deadlinePassed) {
+        setText(COLORS.darkMuted);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.6);
+        doc.text('Early-bird offer has ended', rightX + PAD, ry + 6);
+      }
+    }
+
+    // Reserve badge box (right sub-column)
+    const reserveTop = CARDS_TOP + PAD;
+    if (isFull) {
+      setFill([253, 235, 234] as RGB);
+      doc.roundedRect(reserveColX, reserveTop, reserveColW, 40, 10, 10, 'F');
+      setText(COLORS.red);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      doc.text('Sold Out', reserveColX + 12, reserveTop + 24);
+    } else if (isAlmostFull) {
+      setFill([254, 243, 226] as RGB);
+      doc.roundedRect(reserveColX, reserveTop, reserveColW, 56, 10, 10, 'F');
+      setText([180, 120, 20] as RGB);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.3);
+      const lines = clampLines(`Only ${remaining} seats left \u2014 almost full!`, reserveColW - 24, 2);
+      doc.text(lines, reserveColX + 12, reserveTop + 22);
+    } else if (trip.advance_amount != null) {
+      setFill([232, 247, 237] as RGB);
+      doc.roundedRect(reserveColX, reserveTop, reserveColW, 56, 10, 10, 'F');
+      icons.check(reserveColX + 14, reserveTop + 30, 20, COLORS.green);
+      setText(COLORS.dark);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.4);
+      const l1 = clampLines(`Reserve today with only ${formatPrice(trip.advance_amount)}`, reserveColW - 42, 2);
+      doc.text(l1, reserveColX + 34, reserveTop + 16);
+      const ny2 = reserveTop + 16 + l1.length * 11;
+      if (remainingAfterAdvance != null) {
+        setText(COLORS.darkMuted);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.8);
+        const l2 = clampLines(`Remaining ${formatPrice(remainingAfterAdvance)} payable before the trip.`, reserveColW - 42, 2);
+        doc.text(l2, reserveColX + 34, ny2 + 4);
+      }
+    } else {
+      setFill([232, 247, 237] as RGB);
+      doc.roundedRect(reserveColX, reserveTop, reserveColW, 30, 8, 8, 'F');
+      setText(COLORS.green);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.3);
+      doc.text('Seats available', reserveColX + 12, reserveTop + 19);
+    }
+    setDraw(COLORS.grayLineSoft);
+    doc.setLineWidth(1);
+    doc.line(reserveColX - 9, CARDS_TOP + PAD - 4, reserveColX - 9, CARDS_TOP + 96);
+
+    // Meta row: Dates / Duration / Group Size / Age Range
+    const metaTop = CARDS_TOP + 130;
+    setDraw(COLORS.grayLineSoft);
+    doc.line(rightX + PAD, metaTop - 12, rightX + rightW - PAD, metaTop - 12);
+
+    const metaItems: { icon: (x: number, y: number, s?: number, color?: RGB) => void; label: string; value: string }[] = [
+      { icon: icons.calendar, label: 'Dates', value: formatDateRange(trip.start_date, trip.end_date) },
+      { icon: icons.clock, label: 'Duration', value: trip.duration },
+      { icon: icons.users, label: 'Group Size', value: `Max ${trip.total_seats}` },
+      { icon: icons.userCheck, label: 'Age Range', value: formatAgeRange(trip.min_age, trip.max_age) },
+    ];
+    const metaColW = (rightW - PAD * 2) / metaItems.length;
+    metaItems.forEach((item, i) => {
+      const mx = rightX + PAD + metaColW * i;
+      item.icon(mx, metaTop + 12, 13, COLORS.primary);
+      setText(COLORS.darkMuted);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.text(item.label, mx + 17, metaTop + 3);
+      setText(COLORS.dark);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      const vLines = clampLines(item.value, metaColW - 22, 2);
+      doc.text(vLines, mx + 17, metaTop + 16);
+    });
+
+    // CTA button
+    const btnY = metaTop + 38;
+    const showAdvance = trip.advance_amount != null && !isFull;
+    const btnH = showAdvance ? 38 : 30;
+    setFill(COLORS.primary);
+    doc.roundedRect(rightX + PAD, btnY, rightW - PAD * 2, btnH, 10, 10, 'F');
+    icons.lock(rightX + PAD + 16, btnY + btnH / 2 + 9, 17, COLORS.white);
+    setText(COLORS.white);
+    if (isFull) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('JOIN WAITLIST', rightX + PAD + 38, btnY + btnH / 2 + 4);
+    } else if (showAdvance) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('SECURE YOUR SPOT', rightX + PAD + 38, btnY + btnH / 2 - 3);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.6);
+      doc.text(`At only ${formatPrice(trip.advance_amount as number)} today`, rightX + PAD + 38, btnY + btnH / 2 + 11);
+    } else {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('BOOK YOUR SEAT', rightX + PAD + 38, btnY + btnH / 2 + 4);
+    }
+
+    // Link row: Add to calendar | Share this trip | Download itinerary
+    const linkY = btnY + btnH + 18;
+    const linkItems = [
+      { icon: icons.calendar, label: 'Add to calendar' },
+      { icon: icons.share, label: 'Share this trip' },
+      { icon: icons.download, label: 'Download itinerary' },
     ];
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    const widths = contacts.map(c => doc.getTextWidth(c.label));
-    const gap = 30;
-    const totalW = widths.reduce((a, b) => a + b, 0) + gap * (contacts.length - 1);
-    let cx = PAGE_W / 2 - totalW / 2;
-    const rowY = cy + 100;
-    contacts.forEach((c, i) => {
-      setText(COLORS.primary);
-      doc.textWithLink(c.label, cx, rowY, { url: c.url });
-      cx += widths[i] + gap;
+    doc.setFontSize(8.1);
+    let linkX = rightX + PAD;
+    linkItems.forEach((item, i) => {
+      item.icon(linkX, linkY + 5, 11, COLORS.darkMuted);
+      setText(COLORS.darkMuted);
+      doc.text(item.label, linkX + 15, linkY + 3);
+      linkX += doc.getTextWidth(item.label) + 33;
+      if (i < linkItems.length - 1) {
+        setDraw(COLORS.grayLineSoft);
+        doc.line(linkX - 15, linkY - 5, linkX - 15, linkY + 7);
+      }
     });
+
+    // "No payment required..." assurance, right-aligned in the card.
+    const assuranceW = 195;
+    const assuranceX = rightX + rightW - PAD - assuranceW;
+    icons.check(assuranceX, linkY + 9, 12, COLORS.green);
+    setText(COLORS.darkMuted);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.3);
+    const assuranceLines = doc.splitTextToSize("No payment required to enquire. We'll contact you within 24 hours.", assuranceW - 15);
+    doc.text(assuranceLines, assuranceX + 15, linkY);
+
+    // ---- Contact bar (from BRAND — the site's existing contact info) ----
+    const CONTACT_TOP = 398;
+    const CONTACT_BOTTOM = 436;
+    setFill(COLORS.cream);
+    doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 12, 12, 'F');
+    setDraw(COLORS.grayLine);
+    doc.setLineWidth(1);
+    doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 12, 12, 'S');
+
+    const contactItems: { icon: (x: number, y: number, s?: number, color?: RGB) => void; title: string; value: string; url?: string }[] = [
+      { icon: icons.headset, title: 'Need Help?', value: "We're just a message away!" },
+      { icon: icons.phone, title: 'Call / WhatsApp', value: BRAND.phone, url: `tel:${BRAND.phone.replace(/\s/g, '')}` },
+      { icon: icons.mail, title: 'Email Us', value: BRAND.email, url: `mailto:${BRAND.email}` },
+      { icon: icons.globe, title: 'Website', value: BRAND.website, url: `https://${BRAND.website.replace('www.', '')}` },
+      { icon: icons.instagram, title: 'Follow Us', value: BRAND.instagram, url: `https://instagram.com/${BRAND.instagram.replace('@', '')}` },
+    ];
+    const contactColW = CONTENT_W / contactItems.length;
+    const contactMidY = CONTACT_TOP + (CONTACT_BOTTOM - CONTACT_TOP) / 2;
+    contactItems.forEach((item, i) => {
+      const cx0 = MARGIN + contactColW * i + 18;
+      setFill(COLORS.backgroundWarm);
+      doc.circle(cx0 + 12, contactMidY, 15, 'F');
+      item.icon(cx0, contactMidY + 12, 20, COLORS.primary);
+
+      const tx = cx0 + 30;
+      setText(COLORS.dark);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.2);
+      doc.text(item.title, tx, contactMidY - 3);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.4);
+      if (item.url) {
+        setText(COLORS.primary);
+        doc.textWithLink(item.value, tx, contactMidY + 10, { url: item.url });
+      } else {
+        setText(COLORS.darkMuted);
+        doc.text(item.value, tx, contactMidY + 10);
+      }
+
+      if (i < contactItems.length - 1) {
+        setDraw(COLORS.grayLineSoft);
+        doc.line(MARGIN + contactColW * (i + 1), CONTACT_TOP + 8, MARGIN + contactColW * (i + 1), CONTACT_BOTTOM - 8);
+      }
+    });
+
+    // ---- Footer band (hardcoded copy per the reference design) ----
+    const FOOTER_TOP = 446;
+    setFill(COLORS.dark);
+    doc.rect(0, FOOTER_TOP, PAGE_W, PAGE_H - FOOTER_TOP, 'F');
+
+    withOpacity(0.5, () => {
+      icons.palm(24, PAGE_H - 12, 30, COLORS.whiteMuted);
+      icons.mountain(60, PAGE_H - 12, 26, COLORS.whiteMuted);
+      setDraw(COLORS.whiteMuted);
+      doc.setLineWidth(1);
+      doc.line(104, FOOTER_TOP + 20, 112, FOOTER_TOP + 14);
+      doc.line(112, FOOTER_TOP + 14, 120, FOOTER_TOP + 20);
+      doc.line(120, FOOTER_TOP + 24, 128, FOOTER_TOP + 18);
+      doc.line(128, FOOTER_TOP + 18, 136, FOOTER_TOP + 24);
+    });
+
+    // Brush-stroke ribbon with the hardcoded "Travel. Laugh. Connect." line.
+    const ribbonY = FOOTER_TOP + (PAGE_H - FOOTER_TOP) / 2;
+    doc.setFont('Parisienne', 'normal');
+    doc.setFontSize(19);
+    const ribbonText = 'Travel. Laugh. Connect.';
+    const ribbonTextW = doc.getTextWidth(ribbonText);
+    const ribbonW = ribbonTextW + 110;
+    const ribbonX = PAGE_W / 2 - ribbonW / 2;
+    const ribbonH = 34;
+    setFill(COLORS.secondary);
+    doc.roundedRect(ribbonX, ribbonY - ribbonH / 2, ribbonW, ribbonH, ribbonH / 2, ribbonH / 2, 'F');
+    icons.heart(ribbonX + 22, ribbonY + 6, 14, COLORS.white, 'F');
+    setText(COLORS.white);
+    doc.text(ribbonText, PAGE_W / 2 - ribbonTextW / 2, ribbonY + 6);
+    icons.heart(ribbonX + ribbonW - 36, ribbonY + 6, 14, COLORS.white, 'F');
+
+    // Small dotted route + pin, right of the ribbon.
+    const routeX = ribbonX + ribbonW + 24;
+    setDraw(COLORS.gold);
+    doc.setLineWidth(1);
+    doc.setLineDashPattern([2, 2], 0);
+    doc.lines(
+      [
+        [16, -10],
+        [16, 10],
+      ],
+      routeX,
+      ribbonY + 8,
+      [1, 1],
+      'S',
+      false
+    );
+    doc.setLineDashPattern([], 0);
+    icons.pin(routeX + 30, ribbonY + 10, 14, COLORS.gold);
+
+    // Right-aligned closing lines (hardcoded per the reference design), kept
+    // clear of the page-number badge drawn in the bottom-right corner.
+    const closingRightEdge = PAGE_W - 176;
+    setText(COLORS.white);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Thank you for choosing ULAA.', closingRightEdge, FOOTER_TOP + 24, { align: 'right' });
+
+    doc.setFont('Parisienne', 'normal');
+    doc.setFontSize(21);
+    setText(COLORS.gold);
+    const seeYouText = `See you in ${destinationFirstWord}!`;
+    doc.text(seeYouText, closingRightEdge - 18, FOOTER_TOP + 50, { align: 'right' });
+    icons.heart(closingRightEdge - 4, FOOTER_TOP + 53, 13, COLORS.gold, 'S');
   }
 
   // =========================================================================
