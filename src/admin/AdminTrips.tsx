@@ -19,7 +19,7 @@ import DatePicker from '../components/ui/DatePicker';
 import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
-import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip, COVER_IMAGE_TARGET_SIZE_BYTES } from '../services/api';
+import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip, COVER_IMAGE_TARGET_SIZE_BYTES, getSiteContent } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
@@ -27,6 +27,7 @@ import type {
   UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy,
   TripHighlightCard, TripInclusionItem, TripIncludedGroup, TripGalleryItem,
   TripFounder, TripConfidenceItem, TripEndBanner, CoverImageCrop,
+  AboutContent,
 } from '../types/types-index';
 import { formatDate, slugify, formatAgeRange } from '../utils/utils-index';
 
@@ -109,7 +110,7 @@ interface TripForm {
   end_banner: TripEndBanner;
 }
 
-const emptyFounder: TripFounder = { photo: '', name: '', description: '' };
+const emptyFounder: TripFounder = { photo: '', name: '', designation: '', description: '' };
 const emptyEndBanner: TripEndBanner = { image: '', heading: '', description: '', cta_label: '', cta_url: '' };
 
 const emptyForm: TripForm = {
@@ -192,11 +193,25 @@ export default function AdminTrips() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalSearch, modalOpen]);
 
-  const openCreate = () => {
+  const openCreate = async () => {
     setEditingTrip(null);
-    setForm(emptyForm);
     setModalSearch('');
     setModalSearchNoMatch(false);
+    // Pre-fill trip_founder from About page "Meet the Founder" data so the
+    // admin doesn't have to re-enter the same photo/name/bio for every trip.
+    let preFilledFounder: TripFounder = emptyFounder;
+    try {
+      const about = await getSiteContent<Partial<AboutContent>>('about');
+      if (about?.founder) {
+        const { photo = '', name = '', designation = '', description = '' } = about.founder;
+        if (photo || name || description) {
+          preFilledFounder = { photo, name, designation, description };
+        }
+      }
+    } catch {
+      // silently fall back to empty founder
+    }
+    setForm({ ...emptyForm, trip_founder: preFilledFounder });
     setModalOpen(true);
   };
 
@@ -298,6 +313,7 @@ export default function AdminTrips() {
       trip_founder: {
         photo: '(leave blank — uploaded manually)',
         name: '<Founder/host name for this trip>',
+        designation: '<Designation or role, e.g. "Founder & CEO, ULAA" (optional)>',
         description: '<Short founder bio/description for this trip>',
       },
       confidence_items: [
@@ -477,7 +493,7 @@ export default function AdminTrips() {
           ? raw.things_to_carry_items.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) }))
           : [],
         trip_founder: raw.trip_founder
-          ? { photo: asStr(raw.trip_founder.photo), name: asStr(raw.trip_founder.name), description: asStr(raw.trip_founder.description) }
+          ? { photo: asStr(raw.trip_founder.photo), name: asStr(raw.trip_founder.name), designation: asStr(raw.trip_founder.designation), description: asStr(raw.trip_founder.description) }
           : emptyFounder,
         confidence_items: Array.isArray(raw.confidence_items)
           ? raw.confidence_items.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) }))
@@ -1356,6 +1372,15 @@ export default function AdminTrips() {
                 onChange={e => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, name: e.target.value } }))}
                 className={inputClass}
                 placeholder="e.g. Priya Sharma"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Designation</label>
+              <input
+                value={form.trip_founder.designation ?? ''}
+                onChange={e => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, designation: e.target.value } }))}
+                className={inputClass}
+                placeholder="e.g. Founder & CEO, ULAA"
               />
             </div>
             <div className="md:col-span-2">

@@ -31,6 +31,7 @@ export interface TripGalleryItem {
 export interface TripFounder {
   photo: string;
   name: string;
+  designation?: string;
   description: string;
 }
 

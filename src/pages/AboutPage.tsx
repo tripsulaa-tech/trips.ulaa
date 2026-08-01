@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { ExternalLink, X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, Compass, Ticket, Backpack, Plane, Image as ImageIcon } from 'lucide-react';
+import { ExternalLink, X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, Compass, Ticket, Backpack, Plane, Image as ImageIcon, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
+import Button from '../components/ui/Button';
 import TestimonialCard from '../components/ui/TestimonialCard';
 import { getSiteContent, getTestimonials, getCompletedTrips } from '../services/api';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
@@ -89,6 +90,23 @@ export default function AboutPage() {
   // revert). Mirrors the heart-tap-to-reveal pattern on the trip details page.
   const [journeyActivated, setJourneyActivated] = useState(false);
 
+  // Parallax hero — mirrors HeroSection.tsx exactly
+  const heroContainerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: heroScrollY } = useScroll({
+    target: heroContainerRef,
+    offset: ['start start', 'end start'],
+  });
+  const heroY = useTransform(heroScrollY, [0, 1], ['0%', '30%']);
+  const heroOpacity = useTransform(heroScrollY, [0, 0.8], [1, 0]);
+  const heroTextVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: { delay: i * 0.15, duration: 0.7, ease: 'easeOut' as const },
+    }),
+  };
+
   useEffect(() => {
     // Fetch about content
     getSiteContent<Partial<AboutContent>>('about')
@@ -146,47 +164,105 @@ export default function AboutPage() {
     <Layout>
 
       {/* ══════════════════════════════════════════════════════════════
-          1. HERO BANNER
+          1. HERO BANNER — identical layout to home HeroSection
       ══════════════════════════════════════════════════════════════ */}
-      <div className="relative h-[70vh] min-h-[480px] overflow-hidden">
-        {(hero.image || hero.mobile_image) ? (
-          <>
-            {/* Mobile banner (falls back to desktop image if no mobile-specific one was uploaded) */}
-            <img
-              src={hero.mobile_image || hero.image}
-              alt={hero.heading}
-              className="w-full h-full object-cover md:hidden"
-            />
-            {/* Desktop/tablet banner (falls back to mobile image if no desktop-specific one was uploaded) */}
-            <img
-              src={hero.image || hero.mobile_image}
-              alt={hero.heading}
-              className="w-full h-full object-cover hidden md:block"
-            />
-          </>
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/80 to-dark" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-dark/40 via-dark/50 to-dark/80" />
-        <div className="absolute inset-0 flex flex-col items-start justify-center text-left text-white px-6 sm:px-10 lg:px-20 pt-20">
-          <motion.div {...fadeUp()} className="max-w-3xl">
-            <h1 className="font-display text-4xl sm:text-5xl md:text-7xl font-bold leading-tight mb-6 whitespace-pre-line">
-              {hero.heading}
-            </h1>
-            <p className="text-white/80 text-lg md:text-xl max-w-2xl mb-8 leading-relaxed whitespace-pre-line">
-              {hero.subheading}
-            </p>
-            {hero.cta_label && hero.cta_url && (
-              <Link
-                to={hero.cta_url}
-                className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white font-button font-semibold px-8 py-3 rounded-full transition-colors duration-200"
-              >
-                {hero.cta_label}
-              </Link>
+      <section
+        ref={heroContainerRef}
+        className="relative min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
+      >
+        {/* Parallax Background */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div className="absolute inset-0" style={{ y: heroY }}>
+            {(hero.image || hero.mobile_image) ? (
+              <>
+                <img
+                  src={hero.mobile_image || hero.image}
+                  alt={hero.heading}
+                  className="w-full h-full object-cover md:hidden"
+                />
+                <img
+                  src={hero.image || hero.mobile_image}
+                  alt={hero.heading}
+                  className="w-full h-full object-cover hidden md:block"
+                />
+              </>
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/80 to-dark" />
             )}
           </motion.div>
+          {/* Gradient Overlays — identical to home hero */}
+          <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-dark/40 to-dark/80" />
+          <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />
         </div>
-      </div>
+
+        {/* Content — bottom-anchored, matching home hero exactly */}
+        <motion.div
+          style={{ opacity: heroOpacity }}
+          className="absolute inset-x-0 bottom-0 z-10 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-14 lg:pb-20 text-white"
+        >
+          <div className="max-w-[1344px] mx-auto">
+            <div className="max-w-3xl">
+              <motion.h1
+                custom={1}
+                initial="hidden"
+                animate="visible"
+                variants={heroTextVariants}
+                className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] mb-6 whitespace-pre-line"
+              >
+                {hero.heading}
+              </motion.h1>
+              <motion.p
+                custom={2}
+                initial="hidden"
+                animate="visible"
+                variants={heroTextVariants}
+                className="text-base sm:text-lg text-white/85 leading-relaxed mb-3 sm:mb-8 max-w-xl whitespace-pre-line"
+              >
+                {hero.subheading}
+              </motion.p>
+              <motion.div
+                custom={3}
+                initial="hidden"
+                animate="visible"
+                variants={heroTextVariants}
+                className="flex flex-row flex-wrap gap-3 sm:gap-4"
+              >
+                <Link to={hero.cta_url || '/trips'}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="group/btn whitespace-nowrap sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
+                  >
+                    {hero.cta_label || 'Explore Trips'}
+                    <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />
+                  </Button>
+                </Link>
+                <Link to="/completed-trips">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="whitespace-nowrap text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
+                  >
+                    <Play size={14} className="fill-white sm:w-4 sm:h-4" />
+                    View Gallery
+                  </Button>
+                </Link>
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2, repeat: Infinity, repeatType: 'reverse', duration: 1 }}
+          className="hidden sm:flex absolute bottom-24 left-1/2 -translate-x-1/2 flex-col items-center gap-2 text-white/60"
+        >
+          <span className="text-xs font-button tracking-widest uppercase">Scroll</span>
+          <div className="w-px h-10 bg-gradient-to-b from-white/60 to-transparent" />
+        </motion.div>
+      </section>
 
       {/* ══════════════════════════════════════════════════════════════
           2. OUR STORY
