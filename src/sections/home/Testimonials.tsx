@@ -4,8 +4,9 @@ import type { PanInfo } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import SectionTitle from '../../components/ui/SectionTitle';
 import TestimonialCard from '../../components/ui/TestimonialCard';
-import { getTestimonials } from '../../services/api';
-import type { Testimonial } from '../../types/types-index';
+import { getTestimonials, getSiteContent } from '../../services/api';
+import type { Testimonial, TestimonialsSectionContent } from '../../types/types-index';
+import { DEFAULT_TESTIMONIALS_SECTION } from '../../constants/testimonials-section';
 
 const DEMO_TESTIMONIALS: Testimonial[] = [
   {
@@ -38,11 +39,15 @@ export default function Testimonials() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [sectionText, setSectionText] = useState<TestimonialsSectionContent>(DEFAULT_TESTIMONIALS_SECTION);
 
   useEffect(() => {
     getTestimonials()
       .then(data => setTestimonials((data.length > 0 ? data : DEMO_TESTIMONIALS).slice(0, 3)))
       .catch(() => setTestimonials(DEMO_TESTIMONIALS.slice(0, 3)));
+    getSiteContent<TestimonialsSectionContent>('testimonials_section')
+      .then(data => { if (data) setSectionText(data); })
+      .catch(() => {});
   }, []);
 
   const prev = () => {
@@ -75,9 +80,9 @@ export default function Testimonials() {
       <div className="max-w-[1344px] mx-auto">
         <div className="text-center mb-8 sm:mb-16">
           <SectionTitle
-            label="Real Stories"
-            title="What our travelers say."
-            subtitle="Thousands of women have discovered themselves through ULAA. Here are some of their stories."
+            label={sectionText.sub_heading}
+            title={sectionText.heading}
+            subtitle={sectionText.subheading}
             align="center"
             light
           />

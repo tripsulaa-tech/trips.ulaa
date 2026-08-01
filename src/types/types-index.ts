@@ -558,6 +558,15 @@ export interface WhyUlaaContent {
   features: WhyUlaaFeature[];
 }
 
+// =============================================
+// Testimonials section heading text (editable via Admin)
+// =============================================
+export interface TestimonialsSectionContent {
+  sub_heading: string;
+  heading: string;
+  subheading: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Star, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Star, ChevronUp, ChevronDown, Save } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -8,10 +8,12 @@ import Select from '../components/ui/Select';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import {
   getAllTestimonialsAdmin, createTestimonial, updateTestimonial, deleteTestimonial,
+  getSiteContent, upsertSiteContent,
 } from '../services/api';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import type { Testimonial } from '../types/types-index';
+import type { Testimonial, TestimonialsSectionContent } from '../types/types-index';
 import { slugify } from '../utils/utils-index';
+import { DEFAULT_TESTIMONIALS_SECTION } from '../constants/testimonials-section';
 
 interface TestimonialForm {
   name: string;
@@ -35,11 +37,37 @@ export default function AdminTestimonials() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<TestimonialForm>(emptyForm);
 
+  const [sectionText, setSectionText] = useState<TestimonialsSectionContent>(DEFAULT_TESTIMONIALS_SECTION);
+  const [sectionSaving, setSectionSaving] = useState(false);
+  const [sectionSaved, setSectionSaved] = useState(false);
+
   const load = () => {
     getAllTestimonialsAdmin().then(setItems).catch(console.error).finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    getSiteContent<TestimonialsSectionContent>('testimonials_section')
+      .then(data => setSectionText(data || DEFAULT_TESTIMONIALS_SECTION))
+      .catch(() => setSectionText(DEFAULT_TESTIMONIALS_SECTION));
+  }, []);
+
+  const setSectionField = (key: keyof TestimonialsSectionContent, value: string) => {
+    setSectionText(s => ({ ...s, [key]: value }));
+  };
+
+  const handleSectionSave = async () => {
+    try {
+      setSectionSaving(true);
+      await upsertSiteContent('testimonials_section', sectionText);
+      setSectionSaved(true);
+      setTimeout(() => setSectionSaved(false), 2500);
+    } catch {
+      alert('Failed to save. Please try again.');
+    } finally {
+      setSectionSaving(false);
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -101,6 +129,45 @@ export default function AdminTestimonials() {
   return (
     <AdminLayout title="Testimonials" subtitle="Manage the 'Real Stories' shown on the homepage.">
       <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow-card p-6 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark">Section Text</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Sub Heading</label>
+              <input
+                value={sectionText.sub_heading}
+                onChange={e => setSectionField('sub_heading', e.target.value)}
+                className={inputClass}
+                placeholder="Real Stories"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Section Heading</label>
+              <input
+                value={sectionText.heading}
+                onChange={e => setSectionField('heading', e.target.value)}
+                className={inputClass}
+                placeholder="What our travelers say."
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-dark mb-1">Subheading</label>
+              <textarea
+                value={sectionText.subheading}
+                onChange={e => setSectionField('subheading', e.target.value)}
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="primary" size="sm" onClick={handleSectionSave} loading={sectionSaving}>
+              <Save size={14} /> Save Changes
+            </Button>
+            {sectionSaved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+          </div>
+        </div>
+
         <div className="flex justify-between items-center">
           <p className="text-dark-muted">{items.length} testimonials</p>
           <Button variant="primary" size="sm" onClick={openCreate}><Plus size={16} /> Add Testimonial</Button>
