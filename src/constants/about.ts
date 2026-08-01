@@ -47,8 +47,9 @@ export const DEFAULT_ABOUT: AboutContent = {
 
   // 5. Why Ulaa is Different
   why_different: {
+    sub_heading: 'Beyond the Ordinary',
     heading: 'Why ULAA is Different',
-    subheading: 'We\'re not just a travel company. We\'re a movement.',
+    subheading: 'Thoughtfully crafted for every traveler.',
     cards: [
       { heading: 'Women-Only Safe Spaces', description: 'Every trip is exclusively for women, creating an environment where you can truly let your guard down.', image: '' },
       { heading: 'Handpicked Hidden Gems', description: 'We seek out destinations Instagram hasn\'t discovered yet — raw, authentic, and unforgettable.', image: '' },
@@ -61,8 +62,9 @@ export const DEFAULT_ABOUT: AboutContent = {
 
   // 6. Our Community
   community: {
+    sub_heading: 'Together We Thrive',
     heading: 'Our Community',
-    subheading: 'Real women. Real moments. Real magic.',
+    subheading: 'Travel together. Belong forever.',
     photos: [],
   },
 
@@ -74,13 +76,18 @@ export const DEFAULT_ABOUT: AboutContent = {
     avg_trip_rating: 4.9,
   },
 
-  // 8. Testimonials section heading
-  testimonials_heading: 'What Our Girls Say',
+  // 8. Testimonials section
+  testimonials: {
+    sub_heading: 'Stories That Inspire',
+    heading: 'What Our Girls Say',
+    subheading: 'Real stories. Real experiences.',
+  },
 
   // 9. Your Ulaa Journey
   journey: {
+    sub_heading: 'One Step Closer',
     heading: 'Your ULAA Journey',
-    subheading: 'Every adventure begins with a single step.',
+    subheading: 'One booking. Countless unforgettable moments.',
     steps: [
       { heading: 'Discover Your Trip', description: 'Browse our carefully curated calendar of upcoming women-only trips across India and beyond.', icon: 'compass' },
       { heading: 'Book Your Spot', description: 'Reserve your seat with a simple booking form. Our team confirms within 24 hours.', icon: 'ticket' },
@@ -132,7 +139,7 @@ export function mergeWithDefaults(data: Partial<AboutContent> | null | undefined
     why_different: { ...DEFAULT_ABOUT.why_different, ...data.why_different },
     community: { ...DEFAULT_ABOUT.community, ...data.community },
     stats: { ...DEFAULT_ABOUT.stats, ...data.stats },
-    testimonials_heading: data.testimonials_heading ?? DEFAULT_ABOUT.testimonials_heading,
+    testimonials: { ...DEFAULT_ABOUT.testimonials, ...data.testimonials },
     journey: { ...DEFAULT_ABOUT.journey, ...data.journey },
     founder: { ...DEFAULT_ABOUT.founder, ...data.founder },
   };

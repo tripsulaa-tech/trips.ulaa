@@ -97,8 +97,8 @@ export default function CompletedTripsPage() {
       trips.flatMap(t => t.destination.split(',').map(d => d.trim().toLowerCase()))
     ).size;
     return [
-      { value: `${tripsCompleted}+`, label: 'Trips Completed' },
-      { value: `${womenTraveled}+`, label: 'Women Traveled' },
+      { value: `${womenTraveled}+`, label: 'Girls travelled' },
+      { value: `${tripsCompleted}+`, label: 'Trips completed' },
       { value: `${destinations}+`, label: 'Destinations' },
     ];
   }, [trips]);

@@ -489,17 +489,21 @@ export interface AboutContent {
   };
   // 5. Why Ulaa is Different (up to 6 cards)
   why_different: {
+    /** Small script line above the heading, e.g. "Beyond the Ordinary" */
+    sub_heading: string;
     heading: string;
     subheading: string;
     cards: AboutWhyDifferentCard[];
   };
   // 6. Our Community
   community: {
+    /** Small script line above the heading, e.g. "Together We Thrive" */
+    sub_heading: string;
     heading: string;
     subheading: string;
     photos: string[];
   };
-  // 7. Statistics (Girls Travelled, Destinations, Friendships Made, Avg Rating)
+  // 7. Statistics (Girls Travelled, Trips Completed, Destinations)
   stats: {
     girls_travelled: number;
     destinations: number;
@@ -507,9 +511,16 @@ export interface AboutContent {
     avg_trip_rating: number;
   };
   // 8. What Our Girls Say — fetched from existing Testimonials module
-  testimonials_heading: string;
+  testimonials: {
+    /** Small script line above the heading, e.g. "Stories That Inspire" */
+    sub_heading: string;
+    heading: string;
+    subheading: string;
+  };
   // 9. Your Ulaa Journey (5 steps)
   journey: {
+    /** Small script line above the heading, e.g. "One Step Closer" */
+    sub_heading: string;
     heading: string;
     subheading: string;
     steps: AboutJourneyStep[];

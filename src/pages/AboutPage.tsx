@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Star, ExternalLink, X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown, Compass, Ticket, Backpack, Plane, Image as ImageIcon } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { PanInfo } from 'framer-motion';
+import { ExternalLink, X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, Compass, Ticket, Backpack, Plane, Image as ImageIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import TestimonialCard from '../components/ui/TestimonialCard';
-import { getSiteContent, getTestimonials } from '../services/api';
+import { getSiteContent, getTestimonials, getCompletedTrips } from '../services/api';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
 import type {
@@ -15,6 +16,7 @@ import type {
   AboutJourneyStep,
   AboutFounderSocialLink,
   Testimonial,
+  CompletedTrip,
 } from '../types/types-index';
 
 // ─── animation helpers ────────────────────────────────────────────────────────
@@ -53,7 +55,35 @@ const WELCOME_FILL = '#16A34A';
 export default function AboutPage() {
   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [liveRating, setLiveRating] = useState<number | null>(null);
+  // Completed trips, fetched live so the stats strip below (Girls Travelled,
+  // Trips Completed, Destinations) reflects real data instead of a
+  // hardcoded admin number — same live-data approach, and now the exact
+  // same three stats, as the Completed Trips page.
+  const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
+
+  // Mobile "What Our Girls Say" carousel — mirrors the swipeable single-card
+  // carousel used on the home page's Testimonials section.
+  const [testimonialIndex, setTestimonialIndex] = useState(0);
+  const [testimonialDirection, setTestimonialDirection] = useState(0);
+  const prevTestimonial = () => {
+    setTestimonialDirection(-1);
+    setTestimonialIndex(c => Math.max(0, c - 1));
+  };
+  const nextTestimonial = () => {
+    setTestimonialDirection(1);
+    setTestimonialIndex(c => Math.min(testimonials.length - 1, c + 1));
+  };
+  const TESTIMONIAL_SWIPE_DISTANCE = 50;
+  const TESTIMONIAL_SWIPE_VELOCITY = 400;
+  const handleTestimonialDragEnd = (_e: unknown, info: PanInfo) => {
+    if (info.offset.x < -TESTIMONIAL_SWIPE_DISTANCE || info.velocity.x < -TESTIMONIAL_SWIPE_VELOCITY) nextTestimonial();
+    else if (info.offset.x > TESTIMONIAL_SWIPE_DISTANCE || info.velocity.x > TESTIMONIAL_SWIPE_VELOCITY) prevTestimonial();
+  };
+  const testimonialSlideVariants = {
+    enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -80 : 80, opacity: 0 }),
+  };
   // Tapping the glowing connector arrow fills every "Have You Ever" icon red
   // and every "Welcome to Ulaa" icon green, all at once (tap again to
   // revert). Mirrors the heart-tap-to-reveal pattern on the trip details page.
@@ -67,14 +97,13 @@ export default function AboutPage() {
 
     // Fetch testimonials from existing module
     getTestimonials()
-      .then(data => {
-        setTestimonials(data);
-        // Calculate avg rating dynamically from the testimonials table
-        if (data.length > 0) {
-          const avg = data.reduce((sum, t) => sum + t.rating, 0) / data.length;
-          setLiveRating(Math.round(avg * 10) / 10);
-        }
-      })
+      .then(data => setTestimonials(data))
+      .catch(() => {});
+
+    // Fetch completed trips to derive live stats (girls travelled, trips
+    // completed, destinations) instead of using static numbers
+    getCompletedTrips()
+      .then(data => setCompletedTrips(data))
       .catch(() => {});
   }, []);
 
@@ -85,14 +114,31 @@ export default function AboutPage() {
     why_different,
     community,
     stats,
-    testimonials_heading,
+    testimonials: testimonialsContent,
     journey,
     founder,
   } = content;
   const { have_you_ever, welcome_to_ulaa } = journey_intro;
 
-  // Use live avg rating from DB if available, fall back to admin-set value
-  const displayRating = liveRating ?? stats.avg_trip_rating;
+  // Live stats derived from real completed trips — same three numbers,
+  // same order, as the Completed Trips page (Girls Travelled, Trips
+  // Completed, Destinations). Falls back to the admin-configured numbers
+  // until trips have loaded.
+  const liveStats = useMemo(() => {
+    if (completedTrips.length === 0) return null;
+    const girlsTravelled = completedTrips.reduce((sum, t) => sum + (t.participants || 0), 0);
+    const tripsCompleted = completedTrips.length;
+    const destinations = new Set(
+      completedTrips.flatMap(t => t.destination.split(',').map(d => d.trim().toLowerCase()))
+    ).size;
+    return { girlsTravelled, tripsCompleted, destinations };
+  }, [completedTrips]);
+
+  const statsDisplay = {
+    girls_travelled: liveStats?.girlsTravelled ?? stats.girls_travelled,
+    trips_completed: liveStats?.tripsCompleted ?? 0,
+    destinations: liveStats?.destinations ?? stats.destinations,
+  };
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -178,7 +224,7 @@ export default function AboutPage() {
         <div className="max-w-[1344px] mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-6 sm:mb-14">
             {journey_intro.sub_heading && (
-              <p className="font-script text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+              <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
                 {journey_intro.sub_heading}
               </p>
             )}
@@ -187,7 +233,24 @@ export default function AboutPage() {
             </h2>
             {journey_intro.description && (
               <p className="text-dark-muted text-lg whitespace-pre-line">
-                {journey_intro.description}
+                {(() => {
+                  // Highlight "beautiful experiences" in the same color as
+                  // the "From Worries" script heading above it, matching
+                  // everything else exactly as admin-configured.
+                  const phrase = 'beautiful experiences';
+                  const idx = journey_intro.description.toLowerCase().indexOf(phrase);
+                  if (idx === -1) return journey_intro.description;
+                  const before = journey_intro.description.slice(0, idx);
+                  const match = journey_intro.description.slice(idx, idx + phrase.length);
+                  const after = journey_intro.description.slice(idx + phrase.length);
+                  return (
+                    <>
+                      {before}
+                      <span className="text-primary">{match}</span>
+                      {after}
+                    </>
+                  );
+                })()}
               </p>
             )}
           </motion.div>
@@ -311,6 +374,11 @@ export default function AboutPage() {
       <section className="py-12 px-4 sm:px-6 lg:px-8 bg-background-warm">
         <div className="max-w-[1344px] mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-6 sm:mb-14">
+            {why_different.sub_heading && (
+              <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+                {why_different.sub_heading}
+              </p>
+            )}
             <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
               {why_different.heading}
             </h2>
@@ -362,6 +430,11 @@ export default function AboutPage() {
                     {...fadeUp()}
                     className="flex-shrink-0 bg-gradient-to-br from-background-warm to-primary/10 rounded-2xl p-6"
                   >
+                    {community.sub_heading && (
+                      <p className="font-script font-normal text-xl text-primary mb-1 whitespace-pre-line">
+                        {community.sub_heading}
+                      </p>
+                    )}
                     <div className="flex items-center gap-2 mb-2">
                       <h2 className="font-display text-4xl font-bold text-dark whitespace-nowrap">
                         {community.heading}
@@ -424,6 +497,11 @@ export default function AboutPage() {
             ) : (
               <>
                 <motion.div {...fadeUp()} className="text-center mb-12">
+                  {community.sub_heading && (
+                    <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+                      {community.sub_heading}
+                    </p>
+                  )}
                   <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
                     {community.heading}
                   </h2>
@@ -447,26 +525,17 @@ export default function AboutPage() {
       ══════════════════════════════════════════════════════════════ */}
       <section className="py-6 sm:py-12 px-4 sm:px-6 lg:px-8 bg-primary">
         <div className="max-w-[1344px] mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
+          <div className="grid grid-cols-3 gap-6 text-center text-white">
             {[
-              { value: `${stats.girls_travelled}+`, label: 'Girls Travelled' },
-              { value: `${stats.destinations}+`, label: 'Destinations' },
-              { value: `${stats.friendships_made}+`, label: 'Friendships Made' },
-              {
-                value: (
-                  <span className="flex items-center justify-center gap-1">
-                    <Star size={28} className="fill-white text-white" />
-                    {displayRating}
-                  </span>
-                ),
-                label: 'Average Trip Rating',
-              },
+              { value: `${statsDisplay.girls_travelled}+`, label: 'Girls travelled' },
+              { value: `${statsDisplay.trips_completed}+`, label: 'Trips completed' },
+              { value: `${statsDisplay.destinations}+`, label: 'Destinations' },
             ].map((stat, i) => (
               <motion.div key={i} {...fadeUp(i * 0.1)}>
-                <div className="font-display text-5xl md:text-6xl font-bold mb-2">
+                <div className="font-display text-3xl md:text-4xl font-bold mb-2">
                   {stat.value}
                 </div>
-                <div className="text-white/80 text-sm font-button font-semibold uppercase tracking-widest">
+                <div className="text-white/80 text-sm md:text-base mt-1">
                   {stat.label}
                 </div>
               </motion.div>
@@ -482,14 +551,77 @@ export default function AboutPage() {
         <section className="py-12 sm:py-24 px-4 sm:px-6 lg:px-8 bg-background-warm">
           <div className="max-w-[1344px] mx-auto">
             <motion.div {...fadeUp()} className="text-center mb-12">
+              {testimonialsContent.sub_heading && (
+                <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+                  {testimonialsContent.sub_heading}
+                </p>
+              )}
               <h2 className="font-display text-4xl md:text-5xl font-bold text-dark whitespace-pre-line">
-                {testimonials_heading}
+                {testimonialsContent.heading}
               </h2>
+              {testimonialsContent.subheading && (
+                <p className="text-dark-muted text-lg mt-4 whitespace-pre-line">
+                  {testimonialsContent.subheading}
+                </p>
+              )}
             </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Desktop / tablet grid */}
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {testimonials.map((testimonial, i) => (
                 <TestimonialCard key={testimonial.id} testimonial={testimonial} index={i} />
               ))}
+            </div>
+
+            {/* Mobile carousel — only the active card is rendered, swipeable,
+                same behaviour as the home page's testimonials carousel */}
+            <div className="md:hidden">
+              <div className="overflow-hidden px-2">
+                <AnimatePresence mode="wait" custom={testimonialDirection} initial={false}>
+                  <motion.div
+                    key={testimonials[testimonialIndex]?.id}
+                    custom={testimonialDirection}
+                    variants={testimonialSlideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.6}
+                    onDragEnd={handleTestimonialDragEnd}
+                  >
+                    {testimonials[testimonialIndex] && (
+                      <TestimonialCard testimonial={testimonials[testimonialIndex]} index={0} />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+              {/* Controls */}
+              <div className="flex items-center justify-center gap-4 mt-6">
+                <button
+                  onClick={prevTestimonial}
+                  disabled={testimonialIndex === 0}
+                  className="w-10 h-10 rounded-full bg-dark/10 hover:bg-primary hover:text-white text-dark flex items-center justify-center disabled:opacity-40 transition-colors"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <div className="flex gap-2">
+                  {testimonials.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setTestimonialDirection(i > testimonialIndex ? 1 : -1); setTestimonialIndex(i); }}
+                      className={`w-2 h-2 rounded-full transition-all ${i === testimonialIndex ? 'bg-primary w-5' : 'bg-dark/20'}`}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={nextTestimonial}
+                  disabled={testimonialIndex === testimonials.length - 1}
+                  className="w-10 h-10 rounded-full bg-dark/10 hover:bg-primary hover:text-white text-dark flex items-center justify-center disabled:opacity-40 transition-colors"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -501,6 +633,11 @@ export default function AboutPage() {
       <section className="py-12 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-5xl mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-16">
+            {journey.sub_heading && (
+              <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+                {journey.sub_heading}
+              </p>
+            )}
             <h2 className="font-display text-4xl md:text-5xl font-bold text-dark mb-4 whitespace-pre-line">
               {journey.heading}
             </h2>
@@ -508,10 +645,10 @@ export default function AboutPage() {
               <p className="text-dark-muted text-lg whitespace-pre-line">{journey.subheading}</p>
             )}
           </motion.div>
-          <div className="relative">
-            {/* Horizontal connector line (desktop) */}
-            <div className="hidden md:block absolute top-8 left-8 right-8 h-0.5 bg-primary/30" />
-            <div className="flex flex-col md:flex-row md:justify-between gap-10 md:gap-4">
+          {/* Desktop / tablet — horizontal row with a straight connector line */}
+          <div className="hidden md:block relative">
+            <div className="absolute top-8 left-8 right-8 h-0.5 bg-primary/30" />
+            <div className="flex md:flex-row md:justify-between gap-4">
               {journey.steps.map((step: AboutJourneyStep, i: number) => {
                 const meta = getTripHighlightIcon(step.icon);
                 const Icon = meta ? meta.Icon : JOURNEY_ICONS[i % JOURNEY_ICONS.length];
@@ -519,9 +656,8 @@ export default function AboutPage() {
                   <motion.div
                     key={i}
                     {...fadeUp(i * 0.1)}
-                    className="relative z-10 flex flex-col items-center text-center md:flex-1 md:px-2"
+                    className="relative z-10 flex flex-col items-center text-center flex-1 px-2"
                   >
-                    {/* Step icon bubble */}
                     <div className="flex-shrink-0 w-16 h-16 rounded-full bg-white border-2 border-primary flex items-center justify-center shadow-md mb-4">
                       <Icon size={26} className="text-primary" strokeWidth={1.75} />
                     </div>
@@ -531,6 +667,64 @@ export default function AboutPage() {
                     <p className="text-dark-muted text-sm leading-snug whitespace-pre-line max-w-[200px]">
                       {step.description}
                     </p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mobile — zigzag layout: step 1 on the left, step 2 on the
+              right, step 3 back on the left, and so on, connected by a
+              single straight vertical line running down the center through
+              every icon. */}
+          <div className="md:hidden relative">
+            <div className="flex flex-col">
+              {journey.steps.map((step: AboutJourneyStep, i: number) => {
+                const meta = getTripHighlightIcon(step.icon);
+                const Icon = meta ? meta.Icon : JOURNEY_ICONS[i % JOURNEY_ICONS.length];
+                const isLeft = i % 2 === 0;
+                const isLast = i === journey.steps.length - 1;
+                return (
+                  <motion.div key={i} {...fadeUp(i * 0.1)} className="relative">
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
+                      {/* Left column: content when isLeft, otherwise empty */}
+                      <div className={isLeft ? 'text-right' : ''}>
+                        {isLeft && (
+                          <>
+                            <h3 className="font-display text-base font-bold text-primary mb-1.5 whitespace-pre-line">
+                              {step.heading}
+                            </h3>
+                            <p className="text-dark-muted text-sm leading-snug whitespace-pre-line">
+                              {step.description}
+                            </p>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Center column: icon bubble + connecting line segment down to the next step */}
+                      <div className="relative flex flex-col items-center">
+                        <div className="flex-shrink-0 w-14 h-14 rounded-full bg-white border-2 border-primary flex items-center justify-center shadow-md z-10">
+                          <Icon size={22} className="text-primary" strokeWidth={1.75} />
+                        </div>
+                        {!isLast && (
+                          <div className="w-0.5 bg-primary/30 flex-1 min-h-[64px]" />
+                        )}
+                      </div>
+
+                      {/* Right column: content when !isLeft, otherwise empty */}
+                      <div className={!isLeft ? 'text-left' : ''}>
+                        {!isLeft && (
+                          <>
+                            <h3 className="font-display text-base font-bold text-primary mb-1.5 whitespace-pre-line">
+                              {step.heading}
+                            </h3>
+                            <p className="text-dark-muted text-sm leading-snug whitespace-pre-line">
+                              {step.description}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </motion.div>
                 );
               })}

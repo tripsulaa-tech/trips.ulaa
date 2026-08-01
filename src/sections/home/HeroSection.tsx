@@ -45,10 +45,13 @@ export default function HeroSection() {
         <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />
       </div>
 
-      {/* Content */}
+      {/* Content — anchored to the bottom of the hero at every breakpoint,
+          so the subheading + buttons land in the lower portion of the image
+          (next to the women) with consistent breathing room above the
+          section's bottom edge, instead of being pinned near the top. */}
       <motion.div
         style={{ opacity }}
-        className="relative z-10 px-4 sm:px-6 lg:px-8 pt-28 sm:pt-32 lg:pt-36 pb-12 text-white"
+        className="absolute inset-x-0 bottom-0 z-10 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-14 lg:pb-20 text-white"
       >
         <div className="max-w-[1344px] mx-auto">
         <div className="max-w-3xl">

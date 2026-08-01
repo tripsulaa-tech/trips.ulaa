@@ -111,6 +111,9 @@ export default function AdminAbout() {
   const setJourney = (field: string, value: unknown) =>
     setContent(p => ({ ...p, journey: { ...p.journey, [field]: value } }));
 
+  const setTestimonialsContent = (field: keyof AboutContent['testimonials'], value: string) =>
+    setContent(p => ({ ...p, testimonials: { ...p.testimonials, [field]: value } }));
+
   const setFounder = (field: keyof AboutContent['founder'], value: unknown) =>
     setContent(p => ({ ...p, founder: { ...p.founder, [field]: value } }));
 
@@ -447,6 +450,15 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark">4 · Why ULAA is Different</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
+              <label className={labelClass}>Sub Heading</label>
+              <input
+                value={content.why_different.sub_heading}
+                onChange={e => setWHY('sub_heading', e.target.value)}
+                className={inputClass}
+                placeholder="Beyond the Ordinary"
+              />
+            </div>
+            <div>
               <label className={labelClass}>Section Heading</label>
               <textarea
                 value={content.why_different.heading}
@@ -455,7 +467,7 @@ export default function AdminAbout() {
                 className={`${inputClass} resize-none`}
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className={labelClass}>Subheading</label>
               <textarea
                 value={content.why_different.subheading}
@@ -530,6 +542,15 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark">5 · Our Community</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
+              <label className={labelClass}>Sub Heading</label>
+              <input
+                value={content.community.sub_heading}
+                onChange={e => setCommunity('sub_heading', e.target.value)}
+                className={inputClass}
+                placeholder="Together We Thrive"
+              />
+            </div>
+            <div>
               <label className={labelClass}>Section Heading</label>
               <textarea
                 value={content.community.heading}
@@ -538,7 +559,7 @@ export default function AdminAbout() {
                 className={`${inputClass} resize-none`}
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className={labelClass}>Subheading</label>
               <textarea
                 value={content.community.subheading}
@@ -559,10 +580,57 @@ export default function AdminAbout() {
           />
         </div>
 
-        {/* ── 7. Your ULAA Journey ─────────────────────────────────────────── */}
+        {/* ── 7. What Our Girls Say ────────────────────────────────────────── */}
         <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">6 · Your ULAA Journey</h2>
+          <h2 className="font-display text-lg font-bold text-dark">6 · What Our Girls Say</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Sub Heading</label>
+              <input
+                value={content.testimonials.sub_heading}
+                onChange={e => setTestimonialsContent('sub_heading', e.target.value)}
+                className={inputClass}
+                placeholder="Stories That Inspire"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Section Heading</label>
+              <textarea
+                value={content.testimonials.heading}
+                onChange={e => setTestimonialsContent('heading', e.target.value)}
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelClass}>Subheading</label>
+              <textarea
+                value={content.testimonials.subheading}
+                onChange={e => setTestimonialsContent('subheading', e.target.value)}
+                rows={2}
+                className={`${inputClass} resize-none`}
+                placeholder="Real stories. Real experiences."
+              />
+            </div>
+          </div>
+          <p className="text-xs text-dark-muted">
+            The testimonial cards themselves come from the Testimonials section of the admin panel.
+          </p>
+        </div>
+
+        {/* ── 8. Your ULAA Journey ─────────────────────────────────────────── */}
+        <div className={cardClass}>
+          <h2 className="font-display text-lg font-bold text-dark">7 · Your ULAA Journey</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Sub Heading</label>
+              <input
+                value={content.journey.sub_heading}
+                onChange={e => setJourney('sub_heading', e.target.value)}
+                className={inputClass}
+                placeholder="One Step Closer"
+              />
+            </div>
             <div>
               <label className={labelClass}>Section Heading</label>
               <textarea
@@ -572,7 +640,7 @@ export default function AdminAbout() {
                 className={`${inputClass} resize-none`}
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className={labelClass}>Subheading</label>
               <textarea
                 value={content.journey.subheading}
@@ -645,7 +713,7 @@ export default function AdminAbout() {
 
         {/* ── 8. Meet the Founder ──────────────────────────────────────────── */}
         <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">7 · Meet the Founder</h2>
+          <h2 className="font-display text-lg font-bold text-dark">8 · Meet the Founder</h2>
           <ImageUploadField
             label="Founder Photo"
             value={content.founder.photo}
