@@ -23,7 +23,7 @@ import {
   Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight,
   ChevronDown, ChevronUp, BadgeCheck,
   Shirt, Footprints, Glasses, HatGlasses, Headphones, BatteryCharging, Pill, SprayCan, Droplet, GlassWater,
-  Cookie, Sparkles, FileText, IdCard, Hand, ShieldCheck, type LucideIcon,
+  Cookie, Sparkles, FileText, IdCard, Hand, ShieldCheck, Flame, type LucideIcon,
 } from 'lucide-react';
 
 // Tracks whether the viewport is at/above the `sm` breakpoint (640px) so
@@ -595,51 +595,82 @@ export default function TripDetailPage() {
         <div className="max-w-[1344px] mx-auto space-y-9 sm:space-y-12">
             {/* Countdown — mobile only; desktop keeps its original spot in the hero */}
             {countdown && (
-              <div className="flex justify-center sm:hidden">
-                <div className="inline-flex flex-col items-center gap-2.5 bg-dark border border-white/10 shadow-card rounded-xl px-6 py-4">
-                  <p className="flex items-center gap-1.5 text-primary-light text-[11px] font-button font-bold uppercase tracking-[0.2em] whitespace-nowrap">
-                    <Clock size={12} /> Trip starts in
-                  </p>
-                  <div className="flex items-center gap-2.5">
-                    {[
-                      { v: countdown.days, l: 'Days' },
-                      { v: countdown.hours, l: 'Hrs' },
-                      { v: countdown.minutes, l: 'Min' },
-                      { v: countdown.seconds, l: 'Sec' },
-                    ].map(({ v, l }, i) => (
-                      <div key={l} className="flex items-center gap-2.5">
-                        <div className="text-center">
-                          <div
-                            className="relative w-14 h-12 overflow-hidden rounded-md bg-gradient-to-b from-background to-background-warm shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
-                            style={{ perspective: '80px' }}
-                          >
-                            <div className="absolute left-0 right-0 top-1/2 h-px bg-dark/15 -translate-y-px z-10" />
-                            <AnimatePresence mode="popLayout" initial={false}>
-                              <motion.div
-                                key={v}
-                                initial={{ rotateX: 90, opacity: 0 }}
-                                animate={{ rotateX: 0, opacity: 1 }}
-                                exit={{ rotateX: -90, opacity: 0 }}
-                                transition={{ duration: 0.8, ease: 'easeInOut' }}
-                                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
-                                className="absolute inset-0 flex items-center justify-center font-display text-2xl font-bold text-dark tabular-nums"
-                              >
-                                {String(v).padStart(2, '0')}
-                              </motion.div>
-                            </AnimatePresence>
+              <div className="sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setBookingOpen(true)}
+                  aria-label="Trip starts soon — tap to book your seat"
+                  className="countdown-border-glow relative overflow-hidden w-full text-left bg-gradient-to-br from-dark via-primary-dark/70 to-dark countdown-gradient border border-primary-light/25 rounded-2xl px-5 py-5 active:scale-[0.99] transition-transform"
+                >
+                  {/* Decorative ambient glows */}
+                  <div className="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/25 blur-3xl" />
+                  <div className="pointer-events-none absolute -bottom-12 -left-8 w-32 h-32 rounded-full bg-primary-light/15 blur-3xl" />
+                  {/* Diagonal shimmer sweep */}
+                  <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent countdown-shimmer" />
+                  {/* Floating sparkles */}
+                  <Sparkles size={14} className="countdown-float pointer-events-none absolute top-4 right-8 text-primary-light/50" style={{ animationDelay: '0.4s' }} />
+                  <Sparkles size={10} className="countdown-float pointer-events-none absolute bottom-6 left-6 text-primary-light/40" style={{ animationDelay: '1.6s' }} />
+
+                  {(isAlmostFull || isFull) && (
+                    <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-white/10 backdrop-blur-sm border border-white/15 text-amber-300 text-[10px] font-button font-bold uppercase tracking-wide px-2 py-1 rounded-full">
+                      <Flame size={11} className="text-amber-300" />
+                      {isFull ? 'Sold out' : `${remaining} seats left`}
+                    </span>
+                  )}
+
+                  <div className="relative flex flex-col items-center gap-3">
+                    <p className="flex items-center gap-1.5 text-primary-light text-[11px] font-button font-bold uppercase tracking-[0.2em] whitespace-nowrap">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-light opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-light" />
+                      </span>
+                      Trip starts in
+                    </p>
+                    <div className="flex items-center gap-2.5">
+                      {[
+                        { v: countdown.days, l: 'Days' },
+                        { v: countdown.hours, l: 'Hrs' },
+                        { v: countdown.minutes, l: 'Min' },
+                        { v: countdown.seconds, l: 'Sec' },
+                      ].map(({ v, l }, i) => (
+                        <div key={l} className="flex items-center gap-2.5">
+                          <div className="text-center">
+                            <div
+                              className={`relative w-16 h-14 overflow-hidden rounded-lg bg-gradient-to-b from-background to-background-warm shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_4px_12px_-2px_rgba(0,0,0,0.4)] ring-1 ring-white/10 ${l === 'Sec' ? 'countdown-tick' : ''}`}
+                              style={{ perspective: '80px' }}
+                            >
+                              <div className="absolute left-0 right-0 top-1/2 h-px bg-dark/15 -translate-y-px z-10" />
+                              <AnimatePresence mode="popLayout" initial={false}>
+                                <motion.div
+                                  key={v}
+                                  initial={{ rotateX: 90, opacity: 0 }}
+                                  animate={{ rotateX: 0, opacity: 1 }}
+                                  exit={{ rotateX: -90, opacity: 0 }}
+                                  transition={{ duration: 0.8, ease: 'easeInOut' }}
+                                  style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+                                  className="absolute inset-0 flex items-center justify-center font-display text-3xl font-bold text-dark tabular-nums"
+                                >
+                                  {String(v).padStart(2, '0')}
+                                </motion.div>
+                              </AnimatePresence>
+                            </div>
+                            <div className="text-white/60 text-[10px] uppercase tracking-widest text-center mt-1.5">{l}</div>
                           </div>
-                          <div className="text-white/60 text-[10px] uppercase tracking-widest text-center mt-1.5">{l}</div>
+                          {i < 3 && (
+                            <div className="flex flex-col gap-1 self-start mt-5">
+                              <span className="w-1 h-1 rounded-full bg-primary-light/70 animate-pulse" />
+                              <span className="w-1 h-1 rounded-full bg-primary-light/70 animate-pulse" />
+                            </div>
+                          )}
                         </div>
-                        {i < 3 && (
-                          <div className="flex flex-col gap-1 self-start mt-4">
-                            <span className="w-1 h-1 rounded-full bg-primary-light/70" />
-                            <span className="w-1 h-1 rounded-full bg-primary-light/70" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    <p className="flex items-center gap-1.5 text-white/60 text-[11px] font-medium">
+                      Don't miss out — tap to secure your spot
+                      <ArrowRight size={12} className="text-primary-light" />
+                    </p>
                   </div>
-                </div>
+                </button>
               </div>
             )}
             {/* Highlights */}
