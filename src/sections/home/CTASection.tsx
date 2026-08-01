@@ -20,10 +20,8 @@ export default function CTASection() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4 sm:space-y-6"
         >
-          <span className="inline-flex items-center gap-2 text-secondary text-xs sm:text-sm font-button font-semibold tracking-[0.2em] uppercase">
-            <span className="w-6 h-px bg-secondary" />
+          <span className="inline-flex items-center gap-3 text-secondary font-script font-medium text-2xl sm:text-3xl md:text-4xl">
             Your Adventure Awaits
-            <span className="w-6 h-px bg-secondary" />
           </span>
 
           <h2 className="font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">

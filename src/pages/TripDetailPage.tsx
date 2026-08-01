@@ -390,9 +390,10 @@ export default function TripDetailPage() {
                 variant="primary"
                 size="sm"
                 onClick={() => setBookingOpen(true)}
-                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto !px-3 !py-2 !text-sm !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
+                className="group/btn flex-1 sm:flex-none whitespace-nowrap sm:w-auto !px-3 !py-2 !text-sm !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
               >
                 {isFull ? 'Join Waitlist' : 'Book Your Seat'}
+                {!isFull && <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />}
               </Button>
               <Button
                 variant="ghost"
@@ -405,52 +406,6 @@ export default function TripDetailPage() {
                 {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
                 {pdfLoading ? 'Preparing…' : 'Download'}
               </Button>
-              {countdown && (
-                <div className="hidden md:flex flex-col items-center gap-2 md:absolute md:right-0 md:translate-x-10 md:top-0 bg-background-warm/95 backdrop-blur-md border border-dark/10 shadow-[0_10px_35px_-8px_rgba(45,33,24,0.35)] rounded-xl px-5 py-3.5">
-                  <p className="flex items-center gap-1.5 text-primary text-[10px] font-button font-bold uppercase tracking-[0.2em] whitespace-nowrap">
-                    <Clock size={11} /> Trip starts in
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {[
-                      { v: countdown.days, l: 'Days' },
-                      { v: countdown.hours, l: 'Hrs' },
-                      { v: countdown.minutes, l: 'Min' },
-                      { v: countdown.seconds, l: 'Sec' },
-                    ].map(({ v, l }, i) => (
-                      <div key={l} className="flex items-center gap-2">
-                        <div className="text-center">
-                          <div
-                            className="relative w-10 h-9 overflow-hidden rounded-md bg-gradient-to-b from-dark-muted to-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                            style={{ perspective: '80px' }}
-                          >
-                            <div className="absolute left-0 right-0 top-1/2 h-px bg-black/40 -translate-y-px z-10" />
-                            <AnimatePresence mode="popLayout" initial={false}>
-                              <motion.div
-                                key={v}
-                                initial={{ rotateX: 90, opacity: 0 }}
-                                animate={{ rotateX: 0, opacity: 1 }}
-                                exit={{ rotateX: -90, opacity: 0 }}
-                                transition={{ duration: 0.8, ease: 'easeInOut' }}
-                                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-                                className="absolute inset-0 flex items-center justify-center font-display text-lg font-bold text-white tabular-nums"
-                              >
-                                {String(v).padStart(2, '0')}
-                              </motion.div>
-                            </AnimatePresence>
-                          </div>
-                          <div className="text-dark/50 text-[9px] uppercase tracking-widest text-center mt-1">{l}</div>
-                        </div>
-                        {i < 3 && (
-                          <div className="flex flex-col gap-1 self-start mt-3">
-                            <span className="w-1 h-1 rounded-full bg-primary/50" />
-                            <span className="w-1 h-1 rounded-full bg-primary/50" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
             <div className="order-7 sm:order-6 mt-1 sm:mt-0 flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 text-white/70 text-xs sm:text-sm mb-4 sm:mb-0">
               <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
@@ -593,14 +548,14 @@ export default function TripDetailPage() {
       {/* Main Content */}
       <div className="relative isolate px-4 sm:px-6 lg:px-8 py-8 sm:py-16 pb-12 lg:pb-16">
         <div className="max-w-[1344px] mx-auto space-y-9 sm:space-y-12">
-            {/* Countdown — mobile only; desktop keeps its original spot in the hero */}
+            {/* Countdown — premium flip-clock card, shown at all breakpoints */}
             {countdown && (
-              <div className="sm:hidden">
+              <div className="sm:max-w-xl sm:mx-auto">
                 <button
                   type="button"
                   onClick={() => setBookingOpen(true)}
                   aria-label="Trip starts soon — tap to book your seat"
-                  className="countdown-border-glow relative overflow-hidden w-full text-left bg-gradient-to-br from-dark via-primary-dark/70 to-dark countdown-gradient border border-primary-light/25 rounded-2xl px-5 py-5 active:scale-[0.99] transition-transform"
+                  className="countdown-border-glow relative overflow-hidden w-full text-left bg-gradient-to-br from-dark via-primary-dark/70 to-dark countdown-gradient border border-primary-light/25 rounded-2xl px-5 py-5 sm:px-8 sm:py-8 active:scale-[0.99] transition-transform"
                 >
                   {/* Decorative ambient glows */}
                   <div className="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/25 blur-3xl" />
@@ -703,7 +658,7 @@ export default function TripDetailPage() {
                     </motion.span>
                   </button>
                 </h2>
-                <p className="sm:hidden text-center text-dark-muted text-xs -mt-3 mb-4">
+                <p className="sm:hidden text-center text-dark-muted text-sm -mt-3 mb-4">
                   Tap the heart to reveal all reasons
                 </p>
                 <div className="flex flex-wrap justify-center divide-y divide-x-0 sm:divide-y-0 sm:divide-x divide-background-warm">
@@ -749,7 +704,7 @@ export default function TripDetailPage() {
                 <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-6 sm:mb-10 text-center px-2">
                   {trip.itinerary.length} Day{trip.itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments
                 </h2>
-                <p className="text-center text-dark-muted text-xs -mt-4 mb-6">
+                <p className="text-center text-dark-muted text-sm -mt-4 mb-6">
                   Tap a day's icon to see the details
                 </p>
                 <div className={`grid gap-x-6 gap-y-9 sm:gap-y-12 pt-6 ${getItineraryGridClass(trip.itinerary.length)}`}>
@@ -1132,18 +1087,25 @@ export default function TripDetailPage() {
                   size="lg"
                   fullWidth
                   onClick={() => setBookingOpen(true)}
+                  className="group/btn"
                 >
                   {isFull ? (
                     'Join Waitlist'
                   ) : trip.advance_amount != null ? (
                     <span className="flex flex-col items-center leading-tight">
-                      <span>Secure Your Spot</span>
+                      <span className="flex items-center gap-1.5">
+                        Secure Your Spot
+                        <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
+                      </span>
                       <span className="text-xs font-medium opacity-90 mt-0.5">
                         At only {formatPrice(trip.advance_amount)} today
                       </span>
                     </span>
                   ) : (
-                    'Book Your Seat'
+                    <span className="flex items-center gap-1.5">
+                      Book Your Seat
+                      <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
+                    </span>
                   )}
                 </Button>
 
@@ -1455,9 +1417,9 @@ export default function TripDetailPage() {
           {trip.end_banner.image && (
             <img src={trip.end_banner.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
           )}
-          <div className={`relative ${trip.end_banner.image ? 'bg-dark/70' : 'bg-dark'} py-12 sm:py-20 px-4 sm:px-6 lg:px-8`}>
+          <div className={`relative ${trip.end_banner.image ? 'bg-dark/70' : 'bg-dark'} pt-12 sm:pt-20 pb-10 px-4 sm:px-6 lg:px-8`}>
             <div className="max-w-[1344px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-              <div>
+              <div className="mt-8 sm:mt-12">
                 {trip.end_banner.heading && (
                   <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
                     {trip.end_banner.heading}
@@ -1471,7 +1433,7 @@ export default function TripDetailPage() {
                     {trip.end_banner.cta_url ? (
                       <a
                         href={trip.end_banner.cta_url}
-                        className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-lg transition-colors"
+                        className="group/btn inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-lg transition-colors"
                       >
                         {trip.end_banner.cta_label} <ExternalLink size={15} />
                       </a>
@@ -1479,9 +1441,10 @@ export default function TripDetailPage() {
                       <button
                         type="button"
                         onClick={() => setBookingOpen(true)}
-                        className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-lg transition-colors"
+                        className="group/btn inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-lg transition-colors"
                       >
                         {trip.end_banner.cta_label}
+                        <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
                       </button>
                     )}
                     <a

@@ -4,6 +4,7 @@ import { Search, Filter } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
 import AlbumCard from '../components/ui/AlbumCard';
+import AlbumCarousel from '../components/ui/AlbumCarousel';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getCompletedTrips } from '../services/api';
 import type { CompletedTrip } from '../types/types-index';
@@ -110,7 +111,7 @@ export default function CompletedTripsPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-dark/50 to-dark/85" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <span className="text-secondary text-sm font-button font-semibold tracking-[0.2em] uppercase">Travel Journal</span>
+            <span className="text-secondary font-script font-medium text-2xl sm:text-3xl md:text-4xl block">Travel Journal</span>
             <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">Our Travel Albums</h1>
             <p className="text-white/80 mt-3 text-lg max-w-xl">
               Every trip is a story. Browse through our collection of beautiful memories.
@@ -219,10 +220,32 @@ export default function CompletedTripsPage() {
             <p className="text-dark-muted text-sm mb-8">
               Showing <span className="font-semibold text-dark">{filtered.length}</span> album{filtered.length !== 1 ? 's' : ''}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {filtered.map((trip, i) => (
-                <AlbumCard key={trip.id} trip={trip} index={i} />
-              ))}
+            {/* Mobile: first 2 albums static, 3rd onward in a swipeable carousel */}
+            <div className="md:hidden">
+              <div className="grid grid-cols-1 gap-6">
+                {filtered.slice(0, 2).map((trip, i) => (
+                  <AlbumCard key={trip.id} trip={trip} index={i} />
+                ))}
+              </div>
+              {filtered.length > 2 && (
+                <div className="mt-6">
+                  <AlbumCarousel items={filtered.slice(2)} />
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: first 3 albums static, 4th onward in a swipeable carousel */}
+            <div className="hidden md:block">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {filtered.slice(0, 3).map((trip, i) => (
+                  <AlbumCard key={trip.id} trip={trip} index={i} />
+                ))}
+              </div>
+              {filtered.length > 3 && (
+                <div className="mt-8 max-w-sm mx-auto">
+                  <AlbumCarousel items={filtered.slice(3)} />
+                </div>
+              )}
             </div>
           </>
         )}
