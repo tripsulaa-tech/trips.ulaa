@@ -154,6 +154,12 @@ export interface UpcomingTrip {
   confidence_description?: string;              // "Travel with Confidence" section body
   meeting_address?: string;                     // Street/full address for meeting point
   end_banner?: TripEndBanner;                   // End-of-page full-width banner
+  // When true, the public site shows only the cover image + title for this
+  // trip — TripCard renders a stripped-down teaser (no price/date/seats/
+  // booking CTA) and TripDetailPage shows only the hero banner + a short
+  // "Coming Soon" message, hiding itinerary/pricing/booking content.
+  // Independent of is_published — see add_trip_coming_soon.sql.
+  is_coming_soon?: boolean;
   is_published: boolean;
   created_at: string;
   updated_at: string;

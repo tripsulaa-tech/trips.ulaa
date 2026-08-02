@@ -155,6 +155,12 @@ create table public.upcoming_trips (
   -- Saved position/zoom for cover_image, set via Admin → Add/Edit Trip →
   -- Media → Cover Image Editor. See add_trip_cover_image_crop.sql.
   cover_image_crop        jsonb,
+  -- When true, the public site shows only the cover image + title for this
+  -- trip (TripCard teaser + TripDetailPage hero banner) and hides
+  -- itinerary/pricing/booking content. Independent of is_published — a
+  -- trip can be published and still marked "coming soon" while the rest
+  -- of its content is filled in. See add_trip_coming_soon.sql.
+  is_coming_soon          boolean not null default false,
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
   constraint upcoming_trips_trip_type_check

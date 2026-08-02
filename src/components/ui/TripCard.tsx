@@ -12,6 +12,52 @@ interface TripCardProps {
 }
 
 export default function TripCard({ trip, index = 0 }: TripCardProps) {
+  // Coming Soon trips (Admin → Upcoming Trips → Add/Edit Trip → Publish
+  // tab) intentionally show only the cover image + title on the public
+  // site — no price, dates, seats, or booking CTA — while the rest of the
+  // trip's content is still being filled in. Renders as its own simple
+  // teaser instead of reusing the full card below, since almost every
+  // field that card shows (price, dates, seats, share/calendar actions)
+  // doesn't apply yet.
+  if (trip.is_coming_soon) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05, duration: 0.3 }}
+        className="group bg-white rounded-xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
+      >
+        <div className="relative h-56 md:h-64 overflow-hidden rounded-t-xl">
+          <div className="w-full h-full transition-transform duration-700 group-hover:scale-110">
+            <img
+              src={trip.cover_image || PLACEHOLDER_IMAGE}
+              alt={trip.title}
+              loading="lazy"
+              className="w-full h-full object-cover"
+              style={getCoverImageStyle(trip.cover_image_crop)}
+            />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent" />
+          <div className="absolute top-4 left-4">
+            <span className="bg-amber-500 text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
+              Coming Soon
+            </span>
+          </div>
+        </div>
+        <div className="p-6 flex-1 flex flex-col">
+          <h3 className="font-display text-xl font-bold text-dark mb-3 line-clamp-2 flex-1">
+            {trip.title}
+          </h3>
+          <Link to={`/trips/${trip.slug}`}>
+            <Button variant="outline" size="sm" fullWidth>
+              Coming Soon
+            </Button>
+          </Link>
+        </div>
+      </motion.div>
+    );
+  }
+
   const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
   const isAlmostFull = remaining <= 5 && remaining > 0;
   const isFull = remaining === 0;
