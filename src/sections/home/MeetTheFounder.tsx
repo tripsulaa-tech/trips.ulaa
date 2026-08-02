@@ -5,7 +5,6 @@ import { Play } from 'lucide-react';
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../../constants/founder';
 import { getSocialIcon, getSocialBrandClasses, getSocialHref } from '../../utils/socialIcons';
-import Button from '../../components/ui/Button';
 import type { FounderContent } from '../../types/types-index';
 
 const fadeUp = (delay = 0) => ({
@@ -104,15 +103,13 @@ export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderP
               </a>
             ))}
             {showAboutLink && (
-              <Link to="/about">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-base"
-                >
-                  <Play size={14} className="fill-white sm:w-4 sm:h-4" />
-                  About
-                </Button>
+              <Link
+                to="/about"
+                title="About"
+                aria-label="About"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white border border-white/40 hover:border-white hover:bg-white/10 shadow-warm-lg hover:scale-105 transition-all duration-200"
+              >
+                <Play size={16} className="fill-white" />
               </Link>
             )}
           </div>
