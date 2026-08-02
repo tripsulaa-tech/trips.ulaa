@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../../constants/founder';
+import { getSocialIcon, getSocialBrandClasses } from '../../utils/socialIcons';
 import Button from '../../components/ui/Button';
 import type { FounderContent } from '../../types/types-index';
 
@@ -22,19 +23,30 @@ interface MeetTheFounderProps {
   showAboutLink?: boolean;
 }
 
+// Builds a clickable href for a social link. "Mail"/"Email" platforms are
+// stored as a plain address (e.g. "hello@ulaa.com") rather than a full URL,
+// so those get a mailto: prefix; anything else is used as-is.
+function socialHref(platform: string, url: string): string {
+  if (/mail|email/i.test(platform) && !/^mailto:/i.test(url) && !/:\/\//.test(url)) {
+    return `mailto:${url}`;
+  }
+  return url;
+}
+
 // The single shared "Meet the Founder" section — reused as-is (same
 // component, same data, same design) across the Home page, About page, and
 // Upcoming Trips page, all reading the same source: the 'founder'
 // site_content row (see src/admin/AdminFounder.tsx). Design: a large
 // tilted, rounded photo frame beside a header/bio (centered on mobile,
-// left-aligned from md up), plus two CTAs (Contact Us -> the founder's
-// Instagram link, About -> the About page) instead of a row of social
-// icons. The header/eyebrow is hand-rolled here (rather than the shared
-// SectionTitle component) because SectionTitle's `align` prop isn't
-// responsive, and this section needs centered-on-mobile/left-on-desktop,
-// unlike SectionTitle's other callers. Kept as its own component so it can
-// be lazy-loaded independently of the rest of each page's code, matching
-// the pattern of the other Home sections.
+// left-aligned from md up), plus a row of brand-colored social icon
+// buttons (one per link the admin has added, in the order they were
+// added — see getSocialIcon/getSocialBrandClasses in utils/socialIcons)
+// and an "About" CTA. The header/eyebrow is hand-rolled here (rather than
+// the shared SectionTitle component) because SectionTitle's `align` prop
+// isn't responsive, and this section needs centered-on-mobile/
+// left-on-desktop, unlike SectionTitle's other callers. Kept as its own
+// component so it can be lazy-loaded independently of the rest of each
+// page's code, matching the pattern of the other Home sections.
 export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderProps) {
   const [founder, setFounder] = useState<FounderContent>(DEFAULT_FOUNDER);
 
@@ -44,12 +56,7 @@ export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderP
       .catch(() => {});
   }, []);
 
-  // "Contact Us" points at the founder's Instagram (falling back to
-  // whichever social link is set, if Instagram itself isn't) rather than
-  // a site contact form.
-  const contactUrl =
-    founder.social_links.find(l => /insta/i.test(l.platform) && l.url)?.url ||
-    founder.social_links.find(l => l.url)?.url;
+  const socialLinks = founder.social_links.filter(l => l.platform && l.url);
 
   return (
     <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-dark relative overflow-hidden">
@@ -90,14 +97,20 @@ export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderP
             {founder.description}
           </p>
 
-          <div className="flex flex-row flex-wrap gap-3 sm:gap-4 justify-center md:justify-start mt-7">
-            {contactUrl && (
-              <a href={contactUrl} target="_blank" rel="noopener noreferrer">
-                <Button variant="primary" size="sm" className="sm:px-8 sm:py-4 sm:text-base">
-                  Contact Us
-                </Button>
+          <div className="flex flex-row flex-wrap items-center gap-3 sm:gap-4 justify-center md:justify-start mt-7">
+            {socialLinks.map((link, i) => (
+              <a
+                key={i}
+                href={socialHref(link.platform, link.url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={link.platform}
+                aria-label={link.platform}
+                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white shadow-warm-lg hover:scale-105 transition-transform duration-200 ${getSocialBrandClasses(link.platform)}`}
+              >
+                {getSocialIcon(link.platform, 18)}
               </a>
-            )}
+            ))}
             {showAboutLink && (
               <Link to="/about">
                 <Button

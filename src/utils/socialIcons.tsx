@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Globe } from 'lucide-react';
+import { Globe, Mail } from 'lucide-react';
 
 // Founder social links store `platform` as free text (admin types it in),
 // so this matches loosely on keywords rather than an exact enum. Anything
@@ -70,6 +70,10 @@ const ICONS: { match: RegExp; icon: (size: number) => ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    match: /mail|email/i,
+    icon: (size) => <Mail size={size} />,
+  },
 ];
 
 /** Resolves the best-fitting brand icon for a founder/team social link
@@ -93,6 +97,7 @@ const BRAND_CLASSES: { match: RegExp; className: string }[] = [
   { match: /whatsapp/i, className: 'bg-[#25D366]' },
   { match: /pinterest/i, className: 'bg-[#E60023]' },
   { match: /tiktok/i, className: 'bg-black' },
+  { match: /mail|email/i, className: 'bg-primary' },
 ];
 
 /** Resolves the real brand background color/gradient for a social link's

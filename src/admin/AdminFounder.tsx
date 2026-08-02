@@ -173,7 +173,7 @@ export default function AdminFounder() {
                     value={link.url}
                     onChange={e => updateSocial(i, 'url', e.target.value)}
                     className={inputClass}
-                    placeholder="https://instagram.com/…"
+                    placeholder="https://instagram.com/… (or an email address for Mail)"
                   />
                 </div>
                 <button
