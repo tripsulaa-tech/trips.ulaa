@@ -107,3 +107,43 @@ export function getSocialBrandClasses(platform: string): string {
   const found = BRAND_CLASSES.find(({ match }) => match.test(platform));
   return found ? found.className : 'bg-white/10 border border-white/10';
 }
+
+// Strips a leading "@" and any leading/trailing slashes from a handle, e.g.
+// "@justjini_/" or "/justjini_/" both become "justjini_".
+function cleanHandle(value: string): string {
+  return value.trim().replace(/^@/, '').replace(/^\/+|\/+$/g, '');
+}
+
+// Per-platform rule for turning a bare handle/username/number (whatever an
+// admin is likely to paste in without thinking about the full URL) into a
+// working link. Only consulted when the stored value ISN'T already a full
+// URL/mailto/tel link (see getSocialHref below).
+const HREF_BUILDERS: { match: RegExp; build: (value: string) => string }[] = [
+  // WhatsApp stores a phone number, not a handle — build a wa.me deep link.
+  // Digits only; admin should include the country code (e.g. 9198…) for
+  // this to resolve to the right person.
+  { match: /whatsapp/i, build: value => `https://wa.me/${value.replace(/\D/g, '')}` },
+  // Mail/Gmail/Email store a plain address.
+  { match: /mail|email/i, build: value => `mailto:${value}` },
+  { match: /insta/i, build: value => `https://instagram.com/${cleanHandle(value)}` },
+  { match: /linkedin/i, build: value => `https://www.linkedin.com/in/${cleanHandle(value)}` },
+  { match: /facebook|\bfb\b/i, build: value => `https://facebook.com/${cleanHandle(value)}` },
+  { match: /twitter|\bx\.com\b|^x$|\btwitter\/x\b/i, build: value => `https://x.com/${cleanHandle(value)}` },
+  { match: /youtube|\byt\b/i, build: value => `https://youtube.com/${cleanHandle(value)}` },
+  { match: /tiktok/i, build: value => `https://tiktok.com/@${cleanHandle(value).replace(/^@/, '')}` },
+  { match: /pinterest/i, build: value => `https://pinterest.com/${cleanHandle(value)}` },
+];
+
+/** Resolves a working href for a founder/team social link from whatever the
+ *  admin typed into the URL field — a full URL, a bare handle/username
+ *  ("justjini_", "@justjini_", "jini-varghese-a57777b1"), or (for WhatsApp)
+ *  a phone number. If it's already a full URL/mailto/tel link, it's used
+ *  as-is; otherwise it's built using the platform-specific rule above, with
+ *  the raw value as a last-resort fallback for unrecognized platforms. */
+export function getSocialHref(platform: string, value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^(https?:|mailto:|tel:)/i.test(trimmed)) return trimmed;
+  const found = HREF_BUILDERS.find(({ match }) => match.test(platform));
+  return found ? found.build(trimmed) : trimmed;
+}

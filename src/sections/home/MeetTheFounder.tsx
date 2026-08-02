@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../../constants/founder';
-import { getSocialIcon, getSocialBrandClasses } from '../../utils/socialIcons';
+import { getSocialIcon, getSocialBrandClasses, getSocialHref } from '../../utils/socialIcons';
 import Button from '../../components/ui/Button';
 import type { FounderContent } from '../../types/types-index';
 
@@ -23,16 +23,6 @@ interface MeetTheFounderProps {
   showAboutLink?: boolean;
 }
 
-// Builds a clickable href for a social link. "Mail"/"Email" platforms are
-// stored as a plain address (e.g. "hello@ulaa.com") rather than a full URL,
-// so those get a mailto: prefix; anything else is used as-is.
-function socialHref(platform: string, url: string): string {
-  if (/mail|email/i.test(platform) && !/^mailto:/i.test(url) && !/:\/\//.test(url)) {
-    return `mailto:${url}`;
-  }
-  return url;
-}
-
 // The single shared "Meet the Founder" section — reused as-is (same
 // component, same data, same design) across the Home page, About page, and
 // Upcoming Trips page, all reading the same source: the 'founder'
@@ -40,13 +30,15 @@ function socialHref(platform: string, url: string): string {
 // tilted, rounded photo frame beside a header/bio (centered on mobile,
 // left-aligned from md up), plus a row of brand-colored social icon
 // buttons (one per link the admin has added, in the order they were
-// added — see getSocialIcon/getSocialBrandClasses in utils/socialIcons)
-// and an "About" CTA. The header/eyebrow is hand-rolled here (rather than
-// the shared SectionTitle component) because SectionTitle's `align` prop
-// isn't responsive, and this section needs centered-on-mobile/
-// left-on-desktop, unlike SectionTitle's other callers. Kept as its own
-// component so it can be lazy-loaded independently of the rest of each
-// page's code, matching the pattern of the other Home sections.
+// added — see getSocialIcon/getSocialBrandClasses/getSocialHref in
+// utils/socialIcons, which also resolve bare handles/usernames/phone
+// numbers into working links) and an "About" CTA. The header/eyebrow is
+// hand-rolled here (rather than the shared SectionTitle component) because
+// SectionTitle's `align` prop isn't responsive, and this section needs
+// centered-on-mobile/left-on-desktop, unlike SectionTitle's other callers.
+// Kept as its own component so it can be lazy-loaded independently of the
+// rest of each page's code, matching the pattern of the other Home
+// sections.
 export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderProps) {
   const [founder, setFounder] = useState<FounderContent>(DEFAULT_FOUNDER);
 
@@ -101,7 +93,7 @@ export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderP
             {socialLinks.map((link, i) => (
               <a
                 key={i}
-                href={socialHref(link.platform, link.url)}
+                href={getSocialHref(link.platform, link.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 title={link.platform}

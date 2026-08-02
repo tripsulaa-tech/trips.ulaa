@@ -158,6 +158,9 @@ export default function AdminFounder() {
                 <Plus size={14} /> Add Link
               </Button>
             </div>
+            <p className="text-xs text-dark-muted -mt-1">
+              Full URLs work best, but a bare username (e.g. "justjini_") also works for Instagram, LinkedIn, Facebook, X, YouTube, TikTok, and Pinterest. For WhatsApp, enter a phone number with country code (e.g. "919876543210"). For Mail/Gmail, enter the email address.
+            </p>
             {content.social_links.map((link: AboutFounderSocialLink, i: number) => (
               <div key={i} className="flex items-center gap-2">
                 <div className="w-36 flex-shrink-0">
@@ -173,7 +176,7 @@ export default function AdminFounder() {
                     value={link.url}
                     onChange={e => updateSocial(i, 'url', e.target.value)}
                     className={inputClass}
-                    placeholder="https://instagram.com/… (or an email address for Mail)"
+                    placeholder="justjini_ or https://instagram.com/justjini_"
                   />
                 </div>
                 <button
