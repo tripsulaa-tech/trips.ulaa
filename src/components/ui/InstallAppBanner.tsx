@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Download, MoreVertical, Share, X } from 'lucide-react';
+import { Download, Menu, MoreVertical, Share, X } from 'lucide-react';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 // iOS Safari (and, since they all relay to Safari's share sheet, Chrome/Edge/
@@ -14,6 +14,32 @@ function isIos(): boolean {
   const ua = window.navigator.userAgent;
   return /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in document);
 }
+
+// All iOS browsers are Safari (WebKit) under the hood, but each ships its
+// own chrome around it, so the Share icon lives in a different spot in each
+// one. Order matters: Chrome/Firefox/Edge on iOS all include "Safari" in
+// their UA string too, so check their own tokens first and only fall back
+// to "Safari" once those are ruled out.
+type IosBrowser = 'chrome' | 'firefox' | 'edge' | 'safari';
+
+function getIosBrowser(): IosBrowser {
+  const ua = window.navigator.userAgent;
+  if (ua.includes('CriOS')) return 'chrome';
+  if (ua.includes('FxiOS')) return 'firefox';
+  if (ua.includes('EdgiOS')) return 'edge';
+  return 'safari';
+}
+
+const IOS_SHARE_LOCATION: Record<IosBrowser, string> = {
+  // Chrome iOS: share icon sits in the top address bar, not a bottom toolbar.
+  chrome: 'in the address bar at the top',
+  // Firefox iOS: no dedicated share icon in the toolbar — it's inside the menu.
+  firefox: 'in the menu at the bottom',
+  // Edge iOS: share icon lives in the bottom "..." menu.
+  edge: 'in the menu at the bottom',
+  // Safari iOS: share icon is in the bottom toolbar (top toolbar on iPad).
+  safari: 'in the toolbar at the bottom',
+};
 
 // Mobile Chrome/Edge no longer show their own install banner automatically
 // on most visits — a page has to capture `beforeinstallprompt` and offer
@@ -34,6 +60,7 @@ export default function InstallAppBanner() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
   const ios = isIos();
+  const iosBrowser = ios ? getIosBrowser() : null;
 
   if (isInstalled || dismissed) return null;
   if (!canInstall && !isAdmin && !ios) return null;
@@ -65,9 +92,17 @@ export default function InstallAppBanner() {
                 : 'Add ULAA to your home screen for a faster, app-like experience.'
               : 'The main ULAA app is already installed on this device, so use "Create shortcut" instead to get a separate Admin icon.'}
         </p>
-        {ios ? (
+        {ios && iosBrowser ? (
           <div className="mt-2 flex items-center gap-1.5 text-xs text-dark-muted">
-            Tap <Share className="h-3.5 w-3.5" /> then "Add to Home Screen"
+            {iosBrowser === 'firefox' || iosBrowser === 'edge' ? (
+              <>
+                Tap <Menu className="h-3.5 w-3.5" /> ({IOS_SHARE_LOCATION[iosBrowser]}), then "Share" → "Add to Home Screen"
+              </>
+            ) : (
+              <>
+                Tap <Share className="h-3.5 w-3.5" /> ({IOS_SHARE_LOCATION[iosBrowser]}), then "Add to Home Screen"
+              </>
+            )}
           </div>
         ) : canInstall ? (
           <div className="mt-3 flex gap-2">

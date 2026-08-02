@@ -119,7 +119,7 @@ export default function AdminFounder() {
             value={content.photo}
             onChange={url => setFounder('photo', url)}
             bucket="ulaa"
-            pathPrefix="about/founder"
+            pathPrefix="founder"
             hint="Square, at least 600×600px, with the face centered."
             allowUrl
           />
