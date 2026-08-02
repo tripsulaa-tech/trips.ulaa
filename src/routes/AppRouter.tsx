@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AuthProvider } from '../context/AuthContext';
 import { useAuth } from '../context/useAuth';
 import { motion } from 'framer-motion';
+import InstallAppBanner from '../components/ui/InstallAppBanner';
 
 // Scrolls the window to the top whenever the route changes, so navigating
 // (e.g. via the footer's Upcoming Trips / Completed Trips / About / Contact
@@ -12,6 +13,34 @@ function ScrollToTop() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
+// main.tsx swaps the manifest/icon links once, on the initial hard page
+// load. That covers a visitor who types /admin directly, but not one who
+// lands on "/" and then clicks through to /admin (or back) via client-side
+// routing — the manifest link never got re-pointed for that navigation, so
+// installing from the "wrong" route re-served the previous route's
+// manifest. Re-run the same swap on every route change so it stays correct
+// no matter how the visitor got there.
+function SyncManifestWithRoute() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const isAdminRoute = pathname.startsWith('/admin');
+
+    document
+      .querySelector('link[rel="manifest"]')
+      ?.setAttribute('href', isAdminRoute ? '/manifest-admin.json' : '/manifest.json');
+    document
+      .querySelector('link[rel="apple-touch-icon"]')
+      ?.setAttribute('href', isAdminRoute ? '/icons/admin/apple-touch-icon.png' : '/icons/user/apple-touch-icon.png');
+    document
+      .querySelector('meta[name="apple-mobile-web-app-title"]')
+      ?.setAttribute('content', isAdminRoute ? 'ULAA Admin' : 'ULAA');
+    document.title = isAdminRoute ? 'ULAA Admin' : 'ULAA Trips — Unseen. Local. Adventures. Activities.';
   }, [pathname]);
 
   return null;
@@ -68,6 +97,8 @@ export default function AppRouter() {
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
+        <SyncManifestWithRoute />
+        <InstallAppBanner />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public Routes */}

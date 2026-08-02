@@ -149,7 +149,7 @@ export default function Footer() {
             Made with <Heart className="w-3.5 h-3.5 text-[#e4782f] fill-[#e4782f]" /> for the fearless women of India.
           </p>
           <p className="mt-2 text-[12px] text-[#a89a8a]/80">
-            © {year} ULAA · <a href="https://www.tripsulaa.com" className="hover:text-[#e4782f] transition-colors">www.tripsulaa.com</a> · All rights reserved.
+            © {year} ULAA · <a href="https://www.ulaatrips.com" className="hover:text-[#e4782f] transition-colors">www.tripsulaa.com</a> · All rights reserved.
           </p>
         </div>
       </div>
