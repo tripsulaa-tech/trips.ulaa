@@ -222,6 +222,15 @@ button, .btn {
   animation: countdown-shimmer 3.2s ease-in-out infinite;
 }
 
+/* Loading placeholder sweep shown behind a gallery photo while it loads. */
+@keyframes gallery-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.gallery-shimmer {
+  animation: gallery-shimmer 1.4s ease-in-out infinite;
+}
+
 @keyframes countdown-float {
   0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
   50% { transform: translateY(-8px) rotate(8deg); opacity: 1; }

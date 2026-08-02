@@ -8,7 +8,7 @@ import {
   animate,
   type PanInfo,
 } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, MapPin, Heart, Download, Share2 } from 'lucide-react';
 
 // =============================================================================
 // GalleryViewer — the single, centralized fullscreen photo viewer for the
@@ -52,6 +52,16 @@ export interface GalleryViewerProps {
    *  counter in the bottom overlay. Omit entirely on pages with no
    *  meaningful single location (e.g. a mixed homepage feed). */
   fallbackLocation?: string;
+  /** Whether the CURRENT photo is liked — only meaningful when `onToggleLike`
+   *  is also passed. Omit both to hide the like button entirely. */
+  liked?: boolean;
+  onToggleLike?: (image: GalleryImageItem, index: number) => void;
+  /** Called when the download action is tapped. Omitted → falls back to
+   *  opening the photo's `src` in a new tab so it can be saved manually. */
+  onDownload?: (image: GalleryImageItem, index: number) => void;
+  /** Called when the share action is tapped. Omitted → falls back to the
+   *  Web Share API (or copying the photo URL where Share isn't supported). */
+  onShare?: (image: GalleryImageItem, index: number) => void;
 }
 
 const SWIPE_VELOCITY_THRESHOLD = 500;
@@ -70,7 +80,18 @@ function mod(n: number, m: number): number {
   return ((n % m) + m) % m;
 }
 
-export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClose, openLayoutId, fallbackLocation }: GalleryViewerProps) {
+export default function GalleryViewer({
+  images,
+  initialIndex = 0,
+  isOpen,
+  onClose,
+  openLayoutId,
+  fallbackLocation,
+  liked,
+  onToggleLike,
+  onDownload,
+  onShare,
+}: GalleryViewerProps) {
   const items = useMemo(() => normalizeImages(images), [images]);
   const total = items.length;
 
@@ -307,6 +328,33 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
   const current = items[index];
   const panRange = trackWidth * 0.5 * Math.max(0, zoom - 1);
 
+  // ─── action bar: like / download / share (all overridable, all optional) ─
+  const handleDownload = () => {
+    if (onDownload) return onDownload(current, index);
+    const a = document.createElement('a');
+    a.href = current.src;
+    a.download = '';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const handleShare = () => {
+    if (onShare) return onShare(current, index);
+    if (navigator.share) {
+      navigator.share({ url: current.src, title: current.caption || current.location }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(current.src).catch(() => {});
+    }
+  };
+
+  const [loadedSrcs, setLoadedSrcs] = useState<Set<string>>(new Set());
+  const markLoaded = useCallback((src: string) => {
+    setLoadedSrcs(prev => (prev.has(src) ? prev : new Set(prev).add(src)));
+  }, []);
+
   const renderSlide = (
     item: GalleryImageItem,
     i: number,
@@ -316,12 +364,22 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
     <div
       key={slot}
       style={{ width: trackWidth || '100%' }}
-      className="h-full flex items-center justify-center shrink-0 select-none"
+      className="relative h-full flex items-center justify-center shrink-0 select-none"
     >
+      {!loadedSrcs.has(item.src) && (
+        <div
+          aria-hidden
+          className="absolute inset-8 sm:inset-16 rounded-2xl overflow-hidden bg-white/5"
+        >
+          <div className="absolute inset-0 -translate-x-full gallery-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        </div>
+      )}
       <motion.img
         src={item.src}
         alt={item.alt || `Photo ${i + 1} of ${total}`}
         draggable={false}
+        loading={isCurrent ? 'eager' : 'lazy'}
+        onLoad={() => markLoaded(item.src)}
         layoutId={isCurrent && !hasNavigated && openLayoutId ? openLayoutId : undefined}
         initial={isCurrent && !openLayoutId ? { opacity: 0, scale: 0.94 } : { opacity: isCurrent ? 1 : 0.5 }}
         animate={{ opacity: isCurrent ? 1 : 0.5, scale: 1 }}
@@ -342,7 +400,9 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
               }
             : undefined
         }
-        className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg pointer-events-auto cursor-zoom-in"
+        className={`max-w-full max-h-full w-auto h-auto object-contain rounded-none sm:rounded-2xl pointer-events-auto cursor-zoom-in ${
+          isCurrent ? 'drop-shadow-[0_25px_60px_rgba(0,0,0,0.55)]' : ''
+        }`}
         {...(isCurrent && zoom > 1.02
           ? {
               drag: true,
@@ -370,8 +430,24 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
           style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
           onMouseMove={bumpControls}
         >
-          {/* Solid backdrop — standard app dark tone, no blurred-photo effect */}
-          <div aria-hidden className="absolute inset-0 bg-dark" />
+          {/* Backdrop — a heavily blurred, darkened cover of the current photo
+              fills the letterboxed space around it (instead of a flat dead
+              zone), like Photos/Instagram viewers. Sits behind everything. */}
+          <div aria-hidden className="absolute inset-0 bg-dark overflow-hidden">
+            <AnimatePresence mode="popLayout">
+              <motion.img
+                key={current.src}
+                src={current.src}
+                alt=""
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.4 }}
+                className="absolute inset-0 w-full h-full object-cover scale-110 blur-3xl brightness-[0.45] saturate-125"
+              />
+            </AnimatePresence>
+            <div className="absolute inset-0 bg-dark/35" />
+          </div>
 
           {/* Top controls */}
           <AnimatePresence>
@@ -381,37 +457,39 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: reduceMotion ? 0 : 0.2 }}
-                className="absolute top-0 inset-x-0 z-20 px-4 pt-3 sm:pt-4"
+                className="absolute top-0 inset-x-0 z-20 px-3 pt-3 sm:px-4 sm:pt-4"
               >
-                <div className="flex items-center justify-between">
-                  {total > 1 ? (
-                    <span className="text-cream text-xs sm:text-sm font-button tracking-wide bg-dark-muted px-3 py-1.5 rounded-full">
-                      {index + 1} / {total}
-                    </span>
-                  ) : <span />}
-                  <button
-                    ref={closeBtnRef}
-                    onClick={onClose}
-                    aria-label="Close gallery"
-                    className="text-dark bg-cream hover:bg-white rounded-full p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
+                <div aria-hidden className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/45 to-transparent -z-10" />
                 {total > 1 && (
-                  <div className="mt-2 flex gap-1">
+                  <div className="flex gap-1 mb-2.5">
                     {items.map((_, i) => (
-                      <div key={i} className="h-[2px] flex-1 rounded-full bg-white/20 overflow-hidden">
+                      <div key={i} className="h-[3px] flex-1 rounded-full bg-white/25 overflow-hidden">
                         <motion.div
-                          className="h-full bg-secondary rounded-full"
+                          className="h-full bg-gradient-to-r from-gold to-cream rounded-full shadow-[0_0_6px_rgba(250,247,242,0.5)]"
                           initial={false}
                           animate={{ width: i <= index ? '100%' : '0%' }}
-                          transition={{ duration: reduceMotion ? 0 : 0.2 }}
+                          transition={{ duration: reduceMotion ? 0 : 0.25, ease: 'easeOut' }}
                         />
                       </div>
                     ))}
                   </div>
                 )}
+                <div className="flex items-center justify-between">
+                  {total > 1 ? (
+                    <span className="text-cream text-xs sm:text-sm font-button font-medium tracking-wide bg-black/30 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full">
+                      {index + 1} / {total}
+                    </span>
+                  ) : <span />}
+                  <motion.button
+                    ref={closeBtnRef}
+                    onClick={onClose}
+                    aria-label="Close gallery"
+                    whileTap={{ scale: 0.88 }}
+                    className="text-white bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50 rounded-full p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    <X size={20} />
+                  </motion.button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -425,7 +503,7 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                 exit={{ opacity: 0 }}
                 className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-20 flex justify-center pointer-events-none"
               >
-                <span className="text-cream text-sm font-button tracking-wide bg-dark-muted px-4 py-2 rounded-full">
+                <span className="text-cream text-sm font-button tracking-wide bg-black/30 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full">
                   ← Swipe to explore photos →
                 </span>
               </motion.div>
@@ -435,20 +513,24 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
           {/* Desktop-only arrow buttons — mobile relies purely on gestures */}
           {total > 1 && (
             <>
-              <button
+              <motion.button
                 onClick={(e) => { e.stopPropagation(); prev(); }}
                 aria-label="Previous photo"
-                className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 text-dark bg-cream hover:bg-white rounded-full p-3 items-center justify-center cursor-pointer transition-colors"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.9 }}
+                className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 text-white bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50 rounded-full p-3 items-center justify-center cursor-pointer transition-colors"
               >
                 <ChevronLeft size={22} />
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 onClick={(e) => { e.stopPropagation(); next(); }}
                 aria-label="Next photo"
-                className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 text-dark bg-cream hover:bg-white rounded-full p-3 items-center justify-center cursor-pointer transition-colors"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.9 }}
+                className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 text-white bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50 rounded-full p-3 items-center justify-center cursor-pointer transition-colors"
               >
                 <ChevronRight size={22} />
-              </button>
+              </motion.button>
             </>
           )}
 
@@ -477,13 +559,12 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
             )}
           </div>
 
-          {/* Bottom info: location (or caption) + photo count, plus a
-              windowed swipe-indicator dot row. Uses a same-tone gradient
-              scrim (not a contrasting solid block) so the screen's overall
-              brightness stays consistent whether controls are shown or not. */}
+          {/* Bottom bar: location/caption on the left, a frosted-glass
+              like/download/share action row on the right. Position within
+              the set is already shown by the top segmented bar, so this
+              row stays uncluttered rather than repeating a dot indicator. */}
           {(() => {
             const locationLabel = current.location || fallbackLocation;
-            if (!locationLabel && !current.caption) return null;
             return (
               <AnimatePresence>
                 {controlsVisible && (
@@ -493,8 +574,8 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                     exit={{ opacity: 0, y: 8 }}
                     className="absolute bottom-0 inset-x-0 z-20 pointer-events-none"
                   >
-                    <div aria-hidden className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-dark to-transparent" />
-                    <div className="relative px-4 sm:px-6 pb-3 sm:pb-4 flex items-end justify-between gap-3">
+                    <div aria-hidden className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="relative px-3 sm:px-6 pb-4 sm:pb-5 flex items-end justify-between gap-3">
                       <div className="min-w-0">
                         {locationLabel ? (
                           <>
@@ -502,28 +583,59 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                               <MapPin size={15} className="shrink-0" />
                               <span className="truncate">{locationLabel}</span>
                             </span>
-                            {total > 1 && (
+                            {current.caption ? (
+                              <span className="block text-cream/70 text-xs sm:text-sm mt-0.5 truncate">{current.caption}</span>
+                            ) : total > 1 && (
                               <span className="block text-cream/70 text-xs sm:text-sm mt-0.5">
                                 Photo {index + 1} of {total}
                               </span>
                             )}
                           </>
-                        ) : (
+                        ) : current.caption ? (
                           <span className="text-cream text-xs sm:text-sm truncate">{current.caption}</span>
-                        )}
+                        ) : <span />}
                       </div>
-                      {total > 1 && total <= 12 && (
-                        <div className="flex items-center gap-1 shrink-0 pb-0.5">
-                          {items.map((_, i) => (
-                            <span
-                              key={i}
-                              className={`rounded-full transition-all duration-200 ${
-                                i === index ? 'w-1.5 h-1.5 bg-secondary' : 'w-1 h-1 bg-cream/40'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      )}
+
+                      <div className="flex items-center gap-2 shrink-0 pointer-events-auto">
+                        {onToggleLike && (
+                          <motion.button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onToggleLike(current, index); }}
+                            aria-label={liked ? 'Unlike photo' : 'Like photo'}
+                            aria-pressed={liked}
+                            whileTap={{ scale: 0.85 }}
+                            className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50 text-white flex items-center justify-center cursor-pointer transition-colors"
+                          >
+                            <motion.span
+                              key={String(liked)}
+                              initial={{ scale: 0.5 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                              className="flex"
+                            >
+                              <Heart size={17} className={liked ? 'fill-red-500 text-red-500' : ''} />
+                            </motion.span>
+                          </motion.button>
+                        )}
+                        <motion.button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleDownload(); }}
+                          aria-label="Download photo"
+                          whileTap={{ scale: 0.85 }}
+                          className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50 text-white flex items-center justify-center cursor-pointer transition-colors"
+                        >
+                          <Download size={17} />
+                        </motion.button>
+                        <motion.button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                          aria-label="Share photo"
+                          whileTap={{ scale: 0.85 }}
+                          className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50 text-white flex items-center justify-center cursor-pointer transition-colors"
+                        >
+                          <Share2 size={16} />
+                        </motion.button>
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -539,12 +651,12 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 12 }}
-                  className="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4"
+                  className="hidden sm:block absolute bottom-24 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4"
                 >
                   <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-dark-muted to-transparent z-10 rounded-l-lg" />
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-dark-muted to-transparent z-10 rounded-r-lg" />
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth bg-dark-muted rounded-lg px-3 py-2.5">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/40 to-transparent z-10 rounded-l-xl" />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-black/40 to-transparent z-10 rounded-r-xl" />
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth bg-black/30 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2.5 shadow-2xl">
                       {items.map((img, i) => (
                         <button
                           key={i}
@@ -552,7 +664,7 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                           aria-label={`Go to photo ${i + 1}`}
                           aria-current={i === index}
                           className={`relative w-12 h-12 rounded-lg overflow-hidden shrink-0 cursor-pointer transition-all duration-200 ${
-                            i === index ? 'ring-2 ring-secondary ring-offset-2 ring-offset-dark scale-105' : 'opacity-50 hover:opacity-90'
+                            i === index ? 'ring-2 ring-cream ring-offset-2 ring-offset-black/30 scale-105' : 'opacity-50 hover:opacity-90'
                           }`}
                         >
                           <img src={img.src} alt="" loading="lazy" className="w-full h-full object-cover" />
