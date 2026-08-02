@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { Upload, X, ImagePlus, Loader2, Link2 } from 'lucide-react';
 import { uploadImage, deleteImageByUrl } from '../../services/api';
-import Button from './Button';
 
 interface MultiImageUploadFieldProps {
   label: string;
@@ -81,28 +80,26 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 mb-1">
+      <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
         <label className="block text-sm font-medium text-dark">{label}</label>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Button
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
             type="button"
-            variant="outline"
-            size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
+            className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
+            {uploading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
             {uploading ? 'Uploading...' : 'Add Photos'}
-          </Button>
+          </button>
           {allowUrl && (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={() => setShowUrlInput(true)}
+              className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
             >
-              <Link2 size={14} /> Add by URL
-            </Button>
+              <Link2 size={13} /> Add by URL
+            </button>
           )}
         </div>
       </div>
