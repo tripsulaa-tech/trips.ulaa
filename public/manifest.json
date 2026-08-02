@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "ULAA — Unseen. Local. Adventures. Activities.",
   "short_name": "ULAA",
   "description": "Girls-only travel community organizing curated trips to India's hidden destinations.",
@@ -8,6 +9,7 @@
   "orientation": "portrait",
   "background_color": "#FFFFFF",
   "theme_color": "#A85A2A",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/user/icon-192.png",

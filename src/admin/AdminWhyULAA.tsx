@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, RotateCcw } from 'lucide-react';
+
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';
@@ -162,11 +162,11 @@ export default function AdminWhyULAA() {
 
         {/* Actions — sticky above the form while scrolling */}
         <div className="sticky bottom-4 z-20 flex items-center gap-3 bg-white rounded-lg shadow-warm-lg border border-background-warm px-5 py-4">
-          <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
-            <Save size={16} /> Save Changes
+          <Button variant="primary" size="md" className="flex-1" onClick={handleSave} loading={saving}>
+            Save Changes
           </Button>
-          <Button variant="outline" size="md" onClick={resetToDefault}>
-            <RotateCcw size={16} /> Reset to Default
+          <Button variant="outline" size="md" className="flex-1" onClick={resetToDefault}>
+            Reset to Default
           </Button>
           {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
         </div>

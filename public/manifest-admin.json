@@ -1,4 +1,5 @@
 {
+  "id": "/admin",
   "name": "ULAA Admin",
   "short_name": "ULAA Admin",
   "description": "Admin dashboard for ULAA — manage trips, albums, testimonials and enquiries.",
@@ -8,6 +9,7 @@
   "orientation": "portrait",
   "background_color": "#271e18",
   "theme_color": "#A85A2A",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/admin/icon-192.png",
