@@ -35,6 +35,7 @@ const AdminGallery = lazy(() => import('../admin/AdminGallery'));
 const AdminEnquiries = lazy(() => import('../admin/AdminEnquiries'));
 const AdminWaitlist = lazy(() => import('../admin/AdminWaitlist'));
 const AdminAbout = lazy(() => import('../admin/AdminAbout'));
+const AdminFounder = lazy(() => import('../admin/AdminFounder'));
 const AdminWhyULAA = lazy(() => import('../admin/AdminWhyULAA'));
 const AdminTestimonials = lazy(() => import('../admin/AdminTestimonials'));
 
@@ -102,6 +103,9 @@ export default function AppRouter() {
             } />
             <Route path="/admin/about" element={
               <ProtectedRoute><AdminAbout /></ProtectedRoute>
+            } />
+            <Route path="/admin/founder" element={
+              <ProtectedRoute><AdminFounder /></ProtectedRoute>
             } />
             <Route path="/admin/why-us" element={
               <ProtectedRoute><AdminWhyULAA /></ProtectedRoute>

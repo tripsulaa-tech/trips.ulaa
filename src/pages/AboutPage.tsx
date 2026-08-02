@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { ExternalLink, X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, Compass, Ticket, Backpack, Plane, Image as ImageIcon, Play } from 'lucide-react';
+import { X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, Compass, Ticket, Backpack, Plane, Image as ImageIcon, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
@@ -15,10 +15,11 @@ import type {
   AboutWelcomeItem,
   AboutWhyDifferentCard,
   AboutJourneyStep,
-  AboutFounderSocialLink,
   Testimonial,
   CompletedTrip,
 } from '../types/types-index';
+
+const MeetTheFounder = lazy(() => import('../sections/home/MeetTheFounder'));
 
 // ─── animation helpers ────────────────────────────────────────────────────────
 
@@ -134,7 +135,6 @@ export default function AboutPage() {
     stats,
     testimonials: testimonialsContent,
     journey,
-    founder,
   } = content;
   const { have_you_ever, welcome_to_ulaa } = journey_intro;
 
@@ -811,60 +811,14 @@ export default function AboutPage() {
 
       {/* ══════════════════════════════════════════════════════════════
           10. MEET THE FOUNDER
+          Shared component/data source with the Home and Upcoming Trips
+          pages — see src/sections/home/MeetTheFounder.tsx and
+          src/admin/AdminFounder.tsx. The "About" CTA is hidden since
+          we're already on the About page.
       ══════════════════════════════════════════════════════════════ */}
-      <section className="py-12 sm:py-24 px-4 sm:px-6 lg:px-8 bg-dark">
-        <div className="max-w-[1344px] mx-auto">
-          <motion.div {...fadeUp()} className="text-center mb-12">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-4">
-              Meet the Founder
-            </h2>
-          </motion.div>
-          <div className="flex flex-col md:flex-row gap-12 items-center max-w-4xl mx-auto">
-            <motion.div {...fadeUp(0.1)} className="flex-shrink-0">
-              {founder.photo ? (
-                <img
-                  src={founder.photo}
-                  alt={founder.name}
-                  className="w-56 h-56 md:w-72 md:h-72 rounded-full object-cover shadow-warm-lg border-4 border-primary/30"
-                />
-              ) : (
-                <div className="w-56 h-56 md:w-72 md:h-72 rounded-full bg-white/10 border-4 border-primary/30 flex items-center justify-center">
-                  <span className="text-white/40 text-5xl font-display font-bold">
-                    {founder.name.charAt(0) || '?'}
-                  </span>
-                </div>
-              )}
-            </motion.div>
-            <motion.div {...fadeUp(0.2)} className="space-y-5 text-center md:text-left">
-              <div>
-                <h3 className="font-display text-3xl font-bold text-white">{founder.name}</h3>
-                {founder.designation && (
-                  <p className="text-primary text-base font-semibold mt-1">{founder.designation}</p>
-                )}
-              </div>
-              <p className="text-white/70 text-lg leading-relaxed whitespace-pre-line">{founder.description}</p>
-              {founder.social_links.length > 0 && (
-                <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                  {founder.social_links.map((link: AboutFounderSocialLink, i: number) =>
-                    link.url ? (
-                      <a
-                        key={i}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-button font-semibold px-4 py-2 rounded-full transition-colors duration-200"
-                      >
-                        {link.platform}
-                        <ExternalLink size={13} />
-                      </a>
-                    ) : null,
-                  )}
-                </div>
-              )}
-            </motion.div>
-          </div>
-        </div>
-      </section>
+      <Suspense fallback={<div className="h-96 bg-dark animate-pulse" />}>
+        <MeetTheFounder showAboutLink={false} />
+      </Suspense>
 
     </Layout>
   );

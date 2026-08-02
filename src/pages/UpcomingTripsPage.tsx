@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter } from 'lucide-react';
 import Layout from '../components/layout/Layout';
@@ -6,6 +6,8 @@ import TripCard from '../components/ui/TripCard';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getUpcomingTrips } from '../services/api';
 import type { UpcomingTrip } from '../types/types-index';
+
+const MeetTheFounder = lazy(() => import('../sections/home/MeetTheFounder'));
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1600&q=80';
 
@@ -141,6 +143,13 @@ export default function UpcomingTripsPage() {
         )}
         </div>
       </div>
+
+      {/* Meet the Founder — shared component/data source with the Home and
+          About pages, see src/sections/home/MeetTheFounder.tsx and
+          src/admin/AdminFounder.tsx. */}
+      <Suspense fallback={<div className="h-96 bg-dark animate-pulse" />}>
+        <MeetTheFounder />
+      </Suspense>
     </Layout>
   );
 }

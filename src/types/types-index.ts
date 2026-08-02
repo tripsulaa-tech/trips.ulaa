@@ -538,14 +538,21 @@ export interface AboutContent {
     subheading: string;
     steps: AboutJourneyStep[];
   };
-  // 10. Meet the Founder
-  founder: {
-    photo: string;
-    name: string;
-    designation: string;
-    description: string;
-    social_links: AboutFounderSocialLink[];
-  };
+}
+
+// =============================================
+// Meet the Founder (editable via its own Admin tab, stored under the
+// 'founder' site_content key). Previously nested inside AboutContent, now
+// its own shared source so the Home page, About page, and Upcoming Trips
+// page all read/render the exact same data instead of each keeping their
+// own copy.
+// =============================================
+export interface FounderContent {
+  photo: string;
+  name: string;
+  designation: string;
+  description: string;
+  social_links: AboutFounderSocialLink[];
 }
 
 // =============================================

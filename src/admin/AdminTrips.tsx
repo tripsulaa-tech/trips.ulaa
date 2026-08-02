@@ -27,7 +27,7 @@ import type {
   UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy,
   TripHighlightCard, TripInclusionItem, TripIncludedGroup, TripGalleryItem,
   TripFounder, TripConfidenceItem, TripEndBanner, CoverImageCrop,
-  AboutContent,
+  FounderContent,
 } from '../types/types-index';
 import { formatDate, slugify, formatAgeRange } from '../utils/utils-index';
 
@@ -241,13 +241,14 @@ export default function AdminTrips() {
     setEditingTrip(null);
     setModalSearch('');
     setModalSearchNoMatch(false);
-    // Pre-fill trip_founder from About page "Meet the Founder" data so the
+    // Pre-fill trip_founder from the shared "Meet the Founder" data (now its
+    // own admin tab/site_content key, see src/admin/AdminFounder.tsx) so the
     // admin doesn't have to re-enter the same photo/name/bio for every trip.
     let preFilledFounder: TripFounder = emptyFounder;
     try {
-      const about = await getSiteContent<Partial<AboutContent>>('about');
-      if (about?.founder) {
-        const { photo = '', name = '', designation = '', description = '' } = about.founder;
+      const founder = await getSiteContent<Partial<FounderContent>>('founder');
+      if (founder) {
+        const { photo = '', name = '', designation = '', description = '' } = founder;
         if (photo || name || description) {
           preFilledFounder = { photo, name, designation, description };
         }

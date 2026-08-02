@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { getSiteContent } from '../../services/api';
-import { DEFAULT_ABOUT, mergeWithDefaults } from '../../constants/about';
+import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../../constants/founder';
 import Button from '../../components/ui/Button';
-import type { AboutContent } from '../../types/types-index';
+import type { FounderContent } from '../../types/types-index';
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 30 },
@@ -14,29 +14,35 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.6, delay },
 });
 
-// Same "Meet the Founder" content as the About page (section 10 there),
-// reused as-is on the Home page — same content source (site_content ->
-// 'about' -> founder) — but with its own design: a large tilted, rounded
-// photo frame beside a header/bio (centered on mobile, left-aligned from
-// md up), plus two CTAs (Contact Us -> the founder's Instagram link, About
-// -> the About page) instead of a row of social icons. The header/eyebrow
-// is hand-rolled here (rather than the shared SectionTitle component)
-// because SectionTitle's `align` prop isn't responsive, and this section
-// needs centered-on-mobile/left-on-desktop, unlike SectionTitle's other
-// callers. Kept as its own component (rather than importing a shared one
-// from AboutPage.tsx) so this section can be lazy-loaded independently of
-// the rest of the About page's code, matching the pattern of the other
-// Home sections.
-export default function MeetTheFounder() {
-  const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
+interface MeetTheFounderProps {
+  // Hides the "About" CTA (which links to the About page) when this
+  // section is rendered on the About page itself, since linking there
+  // from there would be a no-op. Defaults to true for the Home and
+  // Upcoming Trips placements.
+  showAboutLink?: boolean;
+}
+
+// The single shared "Meet the Founder" section — reused as-is (same
+// component, same data, same design) across the Home page, About page, and
+// Upcoming Trips page, all reading the same source: the 'founder'
+// site_content row (see src/admin/AdminFounder.tsx). Design: a large
+// tilted, rounded photo frame beside a header/bio (centered on mobile,
+// left-aligned from md up), plus two CTAs (Contact Us -> the founder's
+// Instagram link, About -> the About page) instead of a row of social
+// icons. The header/eyebrow is hand-rolled here (rather than the shared
+// SectionTitle component) because SectionTitle's `align` prop isn't
+// responsive, and this section needs centered-on-mobile/left-on-desktop,
+// unlike SectionTitle's other callers. Kept as its own component so it can
+// be lazy-loaded independently of the rest of each page's code, matching
+// the pattern of the other Home sections.
+export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderProps) {
+  const [founder, setFounder] = useState<FounderContent>(DEFAULT_FOUNDER);
 
   useEffect(() => {
-    getSiteContent<Partial<AboutContent>>('about')
-      .then(data => setContent(mergeWithDefaults(data)))
+    getSiteContent<Partial<FounderContent>>('founder')
+      .then(data => setFounder(mergeFounderWithDefaults(data)))
       .catch(() => {});
   }, []);
-
-  const { founder } = content;
 
   // "Contact Us" points at the founder's Instagram (falling back to
   // whichever social link is set, if Instagram itself isn't) rather than
@@ -92,16 +98,18 @@ export default function MeetTheFounder() {
                 </Button>
               </a>
             )}
-            <Link to="/about">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-base"
-              >
-                <Play size={14} className="fill-white sm:w-4 sm:h-4" />
-                About
-              </Button>
-            </Link>
+            {showAboutLink && (
+              <Link to="/about">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-base"
+                >
+                  <Play size={14} className="fill-white sm:w-4 sm:h-4" />
+                  About
+                </Button>
+              </Link>
+            )}
           </div>
         </motion.div>
       </div>

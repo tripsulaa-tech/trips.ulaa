@@ -15,7 +15,6 @@ import type {
   AboutWelcomeItem,
   AboutWhyDifferentCard,
   AboutJourneyStep,
-  AboutFounderSocialLink,
 } from '../types/types-index';
 
 // Data fetched from the DB is merged with DEFAULT_ABOUT (see
@@ -145,9 +144,6 @@ export default function AdminAbout() {
   const setTestimonialsContent = (field: keyof AboutContent['testimonials'], value: string) =>
     setContent(p => ({ ...p, testimonials: { ...p.testimonials, [field]: value } }));
 
-  const setFounder = (field: keyof AboutContent['founder'], value: unknown) =>
-    setContent(p => ({ ...p, founder: { ...p.founder, [field]: value } }));
-
   // ── have_you_ever items ────────────────────────────────────────────────────
 
   const updateHYEItem = (i: number, field: keyof AboutHaveYouEverItem, value: string) => {
@@ -215,22 +211,6 @@ export default function AdminAbout() {
     if (content.journey.steps.length <= 1) return;
     setJourney('steps', content.journey.steps.filter((_: unknown, idx: number) => idx !== i));
   };
-
-  // ── founder social links ───────────────────────────────────────────────────
-
-  const updateSocial = (i: number, field: keyof AboutFounderSocialLink, value: string) => {
-    const links: AboutFounderSocialLink[] = content.founder.social_links.map(
-      (l: AboutFounderSocialLink, idx: number) => (idx === i ? { ...l, [field]: value } : l),
-    );
-    setFounder('social_links', links);
-  };
-  const addSocial = () =>
-    setFounder('social_links', [...content.founder.social_links, { platform: '', url: '' }]);
-  const removeSocial = (i: number) =>
-    setFounder(
-      'social_links',
-      content.founder.social_links.filter((_: unknown, idx: number) => idx !== i),
-    );
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -739,79 +719,6 @@ export default function AdminAbout() {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-
-        {/* ── 8. Meet the Founder ──────────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">8 · Meet the Founder</h2>
-          <ImageUploadField
-            label="Founder Photo"
-            value={content.founder.photo}
-            onChange={url => setFounder('photo', url)}
-            bucket="ulaa"
-            pathPrefix="about/founder"
-            hint="Square, at least 600×600px, with the face centered — shown as a large circular photo."
-            allowUrl
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Name</label>
-              <input
-                value={content.founder.name}
-                onChange={e => setFounder('name', e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Designation</label>
-              <input
-                value={content.founder.designation}
-                onChange={e => setFounder('designation', e.target.value)}
-                className={inputClass}
-                placeholder="Founder & CEO, ULAA"
-              />
-            </div>
-          </div>
-          <div>
-            <label className={labelClass}>About / Description</label>
-            <textarea
-              value={content.founder.description}
-              onChange={e => setFounder('description', e.target.value)}
-              rows={4}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className={`${labelClass} mb-0`}>Social Links</label>
-              <Button variant="outline" size="sm" onClick={addSocial}>
-                <Plus size={14} /> Add Link
-              </Button>
-            </div>
-            {content.founder.social_links.map((link: AboutFounderSocialLink, i: number) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  value={link.platform}
-                  onChange={e => updateSocial(i, 'platform', e.target.value)}
-                  className={`${inputClass} w-36 flex-shrink-0`}
-                  placeholder="Instagram"
-                />
-                <input
-                  value={link.url}
-                  onChange={e => updateSocial(i, 'url', e.target.value)}
-                  className={`${inputClass} flex-1`}
-                  placeholder="https://instagram.com/…"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeSocial(i)}
-                  className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
           </div>
         </div>
 

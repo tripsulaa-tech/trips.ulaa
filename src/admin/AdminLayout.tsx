@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Home, Briefcase, BookOpen, Image, MessageCircle,
   LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles, ListChecks,
-  PanelLeftClose, PanelLeftOpen
+  PanelLeftClose, PanelLeftOpen, UserCircle
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/useAuth';
@@ -18,6 +18,7 @@ const adminNav = [
   { label: 'Instagram Moments', to: '/admin/instagram-moments', icon: Image },
   { label: 'Testimonials', to: '/admin/testimonials', icon: Star },
   { label: 'About Page', to: '/admin/about', icon: FileText },
+  { label: 'Founder', to: '/admin/founder', icon: UserCircle },
   { label: 'Why ULAA', to: '/admin/why-us', icon: Sparkles },
   { label: 'Enquiries', to: '/admin/enquiries', icon: MessageCircle },
   { label: 'Waitlist', to: '/admin/waitlist', icon: ListChecks },

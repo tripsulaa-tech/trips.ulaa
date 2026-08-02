@@ -97,18 +97,6 @@ export const DEFAULT_ABOUT: AboutContent = {
     ],
   },
 
-  // 10. Meet the Founder
-  founder: {
-    photo: '',
-    name: 'Founder Name',
-    designation: 'Founder & CEO, ULAA',
-    description:
-      'A passionate traveller and women\'s safety advocate, our founder started ULAA after one too many trips where she wished she had a trusted community of women to explore with. Her mission: to make the world smaller, safer, and more beautiful — one women-only trip at a time.',
-    social_links: [
-      { platform: 'Instagram', url: '' },
-      { platform: 'LinkedIn', url: '' },
-    ],
-  },
 };
 
 // Merges data fetched from the DB with DEFAULT_ABOUT so that any section or
@@ -141,6 +129,5 @@ export function mergeWithDefaults(data: Partial<AboutContent> | null | undefined
     stats: { ...DEFAULT_ABOUT.stats, ...data.stats },
     testimonials: { ...DEFAULT_ABOUT.testimonials, ...data.testimonials },
     journey: { ...DEFAULT_ABOUT.journey, ...data.journey },
-    founder: { ...DEFAULT_ABOUT.founder, ...data.founder },
   };
 }
