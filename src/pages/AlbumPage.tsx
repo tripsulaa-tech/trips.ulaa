@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MapPin, Calendar, Users, Images, ArrowLeft, Share2, Heart } from 'lucide-react';
 import Layout from '../components/layout/Layout';
-import { GalleryGrid } from '../components/ui/Lightbox';
+import { GalleryGrid } from '../components/ui/GalleryViewer';
 import { getCompletedTripBySlug, likeCompletedTrip, unlikeCompletedTrip } from '../services/api';
 import type { CompletedTrip } from '../types/types-index';
 import { formatDate, formatBatchLabel, PLACEHOLDER_IMAGE, getVisitorId } from '../utils/utils-index';

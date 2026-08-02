@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ZoomIn } from 'lucide-react';
 import SectionTitle from '../../components/ui/SectionTitle';
-import Lightbox from '../../components/ui/Lightbox';
+import GalleryViewer from '../../components/ui/GalleryViewer';
 import { getGalleryImages } from '../../services/api';
 
 const FALLBACK_IMAGES = [
@@ -62,7 +62,8 @@ export default function GalleryPreview() {
                 i === 0 || i === 4 ? 'row-span-2' : ''
               } ${i === 0 ? 'md:col-span-2 md:row-span-1' : ''}`}
             >
-              <img
+              <motion.img
+                layoutId={`home-gallery-${i}`}
                 src={img}
                 alt={`ULAA Gallery ${i + 1}`}
                 loading="lazy"
@@ -78,11 +79,12 @@ export default function GalleryPreview() {
           ))}
         </div>
 
-        <Lightbox
+        <GalleryViewer
           images={images}
           initialIndex={selectedIndex}
           isOpen={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
+          openLayoutId={`home-gallery-${selectedIndex}`}
         />
       </div>
     </section>

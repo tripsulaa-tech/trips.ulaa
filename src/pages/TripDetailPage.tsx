@@ -9,7 +9,7 @@ import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import GalleryCarousel from '../components/ui/GalleryCarousel';
-import Lightbox from '../components/ui/Lightbox';
+import GalleryViewer from '../components/ui/GalleryViewer';
 import PagedCarousel, { type PagedCarouselHandle } from '../components/ui/PagedCarousel';
 import { useResponsiveItemsPerView } from '../components/ui/useResponsiveItemsPerView';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
@@ -1054,7 +1054,12 @@ export default function TripDetailPage() {
                           {/* h-auto (no object-cover) lets each tile take the photo's own
                               aspect ratio, so admin-uploaded images are never cropped —
                               portrait, landscape, and square photos all show in full. */}
-                          <img src={photo} alt={`Fashion ${i + 1}`} className="w-full h-auto block group-hover:scale-105 transition-transform duration-500" />
+                          <motion.img
+                            layoutId={`fashion-gallery-${i}`}
+                            src={photo}
+                            alt={`Fashion ${i + 1}`}
+                            className="w-full h-auto block group-hover:scale-105 transition-transform duration-500"
+                          />
                           {isLastVisible && remaining > 0 && (
                             <div className="absolute inset-0 bg-dark/50 flex items-center justify-center">
                               <span className="text-white font-display font-bold text-lg">+{remaining}</span>
@@ -1065,11 +1070,12 @@ export default function TripDetailPage() {
                     });
                   })()}
                 </div>
-                <Lightbox
+                <GalleryViewer
                   images={trip.fashion_photos!}
                   initialIndex={fashionLightboxIndex}
                   isOpen={fashionLightboxOpen}
                   onClose={() => setFashionLightboxOpen(false)}
+                  openLayoutId={`fashion-gallery-${fashionLightboxIndex}`}
                 />
               </section>
             )}
