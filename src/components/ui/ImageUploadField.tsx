@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Upload, X, ImagePlus, Link2 } from 'lucide-react';
-import { uploadImage, deleteImageByUrl } from '../../services/api';
+import { uploadImage, uploadImageFromUrl, deleteImageByUrl } from '../../services/api';
 
 interface ImageUploadFieldProps {
   label: string;
@@ -30,10 +30,12 @@ interface ImageUploadFieldProps {
   // isn't shown in a fixed-ratio tile elsewhere on the site).
   aspectRatio?: string;
   // When true, also offers a "paste an image URL" option alongside the file
-  // upload dropzone. The pasted URL is stored as-is and rendered directly
-  // (<img src={url}>) — nothing is downloaded or re-hosted, so it stays live
-  // exactly as long as the source URL does. Off by default so existing
-  // upload-only fields are unaffected.
+  // upload dropzone. On submit, the pasted URL is fetched and re-hosted in
+  // our own storage (compressed like a regular upload) so the saved trip
+  // loads from our storage/CDN instead of hotlinking the source site. If the
+  // source site's CORS policy blocks that fetch, it falls back to storing
+  // the URL as-is (<img src={url}>) so the admin isn't blocked from saving.
+  // Off by default so existing upload-only fields are unaffected.
   allowUrl?: boolean;
 }
 
@@ -72,12 +74,28 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
     if (previousUrl && previousUrl.includes(`/${bucket}/`)) await deleteImageByUrl(bucket, previousUrl).catch(() => {});
   };
 
-  const applyUrl = () => {
+  const applyUrl = async () => {
     const trimmed = urlDraft.trim();
     if (!trimmed) return;
-    onChange(trimmed);
+    const previousUrl = value;
     setUrlDraft('');
     setShowUrlInput(false);
+    try {
+      setUploading(true);
+      const namePart = fileNamePrefix ? `${fileNamePrefix}-url-image` : 'url-image';
+      const path = `${pathPrefix}/${Date.now()}-${namePart}`;
+      const hostedUrl = await uploadImageFromUrl(bucket, trimmed, path, maxSizeBytes);
+      onChange(hostedUrl);
+      if (previousUrl && previousUrl.includes(`/${bucket}/`)) await deleteImageByUrl(bucket, previousUrl).catch(() => {});
+    } catch {
+      // Most often the source site's CORS policy blocked us from reading the
+      // image bytes — fall back to using the URL as-is so the admin can
+      // still save, just without the storage/perf benefit.
+      onChange(trimmed);
+      alert("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead — it may load slower for visitors.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -167,16 +185,17 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
                   onChange={e => setUrlDraft(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyUrl(); } }}
                   placeholder="Or paste an image URL…"
-                  className="w-full pl-7 pr-2 py-1.5 text-xs border-2 border-background-warm rounded-md bg-background focus:border-primary outline-none transition-colors"
+                  disabled={uploading}
+                  className="w-full pl-7 pr-2 py-1.5 text-xs border-2 border-background-warm rounded-md bg-background focus:border-primary outline-none transition-colors disabled:opacity-60"
                 />
               </div>
               <button
                 type="button"
                 onClick={applyUrl}
-                disabled={!urlDraft.trim()}
+                disabled={!urlDraft.trim() || uploading}
                 className="px-2.5 py-1.5 rounded-md bg-primary text-white text-xs font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Use URL
+                {uploading ? 'Saving...' : 'Use URL'}
               </button>
               {value && (
                 <button

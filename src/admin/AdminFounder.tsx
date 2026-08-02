@@ -3,7 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';
-import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
+import { getSiteContent, upsertSiteContent, deleteImageByUrl, COVER_IMAGE_TARGET_SIZE_BYTES } from '../services/api';
 import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../constants/founder';
 import { useConfirm } from '../components/ui/useConfirm';
 import { collectStorageUrls } from '../utils/utils-index';
@@ -120,6 +120,7 @@ export default function AdminFounder() {
             onChange={url => setFounder('photo', url)}
             bucket="ulaa"
             pathPrefix="founder"
+            maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
             hint="Square, at least 600×600px, with the face centered."
             allowUrl
           />

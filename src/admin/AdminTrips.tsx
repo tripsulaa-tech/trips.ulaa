@@ -1452,6 +1452,7 @@ export default function AdminTrips() {
                 bucket="ulaa"
                 pathPrefix="trip-founder"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
+                maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
                 hint="Square, at least 400×400px, with the face centered — shown as a circular avatar."
                 allowUrl
               />

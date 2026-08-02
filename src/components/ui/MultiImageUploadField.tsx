@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Upload, X, ImagePlus, Loader2, Link2 } from 'lucide-react';
-import { uploadImage, deleteImageByUrl } from '../../services/api';
+import { uploadImage, uploadImageFromUrl, deleteImageByUrl } from '../../services/api';
 
 interface MultiImageUploadFieldProps {
   label: string;
@@ -16,9 +16,12 @@ interface MultiImageUploadFieldProps {
   // visually inside this field rather than as a separate block above it.
   children?: React.ReactNode;
   // When true, also offers a "paste an image URL" option next to the
-  // upload tile. Pasted URLs are stored as-is and rendered directly
-  // (<img src={url}>) — nothing is downloaded or re-hosted. Off by default
-  // so existing upload-only fields are unaffected.
+  // upload tile. On submit, the pasted URL is fetched and re-hosted in our
+  // own storage (compressed like a regular upload) so the saved page loads
+  // from our storage/CDN instead of hotlinking the source site. If the
+  // source site's CORS policy blocks that fetch, it falls back to storing
+  // the URL as-is (<img src={url}>) so the admin isn't blocked from adding
+  // it. Off by default so existing upload-only fields are unaffected.
   allowUrl?: boolean;
 }
 
@@ -70,12 +73,25 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
     }
   };
 
-  const applyUrl = () => {
+  const applyUrl = async () => {
     const trimmed = urlDraft.trim();
     if (!trimmed) return;
-    onChange([...value, trimmed]);
     setUrlDraft('');
     setShowUrlInput(false);
+    try {
+      setUploading(true);
+      const path = `${pathPrefix}/${Date.now()}-url-image`;
+      const hostedUrl = await uploadImageFromUrl(bucket, trimmed, path);
+      onChange([...value, hostedUrl]);
+    } catch {
+      // Most often the source site's CORS policy blocked us from reading the
+      // image bytes — fall back to using the URL as-is so the admin can
+      // still add it, just without the storage/perf benefit.
+      onChange([...value, trimmed]);
+      alert("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead — it may load slower for visitors.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -117,16 +133,17 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
               onChange={e => setUrlDraft(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyUrl(); } }}
               placeholder="Paste an image URL…"
-              className="w-full pl-7 pr-2 py-1.5 text-xs border-2 border-background-warm rounded-md bg-background focus:border-primary outline-none transition-colors"
+              disabled={uploading}
+              className="w-full pl-7 pr-2 py-1.5 text-xs border-2 border-background-warm rounded-md bg-background focus:border-primary outline-none transition-colors disabled:opacity-60"
             />
           </div>
           <button
             type="button"
             onClick={applyUrl}
-            disabled={!urlDraft.trim()}
+            disabled={!urlDraft.trim() || uploading}
             className="px-2.5 py-1.5 rounded-md bg-primary text-white text-xs font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Add
+            {uploading ? 'Saving...' : 'Add'}
           </button>
           <button
             type="button"

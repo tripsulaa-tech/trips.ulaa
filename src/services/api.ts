@@ -516,6 +516,26 @@ export async function uploadImage(bucket: string, file: File, path: string, targ
   return data.publicUrl;
 }
 
+// Fetches a pasted image URL client-side and re-hosts it in our own storage
+// (compressed the same as a regular file upload), so pages load from our
+// storage/CDN instead of hotlinking a third-party origin at full, uncompressed
+// size on every visit.
+//
+// Caveat: this relies on the browser's fetch() being able to read the
+// response body, which requires the source site to allow cross-origin reads
+// (CORS). Plenty of sites don't set that header, so this will fail for some
+// pasted URLs — callers should catch and fall back to using the URL as-is
+// rather than blocking the admin from saving.
+export async function uploadImageFromUrl(bucket: string, sourceUrl: string, path: string, targetSizeBytes?: number): Promise<string> {
+  const response = await fetch(sourceUrl);
+  if (!response.ok) throw new Error(`Failed to fetch image (${response.status})`);
+  const blob = await response.blob();
+  if (!blob.type.startsWith('image/')) throw new Error('URL did not return an image');
+  const fileName = sourceUrl.split('/').pop()?.split('?')[0].split('#')[0] || 'image';
+  const file = new File([blob], fileName, { type: blob.type });
+  return uploadImage(bucket, file, path, targetSizeBytes);
+}
+
 export async function deleteImage(bucket: string, path: string): Promise<void> {
   const { error } = await supabase.storage.from(bucket).remove([path]);
   if (error) throw error;
