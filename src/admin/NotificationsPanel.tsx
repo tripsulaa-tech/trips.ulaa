@@ -29,12 +29,16 @@ export default function NotificationsPanel() {
     getUnreadNotificationCount().then(setUnreadCount).catch(console.error);
   };
 
-  const loadList = () => {
+  const loadList = async () => {
     setLoading(true);
-    getNotifications()
-      .then(setItems)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    try {
+      const data = await getNotifications();
+      setItems(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Initial unread count + realtime subscription (new rows and read-state changes)
@@ -55,7 +59,20 @@ export default function NotificationsPanel() {
 
   // Fetch the list the first time the panel is opened
   useEffect(() => {
-    if (open) loadList();
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await getNotifications();
+        if (!cancelled) setItems(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [open]);
 
   const handleToggle = () => setOpen(o => !o);

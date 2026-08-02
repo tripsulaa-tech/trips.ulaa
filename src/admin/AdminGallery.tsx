@@ -32,7 +32,7 @@ export default function AdminGallery() {
         await supabase.from('gallery').insert({ image_url: url, sort_order: 0 });
       }
       load();
-    } catch (err) {
+    } catch {
       alert('Failed to upload. Make sure the Supabase storage bucket "ulaa" exists and is public.');
     } finally {
       setUploading(false);

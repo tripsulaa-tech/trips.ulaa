@@ -348,10 +348,15 @@ export default function AdminWaitlist() {
   } = paginate(sortedFiltered, currentPage, WAITLIST_PAGE_SIZE);
 
   // Land back on page 1 whenever the filters or search term change, so the
-  // admin never gets stuck on a page that no longer has any rows.
-  useEffect(() => {
+  // admin never gets stuck on a page that no longer has any rows. Done
+  // during render (comparing against the previous filter signature) rather
+  // than in an effect — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
+  const filterSignature = `${statusFilter}|${tripFilter}|${trimmedSearch}`;
+  const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
+  if (filterSignature !== prevFilterSignature) {
+    setPrevFilterSignature(filterSignature);
     setCurrentPage(1);
-  }, [statusFilter, tripFilter, trimmedSearch]);
+  }
 
   const seatOpenCount = entries.filter(hasSeatOpen).length;
 

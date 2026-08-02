@@ -1310,7 +1310,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         if (hasBullets) {
           const remainingLines = availLines - usedLines;
           if (remainingLines > 0) {
-            ty = drawBulletList(dayBullets, cx + pad, ty, cardW - pad * 2, {
+            drawBulletList(dayBullets, cx + pad, ty, cardW - pad * 2, {
               size: 8.8,
               color: COLORS.darkMuted,
               lineHeight: lineH,

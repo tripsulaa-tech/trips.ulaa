@@ -545,10 +545,16 @@ export default function AdminEnquiries() {
     loadWaitlistCounts();
   }, []);
 
+  // Syncs local state FROM the URL's ?trip=/?enquiry= params (external
+  // system) rather than deriving state from a prop, so this genuinely
+  // belongs in an effect rather than the render-time-adjustment pattern
+  // used above — it also needs to call setSearchParams to clear the params
+  // once consumed, which can only happen after commit.
   useEffect(() => {
     if (enquiries.length === 0) return;
     const tripParam = searchParams.get('trip');
     const enquiryParam = searchParams.get('enquiry');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tripParam) setSelectedTripKey(tripParam);
     if (enquiryParam) {
       setExpandedId(enquiryParam);
@@ -569,6 +575,10 @@ export default function AdminEnquiries() {
   // (usually from a cancellation) and this person is next in line. Prefill
   // the add-enquiry form with what we already know about them so the admin
   // only has to fill in the payment.
+  // Syncs local state FROM router navigation state (external system, set by
+  // AdminWaitlist's navigate() call) and also calls navigate() itself to
+  // clear that state once consumed — genuinely effect territory, not a
+  // simple prop-driven reset.
   useEffect(() => {
     const incoming = (location.state as { convertWaitlist?: { id: string; full_name: string; phone: string; email: string; age?: number | null; city?: string | null; food_preference?: 'veg' | 'non_veg' | null; trip_id?: string; trip_title?: string; message?: string; group_size?: number | null; already_converted?: number; slots?: number } } | null)?.convertWaitlist;
     if (!incoming) return;
@@ -593,6 +603,7 @@ export default function AdminEnquiries() {
           ').',
         ].join('')
       : 'Converted from waitlist.';
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm({
       ...emptyForm,
       full_name: incoming.full_name,
@@ -646,11 +657,34 @@ export default function AdminEnquiries() {
     navigate(location.pathname, { replace: true });
   }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Looks up what a trip actually charges for a given package (early-bird or
+  // normal). Returns undefined if the trip or that price isn't set.
+  const getTripPrice = (tripId: string | undefined, packageType: Enquiry['package_type']): number | undefined => {
+    const trip = trips.find(t => t.id === tripId);
+    if (!trip) return undefined;
+    const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
+    return price ?? undefined;
+  };
+
+  // Suggests the trip's active price (early-bird or normal) as a starting
+  // point for total_amount whenever the trip or package changes. The admin
+  // can still type over it — this is just to save a lookup.
+  const applySuggestedAmount = (tripId: string, packageType: Enquiry['package_type']) => {
+    const suggested = getTripPrice(tripId, packageType);
+    if (suggested != null) {
+      setForm(f => ({ ...f, total_amount: suggested }));
+    }
+  };
+
   // Trip prices load asynchronously, separately from the handoff above, so
   // fill in the suggested total once both the converting entry and the
-  // trip list are available.
+  // trip list are available. Depends on the combination of three pieces of
+  // state settling together (not a single prop change), so this isn't a
+  // good fit for the render-time-adjustment pattern used elsewhere in this
+  // file — an effect is the right tool here.
   useEffect(() => {
     if (!convertingWaitlist || !form.trip_id || trips.length === 0 || form.total_amount !== '') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     applySuggestedAmount(form.trip_id, form.package_type);
   }, [convertingWaitlist, trips, form.trip_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -688,9 +722,11 @@ export default function AdminEnquiries() {
     return () => clearTimeout(t);
   }, [highlightId]);
 
-  useEffect(() => {
+  const [prevSelectedTripKey, setPrevSelectedTripKey] = useState(selectedTripKey);
+  if (selectedTripKey !== prevSelectedTripKey) {
+    setPrevSelectedTripKey(selectedTripKey);
     setSelectedIds(new Set());
-  }, [selectedTripKey]);
+  }
 
   // Single-record status change from the per-row dropdown. Bulk status
   // changes never go through here — they're applied in handleBulkSave
@@ -724,25 +760,6 @@ export default function AdminEnquiries() {
 
   const updateWaitlistPerson = (index: number, patch: Partial<WaitlistPersonForm>) => {
     setWaitlistPeople(prev => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
-  };
-
-  // Looks up what a trip actually charges for a given package (early-bird or
-  // normal). Returns undefined if the trip or that price isn't set.
-  const getTripPrice = (tripId: string | undefined, packageType: Enquiry['package_type']): number | undefined => {
-    const trip = trips.find(t => t.id === tripId);
-    if (!trip) return undefined;
-    const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
-    return price ?? undefined;
-  };
-
-  // Suggests the trip's active price (early-bird or normal) as a starting
-  // point for total_amount whenever the trip or package changes. The admin
-  // can still type over it — this is just to save a lookup.
-  const applySuggestedAmount = (tripId: string, packageType: Enquiry['package_type']) => {
-    const suggested = getTripPrice(tripId, packageType);
-    if (suggested != null) {
-      setForm(f => ({ ...f, total_amount: suggested }));
-    }
   };
 
   const openPayment = (enquiry: Enquiry) => {
@@ -1444,10 +1461,15 @@ export default function AdminEnquiries() {
 
   // Any change to what's being filtered/searched can shrink the result set
   // out from under the current page, so land back on page 1 whenever the
-  // filters, trip scope, or search term change.
-  useEffect(() => {
+  // filters, trip scope, or search term change. Done during render
+  // (comparing against the previous filter signature) rather than in an
+  // effect — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
+  const filterSignature = `${filter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${sourceFilter}|${selectedTripKey}|${trimmedSearch}`;
+  const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
+  if (filterSignature !== prevFilterSignature) {
+    setPrevFilterSignature(filterSignature);
     setCurrentPage(1);
-  }, [filter, payFilter, bookedFilter, groupFilter, foodFilter, sourceFilter, selectedTripKey, trimmedSearch]);
+  }
 
   const counts = {
     all: scopedEnquiries.length,
