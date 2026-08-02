@@ -1446,19 +1446,19 @@ export default function TripDetailPage() {
             <div className="max-w-[1344px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
               <div className="mt-8 sm:mt-12">
                 {trip.end_banner.heading && (
-                  <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
+                  <h2 className="font-display text-2xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
                     {trip.end_banner.heading}
                   </h2>
                 )}
                 {trip.end_banner.description && (
-                  <p className="text-white/70 text-base sm:text-lg leading-relaxed mb-6">{trip.end_banner.description}</p>
+                  <p className="text-white/70 text-sm sm:text-lg leading-relaxed mb-6">{trip.end_banner.description}</p>
                 )}
                 {trip.end_banner.cta_label && (
                   <div className="flex flex-row flex-wrap items-center gap-3">
                     {trip.end_banner.cta_url ? (
                       <a
                         href={trip.end_banner.cta_url}
-                        className="group/btn inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-lg transition-colors"
+                        className="group/btn inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-3 py-2 text-sm min-h-[44px] sm:px-8 sm:py-4 sm:text-lg rounded-lg transition-colors"
                       >
                         {trip.end_banner.cta_label} <ExternalLink size={15} />
                       </a>
@@ -1466,7 +1466,7 @@ export default function TripDetailPage() {
                       <button
                         type="button"
                         onClick={() => setBookingOpen(true)}
-                        className="group/btn inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-8 py-3 rounded-lg transition-colors"
+                        className="group/btn inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-3 py-2 text-sm min-h-[44px] sm:px-8 sm:py-4 sm:text-lg rounded-lg transition-colors"
                       >
                         {trip.end_banner.cta_label}
                         <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
@@ -1474,7 +1474,7 @@ export default function TripDetailPage() {
                     )}
                     <a
                       href="#highlights"
-                      className="inline-flex items-center gap-2 bg-transparent text-white border-2 border-white/40 hover:border-white hover:bg-white/10 font-button font-semibold px-8 py-3 rounded-lg transition-colors"
+                      className="inline-flex items-center justify-center gap-2 bg-transparent text-white border-2 border-white/40 hover:border-white hover:bg-white/10 font-button font-semibold px-3 py-2 text-sm min-h-[44px] sm:px-8 sm:py-4 sm:text-lg rounded-lg transition-colors"
                     >
                       Explore Trip
                     </a>

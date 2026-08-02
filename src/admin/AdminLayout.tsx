@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import NotificationsPanel from './NotificationsPanel';
 import PushNotificationToggle from './PushNotificationToggle';
+import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 
 const adminNav = [
   { label: 'Dashboard', to: '/admin', icon: Home },
@@ -234,6 +235,8 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
           {children}
         </main>
       </div>
+
+      <ScrollToTopButton leftClass={collapsed ? 'left-6 lg:left-[6.5rem]' : 'left-6 lg:left-[17.5rem]'} />
     </div>
   );
 }
