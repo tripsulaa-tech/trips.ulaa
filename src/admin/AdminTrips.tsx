@@ -19,7 +19,7 @@ import DatePicker from '../components/ui/DatePicker';
 import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
-import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTrip, COVER_IMAGE_TARGET_SIZE_BYTES, getSiteContent } from '../services/api';
+import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTripCascade, getTripDeletionImpact, COVER_IMAGE_TARGET_SIZE_BYTES, getSiteContent } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
@@ -623,14 +623,29 @@ export default function AdminTrips() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (trip: UpcomingTrip) => {
+    // Look up what's actually attached to this trip first, so the warning
+    // is specific ("12 enquiries, 3 waitlist entries, 8 photos") instead of
+    // a generic "this cannot be undone" that's easy to click through
+    // without registering what's really at stake. Falls back to a plain
+    // warning if the lookup itself fails, rather than blocking deletion.
+    const impact = await getTripDeletionImpact(trip.id).catch(() => null);
+    const parts: string[] = [];
+    if (impact) {
+      if (impact.enquiries > 0) parts.push(`${impact.enquiries} ${impact.enquiries === 1 ? 'enquiry' : 'enquiries'}`);
+      if (impact.waitlist > 0) parts.push(`${impact.waitlist} waitlist ${impact.waitlist === 1 ? 'entry' : 'entries'}`);
+      if (impact.photos > 0) parts.push(`${impact.photos} ${impact.photos === 1 ? 'photo' : 'photos'}`);
+    }
+    const message = parts.length
+      ? `Deleting "${trip.title}" also permanently removes ${parts.join(', ')} linked to it. This cannot be undone.`
+      : `This will permanently delete "${trip.title}". This cannot be undone.`;
     const ok = await confirm({
       title: 'Delete this trip?',
-      message: 'This cannot be undone.',
-      confirmLabel: 'Delete',
+      message,
+      confirmLabel: 'Delete everything',
     });
     if (!ok) return;
-    await deleteUpcomingTrip(id);
+    await deleteUpcomingTripCascade(trip);
     load();
   };
 
@@ -756,7 +771,7 @@ export default function AdminTrips() {
                           <button onClick={() => openEdit(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title="Edit">
                             <Edit2 size={15} />
                           </button>
-                          <button onClick={() => handleDelete(trip.id)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-red-50 active:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Delete">
+                          <button onClick={() => handleDelete(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-red-50 active:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Delete">
                             <Trash2 size={15} />
                           </button>
                         </div>

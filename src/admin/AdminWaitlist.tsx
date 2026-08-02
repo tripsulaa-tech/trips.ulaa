@@ -11,10 +11,10 @@ import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh, C
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
-import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getEnquiries, submitWaitlist } from '../services/api';
+import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getEnquiries, submitWaitlist } from '../services/api';
 import { formatDate, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
-import type { WaitlistEntry, UpcomingTrip, Enquiry } from '../types/types-index';
+import type { WaitlistEntry, UpcomingTrip, CompletedTrip, Enquiry } from '../types/types-index';
 
 const STATUS_CONFIG = {
   waiting: { label: 'Waiting', color: 'bg-amber-100 text-amber-700', icon: Circle },
@@ -67,7 +67,7 @@ function FilterDropdown<T extends string>({
   onSelect,
   align = 'left',
 }: {
-  options: { key: T; label: string; count: number }[];
+  options: { key: T; label: string; count: number; section?: string }[];
   value: T;
   onSelect: (key: T) => void;
   align?: 'left' | 'right';
@@ -76,18 +76,27 @@ function FilterDropdown<T extends string>({
     <div
       className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-md shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
     >
-      {options.map(opt => (
-        <button
-          key={opt.key}
-          onClick={() => onSelect(opt.key)}
-          className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-button text-left transition-colors ${
-            value === opt.key ? 'bg-primary/10 text-primary font-semibold' : 'text-dark-muted hover:bg-background-warm'
-          }`}
-        >
-          <span className="truncate">{opt.label}</span>
-          <span className="opacity-60 shrink-0">{opt.count}</span>
-        </button>
-      ))}
+      {options.map((opt, i) => {
+        const showSectionHeader = !!opt.section && opt.section !== options[i - 1]?.section;
+        return (
+          <div key={opt.key}>
+            {showSectionHeader && (
+              <div className="px-3 pt-2.5 pb-1 text-[10px] font-button font-bold text-dark-muted/60 uppercase tracking-wide">
+                {opt.section}
+              </div>
+            )}
+            <button
+              onClick={() => onSelect(opt.key)}
+              className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-button text-left transition-colors ${
+                value === opt.key ? 'bg-primary/10 text-primary font-semibold' : 'text-dark-muted hover:bg-background-warm'
+              }`}
+            >
+              <span className="truncate">{opt.label}</span>
+              <span className="opacity-60 shrink-0">{opt.count}</span>
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -104,6 +113,12 @@ export default function AdminWaitlist() {
   // to Waitlist modal can offer every sold-out-or-not trip, including ones
   // with zero signups so far.
   const [allTrips, setAllTrips] = useState<UpcomingTrip[]>([]);
+  // Completed-trip lookup only — same reasoning as AdminEnquiries: a
+  // waitlist entry's trip_id can point at a trip that already finished and
+  // graduated into an album (same id, see sync_started_trip_albums in
+  // schema.sql). That's expected, not a data problem, but it looks
+  // identical to a still-upcoming trip in the Trip filter unless labeled.
+  const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
   // Maps a converted entry's linked enquiry id -> whether that booking was
   // later cancelled. A waitlist entry is only ever marked 'converted' once
   // and never automatically flipped back, so without this a person whose
@@ -205,10 +220,11 @@ export default function AdminWaitlist() {
   };
 
   const load = () => {
-    Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries()])
-      .then(([waitlistData, tripsData, enquiries]) => {
+    Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries(), getAllCompletedTripsAdmin()])
+      .then(([waitlistData, tripsData, enquiries, completedTripsData]) => {
         setEntries(waitlistData);
         setAllTrips(tripsData);
+        setCompletedTrips(completedTripsData);
         const map: Record<string, number> = {};
         tripsData.forEach(t => { map[t.id] = seatsLeft(t.total_seats, t.seats_booked); });
         setSeatsAvailable(map);
@@ -230,10 +246,13 @@ export default function AdminWaitlist() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const trips = useMemo(() => {
+    const completedIds = new Set(completedTrips.map(t => t.id));
     const map = new Map<string, string>();
-    entries.forEach(e => map.set(e.trip_id, e.trip_title || 'Untitled trip'));
-    return Array.from(map.entries()).map(([id, title]) => ({ value: id, label: title }));
-  }, [entries]);
+    entries.forEach(e => { if (!map.has(e.trip_id)) map.set(e.trip_id, e.trip_title || 'Untitled trip'); });
+    return Array.from(map.entries())
+      .map(([id, title]) => ({ value: id, label: title, isCompleted: completedIds.has(id) }))
+      .sort((a, b) => Number(a.isCompleted) - Number(b.isCompleted));
+  }, [entries, completedTrips]);
 
   // A solo entry (group_size null/1) is ready the moment any seat is free.
   // A group entry needs at least group_size seats free together before
@@ -689,7 +708,7 @@ export default function AdminWaitlist() {
                       onSelect={key => { setTripFilter(key); setOpenFilterPanel(null); }}
                       options={[
                         { key: 'all', label: 'All trips', count: tripCounts.all },
-                        ...trips.map(t => ({ key: t.value, label: t.label, count: tripCounts[t.value] || 0 })),
+                        ...trips.map(t => ({ key: t.value, label: t.label, count: tripCounts[t.value] || 0, section: t.isCompleted ? 'Completed' : undefined })),
                       ]}
                     />
                   )}

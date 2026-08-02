@@ -11,8 +11,8 @@ import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh, C
 import type { SortDirection } from '../components/ui/DataTableChrome';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow } from '../services/api';
-import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../types/types-index';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow } from '../services/api';
+import type { Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry } from '../types/types-index';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
 
@@ -324,7 +324,7 @@ function FilterDropdown<T extends string>({
   onSelect,
   align = 'left',
 }: {
-  options: { key: T; label: string; count: number }[];
+  options: { key: T; label: string; count: number; section?: string }[];
   value: T;
   onSelect: (key: T) => void;
   align?: 'left' | 'right';
@@ -333,18 +333,30 @@ function FilterDropdown<T extends string>({
     <div
       className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-md shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
     >
-      {options.map(opt => (
-        <button
-          key={opt.key}
-          onClick={() => onSelect(opt.key)}
-          className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-button text-left transition-colors ${
-            value === opt.key ? 'bg-primary/10 text-primary font-semibold' : 'text-dark-muted hover:bg-background-warm'
-          }`}
-        >
-          <span className="truncate">{opt.label}</span>
-          <span className="opacity-60 shrink-0">{opt.count}</span>
-        </button>
-      ))}
+      {options.map((opt, i) => {
+        // A section header renders once, right before the first option
+        // that belongs to it — e.g. every completed trip gets grouped
+        // under one "Completed" label instead of each repeating it.
+        const showSectionHeader = !!opt.section && opt.section !== options[i - 1]?.section;
+        return (
+          <div key={opt.key}>
+            {showSectionHeader && (
+              <div className="px-3 pt-2.5 pb-1 text-[10px] font-button font-bold text-dark-muted/60 uppercase tracking-wide">
+                {opt.section}
+              </div>
+            )}
+            <button
+              onClick={() => onSelect(opt.key)}
+              className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-button text-left transition-colors ${
+                value === opt.key ? 'bg-primary/10 text-primary font-semibold' : 'text-dark-muted hover:bg-background-warm'
+              }`}
+            >
+              <span className="truncate">{opt.label}</span>
+              <span className="opacity-60 shrink-0">{opt.count}</span>
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -357,6 +369,13 @@ export default function AdminEnquiries() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
+  // Only used to resolve trip titles / tell a genuinely-deleted trip apart
+  // from one that simply graduated into a completed album (see
+  // sync_started_trip_albums in schema.sql — the album keeps the same id,
+  // but the upcoming_trips row itself gets removed once the album is
+  // published). Not refreshed after every mutation like `trips` is, since
+  // it's only needed for this lookup, not for editing/booking flows.
+  const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | Enquiry['status']>('all');
   const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
@@ -522,6 +541,7 @@ export default function AdminEnquiries() {
   useEffect(() => {
     load();
     getAllUpcomingTripsAdmin().then(setTrips).catch(console.error);
+    getAllCompletedTripsAdmin().then(setCompletedTrips).catch(console.error);
     loadWaitlistCounts();
   }, []);
 
@@ -1231,6 +1251,21 @@ export default function AdminEnquiries() {
     title: string;
     trip?: UpcomingTrip;
     enquiries: Enquiry[];
+    // True when this group's enquiries reference a trip_id that no longer
+    // exists in the current `trips` list — i.e. the trip was deleted after
+    // people enquired for it. The group still has to show up (deleting a
+    // trip doesn't delete its enquiries/payment history), but it's flagged
+    // so the admin isn't confused about why a "gone" trip still appears.
+    isDeletedTrip: boolean;
+    // True when the trip finished and graduated into a completed album
+    // (sync_started_trip_albums, same id). Distinct from isDeletedTrip —
+    // this is the normal, expected lifecycle for every trip, not a loss of
+    // data — but it's still flagged and labeled so an admin scanning the
+    // Trip filter can tell "this already happened" apart from "this is
+    // still bookable" at a glance, the same way a CRM tags a closed deal
+    // or a support desk tags a resolved ticket instead of leaving it
+    // looking identical to an open one in the same list.
+    isCompletedTrip: boolean;
   };
 
   // 'unlinked' bucket = every enquiry with trip_id null — both genuine
@@ -1247,11 +1282,22 @@ export default function AdminEnquiries() {
       const key = e.trip_id || UNLINKED_GROUP_KEY;
       if (!map.has(key)) {
         const linkedTrip = e.trip_id ? trips.find(t => t.id === e.trip_id) : undefined;
+        // A trip_id can stop matching `trips` (upcoming) either because it
+        // was genuinely deleted, or because the trip finished and
+        // sync_started_trip_albums() turned it into a completed album with
+        // the same id — that's a normal lifecycle move, not a deletion, so
+        // it must not be flagged the same way.
+        const linkedCompletedTrip = e.trip_id ? completedTrips.find(t => t.id === e.trip_id) : undefined;
+        const isDeletedTrip = !!e.trip_id && !linkedTrip && !linkedCompletedTrip;
+        const isCompletedTrip = !!linkedCompletedTrip;
+        const title = linkedTrip?.title || linkedCompletedTrip?.title || e.trip_title || 'General Enquiries (No Trip)';
         map.set(key, {
           key,
-          title: linkedTrip?.title || e.trip_title || 'General Enquiries (No Trip)',
+          title,
           trip: linkedTrip,
           enquiries: [],
+          isDeletedTrip,
+          isCompletedTrip,
         });
       }
       map.get(key)!.enquiries.push(e);
@@ -1259,6 +1305,13 @@ export default function AdminEnquiries() {
     return Array.from(map.values()).sort((a, b) => {
       if (a.key === UNLINKED_GROUP_KEY) return -1;
       if (b.key === UNLINKED_GROUP_KEY) return 1;
+      // Active trips first, then completed, then deleted — so the Trip
+      // filter reads top-to-bottom as "what's live" → "what's finished" →
+      // "what's gone" instead of interleaving all three by raw enquiry
+      // count. Same idea as an inbox listing unread before archived.
+      const tier = (g: TripGroup) => (g.isDeletedTrip ? 2 : g.isCompletedTrip ? 1 : 0);
+      const tierDiff = tier(a) - tier(b);
+      if (tierDiff !== 0) return tierDiff;
       return b.enquiries.length - a.enquiries.length;
     });
   })();
@@ -1619,7 +1672,15 @@ export default function AdminEnquiries() {
                 )}
               </div>
               <div className="min-w-0 flex-1 flex flex-col gap-1 py-0.5">
-                <p className="font-display font-bold text-dark truncate">{activeGroup ? (activeGroup.title || activeGroup.trip?.title || 'Untitled Trip') : 'All Trips'}</p>
+                <p className="font-display font-bold text-dark truncate flex items-center gap-2">
+                  <span className="truncate">{activeGroup ? (activeGroup.title || activeGroup.trip?.title || 'Untitled Trip') : 'All Trips'}</span>
+                  {activeGroup?.isCompletedTrip && (
+                    <span className="shrink-0 text-[10px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-background-warm text-dark-muted">Completed</span>
+                  )}
+                  {activeGroup?.isDeletedTrip && (
+                    <span className="shrink-0 text-[10px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-50 text-red-600">Deleted</span>
+                  )}
+                </p>
                 {activeGroup?.trip?.start_date && activeGroup.trip.end_date && (
                   <p className="text-dark-muted text-xs flex items-center gap-1">
                     <CalendarDays size={11} className="shrink-0" /> {formatDateRange(activeGroup.trip.start_date, activeGroup.trip.end_date)}
@@ -1765,7 +1826,12 @@ export default function AdminEnquiries() {
                         onSelect={key => { setSelectedTripKey(key === 'all' ? null : key); setOpenFilterPanel(null); }}
                         options={[
                           { key: 'all', label: 'All trips', count: enquiries.length },
-                          ...tripGroups.map(g => ({ key: g.key, label: g.title, count: g.enquiries.length })),
+                          ...tripGroups.map(g => ({
+                            key: g.key,
+                            label: g.title,
+                            count: g.enquiries.length,
+                            section: g.key === UNLINKED_GROUP_KEY ? undefined : g.isDeletedTrip ? 'Deleted' : g.isCompletedTrip ? 'Completed' : undefined,
+                          })),
                         ]}
                       />
                     )}

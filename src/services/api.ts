@@ -157,6 +157,93 @@ export async function deleteUpcomingTrip(id: string): Promise<void> {
 }
 
 // =============================================
+// Trip deletion — cascade cleanup
+// =============================================
+// Bucket every trip-attached image lives in — see the bucket="ulaa" props
+// throughout AdminTrips.tsx's upload fields.
+const TRIP_IMAGE_BUCKET = 'ulaa';
+
+// Pulls every image URL referenced anywhere on an upcoming trip (cover,
+// mobile hero, gallery, accommodation/fashion photo galleries, "Places
+// You'll Post" items, itinerary day photos, founder photo, end banner) so
+// deleteUpcomingTripCascade can clean them out of storage instead of
+// leaving orphaned files behind, and getTripDeletionImpact can show an
+// accurate photo count in the pre-delete warning.
+function collectTripImageUrls(trip: UpcomingTrip): string[] {
+  const urls: string[] = [];
+  if (trip.cover_image) urls.push(trip.cover_image);
+  if (trip.hero_mobile_image) urls.push(trip.hero_mobile_image);
+  urls.push(...(trip.gallery_images || []));
+  urls.push(...(trip.accommodation_photos || []));
+  urls.push(...(trip.fashion_photos || []));
+  (trip.gallery_items || []).forEach(item => { if (item.photo) urls.push(item.photo); });
+  (trip.itinerary || []).forEach(day => urls.push(...(day.images || [])));
+  if (trip.trip_founder?.photo) urls.push(trip.trip_founder.photo);
+  if (trip.end_banner?.image) urls.push(trip.end_banner.image);
+  return Array.from(new Set(urls));
+}
+
+// Counts of everything tied to a trip, for the delete-confirmation warning
+// (AdminTrips.handleDelete) shown before the admin commits — an enquiry
+// count isn't just a number, it's real people and money, so this is the
+// last chance to back out with full information.
+export async function getTripDeletionImpact(tripId: string): Promise<{ enquiries: number; waitlist: number; photos: number }> {
+  const [{ count: enquiryCount, error: eErr }, { count: waitlistCount, error: wErr }, { data: trip, error: tErr }] = await Promise.all([
+    supabase.from('enquiries').select('id', { count: 'exact', head: true }).eq('trip_id', tripId).is('deleted_at', null),
+    supabase.from('waitlist').select('id', { count: 'exact', head: true }).eq('trip_id', tripId),
+    supabase.from('upcoming_trips').select('*').eq('id', tripId).single(),
+  ]);
+  if (eErr) throw eErr;
+  if (wErr) throw wErr;
+  if (tErr) throw tErr;
+  return {
+    enquiries: enquiryCount || 0,
+    waitlist: waitlistCount || 0,
+    photos: trip ? collectTripImageUrls(trip).length : 0,
+  };
+}
+
+// Deletes a trip and everything attached to it:
+//  - linked enquiries are SOFT-deleted (deleted_at stamped) — same
+//    mechanism as a normal single-enquiry delete (deleteEnquiry above).
+//    trip_id was deliberately left as a non-FK column (see schema.sql)
+//    specifically so payment history survives a trip being deleted;
+//    payments.enquiry_id cascade-deletes if an enquiry row itself is ever
+//    hard-deleted, so a soft delete here is what keeps that ledger intact.
+//    The enquiries still fully disappear from every admin view, which is
+//    what "gone" looks like day-to-day — they're just recoverable at the
+//    DB level rather than destroyed outright.
+//  - linked waitlist entries are hard-deleted — no payment data to protect
+//    there.
+//  - every image the trip referenced is removed from storage, best-effort
+//    (a single failed/missing file doesn't block the rest of the cascade).
+//  - the trip row itself is deleted last, once everything above succeeds.
+export async function deleteUpcomingTripCascade(trip: UpcomingTrip): Promise<void> {
+  const [{ error: enquiryErr }, { error: waitlistErr }] = await Promise.all([
+    supabase
+      .from('enquiries')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('trip_id', trip.id)
+      .is('deleted_at', null),
+    supabase.from('waitlist').delete().eq('trip_id', trip.id),
+  ]);
+  if (enquiryErr) throw enquiryErr;
+  if (waitlistErr) throw waitlistErr;
+
+  const imageUrls = collectTripImageUrls(trip);
+  await Promise.all(
+    imageUrls.map(url =>
+      deleteImageByUrl(TRIP_IMAGE_BUCKET, url).catch(() => {
+        // Best-effort: an already-missing or unrecognizable URL shouldn't
+        // block the rest of the trip delete.
+      })
+    )
+  );
+
+  await deleteUpcomingTrip(trip.id);
+}
+
+// =============================================
 // Completed Trips
 // =============================================
 export async function getCompletedTrips(): Promise<CompletedTrip[]> {
@@ -234,6 +321,69 @@ export async function updateCompletedTrip(id: string, trip: Partial<CompletedTri
 export async function deleteCompletedTrip(id: string): Promise<void> {
   const { error } = await supabase.from('completed_trips').delete().eq('id', id);
   if (error) throw error;
+}
+
+// =============================================
+// Completed trip (album) deletion — cascade cleanup
+// =============================================
+// Same reasoning as the upcoming-trip cascade above: enquiries.trip_id and
+// waitlist.trip_id are polymorphic across upcoming_trips/completed_trips
+// (see schema.sql), and sync_started_trip_albums() carries a trip's id
+// over unchanged when it becomes an album — so an album can still have
+// live enquiries/waitlist rows pointed at it, exactly like an upcoming
+// trip can. completed_trip_likes already cascade-deletes via its own FK
+// (on delete cascade), so that needs no manual cleanup here.
+function collectCompletedTripImageUrls(trip: CompletedTrip): string[] {
+  const urls: string[] = [];
+  if (trip.cover_image) urls.push(trip.cover_image);
+  urls.push(...(trip.gallery_images || []));
+  return Array.from(new Set(urls));
+}
+
+// Counts of everything tied to an album, for the delete-confirmation
+// warning (AdminAlbums.handleDelete) shown before the admin commits.
+export async function getCompletedTripDeletionImpact(tripId: string): Promise<{ enquiries: number; waitlist: number; photos: number }> {
+  const [{ count: enquiryCount, error: eErr }, { count: waitlistCount, error: wErr }, { data: trip, error: tErr }] = await Promise.all([
+    supabase.from('enquiries').select('id', { count: 'exact', head: true }).eq('trip_id', tripId).is('deleted_at', null),
+    supabase.from('waitlist').select('id', { count: 'exact', head: true }).eq('trip_id', tripId),
+    supabase.from('completed_trips').select('*').eq('id', tripId).single(),
+  ]);
+  if (eErr) throw eErr;
+  if (wErr) throw wErr;
+  if (tErr) throw tErr;
+  return {
+    enquiries: enquiryCount || 0,
+    waitlist: waitlistCount || 0,
+    photos: trip ? collectCompletedTripImageUrls(trip).length : 0,
+  };
+}
+
+// Deletes an album and everything attached to it — same soft-delete-
+// enquiries / hard-delete-waitlist / best-effort-image-cleanup pattern as
+// deleteUpcomingTripCascade, see the comment there for the full rationale.
+export async function deleteCompletedTripCascade(trip: CompletedTrip): Promise<void> {
+  const [{ error: enquiryErr }, { error: waitlistErr }] = await Promise.all([
+    supabase
+      .from('enquiries')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('trip_id', trip.id)
+      .is('deleted_at', null),
+    supabase.from('waitlist').delete().eq('trip_id', trip.id),
+  ]);
+  if (enquiryErr) throw enquiryErr;
+  if (waitlistErr) throw waitlistErr;
+
+  const imageUrls = collectCompletedTripImageUrls(trip);
+  await Promise.all(
+    imageUrls.map(url =>
+      deleteImageByUrl(TRIP_IMAGE_BUCKET, url).catch(() => {
+        // Best-effort: an already-missing or unrecognizable URL shouldn't
+        // block the rest of the album delete.
+      })
+    )
+  );
+
+  await deleteCompletedTrip(trip.id);
 }
 
 // =============================================

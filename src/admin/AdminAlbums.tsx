@@ -7,7 +7,7 @@ import Modal from '../components/ui/Modal';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import DatePicker from '../components/ui/DatePicker';
-import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTrip } from '../services/api';
+import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTripCascade, getCompletedTripDeletionImpact } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { CompletedTrip } from '../types/types-index';
@@ -103,9 +103,19 @@ export default function AdminAlbums() {
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!(await confirm({ message: 'Delete this album?', confirmLabel: 'Delete' }))) return;
-    await deleteCompletedTrip(id);
+  const handleDelete = async (album: CompletedTrip) => {
+    const impact = await getCompletedTripDeletionImpact(album.id).catch(() => null);
+    const parts: string[] = [];
+    if (impact) {
+      if (impact.enquiries > 0) parts.push(`${impact.enquiries} ${impact.enquiries === 1 ? 'enquiry' : 'enquiries'}`);
+      if (impact.waitlist > 0) parts.push(`${impact.waitlist} waitlist ${impact.waitlist === 1 ? 'entry' : 'entries'}`);
+      if (impact.photos > 0) parts.push(`${impact.photos} ${impact.photos === 1 ? 'photo' : 'photos'}`);
+    }
+    const message = parts.length
+      ? `Deleting "${album.title}" also permanently removes ${parts.join(', ')} linked to it. This cannot be undone.`
+      : `This will permanently delete "${album.title}". This cannot be undone.`;
+    if (!(await confirm({ title: 'Delete this album?', message, confirmLabel: 'Delete everything' }))) return;
+    await deleteCompletedTripCascade(album);
     load();
   };
 
@@ -176,7 +186,7 @@ export default function AdminAlbums() {
                             {album.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
                           </button>
                           <button onClick={() => openEdit(album)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={15} /></button>
-                          <button onClick={() => handleDelete(album.id)} className="p-1.5 rounded hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
+                          <button onClick={() => handleDelete(album)} className="p-1.5 rounded hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
                         </div>
                       </td>
                     </motion.tr>
