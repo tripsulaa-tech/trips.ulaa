@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Upload, Trash2, Star } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
-import { getGalleryImages, uploadImage, deleteImage } from '../services/api';
+import { getGalleryImages, uploadImage, deleteImage, getStoragePathFromUrl } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { GalleryImage } from '../types/types-index';
@@ -42,8 +42,10 @@ export default function AdminGallery() {
 
   const handleDelete = async (img: GalleryImage) => {
     if (!(await confirm({ message: 'Delete this image?', confirmLabel: 'Delete' }))) return;
-    const path = img.image_url.split('/').slice(-2).join('/');
-    await deleteImage('ulaa', path).catch(() => {});
+    const path = getStoragePathFromUrl('ulaa', img.image_url);
+    if (path) {
+      await deleteImage('ulaa', path).catch(() => {});
+    }
     await supabase.from('gallery').delete().eq('id', img.id);
     load();
   };

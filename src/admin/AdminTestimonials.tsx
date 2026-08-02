@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, Eye, EyeOff, Star, ChevronUp, ChevronDown, Save } from 'lucide-react';
 import AdminLayout from './AdminLayout';
@@ -8,7 +8,7 @@ import Select from '../components/ui/Select';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import {
   getAllTestimonialsAdmin, createTestimonial, updateTestimonial, deleteTestimonial,
-  getSiteContent, upsertSiteContent,
+  getSiteContent, upsertSiteContent, deleteImageByUrl,
 } from '../services/api';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { Testimonial, TestimonialsSectionContent } from '../types/types-index';
@@ -69,9 +69,18 @@ export default function AdminTestimonials() {
     }
   };
 
+  // Tracks the photo URL that was already on the form when the modal opened
+  // (empty for create, existing photo for edit). Any storage URL present at
+  // close-time that wasn't in this snapshot was uploaded during the session
+  // but never saved — delete it best-effort so it doesn't orphan in storage.
+  const initialModalPhotoRef = useRef<string>('');
+  const STORAGE_BUCKET = 'ulaa';
+  const isStorageUrl = (url: string) => url.includes(`/object/public/${STORAGE_BUCKET}/`);
+
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyForm, is_published: true });
+    initialModalPhotoRef.current = '';
     setModalOpen(true);
   };
 
@@ -81,7 +90,18 @@ export default function AdminTestimonials() {
       name: t.name, photo: t.photo || '', review: t.review, rating: t.rating,
       destination: t.destination || '', is_published: t.is_published,
     });
+    initialModalPhotoRef.current = t.photo || '';
     setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    const current = form.photo;
+    const initial = initialModalPhotoRef.current;
+    if (current && current !== initial && isStorageUrl(current)) {
+      deleteImageByUrl(STORAGE_BUCKET, current).catch(() => {});
+    }
+    initialModalPhotoRef.current = '';
+    setModalOpen(false);
   };
 
   const handleSave = async () => {
@@ -92,6 +112,8 @@ export default function AdminTestimonials() {
       } else {
         await createTestimonial({ ...form, sort_order: items.length });
       }
+      // Upload is now committed to the DB — nothing to clean up on close.
+      initialModalPhotoRef.current = '';
       setModalOpen(false);
       load();
     } catch {
@@ -234,7 +256,7 @@ export default function AdminTestimonials() {
         )}
       </div>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Testimonial' : 'Add Testimonial'} size="lg">
+      <Modal isOpen={modalOpen} onClose={closeModal} title={editing ? 'Edit Testimonial' : 'Add Testimonial'} size="lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Name *</label>
@@ -273,7 +295,7 @@ export default function AdminTestimonials() {
           </div>
         </div>
         <div className="flex gap-3 mt-6">
-          <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>Cancel</Button>
+          <Button variant="outline" size="md" onClick={closeModal}>Cancel</Button>
           <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
             {editing ? 'Save Changes' : 'Add Testimonial'}
           </Button>

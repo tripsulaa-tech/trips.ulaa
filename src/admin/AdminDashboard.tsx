@@ -78,8 +78,18 @@ export default function AdminDashboard() {
     });
   }, []);
 
-  const todayStr = new Date().toDateString();
-  const newToday = enquiries.filter(e => new Date(e.created_at).toDateString() === todayStr).length;
+  // Compare against local-midnight timestamps rather than toDateString(),
+  // so "today" is computed once from a single reference point (the browser's
+  // local calendar day) instead of re-deriving it per-entry via string
+  // conversion, which is the safer way to do this comparison correctly
+  // across timezones.
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfTomorrow = startOfToday + 24 * 60 * 60 * 1000;
+  const newToday = enquiries.filter(e => {
+    const t = new Date(e.created_at).getTime();
+    return t >= startOfToday && t < startOfTomorrow;
+  }).length;
 
   const statCards = [
     { label: 'Upcoming Trips', value: upcoming.length, icon: Briefcase, color: 'text-primary', to: '/admin/trips', cta: 'View all trips' },

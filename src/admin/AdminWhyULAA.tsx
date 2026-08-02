@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Save, RotateCcw } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';
-import { getSiteContent, upsertSiteContent } from '../services/api';
+import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
 import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
 import { useConfirm } from '../components/ui/ConfirmDialog';
+import { collectStorageUrls } from '../utils/utils-index';
 import type { WhyUlaaContent } from '../types/types-index';
 
 const inputClass = 'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
@@ -18,12 +19,30 @@ export default function AdminWhyULAA() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const STORAGE_BUCKET = 'ulaa';
+  // Same snapshot-diff approach as AdminAbout — see the comment there for
+  // why this exists (page-level Save with no modal-close hook to catch
+  // orphaned uploads, so this doubles as the navigate-away guard too).
+  const savedUrlsRef = useRef<Set<string>>(new Set());
+  const savedContentRef = useRef<string>('');
+
   useEffect(() => {
     getSiteContent<WhyUlaaContent>('why_ulaa')
-      .then(data => setContent(data || DEFAULT_WHY_ULAA))
-      .catch(() => setContent(DEFAULT_WHY_ULAA))
+      .then(data => {
+        const resolved = data || DEFAULT_WHY_ULAA;
+        setContent(resolved);
+        savedUrlsRef.current = collectStorageUrls(resolved, STORAGE_BUCKET);
+        savedContentRef.current = JSON.stringify(resolved);
+      })
+      .catch(() => {
+        setContent(DEFAULT_WHY_ULAA);
+        savedUrlsRef.current = collectStorageUrls(DEFAULT_WHY_ULAA, STORAGE_BUCKET);
+        savedContentRef.current = JSON.stringify(DEFAULT_WHY_ULAA);
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const hasUnsavedChanges = () => JSON.stringify(content) !== savedContentRef.current;
 
   const updateFeature = (index: number, patch: Partial<WhyUlaaContent['features'][number]>) => {
     setContent(c => ({
@@ -40,6 +59,12 @@ export default function AdminWhyULAA() {
     try {
       setSaving(true);
       await upsertSiteContent('why_ulaa', content);
+      const newUrls = collectStorageUrls(content, STORAGE_BUCKET);
+      for (const url of savedUrlsRef.current) {
+        if (!newUrls.has(url)) deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
+      }
+      savedUrlsRef.current = newUrls;
+      savedContentRef.current = JSON.stringify(content);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -68,7 +93,7 @@ export default function AdminWhyULAA() {
   }
 
   return (
-    <AdminLayout title="Why ULAA" subtitle='Edit the 6 image cards shown in the "Travel differently." section on the home page.'>
+    <AdminLayout title="Why ULAA" subtitle='Edit the 6 image cards shown in the "Travel differently." section on the home page.' hasUnsavedChanges={hasUnsavedChanges}>
       <div className="space-y-6 max-w-4xl">
         <div className={cardClass}>
           <h2 className="font-display text-lg font-bold text-dark">Section Text</h2>

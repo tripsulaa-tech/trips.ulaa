@@ -309,3 +309,27 @@ export function getVisitorId(): string {
   }
   return id;
 }
+
+// Walks an arbitrary JSON-shaped value (objects, arrays, strings mixed
+// together) and collects every string that looks like a Supabase storage
+// URL for the given bucket. Used by page-level admin forms (About, Why
+// ULAA) that don't have a single flat list of image fields the way a
+// modal form does — content here is a nested tree of sections, each of
+// which may or may not hold an image URL — so rather than hand-maintain a
+// list of every image field (and have it drift as sections are added),
+// this just recursively finds anything that matches the storage URL shape.
+export function collectStorageUrls(value: unknown, bucket: string): Set<string> {
+  const urls = new Set<string>();
+  const marker = `/object/public/${bucket}/`;
+  const walk = (v: unknown) => {
+    if (typeof v === 'string') {
+      if (v.includes(marker)) urls.add(v);
+    } else if (Array.isArray(v)) {
+      v.forEach(walk);
+    } else if (v && typeof v === 'object') {
+      Object.values(v).forEach(walk);
+    }
+  };
+  walk(value);
+  return urls;
+}

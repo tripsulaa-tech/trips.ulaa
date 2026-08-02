@@ -1017,6 +1017,12 @@ export default function AdminEnquiries() {
 
   // Permanently removes every selected enquiry. Same underlying delete as
   // the single-row action, just fanned out across the selection.
+  //
+  // Sequential, not Promise.all — same reasoning as the bulk save above:
+  // deleting multiple booked enquiries for the same trip each triggers a
+  // seat release, and firing those concurrently means they'd race on
+  // seats_booked. Rare in practice (the DB trigger handles it safely
+  // either way), but there's no reason not to be consistent here too.
   const handleBulkDelete = async () => {
     const targets = enquiries.filter(e => selectedIds.has(e.id));
     if (targets.length === 0) return;
@@ -1028,7 +1034,9 @@ export default function AdminEnquiries() {
     if (!ok) return;
     setBulkDeleting(true);
     try {
-      await Promise.all(targets.map(e => deleteEnquiry(e)));
+      for (const e of targets) {
+        await deleteEnquiry(e);
+      }
       const tripIds = new Set(targets.map(e => e.trip_id).filter(Boolean));
       if (tripIds.size > 0) {
         const freshTrips = await getAllUpcomingTripsAdmin();

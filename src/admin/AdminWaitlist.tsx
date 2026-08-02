@@ -465,6 +465,11 @@ export default function AdminWaitlist() {
     setEntries(prev => prev.map(e => (e.id === id ? { ...e, status } : e)));
     await updateWaitlistStatus(id, status).catch(console.error);
     setUpdating(null);
+    // The optimistic update above only touches this entry's status — it
+    // doesn't refresh seatsAvailable, so a stale "N seats open" badge could
+    // linger if another booking landed elsewhere while this page was open.
+    // Reload trip/seat data (not a full-page loading state) to keep it honest.
+    load();
   };
 
   const handleDelete = async (entry: WaitlistEntry) => {

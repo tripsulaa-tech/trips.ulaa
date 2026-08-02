@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Save, RotateCcw, Plus, Trash2, GripVertical } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
-import { getSiteContent, upsertSiteContent } from '../services/api';
+import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { useConfirm } from '../components/ui/ConfirmDialog';
+import { collectStorageUrls } from '../utils/utils-index';
 import type {
   AboutContent,
   AboutHaveYouEverItem,
@@ -35,17 +36,47 @@ export default function AdminAbout() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const STORAGE_BUCKET = 'ulaa';
+  // Snapshot of every storage URL present in `content` as of the last
+  // successful load or save. Compared against the live set on save (to
+  // find newly-uploaded images that got swapped out again before saving)
+  // and exposed to AdminLayout via hasUnsavedChanges so navigating away
+  // mid-edit — the actual gap this is fixing — prompts a confirmation
+  // instead of silently discarding an in-progress upload/edit.
+  const savedUrlsRef = useRef<Set<string>>(new Set());
+  const savedContentRef = useRef<string>('');
+
   useEffect(() => {
     getSiteContent<Partial<AboutContent>>('about')
-      .then(data => setContent(mergeWithDefaults(data)))
-      .catch(() => setContent(DEFAULT_ABOUT))
+      .then(data => {
+        const merged = mergeWithDefaults(data);
+        setContent(merged);
+        savedUrlsRef.current = collectStorageUrls(merged, STORAGE_BUCKET);
+        savedContentRef.current = JSON.stringify(merged);
+      })
+      .catch(() => {
+        setContent(DEFAULT_ABOUT);
+        savedUrlsRef.current = collectStorageUrls(DEFAULT_ABOUT, STORAGE_BUCKET);
+        savedContentRef.current = JSON.stringify(DEFAULT_ABOUT);
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const hasUnsavedChanges = () => JSON.stringify(content) !== savedContentRef.current;
 
   const handleSave = async () => {
     try {
       setSaving(true);
       await upsertSiteContent('about', content);
+      // Any image that was in the previously-saved content but isn't in
+      // what we just saved (e.g. swapped for a new upload, or removed)
+      // is now truly orphaned — clean it up best-effort.
+      const newUrls = collectStorageUrls(content, STORAGE_BUCKET);
+      for (const url of savedUrlsRef.current) {
+        if (!newUrls.has(url)) deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
+      }
+      savedUrlsRef.current = newUrls;
+      savedContentRef.current = JSON.stringify(content);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -204,7 +235,7 @@ export default function AdminAbout() {
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <AdminLayout title="About Page" subtitle="Manage every section of the public About Us page.">
+    <AdminLayout title="About Page" subtitle="Manage every section of the public About Us page." hasUnsavedChanges={hasUnsavedChanges}>
       <div className="space-y-6 max-w-4xl">
 
         {/* ── 1. Hero Banner ──────────────────────────────────────────────── */}

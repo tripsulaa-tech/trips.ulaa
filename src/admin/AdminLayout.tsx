@@ -5,7 +5,7 @@ import {
   LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles, ListChecks,
   PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import NotificationsPanel from './NotificationsPanel';
 import PushNotificationToggle from './PushNotificationToggle';
@@ -27,6 +27,14 @@ interface AdminLayoutProps {
   children: ReactNode;
   title: string;
   subtitle?: string;
+  // Page-level (non-modal) admin screens like About/Why ULAA have no
+  // save-on-close event to hook the way a modal does — the only signal
+  // that something might be lost is the admin trying to navigate away.
+  // If provided, this is checked before any sidebar/logo/"View Site" link
+  // navigates; returning true blocks navigation until confirmed. This
+  // covers in-app (SPA) navigation only — see the beforeunload handler
+  // below for tab close/refresh/typed-URL navigation.
+  hasUnsavedChanges?: () => boolean;
 }
 
 interface SidebarContentProps {
@@ -35,13 +43,14 @@ interface SidebarContentProps {
   onNavigate: () => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  guardNavigate?: (e: React.MouseEvent) => void;
 }
 
-function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onToggleCollapse }: SidebarContentProps) {
+function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onToggleCollapse, guardNavigate }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
       <div className={`relative pt-6 pb-4 flex items-center ${collapsed ? 'flex-col gap-3 px-2' : 'justify-center px-6'}`}>
-        <Link to="/" className="inline-block shrink-0">
+        <Link to="/" className="inline-block shrink-0" onClick={guardNavigate}>
           {collapsed ? (
             <img src="/favicon.svg" alt="ULAA" className="h-9 w-9" />
           ) : (
@@ -82,7 +91,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
             key={to}
             to={to}
             end={to === '/admin'}
-            onClick={onNavigate}
+            onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
             title={collapsed ? label : undefined}
             className={({ isActive }) => `
               flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all
@@ -99,6 +108,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       <div className={`p-4 border-t border-background-warm ${collapsed ? 'px-2' : ''}`}>
         <Link
           to="/"
+          onClick={guardNavigate}
           title={collapsed ? 'View Site' : undefined}
           className={`flex items-center justify-center gap-2 py-2.5 rounded-md border border-background-warm text-sm font-medium text-dark hover:bg-background-warm transition-colors ${collapsed ? 'px-0' : 'px-4'}`}
         >
@@ -112,7 +122,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';
 
-export default function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
+export default function AdminLayout({ children, title, subtitle, hasUnsavedChanges }: AdminLayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -140,7 +150,38 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
     });
   };
 
+  // Tab close / refresh / typed-URL navigation away can't be intercepted
+  // by React Router at all (there's no SPA navigation event to hook), so
+  // this is the only way to warn for that case. Browsers ignore the
+  // custom message text and show their own generic prompt, but attaching
+  // the listener at all is what makes the prompt appear.
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedChanges]);
+
+  // In-app (SPA) navigation away — sidebar links don't trigger a page
+  // reload, so beforeunload never fires for these; this is the
+  // lightweight substitute for a React Router data-router useBlocker
+  // (which isn't available under the plain BrowserRouter this app uses).
+  const guardNavigate = (e: React.MouseEvent) => {
+    if (!hasUnsavedChanges || !hasUnsavedChanges()) return;
+    if (!window.confirm('You have unsaved changes that will be lost. Leave this page anyway?')) {
+      e.preventDefault();
+    }
+  };
+
   const handleSignOut = async () => {
+    if (hasUnsavedChanges?.() && !window.confirm('You have unsaved changes that will be lost. Sign out anyway?')) {
+      return;
+    }
     await signOut();
     navigate('/admin');
   };
@@ -160,6 +201,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
           onNavigate={() => setSidebarOpen(false)}
           collapsed={collapsed}
           onToggleCollapse={toggleCollapsed}
+          guardNavigate={guardNavigate}
         />
       </aside>
 
@@ -172,7 +214,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
             <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-md text-dark-muted hover:bg-background">
               <X size={20} />
             </button>
-            <SidebarContent userEmail={user?.email} initial={initial} onNavigate={() => setSidebarOpen(false)} />
+            <SidebarContent userEmail={user?.email} initial={initial} onNavigate={() => setSidebarOpen(false)} guardNavigate={guardNavigate} />
           </div>
         </div>
       )}

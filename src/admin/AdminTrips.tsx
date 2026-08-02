@@ -625,6 +625,13 @@ export default function AdminTrips() {
   };
 
   const handleSave = async () => {
+    if (!form.title.trim() || !form.destination.trim() || !form.start_date || !form.end_date) {
+      await alert({
+        title: 'Missing required fields',
+        message: 'Title, Destination, Start Date, and End Date are all required before saving this trip.',
+      });
+      return;
+    }
     if (form.price === '' || Number(form.price) <= 0) {
       await alert({
         title: 'Regular price required',
