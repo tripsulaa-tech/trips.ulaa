@@ -20,7 +20,7 @@ import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/c
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import {
   MapPin, Calendar, Clock, Users, UserCheck, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight,
+  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight, Play,
   ChevronDown, ChevronUp, BadgeCheck,
   Shirt, Footprints, Glasses, HatGlasses, Headphones, BatteryCharging, Pill, SprayCan, Droplet, GlassWater,
   Cookie, Sparkles, FileText, IdCard, Hand, ShieldCheck, Flame, type LucideIcon,
@@ -298,9 +298,31 @@ export default function TripDetailPage() {
           <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-3">Details coming soon</h2>
           <p className="text-dark-muted text-sm sm:text-base max-w-lg mx-auto mb-8">
             We're still putting together the itinerary, pricing and booking details for this trip.
-            Check back soon, or explore our other upcoming trips in the meantime.
+            Check back soon, or explore our other upcoming trips in the meantime — or take a look
+            at our completed trips to see what a ULAA trip actually looks like.
           </p>
-          <Link to="/trips"><Button variant="primary">View All Trips</Button></Link>
+          <div className="flex flex-row flex-wrap items-center justify-center gap-3 sm:gap-4">
+            <Link to="/trips">
+              <Button
+                variant="primary"
+                size="sm"
+                className="group/btn whitespace-nowrap sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
+              >
+                View All Trips
+                <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />
+              </Button>
+            </Link>
+            <Link to="/completed-trips">
+              <Button
+                variant="outline"
+                size="sm"
+                className="whitespace-nowrap sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
+              >
+                <Play size={14} className="fill-current sm:w-4 sm:h-4" />
+                View Gallery
+              </Button>
+            </Link>
+          </div>
         </div>
       </Layout>
     );
