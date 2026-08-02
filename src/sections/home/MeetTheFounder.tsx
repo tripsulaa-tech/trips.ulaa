@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink } from 'lucide-react';
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../../constants/about';
+import { getSocialIcon } from '../../utils/socialIcons';
 import type { AboutContent, AboutFounderSocialLink } from '../../types/types-index';
 
 const fadeUp = (delay = 0) => ({
@@ -31,39 +31,41 @@ export default function MeetTheFounder() {
   const { founder } = content;
 
   return (
-    <section className="py-12 sm:py-24 px-4 sm:px-6 lg:px-8 bg-dark">
-      <div className="max-w-[1344px] mx-auto">
-        <motion.div {...fadeUp()} className="text-center mb-12">
-          <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-4">
-            Meet the Founder
-          </h2>
-        </motion.div>
-        <div className="flex flex-col md:flex-row gap-12 items-center max-w-4xl mx-auto">
-          <motion.div {...fadeUp(0.1)} className="flex-shrink-0">
+    <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 bg-dark relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+      <div className="max-w-2xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-7">
+          <motion.div {...fadeUp()} className="flex-shrink-0 relative">
             {founder.photo ? (
               <img
                 src={founder.photo}
                 alt={founder.name}
-                className="w-56 h-56 md:w-72 md:h-72 rounded-full object-cover shadow-warm-lg border-4 border-primary/30"
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-[3px] border-primary shadow-warm"
               />
             ) : (
-              <div className="w-56 h-56 md:w-72 md:h-72 rounded-full bg-white/10 border-4 border-primary/30 flex items-center justify-center">
-                <span className="text-white/40 text-5xl font-display font-bold">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-dark-muted border-[3px] border-primary flex items-center justify-center">
+                <span className="text-white/35 text-3xl font-button font-bold">
                   {founder.name.charAt(0) || '?'}
                 </span>
               </div>
             )}
-          </motion.div>
-          <motion.div {...fadeUp(0.2)} className="space-y-5 text-center md:text-left">
-            <div>
-              <h3 className="font-display text-3xl font-bold text-white">{founder.name}</h3>
-              {founder.designation && (
-                <p className="text-primary text-base font-semibold mt-1">{founder.designation}</p>
-              )}
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-dark text-base font-serif font-bold leading-none">
+              &rdquo;
             </div>
-            <p className="text-white/70 text-lg leading-relaxed whitespace-pre-line">{founder.description}</p>
+          </motion.div>
+          <motion.div {...fadeUp(0.1)} className="text-center sm:text-left min-w-0">
+            <span className="inline-block text-[10px] font-button font-semibold tracking-wider text-secondary bg-secondary/10 px-2.5 py-1 rounded-full mb-2">
+              MEET THE FOUNDER
+            </span>
+            <h3 className="font-display text-xl sm:text-2xl font-bold text-white">{founder.name}</h3>
+            {founder.designation && (
+              <p className="text-secondary text-xs font-button font-semibold mt-0.5 mb-2.5">{founder.designation}</p>
+            )}
+            <p className="text-white/65 text-sm leading-relaxed whitespace-pre-line line-clamp-4 sm:line-clamp-3">
+              {founder.description}
+            </p>
             {founder.social_links.length > 0 && (
-              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+              <div className="flex gap-2 justify-center sm:justify-start mt-3">
                 {founder.social_links.map((link: AboutFounderSocialLink, i: number) =>
                   link.url ? (
                     <a
@@ -71,10 +73,11 @@ export default function MeetTheFounder() {
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-button font-semibold px-4 py-2 rounded-full transition-colors duration-200"
+                      title={link.platform || 'Social link'}
+                      aria-label={link.platform || 'Social link'}
+                      className="w-8 h-8 rounded-full bg-white/8 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition-colors duration-200"
                     >
-                      {link.platform}
-                      <ExternalLink size={13} />
+                      {getSocialIcon(link.platform, 15)}
                     </a>
                   ) : null,
                 )}
