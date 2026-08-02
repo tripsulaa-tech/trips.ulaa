@@ -9,6 +9,7 @@ import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import GalleryCarousel from '../components/ui/GalleryCarousel';
+import GalleryViewer from '../components/ui/GalleryViewer';
 import PagedCarousel, { type PagedCarouselHandle } from '../components/ui/PagedCarousel';
 import { useResponsiveItemsPerView } from '../components/ui/useResponsiveItemsPerView';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
@@ -157,6 +158,8 @@ export default function TripDetailPage() {
       return next;
     });
   };
+  const [fashionLightboxOpen, setFashionLightboxOpen] = useState(false);
+  const [fashionLightboxIndex, setFashionLightboxIndex] = useState(0);
   const navBarRef = useRef<HTMLElement>(null);
   const navLinkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const calendarMenuRef = useRef<HTMLDivElement>(null);
@@ -1042,14 +1045,17 @@ export default function TripDetailPage() {
                     return visible.map((photo, i) => {
                       const isLastVisible = i === visible.length - 1;
                       return (
-                        <div
+                        <button
                           key={i}
+                          type="button"
+                          onClick={() => { setFashionLightboxIndex(i); setFashionLightboxOpen(true); }}
                           className="relative block w-full overflow-hidden rounded-lg break-inside-avoid group"
                         >
                           {/* h-auto (no object-cover) lets each tile take the photo's own
                               aspect ratio, so admin-uploaded images are never cropped —
                               portrait, landscape, and square photos all show in full. */}
-                          <img
+                          <motion.img
+                            layoutId={`fashion-gallery-${i}`}
                             src={photo}
                             alt={`Fashion ${i + 1}`}
                             className="w-full h-auto block group-hover:scale-105 transition-transform duration-500"
@@ -1059,11 +1065,19 @@ export default function TripDetailPage() {
                               <span className="text-white font-display font-bold text-lg">+{remaining}</span>
                             </div>
                           )}
-                        </div>
+                        </button>
                       );
                     });
                   })()}
                 </div>
+                <GalleryViewer
+                  images={trip.fashion_photos!}
+                  initialIndex={fashionLightboxIndex}
+                  isOpen={fashionLightboxOpen}
+                  onClose={() => setFashionLightboxOpen(false)}
+                  openLayoutId={`fashion-gallery-${fashionLightboxIndex}`}
+                  fallbackLocation={trip.title}
+                />
               </section>
             )}
 
