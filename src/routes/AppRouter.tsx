@@ -37,6 +37,9 @@ function SyncManifestWithRoute() {
     document
       .querySelector('link[rel="apple-touch-icon"]')
       ?.setAttribute('href', isAdminRoute ? '/icons/admin/apple-touch-icon.png' : '/icons/user/apple-touch-icon.png');
+    const favicon = document.querySelector('link[rel="icon"]');
+    favicon?.setAttribute('href', isAdminRoute ? '/icons/admin/favicon-32.png' : '/ULAA.svg');
+    favicon?.setAttribute('type', isAdminRoute ? 'image/png' : 'image/svg+xml');
     document
       .querySelector('meta[name="apple-mobile-web-app-title"]')
       ?.setAttribute('content', isAdminRoute ? 'ULAA Admin' : 'ULAA');

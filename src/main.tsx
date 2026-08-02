@@ -26,6 +26,9 @@ if (isAdminRoute) {
   document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', '/icons/admin/apple-touch-icon.png')
   document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.setAttribute('content', 'yes')
   document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', 'ULAA Admin')
+  const favicon = document.querySelector('link[rel="icon"]')
+  favicon?.setAttribute('href', '/icons/admin/favicon-32.png')
+  favicon?.setAttribute('type', 'image/png')
   document.title = 'ULAA Admin'
 }
 
