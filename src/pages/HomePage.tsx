@@ -7,6 +7,7 @@ const UpcomingTripsPreview = lazy(() => import('../sections/home/UpcomingTripsPr
 const CompletedTripsPreview = lazy(() => import('../sections/home/CompletedTripsPreview'));
 const Testimonials = lazy(() => import('../sections/home/Testimonials'));
 const GalleryPreview = lazy(() => import('../sections/home/GalleryPreview'));
+const MeetTheFounder = lazy(() => import('../sections/home/MeetTheFounder'));
 const CTASection = lazy(() => import('../sections/home/CTASection'));
 
 export default function HomePage() {
@@ -27,6 +28,9 @@ export default function HomePage() {
       </Suspense>
       <Suspense fallback={<div className="h-96 bg-background animate-pulse" />}>
         <GalleryPreview />
+      </Suspense>
+      <Suspense fallback={<div className="h-96 bg-dark animate-pulse" />}>
+        <MeetTheFounder />
       </Suspense>
       <Suspense fallback={<div className="h-64 animate-pulse" />}>
         <CTASection />
