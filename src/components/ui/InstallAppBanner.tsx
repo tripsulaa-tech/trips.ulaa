@@ -1,7 +1,19 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Download, MoreVertical, X } from 'lucide-react';
+import { Download, MoreVertical, Share, X } from 'lucide-react';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
+
+// iOS Safari (and, since they all relay to Safari's share sheet, Chrome/Edge/
+// Firefox on iOS too) never fires `beforeinstallprompt` — Apple doesn't
+// implement it at all, on any browser. So `canInstall` from useInstallPrompt
+// will always be false here, and there is no way to trigger an install
+// programmatically. The only path is the user manually tapping the Share
+// icon and choosing "Add to Home Screen" — this just detects that platform
+// so we can point them at it instead of showing nothing.
+function isIos(): boolean {
+  const ua = window.navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in document);
+}
 
 // Mobile Chrome/Edge no longer show their own install banner automatically
 // on most visits — a page has to capture `beforeinstallprompt` and offer
@@ -21,9 +33,10 @@ export default function InstallAppBanner() {
   const [dismissed, setDismissed] = useState(false);
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  const ios = isIos();
 
   if (isInstalled || dismissed) return null;
-  if (!canInstall && !isAdmin) return null;
+  if (!canInstall && !isAdmin && !ios) return null;
 
   const handleInstall = async () => {
     const accepted = await promptInstall();
@@ -42,13 +55,21 @@ export default function InstallAppBanner() {
           {isAdmin ? 'Install ULAA Admin' : 'Install the ULAA app'}
         </p>
         <p className="mt-0.5 text-xs text-dark-muted">
-          {canInstall
+          {ios
             ? isAdmin
               ? 'Add the admin dashboard to your home screen for quick access.'
               : 'Add ULAA to your home screen for a faster, app-like experience.'
-            : 'The main ULAA app is already installed on this device, so use "Create shortcut" instead to get a separate Admin icon.'}
+            : canInstall
+              ? isAdmin
+                ? 'Add the admin dashboard to your home screen for quick access.'
+                : 'Add ULAA to your home screen for a faster, app-like experience.'
+              : 'The main ULAA app is already installed on this device, so use "Create shortcut" instead to get a separate Admin icon.'}
         </p>
-        {canInstall ? (
+        {ios ? (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-dark-muted">
+            Tap <Share className="h-3.5 w-3.5" /> then "Add to Home Screen"
+          </div>
+        ) : canInstall ? (
           <div className="mt-3 flex gap-2">
             <button
               onClick={handleInstall}
