@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ZoomIn } from 'lucide-react';
 import SectionTitle from '../../components/ui/SectionTitle';
-import GalleryViewer from '../../components/ui/GalleryViewer';
 import { getGalleryImages } from '../../services/api';
 
 const FALLBACK_IMAGES = [
@@ -18,8 +16,6 @@ const FALLBACK_IMAGES = [
 ];
 
 export default function GalleryPreview() {
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [images, setImages] = useState<string[]>(FALLBACK_IMAGES);
 
   useEffect(() => {
@@ -31,11 +27,6 @@ export default function GalleryPreview() {
       })
       .catch(console.error);
   }, []);
-
-  const open = (i: number) => {
-    setSelectedIndex(i);
-    setLightboxOpen(true);
-  };
 
   return (
     <section className="pt-12 pb-12 sm:py-12 px-4 sm:px-6 lg:px-8 bg-background">
@@ -57,35 +48,19 @@ export default function GalleryPreview() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.06 }}
-              onClick={() => open(i)}
-              className={`group relative overflow-hidden rounded-lg cursor-pointer ${
+              className={`group relative overflow-hidden rounded-lg ${
                 i === 0 || i === 4 ? 'row-span-2' : ''
               } ${i === 0 ? 'md:col-span-2 md:row-span-1' : ''}`}
             >
-              <motion.img
-                layoutId={`home-gallery-${i}`}
+              <img
                 src={img}
                 alt={`ULAA Gallery ${i + 1}`}
                 loading="lazy"
                 className="w-full h-full object-cover min-h-40 md:min-h-56 transition-transform duration-700 group-hover:scale-110"
               />
-              <div className="absolute inset-0 bg-dark/0 group-hover:bg-dark/30 transition-all duration-300 flex items-center justify-center">
-                <ZoomIn
-                  size={28}
-                  className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                />
-              </div>
             </motion.div>
           ))}
         </div>
-
-        <GalleryViewer
-          images={images}
-          initialIndex={selectedIndex}
-          isOpen={lightboxOpen}
-          onClose={() => setLightboxOpen(false)}
-          openLayoutId={`home-gallery-${selectedIndex}`}
-        />
       </div>
     </section>
   );

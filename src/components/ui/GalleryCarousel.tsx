@@ -11,10 +11,6 @@ interface GalleryCarouselProps {
   items: GalleryCarouselItem[];
 }
 
-// Same paged carousel used on the homepage (Completed Trips albums): a
-// fixed number of cards per page with prev/dots/next controls below,
-// rather than floating side arrows over the row. Shows up to 6 photos
-// per page on desktop.
 export default function GalleryCarousel({ items }: GalleryCarouselProps) {
   const itemsPerView = useResponsiveItemsPerView({ base: 2, sm: 3, md: 4, lg: 6 });
 
@@ -26,13 +22,13 @@ export default function GalleryCarousel({ items }: GalleryCarouselProps) {
       itemsPerView={itemsPerView}
       keyExtractor={(_item, i) => i}
       renderItem={(item, i) => (
-        <div className="group overflow-hidden rounded-xl shadow-card border border-background-warm bg-white">
-          <div className="aspect-[4/3] overflow-hidden">
+        <div className="group overflow-hidden rounded-xl shadow-card border border-background-warm bg-white relative">
+          <div className="aspect-[4/3] overflow-hidden relative">
             <img
               src={item.photo || PLACEHOLDER_IMAGE}
               alt={item.description || `Gallery image ${i + 1}`}
               draggable={false}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover group-hover:scale-[1.07] transition-transform duration-600 ease-out"
             />
           </div>
           {item.description && (
@@ -45,3 +41,4 @@ export default function GalleryCarousel({ items }: GalleryCarouselProps) {
     />
   );
 }
+
