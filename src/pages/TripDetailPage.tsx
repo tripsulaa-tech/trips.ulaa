@@ -1392,7 +1392,7 @@ export default function TripDetailPage() {
                       <p className="text-primary text-sm font-semibold mb-2">{trip.trip_founder.designation}</p>
                     )}
                     {trip.trip_founder.description && (
-                      <p className="text-white/70 text-sm leading-relaxed">{trip.trip_founder.description}</p>
+                      <p className="text-white/70 text-sm leading-relaxed whitespace-pre-line">{trip.trip_founder.description}</p>
                     )}
                   </div>
                 </div>

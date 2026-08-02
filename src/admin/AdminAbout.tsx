@@ -724,10 +724,10 @@ export default function AdminAbout() {
 
         {/* ── Sticky Save Bar ───────────────────────────────────────────────── */}
         <div className="sticky bottom-4 z-20 flex items-center gap-3 bg-white rounded-lg shadow-warm-lg border border-background-warm px-5 py-4">
-          <Button variant="primary" size="md" className="flex-1" onClick={handleSave} loading={saving}>
+          <Button variant="primary" size="md" className="sm:flex-1" onClick={handleSave} loading={saving}>
             Save Changes
           </Button>
-          <Button variant="outline" size="md" className="flex-1" onClick={resetToDefault}>
+          <Button variant="outline" size="md" className="sm:flex-1" onClick={resetToDefault}>
             Reset to Default
           </Button>
           {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
