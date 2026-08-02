@@ -79,3 +79,26 @@ export function getSocialIcon(platform: string, size = 16): ReactNode {
   if (found) return found.icon(size);
   return <Globe size={size} />;
 }
+
+// Real brand backgrounds for each platform so the icon reads as "Instagram"/
+// "Facebook"/etc. at a glance rather than a generic tinted circle. Matched
+// with the same loose keyword regexes as ICONS above; unrecognized platforms
+// fall back to a neutral translucent circle.
+const BRAND_CLASSES: { match: RegExp; className: string }[] = [
+  { match: /insta/i, className: 'bg-gradient-to-tr from-[#FFDC80] via-[#F56040] via-[#C13584] to-[#5851DB]' },
+  { match: /facebook|\bfb\b/i, className: 'bg-[#1877F2]' },
+  { match: /twitter|\bx\.com\b|^x$|\btwitter\/x\b/i, className: 'bg-black' },
+  { match: /linkedin/i, className: 'bg-[#0A66C2]' },
+  { match: /youtube|\byt\b/i, className: 'bg-[#FF0000]' },
+  { match: /whatsapp/i, className: 'bg-[#25D366]' },
+  { match: /pinterest/i, className: 'bg-[#E60023]' },
+  { match: /tiktok/i, className: 'bg-black' },
+];
+
+/** Resolves the real brand background color/gradient for a social link's
+ *  platform, for icon buttons that should read as that brand at a glance.
+ *  Falls back to a neutral translucent circle for unrecognized platforms. */
+export function getSocialBrandClasses(platform: string): string {
+  const found = BRAND_CLASSES.find(({ match }) => match.test(platform));
+  return found ? found.className : 'bg-white/10 border border-white/10';
+}

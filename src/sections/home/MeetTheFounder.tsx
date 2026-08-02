@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { Play } from 'lucide-react';
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../../constants/about';
-import { getSocialIcon } from '../../utils/socialIcons';
-import type { AboutContent, AboutFounderSocialLink } from '../../types/types-index';
+import Button from '../../components/ui/Button';
+import type { AboutContent } from '../../types/types-index';
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 30 },
@@ -12,13 +14,19 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.6, delay },
 });
 
-// Same "Meet the Founder" block as the About page (section 10 there),
+// Same "Meet the Founder" content as the About page (section 10 there),
 // reused as-is on the Home page — same content source (site_content ->
-// 'about' -> founder), same markup/styling — just placed above Instagram
-// Moments here instead of at the end of the About page. Kept as its own
-// component (rather than importing a shared one from AboutPage.tsx) so
-// this section can be lazy-loaded independently of the rest of the About
-// page's code, matching the pattern of the other Home sections.
+// 'about' -> founder) — but with its own design: a large tilted, rounded
+// photo frame beside a header/bio (centered on mobile, left-aligned from
+// md up), plus two CTAs (Contact Us -> the founder's Instagram link, About
+// -> the About page) instead of a row of social icons. The header/eyebrow
+// is hand-rolled here (rather than the shared SectionTitle component)
+// because SectionTitle's `align` prop isn't responsive, and this section
+// needs centered-on-mobile/left-on-desktop, unlike SectionTitle's other
+// callers. Kept as its own component (rather than importing a shared one
+// from AboutPage.tsx) so this section can be lazy-loaded independently of
+// the rest of the About page's code, matching the pattern of the other
+// Home sections.
 export default function MeetTheFounder() {
   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
 
@@ -30,61 +38,72 @@ export default function MeetTheFounder() {
 
   const { founder } = content;
 
+  // "Contact Us" points at the founder's Instagram (falling back to
+  // whichever social link is set, if Instagram itself isn't) rather than
+  // a site contact form.
+  const contactUrl =
+    founder.social_links.find(l => /insta/i.test(l.platform) && l.url)?.url ||
+    founder.social_links.find(l => l.url)?.url;
+
   return (
-    <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 bg-dark relative overflow-hidden">
+    <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-dark relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
-      <div className="max-w-2xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-center gap-7">
-          <motion.div {...fadeUp()} className="flex-shrink-0 relative">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 md:gap-16 items-center">
+        <motion.div {...fadeUp()} className="flex justify-center md:justify-start">
+          <div className="w-64 h-72 sm:w-80 sm:h-96 md:w-[22rem] md:h-[26rem] rounded-[2.5rem] border-4 border-primary overflow-hidden -rotate-6 shadow-warm-lg">
             {founder.photo ? (
               <img
                 src={founder.photo}
                 alt={founder.name}
-                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-[3px] border-primary shadow-warm"
+                className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-dark-muted border-[3px] border-primary flex items-center justify-center">
-                <span className="text-white/35 text-3xl font-button font-bold">
+              <div className="w-full h-full bg-dark-muted flex items-center justify-center">
+                <span className="text-white/35 text-6xl font-button font-bold rotate-6">
                   {founder.name.charAt(0) || '?'}
                 </span>
               </div>
             )}
-            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-dark text-base font-serif font-bold leading-none">
-              &rdquo;
-            </div>
-          </motion.div>
-          <motion.div {...fadeUp(0.1)} className="text-center sm:text-left min-w-0">
-            <span className="inline-block text-[10px] font-button font-semibold tracking-wider text-secondary bg-secondary/10 px-2.5 py-1 rounded-full mb-2">
-              MEET THE FOUNDER
-            </span>
-            <h3 className="font-display text-xl sm:text-2xl font-bold text-white">{founder.name}</h3>
-            {founder.designation && (
-              <p className="text-secondary text-xs font-button font-semibold mt-0.5 mb-2.5">{founder.designation}</p>
-            )}
-            <p className="text-white/65 text-sm leading-relaxed whitespace-pre-line line-clamp-4 sm:line-clamp-3">
-              {founder.description}
+          </div>
+        </motion.div>
+
+        <motion.div {...fadeUp(0.1)} className="flex flex-col items-center md:items-start text-center md:text-left">
+          <span className="font-script font-medium text-3xl md:text-4xl text-secondary">
+            Meet the Founder
+          </span>
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-white mt-3">
+            {founder.name}
+          </h2>
+          {founder.designation && (
+            <p className="text-base sm:text-lg md:text-xl leading-relaxed text-white/80 mt-3">
+              {founder.designation}
             </p>
-            {founder.social_links.length > 0 && (
-              <div className="flex gap-2 justify-center sm:justify-start mt-3">
-                {founder.social_links.map((link: AboutFounderSocialLink, i: number) =>
-                  link.url ? (
-                    <a
-                      key={i}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={link.platform || 'Social link'}
-                      aria-label={link.platform || 'Social link'}
-                      className="w-8 h-8 rounded-full bg-white/8 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition-colors duration-200"
-                    >
-                      {getSocialIcon(link.platform, 15)}
-                    </a>
-                  ) : null,
-                )}
-              </div>
+          )}
+
+          <p className="text-white/65 text-sm sm:text-base leading-relaxed whitespace-pre-line mt-5">
+            {founder.description}
+          </p>
+
+          <div className="flex flex-row flex-wrap gap-3 sm:gap-4 justify-center md:justify-start mt-7">
+            {contactUrl && (
+              <a href={contactUrl} target="_blank" rel="noopener noreferrer">
+                <Button variant="primary" size="sm" className="sm:px-8 sm:py-4 sm:text-base">
+                  Contact Us
+                </Button>
+              </a>
             )}
-          </motion.div>
-        </div>
+            <Link to="/about">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-base"
+              >
+                <Play size={14} className="fill-white sm:w-4 sm:h-4" />
+                About
+              </Button>
+            </Link>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
