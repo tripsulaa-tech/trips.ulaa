@@ -227,7 +227,7 @@ export default function AlbumPage() {
                 </button>
               </div>
             </div>
-            <GalleryGrid images={album.gallery_images} />
+            <GalleryGrid images={album.gallery_images} fallbackLocation={album.destination} />
           </section>
         )}
         </div>

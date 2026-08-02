@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   motion,
   AnimatePresence,
@@ -7,7 +8,7 @@ import {
   animate,
   type PanInfo,
 } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 
 // =============================================================================
 // GalleryViewer — the single, centralized fullscreen photo viewer for the
@@ -28,6 +29,9 @@ export interface GalleryImageItem {
   src: string;
   alt?: string;
   caption?: string;
+  /** Per-photo location label (e.g. "Munnar View Point"). Takes priority
+   *  over `fallbackLocation` on GalleryViewer when both are present. */
+  location?: string;
 }
 
 export type GalleryImageInput = string | GalleryImageItem;
@@ -43,6 +47,11 @@ export interface GalleryViewerProps {
    *  Omit for a matched scale/fade entrance instead (used where the
    *  calling page has its own custom grid we don't want to touch). */
   openLayoutId?: string;
+  /** Generic location label used when a photo has no `location` of its own
+   *  — e.g. a trip name or album destination. Shown alongside the photo
+   *  counter in the bottom overlay. Omit entirely on pages with no
+   *  meaningful single location (e.g. a mixed homepage feed). */
+  fallbackLocation?: string;
 }
 
 const SWIPE_VELOCITY_THRESHOLD = 500;
@@ -61,7 +70,7 @@ function mod(n: number, m: number): number {
   return ((n % m) + m) % m;
 }
 
-export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClose, openLayoutId }: GalleryViewerProps) {
+export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClose, openLayoutId, fallbackLocation }: GalleryViewerProps) {
   const items = useMemo(() => normalizeImages(images), [images]);
   const total = items.length;
 
@@ -298,9 +307,14 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
   const current = items[index];
   const panRange = trackWidth * 0.5 * Math.max(0, zoom - 1);
 
-  const renderSlide = (item: GalleryImageItem, i: number, isCurrent: boolean) => (
+  const renderSlide = (
+    item: GalleryImageItem,
+    i: number,
+    isCurrent: boolean,
+    slot: 'prev' | 'current' | 'next'
+  ) => (
     <div
-      key={i}
+      key={slot}
       style={{ width: trackWidth || '100%' }}
       className="h-full flex items-center justify-center shrink-0 select-none"
     >
@@ -340,7 +354,7 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
     </div>
   );
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -356,20 +370,8 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
           style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
           onMouseMove={bumpControls}
         >
-          {/* Blurred, dimmed backdrop built from the current photo — adds
-              depth instead of a flat brown/black void behind it. */}
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-dark"
-            style={{
-              backgroundImage: `url(${current.src})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(48px) brightness(0.35)',
-              transform: 'scale(1.15)',
-            }}
-          />
-          <div aria-hidden className="absolute inset-0 bg-dark/45" />
+          {/* Solid backdrop — standard app dark tone, no blurred-photo effect */}
+          <div aria-hidden className="absolute inset-0 bg-dark" />
 
           {/* Top controls */}
           <AnimatePresence>
@@ -383,7 +385,7 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
               >
                 <div className="flex items-center justify-between">
                   {total > 1 ? (
-                    <span className="text-cream/90 text-xs sm:text-sm font-button tracking-wide bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full">
+                    <span className="text-cream text-xs sm:text-sm font-button tracking-wide bg-dark-muted px-3 py-1.5 rounded-full">
                       {index + 1} / {total}
                     </span>
                   ) : <span />}
@@ -391,18 +393,23 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                     ref={closeBtnRef}
                     onClick={onClose}
                     aria-label="Close gallery"
-                    className="text-cream hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer transition-colors"
+                    className="text-dark bg-cream hover:bg-white rounded-full p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer transition-colors"
                   >
                     <X size={20} />
                   </button>
                 </div>
                 {total > 1 && (
-                  <div className="mt-2 h-[2px] w-full bg-white/15 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-white/80 rounded-full"
-                      animate={{ width: `${((index + 1) / total) * 100}%` }}
-                      transition={{ duration: reduceMotion ? 0 : 0.25 }}
-                    />
+                  <div className="mt-2 flex gap-1">
+                    {items.map((_, i) => (
+                      <div key={i} className="h-[2px] flex-1 rounded-full bg-white/20 overflow-hidden">
+                        <motion.div
+                          className="h-full bg-secondary rounded-full"
+                          initial={false}
+                          animate={{ width: i <= index ? '100%' : '0%' }}
+                          transition={{ duration: reduceMotion ? 0 : 0.2 }}
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
               </motion.div>
@@ -418,7 +425,7 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                 exit={{ opacity: 0 }}
                 className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-20 flex justify-center pointer-events-none"
               >
-                <span className="text-cream/90 text-sm font-button tracking-wide bg-white/10 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full">
+                <span className="text-cream text-sm font-button tracking-wide bg-dark-muted px-4 py-2 rounded-full">
                   ← Swipe to explore photos →
                 </span>
               </motion.div>
@@ -431,14 +438,14 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
               <button
                 onClick={(e) => { e.stopPropagation(); prev(); }}
                 aria-label="Previous photo"
-                className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 text-cream hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full p-3 items-center justify-center cursor-pointer transition-colors"
+                className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 text-dark bg-cream hover:bg-white rounded-full p-3 items-center justify-center cursor-pointer transition-colors"
               >
                 <ChevronLeft size={22} />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); next(); }}
                 aria-label="Next photo"
-                className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 text-cream hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full p-3 items-center justify-center cursor-pointer transition-colors"
+                className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 text-dark bg-cream hover:bg-white rounded-full p-3 items-center justify-center cursor-pointer transition-colors"
               >
                 <ChevronRight size={22} />
               </button>
@@ -463,28 +470,66 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                 dragMomentum={false}
                 onDragEnd={handleTrackDragEnd}
               >
-                {renderSlide(items[prevIdx], prevIdx, false)}
-                {renderSlide(items[index], index, true)}
-                {renderSlide(items[nextIdx], nextIdx, false)}
+                {renderSlide(items[prevIdx], prevIdx, false, 'prev')}
+                {renderSlide(items[index], index, true, 'current')}
+                {renderSlide(items[nextIdx], nextIdx, false, 'next')}
               </motion.div>
             )}
           </div>
 
-          {/* Caption */}
-          <AnimatePresence>
-            {controlsVisible && current.caption && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                className="absolute bottom-0 inset-x-0 z-20 px-4 pb-3 sm:pb-4 text-center pointer-events-none"
-              >
-                <span className="inline-block text-cream/90 text-xs sm:text-sm bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full max-w-[92vw] truncate">
-                  {current.caption}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Bottom info: location (or caption) + photo count, plus a
+              windowed swipe-indicator dot row. Uses a same-tone gradient
+              scrim (not a contrasting solid block) so the screen's overall
+              brightness stays consistent whether controls are shown or not. */}
+          {(() => {
+            const locationLabel = current.location || fallbackLocation;
+            if (!locationLabel && !current.caption) return null;
+            return (
+              <AnimatePresence>
+                {controlsVisible && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="absolute bottom-0 inset-x-0 z-20 pointer-events-none"
+                  >
+                    <div aria-hidden className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-dark to-transparent" />
+                    <div className="relative px-4 sm:px-6 pb-3 sm:pb-4 flex items-end justify-between gap-3">
+                      <div className="min-w-0">
+                        {locationLabel ? (
+                          <>
+                            <span className="flex items-center gap-1.5 text-cream text-sm sm:text-base font-display font-semibold truncate">
+                              <MapPin size={15} className="shrink-0" />
+                              <span className="truncate">{locationLabel}</span>
+                            </span>
+                            {total > 1 && (
+                              <span className="block text-cream/70 text-xs sm:text-sm mt-0.5">
+                                Photo {index + 1} of {total}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-cream text-xs sm:text-sm truncate">{current.caption}</span>
+                        )}
+                      </div>
+                      {total > 1 && total <= 12 && (
+                        <div className="flex items-center gap-1 shrink-0 pb-0.5">
+                          {items.map((_, i) => (
+                            <span
+                              key={i}
+                              className={`rounded-full transition-all duration-200 ${
+                                i === index ? 'w-1.5 h-1.5 bg-secondary' : 'w-1 h-1 bg-cream/40'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            );
+          })()}
 
           {/* Desktop filmstrip — hidden on small mobile screens */}
           {total > 1 && (
@@ -497,9 +542,9 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
                   className="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4"
                 >
                   <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-dark/70 to-transparent z-10 rounded-l-lg" />
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-dark/70 to-transparent z-10 rounded-r-lg" />
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth bg-white/10 border border-white/10 backdrop-blur-md rounded-lg px-3 py-2.5">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-dark-muted to-transparent z-10 rounded-l-lg" />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-dark-muted to-transparent z-10 rounded-r-lg" />
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth bg-dark-muted rounded-lg px-3 py-2.5">
                       {items.map((img, i) => (
                         <button
                           key={i}
@@ -521,7 +566,8 @@ export default function GalleryViewer({ images, initialIndex = 0, isOpen, onClos
           )}
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
@@ -554,9 +600,12 @@ export function GalleryThumb({ src, alt, layoutId, onClick, className, imgClassN
 // =============================================================================
 interface GalleryGridProps {
   images: GalleryImageInput[];
+  /** Generic location label shown in the viewer's bottom overlay when a
+   *  photo has no `location` of its own — e.g. the album's destination. */
+  fallbackLocation?: string;
 }
 
-export function GalleryGrid({ images }: GalleryGridProps) {
+export function GalleryGrid({ images, fallbackLocation }: GalleryGridProps) {
   const items = useMemo(() => normalizeImages(images), [images]);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(0);
@@ -587,6 +636,7 @@ export function GalleryGrid({ images }: GalleryGridProps) {
         isOpen={open}
         onClose={() => setOpen(false)}
         openLayoutId={`gallery-grid-${selected}`}
+        fallbackLocation={fallbackLocation}
       />
     </>
   );

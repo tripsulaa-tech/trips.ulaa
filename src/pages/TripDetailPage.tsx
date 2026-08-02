@@ -1076,6 +1076,7 @@ export default function TripDetailPage() {
                   isOpen={fashionLightboxOpen}
                   onClose={() => setFashionLightboxOpen(false)}
                   openLayoutId={`fashion-gallery-${fashionLightboxIndex}`}
+                  fallbackLocation={trip.title}
                 />
               </section>
             )}
