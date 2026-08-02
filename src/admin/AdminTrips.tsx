@@ -19,7 +19,7 @@ import DatePicker from '../components/ui/DatePicker';
 import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
-import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTripCascade, getTripDeletionImpact, COVER_IMAGE_TARGET_SIZE_BYTES, getSiteContent } from '../services/api';
+import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTripCascade, getTripDeletionImpact, COVER_IMAGE_TARGET_SIZE_BYTES, getSiteContent, deleteImageByUrl } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useAlert } from '../components/ui/AlertDialog';
@@ -149,6 +149,46 @@ export default function AdminTrips() {
   const [form, setForm] = useState<TripForm>(emptyForm);
   const importInputRef = useRef<HTMLInputElement>(null);
 
+  // Tracks the set of image URLs that were already in the form when the
+  // modal opened. Any storage URL in the form at close-time that is NOT in
+  // this set was uploaded during the current session but never saved to the
+  // DB — it's an orphan. We delete those on cancel/close so they don't
+  // silently accumulate in the bucket.
+  const initialModalUrlsRef = useRef<Set<string>>(new Set());
+
+  // Collects every image URL currently in a TripForm into a flat Set.
+  const collectTripFormUrls = (f: TripForm): Set<string> => {
+    const urls = new Set<string>();
+    const add = (u?: string) => { if (u) urls.add(u); };
+    add(f.cover_image);
+    add(f.hero_mobile_image);
+    add(f.trip_founder?.photo);
+    add(f.end_banner?.image);
+    f.accommodation_photos?.forEach(u => add(u));
+    f.fashion_photos?.forEach(u => add(u));
+    f.gallery_items?.forEach(item => add(item.photo));
+    f.itinerary?.forEach(day => day.images?.forEach(u => add(u)));
+    return urls;
+  };
+
+  const STORAGE_BUCKET = 'ulaa';
+  const isStorageUrl = (url: string) => url.includes(`/object/public/${STORAGE_BUCKET}/`);
+
+  // Closes the edit/create modal. Any image URLs that were uploaded during
+  // this session but aren't in the initial snapshot are orphans (the admin
+  // navigated away without saving) — delete them best-effort before closing.
+  const closeModal = () => {
+    const currentUrls = collectTripFormUrls(form);
+    const initial = initialModalUrlsRef.current;
+    for (const url of currentUrls) {
+      if (!initial.has(url) && isStorageUrl(url)) {
+        deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
+      }
+    }
+    initialModalUrlsRef.current = new Set();
+    setModalOpen(false);
+  };
+
   const load = () => {
     getAllUpcomingTripsAdmin().then(setTrips).catch(console.error).finally(() => setLoading(false));
   };
@@ -215,7 +255,9 @@ export default function AdminTrips() {
     } catch {
       // silently fall back to empty founder
     }
-    setForm({ ...emptyForm, trip_founder: preFilledFounder });
+    const initialForm = { ...emptyForm, trip_founder: preFilledFounder };
+    setForm(initialForm);
+    initialModalUrlsRef.current = collectTripFormUrls(initialForm);
     setModalOpen(true);
   };
 
@@ -517,6 +559,7 @@ export default function AdminTrips() {
       };
       setEditingTrip(null);
       setForm(imported);
+      initialModalUrlsRef.current = collectTripFormUrls(imported);
       setModalOpen(true);
     } catch {
       await alert({
@@ -534,7 +577,7 @@ export default function AdminTrips() {
 
   const openEdit = (trip: UpcomingTrip) => {
     setEditingTrip(trip);
-    setForm({
+    const editForm: TripForm = {
       title: trip.title, destination: trip.destination,
       start_date: trip.start_date, end_date: trip.end_date,
       duration: computeDuration(trip.start_date, trip.end_date) || trip.duration, description: trip.description,
@@ -573,7 +616,9 @@ export default function AdminTrips() {
       confidence_description: trip.confidence_description || '',
       meeting_address: trip.meeting_address || '',
       end_banner: trip.end_banner || emptyEndBanner,
-    });
+    };
+    setForm(editForm);
+    initialModalUrlsRef.current = collectTripFormUrls(editForm);
     setModalSearch('');
     setModalSearchNoMatch(false);
     setModalOpen(true);
@@ -614,6 +659,8 @@ export default function AdminTrips() {
       } else {
         await createUpcomingTrip(data);
       }
+      // All uploads are now committed to the DB — nothing to clean up on close.
+      initialModalUrlsRef.current = new Set();
       setModalOpen(false);
       load();
     } catch {
@@ -789,7 +836,7 @@ export default function AdminTrips() {
       {/* Create/Edit Modal */}
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editingTrip ? 'Edit Trip' : 'Add Trip'}
         size="xl"
         headerContent={
@@ -806,7 +853,7 @@ export default function AdminTrips() {
         }
         footer={
           <div className="flex gap-3">
-            <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" size="md" onClick={closeModal}>Cancel</Button>
             <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
               {editingTrip ? 'Save Changes' : 'Create Trip'}
             </Button>

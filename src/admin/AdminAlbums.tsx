@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
 import AdminLayout from './AdminLayout';
@@ -7,7 +7,7 @@ import Modal from '../components/ui/Modal';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import DatePicker from '../components/ui/DatePicker';
-import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTripCascade, getCompletedTripDeletionImpact } from '../services/api';
+import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTripCascade, getCompletedTripDeletionImpact, deleteImageByUrl } from '../services/api';
 
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { CompletedTrip } from '../types/types-index';
@@ -50,14 +50,18 @@ export default function AdminAlbums() {
   const openCreate = () => {
     setEditing(null);
     setErrors({});
-    setForm({ title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false });
+    const emptyAlbumForm: AlbumForm = { title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false };
+    setForm(emptyAlbumForm);
+    initialModalUrlsRef.current = collectAlbumFormUrls(emptyAlbumForm);
     setModalOpen(true);
   };
 
   const openEdit = (album: CompletedTrip) => {
     setEditing(album);
     setErrors({});
-    setForm({ title: album.title, destination: album.destination, map_url: album.map_url || '', trip_date: album.trip_date, description: album.description, batch: album.batch || '', participants: album.participants, cover_image: album.cover_image || '', gallery_images: album.gallery_images || [], is_published: album.is_published });
+    const editForm: AlbumForm = { title: album.title, destination: album.destination, map_url: album.map_url || '', trip_date: album.trip_date, description: album.description, batch: album.batch || '', participants: album.participants, cover_image: album.cover_image || '', gallery_images: album.gallery_images || [], is_published: album.is_published };
+    setForm(editForm);
+    initialModalUrlsRef.current = collectAlbumFormUrls(editForm);
     setModalOpen(true);
   };
 
@@ -97,6 +101,8 @@ export default function AdminAlbums() {
       const data = { ...form, batch, slug: slugify(slugSource) };
       if (editing) await updateCompletedTrip(editing.id, data);
       else await createCompletedTrip(data);
+      // All uploads committed to DB — nothing to clean up on close.
+      initialModalUrlsRef.current = new Set();
       setModalOpen(false);
       load();
     } catch { alert('Failed to save. Please check your connection and try again.'); }
@@ -122,6 +128,35 @@ export default function AdminAlbums() {
   const togglePublish = async (album: CompletedTrip) => {
     await updateCompletedTrip(album.id, { is_published: !album.is_published });
     load();
+  };
+
+  // Tracks the set of image URLs that were already in the form when the
+  // modal opened. Any storage URL present at close-time that was NOT in this
+  // snapshot was uploaded during the session but never saved — delete it
+  // best-effort so it doesn't sit around as an orphan in the bucket.
+  const initialModalUrlsRef = useRef<Set<string>>(new Set());
+
+  const collectAlbumFormUrls = (f: AlbumForm): Set<string> => {
+    const urls = new Set<string>();
+    const add = (u?: string) => { if (u) urls.add(u); };
+    add(f.cover_image);
+    f.gallery_images?.forEach(u => add(u));
+    return urls;
+  };
+
+  const STORAGE_BUCKET = 'ulaa';
+  const isStorageUrl = (url: string) => url.includes(`/object/public/${STORAGE_BUCKET}/`);
+
+  const closeModal = () => {
+    const currentUrls = collectAlbumFormUrls(form);
+    const initial = initialModalUrlsRef.current;
+    for (const url of currentUrls) {
+      if (!initial.has(url) && isStorageUrl(url)) {
+        deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
+      }
+    }
+    initialModalUrlsRef.current = new Set();
+    setModalOpen(false);
   };
 
   const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
@@ -198,7 +233,7 @@ export default function AdminAlbums() {
         )}
       </div>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Album' : 'Add Album'} size="lg">
+      <Modal isOpen={modalOpen} onClose={closeModal} title={editing ? 'Edit Album' : 'Add Album'} size="lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Album Title *</label>
@@ -311,7 +346,7 @@ export default function AdminAlbums() {
           </div>
         </div>
         <div className="flex gap-3 mt-6">
-          <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>Cancel</Button>
+          <Button variant="outline" size="md" onClick={closeModal}>Cancel</Button>
           <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
             {editing ? 'Save Changes' : 'Create Album'}
           </Button>
