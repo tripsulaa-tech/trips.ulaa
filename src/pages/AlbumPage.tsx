@@ -62,10 +62,15 @@ export default function AlbumPage() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  useEffect(() => {
-    if (!album) return;
+  // Reads this device's previously-stored liked state once the album has
+  // loaded (or changed). Adjusted during render rather than in an effect —
+  // localStorage.getItem is synchronous, so there's no need for an effect
+  // just to avoid an extra cascading render.
+  const [prevLikedAlbumId, setPrevLikedAlbumId] = useState<string | null>(null);
+  if (album && album.id !== prevLikedAlbumId) {
+    setPrevLikedAlbumId(album.id);
     setLiked(localStorage.getItem(`ulaa_liked_album_${album.id}`) === '1');
-  }, [album]);
+  }
 
   const toggleLike = async () => {
     if (!album || likeBusy) return;

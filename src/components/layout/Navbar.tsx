@@ -1,9 +1,9 @@
-﻿import { useState, useEffect, type MouseEvent } from 'react';
+﻿import { useState, type MouseEvent } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import Button from '../ui/Button';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -19,9 +19,13 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  useEffect(() => {
-    setIsOpen(false);
-  }, [location]);
+  // Close the mobile menu whenever the route changes. Adjusted during render
+  // (rather than in an effect) to avoid an extra cascading render.
+  const [prevLocationKey, setPrevLocationKey] = useState(location.key);
+  if (location.key !== prevLocationKey) {
+    setPrevLocationKey(location.key);
+    if (isOpen) setIsOpen(false);
+  }
 
   const handleLogoClick = (e: MouseEvent) => {
     // Admin-only: toggle logo between the public home page and the admin dashboard.

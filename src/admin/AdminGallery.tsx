@@ -5,7 +5,7 @@ import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import { getGalleryImages, uploadImage, deleteImage, getStoragePathFromUrl } from '../services/api';
 import { supabase } from '../services/supabase';
-import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useConfirm } from '../components/ui/useConfirm';
 import type { GalleryImage } from '../types/types-index';
 
 export default function AdminGallery() {

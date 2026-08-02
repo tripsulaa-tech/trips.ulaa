@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import type { ButtonHTMLAttributes } from 'react';
+import type { HTMLMotionProps } from 'framer-motion';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends HTMLMotionProps<'button'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'dark';
   size?: 'sm' | 'md' | 'lg' | 'xl';
   loading?: boolean;
@@ -48,7 +48,7 @@ export default function Button({
         ${className}
       `}
       disabled={disabled || loading}
-      {...(props as any)}
+      {...props}
     >
       {loading ? (
         <>

@@ -7,7 +7,7 @@ import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
 import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
-import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useConfirm } from '../components/ui/useConfirm';
 import { collectStorageUrls } from '../utils/utils-index';
 import type {
   AboutContent,

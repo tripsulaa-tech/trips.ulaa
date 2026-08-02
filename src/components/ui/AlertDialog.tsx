@@ -1,33 +1,9 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 import Button from './Button';
-
-export interface AlertOptions {
-  title?: string;
-  message: string;
-  okLabel?: string;
-  /** Defaults to 'error', since that's almost every call site (validation
-   *  messages, failed saves). Pass 'info' or 'success' for anything else. */
-  variant?: 'error' | 'info' | 'success';
-}
-
-type AlertFn = (options: AlertOptions | string) => Promise<void>;
-
-const AlertContext = createContext<AlertFn | null>(null);
-
-/**
- * Drop-in, app-themed replacement for `window.alert`.
- *
- * const alert = useAlert();
- * await alert("Amount paid can't be more than the total amount.");
- */
-export function useAlert(): AlertFn {
-  const ctx = useContext(AlertContext);
-  if (!ctx) throw new Error('useAlert must be used within an <AlertDialogProvider>');
-  return ctx;
-}
+import { AlertContext, type AlertFn, type AlertOptions } from './useAlert';
 
 const VARIANT_CONFIG = {
   error: { icon: AlertCircle, iconClass: 'bg-red-100 text-red-600' },

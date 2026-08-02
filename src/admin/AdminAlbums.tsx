@@ -9,7 +9,7 @@ import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import DatePicker from '../components/ui/DatePicker';
 import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTripCascade, getCompletedTripDeletionImpact, deleteImageByUrl } from '../services/api';
 
-import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useConfirm } from '../components/ui/useConfirm';
 import type { CompletedTrip } from '../types/types-index';
 import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils/utils-index';
 

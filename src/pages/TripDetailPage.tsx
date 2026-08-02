@@ -10,7 +10,8 @@ import BookingForm from '../components/ui/BookingForm';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import GalleryCarousel from '../components/ui/GalleryCarousel';
 import Lightbox from '../components/ui/Lightbox';
-import PagedCarousel, { useResponsiveItemsPerView, type PagedCarouselHandle } from '../components/ui/PagedCarousel';
+import PagedCarousel, { type PagedCarouselHandle } from '../components/ui/PagedCarousel';
+import { useResponsiveItemsPerView } from '../components/ui/useResponsiveItemsPerView';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getTripHighlightIcon, getTripHighlightPalette } from '../constants/tripHighlightIcons';
 import { getUpcomingTripBySlug } from '../services/api';
@@ -110,7 +111,11 @@ export default function TripDetailPage() {
   const toggleHighlight = (i: number) => {
     setExpandedHighlights(prev => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) {
+        next.delete(i);
+      } else {
+        next.add(i);
+      }
       return next;
     });
   };
@@ -130,7 +135,11 @@ export default function TripDetailPage() {
   const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<number>>>, i: number) => {
     setter(prev => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) {
+        next.delete(i);
+      } else {
+        next.add(i);
+      }
       return next;
     });
   };
@@ -141,7 +150,11 @@ export default function TripDetailPage() {
   const toggleItineraryDay = (i: number) => {
     setExpandedItineraryDays(prev => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) {
+        next.delete(i);
+      } else {
+        next.add(i);
+      }
       return next;
     });
   };

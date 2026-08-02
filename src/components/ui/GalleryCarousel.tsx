@@ -1,4 +1,5 @@
-import PagedCarousel, { useResponsiveItemsPerView } from './PagedCarousel';
+import PagedCarousel from './PagedCarousel';
+import { useResponsiveItemsPerView } from './useResponsiveItemsPerView';
 import { PLACEHOLDER_IMAGE } from '../../utils/utils-index';
 
 export interface GalleryCarouselItem {

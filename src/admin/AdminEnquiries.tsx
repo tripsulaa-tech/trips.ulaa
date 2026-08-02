@@ -7,10 +7,11 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import FoodMark from '../components/ui/FoodMark';
-import { TableHeaderBar, TablePagination, paginate, useDragScroll, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
-import type { SortDirection } from '../components/ui/DataTableChrome';
-import { useConfirm } from '../components/ui/ConfirmDialog';
-import { useAlert } from '../components/ui/AlertDialog';
+import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
+import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
+import type { SortDirection } from '../components/ui/dataTableUtils';
+import { useConfirm } from '../components/ui/useConfirm';
+import { useAlert } from '../components/ui/useAlert';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow } from '../services/api';
 import type { Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry } from '../types/types-index';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
@@ -569,7 +570,7 @@ export default function AdminEnquiries() {
       }
     }
     if (tripParam || enquiryParam) setSearchParams({}, { replace: true });
-  }, [enquiries, searchParams]);
+  }, [enquiries, searchParams, setSearchParams]);
 
   // Someone hit "Convert to Enquiry" on the Waitlist page — a seat opened up
   // (usually from a cancellation) and this person is next in line. Prefill

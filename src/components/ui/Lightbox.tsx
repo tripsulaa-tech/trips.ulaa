@@ -13,9 +13,14 @@ export default function Lightbox({ images, initialIndex = 0, isOpen, onClose }: 
   const [current, setCurrent] = useState(initialIndex);
   const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  useEffect(() => {
+  // Reset the shown image whenever initialIndex changes (e.g. reopened on a
+  // different photo). Adjusted during render rather than in an effect to
+  // avoid an extra cascading render.
+  const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
+  if (initialIndex !== prevInitialIndex) {
+    setPrevInitialIndex(initialIndex);
     setCurrent(initialIndex);
-  }, [initialIndex]);
+  }
 
   // Lock body scroll while lightbox is open so the footer/page behind
   // can never peek through or overlap the modal.

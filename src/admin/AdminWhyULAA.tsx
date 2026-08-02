@@ -5,7 +5,7 @@ import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
 import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
-import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useConfirm } from '../components/ui/useConfirm';
 import { collectStorageUrls } from '../utils/utils-index';
 import type { WhyUlaaContent } from '../types/types-index';
 

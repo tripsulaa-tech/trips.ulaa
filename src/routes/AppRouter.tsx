@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from '../context/AuthContext';
+import { AuthProvider } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { motion } from 'framer-motion';
 
 // Scrolls the window to the top whenever the route changes, so navigating

@@ -10,7 +10,7 @@ import {
   getAllTestimonialsAdmin, createTestimonial, updateTestimonial, deleteTestimonial,
   getSiteContent, upsertSiteContent, deleteImageByUrl,
 } from '../services/api';
-import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useConfirm } from '../components/ui/useConfirm';
 import type { Testimonial, TestimonialsSectionContent } from '../types/types-index';
 import { slugify } from '../utils/utils-index';
 import { DEFAULT_TESTIMONIALS_SECTION } from '../constants/testimonials-section';

@@ -92,6 +92,13 @@ export default function DatePicker({
   useLayoutEffect(() => {
     if (isOpen) {
       const base = selectedDate || new Date();
+      // This effect isn't just resetting state on a prop change — it also
+      // calls updatePosition(), which reads the trigger's post-render
+      // bounding rect via getBoundingClientRect(). That measurement doesn't
+      // exist during the render phase, so a useLayoutEffect (not a
+      // render-time adjustment) is the correct primitive here, and the
+      // accompanying setState calls are justified alongside it.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewDate(base);
       setFocusedDate(base);
       setViewMode('days');
@@ -158,7 +165,7 @@ export default function DatePicker({
   // Keyboard navigation across the day grid
   const handleGridKeyDown = (e: React.KeyboardEvent) => {
     if (viewMode !== 'days') return;
-    let next: Date | null = null;
+    let next: Date;
     switch (e.key) {
       case 'ArrowLeft': next = addDays(focusedDate, -1); break;
       case 'ArrowRight': next = addDays(focusedDate, 1); break;

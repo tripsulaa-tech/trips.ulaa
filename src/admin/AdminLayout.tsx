@@ -6,7 +6,7 @@ import {
   PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import NotificationsPanel from './NotificationsPanel';
 import PushNotificationToggle from './PushNotificationToggle';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';

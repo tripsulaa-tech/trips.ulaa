@@ -89,10 +89,14 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // Keeps the veg-count text field's displayed value in sync whenever
   // groupVegCount is changed programmatically elsewhere (clamped down when
   // groupSize shrinks, reset after a successful submit, etc.) rather than
-  // by the user typing directly into this field.
-  useEffect(() => {
+  // by the user typing directly into this field. Adjusted during render
+  // (rather than in an effect) to avoid an extra cascading render.
+  const [prevVegSyncKey, setPrevVegSyncKey] = useState(`${groupVegCount}:${groupSize}`);
+  const vegSyncKey = `${groupVegCount}:${groupSize}`;
+  if (vegSyncKey !== prevVegSyncKey) {
+    setPrevVegSyncKey(vegSyncKey);
     setVegCountInput(String(Math.min(groupVegCount, groupSize)));
-  }, [groupVegCount, groupSize]);
+  }
 
   const termsText = (terms || '').trim() || DEFAULT_TERMS_AND_CONDITIONS;
   const termsSections = useMemo(() => parseTerms(termsText), [termsText]);

@@ -21,8 +21,8 @@ import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay'
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
 import { getAllUpcomingTripsAdmin, createUpcomingTrip, updateUpcomingTrip, deleteUpcomingTripCascade, getTripDeletionImpact, COVER_IMAGE_TARGET_SIZE_BYTES, getSiteContent, deleteImageByUrl } from '../services/api';
 
-import { useConfirm } from '../components/ui/ConfirmDialog';
-import { useAlert } from '../components/ui/AlertDialog';
+import { useConfirm } from '../components/ui/useConfirm';
+import { useAlert } from '../components/ui/useAlert';
 import type {
   UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy,
   TripHighlightCard, TripInclusionItem, TripIncludedGroup, TripGalleryItem,
