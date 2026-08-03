@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, Payment, WaitlistEntry, WaitlistFormData } from '../types/types-index';
+import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData } from '../types/types-index';
 
 // =============================================
 // Trip lifecycle
@@ -980,19 +980,6 @@ export async function deleteWaitlistEntry(id: string): Promise<void> {
   if (error) throw error;
 }
 
-// Fetches the payment history for one enquiry (booking amount, balance,
-// installments, refunds) — this is the source of truth; enquiries.amount_paid
-// and refund_amount are just a cached rollup kept in sync via DB trigger.
-export async function getPayments(enquiryId: string): Promise<Payment[]> {
-  const { data, error } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('enquiry_id', enquiryId)
-    .order('paid_at', { ascending: true });
-  if (error) throw error;
-  return data || [];
-}
-
 // Records a new payment (delta from what's already been paid, not an
 // absolute total) against an enquiry. Inserting into the payments ledger
 // triggers a DB-side recalculation of enquiries.amount_paid — this function
@@ -1141,15 +1128,6 @@ export async function setEnquiryNoShow(enquiry: Enquiry, isNoShow: boolean): Pro
     .single();
   if (error) throw error;
 
-  return data;
-}
-
-// Fetches a single enquiry by id — used for stale-data detection (see
-// handleSavePayment in AdminEnquiries: we re-fetch updated_at just before
-// saving to catch concurrent edits from another admin session).
-export async function getEnquiry(id: string): Promise<Enquiry | null> {
-  const { data, error } = await supabase.from('enquiries').select('*').eq('id', id).single();
-  if (error) return null;
   return data;
 }
 
