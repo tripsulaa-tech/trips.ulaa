@@ -30,8 +30,10 @@ export default function Layout({ children }: LayoutProps) {
       </main>
       <Footer />
       {/* Reserves space at the very end of the page on mobile so the fixed
-          BottomNav never overlaps the last line of the footer. */}
-      <div className="h-20 lg:hidden" aria-hidden="true" />
+          BottomNav — now an inset floating dock plus safe-area padding,
+          slightly taller than the old edge-to-edge bar — never overlaps the
+          last line of the footer. */}
+      <div className="h-28 lg:hidden" aria-hidden="true" />
       <FloatingWhatsApp />
       <ScrollToTopButton />
       <BottomNav />

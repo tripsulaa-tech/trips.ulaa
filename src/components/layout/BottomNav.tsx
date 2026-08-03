@@ -1,6 +1,6 @@
 import { Home, Briefcase, Globe2, Info, Phone } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 
 interface BottomNavItem {
@@ -20,6 +20,7 @@ const navItems: BottomNavItem[] = [
 
 export default function BottomNav() {
   const location = useLocation();
+  const reduceMotion = useReducedMotion();
 
   const activeIndex = navItems.findIndex(({ to, end }) =>
     end ? location.pathname === to : location.pathname === to || location.pathname.startsWith(`${to}/`)
@@ -27,11 +28,22 @@ export default function BottomNav() {
   const safeIndex = Math.max(activeIndex, 0);
 
   return (
-    <nav
-      className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-white border-t border-gray-100 pb-[env(safe-area-inset-bottom)]"
+    <motion.nav
+      initial={{ y: 96, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: 'easeOut' }}
       aria-label="Primary mobile navigation"
+      // pointer-events-none on the wrapper + pointer-events-auto on the dock
+      // below keeps the transparent side-gutters (and the centered dock's
+      // margins on wider/tablet widths) from silently eating taps meant for
+      // whatever sits underneath them.
+      className="fixed bottom-0 inset-x-0 z-40 lg:hidden pointer-events-none px-3 pt-1 pb-[max(env(safe-area-inset-bottom),0.625rem)]"
     >
-      <div className="grid grid-cols-5 h-16">
+      {/* Floating glass dock — inset from the screen edges instead of the
+          old edge-to-edge bar, with a frosted backdrop-blur, a warm elevation
+          shadow, and a hairline inner highlight so it reads as a physical,
+          raised object rather than a flat strip glued to the viewport. */}
+      <div className="pointer-events-auto relative mx-auto flex h-16 max-w-md rounded-[28px] border border-white/70 bg-white/80 backdrop-blur-xl shadow-[0_8px_40px_rgba(168,90,42,0.18),inset_0_1px_0_rgba(255,255,255,0.6)]">
         {navItems.map(({ label, to, icon: Icon, end }, index) => {
           const isActive = index === safeIndex;
 
@@ -42,23 +54,28 @@ export default function BottomNav() {
               end={end}
               aria-label={label}
               aria-current={isActive ? 'page' : undefined}
-              className="relative flex flex-col items-center justify-center gap-1 outline-none"
+              className="relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[22px] outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              {isActive && (
-                <motion.div
-                  layoutId="bottomnav-pill"
-                  className="absolute inset-x-3 top-2 bottom-2 rounded-2xl bg-primary/10"
-                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              <motion.div
+                whileTap={{ scale: 0.88 }}
+                className="relative flex h-8 w-11 items-center justify-center"
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="bottomnav-indicator"
+                    className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary to-primary-light shadow-[0_4px_14px_-2px_rgba(168,90,42,0.55)]"
+                    transition={reduceMotion ? { duration: 0 } : { duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                )}
+                <Icon
+                  size={20}
+                  strokeWidth={isActive ? 2.25 : 1.75}
+                  className={`relative z-10 transition-colors duration-200 ${isActive ? 'text-white' : 'text-dark-muted'}`}
                 />
-              )}
-              <Icon
-                size={20}
-                strokeWidth={isActive ? 2.2 : 1.5}
-                className={`relative z-10 transition-colors ${isActive ? 'text-primary' : 'text-gray-500'}`}
-              />
+              </motion.div>
               <span
-                className={`text-[10px] leading-none relative z-10 transition-colors ${
-                  isActive ? 'text-primary font-semibold' : 'text-gray-500 font-medium'
+                className={`relative z-10 text-xs leading-none transition-colors duration-200 ${
+                  isActive ? 'font-button font-semibold text-primary' : 'font-medium text-dark-muted/80'
                 }`}
               >
                 {label}
@@ -67,6 +84,6 @@ export default function BottomNav() {
           );
         })}
       </div>
-    </nav>
+    </motion.nav>
   );
 }

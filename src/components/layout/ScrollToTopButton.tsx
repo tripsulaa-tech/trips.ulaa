@@ -36,7 +36,7 @@ export default function ScrollToTopButton({ leftClass = 'left-6' }: ScrollToTopB
           exit={{ opacity: 0, y: 10, scale: 0.9 }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-          className={`fixed bottom-24 lg:bottom-6 ${leftClass} z-50 w-11 h-11 rounded-full bg-white border border-background-warm shadow-warm-lg flex items-center justify-center text-dark-muted hover:text-primary transition-colors`}
+          className={`fixed bottom-28 lg:bottom-6 ${leftClass} z-50 w-11 h-11 rounded-full bg-white border border-background-warm shadow-warm-lg flex items-center justify-center text-dark-muted hover:text-primary transition-colors`}
         >
           <ArrowUp size={18} />
         </motion.button>
