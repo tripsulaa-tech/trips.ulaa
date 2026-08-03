@@ -3,6 +3,7 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import FloatingWhatsApp from './FloatingWhatsApp';
 import ScrollToTopButton from './ScrollToTopButton';
+import BottomNav from './BottomNav';
 
 interface LayoutProps {
   children: ReactNode;
@@ -28,8 +29,12 @@ export default function Layout({ children }: LayoutProps) {
         {children}
       </main>
       <Footer />
+      {/* Reserves space at the very end of the page on mobile so the fixed
+          BottomNav never overlaps the last line of the footer. */}
+      <div className="h-20 lg:hidden" aria-hidden="true" />
       <FloatingWhatsApp />
       <ScrollToTopButton />
+      <BottomNav />
     </div>
   );
 }
