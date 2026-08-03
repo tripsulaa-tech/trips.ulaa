@@ -1,4 +1,4 @@
-import { Home, Calendar, MapPinned, Heart, Headphones } from 'lucide-react';
+import { Home, Calendar, MountainSnow, Heart, Headphones } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
@@ -13,7 +13,7 @@ interface BottomNavItem {
 const navItems: BottomNavItem[] = [
   { label: 'Home', to: '/', icon: Home, end: true },
   { label: 'Upcoming', to: '/trips', icon: Calendar },
-  { label: 'Journey', to: '/completed-trips', icon: MapPinned },
+  { label: 'Journey', to: '/completed-trips', icon: MountainSnow },
   { label: 'About', to: '/about', icon: Heart },
   { label: 'Contact', to: '/contact', icon: Headphones },
 ];
