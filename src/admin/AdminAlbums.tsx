@@ -7,7 +7,7 @@ import Modal from '../components/ui/Modal';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import MultiImageUploadField from '../components/ui/MultiImageUploadField';
 import DatePicker from '../components/ui/DatePicker';
-import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTripCascade, getCompletedTripDeletionImpact, deleteImageByUrl } from '../services/api';
+import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTripCascade, getCompletedTripDeletionImpact, deleteImageByUrl, COVER_IMAGE_TARGET_SIZE_BYTES } from '../services/api';
 
 import { useConfirm } from '../components/ui/useConfirm';
 import type { CompletedTrip } from '../types/types-index';
@@ -311,6 +311,7 @@ export default function AdminAlbums() {
               bucket="ulaa"
               pathPrefix="album-covers"
               fileNamePrefix={editing ? editing.slug : (slugify(form.title) || undefined)}
+              maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
               hint="Wide landscape, at least 1600×1200px — shown full-bleed as the album's hero banner."
             />
           </div>
