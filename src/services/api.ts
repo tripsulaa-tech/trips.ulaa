@@ -541,7 +541,14 @@ export async function uploadImage(bucket: string, file: File, path: string, targ
   const finalPath = compressed !== file
     ? path.replace(/\.[^./]+$/, '') + '.webp'
     : path;
-  const { error } = await supabase.storage.from(bucket).upload(finalPath, compressed, { upsert: true });
+  // cacheControl is in seconds; 31536000 = 1 year. Safe to cache this long
+  // because every call site generates a fresh, timestamp-prefixed path per
+  // upload (see AdminGallery.tsx / ImageUploadField.tsx / MultiImageUploadField.tsx),
+  // so a given URL's bytes are immutable — an edit produces a *new* path/URL
+  // rather than overwriting this one. Without this, Supabase's default of
+  // 3600s meant browsers and the CDN re-fetched every image from origin
+  // (counted as Cached Egress) at least once an hour, on every repeat view.
+  const { error } = await supabase.storage.from(bucket).upload(finalPath, compressed, { upsert: true, cacheControl: '31536000' });
   if (error) throw error;
   const { data } = supabase.storage.from(bucket).getPublicUrl(finalPath);
   return data.publicUrl;

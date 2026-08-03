@@ -1699,7 +1699,7 @@ export default function AdminEnquiries() {
             <div className="flex items-center gap-3 p-4 flex-1 min-w-0 md:basis-1/3 border-b md:border-b-0 border-background-warm mx-4 md:mx-0 md:my-4 md:border-r">
               <div className="w-14 h-14 rounded-md overflow-hidden bg-background-warm shrink-0">
                 {activeGroup?.trip?.cover_image && (
-                  <img src={activeGroup.trip.cover_image} alt={activeGroup.title} className="w-full h-full object-cover" />
+                  <img src={activeGroup.trip.cover_image} alt={activeGroup.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 )}
               </div>
               <div className="min-w-0 flex-1 flex flex-col gap-1 py-0.5">

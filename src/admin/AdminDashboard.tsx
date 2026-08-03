@@ -271,7 +271,7 @@ export default function AdminDashboard() {
                     >
                       <div className="w-12 h-12 sm:w-16 sm:h-16 rounded sm:rounded-md overflow-hidden bg-background-warm flex-shrink-0">
                         {trip.cover_image && (
-                          <img src={trip.cover_image} alt={trip.title} className="w-full h-full object-cover" />
+                          <img src={trip.cover_image} alt={trip.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">

@@ -359,7 +359,7 @@ export default function AdminAlbums() {
         {viewing && (
           <div className="space-y-5">
             {viewing.cover_image && (
-              <img src={viewing.cover_image} alt={viewing.title} className="w-full h-48 object-cover rounded-md" />
+              <img src={viewing.cover_image} alt={viewing.title} className="w-full h-48 object-cover rounded-md" loading="lazy" decoding="async" />
             )}
 
             <div className="flex flex-wrap items-center gap-2">
@@ -404,7 +404,7 @@ export default function AdminAlbums() {
                 <p className="text-xs font-medium text-dark-muted mb-1">Gallery ({viewing.gallery_images.length})</p>
                 <div className="grid grid-cols-4 gap-2">
                   {viewing.gallery_images.slice(0, 8).map((url, i) => (
-                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
+                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" loading="lazy" decoding="async" />
                   ))}
                 </div>
               </div>

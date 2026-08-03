@@ -1592,12 +1592,12 @@ export default function AdminTrips() {
         {viewingTrip && (
           <div className="space-y-5">
             {viewingTrip.cover_image && (
-              <img src={viewingTrip.cover_image} alt={viewingTrip.title} className="w-full h-48 object-cover rounded-md" />
+              <img src={viewingTrip.cover_image} alt={viewingTrip.title} className="w-full h-48 object-cover rounded-md" loading="lazy" decoding="async" />
             )}
             {viewingTrip.hero_mobile_image && (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Mobile Hero Banner</p>
-                <img src={viewingTrip.hero_mobile_image} alt="" className="w-28 h-40 object-cover rounded-md" />
+                <img src={viewingTrip.hero_mobile_image} alt="" className="w-28 h-40 object-cover rounded-md" loading="lazy" decoding="async" />
               </div>
             )}
 
@@ -1710,7 +1710,7 @@ export default function AdminTrips() {
                         {d.images && d.images.length > 0 && (
                           <div className="flex gap-1.5 mt-1.5">
                             {d.images.slice(0, 6).map((url, j) => (
-                              <img key={j} src={url} alt="" className="w-10 h-10 object-cover rounded" />
+                              <img key={j} src={url} alt="" className="w-10 h-10 object-cover rounded" loading="lazy" decoding="async" />
                             ))}
                             {d.images.length > 6 && (
                               <span className="w-10 h-10 rounded bg-background-warm text-dark-muted text-xs flex items-center justify-center">
@@ -1822,7 +1822,7 @@ export default function AdminTrips() {
                 {(viewingTrip.accommodation_photos?.length ?? 0) > 0 && (
                   <div className="grid grid-cols-4 gap-2">
                     {viewingTrip.accommodation_photos!.slice(0, 8).map((url, i) => (
-                      <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
+                      <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" loading="lazy" decoding="async" />
                     ))}
                   </div>
                 )}
@@ -1834,7 +1834,7 @@ export default function AdminTrips() {
                 <p className="text-xs font-medium text-dark-muted mb-1">Trip Founder</p>
                 <div className="flex gap-3 items-start bg-background-warm/60 rounded-md p-3">
                   {viewingTrip.trip_founder.photo && (
-                    <img src={viewingTrip.trip_founder.photo} alt="" className="w-14 h-14 rounded-full object-cover flex-shrink-0" />
+                    <img src={viewingTrip.trip_founder.photo} alt="" className="w-14 h-14 rounded-full object-cover flex-shrink-0" loading="lazy" decoding="async" />
                   )}
                   <div>
                     {viewingTrip.trip_founder.name && <p className="text-sm font-medium text-dark">{viewingTrip.trip_founder.name}</p>}
@@ -1851,7 +1851,7 @@ export default function AdminTrips() {
                 <p className="text-xs font-medium text-dark-muted mb-1">Gallery ({viewingTrip.gallery_images.length})</p>
                 <div className="grid grid-cols-4 gap-2">
                   {viewingTrip.gallery_images.slice(0, 8).map((url, i) => (
-                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
+                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" loading="lazy" decoding="async" />
                   ))}
                 </div>
               </div>
@@ -1866,7 +1866,7 @@ export default function AdminTrips() {
                 <div className="grid grid-cols-4 gap-2">
                   {viewingTrip.gallery_items!.slice(0, 8).map((item, i) => (
                     <div key={i}>
-                      {item.photo && <img src={item.photo} alt="" className="w-full h-16 object-cover rounded" />}
+                      {item.photo && <img src={item.photo} alt="" className="w-full h-16 object-cover rounded" loading="lazy" decoding="async" />}
                       {item.description && <p className="text-dark-muted text-xs mt-0.5 truncate">{item.description}</p>}
                     </div>
                   ))}
@@ -1882,7 +1882,7 @@ export default function AdminTrips() {
                 )}
                 <div className="grid grid-cols-4 gap-2">
                   {viewingTrip.fashion_photos!.slice(0, 8).map((url, i) => (
-                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" />
+                    <img key={i} src={url} alt="" className="w-full h-16 object-cover rounded" loading="lazy" decoding="async" />
                   ))}
                 </div>
               </div>
@@ -1893,7 +1893,7 @@ export default function AdminTrips() {
                 <p className="text-xs font-medium text-dark-muted mb-1">End Banner</p>
                 <div className="flex gap-3 items-start bg-background-warm/60 rounded-md p-3">
                   {viewingTrip.end_banner.image && (
-                    <img src={viewingTrip.end_banner.image} alt="" className="w-20 h-14 rounded object-cover flex-shrink-0" />
+                    <img src={viewingTrip.end_banner.image} alt="" className="w-20 h-14 rounded object-cover flex-shrink-0" loading="lazy" decoding="async" />
                   )}
                   <div>
                     {viewingTrip.end_banner.heading && <p className="text-sm font-medium text-dark">{viewingTrip.end_banner.heading}</p>}

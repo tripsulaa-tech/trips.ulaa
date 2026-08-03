@@ -222,7 +222,7 @@ export default function AdminTestimonials() {
                             <button onClick={() => move(index, -1)} disabled={index === 0} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={12} /></button>
                             <button onClick={() => move(index, 1)} disabled={index === items.length - 1} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={12} /></button>
                           </div>
-                          {t.photo && <img src={t.photo} alt={t.name} className="w-8 h-8 rounded-full object-cover" />}
+                          {t.photo && <img src={t.photo} alt={t.name} className="w-8 h-8 rounded-full object-cover" loading="lazy" decoding="async" />}
                           <span className="truncate max-w-[140px]">{t.name}</span>
                         </div>
                       </td>
