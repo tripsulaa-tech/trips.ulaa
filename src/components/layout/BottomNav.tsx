@@ -1,4 +1,4 @@
-import { Home, Briefcase, Globe2, Info, Phone } from 'lucide-react';
+import { Home, Calendar, MapPinned, Heart, Headphones } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
@@ -12,10 +12,10 @@ interface BottomNavItem {
 
 const navItems: BottomNavItem[] = [
   { label: 'Home', to: '/', icon: Home, end: true },
-  { label: 'Upcoming', to: '/trips', icon: Briefcase },
-  { label: 'Journey', to: '/completed-trips', icon: Globe2 },
-  { label: 'About', to: '/about', icon: Info },
-  { label: 'Contact', to: '/contact', icon: Phone },
+  { label: 'Upcoming', to: '/trips', icon: Calendar },
+  { label: 'Journey', to: '/completed-trips', icon: MapPinned },
+  { label: 'About', to: '/about', icon: Heart },
+  { label: 'Contact', to: '/contact', icon: Headphones },
 ];
 
 export default function BottomNav() {
@@ -31,7 +31,11 @@ export default function BottomNav() {
     <motion.nav
       initial={{ y: 96, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: 'easeOut' }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : { duration: 0.32, ease: [0.22, 1, 0.36, 1] }
+      }
       aria-label="Primary mobile navigation"
       // pointer-events-none on the wrapper + pointer-events-auto on the dock
       // below keeps the transparent side-gutters (and the centered dock's
@@ -43,7 +47,7 @@ export default function BottomNav() {
           old edge-to-edge bar, with a frosted backdrop-blur, a warm elevation
           shadow, and a hairline inner highlight so it reads as a physical,
           raised object rather than a flat strip glued to the viewport. */}
-      <div className="pointer-events-auto relative mx-auto flex h-16 max-w-md rounded-[28px] border border-white/70 bg-white/80 backdrop-blur-xl shadow-[0_8px_40px_rgba(168,90,42,0.18),inset_0_1px_0_rgba(255,255,255,0.6)]">
+      <div className="pointer-events-auto relative mx-auto flex h-16 max-w-md rounded-[8px] border border-white/70 bg-white/80 backdrop-blur-xl shadow-[0_8px_40px_rgba(168,90,42,0.18),inset_0_1px_0_rgba(255,255,255,0.6)]">
         {navItems.map(({ label, to, icon: Icon, end }, index) => {
           const isActive = index === safeIndex;
 
@@ -54,16 +58,16 @@ export default function BottomNav() {
               end={end}
               aria-label={label}
               aria-current={isActive ? 'page' : undefined}
-              className="relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[22px] outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[6px] outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <motion.div
                 whileTap={{ scale: 0.88 }}
-                className="relative flex h-8 w-11 items-center justify-center"
+                className="relative flex h-9 w-9 items-center justify-center"
               >
                 {isActive && (
                   <motion.span
                     layoutId="bottomnav-indicator"
-                    className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary to-primary-light shadow-[0_4px_14px_-2px_rgba(168,90,42,0.55)]"
+                    className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-primary-light shadow-[0_4px_14px_-2px_rgba(168,90,42,0.55)]"
                     transition={reduceMotion ? { duration: 0 } : { duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                   />
                 )}

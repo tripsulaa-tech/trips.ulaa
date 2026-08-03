@@ -4,6 +4,7 @@ import { AuthProvider } from '../context/AuthContext';
 import { useAuth } from '../context/useAuth';
 import { motion } from 'framer-motion';
 import InstallAppBanner from '../components/ui/InstallAppBanner';
+import BottomNav from '../components/layout/BottomNav';
 
 // Scrolls the window to the top whenever the route changes, so navigating
 // (e.g. via the footer's Upcoming Trips / Completed Trips / About / Contact
@@ -25,6 +26,20 @@ function ScrollToTop() {
 // installing from the "wrong" route re-served the previous route's
 // manifest. Re-run the same swap on every route change so it stays correct
 // no matter how the visitor got there.
+// Rendered once here, outside <Routes>, instead of inside each page's
+// <Layout>. Layout used to render its own BottomNav, so navigating between
+// pages unmounted and remounted it every time — replaying its entrance
+// animation (so it never read as "sticky") and resetting the active-tab
+// indicator's layoutId tracking (so it jumped instead of sliding). Keeping
+// a single persistent instance here fixes both: it only mounts/unmounts
+// when crossing the public/admin boundary, which is the one case where a
+// fresh entrance is actually correct.
+function PersistentBottomNav() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/admin')) return null;
+  return <BottomNav />;
+}
+
 function SyncManifestWithRoute() {
   const { pathname } = useLocation();
 
@@ -102,6 +117,7 @@ export default function AppRouter() {
         <ScrollToTop />
         <SyncManifestWithRoute />
         <InstallAppBanner />
+        <PersistentBottomNav />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public Routes */}

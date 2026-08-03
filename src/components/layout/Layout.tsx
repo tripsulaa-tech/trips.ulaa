@@ -3,7 +3,6 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import FloatingWhatsApp from './FloatingWhatsApp';
 import ScrollToTopButton from './ScrollToTopButton';
-import BottomNav from './BottomNav';
 
 interface LayoutProps {
   children: ReactNode;
@@ -36,7 +35,6 @@ export default function Layout({ children }: LayoutProps) {
       <div className="h-28 lg:hidden" aria-hidden="true" />
       <FloatingWhatsApp />
       <ScrollToTopButton />
-      <BottomNav />
     </div>
   );
 }
