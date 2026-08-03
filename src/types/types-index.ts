@@ -580,6 +580,19 @@ export interface TestimonialsSectionContent {
   subheading: string;
 }
 
+// =============================================
+// Mobile bottom nav bar tabs (editable via Admin)
+// =============================================
+export interface BottomNavItemConfig {
+  /** Stable identifier — used as the React key and framer-motion layoutId anchor. */
+  id: string;
+  label: string;
+  /** Route path, e.g. "/trips". */
+  to: string;
+  /** Icon library key from tripHighlightIcons.ts (e.g. "home", "calendar"). */
+  icon: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

@@ -85,6 +85,7 @@ const AdminAbout = lazy(() => import('../admin/AdminAbout'));
 const AdminFounder = lazy(() => import('../admin/AdminFounder'));
 const AdminWhyULAA = lazy(() => import('../admin/AdminWhyULAA'));
 const AdminTestimonials = lazy(() => import('../admin/AdminTestimonials'));
+const AdminBottomNav = lazy(() => import('../admin/AdminBottomNav'));
 
 const PageLoader = () => (
   <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
@@ -162,6 +163,9 @@ export default function AppRouter() {
             } />
             <Route path="/admin/testimonials" element={
               <ProtectedRoute><AdminTestimonials /></ProtectedRoute>
+            } />
+            <Route path="/admin/bottom-nav" element={
+              <ProtectedRoute><AdminBottomNav /></ProtectedRoute>
             } />
 
             {/* 404 */}

@@ -1,30 +1,35 @@
-import { Home, Calendar, MountainSnow, Heart, Headphones } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Home } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import type { LucideIcon } from 'lucide-react';
-
-interface BottomNavItem {
-  label: string;
-  to: string;
-  icon: LucideIcon;
-  end?: boolean;
-}
-
-const navItems: BottomNavItem[] = [
-  { label: 'Home', to: '/', icon: Home, end: true },
-  { label: 'Upcoming', to: '/trips', icon: Calendar },
-  { label: 'Journey', to: '/completed-trips', icon: MountainSnow },
-  { label: 'About', to: '/about', icon: Heart },
-  { label: 'Contact', to: '/contact', icon: Headphones },
-];
+import { getSiteContent } from '../../services/api';
+import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
+import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
+import type { BottomNavItemConfig } from '../../types/types-index';
 
 export default function BottomNav() {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
 
-  const activeIndex = navItems.findIndex(({ to, end }) =>
-    end ? location.pathname === to : location.pathname === to || location.pathname.startsWith(`${to}/`)
-  );
+  // Starts from the defaults (so there's no flash of an empty bar) and
+  // swaps in the admin's saved tabs, if any, once the fetch resolves. See
+  // /admin/bottom-nav (AdminBottomNav.tsx) for where these are edited.
+  const [navItems, setNavItems] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);
+
+  useEffect(() => {
+    getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+      .then(data => {
+        if (data && data.length > 0) setNavItems(data);
+      })
+      .catch(() => {
+        // Fetch failed — keep the defaults already in state.
+      });
+  }, []);
+
+  const isItemActive = (to: string) =>
+    to === '/' ? location.pathname === to : location.pathname === to || location.pathname.startsWith(`${to}/`);
+
+  const activeIndex = navItems.findIndex(({ to }) => isItemActive(to));
   const safeIndex = Math.max(activeIndex, 0);
 
   return (
@@ -48,14 +53,17 @@ export default function BottomNav() {
           shadow, and a hairline inner highlight so it reads as a physical,
           raised object rather than a flat strip glued to the viewport. */}
       <div className="pointer-events-auto relative mx-auto flex h-16 max-w-md rounded-[8px] border border-white/70 bg-white/80 backdrop-blur-xl shadow-[0_8px_40px_rgba(168,90,42,0.18),inset_0_1px_0_rgba(255,255,255,0.6)]">
-        {navItems.map(({ label, to, icon: Icon, end }, index) => {
+        {navItems.map(({ id, label, to, icon }, index) => {
           const isActive = index === safeIndex;
+          // Falls back to the Home icon if a saved icon key doesn't resolve
+          // (e.g. it was removed from the shared library after being saved).
+          const Icon = getTripHighlightIcon(icon)?.Icon ?? Home;
 
           return (
             <NavLink
-              key={to}
+              key={id}
               to={to}
-              end={end}
+              end={to === '/'}
               aria-label={label}
               aria-current={isActive ? 'page' : undefined}
               className="relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[6px] outline-none focus-visible:ring-2 focus-visible:ring-primary/40"

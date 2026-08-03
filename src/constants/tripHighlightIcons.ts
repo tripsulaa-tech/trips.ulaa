@@ -12,6 +12,7 @@ import {
   Shirt, Footprints, Hand, Glasses, HatGlasses, BatteryCharging, Pill, IdCard, GlassWater,
   X, HelpCircle, Frown, Smile, AlertCircle, Meh,
   UserRoundX, HeartHandshake as PeopleHeart, ShieldX, MapPinned as MapAlert,
+  Home, Calendar, Headphones,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -104,6 +105,11 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'car', label: 'Road Trip', Icon: Car, keywords: ['road trip', 'drive', 'jeep safari'] },
   { key: 'train-front', label: 'Train', Icon: TrainFront, keywords: ['train journey', 'railway'] },
   { key: 'cable-car', label: 'Cable Car', Icon: CableCar, keywords: ['cable car', 'ropeway', 'mountains'] },
+
+  // Navigation (mainly for the mobile bottom nav bar)
+  { key: 'home', label: 'Home', Icon: Home, keywords: ['home', 'house', 'start', 'main'] },
+  { key: 'calendar', label: 'Calendar', Icon: Calendar, keywords: ['calendar', 'upcoming', 'schedule', 'dates', 'trips'] },
+  { key: 'headphones', label: 'Headphones', Icon: Headphones, keywords: ['contact', 'support', 'headphones', 'help', 'assistance'] },
 
   // Trust & safety (mainly for "Travel with Confidence" items)
   { key: 'shield-check', label: 'Verified Safety', Icon: ShieldCheck, keywords: ['safety', 'safe', 'verified', 'protection', 'secure'] },
