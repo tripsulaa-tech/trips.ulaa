@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Search } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';
@@ -25,8 +25,22 @@ import type {
 
 const inputClass =
   'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
-const cardClass = 'bg-white rounded-lg shadow-card p-6 space-y-4';
 const labelClass = 'block text-sm font-medium text-dark mb-1';
+
+// The 7 sections, in order — drives both the tab bar pills and the
+// scroll-spy (IntersectionObserver) that keeps the active pill in sync as
+// the admin scrolls. Sections themselves stay in one continuous scroll (like
+// the Add Trip modal's tab bar) — clicking a pill jumps to that section
+// rather than hiding the others.
+const SECTION_TITLES = [
+  '1 · Hero Banner',
+  '2 · Our Story',
+  '3 · To Unforgettable Journeys',
+  '4 · Why ULAA is Different',
+  '5 · Our Community',
+  '6 · What Our Girls Say',
+  '7 · Your ULAA Journey',
+];
 
 export default function AdminAbout() {
   const confirm = useConfirm();
@@ -34,6 +48,26 @@ export default function AdminAbout() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Tab bar (pills): sections stay in one continuous scroll — clicking a
+  // pill scrolls to that section, and the active pill updates automatically
+  // as the admin scrolls past each one (same behavior as the Add Trip
+  // modal's own tab bar / Tabs.tsx).
+  const [activeSection, setActiveSection] = useState(0);
+  const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  const tabButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const lastActiveRef = useRef(0);
+  const suppressObserverRef = useRef(false);
+  const suppressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressScrollListenerRef = useRef<(() => void) | null>(null);
+
+  // Page-wide field search (mirrors the Add Trip modal's search field) —
+  // scans every label/section-heading in the page, scrolls the first match
+  // into view with a brief highlight flash.
+  const [pageSearch, setPageSearch] = useState('');
+  const [pageSearchNoMatch, setPageSearchNoMatch] = useState(false);
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
 
   const STORAGE_BUCKET = 'ulaa';
   // Snapshot of every storage URL present in `content` as of the last
@@ -60,6 +94,111 @@ export default function AdminAbout() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const handlePageSearch = () => {
+    const query = pageSearch.trim().toLowerCase();
+    const container = scrollBodyRef.current;
+    if (!query || !container) {
+      setPageSearchNoMatch(false);
+      return;
+    }
+    const candidates = Array.from(container.querySelectorAll<HTMLElement>('label, h2'));
+    const match = candidates.find(el => el.textContent?.toLowerCase().includes(query));
+    if (!match) {
+      setPageSearchNoMatch(true);
+      return;
+    }
+    setPageSearchNoMatch(false);
+    const sectionEl = match.closest<HTMLElement>('[data-section]');
+    if (sectionEl) setActiveSection(Number(sectionEl.dataset.section) - 1);
+    match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const previousBackground = match.style.backgroundColor;
+    const previousTransition = match.style.transition;
+    match.style.transition = 'background-color 0.3s ease';
+    match.style.backgroundColor = '#FDE9D9';
+    setTimeout(() => {
+      match.style.backgroundColor = previousBackground;
+      match.style.transition = previousTransition;
+    }, 1500);
+  };
+
+  useEffect(() => {
+    const timeout = setTimeout(() => handlePageSearch(), pageSearch.trim() ? 350 : 0);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageSearch]);
+
+  // Scroll-spy: highlights whichever section pill matches what's currently
+  // at the top of the scroll area, same approach as Tabs.tsx. Uses 'nearest'
+  // rather than centering the tab, so clicking a tab only scrolls the pill
+  // bar the minimum amount needed — tabs before it stay visible instead of
+  // being pushed off-screen by a full re-center.
+  const scrollTabIntoView = (i: number) => {
+    tabButtonRefs.current[i]?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+  };
+
+  useEffect(() => {
+    const container = scrollBodyRef.current;
+    if (!container) return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (suppressObserverRef.current) return;
+        const visible = entries.filter(e => e.isIntersecting);
+        if (visible.length === 0) return;
+        const topMost = visible.reduce((a, b) => (a.boundingClientRect.top <= b.boundingClientRect.top ? a : b));
+        const idx = sectionRefs.current.indexOf(topMost.target as HTMLDivElement);
+        if (idx !== -1 && idx !== lastActiveRef.current) {
+          lastActiveRef.current = idx;
+          setActiveSection(idx);
+          scrollTabIntoView(idx);
+        }
+      },
+      { root: container, rootMargin: '0px 0px -65% 0px', threshold: 0 }
+    );
+    sectionRefs.current.forEach(el => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, [loading]);
+
+  useEffect(() => () => {
+    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+    if (suppressScrollListenerRef.current) scrollBodyRef.current?.removeEventListener('scroll', suppressScrollListenerRef.current);
+  }, []);
+
+  const handleTabSelect = (i: number) => {
+    lastActiveRef.current = i;
+    setActiveSection(i);
+    suppressObserverRef.current = true;
+    const container = scrollBodyRef.current;
+    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+    if (suppressScrollListenerRef.current) {
+      container?.removeEventListener('scroll', suppressScrollListenerRef.current);
+      suppressScrollListenerRef.current = null;
+    }
+    sectionRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollTabIntoView(i);
+    // Re-enable the scroll-spy once scrolling has actually gone idle,
+    // rather than after a fixed delay. A fixed delay that's shorter than a
+    // long jump's scroll duration (e.g. last section back to the first, on
+    // a page this tall) lets the observer catch an intermediate section
+    // mid-scroll and immediately snap the active tab back to it — which is
+    // what made clicking an earlier (left-side) tab appear to bounce back
+    // to the right.
+    const clearSuppression = () => {
+      suppressObserverRef.current = false;
+      if (suppressScrollListenerRef.current) {
+        container?.removeEventListener('scroll', suppressScrollListenerRef.current);
+        suppressScrollListenerRef.current = null;
+      }
+    };
+    const onScroll = () => {
+      if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+      suppressTimeoutRef.current = setTimeout(clearSuppression, 150);
+    };
+    suppressScrollListenerRef.current = onScroll;
+    container?.addEventListener('scroll', onScroll);
+    // Fallback in case no scroll event fires at all (e.g. already at the target).
+    suppressTimeoutRef.current = setTimeout(clearSuppression, 150);
+  };
 
   const hasUnsavedChanges = () => JSON.stringify(content) !== savedContentRef.current;
 
@@ -216,11 +355,53 @@ export default function AdminAbout() {
 
   return (
     <AdminLayout title="About Page" subtitle="Manage every section of the public About Us page." hasUnsavedChanges={hasUnsavedChanges}>
-      <div className="space-y-6 max-w-4xl">
+      {/* Modal-style card: bordered white card with its own scroll area (the
+          thicker "app-scroll" scrollbar), a pinned search bar + tab bar up
+          top, and a footer that blends into and sticks to the bottom of the
+          card while the sections scroll — same skeleton as the Add Trip
+          popup, just without the overlay since this is a full page. */}
+      <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
+        <div className="p-6 pb-4 border-b border-background-warm flex-shrink-0 space-y-4">
+          <div className="relative w-full max-w-xs">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+            <input
+              type="text"
+              value={pageSearch}
+              onChange={e => setPageSearch(e.target.value)}
+              placeholder="Search fields (e.g. hero heading, journey steps)..."
+              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+            />
+          </div>
+          {/* Tab bar — jumps to a section rather than hiding the others
+              (everything stays in one continuous scroll below), same
+              behavior as the Add Trip modal's own tab bar. */}
+          <div ref={tabBarRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {SECTION_TITLES.map((title, i) => (
+              <button
+                key={title}
+                ref={el => { tabButtonRefs.current[i] = el; }}
+                type="button"
+                onClick={() => handleTabSelect(i)}
+                className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
+                  activeSection === i
+                    ? 'bg-primary text-white'
+                    : 'bg-background text-dark-muted hover:text-dark'
+                }`}
+              >
+                {title.replace(/^\d+ · /, '')}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {/* ── 1. Hero Banner ──────────────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">1 · Hero Banner</h2>
+        <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
+          {pageSearchNoMatch && (
+            <p className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
+          )}
+          <div className="p-6 space-y-8">
+
+        <div ref={el => { sectionRefs.current[0] = el; }} data-section={1} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">1 · Hero Banner</h2>
           <ImageUploadField
             label="Banner Image (Desktop)"
             value={content.hero.image}
@@ -278,10 +459,8 @@ export default function AdminAbout() {
             </div>
           </div>
         </div>
-
-        {/* ── 2. Our Story ────────────────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">2 · Our Story</h2>
+        <div ref={el => { sectionRefs.current[1] = el; }} data-section={2} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">2 · Our Story</h2>
           <div>
             <label className={labelClass}>Section Heading</label>
             <textarea
@@ -310,10 +489,8 @@ export default function AdminAbout() {
             allowUrl
           />
         </div>
-
-        {/* ── 3. To Unforgettable Journeys (Have You Ever... + Welcome to ULAA) ── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">3 · To Unforgettable Journeys</h2>
+        <div ref={el => { sectionRefs.current[2] = el; }} data-section={3} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">3 · To Unforgettable Journeys</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Sub Heading</label>
@@ -455,10 +632,8 @@ export default function AdminAbout() {
             </div>
           </div>
         </div>
-
-        {/* ── 5. Why ULAA is Different ─────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">4 · Why ULAA is Different</h2>
+        <div ref={el => { sectionRefs.current[3] = el; }} data-section={4} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">4 · Why ULAA is Different</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Sub Heading</label>
@@ -547,10 +722,8 @@ export default function AdminAbout() {
             ))}
           </div>
         </div>
-
-        {/* ── 6. Our Community ─────────────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">5 · Our Community</h2>
+        <div ref={el => { sectionRefs.current[4] = el; }} data-section={5} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">5 · Our Community</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Sub Heading</label>
@@ -590,10 +763,8 @@ export default function AdminAbout() {
             allowUrl
           />
         </div>
-
-        {/* ── 7. What Our Girls Say ────────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">6 · What Our Girls Say</h2>
+        <div ref={el => { sectionRefs.current[5] = el; }} data-section={6} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">6 · What Our Girls Say</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Sub Heading</label>
@@ -628,10 +799,8 @@ export default function AdminAbout() {
             The testimonial cards themselves come from the Testimonials section of the admin panel.
           </p>
         </div>
-
-        {/* ── 8. Your ULAA Journey ─────────────────────────────────────────── */}
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">7 · Your ULAA Journey</h2>
+        <div ref={el => { sectionRefs.current[6] = el; }} data-section={7} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">7 · Your ULAA Journey</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Sub Heading</label>
@@ -721,16 +890,20 @@ export default function AdminAbout() {
             </div>
           </div>
         </div>
+          </div>
 
-        {/* ── Sticky Save Bar ───────────────────────────────────────────────── */}
-        <div className="sticky bottom-4 z-20 flex items-center gap-3 bg-white rounded-lg shadow-warm-lg border border-background-warm px-5 py-4">
-          <Button variant="primary" size="md" className="sm:flex-1" onClick={handleSave} loading={saving}>
-            Save
-          </Button>
-          <Button variant="outline" size="md" className="sm:flex-1" onClick={resetToDefault}>
-            Reset to Default
-          </Button>
-          {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+          {/* ── Sticky footer — blended into and pinned to the bottom of the
+              card's own scroll area (not the viewport), same pattern as the
+              Add Trip modal's footer. ───────────────────────────────────── */}
+          <div className="sticky bottom-0 flex items-center gap-3 bg-white border-t border-background-warm px-6 py-4 rounded-b-md">
+            <Button variant="primary" size="md" className="sm:flex-1" onClick={handleSave} loading={saving}>
+              Save
+            </Button>
+            <Button variant="outline" size="md" className="sm:flex-1" onClick={resetToDefault}>
+              Reset to Default
+            </Button>
+            {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+          </div>
         </div>
       </div>
     </AdminLayout>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Search } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';
@@ -17,8 +17,12 @@ import type { FounderContent, AboutFounderSocialLink } from '../types/types-inde
 
 const inputClass =
   'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
-const cardClass = 'bg-white rounded-lg shadow-card p-6 space-y-4';
 const labelClass = 'block text-sm font-medium text-dark mb-1';
+
+// Only one section today, but kept as a list (like AdminAbout/AdminWhyULAA)
+// so the tab bar / scroll-spy code is identical across all three pages —
+// adding a second section later is then just adding another entry here.
+const SECTION_TITLES = ['Meet the Founder'];
 
 export default function AdminFounder() {
   const confirm = useConfirm();
@@ -26,6 +30,21 @@ export default function AdminFounder() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Tab bar (pills) + scroll-spy — identical approach to AdminAbout.tsx.
+  const [activeSection, setActiveSection] = useState(0);
+  const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  const tabButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const lastActiveRef = useRef(0);
+  const suppressObserverRef = useRef(false);
+  const suppressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressScrollListenerRef = useRef<(() => void) | null>(null);
+
+  // Page-wide field search (mirrors the Add Trip modal's search field).
+  const [pageSearch, setPageSearch] = useState('');
+  const [pageSearchNoMatch, setPageSearchNoMatch] = useState(false);
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
 
   const STORAGE_BUCKET = 'ulaa';
   // Same snapshot-diff approach as AdminAbout/AdminWhyULAA — see the
@@ -48,6 +67,101 @@ export default function AdminFounder() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const handlePageSearch = () => {
+    const query = pageSearch.trim().toLowerCase();
+    const container = scrollBodyRef.current;
+    if (!query || !container) {
+      setPageSearchNoMatch(false);
+      return;
+    }
+    const candidates = Array.from(container.querySelectorAll<HTMLElement>('label, h2'));
+    const match = candidates.find(el => el.textContent?.toLowerCase().includes(query));
+    if (!match) {
+      setPageSearchNoMatch(true);
+      return;
+    }
+    setPageSearchNoMatch(false);
+    const sectionEl = match.closest<HTMLElement>('[data-section]');
+    if (sectionEl) setActiveSection(Number(sectionEl.dataset.section) - 1);
+    match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const previousBackground = match.style.backgroundColor;
+    const previousTransition = match.style.transition;
+    match.style.transition = 'background-color 0.3s ease';
+    match.style.backgroundColor = '#FDE9D9';
+    setTimeout(() => {
+      match.style.backgroundColor = previousBackground;
+      match.style.transition = previousTransition;
+    }, 1500);
+  };
+
+  useEffect(() => {
+    const timeout = setTimeout(() => handlePageSearch(), pageSearch.trim() ? 350 : 0);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageSearch]);
+
+  // Uses 'nearest' rather than centering the tab, so clicking a tab only
+  // scrolls the pill bar the minimum amount needed — tabs before it stay
+  // visible instead of being pushed off-screen by a full re-center.
+  const scrollTabIntoView = (i: number) => {
+    tabButtonRefs.current[i]?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+  };
+
+  useEffect(() => {
+    const container = scrollBodyRef.current;
+    if (!container) return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (suppressObserverRef.current) return;
+        const visible = entries.filter(e => e.isIntersecting);
+        if (visible.length === 0) return;
+        const topMost = visible.reduce((a, b) => (a.boundingClientRect.top <= b.boundingClientRect.top ? a : b));
+        const idx = sectionRefs.current.indexOf(topMost.target as HTMLDivElement);
+        if (idx !== -1 && idx !== lastActiveRef.current) {
+          lastActiveRef.current = idx;
+          setActiveSection(idx);
+          scrollTabIntoView(idx);
+        }
+      },
+      { root: container, rootMargin: '0px 0px -65% 0px', threshold: 0 }
+    );
+    sectionRefs.current.forEach(el => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, [loading]);
+
+  useEffect(() => () => {
+    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+    if (suppressScrollListenerRef.current) scrollBodyRef.current?.removeEventListener('scroll', suppressScrollListenerRef.current);
+  }, []);
+
+  const handleTabSelect = (i: number) => {
+    lastActiveRef.current = i;
+    setActiveSection(i);
+    suppressObserverRef.current = true;
+    const container = scrollBodyRef.current;
+    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+    if (suppressScrollListenerRef.current) {
+      container?.removeEventListener('scroll', suppressScrollListenerRef.current);
+      suppressScrollListenerRef.current = null;
+    }
+    sectionRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollTabIntoView(i);
+    const clearSuppression = () => {
+      suppressObserverRef.current = false;
+      if (suppressScrollListenerRef.current) {
+        container?.removeEventListener('scroll', suppressScrollListenerRef.current);
+        suppressScrollListenerRef.current = null;
+      }
+    };
+    const onScroll = () => {
+      if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+      suppressTimeoutRef.current = setTimeout(clearSuppression, 150);
+    };
+    suppressScrollListenerRef.current = onScroll;
+    container?.addEventListener('scroll', onScroll);
+    suppressTimeoutRef.current = setTimeout(clearSuppression, 150);
+  };
 
   const hasUnsavedChanges = () => JSON.stringify(content) !== savedContentRef.current;
 
@@ -108,9 +222,48 @@ export default function AdminFounder() {
       subtitle="Manage the Meet the Founder content shown on the About, Home, and Upcoming Trips pages."
       hasUnsavedChanges={hasUnsavedChanges}
     >
-      <div className="space-y-6 max-w-4xl">
-        <div className={cardClass}>
-          <h2 className="font-display text-lg font-bold text-dark">Meet the Founder</h2>
+      {/* Same modal-style skeleton as the About Page: bordered card, its own
+          scroll area (app-scroll), a pinned search + tab bar up top, and a
+          footer that blends into and sticks to the bottom of the card. */}
+      <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
+        <div className="p-6 pb-4 border-b border-background-warm flex-shrink-0 space-y-4">
+          <div className="relative w-full max-w-xs">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+            <input
+              type="text"
+              value={pageSearch}
+              onChange={e => setPageSearch(e.target.value)}
+              placeholder="Search fields (e.g. name, social links)..."
+              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+            />
+          </div>
+          <div ref={tabBarRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {SECTION_TITLES.map((title, i) => (
+              <button
+                key={title}
+                ref={el => { tabButtonRefs.current[i] = el; }}
+                type="button"
+                onClick={() => handleTabSelect(i)}
+                className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
+                  activeSection === i
+                    ? 'bg-primary text-white'
+                    : 'bg-background text-dark-muted hover:text-dark'
+                }`}
+              >
+                {title}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
+          {pageSearchNoMatch && (
+            <p className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
+          )}
+          <div className="p-6">
+
+        <div ref={el => { sectionRefs.current[0] = el; }} data-section={1} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">Meet the Founder</h2>
           <p className="text-xs text-dark-muted -mt-2">
             This single source is shown on the About page, the Home page, and the Upcoming Trips page — edit it once here and it updates everywhere.
           </p>
@@ -192,15 +345,19 @@ export default function AdminFounder() {
           </div>
         </div>
 
-        {/* ── Sticky Save Bar ───────────────────────────────────────────────── */}
-        <div className="sticky bottom-4 z-20 flex items-center gap-3 bg-white rounded-lg shadow-warm-lg border border-background-warm px-5 py-4">
-          <Button variant="primary" size="md" className="sm:flex-1" onClick={handleSave} loading={saving}>
-            Save
-          </Button>
-          <Button variant="outline" size="md" className="sm:flex-1" onClick={resetToDefault}>
-            Reset to Default
-          </Button>
-          {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+          </div>
+
+          {/* Sticky footer — blended into and pinned to the bottom of the
+              card's own scroll area, same pattern as the Add Trip modal. */}
+          <div className="sticky bottom-0 flex items-center gap-3 bg-white border-t border-background-warm px-6 py-4 rounded-b-md">
+            <Button variant="primary" size="md" className="sm:flex-1" onClick={handleSave} loading={saving}>
+              Save
+            </Button>
+            <Button variant="outline" size="md" className="sm:flex-1" onClick={resetToDefault}>
+              Reset to Default
+            </Button>
+            {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+          </div>
         </div>
       </div>
     </AdminLayout>
