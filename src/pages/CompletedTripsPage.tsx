@@ -89,6 +89,24 @@ export default function CompletedTripsPage() {
     });
   }, [trips, search, month]);
 
+  // How many trips fall in each month pill — respects the current search
+  // text but not the currently-selected month (so switching months doesn't
+  // change every other pill's count out from under you). "All" reflects the
+  // same search-filtered total shown in "Showing N albums" below.
+  const monthCounts = useMemo(() => {
+    const bySearch = trips.filter(trip =>
+      search === '' ||
+      trip.destination.toLowerCase().includes(search.toLowerCase()) ||
+      trip.title.toLowerCase().includes(search.toLowerCase())
+    );
+    const counts: Record<string, number> = { All: bySearch.length };
+    for (const trip of bySearch) {
+      const m = new Date(trip.trip_date).toLocaleString('en', { month: 'long' });
+      counts[m] = (counts[m] || 0) + 1;
+    }
+    return counts;
+  }, [trips, search]);
+
   // Derived live from the fetched trips — no more hardcoded numbers.
   const stats = useMemo(() => {
     const tripsCompleted = trips.length;
@@ -162,17 +180,24 @@ export default function CompletedTripsPage() {
             </div>
             {/* Month filter - desktop */}
             <div className="hidden md:flex gap-2 flex-wrap">
-              {MONTHS.slice(0, 7).map(m => (
+              {MONTHS.map(m => (
                 <button
                   key={m}
                   onClick={() => setMonth(m)}
-                  className={`px-4 py-2 rounded-lg text-sm font-button font-medium transition-all ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-button font-medium transition-all ${
                     month === m
                       ? 'bg-primary text-white'
                       : 'bg-background-warm text-dark hover:bg-primary/10 hover:text-primary'
                   }`}
                 >
                   {m}
+                  <span
+                    className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-xs font-semibold ${
+                      month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
+                    }`}
+                  >
+                    {monthCounts[m] || 0}
+                  </span>
                 </button>
               ))}
             </div>
@@ -192,11 +217,18 @@ export default function CompletedTripsPage() {
                 <button
                   key={m}
                   onClick={() => { setMonth(m); setShowFilters(false); }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-button font-medium transition-all ${
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-button font-medium transition-all ${
                     month === m ? 'bg-primary text-white' : 'bg-background-warm text-dark'
                   }`}
                 >
                   {m}
+                  <span
+                    className={`inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-semibold ${
+                      month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
+                    }`}
+                  >
+                    {monthCounts[m] || 0}
+                  </span>
                 </button>
               ))}
             </div>
@@ -242,7 +274,7 @@ export default function CompletedTripsPage() {
                 ))}
               </div>
               {filtered.length > 3 && (
-                <div className="mt-8 max-w-sm mx-auto">
+                <div className="mt-8">
                   <AlbumCarousel items={filtered.slice(3)} />
                 </div>
               )}
