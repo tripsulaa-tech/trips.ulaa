@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Home, Briefcase, BookOpen, Image, MessageCircle,
   LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles, ListChecks,
-  PanelLeftClose, PanelLeftOpen, UserCircle
+  ChevronsLeft, ChevronsRight, UserCircle
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/useAuth';
@@ -53,9 +53,9 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       <div className={`relative pt-6 pb-4 flex items-center ${collapsed ? 'flex-col gap-3 px-2' : 'justify-center px-6'}`}>
         <Link to="/" className="inline-block shrink-0" onClick={guardNavigate}>
           {collapsed ? (
-            <img src="/favicon.svg" alt="ULAA" className="h-9 w-9" />
+            <img src="/favicon.svg" alt="ULAA" className="h-11 w-11" />
           ) : (
-            <img src="/ULAA.svg" alt="ULAA" className="h-28" />
+            <img src="/ULAA.svg" alt="ULAA" className="h-32" />
           )}
         </Link>
         {/* Collapse/expand toggle — desktop only; the mobile drawer always
@@ -65,11 +65,11 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
             onClick={onToggleCollapse}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={`shrink-0 flex items-center justify-center p-1.5 rounded text-dark-muted hover:bg-background-warm hover:text-primary transition-colors ${
+            className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-background-warm bg-background-warm/60 text-dark-muted hover:bg-background-warm hover:text-primary transition-colors ${
               collapsed ? '' : 'absolute right-4 top-6'
             }`}
           >
-            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
           </button>
         )}
       </div>
