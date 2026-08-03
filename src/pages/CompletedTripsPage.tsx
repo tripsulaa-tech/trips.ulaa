@@ -4,7 +4,6 @@ import { Search, Filter } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
 import AlbumCard from '../components/ui/AlbumCard';
-import AlbumCarousel from '../components/ui/AlbumCarousel';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getCompletedTrips } from '../services/api';
 import type { CompletedTrip } from '../types/types-index';
@@ -153,7 +152,7 @@ export default function CompletedTripsPage() {
       </div>
 
       {/* Albums Grid */}
-      <div className="relative isolate px-6 lg:px-8 py-12 md:py-16">
+      <div className="relative isolate px-6 lg:px-8 pt-12 md:pt-16">
         <div className="max-w-[1344px] mx-auto">
         <div className="mb-6 md:mb-12 flex justify-center">
           <SectionTitle
@@ -163,11 +162,14 @@ export default function CompletedTripsPage() {
             align="center"
           />
         </div>
+        </div>
+      </div>
 
-        {/* Search & Filters */}
-        <div className="mb-6 md:mb-8 space-y-4">
-          {/* Search row — full width on all breakpoints */}
-          <div className="flex gap-3">
+      {/* Search & Filters */}
+      <div className="border-b border-background-warm sticky top-[72px] z-30 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1344px] mx-auto py-4">
+          <div className="flex gap-3 sm:gap-4">
+            {/* Search */}
             <div className="relative flex-1">
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-muted" />
               <input
@@ -178,7 +180,30 @@ export default function CompletedTripsPage() {
                 className="w-full pl-12 pr-4 py-3 rounded-lg border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
               />
             </div>
-            {/* Filter toggle - mobile only */}
+            {/* Month filter - desktop */}
+            <div className="hidden md:flex gap-2 flex-wrap">
+              {MONTHS.filter(m => m === 'All' || (monthCounts[m] ?? 0) > 0).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMonth(m)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-button font-medium transition-all whitespace-nowrap ${
+                    month === m
+                      ? 'bg-primary text-white'
+                      : 'bg-background-warm text-dark hover:bg-primary/10 hover:text-primary'
+                  }`}
+                >
+                  {m}
+                  <span
+                    className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-xs font-semibold ${
+                      month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
+                    }`}
+                  >
+                    {monthCounts[m] ?? 0}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {/* Filter toggle - mobile */}
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="md:hidden flex items-center gap-2 px-4 py-3 rounded-lg border-2 border-background-warm text-dark font-button text-sm shrink-0"
@@ -187,38 +212,13 @@ export default function CompletedTripsPage() {
               Filter
             </button>
           </div>
-
-          {/* Month pills — desktop (own row, full width) */}
-          <div className="hidden md:flex gap-2 flex-wrap">
-            {MONTHS.filter(m => m === 'All' || (monthCounts[m] ?? 0) > 0).map(m => (
-              <button
-                key={m}
-                onClick={() => setMonth(m)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-button font-medium transition-all ${
-                  month === m
-                    ? 'bg-primary text-white'
-                    : 'bg-background-warm text-dark hover:bg-primary/10 hover:text-primary'
-                }`}
-              >
-                {m}
-                <span
-                  className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-xs font-semibold ${
-                    month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
-                  }`}
-                >
-                  {monthCounts[m] ?? 0}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Month pills — mobile (expand on filter toggle) */}
+          {/* Mobile filters */}
           {showFilters && (
-            <div className="md:hidden flex gap-2 flex-wrap">
+            <div className="md:hidden flex gap-2 flex-wrap mt-3">
               {MONTHS.filter(m => m === 'All' || (monthCounts[m] ?? 0) > 0).map(m => (
                 <button
                   key={m}
-                  onClick={() => { setMonth(m); setShowFilters(false); }}
+                  onClick={() => setMonth(m)}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-button font-medium transition-all ${
                     month === m ? 'bg-primary text-white' : 'bg-background-warm text-dark'
                   }`}
@@ -236,6 +236,11 @@ export default function CompletedTripsPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Albums Grid */}
+      <div className="relative isolate px-6 lg:px-8 py-12 md:py-16">
+        <div className="max-w-[1344px] mx-auto">
 
         {loading ? (
           <SkeletonGrid count={6} type="album" />
@@ -254,32 +259,11 @@ export default function CompletedTripsPage() {
             <p className="text-dark-muted text-sm mb-8">
               Showing <span className="font-semibold text-dark">{filtered.length}</span> album{filtered.length !== 1 ? 's' : ''}
             </p>
-            {/* Mobile: first 2 albums static, 3rd onward in a swipeable carousel */}
-            <div className="md:hidden">
-              <div className="grid grid-cols-1 gap-6">
-                {filtered.slice(0, 2).map((trip, i) => (
-                  <AlbumCard key={trip.id} trip={trip} index={i} />
-                ))}
-              </div>
-              {filtered.length > 2 && (
-                <div className="mt-6">
-                  <AlbumCarousel items={filtered.slice(2)} />
-                </div>
-              )}
-            </div>
-
-            {/* Desktop: first 3 albums static, 4th onward in a swipeable carousel */}
-            <div className="hidden md:block">
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                {filtered.slice(0, 3).map((trip, i) => (
-                  <AlbumCard key={trip.id} trip={trip} index={i} />
-                ))}
-              </div>
-              {filtered.length > 3 && (
-                <div className="mt-8">
-                  <AlbumCarousel items={filtered.slice(3)} />
-                </div>
-              )}
+            {/* All albums shown in a single grid — no carousel */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {filtered.map((trip, i) => (
+                <AlbumCard key={trip.id} trip={trip} index={i} />
+              ))}
             </div>
           </>
         )}
