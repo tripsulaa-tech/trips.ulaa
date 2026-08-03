@@ -307,3 +307,16 @@ button, .btn {
   from { width: 0%; }
   to   { width: 100%; }
 }
+
+/* View-only images on the public site (see Layout.tsx, which also blocks
+   the right-click context menu). Users can look, but dragging an image out
+   to save it or long-pressing it on mobile is disabled. This is a deterrent
+   for casual saving, not real DRM — anyone using devtools or a screenshot
+   can still get the pixels, and that's expected/unavoidable on the web. */
+.view-only-images img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

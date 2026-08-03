@@ -58,6 +58,10 @@ export default function AdminAbout() {
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const lastActiveRef = useRef(0);
+  // Edge fades on the tab bar (matches the Add Trip modal's Tabs.tsx) so
+  // it's obvious there are more tabs to scroll to in either direction.
+  const [showLeftFade, setShowLeftFade] = useState(false);
+  const [showRightFade, setShowRightFade] = useState(false);
   const suppressObserverRef = useRef(false);
   const suppressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressScrollListenerRef = useRef<(() => void) | null>(null);
@@ -129,13 +133,42 @@ export default function AdminAbout() {
   }, [pageSearch]);
 
   // Scroll-spy: highlights whichever section pill matches what's currently
-  // at the top of the scroll area, same approach as Tabs.tsx. Uses 'nearest'
-  // rather than centering the tab, so clicking a tab only scrolls the pill
-  // bar the minimum amount needed — tabs before it stay visible instead of
-  // being pushed off-screen by a full re-center.
+  // at the top of the scroll area, same approach as Tabs.tsx. Scrolls the
+  // tab bar's own scrollLeft directly (centering the button) instead of
+  // the button's native scrollIntoView — scrollIntoView's block dimension
+  // considers this page's outer vertical scroll containers too (it can't
+  // be scoped to just the tab bar's horizontal axis), which meant a tab
+  // scrolled would sometimes settle only partially into view instead of
+  // fully. Computing the scrollLeft ourselves touches only the tab bar.
   const scrollTabIntoView = (i: number) => {
-    tabButtonRefs.current[i]?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+    const bar = tabBarRef.current;
+    const btn = tabButtonRefs.current[i];
+    if (!bar || !btn) return;
+    const target = btn.offsetLeft - bar.clientWidth / 2 + btn.clientWidth / 2;
+    bar.scrollTo({ left: target, behavior: 'smooth' });
   };
+
+  // Keeps the edge fades in sync with the tab bar's scroll position —
+  // same approach as Tabs.tsx.
+  const updateTabFades = () => {
+    const el = tabBarRef.current;
+    if (!el) return;
+    setShowLeftFade(el.scrollLeft > 4);
+    setShowRightFade(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
+  useEffect(() => {
+    updateTabFades();
+    const el = tabBarRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', updateTabFades);
+    const resizeObserver = new ResizeObserver(updateTabFades);
+    resizeObserver.observe(el);
+    return () => {
+      el.removeEventListener('scroll', updateTabFades);
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const container = scrollBodyRef.current;
@@ -375,22 +408,30 @@ export default function AdminAbout() {
           {/* Tab bar — jumps to a section rather than hiding the others
               (everything stays in one continuous scroll below), same
               behavior as the Add Trip modal's own tab bar. */}
-          <div ref={tabBarRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {SECTION_TITLES.map((title, i) => (
-              <button
-                key={title}
-                ref={el => { tabButtonRefs.current[i] = el; }}
-                type="button"
-                onClick={() => handleTabSelect(i)}
-                className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
-                  activeSection === i
-                    ? 'bg-primary text-white'
-                    : 'bg-background text-dark-muted hover:text-dark'
-                }`}
-              >
-                {title.replace(/^\d+ · /, '')}
-              </button>
-            ))}
+          <div className="relative">
+            <div ref={tabBarRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
+              {SECTION_TITLES.map((title, i) => (
+                <button
+                  key={title}
+                  ref={el => { tabButtonRefs.current[i] = el; }}
+                  type="button"
+                  onClick={() => handleTabSelect(i)}
+                  className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
+                    activeSection === i
+                      ? 'bg-primary text-white'
+                      : 'bg-background text-dark-muted hover:text-dark'
+                  }`}
+                >
+                  {title.replace(/^\d+ · /, '')}
+                </button>
+              ))}
+            </div>
+            {showLeftFade && (
+              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent" />
+            )}
+            {showRightFade && (
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent" />
+            )}
           </div>
         </div>
 
