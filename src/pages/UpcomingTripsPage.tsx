@@ -37,6 +37,24 @@ export default function UpcomingTripsPage() {
     });
   }, [trips, search, month]);
 
+  // How many upcoming (active) trips fall in each month pill — respects the
+  // current search text but not the currently-selected month (so switching
+  // months doesn't change every other pill's count out from under you).
+  // "All" reflects the same search-filtered total shown in "Showing N trips" below.
+  const monthCounts = useMemo(() => {
+    const bySearch = trips.filter(trip =>
+      search === '' ||
+      trip.destination.toLowerCase().includes(search.toLowerCase()) ||
+      trip.title.toLowerCase().includes(search.toLowerCase())
+    );
+    const counts: Record<string, number> = { All: bySearch.length };
+    for (const trip of bySearch) {
+      const m = new Date(trip.start_date).toLocaleString('en', { month: 'long' });
+      counts[m] = (counts[m] || 0) + 1;
+    }
+    return counts;
+  }, [trips, search]);
+
   return (
     <Layout>
       {/* Hero */}
@@ -57,7 +75,7 @@ export default function UpcomingTripsPage() {
       {/* Search & Filters */}
       <div className="bg-white border-b border-background-warm sticky top-[72px] z-30 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1344px] mx-auto py-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex gap-3 sm:gap-4">
             {/* Search */}
             <div className="relative flex-1">
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-muted" />
@@ -66,29 +84,36 @@ export default function UpcomingTripsPage() {
                 placeholder="Search destination or trip..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-lg border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
+                className="w-full pl-12 pr-4 py-2 rounded-lg border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
               />
             </div>
             {/* Month filter - desktop */}
             <div className="hidden md:flex gap-2 flex-wrap">
-              {MONTHS.slice(0, 7).map(m => (
+              {MONTHS.filter(m => m === 'All' || (monthCounts[m] ?? 0) > 0).map(m => (
                 <button
                   key={m}
                   onClick={() => setMonth(m)}
-                  className={`px-4 py-2 rounded-lg text-sm font-button font-medium transition-all ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-button font-medium transition-all whitespace-nowrap ${
                     month === m
                       ? 'bg-primary text-white'
                       : 'bg-background-warm text-dark hover:bg-primary/10 hover:text-primary'
                   }`}
                 >
                   {m}
+                  <span
+                    className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-xs font-semibold ${
+                      month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
+                    }`}
+                  >
+                    {monthCounts[m] ?? 0}
+                  </span>
                 </button>
               ))}
             </div>
             {/* Filter toggle - mobile */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="md:hidden flex items-center gap-2 px-4 py-3 rounded-lg border-2 border-background-warm text-dark font-button text-sm"
+              className="md:hidden flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-background-warm text-dark font-button text-sm shrink-0"
             >
               <Filter size={16} />
               Filter
@@ -97,15 +122,22 @@ export default function UpcomingTripsPage() {
           {/* Mobile filters */}
           {showFilters && (
             <div className="md:hidden flex gap-2 flex-wrap mt-3">
-              {MONTHS.map(m => (
+              {MONTHS.filter(m => m === 'All' || (monthCounts[m] ?? 0) > 0).map(m => (
                 <button
                   key={m}
-                  onClick={() => { setMonth(m); setShowFilters(false); }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-button font-medium transition-all ${
+                  onClick={() => setMonth(m)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-button font-medium transition-all ${
                     month === m ? 'bg-primary text-white' : 'bg-background-warm text-dark'
                   }`}
                 >
                   {m}
+                  <span
+                    className={`inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-semibold ${
+                      month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
+                    }`}
+                  >
+                    {monthCounts[m] ?? 0}
+                  </span>
                 </button>
               ))}
             </div>
