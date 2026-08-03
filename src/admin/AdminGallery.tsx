@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Trash2, Star } from 'lucide-react';
+import { Upload, Trash2, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
-import { getGalleryImages, uploadImage, deleteImage, getStoragePathFromUrl } from '../services/api';
-import { supabase } from '../services/supabase';
+import { getGalleryImages, addGalleryImage, deleteGalleryImage, updateGalleryFeatured, updateGalleryOrder, uploadImage, deleteImage, getStoragePathFromUrl } from '../services/api';
 import { useConfirm } from '../components/ui/useConfirm';
 import type { GalleryImage } from '../types/types-index';
 
@@ -26,10 +25,12 @@ export default function AdminGallery() {
     if (files.length === 0) return;
     try {
       setUploading(true);
+      let nextOrder = images.length;
       for (const file of files) {
         const path = `gallery/${Date.now()}-${file.name}`;
         const url = await uploadImage('ulaa', file, path);
-        await supabase.from('gallery').insert({ image_url: url, sort_order: 0 });
+        await addGalleryImage(url, nextOrder);
+        nextOrder++;
       }
       load();
     } catch {
@@ -46,12 +47,24 @@ export default function AdminGallery() {
     if (path) {
       await deleteImage('ulaa', path).catch(() => {});
     }
-    await supabase.from('gallery').delete().eq('id', img.id);
+    await deleteGalleryImage(img.id);
     load();
   };
 
   const toggleFeatured = async (img: GalleryImage) => {
-    await supabase.from('gallery').update({ is_featured: !img.is_featured }).eq('id', img.id);
+    await updateGalleryFeatured(img.id, !img.is_featured);
+    load();
+  };
+
+  const move = async (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= images.length) return;
+    const a = images[index];
+    const b = images[target];
+    await Promise.all([
+      updateGalleryOrder(a.id, b.sort_order),
+      updateGalleryOrder(b.id, a.sort_order),
+    ]);
     load();
   };
 
@@ -90,7 +103,7 @@ export default function AdminGallery() {
           <>
             <p className="text-dark-muted text-sm">{images.length} images</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {images.map(img => (
+              {images.map((img, index) => (
                 <motion.div
                   key={img.id}
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -99,6 +112,14 @@ export default function AdminGallery() {
                 >
                   <img src={img.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                   <div className="absolute inset-0 bg-dark/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => move(index, -1)}
+                      disabled={index === 0}
+                      className="p-2 rounded bg-white/20 text-white hover:bg-white/40 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      title="Move earlier"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
                     <button
                       onClick={() => toggleFeatured(img)}
                       className={`p-2 rounded transition-colors ${img.is_featured ? 'bg-secondary text-white' : 'bg-white/20 text-white hover:bg-secondary'}`}
@@ -112,6 +133,14 @@ export default function AdminGallery() {
                       title="Delete"
                     >
                       <Trash2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => move(index, 1)}
+                      disabled={index === images.length - 1}
+                      className="p-2 rounded bg-white/20 text-white hover:bg-white/40 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      title="Move later"
+                    >
+                      <ChevronRight size={16} />
                     </button>
                   </div>
                   {img.is_featured && (
