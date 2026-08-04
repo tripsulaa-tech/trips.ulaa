@@ -353,17 +353,22 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     return kept;
   }
 
-  function slideHeader(icon: (x: number, y: number) => void, title: string, subtitle?: string) {
-    icon(MARGIN, 40);
+  // `icon` is optional — pass `null` to render a plain text-only header
+  // (no leading icon glyph), used for sections where the icon is now
+  // deliberately omitted. Text simply starts at MARGIN instead of being
+  // indented to make room for the icon.
+  function slideHeader(icon: ((x: number, y: number) => void) | null, title: string, subtitle?: string) {
+    const textX = icon ? MARGIN + 30 : MARGIN;
+    if (icon) icon(MARGIN, 40);
     setText(COLORS.dark);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(19);
-    doc.text(title, MARGIN + 30, 46);
+    doc.text(title, textX, 46);
     if (subtitle) {
       setText(COLORS.darkMuted);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
-      doc.text(subtitle, MARGIN + 30, 58);
+      doc.text(subtitle, textX, 58);
     }
     setDraw(COLORS.grayLine);
     doc.setLineWidth(1);
@@ -1243,7 +1248,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       newSlide();
       const isFirst = pageStart === 0;
       slideHeader(
-        (x, y) => icons.calendar(x, y, 20),
+        null,
         'Detailed Itinerary',
         isFirst ? `${trip.itinerary.length} day${trip.itinerary.length === 1 ? '' : 's'} of things to do` : undefined
       );
@@ -1540,7 +1545,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     // Both sections fit stacked on one slide — the common case.
     if (includedH + gapBetween + notIncludedH <= availH) {
       newSlide();
-      slideHeader((x, y) => icons.check(x, y, 20), "What's Included & Not Included");
+      slideHeader(null, "What's Included & Not Included");
       let y = top;
       if (hasIncluded) {
         drawSectionHeading("What's Included", y);
@@ -1567,7 +1572,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       const perPage = rowsPerPage * GROUP_COLS;
       for (let i = 0; i < trip.included_groups.length; i += perPage) {
         newSlide();
-        slideHeader((x, y) => icons.check(x, y, 20), i === 0 ? "What's Included" : "What's Included (continued)");
+        slideHeader(null, i === 0 ? "What's Included" : "What's Included (continued)");
         drawGroupGrid(trip.included_groups.slice(i, i + perPage), top);
       }
     } else if (hasFlatIncluded) {
@@ -1575,14 +1580,14 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       const perPage = rowsPerPage * FLAT_PER_ROW;
       for (let i = 0; i < trip.included.length; i += perPage) {
         newSlide();
-        slideHeader((x, y) => icons.check(x, y, 20), i === 0 ? "What's Included" : "What's Included (continued)");
+        slideHeader(null, i === 0 ? "What's Included" : "What's Included (continued)");
         drawFlatGrid(trip.included.slice(i, i + perPage), top);
       }
     }
 
     if (hasNotIncluded) {
       newSlide();
-      slideHeader((x, y) => icons.cross(x, y, 20), "What's Not Included");
+      slideHeader(null, "What's Not Included");
       drawChipRow(trip.not_included, top);
     }
   }
@@ -1817,7 +1822,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     if (allPhotos.length === 0) return;
 
     newSlide();
-    slideHeader((x, y) => icons.pin(x, y, 20), "Places You'll Definitely Post");
+    slideHeader(null, "Places You'll Definitely Post");
 
     let contentTop = 92;
     if (trip.gallery_description) {
@@ -1887,7 +1892,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     if (allPhotos.length === 0) return;
 
     newSlide();
-    slideHeader((x, y) => icons.shirt(x, y, 20), 'Fashion Aesthetics');
+    slideHeader(null, 'Fashion Aesthetics');
 
     let contentTop = 92;
     if (trip.fashion_description) {
@@ -2003,7 +2008,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
 
     balanced.forEach((page, p) => {
       newSlide();
-      slideHeader((x, y) => icons.question(x, y, 20), p === 0 ? 'FAQs' : 'FAQs (continued)');
+      slideHeader(null, p === 0 ? 'FAQs' : 'FAQs (continued)');
       const startY = centeredTop(top, CONTENT_BOTTOM, Math.max(page.leftH, page.rightH));
       if (page.left.length) drawColumn(MARGIN, startY, page.left);
       if (page.right.length) drawColumn(MARGIN + colW + colGap, startY, page.right);
@@ -2084,7 +2089,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
 
     balanced.forEach((page, p) => {
       newSlide();
-      slideHeader((x, y) => icons.shield(x, y, 20), p === 0 ? 'Cancellation Policy' : 'Cancellation Policy (continued)');
+      slideHeader(null, p === 0 ? 'Cancellation Policy' : 'Cancellation Policy (continued)');
       const startY = centeredTop(top, CONTENT_BOTTOM, Math.max(page.leftH, page.rightH));
       if (page.left.length) drawColumn(MARGIN, startY, page.left);
       if (page.right.length) drawColumn(MARGIN + colW + colGap, startY, page.right);
@@ -2101,7 +2106,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   // =========================================================================
   async function renderTripLeaderAndBooking() {
     newSlide();
-    slideHeader((x, y) => icons.userCheck(x, y, 20), 'Trip Leader & Booking', 'Meet your host, then reserve your seat below');
+    slideHeader(null, 'Trip Leader & Booking', 'Meet your host, then reserve your seat below');
 
     const CARDS_TOP = 90;
     const CARDS_BOTTOM = 380;
