@@ -104,6 +104,25 @@ function sanitizeForPdf(text: string): string {
     .trim();
 }
 
+/** `formatPrice()` returns the ₹ glyph, which isn't in the core PDF font's
+ *  charset — used directly it renders as a mis-measured stray glyph, which
+ *  throws off any layout math based on its width (e.g. positioning a
+ *  strike-through price right after it). Every price shown in the PDF goes
+ *  through this instead, so it's always the sanitized "Rs. 39,999" form. */
+function money(amount: number): string {
+  return sanitizeForPdf(formatPrice(amount));
+}
+
+/** Same as `money()`, but for the large hero price figures (main price and
+ *  its strike-through) where the "Rs." prefix sits right next to big bold
+ *  digits — "Rs." has a lowercase 's', which is visibly shorter than the
+ *  capital 'R' at that size. Using "RS" instead keeps both letters the same
+ *  (capital) height, so the currency prefix reads as evenly weighted
+ *  next to the price rather than lopsided. */
+function heroMoney(amount: number): string {
+  return money(amount).replace(/^Rs\./, 'RS');
+}
+
 // `included_groups` carries the site's grouped "What's Included" content
 // (icon + heading + bulleted sub-items) straight through so the PDF can draw
 // the same heading-card layout as TripDetailPage. `included` is a flattened
@@ -364,15 +383,19 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(19);
     doc.text(title, textX, 46);
+    setDraw(COLORS.grayLine);
+    doc.setLineWidth(1);
+    doc.line(MARGIN, 66, PAGE_W - MARGIN, 66);
+    // Subtitle sits below the divider line (same placement as the
+    // "Travel with Confidence" / "Things to Carry" descriptions) instead
+    // of being squeezed between the title and the line — with breathing
+    // room both above (from the line) and below (before slide content).
     if (subtitle) {
       setText(COLORS.darkMuted);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
-      doc.text(subtitle, textX, 58);
+      doc.text(subtitle, textX, 92);
     }
-    setDraw(COLORS.grayLine);
-    doc.setLineWidth(1);
-    doc.line(MARGIN, 66, PAGE_W - MARGIN, 66);
   }
 
   function drawCheck(cx: number, cy: number, r: number, color: RGB, weight = 1.6) {
@@ -390,6 +413,34 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.setLineCap('round');
     doc.line(cx - r * 0.5, cy - r * 0.5, cx + r * 0.5, cy + r * 0.5);
     doc.line(cx - r * 0.5, cy + r * 0.5, cx + r * 0.5, cy - r * 0.5);
+  }
+
+  /** Small "→" arrow glyph (shaft + head), used next to CTA button labels
+   *  like "Secure Your Spot" — cheaper and crisper than relying on the
+   *  core font's arrow character support. */
+  function drawArrowRight(cx: number, cy: number, r: number, color: RGB, weight = 1.6) {
+    setDraw(color);
+    doc.setLineWidth(weight);
+    doc.setLineCap('round');
+    doc.setLineJoin('round');
+    doc.line(cx - r * 0.6, cy, cx + r * 0.5, cy);
+    doc.line(cx + r * 0.1, cy - r * 0.4, cx + r * 0.5, cy);
+    doc.line(cx + r * 0.1, cy + r * 0.4, cx + r * 0.5, cy);
+  }
+
+  /** Draws one line of text made of differently-colored/weighted runs,
+   *  left-to-right starting at `x` — used for the booking card's reserve
+   *  box ("Reserve today with only <amount>") where only the amount is
+   *  highlighted, matching the live site's <BookingForm> styling. */
+  function drawMixedLine(x: number, y: number, parts: { text: string; color: RGB; bold?: boolean }[], size: number) {
+    let runX = x;
+    parts.forEach(part => {
+      doc.setFont('helvetica', part.bold ? 'bold' : 'normal');
+      doc.setFontSize(size);
+      setText(part.color);
+      doc.text(part.text, runX, y);
+      runX += doc.getTextWidth(part.text);
+    });
   }
 
   /** Simple line-art icon set, drawn as vectors (never rasterized) so they
@@ -678,6 +729,33 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       setFill(color);
       doc.roundedRect(cx - r - s * 0.06, cy - s * 0.02, s * 0.14, s * 0.26, 3, 3, 'F');
       doc.roundedRect(cx + r - s * 0.08, cy - s * 0.02, s * 0.14, s * 0.26, 3, 3, 'F');
+      // Mic boom + bulb curving down-forward from the left ear cup, so the
+      // icon reads as a support headset (with mic) rather than plain headphones.
+      const earBottomX = cx - r - s * 0.06 + s * 0.07;
+      const earBottomY = cy - s * 0.02 + s * 0.26;
+      setDraw(color);
+      doc.setLineWidth(1.4);
+      doc.line(earBottomX, earBottomY, earBottomX + s * 0.13, earBottomY + s * 0.15);
+      setFill(color);
+      doc.circle(earBottomX + s * 0.15, earBottomY + s * 0.17, s * 0.06, 'F');
+    },
+    /** WhatsApp-style call bubble: a filled circle with a speech-bubble tail
+     *  and a simple white handset glyph, used for the "Call / WhatsApp"
+     *  contact item instead of the plain phone icon. */
+    whatsapp(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+      const cx = x + s * 0.5;
+      const cy = y - s * 0.56;
+      const r = s * 0.46;
+      setFill(color);
+      doc.circle(cx, cy, r, 'F');
+      doc.triangle(cx - r * 0.15, cy + r * 0.78, cx + r * 0.35, cy + r * 0.78, cx - r * 0.05, cy + r * 1.25, 'F');
+      setFill(COLORS.white);
+      doc.circle(cx - r * 0.16, cy - r * 0.16, r * 0.16, 'F');
+      doc.circle(cx + r * 0.16, cy + r * 0.16, r * 0.16, 'F');
+      setDraw(COLORS.white);
+      doc.setLineWidth(r * 0.22);
+      doc.setLineCap('round');
+      doc.line(cx - r * 0.08, cy - r * 0.08, cx + r * 0.08, cy + r * 0.08);
     },
     lock(x: number, y: number, s = 20, color: RGB = COLORS.white) {
       const bw = s * 0.62;
@@ -1009,7 +1087,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       trip.duration,
       trip.total_seats ? `Group of ${trip.total_seats}` : '',
       formatAgeRange(trip.min_age, trip.max_age),
-      isEarlyBird && activePrice ? `Early Bird ${formatPrice(activePrice)}` : '',
+      isEarlyBird && activePrice ? `Early Bird ${money(activePrice)}` : '',
     ]
       .filter(Boolean)
       .map(sanitizeForPdf);
@@ -1238,7 +1316,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const cols = 2;
     const rows = 1;
     const perPage = cols * rows;
-    const gridTop = 92;
+    const gridTop = 106; // clears the subtitle (only shown on the first page) with room to spare
     const colGap = 20;
     const rowGap = 16;
     const cardW = cols > 1 ? (CONTENT_W - colGap * (cols - 1)) / cols : CONTENT_W;
@@ -1693,20 +1771,23 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(19);
       doc.text('Things to Carry', carryX, 46);
-      setText(COLORS.darkMuted);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.text('Pack smart. Travel light. Stay ready.', carryX, 58);
       setDraw(COLORS.grayLine);
       doc.setLineWidth(1);
       doc.line(carryX, 66, carryX + carryW, 66);
+
+      // Subtitle sits below the divider line, same as "Travel with
+      // Confidence"'s description on the left column.
+      setText(COLORS.darkMuted);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.text('Pack smart. Travel light. Stay ready.', carryX, top);
 
       const perRow = twoCol ? 2 : 5;
       const gap = 14;
       const chipW = (carryW - gap * (perRow - 1)) / perRow;
       const chipH = 46;
 
-      let y = top;
+      let y = top + 30;
       let col = 0;
       for (let i = 0; i < trip.things_to_carry.length; i++) {
         if (col === 0 && y + chipH > listBottom) break;
@@ -1878,15 +1959,12 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
-  // SLIDE — Fashion Aesthetics (bento-grid photo layout)
+  // SLIDE — Fashion Aesthetics (photo grid)
   // =========================================================================
   // Same shape as `renderGallery` above (optional intro paragraph + a fixed,
-  // non-paginated photo layout) but laid out as an asymmetric "bento" grid
-  // instead of a uniform wall of squares: one large feature tile on the
-  // left, plus a 3-column x 2-row grid of smaller tiles filling the rest.
-  // Caps at 7 visible photos — the same VISIBLE_COUNT the site itself uses
-  // for this section (see TripDetailPage.tsx) — and shows a "+N" overlay
-  // on the last tile when there are more, mirroring that same site behavior.
+  // non-paginated wall of square photos) but as a 3-across, 2-row grid (6
+  // photos) instead of Places' 4-across, 2-row wall. Shows a "+N" overlay
+  // on the last tile when there are more than 6 photos.
   async function renderFashion() {
     const allPhotos = trip.fashion_photos ?? [];
     if (allPhotos.length === 0) return;
@@ -1904,63 +1982,61 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       }) + 14;
     }
 
-    const VISIBLE = 7;
-    const photos = allPhotos.slice(0, VISIBLE);
+    const cols = 3;
+    const rows = 2;
+    const colGap = 14;
+    const rowGap = 14;
+    const photos = allPhotos.slice(0, cols * rows);
     const remaining = allPhotos.length - photos.length;
+
+    // Square size is whichever of width- or height-driven fits smaller, so
+    // the grid always stays made of true squares; centeredTop/horizontal
+    // centering below then spreads that grid evenly across whatever space
+    // is left over in the other dimension. Same approach as renderGallery.
+    const squareByWidth = (CONTENT_W - colGap * (cols - 1)) / cols;
     const availH = CONTENT_BOTTOM - contentTop;
-    const gap = 12;
+    const squareByHeight = (availH - rowGap * (rows - 1)) / rows;
+    const square = Math.min(squareByWidth, squareByHeight);
 
-    const gridCols = 3;
-    const gridRows = 2;
-    const bigW = CONTENT_W * 0.4;
-    const gridX0 = MARGIN + bigW + gap;
-    const gridColW = (CONTENT_W - bigW - gap - gap * (gridCols - 1)) / gridCols;
-    const rowH = (availH - gap * (gridRows - 1)) / gridRows;
+    const gridW = cols * square + colGap * (cols - 1);
+    const gridH = rows * square + rowGap * (rows - 1);
+    const gridX = MARGIN + (CONTENT_W - gridW) / 2;
+    const gridY = centeredTop(contentTop, CONTENT_BOTTOM, gridH);
 
-    const tiles: { x: number; y: number; w: number; h: number }[] = [
-      { x: MARGIN, y: contentTop, w: bigW, h: availH },
-    ];
-    for (let r = 0; r < gridRows; r++) {
-      for (let c = 0; c < gridCols; c++) {
-        tiles.push({
-          x: gridX0 + c * (gridColW + gap),
-          y: contentTop + r * (rowH + gap),
-          w: gridColW,
-          h: rowH,
-        });
-      }
-    }
-
-    const crops = await Promise.all(photos.map((url, i) => loadCoverCroppedImage(url, tiles[i].w, tiles[i].h, 8)));
+    const crops = await Promise.all(photos.map(url => loadCoverCroppedImage(url, square, square, 8)));
 
     crops.forEach((cropped, i) => {
-      const tile = tiles[i];
-      let drawn = false;
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const x = gridX + col * (square + colGap);
+      const y = gridY + row * (square + rowGap);
       if (cropped) {
         try {
-          doc.addImage(cropped, 'JPEG', tile.x, tile.y, tile.w, tile.h);
-          drawn = true;
+          doc.addImage(cropped, 'JPEG', x, y, square, square);
         } catch {
-          drawn = false;
+          setFill(COLORS.backgroundWarm);
+          doc.roundedRect(x, y, square, square, 8, 8, 'F');
+          setDraw(COLORS.grayLineSoft);
+          doc.setLineWidth(0.75);
+          doc.roundedRect(x, y, square, square, 8, 8, 'S');
         }
-      }
-      if (!drawn) {
+      } else {
         setFill(COLORS.backgroundWarm);
-        doc.roundedRect(tile.x, tile.y, tile.w, tile.h, 8, 8, 'F');
+        doc.roundedRect(x, y, square, square, 8, 8, 'F');
         setDraw(COLORS.grayLineSoft);
         doc.setLineWidth(0.75);
-        doc.roundedRect(tile.x, tile.y, tile.w, tile.h, 8, 8, 'S');
+        doc.roundedRect(x, y, square, square, 8, 8, 'S');
       }
 
       if (i === photos.length - 1 && remaining > 0) {
         withOpacity(0.55, () => {
           setFill(COLORS.dark);
-          doc.roundedRect(tile.x, tile.y, tile.w, tile.h, 8, 8, 'F');
+          doc.roundedRect(x, y, square, square, 8, 8, 'F');
         });
         setText(COLORS.white);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(16);
-        doc.text(`+${remaining}`, tile.x + tile.w / 2, tile.y + tile.h / 2 + 5, { align: 'center' });
+        doc.text(`+${remaining}`, x + square / 2, y + square / 2 + 5, { align: 'center' });
       }
     });
   }
@@ -2108,14 +2184,15 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     newSlide();
     slideHeader(null, 'Trip Leader & Booking', 'Meet your host, then reserve your seat below');
 
-    const CARDS_TOP = 90;
-    const CARDS_BOTTOM = 380;
+    const CARDS_TOP = 108;
+    const CARDS_BOTTOM = 415;
     const PAD = 20;
-    const leftW = 300;
+    const leftW = 470;
     const colGapCards = 20;
     const leftX = MARGIN;
     const rightX = leftX + leftW + colGapCards;
     const rightW = CONTENT_W - leftW - colGapCards;
+    const cardCX = rightX + rightW / 2; // horizontal center of the booking card, for the centered layout below
 
     function cardShell(x: number, w: number) {
       setFill(COLORS.cream);
@@ -2202,14 +2279,14 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.text('Trip leader details coming soon.', leftX + PAD, CARDS_TOP + PAD + 40);
     }
 
-    // -- Right: Booking Form (heading, then price, reserve badge, meta row,
-    // CTA, links — same summary as the closing slide's booking card, just
-    // shifted down under its own heading since this page has no cursive
-    // intro line above it) --
+    // -- Right: Booking Form — a centered, single-column layout matching the
+    // live site's <BookingForm> widget exactly (price, per-person, savings
+    // badges, offer countdown, a full-width reserve/status box, a stacked
+    // trip-facts list, the CTA button, quick links and a reassurance note). --
     setText(COLORS.dark);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14.5);
-    doc.text('Booking Form', rightX + PAD, CARDS_TOP + PAD + 6);
+    doc.text('Secure Your Spot Soon', cardCX, CARDS_TOP + PAD + 6, { align: 'center' });
 
     const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
     const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
@@ -2219,131 +2296,173 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const remainingAfterAdvance =
       activePrice != null && trip.advance_amount != null ? Math.max(0, activePrice - trip.advance_amount) : null;
 
-    const BOOK_TOP = CARDS_TOP + 30; // clears the "Booking Form" heading above
-    const priceColW = rightW * 0.58;
-    const reserveColX = rightX + PAD + priceColW + 18;
-    const reserveColW = rightX + rightW - PAD - reserveColX;
+    const BOOK_TOP = CARDS_TOP + 30; // clears the "Secure Your Spot Soon" heading above
+    const innerLeft = rightX + PAD;
+    const innerRight = rightX + rightW - PAD;
+    const innerW = innerRight - innerLeft;
 
-    // Price stack (left sub-column)
+    let ry = BOOK_TOP + 8;
+
+    // Price row: main price + strikethrough, centered as one group
     if (activePrice != null) {
-      let ry = BOOK_TOP + PAD;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(24);
+      const priceStr = heroMoney(activePrice);
+      const priceW = doc.getTextWidth(priceStr);
+
+      let strikeStr = '';
+      let strikeW = 0;
+      if (strikeThroughPrice != null) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(12);
+        strikeStr = heroMoney(strikeThroughPrice);
+        strikeW = doc.getTextWidth(strikeStr);
+      }
+      const gap1 = strikeStr ? 10 : 0;
+      let px = cardCX - (priceW + gap1 + strikeW) / 2;
+
       setText(COLORS.primary);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(27);
-      const priceStr = formatPrice(activePrice);
-      doc.text(priceStr, rightX + PAD, ry + 20);
-      const px = rightX + PAD + doc.getTextWidth(priceStr) + 10;
-      if (strikeThroughPrice != null) {
+      doc.setFontSize(24);
+      doc.text(priceStr, px, ry);
+      px += priceW + gap1;
+
+      if (strikeStr) {
         setText(COLORS.darkMuted);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(13);
-        const strikeStr = formatPrice(strikeThroughPrice);
-        doc.text(strikeStr, px, ry + 20);
-        const sw = doc.getTextWidth(strikeStr);
+        doc.setFontSize(12);
+        doc.text(strikeStr, px, ry);
         setDraw(COLORS.darkMuted);
         doc.setLineWidth(1);
-        doc.line(px, ry + 15, px + sw, ry + 15);
+        doc.line(px, ry - 4, px + strikeW, ry - 4);
       }
-      ry += 26;
+      ry += 15;
+
       setText(COLORS.darkMuted);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.text('per person', rightX + PAD, ry);
-      ry += 18;
+      doc.setFontSize(8.6);
+      doc.text('per person', cardCX, ry, { align: 'center' });
+      ry += 16;
 
-      let bx = rightX + PAD;
-      const badgeY = ry;
-      if (strikeThroughPrice != null) {
-        const saveLabel = `Save ${formatPrice(strikeThroughPrice - activePrice)}`;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        const w = doc.getTextWidth(saveLabel) + 16;
-        setFill([232, 247, 237] as RGB);
-        doc.roundedRect(bx, badgeY - 12, w, 18, 5, 5, 'F');
-        setText(COLORS.green);
-        doc.text(saveLabel, bx + 8, badgeY + 1);
-        bx += w + 8;
+      // Savings / Early Bird badges, centered as a row
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.6);
+      const saveLabel = strikeThroughPrice != null ? `Save ${money(strikeThroughPrice - activePrice)}` : null;
+      const saveW = saveLabel ? doc.getTextWidth(saveLabel) + 16 : 0;
+      const earlyLabel = isEarlyBird ? 'Early Bird' : null;
+      const earlyW = earlyLabel ? doc.getTextWidth(earlyLabel) + 16 : 0;
+      const badgeGap = saveLabel && earlyLabel ? 8 : 0;
+      const badgesTotalW = saveW + badgeGap + earlyW;
+      if (badgesTotalW > 0) {
+        let bx = cardCX - badgesTotalW / 2;
+        const badgeY = ry;
+        if (saveLabel) {
+          setFill([232, 247, 237] as RGB);
+          doc.roundedRect(bx, badgeY - 12, saveW, 17, 5, 5, 'F');
+          setText(COLORS.green);
+          doc.text(saveLabel, bx + 8, badgeY + 1);
+          bx += saveW + badgeGap;
+        }
+        if (earlyLabel) {
+          setFill(COLORS.secondary);
+          doc.roundedRect(bx, badgeY - 12, earlyW, 17, 5, 5, 'F');
+          setText(COLORS.white);
+          doc.text(earlyLabel, bx + 8, badgeY + 1);
+        }
+        ry += 15;
       }
-      if (isEarlyBird) {
-        const label = 'Early Bird';
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        const w = doc.getTextWidth(label) + 16;
-        setFill(COLORS.secondary);
-        doc.roundedRect(bx, badgeY - 12, w, 18, 5, 5, 'F');
-        setText(COLORS.white);
-        doc.text(label, bx + 8, badgeY + 1);
-      }
-      ry += 22;
 
+      // Offer countdown / expiry note, centered (icon + text as one group)
       if (isEarlyBird && trip.early_bird_deadline) {
-        icons.clock(rightX + PAD, ry + 8, 11, COLORS.secondary);
-        setText(COLORS.secondary);
+        const label = `Offer ends ${formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}`;
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8.6);
-        doc.text(
-          `Offer ends ${formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}`,
-          rightX + PAD + 15,
-          ry + 6
-        );
+        doc.setFontSize(8.4);
+        const w = doc.getTextWidth(label);
+        const gx = cardCX - (14 + w) / 2;
+        icons.clock(gx, ry + 6, 11, COLORS.secondary);
+        setText(COLORS.secondary);
+        doc.text(label, gx + 14, ry + 5);
+        ry += 13;
       } else if (deadlinePassed) {
         setText(COLORS.darkMuted);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.6);
-        doc.text('Early-bird offer has ended', rightX + PAD, ry + 6);
+        doc.setFontSize(8.4);
+        doc.text('Early-bird offer has ended', cardCX, ry + 5, { align: 'center' });
+        ry += 13;
       }
     }
 
-    // Reserve badge box (right sub-column)
-    const reserveTop = BOOK_TOP + PAD;
+    // Full-width divider before the reserve/status box
+    const dividerY = ry + 6;
+    setDraw(COLORS.grayLineSoft);
+    doc.setLineWidth(1);
+    doc.line(innerLeft, dividerY, innerRight, dividerY);
+    ry = dividerY + 10;
+
+    // Reserve / status box — full width, matching the live site's green
+    // "Reserve today" panel (or the sold-out / almost-full variants)
+    const boxTop = ry;
+    let boxH = 30;
     if (isFull) {
+      boxH = 36;
       setFill([253, 235, 234] as RGB);
-      doc.roundedRect(reserveColX, reserveTop, reserveColW, 40, 10, 10, 'F');
+      doc.roundedRect(innerLeft, boxTop, innerW, boxH, 10, 10, 'F');
       setText(COLORS.red);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10.5);
-      doc.text('Sold Out', reserveColX + 12, reserveTop + 24);
+      doc.text('Sold Out', cardCX, boxTop + boxH / 2 + 4, { align: 'center' });
     } else if (isAlmostFull) {
+      boxH = 36;
       setFill([254, 243, 226] as RGB);
-      doc.roundedRect(reserveColX, reserveTop, reserveColW, 56, 10, 10, 'F');
+      doc.roundedRect(innerLeft, boxTop, innerW, boxH, 10, 10, 'F');
       setText([180, 120, 20] as RGB);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.3);
-      const lines = clampLines(`Only ${remaining} seats left \u2014 almost full!`, reserveColW - 24, 2);
-      doc.text(lines, reserveColX + 12, reserveTop + 22);
+      doc.setFontSize(9.6);
+      doc.text(`Only ${remaining} seats left \u2014 almost full!`, cardCX, boxTop + boxH / 2 + 4, { align: 'center' });
     } else if (trip.advance_amount != null) {
+      boxH = 40;
       setFill([232, 247, 237] as RGB);
-      doc.roundedRect(reserveColX, reserveTop, reserveColW, 56, 10, 10, 'F');
-      icons.check(reserveColX + 14, reserveTop + 30, 20, COLORS.green);
-      setText(COLORS.dark);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.4);
-      const l1 = clampLines(`Reserve today with only ${formatPrice(trip.advance_amount)}`, reserveColW - 42, 2);
-      doc.text(l1, reserveColX + 34, reserveTop + 16);
-      const ny2 = reserveTop + 16 + l1.length * 11;
+      doc.roundedRect(innerLeft, boxTop, innerW, boxH, 10, 10, 'F');
+      const iconX = innerLeft + 16;
+      const textX = iconX + 22;
+      icons.check(iconX, boxTop + boxH / 2, 18, COLORS.green);
+      drawMixedLine(
+        textX,
+        boxTop + 16,
+        [
+          { text: 'Reserve today with only ', color: COLORS.dark, bold: true },
+          { text: money(trip.advance_amount), color: COLORS.green, bold: true },
+        ],
+        9.4
+      );
       if (remainingAfterAdvance != null) {
-        setText(COLORS.darkMuted);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.8);
-        const l2 = clampLines(`Remaining ${formatPrice(remainingAfterAdvance)} payable before the trip.`, reserveColW - 42, 2);
-        doc.text(l2, reserveColX + 34, ny2 + 4);
+        drawMixedLine(
+          textX,
+          boxTop + 29,
+          [
+            { text: 'Remaining ', color: COLORS.darkMuted },
+            { text: money(remainingAfterAdvance), color: COLORS.dark, bold: true },
+            { text: ' payable before the trip.', color: COLORS.darkMuted },
+          ],
+          7.8
+        );
       }
     } else {
+      boxH = 28;
       setFill([232, 247, 237] as RGB);
-      doc.roundedRect(reserveColX, reserveTop, reserveColW, 30, 8, 8, 'F');
+      doc.roundedRect(innerLeft, boxTop, innerW, boxH, 8, 8, 'F');
       setText(COLORS.green);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.3);
-      doc.text('Seats available', reserveColX + 12, reserveTop + 19);
+      doc.setFontSize(9.6);
+      doc.text('Seats available', cardCX, boxTop + boxH / 2 + 4, { align: 'center' });
     }
+    ry = boxTop + boxH + 12;
+
+    // Trip-facts list: label+icon on the left, value right-aligned
     setDraw(COLORS.grayLineSoft);
     doc.setLineWidth(1);
-    doc.line(reserveColX - 9, BOOK_TOP + PAD - 4, reserveColX - 9, BOOK_TOP + 96);
-
-    // Meta row: Dates / Duration / Group Size / Age Range
-    const metaTop = BOOK_TOP + 130;
-    setDraw(COLORS.grayLineSoft);
-    doc.line(rightX + PAD, metaTop - 12, rightX + rightW - PAD, metaTop - 12);
+    doc.line(innerLeft, ry, innerRight, ry);
+    ry += 15;
 
     const metaItems: { icon: (x: number, y: number, s?: number, color?: RGB) => void; label: string; value: string }[] = [
       { icon: icons.calendar, label: 'Dates', value: formatDateRange(trip.start_date, trip.end_date) },
@@ -2351,48 +2470,53 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       { icon: icons.users, label: 'Group Size', value: `Max ${trip.total_seats}` },
       { icon: icons.userCheck, label: 'Age Range', value: formatAgeRange(trip.min_age, trip.max_age) },
     ];
-    const metaColW = (rightW - PAD * 2) / metaItems.length;
-    metaItems.forEach((item, i) => {
-      const mx = rightX + PAD + metaColW * i;
-      item.icon(mx, metaTop + 12, 13, COLORS.primary);
+    const rowH = 15;
+    metaItems.forEach(item => {
+      item.icon(innerLeft + 6, ry - 3, 12, COLORS.primary);
       setText(COLORS.darkMuted);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.text(item.label, mx + 17, metaTop + 3);
+      doc.setFontSize(9);
+      doc.text(item.label, innerLeft + 20, ry);
       setText(COLORS.dark);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.5);
-      const vLines = clampLines(item.value, metaColW - 22, 2);
-      doc.text(vLines, mx + 17, metaTop + 16);
+      doc.text(item.value, innerRight, ry, { align: 'right' });
+      ry += rowH;
     });
+    ry += 6;
 
-    // CTA button
-    const btnY = metaTop + 38;
+    // CTA button — full width, label + arrow icon (no lock glyph, per the
+    // live site's button), whole area stays clickable
     const showAdvance = trip.advance_amount != null && !isFull;
-    const btnH = showAdvance ? 38 : 30;
+    const btnH = showAdvance ? 36 : 32;
+    const btnY = ry;
     setFill(COLORS.primary);
-    doc.roundedRect(rightX + PAD, btnY, rightW - PAD * 2, btnH, 10, 10, 'F');
-    icons.lock(rightX + PAD + 16, btnY + btnH / 2 + 9, 17, COLORS.white);
+    doc.roundedRect(innerLeft, btnY, innerW, btnH, 10, 10, 'F');
     setText(COLORS.white);
-    if (isFull) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('JOIN WAITLIST', rightX + PAD + 38, btnY + btnH / 2 + 4);
-    } else if (showAdvance) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('SECURE YOUR SPOT', rightX + PAD + 38, btnY + btnH / 2 - 3);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    const ctaLabel = isFull ? 'Join Waitlist' : showAdvance ? 'Secure Your Spot' : 'Book Your Seat';
+    const ctaLabelW = doc.getTextWidth(ctaLabel);
+    const ctaGroupW = ctaLabelW + 8 + 12;
+    const ctaTextY = showAdvance ? btnY + 16 : btnY + btnH / 2 + 4;
+    const ctaStartX = cardCX - ctaGroupW / 2;
+    doc.text(ctaLabel, ctaStartX, ctaTextY);
+    drawArrowRight(ctaStartX + ctaLabelW + 14, ctaTextY - 4, 12, COLORS.white);
+    if (showAdvance) {
+      setText(COLORS.white);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.6);
-      doc.text(`At only ${formatPrice(trip.advance_amount as number)} today`, rightX + PAD + 38, btnY + btnH / 2 + 11);
-    } else {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('BOOK YOUR SEAT', rightX + PAD + 38, btnY + btnH / 2 + 4);
+      doc.setFontSize(8.4);
+      doc.text(`At only ${money(trip.advance_amount as number)} today`, cardCX, btnY + 29, { align: 'center' });
     }
+    // Whole button is clickable — opens this trip's page with its booking
+    // form pre-opened (TripDetailPage watches for "?book=1").
+    doc.link(innerLeft, btnY, innerW, btnH, {
+      url: `https://${BRAND.website.replace('www.', '')}/trips/${trip.slug}?book=1`,
+    });
+    ry = btnY + btnH + 14;
 
-    // Link row: Add to calendar | Share this trip | Download itinerary
-    const linkY = btnY + btnH + 18;
+    // Quick links row, centered: Add to calendar | Share this trip | Download itinerary
+    const linkY = ry;
     const linkItems = [
       { icon: icons.calendar, label: 'Add to calendar' },
       { icon: icons.share, label: 'Share this trip' },
@@ -2400,38 +2524,57 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     ];
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.1);
-    let linkX = rightX + PAD;
+    const linkSepW = 16;
+    const linkIconGap = 15;
+    const linkTotalW =
+      linkItems.reduce((sum, item) => sum + linkIconGap + doc.getTextWidth(item.label), 0) + linkSepW * (linkItems.length - 1);
+    let linkX = cardCX - linkTotalW / 2;
     linkItems.forEach((item, i) => {
       item.icon(linkX, linkY + 5, 11, COLORS.darkMuted);
       setText(COLORS.darkMuted);
-      doc.text(item.label, linkX + 15, linkY + 3);
-      linkX += doc.getTextWidth(item.label) + 33;
+      doc.text(item.label, linkX + linkIconGap, linkY + 3);
+      linkX += linkIconGap + doc.getTextWidth(item.label);
       if (i < linkItems.length - 1) {
         setDraw(COLORS.grayLineSoft);
-        doc.line(linkX - 15, linkY - 5, linkX - 15, linkY + 7);
+        doc.line(linkX + linkSepW / 2, linkY - 5, linkX + linkSepW / 2, linkY + 7);
+        linkX += linkSepW;
       }
+    });
+    ry = linkY + 18;
+
+    // Reassurance note, centered with a small check icon before the first line
+    setText(COLORS.darkMuted);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.6);
+    const noteLines: string[] = doc.splitTextToSize("No payment required to enquire. We'll contact you within 24 hours.", innerW - 20);
+    const firstLineW = doc.getTextWidth(noteLines[0]);
+    icons.check(cardCX - firstLineW / 2 - 12, ry + 2, 10, COLORS.green);
+    noteLines.forEach((line, i) => {
+      doc.text(line, cardCX, ry + i * 10, { align: 'center' });
     });
 
     // ---- Contact bar (from BRAND — the site's existing contact info) ----
-    const CONTACT_TOP = 400;
-    const CONTACT_BOTTOM = 460;
+    const CONTACT_TOP = 425;
+    const CONTACT_BOTTOM = 470;
     setFill(COLORS.cream);
     doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 12, 12, 'F');
     setDraw(COLORS.grayLine);
     doc.setLineWidth(1);
     doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 12, 12, 'S');
 
+    const siteDomain = BRAND.website.replace('www.', '');
     const contactItems: { icon: (x: number, y: number, s?: number, color?: RGB) => void; title: string; value: string; url?: string }[] = [
-      { icon: icons.headset, title: 'Need Help?', value: "We're just a message away!" },
-      { icon: icons.phone, title: 'Call / WhatsApp', value: BRAND.phone, url: `tel:${BRAND.phone.replace(/\s/g, '')}` },
+      { icon: icons.headset, title: 'Need Help?', value: "We're just a message away!", url: `https://${siteDomain}/contact` },
+      { icon: icons.whatsapp, title: 'Call / WhatsApp', value: BRAND.phone, url: `https://wa.me/${BRAND.phone.replace(/\D/g, '')}` },
       { icon: icons.mail, title: 'Email Us', value: BRAND.email, url: `mailto:${BRAND.email}` },
-      { icon: icons.globe, title: 'Website', value: BRAND.website, url: `https://${BRAND.website.replace('www.', '')}` },
+      { icon: icons.globe, title: 'Website', value: BRAND.website, url: `https://${siteDomain}` },
       { icon: icons.instagram, title: 'Follow Us', value: BRAND.instagram, url: `https://instagram.com/${BRAND.instagram.replace('@', '')}` },
     ];
     const contactColW = CONTENT_W / contactItems.length;
     const contactMidY = CONTACT_TOP + (CONTACT_BOTTOM - CONTACT_TOP) / 2;
     contactItems.forEach((item, i) => {
-      const cx0 = MARGIN + contactColW * i + 18;
+      const colX = MARGIN + contactColW * i;
+      const cx0 = colX + 18;
       setFill(COLORS.backgroundWarm);
       doc.circle(cx0 + 12, contactMidY, 15, 'F');
       item.icon(cx0, contactMidY + 12, 20, COLORS.primary);
@@ -2445,7 +2588,9 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.setFontSize(8.4);
       if (item.url) {
         setText(COLORS.primary);
-        doc.textWithLink(item.value, tx, contactMidY + 10, { url: item.url });
+        doc.text(item.value, tx, contactMidY + 10);
+        // Whole card (icon + title + value) is clickable, not just the value line.
+        doc.link(colX, CONTACT_TOP, contactColW, CONTACT_BOTTOM - CONTACT_TOP, { url: item.url });
       } else {
         setText(COLORS.darkMuted);
         doc.text(item.value, tx, contactMidY + 10);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
@@ -91,6 +91,7 @@ function getThingsToCarryIcon(item: string): LucideIcon {
 
 export default function TripDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -172,6 +173,13 @@ export default function TripDetailPage() {
       .catch(() => setTrip(null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Deep-link support for "?book=1" (e.g. the downloaded itinerary PDF's
+  // "Secure Your Spot" link) — opens the booking modal automatically once
+  // the trip has loaded, instead of requiring the visitor to find the CTA.
+  useEffect(() => {
+    if (trip && searchParams.get('book') === '1') setBookingOpen(true);
+  }, [trip, searchParams]);
 
   // Countdown timer — live tick toward trip start_date
   useEffect(() => {
