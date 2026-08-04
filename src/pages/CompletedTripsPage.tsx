@@ -168,7 +168,7 @@ export default function CompletedTripsPage() {
       </div>
 
       {/* Albums Grid */}
-      <div className="relative isolate px-6 lg:px-8 pt-12 md:pt-16">
+      <div className="relative isolate px-6 lg:px-8 pt-6 md:pt-16">
         <div className="max-w-[1344px] mx-auto">
         <div className="mb-6 md:mb-12 flex justify-center">
           <SectionTitle
@@ -182,8 +182,8 @@ export default function CompletedTripsPage() {
       </div>
 
       {/* Search & Filters */}
-      <div className="border-b border-background-warm sticky top-[72px] z-30 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1344px] mx-auto py-4">
+      <div className="bg-background border-b border-background-warm sticky top-[72px] z-30 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1344px] mx-auto py-0 md:py-4">
           <div className="flex gap-3 sm:gap-4">
             {/* Search */}
             <div className="relative flex-1">
@@ -255,7 +255,7 @@ export default function CompletedTripsPage() {
       </div>
 
       {/* Albums Grid */}
-      <div className="relative isolate px-6 lg:px-8 py-12 md:py-16">
+      <div className="relative isolate px-6 lg:px-8 py-6 md:py-16">
         <div className="max-w-[1344px] mx-auto">
 
         {loading ? (
@@ -272,7 +272,7 @@ export default function CompletedTripsPage() {
           </div>
         ) : (
           <>
-            <p className="text-dark-muted text-sm mb-8">
+            <p className="text-dark-muted text-sm mb-6 md:mb-8">
               Showing <span className="font-semibold text-dark">{filtered.length}</span> album{filtered.length !== 1 ? 's' : ''}
             </p>
             {/* All albums shown in a single grid — no carousel */}

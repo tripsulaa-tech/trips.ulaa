@@ -1,24 +1,13 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Heart, Mountain, Image, Users, Home, ChevronRight, Info } from 'lucide-react';
+import { Mail, Phone, MapPin, Heart, Home, ChevronRight } from 'lucide-react';
 import { getWhatsAppLink } from '../../utils/utils-index';
+import { getSiteContent } from '../../services/api';
+import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
+import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
+import type { BottomNavItemConfig } from '../../types/types-index';
 
 const WHATSAPP_NUMBER = '916381336772';
-
-const navItems = [
-  { label: 'Upcoming Trips', to: '/trips', icon: Mountain },
-  { label: 'Completed Trips', to: '/completed-trips', icon: Image },
-  { label: 'About ULAA', to: '/about', icon: Users },
-  { label: 'Contact Us', to: '/contact', icon: Phone },
-];
-
-// Desktop "Quick Links" column includes Home in addition to the mobile nav items
-const quickLinks = [
-  { label: 'Home', to: '/', icon: Home },
-  { label: 'Upcoming Trips', to: '/trips', icon: Mountain },
-  { label: 'Completed Trips', to: '/completed-trips', icon: Image },
-  { label: 'About Us', to: '/about', icon: Info },
-  { label: 'Contact', to: '/contact', icon: Phone },
-];
 
 const socialItems = [
   {
@@ -54,6 +43,38 @@ const socialItems = [
 export default function Footer() {
   const year = new Date().getFullYear();
 
+  // Mirrors the same admin-configurable tabs used by the mobile BottomNav
+  // (see /admin/bottom-nav, AdminBottomNav.tsx) so the footer's nav links —
+  // icon and label alike — always stay in sync with the site's bottom nav
+  // bar instead of drifting out of consistency with it.
+  const [navConfig, setNavConfig] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);
+
+  useEffect(() => {
+    getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+      .then(data => {
+        if (data && data.length > 0) setNavConfig(data);
+      })
+      .catch(() => {
+        // Fetch failed — keep the defaults already in state.
+      });
+  }, []);
+
+  // Mobile nav row excludes Home (there's already a dedicated logo/home
+  // link above it), matching the bottom nav bar's remaining tabs.
+  const navItems = navConfig
+    .filter(item => item.to !== '/')
+    .map(item => ({
+      label: item.label,
+      to: item.to,
+      icon: getTripHighlightIcon(item.icon)?.Icon ?? Home,
+    }));
+
+  // Desktop "Quick Links" column includes Home in addition to the same tabs.
+  const quickLinks = [
+    { label: 'Home', to: '/', icon: Home },
+    ...navItems,
+  ];
+
   return (
     <footer className="bg-[#271e18] text-[#fdfcf6] overflow-hidden">
       {/* ===================== MOBILE / TABLET ===================== */}
@@ -88,7 +109,6 @@ export default function Footer() {
               <span className="w-16 h-16 rounded-full border border-[#a85a2a]/40 flex items-center justify-center text-[#e4782f] transition-colors group-hover:bg-[#a85a2a]/10">
                 {icon}
               </span>
-              <span className="text-[13px] text-[#fdfcf6]/90">{label}</span>
             </a>
           ))}
         </div>
