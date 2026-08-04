@@ -68,7 +68,7 @@ function loadNavOrder(): NavOrder {
     const known = new Set(Object.keys(NAV_ITEM_DEFS));
     const seen = new Set<string>();
     const dedupeKnown = (labels: unknown[]) =>
-      labels.filter((l): l is string => typeof l === 'string' && known.has(l) && !seen.has(l) && seen.add(l));
+      labels.filter((l): l is string => typeof l === 'string' && known.has(l) && !seen.has(l) && (seen.add(l), true));
 
     const topLevel = dedupeKnown(parsed.topLevel);
     const groupChildren = dedupeKnown(parsed.groupChildren);
