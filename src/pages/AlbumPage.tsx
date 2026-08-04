@@ -138,7 +138,13 @@ export default function AlbumPage() {
       <Layout>
         <div className="min-h-screen flex flex-col items-center justify-center">
           <p className="font-display text-3xl text-dark-muted">Album not found.</p>
-          <Link to="/completed-trips" className="mt-4 text-primary hover:underline">← Back to Trips</Link>
+          <Link
+            to="/completed-trips"
+            onClick={() => sessionStorage.setItem('ulaa:restoreScroll:/completed-trips', '1')}
+            className="mt-4 text-primary hover:underline"
+          >
+            ← Back to Trips
+          </Link>
         </div>
       </Layout>
     );
@@ -156,7 +162,15 @@ export default function AlbumPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-dark/30 via-dark/20 to-dark/90" />
         <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-16 max-w-[1344px] mx-auto left-0 right-0">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <Link to="/completed-trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors">
+            <Link
+              to="/completed-trips"
+              onClick={() => {
+                // Tell the albums grid to restore the scroll position the
+                // user was at instead of landing back at the top.
+                sessionStorage.setItem('ulaa:restoreScroll:/completed-trips', '1');
+              }}
+              className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors"
+            >
               <ArrowLeft size={16} /> All Albums
             </Link>
             <a

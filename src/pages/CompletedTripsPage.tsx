@@ -78,6 +78,32 @@ export default function CompletedTripsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Keep track of how far down this page the user has scrolled, so that if
+  // they open an album and then follow its "All Albums" link back here, we
+  // can put them back where they were instead of dropping them at the top.
+  useEffect(() => {
+    const handleScroll = () => {
+      sessionStorage.setItem('ulaa:scrollY:/completed-trips', String(window.scrollY));
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Once the trips have loaded (so the grid has its real height) and the
+  // album page has flagged that we should restore, scroll back to the
+  // saved position. The flag is cleared immediately after so a normal,
+  // fresh visit to this page (e.g. from the footer or nav) still starts
+  // at the top.
+  useEffect(() => {
+    if (loading) return;
+    const shouldRestore = sessionStorage.getItem('ulaa:restoreScroll:/completed-trips');
+    if (shouldRestore) {
+      sessionStorage.removeItem('ulaa:restoreScroll:/completed-trips');
+      const savedY = Number(sessionStorage.getItem('ulaa:scrollY:/completed-trips') || 0);
+      requestAnimationFrame(() => window.scrollTo({ top: savedY, behavior: 'smooth' }));
+    }
+  }, [loading]);
+
   // Live publish/draft status — when the admin publishes a new album (or
   // unpublishes/deletes one) while someone is already sitting on this page,
   // re-pull the public list so it appears/disappears without needing a

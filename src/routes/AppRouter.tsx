@@ -13,6 +13,14 @@ function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
+    // Some pages (e.g. the completed-trips albums grid) ask to restore the
+    // scroll position the user was at instead of jumping to the top — for
+    // example when they follow an album's "All Albums" link back to the
+    // grid they were browsing. When that flag is set for this pathname,
+    // skip the reset and let the destination page handle restoring itself.
+    if (sessionStorage.getItem(`ulaa:restoreScroll:${pathname}`)) {
+      return;
+    }
     window.scrollTo(0, 0);
   }, [pathname]);
 

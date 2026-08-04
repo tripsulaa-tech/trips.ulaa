@@ -27,6 +27,31 @@ export default function UpcomingTripsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Keep track of how far down this page the user has scrolled, so that if
+  // they open a trip and then follow its "All Trips" link back here, we can
+  // put them back where they were instead of dropping them at the top.
+  useEffect(() => {
+    const handleScroll = () => {
+      sessionStorage.setItem('ulaa:scrollY:/trips', String(window.scrollY));
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Once the trips have loaded (so the grid has its real height) and the
+  // trip detail page has flagged that we should restore, smoothly scroll
+  // back to the saved position. The flag is cleared immediately after so a
+  // normal, fresh visit to this page still starts at the top.
+  useEffect(() => {
+    if (loading) return;
+    const shouldRestore = sessionStorage.getItem('ulaa:restoreScroll:/trips');
+    if (shouldRestore) {
+      sessionStorage.removeItem('ulaa:restoreScroll:/trips');
+      const savedY = Number(sessionStorage.getItem('ulaa:scrollY:/trips') || 0);
+      requestAnimationFrame(() => window.scrollTo({ top: savedY, behavior: 'smooth' }));
+    }
+  }, [loading]);
+
   // Live publish/draft + coming-soon status — re-pulls the public list the
   // moment an admin publishes a trip, unpublishes/deletes one, or flips
   // "Coming Soon", so anyone already on this page sees it appear/disappear

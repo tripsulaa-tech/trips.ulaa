@@ -324,7 +324,11 @@ export default function TripDetailPage() {
           <div className="relative sm:absolute sm:inset-0 w-full h-full">
             <div className="relative w-full h-full flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-32 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
               <motion.div className="flex flex-col" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-                <Link to="/trips" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-3 sm:mb-4 transition-colors w-fit">
+                <Link
+                  to="/trips"
+                  onClick={() => sessionStorage.setItem('ulaa:restoreScroll:/trips', '1')}
+                  className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-3 sm:mb-4 transition-colors w-fit"
+                >
                   <ArrowLeft size={16} /> All Trips
                 </Link>
                 <span className="inline-flex w-fit items-center gap-1.5 bg-amber-500 text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md mb-3 sm:mb-4">
@@ -447,7 +451,11 @@ export default function TripDetailPage() {
         <div className="relative sm:absolute sm:inset-0 w-full h-full">
           <div className="relative w-full h-full flex flex-col justify-end pl-4 sm:pl-6 lg:pl-8 pr-4 sm:pr-6 lg:pr-8 pt-32 sm:pt-28 pb-8 sm:pb-12 max-w-[1344px] mx-auto">
           <motion.div className="flex flex-col" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <Link to="/trips" className="order-1 inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-3 sm:mb-4 transition-colors">
+            <Link
+              to="/trips"
+              onClick={() => sessionStorage.setItem('ulaa:restoreScroll:/trips', '1')}
+              className="order-1 inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-3 sm:mb-4 transition-colors"
+            >
               <ArrowLeft size={16} /> All Trips
             </Link>
             <h1 className="order-3 sm:order-2 font-display text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-3 sm:mb-4 leading-tight">
