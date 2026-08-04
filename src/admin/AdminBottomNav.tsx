@@ -179,9 +179,13 @@ export default function AdminBottomNav() {
               </div>
             ))}
 
-            <Button variant="outline" size="sm" onClick={addTab}>
-              <Plus size={14} /> Add Tab
-            </Button>
+            <button
+              type="button"
+              onClick={addTab}
+              className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
+            >
+              <Plus size={13} /> Add Tab
+            </button>
           </div>
 
           <div className="sticky bottom-0 flex items-center gap-3 bg-white border-t border-background-warm px-6 py-4 rounded-b-md">

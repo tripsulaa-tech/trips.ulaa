@@ -581,9 +581,13 @@ export default function AdminAbout() {
               <div className="flex items-center justify-between">
                 <label className={`${labelClass} mb-0`}>Items</label>
                 {content.journey_intro.have_you_ever.items.length < 8 && (
-                  <Button variant="outline" size="sm" onClick={addHYEItem}>
-                    <Plus size={14} /> Add Item
-                  </Button>
+                  <button
+                    type="button"
+                    onClick={addHYEItem}
+                    className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
+                  >
+                    <Plus size={13} /> Add Item
+                  </button>
                 )}
               </div>
               <p className="text-xs text-dark-muted -mt-1">
@@ -636,9 +640,13 @@ export default function AdminAbout() {
               <div className="flex items-center justify-between">
                 <label className={`${labelClass} mb-0`}>Feature Items</label>
                 {content.journey_intro.welcome_to_ulaa.items.length < 8 && (
-                  <Button variant="outline" size="sm" onClick={addWTUItem}>
-                    <Plus size={14} /> Add Item
-                  </Button>
+                  <button
+                    type="button"
+                    onClick={addWTUItem}
+                    className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
+                  >
+                    <Plus size={13} /> Add Item
+                  </button>
                 )}
               </div>
               <p className="text-xs text-dark-muted -mt-1">
@@ -710,9 +718,13 @@ export default function AdminAbout() {
               <div className="flex items-center gap-3">
                 <span className="text-xs text-dark-muted">{content.why_different.cards.length} / 6</span>
                 {content.why_different.cards.length < 6 && (
-                  <Button variant="outline" size="sm" onClick={addWhyCard}>
-                    <Plus size={14} /> Add Card
-                  </Button>
+                  <button
+                    type="button"
+                    onClick={addWhyCard}
+                    className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
+                  >
+                    <Plus size={13} /> Add Card
+                  </button>
                 )}
               </div>
             </div>
@@ -875,9 +887,13 @@ export default function AdminAbout() {
             <div className="flex items-center justify-between">
               <label className={`${labelClass} mb-0`}>Journey Steps</label>
               {content.journey.steps.length < 10 && (
-                <Button variant="outline" size="sm" onClick={addStep}>
-                  <Plus size={14} /> Add Step
-                </Button>
+                <button
+                  type="button"
+                  onClick={addStep}
+                  className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
+                >
+                  <Plus size={13} /> Add Step
+                </button>
               )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

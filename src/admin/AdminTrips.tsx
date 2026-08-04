@@ -1191,9 +1191,9 @@ export default function AdminTrips() {
                 <button
                   type="button"
                   onClick={() => setForm(f => ({ ...f, included_groups: [...f.included_groups, { icon: '', heading: '', bullets: [] }] }))}
-                  className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+                  className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
                 >
-                  <Plus size={14} /> Add Group
+                  <Plus size={13} /> Add Group
                 </button>
               </div>
               <p className="text-xs text-dark-muted mb-3">Shown instead of the icon grid above when at least one group is added, e.g. a "Premium Stay Experience" heading with bulleted details below it.</p>

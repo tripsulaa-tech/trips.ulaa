@@ -2072,14 +2072,20 @@ export default function AdminEnquiries() {
                 </p>
                 <div className="flex items-center gap-2 ml-auto">
                   {bulkEditAllowed ? (
-                    <Button variant="outline" size="sm" onClick={openBulkEdit}>
+                    <button
+                      onClick={openBulkEdit}
+                      className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-background-warm text-dark hover:border-primary/30 transition-colors"
+                    >
                       <Pencil size={14} /> Bulk Edit
-                    </Button>
+                    </button>
                   ) : (
                     <span title="Bulk Edit is disabled when the selection spans more than one trip — pricing fields aren't safe to apply across trips with different prices.">
-                      <Button variant="outline" size="sm" disabled>
+                      <button
+                        disabled
+                        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-background-warm text-dark-muted/40 cursor-default"
+                      >
                         <Pencil size={14} /> Bulk Edit
-                      </Button>
+                      </button>
                     </span>
                   )}
                   <button

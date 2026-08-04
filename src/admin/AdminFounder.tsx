@@ -350,9 +350,13 @@ export default function AdminFounder() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className={`${labelClass} mb-0`}>Social Links</label>
-              <Button variant="outline" size="sm" onClick={addSocial}>
-                <Plus size={14} /> Add Link
-              </Button>
+              <button
+                type="button"
+                onClick={addSocial}
+                className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
+              >
+                <Plus size={13} /> Add Link
+              </button>
             </div>
             <p className="text-xs text-dark-muted -mt-1">
               Full URLs work best, but a bare username (e.g. "justjini_") also works for Instagram, LinkedIn, Facebook, X, YouTube, TikTok, and Pinterest. For WhatsApp, enter a phone number with country code (e.g. "919876543210"). For Mail/Gmail, enter the email address.
