@@ -27,7 +27,7 @@ const inputClass =
   'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 const labelClass = 'block text-sm font-medium text-dark mb-1';
 
-// The 7 sections, in order — drives both the tab bar pills and the
+// The 8 sections, in order — drives both the tab bar pills and the
 // scroll-spy (IntersectionObserver) that keeps the active pill in sync as
 // the admin scrolls. Sections themselves stay in one continuous scroll (like
 // the Add Trip modal's tab bar) — clicking a pill jumps to that section
@@ -38,8 +38,9 @@ const SECTION_TITLES = [
   '3 · To Unforgettable Journeys',
   '4 · Why ULAA is Different',
   '5 · Our Community',
-  '6 · What Our Girls Say',
-  '7 · Your ULAA Journey',
+  '6 · Statistics',
+  '7 · What Our Girls Say',
+  '8 · Your ULAA Journey',
 ];
 
 export default function AdminAbout() {
@@ -309,6 +310,9 @@ export default function AdminAbout() {
 
   const setCommunity = (field: string, value: unknown) =>
     setContent(p => ({ ...p, community: { ...p.community, [field]: value } }));
+
+  const setStats = (field: keyof AboutContent['stats'], value: string) =>
+    setContent(p => ({ ...p, stats: { ...p.stats, [field]: value } }));
 
   const setJourney = (field: string, value: unknown) =>
     setContent(p => ({ ...p, journey: { ...p.journey, [field]: value } }));
@@ -817,7 +821,44 @@ export default function AdminAbout() {
           />
         </div>
         <div ref={el => { sectionRefs.current[5] = el; }} data-section={6} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">6 · What Our Girls Say</h2>
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">6 · Statistics</h2>
+          <p className="text-xs text-dark-muted -mt-1">
+            The numbers themselves are calculated live from completed trips, so they're always accurate.
+            Only the labels below are editable here — and they're shared by both this page and the
+            Completed Trips page, so changing a name updates it in both places.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className={labelClass}>Girls Travelled Label</label>
+              <input
+                value={content.stats.girls_travelled_label}
+                onChange={e => setStats('girls_travelled_label', e.target.value)}
+                className={inputClass}
+                placeholder="Girls travelled"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Trips Completed Label</label>
+              <input
+                value={content.stats.trips_completed_label}
+                onChange={e => setStats('trips_completed_label', e.target.value)}
+                className={inputClass}
+                placeholder="Trips completed"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Destinations Label</label>
+              <input
+                value={content.stats.destinations_label}
+                onChange={e => setStats('destinations_label', e.target.value)}
+                className={inputClass}
+                placeholder="Destinations"
+              />
+            </div>
+          </div>
+        </div>
+        <div ref={el => { sectionRefs.current[6] = el; }} data-section={7} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">7 · What Our Girls Say</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Sub Heading</label>
@@ -852,8 +893,8 @@ export default function AdminAbout() {
             The testimonial cards themselves come from the Testimonials section of the admin panel.
           </p>
         </div>
-        <div ref={el => { sectionRefs.current[6] = el; }} data-section={7} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">7 · Your ULAA Journey</h2>
+        <div ref={el => { sectionRefs.current[7] = el; }} data-section={8} className="scroll-mt-4 space-y-4">
+          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">8 · Your ULAA Journey</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Sub Heading</label>

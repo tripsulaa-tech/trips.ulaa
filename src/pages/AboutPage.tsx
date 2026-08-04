@@ -7,6 +7,7 @@ import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import TestimonialCard from '../components/ui/TestimonialCard';
 import { getSiteContent, getTestimonials, getCompletedTrips } from '../services/api';
+import { subscribeToTable } from '../services/realtime';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
 import type {
@@ -45,14 +46,12 @@ const WELCOME_ICONS = [Heart, Users, ShieldCheck, Sparkles];
 // This fallback set covers legacy steps saved before the picker existed.
 const JOURNEY_ICONS = [Compass, Ticket, Backpack, Plane, Heart];
 
-// Have You Ever / Welcome to Ulaa icon circles: every icon shares one base
-// pastel color (rather than rotating through the trip-card palette), and
-// tapping the connector arrow fills the whole "Have You Ever" side red and
-// the whole "Welcome to Ulaa" side green.
-const JOURNEY_BASE_BG = '#FBEAD9';
-const JOURNEY_BASE_FG = '#C4703A';
-const HAVE_YOU_EVER_FILL = '#DC2626';
-const WELCOME_FILL = '#16A34A';
+// Have You Ever / Welcome to Ulaa icon circles: every icon on the "Have You
+// Ever" side is a muted, premium red, and every icon on the "Welcome to
+// Ulaa" side is a muted, premium green — both subtler than a pure/saturated
+// red or green so they sit quietly alongside the rest of the palette.
+const HAVE_YOU_EVER_FILL = '#B0524F';
+const WELCOME_FILL = '#4C8368';
 
 export default function AboutPage() {
   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
@@ -86,11 +85,6 @@ export default function AboutPage() {
     center: { x: 0, opacity: 1 },
     exit: (dir: number) => ({ x: dir > 0 ? -80 : 80, opacity: 0 }),
   };
-  // Tapping the glowing connector arrow fills every "Have You Ever" icon red
-  // and every "Welcome to Ulaa" icon green, all at once (tap again to
-  // revert). Mirrors the heart-tap-to-reveal pattern on the trip details page.
-  const [journeyActivated, setJourneyActivated] = useState(false);
-
   // Parallax hero — mirrors HeroSection.tsx exactly
   const heroContainerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: heroScrollY } = useScroll({
@@ -124,6 +118,22 @@ export default function AboutPage() {
     getCompletedTrips()
       .then(data => setCompletedTrips(data))
       .catch(() => {});
+  }, []);
+
+  // Live content — the instant an admin saves changes in AdminAbout (copy,
+  // images, the Statistics labels, etc.), re-pull this page's content so
+  // anyone already here sees the update without refreshing.
+  useEffect(() => {
+    const unsubscribe = subscribeToTable(
+      'site_content',
+      () => {
+        getSiteContent<Partial<AboutContent>>('about')
+          .then(data => setContent(mergeWithDefaults(data)))
+          .catch(() => {});
+      },
+      'key=eq.about'
+    );
+    return unsubscribe;
   }, []);
 
   const {
@@ -331,22 +341,14 @@ export default function AboutPage() {
             )}
           </motion.div>
           <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 px-6 py-12 sm:p-12">
-            {/* Center connector arrow — glows continuously to invite a tap; tapping fills every icon on both sides */}
+            {/* Center connector arrow — purely decorative */}
             <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex-col items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setJourneyActivated(v => !v)}
-                aria-pressed={journeyActivated}
-                aria-label={journeyActivated ? 'Tap to reset icon colors' : 'Tap to reveal icon colors'}
-                className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-warm-lg itinerary-icon-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              <span
+                aria-hidden="true"
+                className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-warm-lg"
               >
                 <ArrowRight size={22} className="text-white" />
-              </button>
-              {!journeyActivated && (
-                <span className="text-xs font-semibold text-primary whitespace-nowrap bg-white/80 px-2 py-0.5 rounded-full shadow-sm">
-                  Tap me!
-                </span>
-              )}
+              </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-0 md:divide-x md:divide-dashed md:divide-dark/20">
@@ -384,21 +386,13 @@ export default function AboutPage() {
                 <div className="md:hidden flex flex-col items-center gap-1.5 -mt-2 mb-6">
                   <div className="relative w-full flex items-center justify-center">
                     <span className="absolute left-0 right-0 border-t border-dashed border-dark/20" />
-                    <button
-                      type="button"
-                      onClick={() => setJourneyActivated(v => !v)}
-                      aria-pressed={journeyActivated}
-                      aria-label={journeyActivated ? 'Tap to reset icon colors' : 'Tap to reveal icon colors'}
-                      className="relative z-10 w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg itinerary-icon-glow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    <span
+                      aria-hidden="true"
+                      className="relative z-10 w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg"
                     >
                       <ArrowDown size={18} className="text-white" />
-                    </button>
-                  </div>
-                  {!journeyActivated && (
-                    <span className="text-xs font-semibold text-primary whitespace-nowrap bg-white px-2 py-0.5 rounded-full shadow-sm">
-                      Tap me!
                     </span>
-                  )}
+                  </div>
                 </div>
                 <motion.h2
                   {...fadeUp()}
@@ -417,21 +411,8 @@ export default function AboutPage() {
                         {...fadeUp(i * 0.1)}
                         className="flex flex-col items-center text-center gap-3"
                       >
-                        <div className="relative w-16 h-16 rounded-full flex-shrink-0">
-                          {/* base state — same pastel bg/color for every icon */}
-                          <span
-                            className="absolute inset-0 rounded-full flex items-center justify-center transition-opacity duration-300"
-                            style={{ backgroundColor: JOURNEY_BASE_BG, opacity: journeyActivated ? 0 : 1 }}
-                          >
-                            <Icon size={28} color={JOURNEY_BASE_FG} strokeWidth={1.75} />
-                          </span>
-                          {/* green fill state, triggered by the connector arrow */}
-                          <span
-                            className="absolute inset-0 rounded-full flex items-center justify-center transition-opacity duration-300"
-                            style={{ backgroundColor: WELCOME_FILL, opacity: journeyActivated ? 1 : 0 }}
-                          >
-                            <Icon size={28} color="#fff" strokeWidth={1.75} />
-                          </span>
+                        <div className="relative w-16 h-16 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: WELCOME_FILL }}>
+                          <Icon size={28} color="#fff" strokeWidth={1.75} />
                         </div>
                         <span className="text-dark-muted text-sm leading-snug">{item.title}</span>
                       </motion.div>
@@ -603,9 +584,9 @@ export default function AboutPage() {
         <div className="max-w-[1344px] mx-auto">
           <div className="grid grid-cols-3 gap-6 text-center text-white">
             {[
-              { value: `${statsDisplay.girls_travelled}+`, label: 'Girls travelled' },
-              { value: `${statsDisplay.trips_completed}+`, label: 'Trips completed' },
-              { value: `${statsDisplay.destinations}+`, label: 'Destinations' },
+              { value: `${statsDisplay.girls_travelled}+`, label: stats.girls_travelled_label },
+              { value: `${statsDisplay.trips_completed}+`, label: stats.trips_completed_label },
+              { value: `${statsDisplay.destinations}+`, label: stats.destinations_label },
             ].map((stat, i) => (
               <motion.div key={i} {...fadeUp(i * 0.1)}>
                 <div className="font-display text-3xl md:text-4xl font-bold mb-2">

@@ -5,9 +5,10 @@ import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
 import AlbumCard from '../components/ui/AlbumCard';
 import { SkeletonGrid } from '../components/ui/Skeletons';
-import { getCompletedTrips } from '../services/api';
+import { getCompletedTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
-import type { CompletedTrip } from '../types/types-index';
+import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
+import type { CompletedTrip, AboutContent } from '../types/types-index';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1600&q=80';
 
@@ -70,12 +71,38 @@ export default function CompletedTripsPage() {
   const [search, setSearch] = useState('');
   const [month, setMonth] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
+  // Stat labels only (e.g. "Girls travelled") — admin-editable in the About
+  // page's Statistics section, and shared here so both pages always match.
+  // The numbers themselves stay derived live from real trips below.
+  const [statLabels, setStatLabels] = useState<AboutContent['stats']>(DEFAULT_ABOUT.stats);
 
   useEffect(() => {
     getCompletedTrips()
       .then(data => setTrips(data.length > 0 ? data : DEMO_COMPLETED))
       .catch(() => setTrips(DEMO_COMPLETED))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    getSiteContent<Partial<AboutContent>>('about')
+      .then(data => setStatLabels(mergeWithDefaults(data).stats))
+      .catch(() => {});
+  }, []);
+
+  // Live stat labels — the instant an admin renames a stat in AdminAbout's
+  // Statistics section, re-pull it so this page's stats strip updates
+  // without a refresh (matches the live publish/draft subscription below).
+  useEffect(() => {
+    const unsubscribe = subscribeToTable(
+      'site_content',
+      () => {
+        getSiteContent<Partial<AboutContent>>('about')
+          .then(data => setStatLabels(mergeWithDefaults(data).stats))
+          .catch(() => {});
+      },
+      'key=eq.about'
+    );
+    return unsubscribe;
   }, []);
 
   // Keep track of how far down this page the user has scrolled, so that if
@@ -156,11 +183,11 @@ export default function CompletedTripsPage() {
       trips.flatMap(t => t.destination.split(',').map(d => d.trim().toLowerCase()))
     ).size;
     return [
-      { value: `${womenTraveled}+`, label: 'Girls travelled' },
-      { value: `${tripsCompleted}+`, label: 'Trips completed' },
-      { value: `${destinations}+`, label: 'Destinations' },
+      { value: `${womenTraveled}+`, label: statLabels.girls_travelled_label },
+      { value: `${tripsCompleted}+`, label: statLabels.trips_completed_label },
+      { value: `${destinations}+`, label: statLabels.destinations_label },
     ];
-  }, [trips]);
+  }, [trips, statLabels]);
 
   return (
     <Layout>

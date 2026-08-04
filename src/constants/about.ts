@@ -74,6 +74,9 @@ export const DEFAULT_ABOUT: AboutContent = {
     destinations: 20,
     friendships_made: 1200,
     avg_trip_rating: 4.9,
+    girls_travelled_label: 'Girls travelled',
+    trips_completed_label: 'Trips completed',
+    destinations_label: 'Destinations',
   },
 
   // 8. Testimonials section

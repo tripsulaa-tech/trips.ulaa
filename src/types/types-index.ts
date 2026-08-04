@@ -517,11 +517,20 @@ export interface AboutContent {
     photos: string[];
   };
   // 7. Statistics (Girls Travelled, Trips Completed, Destinations)
+  // The three numbers are always derived live from real completed-trip data
+  // (see AboutPage.tsx / CompletedTripsPage.tsx) — only the labels below are
+  // admin-editable, and are shared by both pages so they always match.
   stats: {
     girls_travelled: number;
     destinations: number;
     friendships_made: number;
     avg_trip_rating: number;
+    /** Label under the "girls travelled" number, e.g. "Girls travelled" */
+    girls_travelled_label: string;
+    /** Label under the "trips completed" number, e.g. "Trips completed" */
+    trips_completed_label: string;
+    /** Label under the "destinations" number, e.g. "Destinations" */
+    destinations_label: string;
   };
   // 8. What Our Girls Say — fetched from existing Testimonials module
   testimonials: {
