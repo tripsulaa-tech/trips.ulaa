@@ -27,7 +27,10 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
       className="group bg-white rounded-xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
-      <div className="relative h-56 md:h-64 overflow-hidden rounded-t-xl">
+      <Link
+        to={`/completed-trips/${trip.slug}`}
+        className="relative h-56 md:h-64 overflow-hidden rounded-t-xl block"
+      >
         <img
           src={trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.destination}
@@ -36,7 +39,7 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
         />
         <div className="absolute inset-0 bg-dark/12" />
         <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent" />
-      </div>
+      </Link>
 
       {/* Content */}
       <div className="p-6 flex-1 flex flex-col">

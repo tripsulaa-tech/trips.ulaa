@@ -27,7 +27,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         transition={{ delay: index * 0.05, duration: 0.3 }}
         className="group bg-white rounded-xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
       >
-        <div className="relative h-56 md:h-64 overflow-hidden rounded-t-xl">
+        <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden rounded-t-xl block">
           <div className="w-full h-full transition-transform duration-700 group-hover:scale-110">
             <img
               src={trip.cover_image || PLACEHOLDER_IMAGE}
@@ -43,7 +43,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               Coming Soon
             </span>
           </div>
-        </div>
+        </Link>
         <div className="p-6 flex-1 flex flex-col">
           <h3 className="font-display text-xl font-bold text-dark mb-3 line-clamp-2 flex-1">
             {trip.title}
@@ -72,7 +72,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
       className="group bg-white rounded-xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
-      <div className="relative h-56 md:h-64 overflow-hidden rounded-t-xl">
+      <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden rounded-t-xl block">
         {/*
           The hover-zoom (group-hover:scale-110) lives on this wrapper div
           rather than the <img> itself, because the saved cover_image_crop
@@ -116,6 +116,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             type="button"
             onClick={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               const url = `${window.location.origin}/trips/${trip.slug}`;
               navigator.share?.({ title: trip.title, url });
             }}
@@ -127,7 +128,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           </button>
           <button
             type="button"
-            onClick={(e) => { e.preventDefault(); addToCalendar(trip); }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCalendar(trip); }}
             aria-label="Add to calendar"
             title="Add to calendar"
             className="h-9 w-9 flex items-center justify-center rounded-full bg-primary text-white border-2 border-primary shadow-warm hover:bg-primary-dark hover:shadow-warm-lg transition-all"
@@ -143,7 +144,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             <span>{trip.destination}</span>
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* Content */}
       <div className="p-6 flex-1 flex flex-col">

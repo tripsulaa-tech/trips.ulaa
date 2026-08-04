@@ -238,7 +238,7 @@ export default function AlbumPage() {
                   }`}
                 >
                   <Heart size={16} className={liked ? 'fill-red-500' : ''} />
-                  {liked ? 'Liked' : 'Like'}{album.likes_count > 0 ? ` (${album.likes_count})` : ''}
+                  {album.likes_count}
                 </button>
                 <button
                   onClick={() => navigator.share?.({ title: album.title, url: window.location.href })}
