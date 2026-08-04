@@ -209,19 +209,39 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
 
   const startDrag = (label: string) => (e: React.PointerEvent) => {
     if (collapsed) return;
+    // Only the primary touch point / left mouse button should start a
+    // drag — on iOS Safari a second, incidental pointer (e.g. a palm
+    // resting on the screen) can otherwise hijack the gesture.
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     setDraggedLabel(label);
   };
 
+  // Long-pressing a touch target on mobile normally triggers the browser's
+  // own gesture handling before our JS ever sees a sustained pointermove:
+  // iOS Safari pops up its text-selection "callout" menu, Android shows a
+  // save/inspect context menu, and both browsers may kick off a native
+  // element drag (ghost image). Any one of these swallows the touch and
+  // makes the handle feel completely dead — matching "long pressed and
+  // tried to move but nothing happens". touch-action / select-none alone
+  // don't stop these, so they're suppressed explicitly below.
   const GripHandle = ({ label, size = 14 }: { label: string; size?: number }) => (
     <span
       onPointerDown={startDrag(label)}
+      onContextMenu={e => e.preventDefault()}
+      draggable={false}
+      onDragStart={e => e.preventDefault()}
       role="button"
       tabIndex={-1}
       aria-label={`Drag to reorder ${label}`}
-      className="shrink-0 flex items-center justify-center w-6 h-9 -ml-1 touch-none select-none cursor-grab active:cursor-grabbing text-dark-muted/50 hover:text-dark-muted"
+      className="shrink-0 flex items-center justify-center w-8 h-10 -ml-1 touch-none select-none cursor-grab active:cursor-grabbing text-dark-muted/50 hover:text-dark-muted"
+      style={{
+        WebkitTouchCallout: 'none',
+        WebkitUserDrag: 'none',
+        WebkitTapHighlightColor: 'transparent',
+      } as React.CSSProperties}
     >
       <GripVertical size={size} />
     </span>
