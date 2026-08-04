@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload, Search, ClipboardList, X, Hourglass } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload, Search, ClipboardList, X, Hourglass, FileDown } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
@@ -146,6 +146,7 @@ export default function AdminTrips() {
   const [editingTrip, setEditingTrip] = useState<UpcomingTrip | null>(null);
   const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pdfDownloadingId, setPdfDownloadingId] = useState<string | null>(null);
   const [form, setForm] = useState<TripForm>(emptyForm);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -714,6 +715,21 @@ export default function AdminTrips() {
     load();
   };
 
+  const handleDownloadTripPdf = async (trip: UpcomingTrip) => {
+    if (pdfDownloadingId) return;
+    setPdfDownloadingId(trip.id);
+    try {
+      // Same lazy import used on the public Trip Detail page — keeps
+      // jsPDF/html2canvas out of the main admin bundle until actually used.
+      const { downloadTripItineraryPdf } = await import('../utils/tripItineraryPdf');
+      await downloadTripItineraryPdf(trip);
+    } catch (err) {
+      console.error('Failed to generate itinerary PDF', err);
+    } finally {
+      setPdfDownloadingId(null);
+    }
+  };
+
   const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
   // Commits whatever's typed/pasted in a group's bullet-draft textarea as one
   // or more bullets, then clears the box. Handles the case where a paste
@@ -822,6 +838,14 @@ export default function AdminTrips() {
                           </button>
                           <button onClick={() => togglePublish(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.is_published ? 'Unpublish' : 'Publish'}>
                             {trip.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                          <button
+                            onClick={() => handleDownloadTripPdf(trip)}
+                            disabled={pdfDownloadingId === trip.id}
+                            className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
+                            title="Download itinerary PDF"
+                          >
+                            <FileDown size={15} className={pdfDownloadingId === trip.id ? 'animate-pulse' : ''} />
                           </button>
                           <button onClick={() => openEdit(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title="Edit">
                             <Edit2 size={15} />
