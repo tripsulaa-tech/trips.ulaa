@@ -445,27 +445,36 @@ export default function AboutPage() {
               </p>
             )}
           </motion.div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
             {why_different.cards.map((card: AboutWhyDifferentCard, i: number) => (
               <motion.div
                 key={i}
                 {...fadeUp(i * 0.08)}
-                className="relative rounded-2xl shadow-card overflow-hidden hover:shadow-card-hover transition-shadow duration-300 group aspect-[4/3]"
+                className="relative aspect-[4/3] rounded-lg sm:rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 group"
               >
                 {card.image ? (
                   <img
                     src={card.image}
                     alt={card.heading}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 ) : (
                   <div className="absolute inset-0 w-full h-full bg-background-warm" />
                 )}
-                {/* Dark bottom gradient for text readability */}
-                <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-7">
-                  <h3 className="font-display text-xl font-bold text-white mb-3 whitespace-pre-line">{card.heading}</h3>
-                  <p className="text-white/85 text-sm leading-relaxed whitespace-pre-line">{card.description}</p>
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.4)',
+                  }}
+                />
+                <div className="relative h-full flex flex-col justify-end p-3 sm:p-4">
+                  <h3 className="font-display text-sm sm:text-base font-bold text-white mb-1 whitespace-pre-line">
+                    {card.heading}
+                  </h3>
+                  <p className="text-white/90 text-xs leading-snug whitespace-pre-line">
+                    {card.description}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -648,7 +657,7 @@ export default function AboutPage() {
                     onDragEnd={handleTestimonialDragEnd}
                   >
                     {testimonials[testimonialIndex] && (
-                      <TestimonialCard testimonial={testimonials[testimonialIndex]} index={0} />
+                      <TestimonialCard testimonial={testimonials[testimonialIndex]} index={0} animateEntrance={false} />
                     )}
                   </motion.div>
                 </AnimatePresence>

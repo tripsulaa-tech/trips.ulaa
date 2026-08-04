@@ -76,6 +76,17 @@ export default function UpcomingTripsPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Flag this page for scroll restoration on the way OUT, whenever the user
+  // leaves it for any reason — not just via the trip detail page's "All
+  // Trips" link. Previously only that one link set this flag, so leaving
+  // via the bottom nav (e.g. switching to Completed Trips and back) always
+  // reset the scroll to the top instead of remembering where the user was.
+  useEffect(() => {
+    return () => {
+      sessionStorage.setItem('ulaa:restoreScroll:/trips', '1');
+    };
+  }, []);
+
   // Once the trips have loaded (so the grid has its real height) and the
   // trip detail page has flagged that we should restore, smoothly scroll
   // back to the saved position. The flag is cleared immediately after so a
@@ -239,7 +250,7 @@ export default function UpcomingTripsPage() {
           </div>
         ) : (
           <>
-            <p className="text-dark-muted text-sm mb-6 md:mb-8">
+            <p className="text-dark-muted text-base sm:text-lg mb-6 md:mb-8">
               <span className="font-semibold text-primary">{navLabel}</span>{' '}
               Showing <span className="font-semibold text-dark">{filtered.length}</span> trip{filtered.length !== 1 ? 's' : ''}
             </p>

@@ -783,12 +783,20 @@ export function GalleryGrid({ images, fallbackLocation }: GalleryGridProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(0);
 
+  // Long albums can have dozens of photos — loading them all up front is
+  // heavy on mobile data and makes the page feel endless. Show a first
+  // batch and let the visitor pull in more on demand.
+  const INITIAL_COUNT = 6;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
+  const visibleItems = items.slice(0, visibleCount);
+  const hasMore = visibleCount < items.length;
+
   const openAt = (i: number) => { setSelected(i); setOpen(true); };
 
   return (
     <>
       <div className="masonry-grid">
-        {items.map((img, i) => (
+        {visibleItems.map((img, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 16 }}
@@ -815,6 +823,17 @@ export function GalleryGrid({ images, fallbackLocation }: GalleryGridProps) {
           </motion.div>
         ))}
       </div>
+      {hasMore && (
+        <div className="flex justify-center mt-6">
+          <button
+            type="button"
+            onClick={() => setVisibleCount(c => c + INITIAL_COUNT)}
+            className="px-6 py-2.5 rounded-md border-2 border-primary text-primary text-sm font-button font-semibold hover:bg-primary hover:text-white transition-colors"
+          >
+            Load More
+          </button>
+        </div>
+      )}
       <GalleryViewer
         images={items}
         initialIndex={selected}

@@ -207,7 +207,7 @@ export default function AlbumPage() {
         </div>
       </div>
 
-      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-16">
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-6 sm:py-16">
         <div className="max-w-[1344px] mx-auto space-y-16">
         {/* Trip Story */}
         {album.story && (
@@ -240,25 +240,27 @@ export default function AlbumPage() {
         {/* Gallery */}
         {album.gallery_images.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
               <h2 className="font-display text-3xl font-bold text-dark">Relive the Journey</h2>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={toggleLike}
                   disabled={likeBusy}
                   aria-label={liked ? 'Unlike this album' : 'Like this album'}
-                  className={`flex items-center gap-2 text-sm transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-default ${
-                    liked ? 'text-red-500' : 'text-dark-muted hover:text-red-500'
+                  className={`flex items-center gap-1.5 h-9 sm:h-8 px-3 rounded-full text-sm transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-default ${
+                    liked ? 'text-red-500' : 'text-primary hover:text-red-500'
                   }`}
                 >
-                  <Heart size={16} className={liked ? 'fill-red-500' : ''} />
+                  <Heart size={16} className={`w-5 h-5 sm:w-4 sm:h-4 ${liked ? 'fill-red-500' : ''}`} />
                   {album.likes_count}
                 </button>
                 <button
                   onClick={() => navigator.share?.({ title: album.title, url: window.location.href })}
-                  className="flex items-center gap-2 text-sm text-dark-muted hover:text-primary transition-colors cursor-pointer"
+                  aria-label="Share this album"
+                  className="flex items-center justify-center w-9 h-9 sm:w-auto sm:h-8 sm:px-3 sm:gap-1.5 rounded-full text-primary text-sm hover:text-primary-dark transition-colors cursor-pointer"
                 >
-                  <Share2 size={16} /> Share
+                  <Share2 size={16} className="w-5 h-5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Share</span>
                 </button>
               </div>
             </div>

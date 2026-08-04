@@ -7,13 +7,23 @@ import { PLACEHOLDER_IMAGE } from '../../utils/utils-index';
 interface TestimonialCardProps {
   testimonial: Testimonial;
   index?: number;
+  // The desktop grid wants each card to fade/drop in on scroll, so this
+  // component owns that entrance animation by default. Mobile swipe
+  // carousels (Testimonials.tsx, AboutPage.tsx) already wrap this card in
+  // their own AnimatePresence + horizontal slide variants — layering this
+  // card's own y:30->0 entrance on top of that fought the parent's
+  // horizontal motion and made swipes look like the card dropped in from
+  // the top instead of sliding left/right. Those carousels pass
+  // animateEntrance={false} to opt out and let the parent's slide own the
+  // motion entirely.
+  animateEntrance?: boolean;
 }
 
 // Reviews longer than this are truncated behind a "Read more" toggle so
 // cards stay a consistent, scannable height in the grid.
 const TRUNCATE_LENGTH = 180;
 
-export default function TestimonialCard({ testimonial, index = 0 }: TestimonialCardProps) {
+export default function TestimonialCard({ testimonial, index = 0, animateEntrance = true }: TestimonialCardProps) {
   const [expanded, setExpanded] = useState(false);
   const isLong = testimonial.review.length > TRUNCATE_LENGTH;
   const displayedReview =
@@ -21,11 +31,17 @@ export default function TestimonialCard({ testimonial, index = 0 }: TestimonialC
       ? `${testimonial.review.slice(0, TRUNCATE_LENGTH).trimEnd()}…`
       : testimonial.review;
 
+  const entranceProps = animateEntrance
+    ? {
+        initial: { opacity: 0, y: 30 },
+        animate: { opacity: 1, y: 0 },
+        transition: { delay: index * 0.1, duration: 0.5 },
+      }
+    : {};
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.5 }}
+      {...entranceProps}
       className="bg-white rounded-xl p-8 shadow-card hover:shadow-card-hover transition-all duration-300 border border-background-warm"
     >
       {/* Stars */}

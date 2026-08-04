@@ -16,11 +16,15 @@ const variants = {
   dark: 'bg-dark text-white hover:bg-dark-muted active:bg-dark-muted border-2 border-dark',
 };
 
+// Mobile always renders at the same 14px font / 44px min-height / 10px-16px
+// padding as the "sm" size, regardless of which size prop is passed, so
+// every button on small screens has a consistent look and feel. Larger
+// sizes only take effect from the sm: breakpoint (tablet/desktop) up.
 const sizes = {
   sm: 'px-4 py-2.5 text-sm rounded-md min-h-[44px]',
-  md: 'px-6 py-3 text-base rounded-md min-h-[48px]',
-  lg: 'px-6 py-3.5 text-base rounded-md min-h-[48px] sm:px-8 sm:py-4 sm:text-lg sm:min-h-[56px]',
-  xl: 'px-6 py-3.5 text-base rounded-md min-h-[48px] sm:px-10 sm:py-5 sm:text-xl sm:rounded-lg sm:min-h-[64px]',
+  md: 'px-4 py-2.5 text-sm rounded-md min-h-[44px] sm:px-6 sm:py-3 sm:text-base sm:min-h-[48px]',
+  lg: 'px-4 py-2.5 text-sm rounded-md min-h-[44px] sm:px-8 sm:py-4 sm:text-lg sm:min-h-[56px]',
+  xl: 'px-4 py-2.5 text-sm rounded-md min-h-[44px] sm:px-10 sm:py-5 sm:text-xl sm:rounded-lg sm:min-h-[64px]',
 };
 
 export default function Button({

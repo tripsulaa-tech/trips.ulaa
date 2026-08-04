@@ -114,7 +114,7 @@ export default function Testimonials() {
                 onDragEnd={handleDragEnd}
               >
                 {testimonials[current] && (
-                  <TestimonialCard testimonial={testimonials[current]} index={0} />
+                  <TestimonialCard testimonial={testimonials[current]} index={0} animateEntrance={false} />
                 )}
               </motion.div>
             </AnimatePresence>

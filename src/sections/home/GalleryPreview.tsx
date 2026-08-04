@@ -49,8 +49,16 @@ export default function GalleryPreview() {
           />
         </div>
 
-        {/* Masonry-style grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-4">
+        {/* Uniform Instagram-style grid — every tile is the same square
+            aspect ratio, so the grid always fills perfectly edge-to-edge
+            no matter how many images there are. (The earlier row-span
+            "masonry" grid, and then a CSS-columns masonry attempt, both
+            left a gap: fixed spans only tile cleanly for specific image
+            counts, and CSS columns strand empty space whenever an image
+            with break-inside-avoid doesn't fit the remaining column
+            height and gets pushed whole to the next column. A uniform
+            grid has no such failure mode.) */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
           {images.map((img, i) => (
             <motion.div
               key={i}
@@ -58,16 +66,14 @@ export default function GalleryPreview() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.06 }}
               onClick={() => open(i)}
-              className={`group relative overflow-hidden rounded-lg cursor-pointer ${
-                i === 0 || i === 4 ? 'row-span-2' : ''
-              } ${i === 0 ? 'md:col-span-2 md:row-span-1' : ''}`}
+              className="group relative aspect-square overflow-hidden rounded-lg cursor-pointer"
             >
               <motion.img
                 layoutId={`home-gallery-${i}`}
                 src={img}
                 alt={`ULAA Gallery ${i + 1}`}
                 loading="lazy"
-                className="w-full h-full object-cover min-h-40 md:min-h-56 transition-transform duration-700 group-hover:scale-110"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-dark/0 group-hover:bg-dark/30 transition-all duration-300 flex items-center justify-center">
                 <ZoomIn
