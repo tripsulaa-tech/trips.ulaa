@@ -3,10 +3,9 @@ import { RefreshCw } from 'lucide-react';
 import { useVersionCheck } from '../../hooks/useVersionCheck';
 
 // Once a new deployment is detected, the page auto-refreshes after this
-// many seconds — enough for the user to notice the banner and finish a
-// quick action (e.g. a button tap), short enough that they land on the
-// new version quickly without having to do anything themselves.
-const AUTO_REFRESH_SECONDS = 4;
+// many seconds — just enough for the banner to register with the user
+// before their tab reloads out from under them.
+const AUTO_REFRESH_SECONDS = 2;
 
 /**
  * Site-wide banner that appears the moment a newer deployment goes live
