@@ -5,6 +5,7 @@ import Layout from '../components/layout/Layout';
 import TripCard from '../components/ui/TripCard';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getUpcomingTrips } from '../services/api';
+import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip } from '../types/types-index';
 
 
@@ -24,6 +25,19 @@ export default function UpcomingTripsPage() {
       .then(data => setTrips(data))
       .catch(() => setTrips([]))
       .finally(() => setLoading(false));
+  }, []);
+
+  // Live publish/draft + coming-soon status — re-pulls the public list the
+  // moment an admin publishes a trip, unpublishes/deletes one, or flips
+  // "Coming Soon", so anyone already on this page sees it appear/disappear
+  // or switch to the coming-soon layout without refreshing.
+  useEffect(() => {
+    const unsubscribe = subscribeToTable('upcoming_trips', () => {
+      getUpcomingTrips()
+        .then(data => setTrips(data))
+        .catch(() => {});
+    });
+    return unsubscribe;
   }, []);
 
   const filtered = useMemo(() => {

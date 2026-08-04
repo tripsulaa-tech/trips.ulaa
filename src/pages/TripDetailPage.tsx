@@ -15,6 +15,7 @@ import { useResponsiveItemsPerView } from '../components/ui/useResponsiveItemsPe
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getTripHighlightIcon, getTripHighlightPalette } from '../constants/tripHighlightIcons';
 import { getUpcomingTripBySlug } from '../services/api';
+import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripConfidenceItem } from '../types/types-index';
 import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice, getStrikeThroughPrice, formatAgeRange, getCoverImageStyle } from '../utils/utils-index';
 import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/calendar';
@@ -173,6 +174,27 @@ export default function TripDetailPage() {
       .catch(() => setTrip(null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Live status — if the admin flips "Coming Soon" (or edits seats, price,
+  // etc.) while someone is already sitting on this trip's page, merge the
+  // change straight in so it reflects immediately. Note: if the admin fully
+  // unpublishes this trip while someone is viewing it, the update won't be
+  // pushed here (an anonymous viewer's Realtime feed can't see a row that
+  // no longer passes the public "is_published = true" policy) — the page
+  // will still show the last-loaded version until they refresh or navigate.
+  useEffect(() => {
+    if (!trip?.id) return;
+    const unsubscribe = subscribeToTable<Partial<UpcomingTrip>>(
+      'upcoming_trips',
+      (payload) => {
+        if (payload.eventType === 'UPDATE' && payload.new) {
+          setTrip(t => (t ? { ...t, ...payload.new } : t));
+        }
+      },
+      `id=eq.${trip.id}`
+    );
+    return unsubscribe;
+  }, [trip?.id]);
 
   // Deep-link support for "?book=1" (e.g. the downloaded itinerary PDF's
   // "Secure Your Spot" link) — opens the booking modal automatically once

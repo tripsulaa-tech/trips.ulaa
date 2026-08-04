@@ -6,6 +6,7 @@ import SectionTitle from '../components/ui/SectionTitle';
 import AlbumCard from '../components/ui/AlbumCard';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getCompletedTrips } from '../services/api';
+import { subscribeToTable } from '../services/realtime';
 import type { CompletedTrip } from '../types/types-index';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1600&q=80';
@@ -75,6 +76,21 @@ export default function CompletedTripsPage() {
       .then(data => setTrips(data.length > 0 ? data : DEMO_COMPLETED))
       .catch(() => setTrips(DEMO_COMPLETED))
       .finally(() => setLoading(false));
+  }, []);
+
+  // Live publish/draft status — when the admin publishes a new album (or
+  // unpublishes/deletes one) while someone is already sitting on this page,
+  // re-pull the public list so it appears/disappears without needing a
+  // refresh. Re-fetching (rather than patching the changed row locally)
+  // keeps this in sync with the same is_published filter the server
+  // enforces, instead of trying to duplicate that logic client-side.
+  useEffect(() => {
+    const unsubscribe = subscribeToTable('completed_trips', () => {
+      getCompletedTrips()
+        .then(data => setTrips(data.length > 0 ? data : DEMO_COMPLETED))
+        .catch(() => {});
+    });
+    return unsubscribe;
   }, []);
 
   const filtered = useMemo(() => {

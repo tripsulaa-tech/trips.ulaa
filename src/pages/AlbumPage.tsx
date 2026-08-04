@@ -5,6 +5,7 @@ import { MapPin, Calendar, Users, Images, ArrowLeft, Share2, Heart } from 'lucid
 import Layout from '../components/layout/Layout';
 import { GalleryGrid } from '../components/ui/GalleryViewer';
 import { getCompletedTripBySlug, likeCompletedTrip, unlikeCompletedTrip } from '../services/api';
+import { subscribeToTable } from '../services/realtime';
 import type { CompletedTrip } from '../types/types-index';
 import { formatDate, formatBatchLabel, PLACEHOLDER_IMAGE, getVisitorId } from '../utils/utils-index';
 
@@ -61,6 +62,26 @@ export default function AlbumPage() {
       .catch(() => setAlbum(DEMO_ALBUM))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Live likes — as soon as *any* visitor (including this one, from another
+  // tab) likes/unlikes this album, likes_count is recomputed server-side and
+  // pushed here via Realtime, so everyone currently viewing the album sees
+  // the count update immediately without refreshing. Scoped to this album's
+  // id only, and only wired up once we know that id.
+  useEffect(() => {
+    if (!album?.id) return;
+    const unsubscribe = subscribeToTable<{ likes_count: number }>(
+      'completed_trips',
+      (payload) => {
+        const newCount = (payload.new as { likes_count?: number } | undefined)?.likes_count;
+        if (typeof newCount === 'number') {
+          setAlbum(a => (a ? { ...a, likes_count: newCount } : a));
+        }
+      },
+      `id=eq.${album.id}`
+    );
+    return unsubscribe;
+  }, [album?.id]);
 
   // Reads this device's previously-stored liked state once the album has
   // loaded (or changed). Adjusted during render rather than in an effect —
