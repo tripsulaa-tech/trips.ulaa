@@ -306,11 +306,6 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     /* falls back to the default font — see comment above */
   }
 
-  // First word of the trip title — used on the closing slide in place of
-  // the hardcoded "Sri Lanka" in the reference design ("We can't wait to
-  // welcome you to <word>!" / "See you in <word>!").
-  const destinationFirstWord = (trip.title || '').trim().split(/\s+/)[0] || trip.destination || 'there';
-
   // ---------------------------------------------------------------------
   // Low-level drawing helpers
   // ---------------------------------------------------------------------
@@ -2097,79 +2092,19 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
-  // SLIDE — Closing: tagline, Meet Your Trip Leader, booking card, contact
-  // bar, and footer. Reproduces the reference "last page" design — the
-  // cursive tagline/heart and the footer's "Travel. Laugh. Connect." /
-  // "Thank you for choosing ULAA." lines are hardcoded per the design brief;
-  // everything else (leader, price, dates, contact details) is read
-  // straight off `trip`/`BRAND` so it stays accurate for any trip.
+  // SLIDE — Trip Leader & Booking: a plain, generic page (same slideHeader
+  // treatment as FAQs/Cancellation Policy) covering "Meet Your Trip Leader",
+  // a "Booking Form" summary card, and the "Need Help?" contact bar. All
+  // content is read straight off `trip`/`BRAND`, same as the closing slide's
+  // versions of these — this page exists as an earlier, easy-to-find stop
+  // for that same info, ahead of the decorative closing slide.
   // =========================================================================
-  async function renderClosing() {
+  async function renderTripLeaderAndBooking() {
     newSlide();
+    slideHeader((x, y) => icons.userCheck(x, y, 20), 'Trip Leader & Booking', 'Meet your host, then reserve your seat below');
 
-    setFill(COLORS.secondary);
-    doc.rect(0, 0, PAGE_W, 4, 'F');
-
-    // Quiet corner doodles, echoing the cover slide's travel motifs.
-    withOpacity(0.3, () => {
-      icons.plane(MARGIN - 4, 34, 20, COLORS.primary);
-      icons.train(PAGE_W - MARGIN - 24, 40, 20, COLORS.primary);
-    });
-
-    // ---- Header: logo, cursive tagline + heart, welcome line ----
-    const LOGO_Y = 16;
-    const LOGO_H = 42;
-    const logo = await loadContainImage('/ULAA-logo-navbar.png');
-    if (logo) {
-      const logoW = LOGO_H * logo.ratio;
-      try {
-        doc.addImage(logo.dataUrl, 'PNG', PAGE_W / 2 - logoW / 2, LOGO_Y, logoW, LOGO_H);
-      } catch {
-        drawTextLogo(PAGE_W / 2 - 60, LOGO_Y, false);
-      }
-    } else {
-      drawTextLogo(PAGE_W / 2 - 60, LOGO_Y, false);
-    }
-
-    // Cursive heading (hardcoded per the reference design) with a small
-    // hand-drawn-style heart right after it.
-    doc.setFont('Parisienne', 'normal');
-    doc.setFontSize(25);
-    setText(COLORS.primaryDark);
-    const headingText = 'Your next adventure begins with one decision.';
-    const headingW = doc.getTextWidth(headingText);
-    const headingX = PAGE_W / 2 - headingW / 2;
-    const HEADING_Y = 90;
-    doc.text(headingText, headingX, HEADING_Y);
-    icons.heart(headingX + headingW + 4, HEADING_Y + 4, 15, COLORS.primaryDark, 'S');
-
-    // "We can't wait to welcome you to <first word of trip title>!" — the
-    // destination word swaps in per-trip; a small palm doodle echoes the
-    // reference design's emoji.
-    const WELCOME_Y = 114;
-    const prefix = "We can\u2019t wait to welcome you to ";
-    const destText = `${destinationFirstWord}!`;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(13.5);
-    const prefixW = doc.getTextWidth(prefix);
-    doc.setFont('helvetica', 'bold');
-    const destW = doc.getTextWidth(destText);
-    const welcomeLineW = prefixW + destW + 18;
-    let wx = PAGE_W / 2 - welcomeLineW / 2;
-    setText(COLORS.dark);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(13.5);
-    doc.text(prefix, wx, WELCOME_Y);
-    wx += prefixW;
-    setText(COLORS.secondary);
-    doc.setFont('helvetica', 'bold');
-    doc.text(destText, wx, WELCOME_Y);
-    wx += destW + 4;
-    icons.palm(wx, WELCOME_Y + 5, 15, COLORS.secondary);
-
-    // ---- Meet Your Trip Leader + Booking cards ----
-    const CARDS_TOP = 132;
-    const CARDS_BOTTOM = 388;
+    const CARDS_TOP = 90;
+    const CARDS_BOTTOM = 380;
     const PAD = 20;
     const leftW = 300;
     const colGapCards = 20;
@@ -2262,7 +2197,15 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.text('Trip leader details coming soon.', leftX + PAD, CARDS_TOP + PAD + 40);
     }
 
-    // -- Right: Booking card (price, reserve badge, meta row, CTA, links) --
+    // -- Right: Booking Form (heading, then price, reserve badge, meta row,
+    // CTA, links — same summary as the closing slide's booking card, just
+    // shifted down under its own heading since this page has no cursive
+    // intro line above it) --
+    setText(COLORS.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14.5);
+    doc.text('Booking Form', rightX + PAD, CARDS_TOP + PAD + 6);
+
     const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
     const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
     const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
@@ -2271,13 +2214,14 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const remainingAfterAdvance =
       activePrice != null && trip.advance_amount != null ? Math.max(0, activePrice - trip.advance_amount) : null;
 
+    const BOOK_TOP = CARDS_TOP + 30; // clears the "Booking Form" heading above
     const priceColW = rightW * 0.58;
     const reserveColX = rightX + PAD + priceColW + 18;
     const reserveColW = rightX + rightW - PAD - reserveColX;
 
     // Price stack (left sub-column)
     if (activePrice != null) {
-      let ry = CARDS_TOP + PAD;
+      let ry = BOOK_TOP + PAD;
       setText(COLORS.primary);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(27);
@@ -2346,7 +2290,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     }
 
     // Reserve badge box (right sub-column)
-    const reserveTop = CARDS_TOP + PAD;
+    const reserveTop = BOOK_TOP + PAD;
     if (isFull) {
       setFill([253, 235, 234] as RGB);
       doc.roundedRect(reserveColX, reserveTop, reserveColW, 40, 10, 10, 'F');
@@ -2389,10 +2333,10 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     }
     setDraw(COLORS.grayLineSoft);
     doc.setLineWidth(1);
-    doc.line(reserveColX - 9, CARDS_TOP + PAD - 4, reserveColX - 9, CARDS_TOP + 96);
+    doc.line(reserveColX - 9, BOOK_TOP + PAD - 4, reserveColX - 9, BOOK_TOP + 96);
 
     // Meta row: Dates / Duration / Group Size / Age Range
-    const metaTop = CARDS_TOP + 130;
+    const metaTop = BOOK_TOP + 130;
     setDraw(COLORS.grayLineSoft);
     doc.line(rightX + PAD, metaTop - 12, rightX + rightW - PAD, metaTop - 12);
 
@@ -2463,19 +2407,9 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       }
     });
 
-    // "No payment required..." assurance, right-aligned in the card.
-    const assuranceW = 195;
-    const assuranceX = rightX + rightW - PAD - assuranceW;
-    icons.check(assuranceX, linkY + 9, 12, COLORS.green);
-    setText(COLORS.darkMuted);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.3);
-    const assuranceLines = doc.splitTextToSize("No payment required to enquire. We'll contact you within 24 hours.", assuranceW - 15);
-    doc.text(assuranceLines, assuranceX + 15, linkY);
-
     // ---- Contact bar (from BRAND — the site's existing contact info) ----
-    const CONTACT_TOP = 398;
-    const CONTACT_BOTTOM = 436;
+    const CONTACT_TOP = 400;
+    const CONTACT_BOTTOM = 460;
     setFill(COLORS.cream);
     doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 12, 12, 'F');
     setDraw(COLORS.grayLine);
@@ -2517,72 +2451,6 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         doc.line(MARGIN + contactColW * (i + 1), CONTACT_TOP + 8, MARGIN + contactColW * (i + 1), CONTACT_BOTTOM - 8);
       }
     });
-
-    // ---- Footer band (hardcoded copy per the reference design) ----
-    const FOOTER_TOP = 446;
-    setFill(COLORS.dark);
-    doc.rect(0, FOOTER_TOP, PAGE_W, PAGE_H - FOOTER_TOP, 'F');
-
-    withOpacity(0.5, () => {
-      icons.palm(24, PAGE_H - 12, 30, COLORS.whiteMuted);
-      icons.mountain(60, PAGE_H - 12, 26, COLORS.whiteMuted);
-      setDraw(COLORS.whiteMuted);
-      doc.setLineWidth(1);
-      doc.line(104, FOOTER_TOP + 20, 112, FOOTER_TOP + 14);
-      doc.line(112, FOOTER_TOP + 14, 120, FOOTER_TOP + 20);
-      doc.line(120, FOOTER_TOP + 24, 128, FOOTER_TOP + 18);
-      doc.line(128, FOOTER_TOP + 18, 136, FOOTER_TOP + 24);
-    });
-
-    // Brush-stroke ribbon with the hardcoded "Travel. Laugh. Connect." line.
-    const ribbonY = FOOTER_TOP + (PAGE_H - FOOTER_TOP) / 2;
-    doc.setFont('Parisienne', 'normal');
-    doc.setFontSize(19);
-    const ribbonText = 'Travel. Laugh. Connect.';
-    const ribbonTextW = doc.getTextWidth(ribbonText);
-    const ribbonW = ribbonTextW + 110;
-    const ribbonX = PAGE_W / 2 - ribbonW / 2;
-    const ribbonH = 34;
-    setFill(COLORS.secondary);
-    doc.roundedRect(ribbonX, ribbonY - ribbonH / 2, ribbonW, ribbonH, ribbonH / 2, ribbonH / 2, 'F');
-    icons.heart(ribbonX + 22, ribbonY + 6, 14, COLORS.white, 'F');
-    setText(COLORS.white);
-    doc.text(ribbonText, PAGE_W / 2 - ribbonTextW / 2, ribbonY + 6);
-    icons.heart(ribbonX + ribbonW - 36, ribbonY + 6, 14, COLORS.white, 'F');
-
-    // Small dotted route + pin, right of the ribbon.
-    const routeX = ribbonX + ribbonW + 24;
-    setDraw(COLORS.gold);
-    doc.setLineWidth(1);
-    doc.setLineDashPattern([2, 2], 0);
-    doc.lines(
-      [
-        [16, -10],
-        [16, 10],
-      ],
-      routeX,
-      ribbonY + 8,
-      [1, 1],
-      'S',
-      false
-    );
-    doc.setLineDashPattern([], 0);
-    icons.pin(routeX + 30, ribbonY + 10, 14, COLORS.gold);
-
-    // Right-aligned closing lines (hardcoded per the reference design), kept
-    // clear of the page-number badge drawn in the bottom-right corner.
-    const closingRightEdge = PAGE_W - 176;
-    setText(COLORS.white);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Thank you for choosing ULAA.', closingRightEdge, FOOTER_TOP + 24, { align: 'right' });
-
-    doc.setFont('Parisienne', 'normal');
-    doc.setFontSize(21);
-    setText(COLORS.gold);
-    const seeYouText = `See you in ${destinationFirstWord}!`;
-    doc.text(seeYouText, closingRightEdge - 18, FOOTER_TOP + 50, { align: 'right' });
-    icons.heart(closingRightEdge - 4, FOOTER_TOP + 53, 13, COLORS.gold, 'S');
   }
 
   // =========================================================================
@@ -2599,7 +2467,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   renderConfidenceAndCarry();
   renderFaqs();
   renderCancellationPolicy();
-  await renderClosing();
+  await renderTripLeaderAndBooking();
 
   // ---------------------------------------------------------------------
   // Page-number badge on every slide, added last so the final total is
