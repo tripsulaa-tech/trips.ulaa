@@ -342,11 +342,12 @@ export default function TripDetailPage() {
           </div>
         </div>
         <div className="max-w-[1344px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-3">Details coming soon</h2>
+          <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-3">Trip details coming soon! ✨</h2>
           <p className="text-dark-muted text-sm sm:text-base max-w-lg mx-auto mb-8">
-            We're still putting together the itinerary, pricing and booking details for this trip.
-            Check back soon, or explore our other upcoming trips in the meantime — or take a look
-            at our completed trips to see what a ULAA trip actually looks like.
+            We're putting the finishing touches on this adventure. The full itinerary, pricing, and
+            booking details will be available soon. While you wait, check out our other upcoming
+            trips or explore our completed trips to see the unforgettable experiences our community
+            has already shared.
           </p>
           <div className="flex flex-row flex-wrap items-center justify-center gap-3 sm:gap-4">
             <Link to="/trips">
