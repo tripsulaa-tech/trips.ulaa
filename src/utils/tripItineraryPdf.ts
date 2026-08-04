@@ -66,7 +66,7 @@ const CONFIDENCE_PALETTE: { bg: RGB; fg: RGB }[] = [
 const BRAND = {
   name: 'ULAA',
   tagline: 'Girls-Only Travel Community',
-  website: 'www.ulaa.in',
+  website: 'www.ulaatrips.com',
   instagram: '@ulaa.trips',
   email: 'trips.ulaa@gmail.com',
   phone: '+91 63813 36772',
