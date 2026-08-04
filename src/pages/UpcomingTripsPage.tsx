@@ -6,6 +6,7 @@ import TripCard from '../components/ui/TripCard';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getUpcomingTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import type { UpcomingTrip, BottomNavItemConfig } from '../types/types-index';
 
@@ -65,41 +66,10 @@ export default function UpcomingTripsPage() {
     return unsubscribe;
   }, []);
 
-  // Keep track of how far down this page the user has scrolled, so that if
-  // they open a trip and then follow its "All Trips" link back here, we can
-  // put them back where they were instead of dropping them at the top.
-  useEffect(() => {
-    const handleScroll = () => {
-      sessionStorage.setItem('ulaa:scrollY:/trips', String(window.scrollY));
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Flag this page for scroll restoration on the way OUT, whenever the user
-  // leaves it for any reason — not just via the trip detail page's "All
-  // Trips" link. Previously only that one link set this flag, so leaving
-  // via the bottom nav (e.g. switching to Completed Trips and back) always
-  // reset the scroll to the top instead of remembering where the user was.
-  useEffect(() => {
-    return () => {
-      sessionStorage.setItem('ulaa:restoreScroll:/trips', '1');
-    };
-  }, []);
-
-  // Once the trips have loaded (so the grid has its real height) and the
-  // trip detail page has flagged that we should restore, smoothly scroll
-  // back to the saved position. The flag is cleared immediately after so a
-  // normal, fresh visit to this page still starts at the top.
-  useEffect(() => {
-    if (loading) return;
-    const shouldRestore = sessionStorage.getItem('ulaa:restoreScroll:/trips');
-    if (shouldRestore) {
-      sessionStorage.removeItem('ulaa:restoreScroll:/trips');
-      const savedY = Number(sessionStorage.getItem('ulaa:scrollY:/trips') || 0);
-      requestAnimationFrame(() => window.scrollTo({ top: savedY, behavior: 'smooth' }));
-    }
-  }, [loading]);
+  // Remember and restore scroll position — wherever the user goes from
+  // here and however they get back (trip detail's back link, bottom nav
+  // tab switch, browser back), they land where they left off.
+  useScrollRestoration('/trips', !loading);
 
   // Live publish/draft + coming-soon status — re-pulls the public list the
   // moment an admin publishes a trip, unpublishes/deletes one, or flips
@@ -119,8 +89,11 @@ export default function UpcomingTripsPage() {
       const matchSearch = search === '' ||
         trip.destination.toLowerCase().includes(search.toLowerCase()) ||
         trip.title.toLowerCase().includes(search.toLowerCase());
+      // Coming Soon trips don't have a confirmed date yet, so they only
+      // ever show up under "All" — picking a specific month pill hides
+      // them, matching that month's pill count (see monthCounts below).
       const matchMonth = month === 'All' ||
-        new Date(trip.start_date).toLocaleString('en', { month: 'long' }) === month;
+        (!trip.is_coming_soon && new Date(trip.start_date).toLocaleString('en', { month: 'long' }) === month);
       return matchSearch && matchMonth;
     });
   }, [trips, search, month]);
@@ -137,6 +110,11 @@ export default function UpcomingTripsPage() {
     );
     const counts: Record<string, number> = { All: bySearch.length };
     for (const trip of bySearch) {
+      // Coming Soon trips carry a placeholder/target start_date, not a
+      // confirmed one — counting them into a specific month's pill would
+      // promise a date that isn't real yet. They still count toward "All"
+      // above, just not toward any individual month.
+      if (trip.is_coming_soon) continue;
       const m = new Date(trip.start_date).toLocaleString('en', { month: 'long' });
       counts[m] = (counts[m] || 0) + 1;
     }
@@ -252,7 +230,9 @@ export default function UpcomingTripsPage() {
           <>
             <p className="text-dark-muted text-base sm:text-lg mb-6 md:mb-8">
               <span className="font-semibold text-primary">{navLabel}</span>{' '}
-              Showing <span className="font-semibold text-dark">{filtered.length}</span> trip{filtered.length !== 1 ? 's' : ''}
+              <span className="text-sm sm:text-base">
+                Showing <span className="font-semibold text-dark">{filtered.length}</span> trip{filtered.length !== 1 ? 's' : ''}
+              </span>
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {filtered.map((trip, i) => (

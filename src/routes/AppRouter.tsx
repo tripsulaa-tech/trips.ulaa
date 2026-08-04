@@ -1,10 +1,21 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
 import { useAuth } from '../context/useAuth';
 import { motion } from 'framer-motion';
 import InstallAppBanner from '../components/ui/InstallAppBanner';
 import BottomNav from '../components/layout/BottomNav';
+import { scrollToInstant } from '../utils/scroll';
+
+// The browser's own back/forward scroll restoration tries to remember and
+// replay scroll positions per history entry, which fights with our own
+// per-route logic below (ScrollToTop / useScrollRestoration) — the two
+// would both try to move the page, sometimes to different places, producing
+// a visible double-jump. Taking manual control here means our logic is the
+// only thing that ever moves the scroll position on navigation.
+if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
 
 // Scrolls the window to the top whenever the route changes, so navigating
 // (e.g. via the footer's Upcoming Trips / Completed Trips / About / Contact
@@ -12,16 +23,22 @@ import BottomNav from '../components/layout/BottomNav';
 function ScrollToTop() {
   const { pathname } = useLocation();
 
-  useEffect(() => {
+  // Layout effect (runs synchronously before paint) + an instant jump
+  // instead of an animated one: the position is already correct in the
+  // first frame the user sees, rather than visibly sliding into place
+  // after the new page has appeared. Layout's own fade-in is the motion
+  // that's actually meant to be seen.
+  useLayoutEffect(() => {
     // Some pages (e.g. the completed-trips albums grid) ask to restore the
     // scroll position the user was at instead of jumping to the top — for
     // example when they follow an album's "All Albums" link back to the
     // grid they were browsing. When that flag is set for this pathname,
-    // skip the reset and let the destination page handle restoring itself.
+    // skip the reset and let the destination page's own restoration
+    // handle it (see hooks/useScrollRestoration.ts).
     if (sessionStorage.getItem(`ulaa:restoreScroll:${pathname}`)) {
       return;
     }
-    window.scrollTo(0, 0);
+    scrollToInstant(0);
   }, [pathname]);
 
   return null;

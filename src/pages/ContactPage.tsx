@@ -6,6 +6,7 @@ import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import { submitContactEnquiry } from '../services/api';
 import { getWhatsAppLink } from '../utils/utils-index';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 
 interface ContactForm {
   name: string;
@@ -18,6 +19,11 @@ const WHATSAPP_NUMBER = '916381336772';
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1400&q=80';
 
 export default function ContactPage() {
+  // Remember and restore scroll position when leaving/returning via the
+  // bottom nav, same as the trips pages. The form is static, so there's no
+  // async load to wait on before restoring.
+  useScrollRestoration('/contact', true);
+
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ContactForm>();

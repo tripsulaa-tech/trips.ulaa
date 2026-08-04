@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import FloatingWhatsApp from './FloatingWhatsApp';
@@ -24,9 +25,25 @@ export default function Layout({ children }: LayoutProps) {
       }}
     >
       <Navbar />
-      <main className="flex-1">
+      {/* Every public page is wrapped in this Layout, and React swaps one
+          page's Layout instance for another's on navigation (mount, not
+          update) — so this entrance animation plays automatically on every
+          route change, tab switch included, without any router-level
+          AnimatePresence wiring. A soft fade + gentle rise, eased out
+          (decelerating, no bounce) reads as a deliberate glide rather than
+          a jarring cut or jump. By the time this plays, the page's scroll
+          position has already been set correctly and instantly (see
+          routes/AppRouter.tsx's ScrollToTop and
+          hooks/useScrollRestoration.ts) — so this fade is the only motion
+          the user actually sees; nothing visibly scrolls or snaps under it. */}
+      <motion.main
+        className="flex-1"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      >
         {children}
-      </main>
+      </motion.main>
       <Footer />
       {/* Reserves space at the very end of the page on mobile so the fixed,
           edge-to-edge BottomNav (its height varies slightly with the

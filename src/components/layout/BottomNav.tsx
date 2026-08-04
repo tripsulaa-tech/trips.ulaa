@@ -3,6 +3,7 @@ import { Home } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { getSiteContent } from '../../services/api';
+import { subscribeToTable } from '../../services/realtime';
 import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
 import type { BottomNavItemConfig } from '../../types/types-index';
@@ -24,6 +25,29 @@ export default function BottomNav() {
       .catch(() => {
         // Fetch failed — keep the defaults already in state.
       });
+  }, []);
+
+  // Live updates — this bar is mounted once, persistently, outside of
+  // <Routes> (see routes/AppRouter.tsx's PersistentBottomNav, which keeps
+  // it from remounting on every navigation), so the one-time fetch above
+  // only ever runs on the very first page load. Without this subscription,
+  // an admin's icon/label/link edit in AdminBottomNav wouldn't show up
+  // here until the visitor did a full page reload. Re-pulling on every
+  // site_content change means it updates live instead, matching how the
+  // "Showing N trips" label already does on the trips pages.
+  useEffect(() => {
+    const unsubscribe = subscribeToTable(
+      'site_content',
+      () => {
+        getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+          .then(data => {
+            if (data && data.length > 0) setNavItems(data);
+          })
+          .catch(() => {});
+      },
+      'key=eq.bottom_nav'
+    );
+    return unsubscribe;
   }, []);
 
   const isItemActive = (to: string) =>

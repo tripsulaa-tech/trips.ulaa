@@ -8,6 +8,7 @@ import Button from '../components/ui/Button';
 import TestimonialCard from '../components/ui/TestimonialCard';
 import { getSiteContent, getTestimonials, getCompletedTrips } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
 import type {
@@ -54,6 +55,12 @@ const HAVE_YOU_EVER_FILL = '#B0524F';
 const WELCOME_FILL = '#4C8368';
 
 export default function AboutPage() {
+  // Remember and restore scroll position when leaving/returning via the
+  // bottom nav. Content starts from DEFAULT_ABOUT and is replaced in place
+  // once it loads, so the page has its real height immediately — no async
+  // "ready" gate needed.
+  useScrollRestoration('/about', true);
+
   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   // Completed trips, fetched live so the stats strip below (Girls Travelled,

@@ -1,6 +1,7 @@
 ﻿import { Suspense, lazy } from 'react';
 import Layout from '../components/layout/Layout';
 import HeroSection from '../sections/home/HeroSection';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 
 const WhyULAA = lazy(() => import('../sections/home/WhyULAA'));
 const UpcomingTripsPreview = lazy(() => import('../sections/home/UpcomingTripsPreview'));
@@ -11,6 +12,13 @@ const MeetTheFounder = lazy(() => import('../sections/home/MeetTheFounder'));
 const CTASection = lazy(() => import('../sections/home/CTASection'));
 
 export default function HomePage() {
+  // Remember and restore scroll position when leaving/returning via the
+  // bottom nav (e.g. Home -> About -> Home), same as the trips pages.
+  // Every section below reserves its real height with a fixed-size skeleton
+  // immediately (even before its data streams in), so the page's height is
+  // stable from first paint and there's no async "ready" gate to wait on.
+  useScrollRestoration('/', true);
+
   return (
     <Layout>
       <HeroSection />

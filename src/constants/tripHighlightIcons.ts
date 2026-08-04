@@ -3,7 +3,7 @@ import {
   Coffee, Utensils, Wine, IceCreamCone, Cherry, Grape, Beer,
   PawPrint, Bird, Binoculars, Compass, Backpack, Tent, TentTree, MountainSnow, Mountain, TreePine, Trees, Bike,
   Leaf, Flower, Flower2, TreeDeciduous, Snowflake, Sun,
-  ShoppingBag, Gift, Ticket, Music, Guitar, Drum, Camera,
+  ShoppingBag, Gift, Ticket, Music, Guitar, Drum, Camera, Image as ImageIcon,
   Heart, Users, Handshake, Sparkles, Star,
   Landmark, Castle, Building2,
   Plane, Car, TrainFront, CableCar,
@@ -846,7 +846,6 @@ const FULL_ICON_LIBRARY: TripHighlightIconMeta[] = [
   { key: 'ice-cream-bowl', label: 'Ice Cream Bowl', Icon: LucideIcons.IceCreamBowl as LucideIcon, keywords: ['bowl', 'cream', 'ice'] },
   { key: 'ice-cream-cone', label: 'Ice Cream Cone', Icon: LucideIcons.IceCreamCone as LucideIcon, keywords: ['cone', 'cream', 'ice'] },
   { key: 'id-card-lanyard', label: 'Id Card Lanyard', Icon: LucideIcons.IdCardLanyard as LucideIcon, keywords: ['card', 'id', 'lanyard'] },
-  { key: 'image', label: 'Image', Icon: LucideIcons.Image as LucideIcon, keywords: ['image'] },
   { key: 'image-down', label: 'Image Down', Icon: LucideIcons.ImageDown as LucideIcon, keywords: ['down', 'image'] },
   { key: 'image-minus', label: 'Image Minus', Icon: LucideIcons.ImageMinus as LucideIcon, keywords: ['image', 'minus'] },
   { key: 'image-off', label: 'Image Off', Icon: LucideIcons.ImageOff as LucideIcon, keywords: ['image', 'off'] },
@@ -1769,6 +1768,7 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'guitar', label: 'Guitar', Icon: Guitar, keywords: ['music', 'culture', 'bonfire'] },
   { key: 'drum', label: 'Drum', Icon: Drum, keywords: ['festival', 'culture', 'celebration'] },
   { key: 'camera', label: 'Camera', Icon: Camera, keywords: ['photography', 'sightseeing', 'photo spot', 'memories'] },
+  { key: 'image', label: 'Image', Icon: ImageIcon, keywords: ['image', 'photo', 'photos', 'gallery', 'album', 'albums', 'completed trips', 'journey', 'memories', 'picture', 'pictures'] },
 
   // Girls-only / social vibes
   { key: 'heart', label: 'Heart', Icon: Heart, keywords: ['love', 'vibes', 'girls-only vibes', 'bonding', 'girl gang', 'safe space'] },

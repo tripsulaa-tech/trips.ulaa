@@ -7,6 +7,7 @@ import AlbumCard from '../components/ui/AlbumCard';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getCompletedTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import type { CompletedTrip, AboutContent, BottomNavItemConfig } from '../types/types-index';
@@ -143,42 +144,10 @@ export default function CompletedTripsPage() {
     return unsubscribe;
   }, []);
 
-  // Keep track of how far down this page the user has scrolled, so that if
-  // they open an album and then follow its "All Albums" link back here, we
-  // can put them back where they were instead of dropping them at the top.
-  useEffect(() => {
-    const handleScroll = () => {
-      sessionStorage.setItem('ulaa:scrollY:/completed-trips', String(window.scrollY));
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Flag this page for scroll restoration on the way OUT, whenever the user
-  // leaves it for any reason — not just via the album page's "All Albums"
-  // link. Previously only that one link set this flag, so leaving via the
-  // bottom nav (e.g. switching to Upcoming Trips and back) always reset the
-  // scroll to the top instead of remembering where the user was.
-  useEffect(() => {
-    return () => {
-      sessionStorage.setItem('ulaa:restoreScroll:/completed-trips', '1');
-    };
-  }, []);
-
-  // Once the trips have loaded (so the grid has its real height) and the
-  // album page has flagged that we should restore, scroll back to the
-  // saved position. The flag is cleared immediately after so a normal,
-  // fresh visit to this page (e.g. from the footer or nav) still starts
-  // at the top.
-  useEffect(() => {
-    if (loading) return;
-    const shouldRestore = sessionStorage.getItem('ulaa:restoreScroll:/completed-trips');
-    if (shouldRestore) {
-      sessionStorage.removeItem('ulaa:restoreScroll:/completed-trips');
-      const savedY = Number(sessionStorage.getItem('ulaa:scrollY:/completed-trips') || 0);
-      requestAnimationFrame(() => window.scrollTo({ top: savedY, behavior: 'smooth' }));
-    }
-  }, [loading]);
+  // Remember and restore scroll position — wherever the user goes from
+  // here and however they get back (album page's back link, bottom nav
+  // tab switch, browser back), they land where they left off.
+  useScrollRestoration('/completed-trips', !loading);
 
   // Live publish/draft status — when the admin publishes a new album (or
   // unpublishes/deletes one) while someone is already sitting on this page,
@@ -376,7 +345,9 @@ export default function CompletedTripsPage() {
           <>
             <p className="text-dark-muted text-base sm:text-lg mb-6 md:mb-8">
               <span className="font-semibold text-primary">{navLabel}</span>{' '}
-              Showing <span className="font-semibold text-dark">{filtered.length}</span> album{filtered.length !== 1 ? 's' : ''}
+              <span className="text-sm sm:text-base">
+                Showing <span className="font-semibold text-dark">{filtered.length}</span> album{filtered.length !== 1 ? 's' : ''}
+              </span>
             </p>
             {/* All albums shown in a single grid — no carousel */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
