@@ -8,9 +8,17 @@ import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getCompletedTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
-import type { CompletedTrip, AboutContent } from '../types/types-index';
+import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
+import type { CompletedTrip, AboutContent, BottomNavItemConfig } from '../types/types-index';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1600&q=80';
+
+// This page is the "Journey" tab in the bottom nav bar (see
+// constants/bottomNav.ts) — its route below is used to pull that tab's
+// admin-editable label for the "Showing N albums" line, so renaming the
+// tab (e.g. AdminBottomNav) updates this text automatically too.
+const NAV_ROUTE = '/completed-trips';
+const DEFAULT_NAV_LABEL = DEFAULT_BOTTOM_NAV_ITEMS.find(i => i.to === NAV_ROUTE)?.label ?? 'Journey';
 
 const MONTHS = ['All', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -75,6 +83,9 @@ export default function CompletedTripsPage() {
   // page's Statistics section, and shared here so both pages always match.
   // The numbers themselves stay derived live from real trips below.
   const [statLabels, setStatLabels] = useState<AboutContent['stats']>(DEFAULT_ABOUT.stats);
+  // This tab's label in the bottom nav bar (e.g. "Journey") — admin-editable
+  // in AdminBottomNav, shown in front of "Showing N albums" below.
+  const [navLabel, setNavLabel] = useState<string>(DEFAULT_NAV_LABEL);
 
   useEffect(() => {
     getCompletedTrips()
@@ -87,6 +98,33 @@ export default function CompletedTripsPage() {
     getSiteContent<Partial<AboutContent>>('about')
       .then(data => setStatLabels(mergeWithDefaults(data).stats))
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+      .then(data => {
+        const match = data?.find(i => i.to === NAV_ROUTE);
+        if (match?.label) setNavLabel(match.label);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Live nav label — the instant an admin renames this tab in
+  // AdminBottomNav, re-pull it so the text below updates without a refresh.
+  useEffect(() => {
+    const unsubscribe = subscribeToTable(
+      'site_content',
+      () => {
+        getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+          .then(data => {
+            const match = data?.find(i => i.to === NAV_ROUTE);
+            setNavLabel(match?.label || DEFAULT_NAV_LABEL);
+          })
+          .catch(() => {});
+      },
+      'key=eq.bottom_nav'
+    );
+    return unsubscribe;
   }, []);
 
   // Live stat labels — the instant an admin renames a stat in AdminAbout's
@@ -326,6 +364,7 @@ export default function CompletedTripsPage() {
         ) : (
           <>
             <p className="text-dark-muted text-sm mb-6 md:mb-8">
+              <span className="font-semibold text-primary">{navLabel}</span>{' '}
               Showing <span className="font-semibold text-dark">{filtered.length}</span> album{filtered.length !== 1 ? 's' : ''}
             </p>
             {/* All albums shown in a single grid — no carousel */}

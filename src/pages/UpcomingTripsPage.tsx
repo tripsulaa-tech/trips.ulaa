@@ -4,14 +4,22 @@ import { Search, Filter } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import TripCard from '../components/ui/TripCard';
 import { SkeletonGrid } from '../components/ui/Skeletons';
-import { getUpcomingTrips } from '../services/api';
+import { getUpcomingTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
-import type { UpcomingTrip } from '../types/types-index';
+import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
+import type { UpcomingTrip, BottomNavItemConfig } from '../types/types-index';
 
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1600&q=80';
 
 const MONTHS = ['All', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// This page is the "Upcoming" tab in the bottom nav bar (see
+// constants/bottomNav.ts) — its route below is used to pull that tab's
+// admin-editable label for the "Showing N trips" line, so renaming the tab
+// (e.g. AdminBottomNav) updates this text automatically too.
+const NAV_ROUTE = '/trips';
+const DEFAULT_NAV_LABEL = DEFAULT_BOTTOM_NAV_ITEMS.find(i => i.to === NAV_ROUTE)?.label ?? 'Upcoming';
 
 export default function UpcomingTripsPage() {
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
@@ -19,12 +27,42 @@ export default function UpcomingTripsPage() {
   const [search, setSearch] = useState('');
   const [month, setMonth] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
+  // This tab's label in the bottom nav bar (e.g. "Upcoming") — admin-editable
+  // in AdminBottomNav, shown in front of "Showing N trips" below.
+  const [navLabel, setNavLabel] = useState<string>(DEFAULT_NAV_LABEL);
 
   useEffect(() => {
     getUpcomingTrips()
       .then(data => setTrips(data))
       .catch(() => setTrips([]))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+      .then(data => {
+        const match = data?.find(i => i.to === NAV_ROUTE);
+        if (match?.label) setNavLabel(match.label);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Live nav label — the instant an admin renames this tab in
+  // AdminBottomNav, re-pull it so the text below updates without a refresh.
+  useEffect(() => {
+    const unsubscribe = subscribeToTable(
+      'site_content',
+      () => {
+        getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+          .then(data => {
+            const match = data?.find(i => i.to === NAV_ROUTE);
+            setNavLabel(match?.label || DEFAULT_NAV_LABEL);
+          })
+          .catch(() => {});
+      },
+      'key=eq.bottom_nav'
+    );
+    return unsubscribe;
   }, []);
 
   // Keep track of how far down this page the user has scrolled, so that if
@@ -202,6 +240,7 @@ export default function UpcomingTripsPage() {
         ) : (
           <>
             <p className="text-dark-muted text-sm mb-6 md:mb-8">
+              <span className="font-semibold text-primary">{navLabel}</span>{' '}
               Showing <span className="font-semibold text-dark">{filtered.length}</span> trip{filtered.length !== 1 ? 's' : ''}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
