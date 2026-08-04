@@ -2871,8 +2871,8 @@ export default function AdminEnquiries() {
         )}
 
         <div className="flex gap-3 mt-6">
-          <Button variant="outline" size="md" onClick={closeAddModal}>Cancel</Button>
-          <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
+          <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeAddModal}>Cancel</Button>
+          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
             {convertingWaitlist
               ? convertingWaitlist.slots > 1
                 ? `Convert ${convertingWaitlist.slots} & Save`
@@ -3032,8 +3032,8 @@ export default function AdminEnquiries() {
             )}
 
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" size="md" onClick={() => setPaymentTarget(null)}>Cancel</Button>
-              <Button variant="primary" size="md" onClick={handleSavePayment} loading={savingPayment}>Save Payment</Button>
+              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setPaymentTarget(null)}>Cancel</Button>
+              <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSavePayment} loading={savingPayment}>Save Payment</Button>
             </div>
           </div>
         )}
@@ -3186,8 +3186,8 @@ export default function AdminEnquiries() {
             </label>
 
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" size="md" onClick={() => setCancelTarget(null)}>Back</Button>
-              <Button variant="primary" size="md" onClick={handleConfirmCancel} loading={cancelling}>Confirm Cancellation</Button>
+              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setCancelTarget(null)}>Back</Button>
+              <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleConfirmCancel} loading={cancelling}>Confirm Cancellation</Button>
             </div>
           </div>
         )}
@@ -3305,8 +3305,8 @@ export default function AdminEnquiries() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" size="md" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="md" onClick={handleBulkSave} loading={bulkSaving}>
+            <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
+            <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleBulkSave} loading={bulkSaving}>
               Bulk Save
             </Button>
           </div>

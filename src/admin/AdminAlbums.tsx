@@ -347,8 +347,8 @@ export default function AdminAlbums() {
           </div>
         </div>
         <div className="flex gap-3 mt-6">
-          <Button variant="outline" size="md" onClick={closeModal}>Cancel</Button>
-          <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
+          <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeModal}>Cancel</Button>
+          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
             {editing ? 'Save Changes' : 'Create Album'}
           </Button>
         </div>
@@ -485,11 +485,12 @@ export default function AdminAlbums() {
               <Button
                 variant="primary"
                 size="md"
+                className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
                 onClick={() => { const a = viewing; setViewing(null); openEdit(a); }}
               >
                 Edit Album
               </Button>
-              <Button variant="outline" size="md" onClick={() => setViewing(null)}>Close</Button>
+              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setViewing(null)}>Close</Button>
             </div>
           </div>
         )}

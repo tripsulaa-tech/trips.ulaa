@@ -767,7 +767,7 @@ export default function AdminTrips() {
         ) : trips.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-lg shadow-card">
             <p className="font-display text-xl text-dark-muted mb-4">No trips yet.</p>
-            <Button variant="primary" onClick={openCreate}><Plus size={16} /> Add Your First Trip</Button>
+            <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={openCreate}><Plus size={16} /> Add Your First Trip</Button>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-card overflow-hidden">
@@ -861,8 +861,8 @@ export default function AdminTrips() {
         }
         footer={
           <div className="flex gap-3">
-            <Button variant="outline" size="md" onClick={closeModal}>Cancel</Button>
-            <Button variant="primary" size="md" onClick={handleSave} loading={saving}>
+            <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeModal}>Cancel</Button>
+            <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
               {editingTrip ? 'Save Changes' : 'Create Trip'}
             </Button>
           </div>
@@ -1939,11 +1939,12 @@ export default function AdminTrips() {
               <Button
                 variant="primary"
                 size="md"
+                className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
                 onClick={() => { const t = viewingTrip; setViewingTrip(null); openEdit(t); }}
               >
                 Edit Trip
               </Button>
-              <Button variant="outline" size="md" onClick={() => setViewingTrip(null)}>Close</Button>
+              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setViewingTrip(null)}>Close</Button>
             </div>
           </div>
         )}

@@ -83,7 +83,7 @@ export default function AdminGallery() {
               variant="primary"
               size="md"
               loading={uploading}
-              className="cursor-pointer"
+              className="cursor-pointer max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
               onClick={() => fileRef.current?.click()}
             >
               <Upload size={16} />

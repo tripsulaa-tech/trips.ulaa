@@ -937,10 +937,10 @@ export default function AdminAbout() {
               card's own scroll area (not the viewport), same pattern as the
               Add Trip modal's footer. ───────────────────────────────────── */}
           <div className="sticky bottom-0 flex items-center gap-3 bg-white border-t border-background-warm px-6 py-4 rounded-b-md">
-            <Button variant="primary" size="md" className="sm:flex-1" onClick={handleSave} loading={saving}>
+            <Button variant="primary" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
               Save
             </Button>
-            <Button variant="outline" size="md" className="sm:flex-1" onClick={resetToDefault}>
+            <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={resetToDefault}>
               Reset to Default
             </Button>
             {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
