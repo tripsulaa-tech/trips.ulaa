@@ -342,7 +342,7 @@ export default function TripDetailPage() {
           </div>
         </div>
         <div className="max-w-[1344px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-3">Trip details coming soon! ✨</h2>
+          <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-3">Trip details coming soon!</h2>
           <p className="text-dark-muted text-sm sm:text-base max-w-lg mx-auto mb-8">
             We're putting the finishing touches on this adventure. The full itinerary, pricing, and
             booking details will be available soon. While you wait, check out our other upcoming

@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 // How often to poll for a new deployment while the tab is open (ms).
-const CHECK_INTERVAL_MS = 60_000;
+// Kept short so a deploy is noticed quickly rather than users sitting on a
+// stale build for up to a minute — the fetch itself is a tiny HTML request,
+// so polling this often is cheap.
+const CHECK_INTERVAL_MS = 15_000;
 
 // Pulls the hashed asset entry (e.g. /assets/main-abc123.js) out of an
 // index.html document so it can be compared across fetches. Vite renames
