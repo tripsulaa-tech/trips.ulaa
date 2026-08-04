@@ -1,29 +1,98 @@
 import type { ReactNode } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Briefcase, BookOpen, Image, MessageCircle,
   LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles, ListChecks,
-  ChevronsLeft, ChevronsRight, UserCircle, PanelBottom
+  ChevronsLeft, ChevronsRight, UserCircle, PanelBottom, GripVertical
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/useAuth';
 import NotificationsPanel from './NotificationsPanel';
 import PushNotificationToggle from './PushNotificationToggle';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 
-const adminNav = [
-  { label: 'Dashboard', to: '/admin', icon: Home },
-  { label: 'Upcoming Trips', to: '/admin/trips', icon: Briefcase },
-  { label: 'Completed Trips', to: '/admin/albums', icon: BookOpen },
-  { label: 'Instagram Moments', to: '/admin/instagram-moments', icon: Image },
-  { label: 'Testimonials', to: '/admin/testimonials', icon: Star },
-  { label: 'About Page', to: '/admin/about', icon: FileText },
-  { label: 'Founder', to: '/admin/founder', icon: UserCircle },
-  { label: 'Why ULAA', to: '/admin/why-us', icon: Sparkles },
-  { label: 'Bottom Nav Bar', to: '/admin/bottom-nav', icon: PanelBottom },
-  { label: 'Enquiries', to: '/admin/enquiries', icon: MessageCircle },
-  { label: 'Waitlist', to: '/admin/waitlist', icon: ListChecks },
-];
+interface AdminNavItemDef {
+  to: string;
+  icon: LucideIcon;
+}
+
+// Single source of truth for what each nav item links to / shows as an
+// icon. Order and top-level-vs-grouped placement are handled separately
+// below (NAV_ORDER_STORAGE_KEY) so the admin can drag any item — including
+// "Dashboard" itself — anywhere they like.
+const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
+  Dashboard: { to: '/admin', icon: Home },
+  'Upcoming Trips': { to: '/admin/trips', icon: Briefcase },
+  'Completed Trips': { to: '/admin/albums', icon: BookOpen },
+  'Instagram Moments': { to: '/admin/instagram-moments', icon: Image },
+  Testimonials: { to: '/admin/testimonials', icon: Star },
+  'About Page': { to: '/admin/about', icon: FileText },
+  Founder: { to: '/admin/founder', icon: UserCircle },
+  'Why ULAA': { to: '/admin/why-us', icon: Sparkles },
+  'Bottom Nav Bar': { to: '/admin/bottom-nav', icon: PanelBottom },
+  Enquiries: { to: '/admin/enquiries', icon: MessageCircle },
+  Waitlist: { to: '/admin/waitlist', icon: ListChecks },
+};
+
+const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'About Page', 'Enquiries', 'Waitlist'];
+const DEFAULT_GROUP_CHILDREN_ORDER = ['Instagram Moments', 'Testimonials', 'Bottom Nav Bar', 'Founder', 'Why ULAA'];
+
+// "Dashboard" is the one item that renders as an expandable group (it's the
+// only item other tabs can be dropped into) — everything else is a plain
+// link, wherever the admin has dragged it to.
+const GROUP_LABEL = 'Dashboard';
+
+interface NavOrder {
+  topLevel: string[];
+  groupChildren: string[];
+}
+
+const NAV_ORDER_STORAGE_KEY = 'admin-sidebar-order';
+
+function defaultNavOrder(): NavOrder {
+  return { topLevel: [...DEFAULT_TOP_LEVEL_ORDER], groupChildren: [...DEFAULT_GROUP_CHILDREN_ORDER] };
+}
+
+// Reads the admin's saved drag-and-drop order, dropping any labels that no
+// longer exist (e.g. a page was removed in a later update) and appending
+// any new ones (e.g. a page was added) into their default spot — so a
+// stale saved order never hides a real nav item.
+function loadNavOrder(): NavOrder {
+  try {
+    const raw = window.localStorage.getItem(NAV_ORDER_STORAGE_KEY);
+    if (!raw) return defaultNavOrder();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed?.topLevel) || !Array.isArray(parsed?.groupChildren)) return defaultNavOrder();
+
+    const known = new Set(Object.keys(NAV_ITEM_DEFS));
+    const seen = new Set<string>();
+    const dedupeKnown = (labels: unknown[]) =>
+      labels.filter((l): l is string => typeof l === 'string' && known.has(l) && !seen.has(l) && seen.add(l));
+
+    const topLevel = dedupeKnown(parsed.topLevel);
+    const groupChildren = dedupeKnown(parsed.groupChildren);
+
+    for (const label of known) {
+      if (seen.has(label)) continue;
+      (DEFAULT_GROUP_CHILDREN_ORDER.includes(label) ? groupChildren : topLevel).push(label);
+    }
+
+    if (!topLevel.includes(GROUP_LABEL)) topLevel.unshift(GROUP_LABEL);
+    return { topLevel, groupChildren };
+  } catch {
+    return defaultNavOrder();
+  }
+}
+
+function saveNavOrder(order: NavOrder) {
+  try {
+    window.localStorage.setItem(NAV_ORDER_STORAGE_KEY, JSON.stringify(order));
+  } catch {
+    // Storage unavailable (private browsing, etc.) — order still works for
+    // this session, it just won't persist.
+  }
+}
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -48,7 +117,116 @@ interface SidebarContentProps {
   guardNavigate?: (e: React.MouseEvent) => void;
 }
 
+interface DragTarget {
+  list: 'top' | 'child';
+  label?: string;
+}
+
 function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onToggleCollapse, guardNavigate }: SidebarContentProps) {
+  const location = useLocation();
+  const [navOrder, setNavOrder] = useState<NavOrder>(loadNavOrder);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
+    [GROUP_LABEL]: navOrder.groupChildren.some(
+      label => location.pathname === NAV_ITEM_DEFS[label].to || location.pathname.startsWith(`${NAV_ITEM_DEFS[label].to}/`)
+    ),
+  }));
+  const [draggedLabel, setDraggedLabel] = useState<string | null>(null);
+  // Every row (top-level item, group header, group child, plus the two
+  // drop-only zones below) registers its wrapper element + what dropping
+  // there means, keyed by a unique row id. Hit-tested by Y position on
+  // every pointer move — this is what makes dragging work with touch as
+  // well as a mouse, since native HTML5 drag-and-drop (draggable /
+  // ondragstart) never fires from touch gestures on mobile browsers.
+  const rowsRef = useRef<Map<string, { el: HTMLElement; target: DragTarget }>>(new Map());
+
+  const toggleGroup = (label: string) => setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
+
+  const updateOrder = (updater: (order: NavOrder) => NavOrder) => {
+    setNavOrder(prev => {
+      const next = updater(prev);
+      saveNavOrder(next);
+      return next;
+    });
+  };
+
+  // Moves the item currently being dragged (read fresh via draggedLabelRef,
+  // not the possibly-stale `draggedLabel` closure) to just before
+  // `targetLabel` within `targetList`, or to the end of that list if
+  // targetLabel is omitted. Called live as the pointer moves, so a drag
+  // reorders in real time rather than only on release.
+  const draggedLabelRef = useRef<string | null>(null);
+  const moveDraggedTo = (targetList: 'top' | 'child', targetLabel?: string) => {
+    const dragged = draggedLabelRef.current;
+    if (!dragged || dragged === targetLabel) return;
+    if (dragged === GROUP_LABEL && targetList === 'child') return; // can't nest the group inside itself
+
+    updateOrder(prev => {
+      const topLevel = prev.topLevel.filter(l => l !== dragged);
+      const groupChildren = prev.groupChildren.filter(l => l !== dragged);
+      const dest = targetList === 'top' ? topLevel : groupChildren;
+      const insertAt = targetLabel ? dest.indexOf(targetLabel) : -1;
+      dest.splice(insertAt === -1 ? dest.length : insertAt, 0, dragged);
+      return { topLevel, groupChildren };
+    });
+  };
+
+  useEffect(() => {
+    if (!draggedLabel) return;
+    draggedLabelRef.current = draggedLabel;
+
+    const findNearestRow = (y: number) => {
+      let nearestKey: string | null = null;
+      let nearestDist = Infinity;
+      rowsRef.current.forEach((entry, key) => {
+        if (entry.target.label === draggedLabel) return; // skip the row being dragged
+        const rect = entry.el.getBoundingClientRect();
+        const center = rect.top + rect.height / 2;
+        const dist = Math.abs(center - y);
+        if (dist < nearestDist) { nearestDist = dist; nearestKey = key; }
+      });
+      return nearestKey ? rowsRef.current.get(nearestKey)! : null;
+    };
+
+    const handleMove = (e: PointerEvent) => {
+      const nearest = findNearestRow(e.clientY);
+      if (nearest) moveDraggedTo(nearest.target.list, nearest.target.label);
+    };
+    const endDrag = () => {
+      draggedLabelRef.current = null;
+      setDraggedLabel(null);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggedLabel]);
+
+  const startDrag = (label: string) => (e: React.PointerEvent) => {
+    if (collapsed) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDraggedLabel(label);
+  };
+
+  const GripHandle = ({ label, size = 14 }: { label: string; size?: number }) => (
+    <span
+      onPointerDown={startDrag(label)}
+      role="button"
+      tabIndex={-1}
+      aria-label={`Drag to reorder ${label}`}
+      className="shrink-0 flex items-center justify-center w-6 h-9 -ml-1 touch-none select-none cursor-grab active:cursor-grabbing text-dark-muted/50 hover:text-dark-muted"
+    >
+      <GripVertical size={size} />
+    </span>
+  );
+
   return (
     <div className="flex flex-col h-full">
       <div className={`relative pt-6 pb-4 flex items-center ${collapsed ? 'flex-col gap-3 px-2' : 'justify-center px-6'}`}>
@@ -88,23 +266,117 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       </div>
 
       <nav className={`flex-1 space-y-1 overflow-y-auto app-scroll ${collapsed ? 'px-2' : 'px-4'}`}>
-        {adminNav.map(({ label, to, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/admin'}
-            onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
-            title={collapsed ? label : undefined}
-            className={({ isActive }) => `
-              flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all
-              ${collapsed ? 'justify-center px-0' : 'px-4'}
-              ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
-            `}
-          >
-            <Icon size={18} className="shrink-0" />
-            {!collapsed && label}
-          </NavLink>
-        ))}
+        {navOrder.topLevel.map(label => {
+          const { to, icon: Icon } = NAV_ITEM_DEFS[label];
+
+          if (label !== GROUP_LABEL) {
+            return (
+              <div
+                key={to}
+                ref={el => { if (el) rowsRef.current.set(label, { el, target: { list: 'top', label } }); else rowsRef.current.delete(label); }}
+                className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
+              >
+                {!collapsed && <GripHandle label={label} />}
+                <NavLink
+                  to={to}
+                  end={to === '/admin'}
+                  onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
+                  title={collapsed ? label : undefined}
+                  className={({ isActive }) => `
+                    flex-1 flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all min-w-0
+                    ${collapsed ? 'justify-center px-0' : 'px-3'}
+                    ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
+                  `}
+                >
+                  <Icon size={18} className="shrink-0" />
+                  {!collapsed && <span className="truncate">{label}</span>}
+                </NavLink>
+              </div>
+            );
+          }
+
+          // "Dashboard" — the one item that renders as an expandable group.
+          // Collapsed rail has no room for a nested list, so it falls back
+          // to a plain link there; only the expanded sidebar shows the
+          // expand/collapse and accepts drops into/out of the group.
+          const isOpen = !collapsed && (openGroups[GROUP_LABEL] ?? false);
+
+          return (
+            <div key={to}>
+              <div
+                ref={el => { if (el) rowsRef.current.set(label, { el, target: { list: 'top', label } }); else rowsRef.current.delete(label); }}
+                className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
+              >
+                {!collapsed && <GripHandle label={label} />}
+                <NavLink
+                  to={to}
+                  end
+                  onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
+                  title={collapsed ? label : undefined}
+                  className={({ isActive }) => `
+                    flex-1 flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all min-w-0
+                    ${collapsed ? 'justify-center px-0' : 'px-2'}
+                    ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
+                  `}
+                >
+                  <Icon size={18} className="shrink-0" />
+                  {!collapsed && <span className="truncate">{label}</span>}
+                </NavLink>
+                {!collapsed && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(GROUP_LABEL)}
+                    aria-label={isOpen ? `Collapse ${label}` : `Expand ${label}`}
+                    aria-expanded={isOpen}
+                    className="shrink-0 p-2.5 mr-1 rounded-md text-dark-muted hover:bg-background-warm hover:text-primary transition-colors"
+                  >
+                    <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
+              </div>
+
+              {isOpen && (
+                <div
+                  ref={el => { if (el) rowsRef.current.set('__GROUP_END__', { el, target: { list: 'child' } }); else rowsRef.current.delete('__GROUP_END__'); }}
+                  className="mt-1 ml-4 pl-3 py-1 space-y-1 border-l border-background-warm min-h-[8px]"
+                >
+                  {navOrder.groupChildren.map(childLabel => {
+                    const child = NAV_ITEM_DEFS[childLabel];
+                    return (
+                      <div
+                        key={child.to}
+                        ref={el => { if (el) rowsRef.current.set(childLabel, { el, target: { list: 'child', label: childLabel } }); else rowsRef.current.delete(childLabel); }}
+                        className={`flex items-center gap-1 rounded-md ${draggedLabel === childLabel ? 'opacity-40' : ''}`}
+                      >
+                        <GripHandle label={childLabel} size={13} />
+                        <NavLink
+                          to={child.to}
+                          onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
+                          className={({ isActive }) => `
+                            flex-1 flex items-center gap-2.5 py-2.5 px-2 rounded-md text-sm font-medium transition-all min-w-0
+                            ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
+                          `}
+                        >
+                          <child.icon size={16} className="shrink-0" />
+                          <span className="truncate">{childLabel}</span>
+                        </NavLink>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Trailing drop zone — lets a dragged group child be un-nested
+            back to the top level by dragging it below the last item. */}
+        {!collapsed && draggedLabel && (
+          <div
+            ref={el => { if (el) rowsRef.current.set('__TOP_END__', { el, target: { list: 'top' } }); else rowsRef.current.delete('__TOP_END__'); }}
+            className="h-10 rounded-md border-2 border-dashed border-primary/30"
+          />
+        )}
       </nav>
 
       <div className={`p-4 border-t border-background-warm ${collapsed ? 'px-2' : ''}`}>

@@ -113,65 +113,69 @@ export default function AdminBottomNav() {
         <div className="app-scroll overflow-y-auto flex-1 min-h-0">
           <div className="p-6 space-y-3">
             {items.map((item, index) => (
-              <div key={item.id} className="flex items-start gap-2 border border-background-warm rounded-md p-3">
-                <div className="flex flex-col gap-1 pt-1">
+              <div key={item.id} className="border border-background-warm rounded-md p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => moveTab(index, -1)}
+                      disabled={index === 0}
+                      className="p-1 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      title="Move up"
+                    >
+                      <ArrowUp size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveTab(index, 1)}
+                      disabled={index === items.length - 1}
+                      className="p-1 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      title="Move down"
+                    >
+                      <ArrowDown size={14} />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs font-medium text-dark-muted mb-1">Icon</label>
+                    <TripHighlightIconPicker
+                      value={item.icon}
+                      onChange={key => updateItem(index, { icon: key })}
+                      hintText={item.label}
+                    />
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => moveTab(index, -1)}
-                    disabled={index === 0}
-                    className="p-1 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                    title="Move up"
+                    onClick={() => removeTab(index)}
+                    className="mt-5 p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+                    title="Remove tab"
                   >
-                    <ArrowUp size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveTab(index, 1)}
-                    disabled={index === items.length - 1}
-                    className="p-1 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                    title="Move down"
-                  >
-                    <ArrowDown size={14} />
+                    <Trash2 size={15} />
                   </button>
                 </div>
 
-                <div className="w-40 flex-shrink-0">
-                  <label className="block text-xs font-medium text-dark-muted mb-1">Icon</label>
-                  <TripHighlightIconPicker
-                    value={item.icon}
-                    onChange={key => updateItem(index, { icon: key })}
-                    hintText={item.label}
-                  />
-                </div>
+                <div className="grid grid-cols-2 gap-2 pl-8">
+                  <div className="min-w-0">
+                    <label className="block text-xs font-medium text-dark-muted mb-1">Label</label>
+                    <input
+                      value={item.label}
+                      onChange={e => updateItem(index, { label: e.target.value })}
+                      className={inputClass}
+                      placeholder="e.g. Upcoming"
+                    />
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <label className="block text-xs font-medium text-dark-muted mb-1">Label</label>
-                  <input
-                    value={item.label}
-                    onChange={e => updateItem(index, { label: e.target.value })}
-                    className={inputClass}
-                    placeholder="e.g. Upcoming"
-                  />
+                  <div className="min-w-0">
+                    <label className="block text-xs font-medium text-dark-muted mb-1">Link</label>
+                    <input
+                      value={item.to}
+                      onChange={e => updateItem(index, { to: e.target.value })}
+                      className={inputClass}
+                      placeholder="/trips"
+                    />
+                  </div>
                 </div>
-
-                <div className="flex-1 min-w-0">
-                  <label className="block text-xs font-medium text-dark-muted mb-1">Link</label>
-                  <input
-                    value={item.to}
-                    onChange={e => updateItem(index, { to: e.target.value })}
-                    className={inputClass}
-                    placeholder="/trips"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => removeTab(index)}
-                  className="mt-6 p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
-                  title="Remove tab"
-                >
-                  <Trash2 size={15} />
-                </button>
               </div>
             ))}
 
@@ -181,10 +185,10 @@ export default function AdminBottomNav() {
           </div>
 
           <div className="sticky bottom-0 flex items-center gap-3 bg-white border-t border-background-warm px-6 py-4 rounded-b-md">
-            <Button variant="primary" size="md" className="sm:flex-1" onClick={handleSave} loading={saving}>
+            <Button variant="primary" size="md" className="sm:flex-1 !text-sm sm:!text-base" onClick={handleSave} loading={saving}>
               Save
             </Button>
-            <Button variant="outline" size="md" className="sm:flex-1" onClick={resetToDefault}>
+            <Button variant="outline" size="md" className="sm:flex-1 !text-sm sm:!text-base" onClick={resetToDefault}>
               Reset to Default
             </Button>
             {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
