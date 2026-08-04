@@ -42,17 +42,16 @@ export default function BottomNav() {
           : { duration: 0.32, ease: [0.22, 1, 0.36, 1] }
       }
       aria-label="Primary mobile navigation"
-      // pointer-events-none on the wrapper + pointer-events-auto on the dock
-      // below keeps the transparent side-gutters (and the centered dock's
-      // margins on wider/tablet widths) from silently eating taps meant for
-      // whatever sits underneath them.
-      className="fixed bottom-0 inset-x-0 z-40 lg:hidden pointer-events-none px-3 pt-1 pb-[max(env(safe-area-inset-bottom),0.625rem)]"
+      // Docked flush to the viewport edges — no side gutters, no bottom
+      // gap. The safe-area inset is padding *inside* the bar (so the
+      // white background itself extends under the iPhone home-indicator
+      // area / Android gesture bar) rather than a transparent margin
+      // that made the bar look like it was floating above the edge.
+      className="fixed bottom-0 inset-x-0 z-40 lg:hidden w-full border-t border-background-warm bg-white shadow-[0_-4px_20px_rgba(168,90,42,0.08)] pb-[env(safe-area-inset-bottom)]"
     >
-      {/* Floating glass dock — inset from the screen edges instead of the
-          old edge-to-edge bar, with a frosted backdrop-blur, a warm elevation
-          shadow, and a hairline inner highlight so it reads as a physical,
-          raised object rather than a flat strip glued to the viewport. */}
-      <div className="pointer-events-auto relative mx-auto flex h-16 max-w-md rounded-[8px] border border-white/70 bg-white/80 backdrop-blur-xl shadow-[0_8px_40px_rgba(168,90,42,0.18),inset_0_1px_0_rgba(255,255,255,0.6)]">
+      {/* Edge-to-edge bar — fills the full width and sits directly on the
+          bottom edge of the screen on both iOS and Android. */}
+      <div className="relative mx-auto flex h-16 w-full max-w-md">
         {navItems.map(({ id, label, to, icon }, index) => {
           const isActive = index === safeIndex;
           // Falls back to the Home icon if a saved icon key doesn't resolve

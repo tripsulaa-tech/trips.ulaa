@@ -28,10 +28,10 @@ export default function Layout({ children }: LayoutProps) {
         {children}
       </main>
       <Footer />
-      {/* Reserves space at the very end of the page on mobile so the fixed
-          BottomNav — now an inset floating dock plus safe-area padding,
-          slightly taller than the old edge-to-edge bar — never overlaps the
-          last line of the footer. */}
+      {/* Reserves space at the very end of the page on mobile so the fixed,
+          edge-to-edge BottomNav (its height varies slightly with the
+          device's safe-area inset) never overlaps the last line of the
+          footer. */}
       <div className="h-28 lg:hidden" aria-hidden="true" />
       <FloatingWhatsApp />
       <ScrollToTopButton />
