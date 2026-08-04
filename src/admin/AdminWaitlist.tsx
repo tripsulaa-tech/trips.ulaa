@@ -1289,7 +1289,10 @@ export default function AdminWaitlist() {
 
         <div className="flex gap-3 pt-5">
           <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setModalOpen(false)}>Cancel</Button>
-          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>Save</Button>
+          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
+            <span className="hidden sm:inline">Save Changes</span>
+            <span className="sm:hidden">Save</span>
+          </Button>
         </div>
       </Modal>
 
