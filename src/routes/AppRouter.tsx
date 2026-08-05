@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect } from 'react';
+import { lazy, Suspense, useLayoutEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
 import { useAuth } from '../context/useAuth';
@@ -65,29 +65,6 @@ function PersistentBottomNav() {
   return <BottomNav />;
 }
 
-function SyncManifestWithRoute() {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    const isAdminRoute = pathname.startsWith('/admin');
-
-    document
-      .querySelector('link[rel="manifest"]')
-      ?.setAttribute('href', isAdminRoute ? '/manifest-admin.json' : '/manifest.json');
-    document
-      .querySelector('link[rel="apple-touch-icon"]')
-      ?.setAttribute('href', isAdminRoute ? '/icons/admin/apple-touch-icon.png' : '/icons/user/apple-touch-icon.png');
-    const favicon = document.querySelector('link[rel="icon"]');
-    favicon?.setAttribute('href', isAdminRoute ? '/icons/admin/favicon-32.png' : '/ULAA.svg');
-    favicon?.setAttribute('type', isAdminRoute ? 'image/png' : 'image/svg+xml');
-    document
-      .querySelector('meta[name="apple-mobile-web-app-title"]')
-      ?.setAttribute('content', isAdminRoute ? 'ULAA Admin' : 'ULAA');
-    document.title = isAdminRoute ? 'ULAA Admin' : 'ULAA Trips — Unseen. Local. Adventures. Activities.';
-  }, [pathname]);
-
-  return null;
-}
 
 // Public Pages
 const HomePage = lazy(() => import('../pages/HomePage'));
@@ -141,7 +118,6 @@ export default function AppRouter() {
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
-        <SyncManifestWithRoute />
         <InstallAppBanner />
         <PersistentBottomNav />
         <Suspense fallback={<PageLoader />}>

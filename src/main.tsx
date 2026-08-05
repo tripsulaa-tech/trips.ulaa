@@ -14,25 +14,13 @@ createRoot(document.getElementById('root')!).render(
 // Give the admin panel its own installable identity, separate from the
 // public site's "ULAA" home-screen app.
 //
-// Chrome's "Install app" prompt and iOS's "Add to Home Screen" branding
-// both read whichever manifest/meta tags are linked on the page at load
-// time. On /admin we swap in a dedicated manifest (manifest-admin.json)
-// and dedicated iOS meta tags/icons — pulled from /icons/admin/ instead
-// of /icons/user/ — so an admin who visits /admin and installs it gets a
-// separate "ULAA Admin" icon that opens straight into the dashboard,
-// fully isolated from the public site's icon set.
-const isAdminRoute = window.location.pathname.startsWith('/admin')
-
-if (isAdminRoute) {
-  document.querySelector('link[rel="manifest"]')?.setAttribute('href', '/manifest-admin.json')
-  document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', '/icons/admin/apple-touch-icon.png')
-  document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.setAttribute('content', 'yes')
-  document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', 'ULAA Admin')
-  const favicon = document.querySelector('link[rel="icon"]')
-  favicon?.setAttribute('href', '/icons/admin/favicon-32.png')
-  favicon?.setAttribute('type', 'image/png')
-  document.title = 'ULAA Admin'
-}
+// This used to swap the manifest/apple-touch-icon/title tags in via JS
+// after load, but iOS's "Add to Home Screen" reliably reads a page's PWA
+// metadata only from what the server actually returned for that URL — it
+// doesn't pick up tags mutated after the fact. /admin is now served by its
+// own static admin.html (see vite.config.ts + vercel.json rewrites) with
+// the "ULAA Admin" manifest/icons baked in directly, so no runtime swap is
+// needed here anymore.
 
 // Register the service worker for both the public site and /admin. Chrome
 // requires an active, controlling service worker before it will offer the
