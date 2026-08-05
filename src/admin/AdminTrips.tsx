@@ -92,11 +92,8 @@ interface TripForm {
   hero_mobile_image: string;
   terms_and_conditions: string;
   cancellation_policy: CancellationPolicy;
-  is_published: boolean;
-  // When true, the public site shows only the cover image + title for this
-  // trip (teaser card + banner-only detail page) instead of the full
-  // content. See is_coming_soon in types-index.ts.
-  is_coming_soon: boolean;
+  // Single lifecycle status — see status in types-index.ts.
+  status: 'draft' | 'coming_soon' | 'published';
   // ── Extended content blocks ──────────────────────────────────────────
   highlight_cards: TripHighlightCard[];
   accommodation_description: string;
@@ -125,7 +122,7 @@ const emptyForm: TripForm = {
   min_age: '', max_age: '', price: '',
   early_bird_price: '', early_bird_deadline: '', strike_through_price: '', advance_amount: '', trip_type: '',
   cover_image: '', cover_image_crop: null, hero_mobile_image: '', terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
-  cancellation_policy: DEFAULT_CANCELLATION_POLICY, is_published: false, is_coming_soon: false,
+  cancellation_policy: DEFAULT_CANCELLATION_POLICY, status: 'draft',
   // Extended
   highlight_cards: [], accommodation_description: '', accommodation_photos: [],
   included_groups: [], gallery_items: [], gallery_description: "Views worth every post. Memories worth even more.",
@@ -329,7 +326,7 @@ export default function AdminTrips() {
         refund_min_days: '<Fastest number of working days an approved refund is processed in>',
         refund_max_days: '<Slowest number of working days an approved refund is processed in>',
       },
-      is_published: false,
+      status: 'draft',
       // ── Extended content blocks ──────────────────────────────────────
       // Note: included_items, not_included_items, and gallery_images are
       // deliberately left out of this template. They're legacy fallback
@@ -518,8 +515,7 @@ export default function AdminTrips() {
           refund_min_days: asNum(raw.cancellation_policy.refund_min_days) || DEFAULT_CANCELLATION_POLICY.refund_min_days,
           refund_max_days: asNum(raw.cancellation_policy.refund_max_days) || DEFAULT_CANCELLATION_POLICY.refund_max_days,
         } : DEFAULT_CANCELLATION_POLICY,
-        is_published: false,
-        is_coming_soon: false,
+        status: 'draft',
         highlight_cards: Array.isArray(raw.highlight_cards)
           ? raw.highlight_cards.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), heading: asStr(c?.heading), description: asStr(c?.description) }))
           : [],
@@ -599,8 +595,7 @@ export default function AdminTrips() {
       cover_image: trip.cover_image || '',
       cover_image_crop: trip.cover_image_crop || null,
       hero_mobile_image: trip.hero_mobile_image || '',
-      is_published: trip.is_published,
-      is_coming_soon: trip.is_coming_soon || false,
+      status: trip.status,
       terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
       cancellation_policy: trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY,
       // Extended
@@ -705,13 +700,22 @@ export default function AdminTrips() {
     load();
   };
 
+  // Eye/EyeOff quick action: draft -> published (full listing, bypassing the
+  // coming_soon teaser state); published or coming_soon -> draft (take fully
+  // offline). Mirrors the old is_published toggle's behavior.
   const togglePublish = async (trip: UpcomingTrip) => {
-    await updateUpcomingTrip(trip.id, { is_published: !trip.is_published });
+    const status = trip.status === 'draft' ? 'published' : 'draft';
+    await updateUpcomingTrip(trip.id, { status });
     load();
   };
 
+  // Hourglass quick action: flips between the two "live" sub-states
+  // (coming_soon <-> published). Clicking it on a draft trip puts it live
+  // straight into coming_soon (teaser) — the common "put it up early while
+  // still filling in content" workflow.
   const toggleComingSoon = async (trip: UpcomingTrip) => {
-    await updateUpcomingTrip(trip.id, { is_coming_soon: !trip.is_coming_soon });
+    const status = trip.status === 'coming_soon' ? 'published' : 'coming_soon';
+    await updateUpcomingTrip(trip.id, { status });
     load();
   };
 
@@ -741,8 +745,9 @@ export default function AdminTrips() {
     setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, bullets: [...g.bullets, ...lines] } : g) }));
     el.value = '';
   };
-  const publishedCount = trips.filter(t => t.is_published).length;
-  const draftCount = trips.length - publishedCount;
+  const publishedCount = trips.filter(t => t.status === 'published').length;
+  const comingSoonCount = trips.filter(t => t.status === 'coming_soon').length;
+  const draftCount = trips.filter(t => t.status === 'draft').length;
 
   return (
     <AdminLayout title="Upcoming Trips">
@@ -757,6 +762,8 @@ export default function AdminTrips() {
             <p className="flex items-center gap-2 text-dark-muted text-sm">
               <ClipboardList size={20} className="text-primary flex-shrink-0" />
               <span className="font-semibold text-green-700">{publishedCount}</span> Published
+              <span className="text-dark-muted/50">•</span>
+              <span className="font-semibold text-amber-700">{comingSoonCount}</span> Coming Soon
               <span className="text-dark-muted/50">•</span>
               <span className="font-semibold text-dark">{draftCount}</span> Draft
             </p>
@@ -820,24 +827,21 @@ export default function AdminTrips() {
                         </span>
                       </td>
                       <td className="px-2 py-3 text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className={`inline-block text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${trip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
-                            {trip.is_published ? 'Published' : 'Draft'}
-                          </span>
-                          {trip.is_coming_soon && (
-                            <span className="inline-block text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-amber-100 text-amber-700">
-                              Coming Soon
-                            </span>
-                          )}
-                        </div>
+                        <span className={`inline-block text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
+                          trip.status === 'published' ? 'bg-green-100 text-green-700'
+                          : trip.status === 'coming_soon' ? 'bg-amber-100 text-amber-700'
+                          : 'bg-background-warm text-dark-muted'
+                        }`}>
+                          {trip.status === 'published' ? 'Published' : trip.status === 'coming_soon' ? 'Coming Soon' : 'Draft'}
+                        </span>
                       </td>
                       <td className="pl-2 pr-2 sm:pl-4 sm:pr-3 py-3 whitespace-nowrap">
                         <div className="flex items-center justify-end gap-0.5 sm:gap-1.5">
-                          <button onClick={() => toggleComingSoon(trip)} className={`flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background transition-colors ${trip.is_coming_soon ? 'text-amber-600' : 'text-dark-muted hover:text-primary'}`} title={trip.is_coming_soon ? 'Turn off Coming Soon (show full trip)' : 'Mark as Coming Soon (show only cover + title)'}>
+                          <button onClick={() => toggleComingSoon(trip)} className={`flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background transition-colors ${trip.status === 'coming_soon' ? 'text-amber-600' : 'text-dark-muted hover:text-primary'}`} title={trip.status === 'coming_soon' ? 'Switch to fully Published (show full trip)' : 'Mark as Coming Soon (show only cover + title)'}>
                             <Hourglass size={15} />
                           </button>
-                          <button onClick={() => togglePublish(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.is_published ? 'Unpublish' : 'Publish'}>
-                            {trip.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
+                          <button onClick={() => togglePublish(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.status === 'draft' ? 'Publish' : 'Unpublish (move to Draft)'}>
+                            {trip.status === 'draft' ? <Eye size={15} /> : <EyeOff size={15} />}
                           </button>
                           <button
                             onClick={() => handleDownloadTripPdf(trip)}
@@ -1586,24 +1590,28 @@ export default function AdminTrips() {
             </div>
           </TabPanel>
           <TabPanel label="Publish">
-            <div className="md:col-span-2 space-y-4">
-              <div className="flex items-center gap-3">
-                <input type="checkbox" id="is_published" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
-                <label htmlFor="is_published" className="text-sm font-medium text-dark">Publish immediately</label>
-              </div>
-              <div className="rounded-md border-2 border-background-warm bg-background p-3">
-                <div className="flex items-center gap-3">
-                  <input type="checkbox" id="is_coming_soon" checked={form.is_coming_soon} onChange={e => setForm(f => ({ ...f, is_coming_soon: e.target.checked }))} className="w-4 h-4 accent-primary" />
-                  <label htmlFor="is_coming_soon" className="text-sm font-medium text-dark">Coming Soon (show teaser only)</label>
-                </div>
-                <p className="text-xs text-dark-muted mt-2 ml-7">
-                  When on, the public site only shows the cover image and title for this trip —
-                  the trip card hides price, dates and seats, and the trip detail page hides
-                  everything below the banner (itinerary, pricing, booking, etc.). Use this to
-                  put a trip up on the site early while you're still filling in the rest of its
-                  content. Works together with "Publish immediately" above — the trip still
-                  needs to be published for either card to appear at all.
-                </p>
+            <div className="md:col-span-2 space-y-3">
+              <p className="text-sm font-medium text-dark">Status</p>
+              <div className="space-y-2">
+                {([
+                  { value: 'draft' as const, label: 'Draft', desc: 'Hidden everywhere on the public site.' },
+                  { value: 'coming_soon' as const, label: 'Coming Soon', desc: "Public, but only the cover image and title show — the trip card hides price/dates/seats and the trip detail page hides everything below the banner. Use this to put a trip up early while you're still filling in the rest of its content." },
+                  { value: 'published' as const, label: 'Published', desc: 'Public, full bookable trip page.' },
+                ]).map(opt => (
+                  <label key={opt.value} className={`flex items-start gap-3 rounded-md border-2 p-3 cursor-pointer transition-colors ${form.status === opt.value ? 'border-primary bg-primary/5' : 'border-background-warm bg-background'}`}>
+                    <input
+                      type="radio"
+                      name="status"
+                      checked={form.status === opt.value}
+                      onChange={() => setForm(f => ({ ...f, status: opt.value }))}
+                      className="w-4 h-4 accent-primary mt-0.5 flex-shrink-0"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-dark">{opt.label}</span>
+                      <span className="block text-xs text-dark-muted mt-0.5">{opt.desc}</span>
+                    </span>
+                  </label>
+                ))}
               </div>
             </div>
           </TabPanel>
@@ -1626,14 +1634,13 @@ export default function AdminTrips() {
             )}
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${viewingTrip.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
-                {viewingTrip.is_published ? 'Published' : 'Draft'}
+              <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
+                viewingTrip.status === 'published' ? 'bg-green-100 text-green-700'
+                : viewingTrip.status === 'coming_soon' ? 'bg-amber-100 text-amber-700'
+                : 'bg-background-warm text-dark-muted'
+              }`}>
+                {viewingTrip.status === 'published' ? 'Published' : viewingTrip.status === 'coming_soon' ? 'Coming Soon' : 'Draft'}
               </span>
-              {viewingTrip.is_coming_soon && (
-                <span className="text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-amber-100 text-amber-700">
-                  Coming Soon
-                </span>
-              )}
               <span className="text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-background-warm text-dark-muted">
                 {viewingTrip.seats_booked}/{viewingTrip.total_seats} seats booked
               </span>

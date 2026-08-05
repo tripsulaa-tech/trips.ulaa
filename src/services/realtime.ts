@@ -15,23 +15,24 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 //   2. The table has REPLICA IDENTITY FULL, so UPDATE/DELETE payloads
 //      include full old-row data (needed for correct filtering).
 //
-// RLS caveat: completed_trips and upcoming_trips are both gated by a
-// "Public read ... using (is_published = true)" policy. Realtime enforces
-// that same policy per change, checked against the *new* row for
-// INSERT/UPDATE and the *old* row for DELETE. In practice that means an
-// anonymous visitor's live feed:
-//   - DOES get notified the instant an admin publishes a draft
-//     (is_published false -> true — the new row now passes the policy),
+// RLS caveat: completed_trips is gated by a "Public read ... using
+// (is_published = true)" policy, and upcoming_trips by a
+// "Public read ... using (status in ('coming_soon', 'published'))" policy.
+// Realtime enforces that same policy per change, checked against the *new*
+// row for INSERT/UPDATE and the *old* row for DELETE. In practice that means
+// an anonymous visitor's live feed:
+//   - DOES get notified the instant an admin publishes a draft (the new row
+//     now passes the policy — is_published false -> true, or
+//     status 'draft' -> 'coming_soon'/'published'),
 //   - DOES get notified if a published trip/album is deleted
 //     (the old row passed the policy),
-//   - will NOT get a push the instant something is unpublished
-//     (true -> false), since the new row no longer satisfies the public
-//     policy and Realtime won't forward that change to a public/anon
-//     subscriber. Pages that list trips re-fetch from the server on every
-//     received event (not just patch state locally), so they still
-//     self-correct as soon as *any* other change comes in — this is just
-//     a platform limitation on the exact instant an unpublish alone is
-//     reflected.
+//   - will NOT get a push the instant something is un-published/drafted
+//     again, since the new row no longer satisfies the public policy and
+//     Realtime won't forward that change to a public/anon subscriber. Pages
+//     that list trips re-fetch from the server on every received event
+//     (not just patch state locally), so they still self-correct as soon as
+//     *any* other change comes in — this is just a platform limitation on
+//     the exact instant an unpublish alone is reflected.
 
 type Payload<T extends Record<string, unknown> = Record<string, unknown>> =
   RealtimePostgresChangesPayload<T>;

@@ -93,7 +93,7 @@ export default function UpcomingTripsPage() {
       // ever show up under "All" — picking a specific month pill hides
       // them, matching that month's pill count (see monthCounts below).
       const matchMonth = month === 'All' ||
-        (!trip.is_coming_soon && new Date(trip.start_date).toLocaleString('en', { month: 'long' }) === month);
+        (trip.status !== 'coming_soon' && new Date(trip.start_date).toLocaleString('en', { month: 'long' }) === month);
       return matchSearch && matchMonth;
     });
   }, [trips, search, month]);
@@ -114,7 +114,7 @@ export default function UpcomingTripsPage() {
       // confirmed one — counting them into a specific month's pill would
       // promise a date that isn't real yet. They still count toward "All"
       // above, just not toward any individual month.
-      if (trip.is_coming_soon) continue;
+      if (trip.status === 'coming_soon') continue;
       const m = new Date(trip.start_date).toLocaleString('en', { month: 'long' });
       counts[m] = (counts[m] || 0) + 1;
     }

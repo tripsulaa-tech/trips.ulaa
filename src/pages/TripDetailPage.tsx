@@ -300,7 +300,7 @@ export default function TripDetailPage() {
   // booking, etc.) is hidden while the rest of the trip's content is
   // still being filled in. This renders instead of, not alongside, the
   // full page below.
-  if (trip.is_coming_soon) {
+  if (trip.status === 'coming_soon') {
     return (
       <Layout>
         <div className="relative mt-[81px] aspect-[9/16] sm:aspect-[21/9] overflow-hidden bg-dark">

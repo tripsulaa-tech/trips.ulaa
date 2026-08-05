@@ -96,7 +96,6 @@ create table public.upcoming_trips (
   price                   numeric(10, 2),
   cover_image             text,
   gallery_images          text[] default '{}'::text[],
-  is_published            boolean default false,
   created_at              timestamptz default now(),
   updated_at              timestamptz default now(),
   early_bird_price        numeric(10, 2),
@@ -155,14 +154,17 @@ create table public.upcoming_trips (
   -- Saved position/zoom for cover_image, set via Admin → Add/Edit Trip →
   -- Media → Cover Image Editor. See add_trip_cover_image_crop.sql.
   cover_image_crop        jsonb,
-  -- When true, the public site shows only the cover image + title for this
-  -- trip (TripCard teaser + TripDetailPage hero banner) and hides
-  -- itinerary/pricing/booking content. Independent of is_published — a
-  -- trip can be published and still marked "coming soon" while the rest
-  -- of its content is filled in. See add_trip_coming_soon.sql.
-  is_coming_soon          boolean not null default false,
+  -- Single lifecycle status, replacing the old independent is_published /
+  -- is_coming_soon booleans (see add_trip_status_lifecycle.sql):
+  --   draft       - hidden everywhere on the public site
+  --   coming_soon - public, but TripCard/TripDetailPage show only the cover
+  --                 image + title (teaser), hiding itinerary/pricing/booking
+  --   published   - public, full bookable trip page
+  status                  text not null default 'draft',
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
+  constraint upcoming_trips_status_check
+    check (status = any (array['draft'::text, 'coming_soon'::text, 'published'::text])),
   constraint upcoming_trips_trip_type_check
     check (trip_type = any (array['domestic'::text, 'international'::text])),
   constraint upcoming_trips_strike_through_price_check
@@ -1153,9 +1155,9 @@ begin
     );
 
   update public.upcoming_trips
-     set is_published = false
+     set status = 'draft'
    where start_date <= current_date
-     and is_published = true;
+     and status <> 'draft';
 end;
 $function$;
 
@@ -1300,7 +1302,7 @@ create policy "Public read completed trips" on public.completed_trips
 create policy "Admin all upcoming trips" on public.upcoming_trips
   for all using (auth.role() = 'authenticated');
 create policy "Public read upcoming trips" on public.upcoming_trips
-  for select using (is_published = true);
+  for select using (status in ('coming_soon', 'published'));
 
 -- enquiries — public can only insert (submit the enquiry form); everything
 -- else (read/update/delete) requires an authenticated admin session.

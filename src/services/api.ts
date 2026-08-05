@@ -98,7 +98,7 @@ export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
     supabase
       .from('upcoming_trips')
       .select('*')
-      .eq('is_published', true)
+      .in('status', ['coming_soon', 'published'])
       .gte('start_date', today)
       .order('start_date', { ascending: true }),
     getWaitlistReservedCounts(),
@@ -113,7 +113,7 @@ export async function getUpcomingTripBySlug(slug: string): Promise<UpcomingTrip 
       .from('upcoming_trips')
       .select('*')
       .eq('slug', slug)
-      .eq('is_published', true)
+      .in('status', ['coming_soon', 'published'])
       .single(),
     getWaitlistReservedCounts(),
   ]);

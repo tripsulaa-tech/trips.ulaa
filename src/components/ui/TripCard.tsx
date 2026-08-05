@@ -19,7 +19,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   // teaser instead of reusing the full card below, since almost every
   // field that card shows (price, dates, seats, share/calendar actions)
   // doesn't apply yet.
-  if (trip.is_coming_soon) {
+  if (trip.status === 'coming_soon') {
     return (
       <motion.div
         initial={{ opacity: 0, y: 30 }}
