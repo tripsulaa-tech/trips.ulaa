@@ -12,7 +12,7 @@ import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
 import type { SortDirection } from '../components/ui/dataTableUtils';
 import { useConfirm } from '../components/ui/useConfirm';
 import { useAlert } from '../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow } from '../services/api';
 import type { Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry } from '../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
@@ -896,8 +896,7 @@ export default function AdminEnquiries() {
   const handleDownloadInvoice = async (e: Enquiry) => {
     setInvoiceBusyId(e.id);
     try {
-      const payments = await getPaymentsForEnquiry(e.id);
-      await downloadInvoicePdf(e, payments);
+      await downloadInvoicePdf(e);
     } catch (err) {
       console.error(err);
       alert('Failed to generate invoice.');
@@ -914,8 +913,7 @@ export default function AdminEnquiries() {
   const handleShareInvoice = async (e: Enquiry) => {
     setInvoiceBusyId(e.id);
     try {
-      const payments = await getPaymentsForEnquiry(e.id);
-      const file = await invoiceAsFile(e, payments);
+      const file = await invoiceAsFile(e);
       const canShareFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
       if (canShareFile) {
         await navigator.share({
@@ -924,7 +922,7 @@ export default function AdminEnquiries() {
           text: `Invoice for booking ${e.booking_id || ''} (${e.trip_title || 'ULAA trip'})`,
         });
       } else {
-        await downloadInvoicePdf(e, payments);
+        await downloadInvoicePdf(e);
         const text = encodeURIComponent(
           `Hi ${e.full_name}, here's your ULAA booking summary:\n` +
           `Booking ID: ${e.booking_id || '—'}\n` +

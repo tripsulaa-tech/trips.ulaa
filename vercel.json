@@ -38,6 +38,12 @@
       ]
     }
   ],
+  "functions": {
+    "api/invoices/[id]/pdf.ts": {
+      "memory": 1536,
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/admin/(.*)", "destination": "/admin.html" },
