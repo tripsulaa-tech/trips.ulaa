@@ -108,7 +108,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
-      headless: true,
+      // IMPORTANT: use chromium.headless, not a hardcoded `true`.
+      // @sparticuz/chromium's `args` are built to match whatever headless
+      // mode `chromium.headless` reports for the bundled Chromium build.
+      // Hardcoding `true` (the legacy boolean headless mode) can mismatch
+      // those args on newer @sparticuz/chromium versions (which default to
+      // the new "shell" headless mode) — Chromium then launches with an
+      // inconsistent flag set and can silently render a blank/truncated
+      // page, which still produces *a* PDF, just not a valid/openable one.
+      headless: chromium.headless,
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -125,6 +133,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // blob of byte indices, which downloads fine but isn't a valid PDF.
     // Buffer.from(...) + res.end() sidesteps that body-sniffing entirely.
     const buffer = Buffer.from(pdf);
+
+    // Guard against ever shipping a broken file to the browser: a real PDF
+    // always starts with the "%PDF-" magic bytes. If Chromium produced a
+    // blank/corrupt render (or the process was killed mid-render), fail
+    // loudly server-side instead of handing the client bytes that download
+    // fine but show "We can't open this file" in the PDF viewer.
+    const isValidPdf = buffer.length > 0 && buffer.subarray(0, 5).toString('ascii') === '%PDF-';
+    if (!isValidPdf) {
+      console.error('Invoice PDF generation produced an invalid PDF buffer', {
+        length: buffer.length,
+        head: buffer.subarray(0, 20).toString('hex'),
+      });
+      res.status(500).json({ error: 'Generated file was not a valid PDF. Please try again.' });
+      return;
+    }
+
     const ref = (enquiry.booking_id || enquiry.id).replace(/[^a-zA-Z0-9-]/g, '');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="ULAA-Invoice-${ref}.pdf"`);

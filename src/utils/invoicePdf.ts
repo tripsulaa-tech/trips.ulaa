@@ -28,7 +28,22 @@ async function fetchInvoicePdfBlob(enquiry: Enquiry): Promise<Blob> {
     const message = await res.text().catch(() => '');
     throw new Error(`Failed to generate invoice (${res.status}). ${message}`);
   }
-  return res.blob();
+  const blob = await res.blob();
+
+  // Defensive check: the server can, in rare cases, respond 200 with a
+  // non-PDF body (e.g. an HTML error/edge page slipping through, or a
+  // truncated response on a serverless timeout). Catching that here means
+  // the person sees "Failed to generate invoice" instead of a file that
+  // downloads fine but Acrobat/Edge reports as "We can't open this file".
+  const contentType = res.headers.get('content-type') || '';
+  const looksLikePdf =
+    contentType.includes('application/pdf') ||
+    (await blob.slice(0, 5).text().catch(() => '')) === '%PDF-';
+  if (!blob.size || !looksLikePdf) {
+    throw new Error('The server returned an invalid PDF. Please try downloading the invoice again.');
+  }
+
+  return blob;
 }
 
 /** Downloads the server-generated invoice PDF to the browser's normal
