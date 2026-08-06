@@ -1,578 +1,651 @@
-import { jsPDF } from 'jspdf';
 import type { Enquiry, Payment } from '../types/types-index';
 import { formatPrice, formatDate } from './utils-index';
-
+ 
 // =============================================================================
-// "Download Invoice" — a single A4 portrait page summarizing one booking:
-// booking reference, traveller + trip details, price breakdown, and the
-// full payment ledger. Built from an `Enquiry` row (booking_id, amounts,
-// trip snapshot fields) plus its `Payment` ledger rows — no other data
-// source needed, so it stays accurate even after a trip is archived to
-// completed_trips.
+// Invoice generation via HTML → browser print-to-PDF.
 //
-// Visual layout is a hand-drawn approximation of the ULAA brand invoice
-// mock-up: logo block, right-aligned title + booking-id pill, a two-column
-// details panel with small pill headers, an icon summary card, a styled
-// payment table, a note strip, and a curved brand-colored footer with
-// simple vector icons (jsPDF has no icon-font/SVG support, so every "icon"
-// below is drawn from primitive shapes — circles/rects/lines/triangles).
+// Real-world approach: build a styled HTML document, open it in a dedicated
+// print window, and call window.print() so the browser's native PDF engine
+// renders it. This gives pixel-perfect, font-accurate output that coordinate-
+// based jsPDF drawing cannot match.
 //
-// Same ₹-glyph problem as tripItineraryPdf.ts (the core PDF fonts don't
-// have the ₹ codepoint, which breaks jsPDF's text-width measurement) — see
-// money() below, same fix (render "Rs." instead).
+// Flow:
+//   buildInvoiceHtml()   → full HTML document string
+//   downloadInvoicePdf() → opens print window; user saves as PDF via the
+//                          browser's native "Save as PDF" print destination
+//   invoiceAsFile()      → returns the HTML as a text/html File; most
+//                          platforms reject that MIME for Web Share API
+//                          file-sharing, so the caller falls back to
+//                          downloadInvoicePdf() + WhatsApp text.
 // =============================================================================
-
-type RGB = readonly [number, number, number];
-
-const COLORS = {
-  primary: [180, 90, 42] as RGB,
-  primaryDark: [139, 72, 32] as RGB,
-  badgeDark: [92, 54, 30] as RGB,
-  dark: [45, 33, 24] as RGB,
-  darkMuted: [120, 100, 84] as RGB,
-  backgroundWarm: [246, 240, 231] as RGB,
-  cream: [250, 246, 239] as RGB,
-  white: [255, 255, 255] as RGB,
-  green: [45, 140, 90] as RGB,
-  greenTint: [222, 240, 229] as RGB,
-  red: [190, 70, 65] as RGB,
-  redTint: [248, 227, 224] as RGB,
-  peachTint: [242, 227, 213] as RGB,
-  grayLine: [225, 213, 199] as RGB,
-} as const;
-
+ 
 const BRAND = {
   name: 'ULAA',
   tagline: 'Girls-Only Travel Community',
   website: 'www.ulaatrips.com',
   email: 'trips.ulaa@gmail.com',
   phone: '+91 63813 36772',
+  bottomTagline: 'Empowering women to explore, together.',
 };
-
-const PAGE_W = 595.28; // A4 @ 72pt/in
-const PAGE_H = 841.89;
-const MARGIN = 48;
-const CONTENT_W = PAGE_W - MARGIN * 2;
-
-function sanitizeForPdf(text: string): string {
-  if (!text) return text;
-  return text
-    .replace(/\u20B9/g, 'Rs. ')
-    .replace(/\p{Extended_Pictographic}/gu, '')
-    .replace(/\u{FE0F}/gu, '')
-    .trim();
-}
-
-function money(amount: number): string {
-  return sanitizeForPdf(formatPrice(amount || 0));
-}
-
+ 
 const PAYMENT_TYPE_LABEL: Record<Payment['payment_type'], string> = {
   booking_amount: 'Booking amount',
   installment: 'Installment',
   balance: 'Balance payment',
   refund: 'Refund',
 };
-
-// -----------------------------------------------------------------------
-// Logo loading — best-effort and never throws, same reasoning as
-// tripItineraryPdf.ts's loadContainImage/fetchAsDataUrl/loadImageEl: a
-// slow network or a missing file should never break invoice generation,
-// it should just fall back to the plain-text "ULAA" wordmark.
-// -----------------------------------------------------------------------
-async function loadLogo(): Promise<{ dataUrl: string; ratio: number } | null> {
+ 
+function esc(text: string | null | undefined): string {
+  if (!text) return '—';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/\u20B9/g, 'Rs.');
+}
+ 
+function money(amount: number): string {
+  return esc(formatPrice(amount || 0));
+}
+ 
+function fdate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  return formatDate(iso, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+ 
+// ---------------------------------------------------------------------------
+// Loads the ULAA logo as a base64 data-URL so it works reliably inside a
+// detached print window on the same origin.
+// ---------------------------------------------------------------------------
+async function loadLogoDataUrl(): Promise<string | null> {
   try {
     const res = await fetch('/ULAA-logo.jpg');
     if (!res.ok) return null;
     const blob = await res.blob();
-    const dataUrl = await new Promise<string>((resolve, reject) => {
+    return new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = () => reject(new Error('read failed'));
       reader.readAsDataURL(blob);
     });
-    const ratio = await new Promise<number>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img.naturalWidth / img.naturalHeight);
-      img.onerror = () => reject(new Error('decode failed'));
-      img.src = dataUrl;
-    });
-    return { dataUrl, ratio };
   } catch {
     return null;
   }
 }
-
-// -----------------------------------------------------------------------
-// Tiny vector "icons" — jsPDF has no icon-font/SVG support, so every icon
-// used below is a handful of primitive shapes (circle/rect/line/triangle)
-// drawn at a given center point, sized to sit inside an r-radius bubble.
-// -----------------------------------------------------------------------
-function iconBubble(doc: jsPDF, cx: number, cy: number, r: number, bg: RGB) {
-  doc.setFillColor(...bg);
-  doc.circle(cx, cy, r, 'F');
-}
-
-function iconGlobe(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setDrawColor(...color);
-  doc.setLineWidth(0.9);
-  doc.circle(cx, cy, 5.5, 'S');
-  doc.line(cx - 5.5, cy, cx + 5.5, cy);
-  doc.ellipse(cx, cy, 2.4, 5.5, 'S');
-}
-
-function iconMail(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setDrawColor(...color);
-  doc.setLineWidth(0.9);
-  doc.rect(cx - 6, cy - 4.2, 12, 8.4, 'S');
-  doc.line(cx - 6, cy - 4.2, cx, cy + 0.8);
-  doc.line(cx + 6, cy - 4.2, cx, cy + 0.8);
-}
-
-function iconPhone(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setDrawColor(...color);
-  doc.setLineWidth(0.9);
-  doc.roundedRect(cx - 3, cy - 6, 6, 12, 1.5, 1.5, 'S');
-  doc.setFillColor(...color);
-  doc.circle(cx, cy + 3.3, 0.6, 'F');
-}
-
-function iconCalendar(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setDrawColor(...color);
-  doc.setLineWidth(0.9);
-  doc.roundedRect(cx - 6, cy - 5, 12, 11, 1.2, 1.2, 'S');
-  doc.line(cx - 6, cy - 1.5, cx + 6, cy - 1.5);
-  doc.line(cx - 3, cy - 6.5, cx - 3, cy - 4);
-  doc.line(cx + 3, cy - 6.5, cx + 3, cy - 4);
-}
-
-function iconPin(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setFillColor(...color);
-  doc.circle(cx, cy - 1, 4.4, 'F');
-  doc.triangle(cx - 3.4, cy + 1.2, cx + 3.4, cy + 1.2, cx, cy + 7, 'F');
-  doc.setFillColor(...COLORS.white);
-  doc.circle(cx, cy - 1, 1.7, 'F');
-}
-
-function iconMoneyBag(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setDrawColor(...color);
-  doc.setLineWidth(0.9);
-  doc.lines([[3, -4], [3, 4], [-6, 0], [0, -8]], cx - 3, cy - 1, [1, 1], 'S', true);
-  doc.circle(cx, cy - 6.2, 1.6, 'S');
-}
-
-function iconWallet(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setDrawColor(...color);
-  doc.setLineWidth(0.9);
-  doc.roundedRect(cx - 7, cy - 5, 14, 10, 1.5, 1.5, 'S');
-  doc.setFillColor(...color);
-  doc.circle(cx + 3.2, cy, 1.3, 'F');
-}
-
-function iconReceipt(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setDrawColor(...color);
-  doc.setLineWidth(0.8);
-  doc.rect(cx - 5, cy - 6.5, 10, 13, 'S');
-  [-3.2, -0.4, 2.4].forEach(dy => doc.line(cx - 3, cy + dy, cx + 3, cy + dy));
-}
-
-function iconInfo(doc: jsPDF, cx: number, cy: number, color: RGB, bg: RGB) {
-  doc.setFillColor(...bg);
-  doc.circle(cx, cy, 7, 'F');
-  doc.setFillColor(...color);
-  doc.circle(cx, cy - 3, 0.9, 'F');
-  doc.setDrawColor(...color);
-  doc.setLineWidth(1.1);
-  doc.line(cx, cy - 0.5, cx, cy + 3.5);
-}
-
-function iconHeart(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setFillColor(...color);
-  doc.circle(cx - 2.2, cy - 1.4, 2.4, 'F');
-  doc.circle(cx + 2.2, cy - 1.4, 2.4, 'F');
-  doc.triangle(cx - 4.2, cy - 0.6, cx + 4.2, cy - 0.6, cx, cy + 4.4, 'F');
-}
-
-function iconInstagram(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setDrawColor(...color);
-  doc.setLineWidth(0.9);
-  doc.roundedRect(cx - 6, cy - 6, 12, 12, 3, 3, 'S');
-  doc.circle(cx, cy, 3, 'S');
-  doc.setFillColor(...color);
-  doc.circle(cx + 3.6, cy - 3.6, 0.7, 'F');
-}
-
-function iconWhatsapp(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  doc.setFillColor(...color);
-  doc.circle(cx, cy - 0.5, 6, 'F');
-  doc.setFillColor(...COLORS.white);
-  doc.circle(cx, cy - 0.5, 4.2, 'F');
-  doc.setFillColor(...color);
-  doc.circle(cx - 1.2, cy - 1.5, 1, 'F');
-  doc.circle(cx + 1.2, cy - 1.5, 1, 'F');
-  doc.triangle(cx + 3.6, cy + 4.4, cx + 3.6, cy + 7.2, cx + 1, cy + 5.2, 'F');
-}
-
-function iconWorld(doc: jsPDF, cx: number, cy: number, color: RGB) {
-  iconGlobe(doc, cx, cy, color);
-}
-
-function drawPalmTree(doc: jsPDF, cx: number, baseY: number, color: RGB) {
-  doc.setDrawColor(...color);
-  doc.setLineWidth(2.2);
-  doc.lines([[-3, -14], [3, -18]], cx, baseY, [1, 1], 'S');
-  const topX = cx, topY = baseY - 32;
-  const leaves: [number, number][] = [
-    [-16, -4], [-13, -12], [-4, -16], [6, -15], [15, -9], [17, -1],
-  ];
-  leaves.forEach(([dx, dy]) => {
-    doc.setLineWidth(1.4);
-    doc.line(topX, topY, topX + dx, topY + dy);
-  });
-}
-
-/** Builds the invoice jsPDF document (not yet saved/downloaded) so callers
- *  can either .save() it directly or pull an output Blob for sharing. */
-export async function buildInvoicePdf(enquiry: Enquiry, payments: Payment[]): Promise<jsPDF> {
-  const doc = new jsPDF({ unit: 'pt', format: [PAGE_W, PAGE_H], orientation: 'portrait' });
-  doc.setFillColor(...COLORS.white);
-  doc.rect(0, 0, PAGE_W, PAGE_H, 'F');
-
-  // ---------------------------------------------------------------------
-  // Header: logo block on the left, brand contact rows in the middle,
-  // "BOOKING INVOICE" title + dark Booking-ID pill + date on the right.
-  // ---------------------------------------------------------------------
-  const logo = await loadLogo();
-  const logoH = 96;
-  let logoW = logoH;
-  let midX = MARGIN + 130;
-  if (logo) {
-    logoW = logoH * logo.ratio;
-    doc.addImage(logo.dataUrl, 'JPEG', MARGIN, MARGIN - 6, logoW, logoH);
-    midX = MARGIN + logoW + 18;
-  } else {
-    doc.setTextColor(...COLORS.dark);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(30);
-    doc.text(BRAND.name, MARGIN, MARGIN + 40);
-  }
-
-  const rightX = PAGE_W - MARGIN;
-  const midW = rightX - 190 - midX;
-
-  doc.setTextColor(...COLORS.dark);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text('Girls-Only', midX, MARGIN + 8);
-  doc.text('Travel Community', midX, MARGIN + 24);
-
-  let contactY = MARGIN + 46;
-  const contactRows: [((d: jsPDF, x: number, y: number, c: RGB) => void), string][] = [
-    [iconWorld, BRAND.website],
-    [iconMail, BRAND.email],
-    [iconPhone, BRAND.phone],
-  ];
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  contactRows.forEach(([drawIcon, label]) => {
-    drawIcon(doc, midX + 5, contactY - 3, COLORS.primary);
-    doc.setTextColor(...COLORS.darkMuted);
-    doc.text(sanitizeForPdf(label), midX + 16, contactY, midW > 0 ? { maxWidth: midW } : undefined);
-    contactY += 16;
-  });
-
-  // Title + decorative rule
-  doc.setTextColor(...COLORS.primary);
-  doc.setFont('times', 'bold');
-  doc.setFontSize(21);
-  doc.text('BOOKING INVOICE', rightX, MARGIN + 14, { align: 'right' });
-  doc.setDrawColor(...COLORS.primary);
-  doc.setLineWidth(1);
-  doc.line(rightX - 150, MARGIN + 24, rightX - 8, MARGIN + 24);
-  doc.setFillColor(...COLORS.primary);
-  doc.circle(rightX - 79, MARGIN + 24, 1.6, 'F');
-
-  // Booking-ID pill
-  const pillW = 178;
-  const pillH = 34;
-  const pillX = rightX - pillW;
-  const pillY = MARGIN + 34;
-  doc.setFillColor(...COLORS.badgeDark);
-  doc.roundedRect(pillX, pillY, pillW, pillH, 8, 8, 'F');
-  doc.setTextColor(...COLORS.peachTint);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text('BOOKING ID', pillX + 14, pillY + 13);
-  doc.setTextColor(...COLORS.white);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text(enquiry.booking_id || '—', pillX + 14, pillY + 27);
-
-  // Invoice date, with a small calendar icon
-  const dateY = pillY + pillH + 20;
-  iconCalendar(doc, rightX - 150, dateY - 3, COLORS.primary);
-  doc.setTextColor(...COLORS.darkMuted);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  doc.text(
-    `Invoice Date: ${formatDate(new Date().toISOString(), { day: 'numeric', month: 'short', year: 'numeric' })}`,
-    rightX - 140,
-    dateY,
-  );
-
-  let y = MARGIN + logoH + 24;
-  doc.setDrawColor(...COLORS.primary);
-  doc.setLineWidth(1.2);
-  doc.line(MARGIN, y, rightX, y);
-  y += 26;
-
-  // ---------------------------------------------------------------------
-  // Traveller + trip details — two columns inside a soft cream panel,
-  // each headed by a small dark pill label.
-  // ---------------------------------------------------------------------
-  const colGap = 28;
-  const colW = (CONTENT_W - colGap) / 2;
-  const leftColX = MARGIN + 16;
-  const rightColX = MARGIN + colW + colGap + 16;
-
-  const rowCount = enquiry.group_size && enquiry.group_size > 1 ? 4 : 3;
-  const panelH = 40 + rowCount * 34 + 10;
-  doc.setFillColor(...COLORS.backgroundWarm);
-  doc.roundedRect(MARGIN, y, CONTENT_W, panelH, 8, 8, 'F');
-  doc.setDrawColor(...COLORS.grayLine);
-  doc.setLineWidth(0.8);
-  doc.line(MARGIN + colW + colGap / 2 + 16, y + 20, MARGIN + colW + colGap / 2 + 16, y + panelH - 16);
-
-  const drawPill = (x: number, label: string) => {
-    const w = doc.getTextWidth(label) + 20;
-    doc.setFillColor(...COLORS.badgeDark);
-    doc.roundedRect(x, y + 14, w, 20, 5, 5, 'F');
-    doc.setTextColor(...COLORS.white);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.text(label, x + 10, y + 27.5);
-  };
-  drawPill(leftColX, 'TRAVELLER DETAILS');
-  drawPill(rightColX, 'TRIP DETAILS');
-
-  let fieldY = y + 56;
-  const drawField = (x: number, label: string, value: string) => {
-    doc.setTextColor(...COLORS.darkMuted);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text(label, x, fieldY);
-    doc.setTextColor(...COLORS.dark);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text(sanitizeForPdf(value) || '—', x, fieldY + 15);
-  };
-
-  drawField(leftColX, 'Traveller Name', enquiry.full_name);
-  drawField(rightColX, 'Trip', enquiry.trip_title || '—');
-  fieldY += 34;
-  drawField(leftColX, 'Phone', enquiry.phone);
-  drawField(rightColX, 'Departure Date', enquiry.departure_date ? formatDate(enquiry.departure_date, { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
-  fieldY += 34;
-  drawField(leftColX, 'Email', enquiry.email);
-  drawField(rightColX, 'Package', enquiry.package_type === 'early_bird' ? 'Early Bird' : 'Normal');
-  fieldY += 34;
-  if (rowCount === 4) {
-    drawField(leftColX, 'Group Booking', `Seat ${enquiry.group_seq} of ${enquiry.group_size}`);
-    drawField(rightColX, 'City', enquiry.city || '—');
-  }
-
-  y += panelH + 26;
-
-  // ---------------------------------------------------------------------
-  // Price summary card — 3 icon "stat" columns separated by thin rules.
-  // ---------------------------------------------------------------------
+ 
+// ---------------------------------------------------------------------------
+// Core: builds a self-contained, print-ready A4 HTML document string.
+// ---------------------------------------------------------------------------
+function buildInvoiceHtml(
+  enquiry: Enquiry,
+  payments: Payment[],
+  logoDataUrl: string | null,
+): string {
   const total = enquiry.total_amount || 0;
   const paid = enquiry.amount_paid || 0;
   const balance = Math.max(0, total - paid);
-  const cardH = 78;
-
-  doc.setDrawColor(...COLORS.grayLine);
-  doc.setLineWidth(1);
-  doc.roundedRect(MARGIN, y, CONTENT_W, cardH, 8, 8, 'S');
-
-  const cardColW = CONTENT_W / 3;
-  const summaryRows: { label: string; value: string; color: RGB; tint: RGB; icon: (d: jsPDF, x: number, y: number, c: RGB) => void }[] = [
-    { label: 'TOTAL AMOUNT', value: money(total), color: COLORS.dark, tint: COLORS.peachTint, icon: iconMoneyBag },
-    { label: 'AMOUNT PAID', value: money(paid), color: COLORS.green, tint: COLORS.greenTint, icon: iconWallet },
-    { label: 'BALANCE DUE', value: money(balance), color: balance > 0 ? COLORS.red : COLORS.green, tint: balance > 0 ? COLORS.redTint : COLORS.greenTint, icon: iconReceipt },
-  ];
-  summaryRows.forEach((row, i) => {
-    const colX = MARGIN + i * cardColW;
-    if (i > 0) {
-      doc.setDrawColor(...COLORS.grayLine);
-      doc.line(colX, y + 14, colX, y + cardH - 14);
+ 
+  const invoiceDate = fdate(new Date().toISOString());
+ 
+  const packageLabel =
+    enquiry.package_type === 'early_bird' ? 'Early Bird' : 'Normal';
+ 
+  // Logo HTML
+  const logoHtml = logoDataUrl
+    ? `<img src="${logoDataUrl}" alt="ULAA" class="logo-img" />`
+    : `<span class="logo-text">ULAA</span>`;
+ 
+  // Group booking field (only when group_size > 1)
+  const groupField =
+    enquiry.group_size && enquiry.group_size > 1
+      ? `<div class="field">
+           <div class="field-label">Group Booking</div>
+           <div class="field-value">Seat ${enquiry.group_seq} of ${enquiry.group_size}</div>
+         </div>`
+      : '';
+ 
+  // Payment rows
+  const paymentRows =
+    payments.length === 0
+      ? `<tr><td colspan="4" class="no-payments">No payments recorded yet.</td></tr>`
+      : payments
+          .map((p, i) => {
+            const isRefund = p.payment_type === 'refund';
+            const rowClass = i % 2 === 0 ? 'row-even' : 'row-odd';
+            return `<tr class="${rowClass}">
+              <td>${fdate(p.paid_at)}</td>
+              <td>${esc(PAYMENT_TYPE_LABEL[p.payment_type] ?? p.payment_type)}</td>
+              <td>${esc(p.payment_method)}</td>
+              <td class="amount-col ${isRefund ? 'amount-refund' : 'amount-paid'}">
+                ${isRefund ? '− ' : ''}${money(Math.abs(p.amount))}
+              </td>
+            </tr>`;
+          })
+          .join('');
+ 
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ULAA Invoice ${esc(enquiry.booking_id)}</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+ 
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+  body {
+    width: 210mm;
+    min-height: 297mm;
+    background: #f5ede3;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    color: #2d1f14;
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+ 
+  /* ── Page wrapper ───────────────────────────────── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    display: flex;
+    flex-direction: column;
+  }
+ 
+  /* ── HEADER ─────────────────────────────────────── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 28px 40px 22px;
+    background: #fdf8f3;
+    border-bottom: 1.5px solid #e0cfc0;
+  }
+ 
+  .header-left { display: flex; flex-direction: column; gap: 10px; }
+ 
+  .logo-area { display: flex; align-items: center; gap: 12px; }
+ 
+  .logo-img  { height: 54px; width: auto; object-fit: contain; }
+  .logo-text {
+    font-size: 30px; font-weight: 800; letter-spacing: 3px; color: #a0522d;
+  }
+ 
+  .brand-tagline {
+    font-size: 11px; font-weight: 500; color: #7a5030; letter-spacing: 0.3px;
+  }
+ 
+  .contact-list { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
+ 
+  .contact-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: #7a5030;
+  }
+ 
+  .contact-icon {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #ecdece; display: flex; align-items: center;
+    justify-content: center; font-size: 9px; flex-shrink: 0;
+    color: #a0522d;
+  }
+ 
+  /* right column */
+  .header-right { text-align: right; }
+ 
+  .invoice-title {
+    font-size: 24px; font-weight: 800; letter-spacing: 1.5px;
+    color: #a0522d; margin-bottom: 4px;
+  }
+ 
+  .title-rule {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 6px; margin-bottom: 14px;
+  }
+  .title-rule-line {
+    height: 1.5px; background: #c8a07a; flex: 1; max-width: 160px;
+  }
+  .title-rule-diamond {
+    width: 6px; height: 6px; background: #a0522d;
+    transform: rotate(45deg); flex-shrink: 0;
+  }
+ 
+  .booking-id-label {
+    font-size: 9px; color: #9a7060; text-transform: uppercase;
+    letter-spacing: 0.8px; margin-bottom: 5px;
+  }
+ 
+  .booking-id-badge {
+    display: inline-block; background: #a0522d; color: #fff;
+    font-size: 11.5px; font-weight: 700; padding: 5px 16px;
+    border-radius: 5px; letter-spacing: 0.3px; margin-bottom: 10px;
+  }
+ 
+  .invoice-date-row {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 6px; font-size: 11px; color: #7a5030;
+  }
+ 
+  .cal-icon {
+    width: 18px; height: 18px; border-radius: 4px;
+    background: #ecdece; display: flex; align-items: center;
+    justify-content: center; font-size: 10px;
+  }
+ 
+  /* ── BODY ───────────────────────────────────────── */
+  .body { flex: 1; padding: 26px 40px 20px; }
+ 
+  /* ── TWO-COLUMN DETAILS ─────────────────────────── */
+  .details-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
+    margin-bottom: 26px;
+  }
+ 
+  .section-pill {
+    display: inline-block; background: #a0522d; color: #fff;
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.9px;
+    text-transform: uppercase; padding: 5px 16px; border-radius: 4px;
+    margin-bottom: 14px;
+  }
+ 
+  .field { margin-bottom: 13px; }
+ 
+  .field-label {
+    font-size: 9.5px; color: #9a7060; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 3px;
+  }
+ 
+  .field-value { font-size: 14px; font-weight: 600; color: #2d1f14; }
+ 
+  /* ── PRICE SUMMARY ──────────────────────────────── */
+  .price-summary {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    border: 1.5px solid #e0cfc0; border-radius: 10px;
+    overflow: hidden; margin-bottom: 26px; background: #fff;
+  }
+ 
+  .price-card {
+    display: flex; align-items: center; gap: 14px; padding: 18px 20px;
+  }
+ 
+  .price-card + .price-card { border-left: 1.5px solid #e0cfc0; }
+ 
+  .price-icon-circle {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; flex-shrink: 0;
+  }
+ 
+  .icon-total   { background: #fff3e8; }
+  .icon-paid    { background: #e6f7ef; }
+  .icon-balance { background: #fef0ee; }
+ 
+  .price-label {
+    font-size: 9.5px; color: #9a7060; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+ 
+  .price-amount { font-size: 19px; font-weight: 800; }
+ 
+  .amount-total   { color: #2d1f14; }
+  .amount-paid    { color: #1e7d4e; }
+  .amount-balance-due  { color: #c0392b; }
+  .amount-balance-zero { color: #1e7d4e; }
+ 
+  /* ── PAYMENT HISTORY ────────────────────────────── */
+  .section-heading {
+    font-size: 14px; font-weight: 700; color: #2d1f14;
+    margin-bottom: 12px; letter-spacing: 0.2px;
+  }
+ 
+  .payment-table {
+    width: 100%; border-collapse: collapse;
+    border-radius: 8px; overflow: hidden;
+    margin-bottom: 24px;
+  }
+ 
+  .payment-table thead tr { background: #5c3318; }
+ 
+  .payment-table th {
+    padding: 10px 14px; font-size: 9.5px; font-weight: 700;
+    color: #fff; text-transform: uppercase; letter-spacing: 0.9px;
+    text-align: left;
+  }
+ 
+  .payment-table th.amount-col { text-align: right; }
+ 
+  .payment-table td {
+    padding: 10px 14px; font-size: 12px; color: #2d1f14;
+  }
+ 
+  .payment-table td.amount-col { text-align: right; font-weight: 600; }
+ 
+  .amount-paid   { color: #1e7d4e; }
+  .amount-refund { color: #c0392b; }
+ 
+  .row-even td { background: #ffffff; }
+  .row-odd  td { background: #faf5f0; }
+ 
+  .no-payments {
+    text-align: center; padding: 18px; color: #9a7060; font-size: 12px;
+    background: #fff;
+  }
+ 
+  /* ── FOOTER NOTE ────────────────────────────────── */
+  .footer-note {
+    display: flex; align-items: flex-start; gap: 11px;
+    background: #fff; border-radius: 8px;
+    padding: 13px 16px; margin-bottom: 22px;
+    border: 1px solid #e8ddd3;
+  }
+ 
+  .info-icon {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #dde8ff; display: flex; align-items: center;
+    justify-content: center; font-size: 12px; font-weight: 700;
+    color: #3a5fc8; flex-shrink: 0; line-height: 1;
+  }
+ 
+  .footer-note-text {
+    font-size: 10.5px; color: #7a5030; line-height: 1.55;
+  }
+ 
+  /* ── THANK YOU ──────────────────────────────────── */
+  .thank-you {
+    text-align: right; padding-right: 8px; margin-bottom: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic; font-size: 27px; color: #2d1f14;
+  }
+ 
+  /* ── BOTTOM BAR ─────────────────────────────────── */
+  .bottom-bar {
+    background: #a0522d; padding: 16px 40px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: auto;
+  }
+ 
+  .bottom-left {
+    display: flex; align-items: center; gap: 0; color: #fff;
+  }
+ 
+  .bottom-logo-img { height: 36px; width: auto; filter: brightness(0) invert(1); }
+ 
+  .bottom-logo-text {
+    font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #fff;
+  }
+ 
+  .bottom-divider {
+    width: 1px; height: 30px; background: rgba(255,255,255,0.35);
+    margin: 0 14px;
+  }
+ 
+  .bottom-tagline {
+    font-size: 10px; color: rgba(255,255,255,0.85);
+    max-width: 160px; line-height: 1.4;
+  }
+ 
+  .bottom-right {
+    display: flex; align-items: center; gap: 12px; color: #fff;
+  }
+ 
+  .follow-label {
+    font-size: 10px; letter-spacing: 0.8px; text-transform: uppercase;
+    color: rgba(255,255,255,0.85);
+  }
+ 
+  .social-icons { display: flex; gap: 8px; }
+ 
+  .social-icon {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #fff;
+  }
+ 
+  /* ── PRINT RESET ────────────────────────────────── */
+  @media print {
+    @page { size: A4 portrait; margin: 0; }
+    body  {
+      width: 210mm; min-height: 297mm;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
-    const iconCx = colX + 30;
-    const iconCy = y + cardH / 2;
-    iconBubble(doc, iconCx, iconCy, 15, row.tint);
-    row.icon(doc, iconCx, iconCy, row.color);
-    const textX = colX + 54;
-    doc.setTextColor(...COLORS.darkMuted);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.text(row.label, textX, y + cardH / 2 - 8);
-    doc.setTextColor(...row.color);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(15);
-    doc.text(row.value, textX, y + cardH / 2 + 12);
-  });
-  y += cardH + 26;
-
-  // ---------------------------------------------------------------------
-  // Payment history table
-  // ---------------------------------------------------------------------
-  doc.setTextColor(...COLORS.dark);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('PAYMENT HISTORY', MARGIN, y);
-  y += 16;
-
-  const cols = [
-    { label: 'DATE', w: 0.24 },
-    { label: 'TYPE', w: 0.3 },
-    { label: 'METHOD', w: 0.23 },
-    { label: 'AMOUNT', w: 0.23 },
-  ];
-  let x = MARGIN;
-  doc.setFillColor(...COLORS.badgeDark);
-  doc.rect(MARGIN, y, CONTENT_W, 24, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.white);
-  cols.forEach(c => {
-    const w = CONTENT_W * c.w;
-    doc.text(c.label, c.label === 'AMOUNT' ? x + w - 10 : x + 10, y + 16, c.label === 'AMOUNT' ? { align: 'right' } : undefined);
-    x += w;
-  });
-  y += 24;
-
-  if (payments.length === 0) {
-    doc.setFillColor(...COLORS.cream);
-    doc.rect(MARGIN, y, CONTENT_W, 24, 'F');
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(...COLORS.darkMuted);
-    doc.text('No payments recorded yet.', MARGIN + 10, y + 16);
-    y += 24;
-  } else {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    payments.forEach((p, i) => {
-      if (y > PAGE_H - 180) {
-        doc.addPage();
-        y = MARGIN;
-      }
-      doc.setFillColor(...(i % 2 === 1 ? COLORS.cream : COLORS.white));
-      doc.rect(MARGIN, y, CONTENT_W, 24, 'F');
-      x = MARGIN;
-      const isRefund = p.payment_type === 'refund';
-      doc.setTextColor(...COLORS.dark);
-      doc.text(formatDate(p.paid_at, { day: 'numeric', month: 'short', year: 'numeric' }), x + 10, y + 16);
-      x += CONTENT_W * cols[0].w;
-      doc.text(PAYMENT_TYPE_LABEL[p.payment_type] || p.payment_type, x + 10, y + 16);
-      x += CONTENT_W * cols[1].w;
-      doc.text(sanitizeForPdf(p.payment_method || '—'), x + 10, y + 16);
-      x += CONTENT_W * cols[2].w;
-      doc.setTextColor(...(isRefund ? COLORS.red : COLORS.green));
-      doc.text(`${isRefund ? '- ' : ''}${money(Math.abs(p.amount))}`, x + CONTENT_W * cols[3].w - 10, y + 16, { align: 'right' });
-      y += 24;
-    });
   }
-  y += 24;
-
-  // ---------------------------------------------------------------------
-  // Note strip — info icon + policy note on the left, "Thank you!" + a
-  // small heart icon on the right.
-  // ---------------------------------------------------------------------
-  const noteH = 46;
-  if (y + noteH > PAGE_H - 130) {
-    doc.addPage();
-    y = MARGIN;
-  }
-  doc.setFillColor(...COLORS.cream);
-  doc.roundedRect(MARGIN, y, CONTENT_W, noteH, 8, 8, 'F');
-  iconInfo(doc, MARGIN + 22, y + noteH / 2, COLORS.primary, COLORS.peachTint);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(...COLORS.darkMuted);
-  const note = 'This invoice reflects amounts recorded for this booking only. Cancellation and refund amounts, if any, are governed by ULAA\'s Terms & Cancellation Policy shared at the time of booking.';
-  const noteLines = doc.splitTextToSize(note, CONTENT_W - 250);
-  doc.text(noteLines, MARGIN + 42, y + noteH / 2 - (noteLines.length > 1 ? 10 : 4));
-
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(15);
-  doc.setTextColor(...COLORS.primary);
-  doc.text('Thank you!', rightX - 46, y + noteH / 2 + 4, { align: 'right' });
-  iconHeart(doc, rightX - 20, y + noteH / 2, COLORS.primary);
-
-  y += noteH + 30;
-
-  // ---------------------------------------------------------------------
-  // Curved brand footer — community line + socials + a small palm silhouette.
-  // Drawn tall enough to hang past the page edge so its bottom corners'
-  // rounding never peeks out below the page.
-  // ---------------------------------------------------------------------
-  const footerH = 88;
-  const footerY = PAGE_H - footerH;
-  doc.setFillColor(...COLORS.primary);
-  doc.roundedRect(MARGIN === 0 ? 0 : 0, footerY, PAGE_W, footerH + 24, 18, 18, 'F');
-  doc.setFillColor(...COLORS.primaryDark);
-  doc.rect(0, footerY + footerH - 10, PAGE_W, 34, 'F');
-
-  iconPin(doc, MARGIN + 12, footerY + 30, COLORS.white);
-  doc.setTextColor(...COLORS.white);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('ULAA TRAVEL COMMUNITY', MARGIN + 26, footerY + 28);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.peachTint);
-  doc.text('Empowering women to explore, together.', MARGIN + 26, footerY + 42);
-
-  doc.setDrawColor(...COLORS.peachTint);
-  doc.setLineWidth(0.7);
-  doc.line(rightX - 175, footerY + 12, rightX - 175, footerY + 48);
-
-  doc.setTextColor(...COLORS.white);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('FOLLOW US', rightX - 150, footerY + 26);
-  const socialY = footerY + 40;
-  const socials: [((d: jsPDF, x: number, y: number, c: RGB) => void)][] = [[iconInstagram], [iconWhatsapp], [iconWorld]];
-  socials.forEach(([drawIcon], i) => {
-    const scx = rightX - 150 + i * 26;
-    doc.setFillColor(...COLORS.white);
-    doc.circle(scx, socialY, 9, 'F');
-    drawIcon(doc, scx, socialY, COLORS.primary);
-  });
-
-  drawPalmTree(doc, rightX - 24, footerY + footerH + 4, COLORS.primaryDark);
-
-  return doc;
+</style>
+</head>
+<body>
+<div class="page">
+ 
+  <!-- ═══════════ HEADER ════════════════════════════════════════════════ -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo-area">${logoHtml}</div>
+      <div class="brand-tagline">${esc(BRAND.tagline)}</div>
+      <div class="contact-list">
+        <div class="contact-row">
+          <div class="contact-icon">&#9679;</div>
+          <span>${esc(BRAND.website)}</span>
+        </div>
+        <div class="contact-row">
+          <div class="contact-icon">&#9993;</div>
+          <span>${esc(BRAND.email)}</span>
+        </div>
+        <div class="contact-row">
+          <div class="contact-icon">&#9742;</div>
+          <span>${esc(BRAND.phone)}</span>
+        </div>
+      </div>
+    </div>
+ 
+    <div class="header-right">
+      <div class="invoice-title">BOOKING INVOICE</div>
+      <div class="title-rule">
+        <div class="title-rule-line"></div>
+        <div class="title-rule-diamond"></div>
+      </div>
+      <div class="booking-id-label">Booking ID:</div>
+      <div class="booking-id-badge">${esc(enquiry.booking_id)}</div>
+      <div class="invoice-date-row">
+        <div class="cal-icon">&#128197;</div>
+        <span>Invoice Date: ${invoiceDate}</span>
+      </div>
+    </div>
+  </header>
+ 
+  <!-- ═══════════ BODY ══════════════════════════════════════════════════ -->
+  <main class="body">
+ 
+    <!-- ── Two-column details ── -->
+    <div class="details-grid">
+      <div>
+        <div class="section-pill">Traveller Details</div>
+        <div class="field">
+          <div class="field-label">Traveller Name</div>
+          <div class="field-value">${esc(enquiry.full_name)}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Phone</div>
+          <div class="field-value">${esc(enquiry.phone)}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Email</div>
+          <div class="field-value">${esc(enquiry.email)}</div>
+        </div>
+        ${groupField}
+      </div>
+ 
+      <div>
+        <div class="section-pill">Trip Details</div>
+        <div class="field">
+          <div class="field-label">Trip</div>
+          <div class="field-value">${esc(enquiry.trip_title)}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Departure Date</div>
+          <div class="field-value">${fdate(enquiry.departure_date)}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Package</div>
+          <div class="field-value">${packageLabel}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">City</div>
+          <div class="field-value">${esc(enquiry.city)}</div>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- ── Price summary ── -->
+    <div class="price-summary">
+      <div class="price-card">
+        <div class="price-icon-circle icon-total">&#128176;</div>
+        <div>
+          <div class="price-label">Total Amount</div>
+          <div class="price-amount amount-total">${money(total)}</div>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-icon-circle icon-paid">&#128179;</div>
+        <div>
+          <div class="price-label">Amount Paid</div>
+          <div class="price-amount amount-paid">${money(paid)}</div>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-icon-circle icon-balance">&#128203;</div>
+        <div>
+          <div class="price-label">Balance Due</div>
+          <div class="price-amount ${balance > 0 ? 'amount-balance-due' : 'amount-balance-zero'}">${money(balance)}</div>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- ── Payment history ── -->
+    <div class="section-heading">PAYMENT HISTORY</div>
+    <table class="payment-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Method</th>
+          <th class="amount-col">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${paymentRows}
+      </tbody>
+    </table>
+ 
+    <!-- ── Footer note ── -->
+    <div class="footer-note">
+      <div class="info-icon">i</div>
+      <div class="footer-note-text">
+        This invoice reflects amounts recorded for this booking only.
+        Cancellation and refund amounts, if any, are governed by ULAA&rsquo;s
+        Terms &amp; Cancellation Policy shared at the time of booking.
+      </div>
+    </div>
+ 
+    <div class="thank-you">Thank you! &#9825;</div>
+ 
+  </main>
+ 
+  <!-- ═══════════ BOTTOM BAR ════════════════════════════════════════════ -->
+  <footer class="bottom-bar">
+    <div class="bottom-left">
+      <span class="bottom-logo-text">ULAA</span>
+      <div class="bottom-divider"></div>
+      <span class="bottom-tagline">${esc(BRAND.bottomTagline)}</span>
+    </div>
+    <div class="bottom-right">
+      <span class="follow-label">Follow Us</span>
+      <div class="social-icons">
+        <div class="social-icon">&#128247;</div>
+        <div class="social-icon">&#128172;</div>
+        <div class="social-icon">&#127760;</div>
+      </div>
+    </div>
+  </footer>
+ 
+</div>
+</body>
+</html>`;
 }
-
-/** Filename shared by both the download and share paths, so a saved file
- *  and a shared file always carry the same name. */
+ 
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+ 
+/** Filename used for both downloaded and shared files. */
 export function invoiceFileName(enquiry: Enquiry): string {
   const ref = (enquiry.booking_id || enquiry.id).replace(/[^a-zA-Z0-9-]/g, '');
   return `ULAA-Invoice-${ref}.pdf`;
 }
-
+ 
+/**
+ * Opens a dedicated print window containing the styled invoice HTML and
+ * immediately triggers window.print().  The browser's built-in "Save as PDF"
+ * print destination produces a pixel-perfect A4 PDF with no extra libraries.
+ */
 export async function downloadInvoicePdf(enquiry: Enquiry, payments: Payment[]): Promise<void> {
-  const doc = await buildInvoicePdf(enquiry, payments);
-  doc.save(invoiceFileName(enquiry));
+  const logoDataUrl = await loadLogoDataUrl();
+  const html = buildInvoiceHtml(enquiry, payments, logoDataUrl);
+ 
+  const win = window.open('', '_blank', 'width=794,height=1123');
+  if (!win) {
+    // Pop-up blocked — fall back to blob URL in the current tab.
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return;
+  }
+ 
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+ 
+  // Wait for the document (and any embedded images / fonts) to finish loading
+  // before triggering print, so the output is never blank.
+  const triggerPrint = () => {
+    win.focus();
+    win.print();
+    // Some browsers close the window automatically after print; others do not.
+    // We do NOT call win.close() here because doing so before print is queued
+    // silently cancels the dialog on Firefox.
+  };
+ 
+  if (win.document.readyState === 'complete') {
+    triggerPrint();
+  } else {
+    win.addEventListener('load', triggerPrint, { once: true });
+  }
 }
-
-/** Returns the invoice as a File, for use with the Web Share API
- *  (navigator.share) — lets a caller offer "Share to WhatsApp" on devices
- *  that support sharing files, with a text-only wa.me fallback elsewhere. */
+ 
+/**
+ * Returns the invoice as an HTML File.
+ *
+ * Most browsers reject `text/html` when `navigator.canShare({ files })` is
+ * called, which causes the caller (AdminEnquiries handleShareInvoice) to
+ * fall back to downloadInvoicePdf() + a WhatsApp text message — exactly the
+ * right behaviour since we cannot generate a binary PDF File client-side
+ * without a server-side renderer.
+ */
 export async function invoiceAsFile(enquiry: Enquiry, payments: Payment[]): Promise<File> {
-  const doc = await buildInvoicePdf(enquiry, payments);
-  const blob = doc.output('blob');
-  return new File([blob], invoiceFileName(enquiry), { type: 'application/pdf' });
+  const logoDataUrl = await loadLogoDataUrl();
+  const html = buildInvoiceHtml(enquiry, payments, logoDataUrl);
+  const blob = new Blob([html], { type: 'text/html' });
+  // Use .pdf extension so the filename looks right if canShare somehow
+  // succeeds; the HTML content is still a perfectly viewable invoice.
+  return new File([blob], invoiceFileName(enquiry), { type: 'text/html' });
 }
