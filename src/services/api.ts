@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData } from '../types/types-index';
+import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment } from '../types/types-index';
 
 // =============================================
 // Trip lifecycle
@@ -1077,6 +1077,21 @@ export async function recordPayment(
     .single();
   if (error) throw error;
   return data;
+}
+
+// Full payment ledger for one enquiry (booking_amount / installment /
+// balance / refund rows), oldest first — the transaction history section
+// of the invoice PDF, and also useful for any future "payment history"
+// admin view. Distinct from enquiries.amount_paid/refund_amount, which are
+// just the running totals this ledger is the source of truth for.
+export async function getPaymentsForEnquiry(enquiryId: string): Promise<Payment[]> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('enquiry_id', enquiryId)
+    .order('paid_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
 }
 
 // Cancels an enquiry / booking. Frees the trip seat immediately if one was

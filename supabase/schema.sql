@@ -235,6 +235,13 @@ create table public.enquiries (
   -- but the data and payment history are preserved for recovery. See
   -- add_soft_delete_enquiries.sql.
   deleted_at                timestamptz,
+  -- Human-readable booking reference, e.g. 'ULAA-2026-000123'. Assigned
+  -- lazily by trg_enquiries_assign_booking_id the first time amount_paid
+  -- goes above 0 (i.e. once this row is actually "Booked", same test as
+  -- isBooked() in AdminEnquiries.tsx) — never re-issued or cleared on
+  -- cancellation. Drives the admin's invoice PDF. See
+  -- add_booking_id_invoice.sql.
+  booking_id                text,
   constraint enquiries_pkey primary key (id),
   constraint enquiries_status_check
     check (status = any (array['new'::text, 'contacted'::text, 'closed'::text])),
@@ -269,6 +276,32 @@ create index enquiries_group_id_idx on public.enquiries using btree (group_id);
 create unique index enquiries_trip_name_phone_email_active_unique
   on public.enquiries (trip_id, lower(trim(full_name)), phone, lower(trim(email)), group_seq)
   where (cancelled_at is null and deleted_at is null);
+
+create unique index enquiries_booking_id_unique
+  on public.enquiries (booking_id)
+  where (booking_id is not null);
+
+-- ----------------------------------------------------------------------------
+-- booking_id_sequences
+-- ----------------------------------------------------------------------------
+-- One row per calendar year, tracking the last booking_id sequence number
+-- issued that year. next_booking_id() increments it atomically (INSERT ...
+-- ON CONFLICT DO UPDATE ... RETURNING) so concurrent payments never collide.
+-- See add_booking_id_invoice.sql.
+create table public.booking_id_sequences (
+  year      integer not null,
+  last_seq  integer not null default 0,
+  constraint booking_id_sequences_pkey primary key (year)
+);
+
+-- next_booking_id(): returns 'ULAA-<year>-<6-digit seq>' for the current
+-- year, bumping booking_id_sequences.
+--
+-- assign_booking_id() / trg_enquiries_assign_booking_id: BEFORE INSERT OR
+-- UPDATE trigger on enquiries — the first time a row's amount_paid > 0 is
+-- seen with booking_id still null, calls next_booking_id() and stamps it
+-- onto the row. Fires whether that happens via createManualEnquiry's
+-- INSERT or recordPayment's downstream amount_paid recompute UPDATE.
 
 -- ----------------------------------------------------------------------------
 -- payments

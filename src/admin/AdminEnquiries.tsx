@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -12,8 +12,9 @@ import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
 import type { SortDirection } from '../components/ui/dataTableUtils';
 import { useConfirm } from '../components/ui/useConfirm';
 import { useAlert } from '../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry } from '../services/api';
 import type { Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry } from '../types/types-index';
+import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
 
@@ -410,6 +411,10 @@ export default function AdminEnquiries() {
   const [openFilterPanel, setOpenFilterPanel] = useState<'trip' | 'query' | 'pay' | 'booked' | 'group' | 'food' | 'more' | null>(null);
   const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  // Enquiry id currently generating/sharing its invoice PDF — disables the
+  // invoice buttons on that one row only while the payments ledger fetch +
+  // PDF build (or the native share sheet) is in flight.
+  const [invoiceBusyId, setInvoiceBusyId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -879,6 +884,65 @@ export default function AdminEnquiries() {
       alert('Failed to delete enquiry.');
     } finally {
       setUpdating(null);
+    }
+  };
+
+  // Downloads (or, on devices that support the Web Share API with files,
+  // shares to WhatsApp/etc.) the invoice PDF for a booked enquiry. Only
+  // meaningful once a booking_id exists — that's assigned server-side the
+  // first time amount_paid > 0 (see add_booking_id_invoice.sql), which is
+  // the same test isBooked() below uses, so the button is only shown/enabled
+  // for rows that are actually booked.
+  const handleDownloadInvoice = async (e: Enquiry) => {
+    setInvoiceBusyId(e.id);
+    try {
+      const payments = await getPaymentsForEnquiry(e.id);
+      await downloadInvoicePdf(e, payments);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to generate invoice.');
+    } finally {
+      setInvoiceBusyId(null);
+    }
+  };
+
+  // Web Share API (level 2, file sharing) lets mobile browsers hand the PDF
+  // straight to WhatsApp/etc. as an attachment. Desktop browsers (and older
+  // mobile ones) don't support sharing files this way, so those fall back
+  // to opening a wa.me chat with a text summary instead — the admin can
+  // then attach the file they just downloaded manually.
+  const handleShareInvoice = async (e: Enquiry) => {
+    setInvoiceBusyId(e.id);
+    try {
+      const payments = await getPaymentsForEnquiry(e.id);
+      const file = await invoiceAsFile(e, payments);
+      const canShareFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
+      if (canShareFile) {
+        await navigator.share({
+          files: [file],
+          title: `ULAA Invoice — ${e.booking_id || ''}`,
+          text: `Invoice for booking ${e.booking_id || ''} (${e.trip_title || 'ULAA trip'})`,
+        });
+      } else {
+        await downloadInvoicePdf(e, payments);
+        const text = encodeURIComponent(
+          `Hi ${e.full_name}, here's your ULAA booking summary:\n` +
+          `Booking ID: ${e.booking_id || '—'}\n` +
+          `Trip: ${e.trip_title || '—'}\n` +
+          `Amount paid: ${formatPrice(e.amount_paid || 0)}${e.total_amount ? ` of ${formatPrice(e.total_amount)}` : ''}\n` +
+          `The invoice PDF has been downloaded — please attach it to this chat.`
+        );
+        const digits = (e.phone || '').replace(/\D/g, '');
+        window.open(`https://wa.me/${digits}?text=${text}`, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      // AbortError just means the admin cancelled the native share sheet —
+      // not a real failure, so don't show an error toast for it.
+      if (err instanceof Error && err.name === 'AbortError') return;
+      console.error(err);
+      alert('Failed to share invoice.');
+    } finally {
+      setInvoiceBusyId(null);
     }
   };
 
@@ -2258,6 +2322,29 @@ export default function AdminEnquiries() {
                                 </p>
                               )}
                             </button>
+                            {e.booking_id && (
+                              <div className="mt-1 flex items-center gap-1">
+                                <span title="Booking ID" className="text-[10px] font-mono text-dark-muted truncate">{e.booking_id}</span>
+                                <button
+                                  onClick={() => handleDownloadInvoice(e)}
+                                  disabled={invoiceBusyId === e.id}
+                                  title="Download invoice"
+                                  aria-label="Download invoice"
+                                  className="shrink-0 text-primary hover:text-primary-dark disabled:opacity-50"
+                                >
+                                  <FileText size={12} />
+                                </button>
+                                <button
+                                  onClick={() => handleShareInvoice(e)}
+                                  disabled={invoiceBusyId === e.id}
+                                  title="Share invoice"
+                                  aria-label="Share invoice"
+                                  className="shrink-0 text-primary hover:text-primary-dark disabled:opacity-50"
+                                >
+                                  <Share2 size={12} />
+                                </button>
+                              </div>
+                            )}
                           </td>
                           <td className="px-2 py-3 text-center">
                             <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
@@ -2555,6 +2642,35 @@ export default function AdminEnquiries() {
                         {refundStatus(e) && (
                           <div className={`rounded-md px-3 py-2 ${refundStatus(e)!.color}`}>
                             <p className="text-xs font-medium">{refundStatus(e)!.label}</p>
+                          </div>
+                        )}
+
+                        {e.booking_id && (
+                          <div className="flex items-center justify-between bg-background-warm rounded-md px-3 py-2">
+                            <div className="min-w-0">
+                              <p className="text-dark-muted text-[10px]">Booking ID</p>
+                              <p className="text-dark text-xs font-mono truncate">{e.booking_id}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => handleDownloadInvoice(e)}
+                                disabled={invoiceBusyId === e.id}
+                                title="Download invoice"
+                                aria-label="Download invoice"
+                                className="text-primary hover:text-primary-dark disabled:opacity-50"
+                              >
+                                <FileText size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleShareInvoice(e)}
+                                disabled={invoiceBusyId === e.id}
+                                title="Share invoice"
+                                aria-label="Share invoice"
+                                className="text-primary hover:text-primary-dark disabled:opacity-50"
+                              >
+                                <Share2 size={16} />
+                              </button>
+                            </div>
                           </div>
                         )}
 
@@ -3074,6 +3190,22 @@ export default function AdminEnquiries() {
                   <FoodMark type={foodPreferenceKey(detailsTarget)} size={10} /> {food.label}
                 </span>
               </div>
+              {detailsTarget.booking_id && (
+                <div className="flex items-center justify-between bg-background-warm rounded-md px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-dark-muted text-xs">Booking ID</p>
+                    <p className="text-dark text-sm font-mono truncate">{detailsTarget.booking_id}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="secondary" size="sm" onClick={() => handleDownloadInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
+                      <FileText size={14} /> Invoice
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => handleShareInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
+                      <Share2 size={14} /> Share
+                    </Button>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
                 <div>
                   <p className="text-dark-muted text-xs">Email</p>

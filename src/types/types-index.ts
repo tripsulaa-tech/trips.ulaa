@@ -277,6 +277,12 @@ export interface Enquiry {
   // waitlist entry into a booking, since the seat was already accounted for
   // on the waitlist rather than being a fresh request against live capacity.
   bypass_capacity_check?: boolean;
+  // Human-readable booking reference (e.g. "ULAA-2026-000123"), assigned by
+  // a DB trigger the first time amount_paid goes above 0 — see
+  // add_booking_id_invoice.sql. Null until then, and never re-issued or
+  // cleared afterwards (including on cancellation). Drives the "Download
+  // Invoice" feature in AdminEnquiries.
+  booking_id?: string | null;
 }
 
 // One row per individual payment or refund against an enquiry. This is the
