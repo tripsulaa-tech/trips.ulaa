@@ -42,6 +42,9 @@ import {
   renderInvoicePdfBuffer,
   isValidPdfBuffer,
   buildInvoiceHtml,
+  describeSupabaseProjectMismatch,
+  isAuthNetworkError,
+  supabaseProjectRef,
   InvoiceNotFoundError,
   type PdfCapableBrowser,
 } from '../api/_lib/generateInvoicePdf.ts';
@@ -127,10 +130,48 @@ export function invoicePdfDevMiddleware(env: Record<string, string>): Plugin {
           return;
         }
 
+        // Check this before spending a network round-trip on a token
+        // verification that's guaranteed to fail — see
+        // describeSupabaseProjectMismatch's doc comment for why this
+        // specific misconfiguration otherwise looks identical to an
+        // expired session no matter how many times you refresh it.
+        const mismatch = describeSupabaseProjectMismatch(supabaseUrl, env.VITE_SUPABASE_URL);
+        if (mismatch) {
+          console.error('[dev] Invoice auth misconfigured:', mismatch);
+          sendJson(res, 500, { error: mismatch });
+          return;
+        }
+
         const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
         const { data: userData, error: authError } = await supabaseAdmin.auth.getUser(token);
         if (authError || !userData?.user) {
-          sendJson(res, 401, { error: 'Invalid or expired session.' });
+          if (authError && isAuthNetworkError(authError)) {
+            // The Auth API was never reached — a broken/refreshed token
+            // can't explain this, so don't suggest re-logging-in. On a dev
+            // machine this is almost always a corporate proxy intercepting
+            // outbound HTTPS (see the puppeteer-download comment above for
+            // the same class of issue), no internet access at all, or the
+            // Supabase project itself being paused (free-tier projects
+            // auto-pause after inactivity).
+            console.error('[dev] Could not reach Supabase Auth API:', authError.message);
+            sendJson(res, 502, {
+              error:
+                `Could not reach Supabase's Auth API (${authError.message}) to verify your session — this is a ` +
+                `network problem on this machine, not an expired session. Check your internet connection, any ` +
+                `corporate proxy/VPN that might intercept HTTPS to *.supabase.co, and that the Supabase project ` +
+                `("${supabaseProjectRef(supabaseUrl)}") isn't paused in the dashboard.`,
+            });
+            return;
+          }
+          // Local dev only, so it's safe to hand back the real reason
+          // (e.g. "invalid JWT: unable to parse or verify signature" vs.
+          // "Invalid API key") instead of a message that reads the same
+          // whether the session actually expired or something's
+          // misconfigured.
+          console.error('[dev] Invoice token verification failed:', authError?.message || 'no user returned');
+          sendJson(res, 401, {
+            error: `Invalid or expired session.${authError?.message ? ` (${authError.message})` : ''}`,
+          });
           return;
         }
 

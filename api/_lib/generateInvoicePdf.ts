@@ -26,6 +26,60 @@ export type { InvoiceEnquiry, InvoicePayment };
 
 export class InvoiceNotFoundError extends Error {}
 
+/** Extracts the project ref ("abcdefgh" out of "https://abcdefgh.supabase.co")
+ *  from a Supabase URL, or null if the URL is missing/malformed. Not a
+ *  secret either way — VITE_SUPABASE_URL ships straight into the client
+ *  bundle, and a Supabase project ref on its own grants no access. */
+export function supabaseProjectRef(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.split('.')[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when `error` (from a `supabase.auth.*` call) is supabase-js's
+ *  AuthRetryableFetchError — the class it wraps around a failed *network*
+ *  call to the Auth API (DNS failure, connection refused, TLS/proxy
+ *  interception, the project being paused, etc.), as opposed to
+ *  AuthApiError, which means the Auth API was reached and it rejected the
+ *  token. Checked by duck-typing `.name` (what supabase-js's own
+ *  `isAuthRetryableFetchError` does internally) rather than importing the
+ *  class from `@supabase/auth-js`, since that package is only a transitive
+ *  dependency here (pulled in by `@supabase/supabase-js`), not one this
+ *  project installs directly. */
+export function isAuthNetworkError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    '__isAuthError' in error &&
+    (error as { name?: unknown }).name === 'AuthRetryableFetchError'
+  );
+}
+
+/** Both invoice-PDF routes verify the admin's session token with a
+ *  service-role client built from SUPABASE_URL — a *different* env var from
+ *  the VITE_SUPABASE_URL the browser actually signs users in against. If
+ *  those two ever point at different Supabase projects (an old project
+ *  reused for SUPABASE_URL, a copy-pasted staging value, etc.), verification
+ *  fails for every token, no matter how fresh — and the failure looks
+ *  exactly like "your session expired," which sends whoever's debugging it
+ *  down the wrong path (re-login, token refresh) instead of the real fix
+ *  (env vars). This catches that specific case with an actionable message
+ *  instead of the generic 401. Returns null when both are set and match, or
+ *  when either is missing (some other check already covers that case). */
+export function describeSupabaseProjectMismatch(serverUrl: string, clientUrl: string | undefined): string | null {
+  const serverRef = supabaseProjectRef(serverUrl);
+  const clientRef = supabaseProjectRef(clientUrl);
+  if (!serverRef || !clientRef || serverRef === clientRef) return null;
+  return (
+    `Invoice auth is misconfigured: the server verifies session tokens against Supabase project "${serverRef}" ` +
+    `(SUPABASE_URL), but the app signs admins in against project "${clientRef}" (VITE_SUPABASE_URL). ` +
+    `Every token will be rejected until both env vars point at the same Supabase project.`
+  );
+}
+
 /** The minimal Puppeteer-shaped browser this module needs. Deliberately
  *  structural rather than `import('puppeteer-core').Browser` — puppeteer's
  *  and puppeteer-core's Browser/Page classes use TS private fields, which

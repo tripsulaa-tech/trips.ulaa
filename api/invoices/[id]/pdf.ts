@@ -32,6 +32,8 @@ import {
   isValidPdfBuffer,
   logoDataUrlFromHttp,
   buildInvoiceHtml,
+  describeSupabaseProjectMismatch,
+  isAuthNetworkError,
   InvoiceNotFoundError,
 } from '../../_lib/generateInvoicePdf';
 
@@ -68,8 +70,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(401).json({ error: 'Missing bearer token.' });
     return;
   }
+  // Same env-var mismatch this route's SUPABASE_URL comment warns about:
+  // if it and VITE_SUPABASE_URL (what the browser actually signs admins in
+  // against) ever point at different Supabase projects, every token fails
+  // verification — and looks exactly like an expired session no matter how
+  // many times the client refreshes it. Caught here as a 500 (config
+  // problem) instead of a misleading 401 (auth problem). Kept generic in
+  // the response since this is production, but the real cause is logged.
+  const mismatch = describeSupabaseProjectMismatch(SUPABASE_URL, process.env.VITE_SUPABASE_URL);
+  if (mismatch) {
+    console.error('Invoice auth misconfigured:', mismatch);
+    res.status(500).json({ error: 'Server misconfigured: invoice auth cannot verify sessions. See function logs.' });
+    return;
+  }
+
   const { data: userData, error: authError } = await supabaseAdmin.auth.getUser(token);
   if (authError || !userData?.user) {
+    if (authError && isAuthNetworkError(authError)) {
+      // The Auth API itself was unreachable (DNS/connect/TLS failure, or
+      // the Supabase project is paused) — this has nothing to do with the
+      // admin's session, so don't tell them to log back in.
+      console.error('Could not reach Supabase Auth API:', authError.message);
+      res.status(502).json({ error: "Could not verify your session: Supabase's Auth API is unreachable right now. Please try again shortly." });
+      return;
+    }
+    console.error('Invoice token verification failed:', authError?.message || 'no user returned');
     res.status(401).json({ error: 'Invalid or expired session.' });
     return;
   }
