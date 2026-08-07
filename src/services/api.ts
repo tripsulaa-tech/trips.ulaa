@@ -760,8 +760,19 @@ export async function getEnquiries(): Promise<Enquiry[]> {
   return data || [];
 }
 
-export async function updateEnquiryStatus(id: string, status: Enquiry['status']): Promise<void> {
-  const { error } = await supabase.from('enquiries').update({ status }).eq('id', id);
+// closedReason is only ever written when status is 'closed'; every other
+// status value (including reopening back to 'new') clears closed_reason
+// back to null so it never lingers on a re-opened or since-progressed
+// enquiry — see add_closed_reason.sql and enquiries_closed_reason_requires_closed_status.
+export async function updateEnquiryStatus(
+  id: string,
+  status: Enquiry['status'],
+  closedReason?: Enquiry['closed_reason']
+): Promise<void> {
+  const { error } = await supabase
+    .from('enquiries')
+    .update({ status, closed_reason: status === 'closed' ? (closedReason ?? null) : null })
+    .eq('id', id);
   if (error) throw error;
   await refreshJourneyStage(id);
 }

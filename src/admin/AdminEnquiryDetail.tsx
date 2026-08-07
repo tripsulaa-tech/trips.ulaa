@@ -30,14 +30,15 @@ import {
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
   recordRefund, deleteEnquiry, updateEnquiryDetails,
 } from '../services/api';
-import type { Enquiry, Payment, UpcomingTrip } from '../types/types-index';
+import type { ClosedReason, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
 import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../utils/utils-index';
 import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
   GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
-  journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested,
+  journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
+  CLOSED_REASON_OPTIONS, closedReasonLabel,
 } from './enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
 
@@ -193,17 +194,23 @@ export default function AdminEnquiryDetail() {
   // that went nowhere. See isNotInterested()'s comment in enquiryShared.tsx
   // for why 'closed' status alone is ambiguous without this.
   const [busyStatus, setBusyStatus] = useState(false);
-  const handleMarkNotInterested = async () => {
+  // Opens the reason-picker modal below instead of closing immediately —
+  // capturing *why* a lead didn't convert (see CLOSED_REASON_OPTIONS) is
+  // what makes the "35 closed before booking" number in reporting
+  // actionable instead of a dead end.
+  const [notInterestedOpen, setNotInterestedOpen] = useState(false);
+  const [closedReason, setClosedReason] = useState<ClosedReason>('no_response');
+  const handleMarkNotInterested = () => {
     if (!enquiry) return;
-    const ok = await confirm({
-      title: 'Mark as Not Interested?',
-      message: 'This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.',
-      confirmLabel: 'Mark Not Interested',
-    });
-    if (!ok) return;
+    setClosedReason('no_response');
+    setNotInterestedOpen(true);
+  };
+  const handleConfirmNotInterested = async () => {
+    if (!enquiry) return;
     setBusyStatus(true);
     try {
-      await updateEnquiryStatus(enquiry.id, 'closed');
+      await updateEnquiryStatus(enquiry.id, 'closed', closedReason);
+      setNotInterestedOpen(false);
       load();
     } catch (err) {
       console.error(err);
@@ -613,8 +620,8 @@ export default function AdminEnquiryDetail() {
                   <jb.icon size={12} className="shrink-0" /> {jb.label}
                 </span>
                 {isNotInterested(enquiry) && (
-                  <span title="Closed — this was just a query, no booking followed" className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-red-50 text-red-600">
-                    <UserMinus size={12} className="shrink-0" /> Not Interested
+                  <span title={closedReasonLabel(enquiry) ? `Closed — ${closedReasonLabel(enquiry)}` : 'Closed — this was just a query, no booking followed'} className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-red-50 text-red-600">
+                    <UserMinus size={12} className="shrink-0" /> Not Interested{closedReasonLabel(enquiry) ? ` — ${closedReasonLabel(enquiry)}` : ''}
                   </span>
                 )}
                 {enquiry.group_size && enquiry.group_size > 1 ? (
@@ -635,6 +642,11 @@ export default function AdminEnquiryDetail() {
               {nma && (
                 <Button variant="outline" size="sm" onClick={handleAdvance} disabled={busyAction} className="!border-primary/30 !text-primary">
                   <nma.icon size={14} /> {nma.label}
+                </Button>
+              )}
+              {canMarkNotInterested(enquiry) && (
+                <Button variant="outline" size="sm" onClick={handleMarkNotInterested} disabled={busyAction || busyStatus}>
+                  <UserMinus size={14} /> Not Interested
                 </Button>
               )}
               <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
@@ -980,6 +992,27 @@ export default function AdminEnquiryDetail() {
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" onClick={() => setInvoiceModalOpen(false)}>Cancel</Button>
             <Button variant="primary" size="md" onClick={handleGenerateInvoice} loading={savingInvoice}>Generate</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Not Interested reason picker — see handleMarkNotInterested above. */}
+      <Modal isOpen={notInterestedOpen} onClose={() => setNotInterestedOpen(false)} title="Mark as Not Interested" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-dark-muted">
+            This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Reason</label>
+            <Select
+              value={closedReason}
+              onChange={val => setClosedReason(val as ClosedReason)}
+              options={CLOSED_REASON_OPTIONS}
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" size="md" onClick={() => setNotInterestedOpen(false)}>Cancel</Button>
+            <Button variant="primary" size="md" onClick={handleConfirmNotInterested} loading={busyStatus}>Mark Not Interested</Button>
           </div>
         </div>
       </Modal>

@@ -15,7 +15,7 @@ import type { SortDirection } from '../components/ui/dataTableUtils';
 import { useConfirm } from '../components/ui/useConfirm';
 import { useAlert } from '../components/ui/useAlert';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry } from '../services/api';
-import type { Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../types/types-index';
+import type { ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
@@ -23,7 +23,8 @@ import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
   GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
-  journeyBadge, nextManualAction, BookingLifecycleStepper, isNotInterested, JourneyLifecycleLegend,
+  journeyBadge, nextManualAction, BookingLifecycleStepper, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend,
+  CLOSED_REASON_OPTIONS, closedReasonLabel, closedReasonBreakdown,
 } from './enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
 
@@ -125,8 +126,21 @@ const emptyBulkForm: BulkEditForm = {
   status: BULK_NO_CHANGE,
 };
 
+// The "Not set" (grey) label is the right, low-urgency default for a fresh
+// lead nobody's spoken to yet — there's nothing to flag. But once an admin
+// has marked the lead Contacted (see handleAdvance/handleStatusChange) and
+// still hasn't opened Track Payment to record a package/total, that same
+// grey "Not set" blended into the row and got missed — nothing distinguished
+// "haven't gotten to it yet" from "actively fell through the cracks after
+// being contacted". journey_stage === 'contacted' is exactly that second
+// case (computeJourneyStage only stays on 'contacted' when total_amount is
+// still unset — see src/services/api.ts), so it gets its own red, harder-to-
+// miss label instead.
 function paymentStatus(e: Enquiry): { label: string; color: string } {
-  if (!e.total_amount) return { label: 'Not set', color: 'bg-slate-100 text-dark-muted' };
+  if (!e.total_amount) {
+    if (e.journey_stage === 'contacted') return { label: 'Needs Pricing', color: 'bg-red-100 text-red-700' };
+    return { label: 'Not set', color: 'bg-slate-100 text-dark-muted' };
+  }
   if (e.amount_paid <= 0) return { label: 'Unpaid', color: 'bg-red-100 text-red-700' };
   if (e.amount_paid >= e.total_amount) return { label: 'Paid in full', color: 'bg-green-100 text-green-700' };
   return { label: 'Partial', color: 'bg-amber-100 text-amber-700' };
@@ -1105,16 +1119,22 @@ export default function AdminEnquiries() {
   // 'closed' status alone is ambiguous without this. Added here (not just
   // on the CRM detail page) so the admin doesn't have to open a row just
   // to drop a lead that said no.
-  const handleMarkNotInterested = async (enquiry: Enquiry) => {
-    const ok = await confirm({
-      title: 'Mark as Not Interested?',
-      message: 'This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.',
-      confirmLabel: 'Mark Not Interested',
-    });
-    if (!ok) return;
-    setUpdating(enquiry.id);
+  // Opens the reason-picker modal below instead of closing immediately —
+  // capturing *why* a lead didn't convert (see CLOSED_REASON_OPTIONS) is
+  // what makes the "35 closed before booking" number in reporting
+  // actionable instead of a dead end. Mirrors AdminEnquiryDetail.tsx.
+  const [notInterestedTarget, setNotInterestedTarget] = useState<Enquiry | null>(null);
+  const [closedReason, setClosedReason] = useState<ClosedReason>('no_response');
+  const handleMarkNotInterested = (enquiry: Enquiry) => {
+    setClosedReason('no_response');
+    setNotInterestedTarget(enquiry);
+  };
+  const handleConfirmNotInterested = async () => {
+    if (!notInterestedTarget) return;
+    setUpdating(notInterestedTarget.id);
     try {
-      await updateEnquiryStatus(enquiry.id, 'closed');
+      await updateEnquiryStatus(notInterestedTarget.id, 'closed', closedReason);
+      setNotInterestedTarget(null);
       load();
     } catch (err) {
       console.error(err);
@@ -1186,6 +1206,11 @@ export default function AdminEnquiries() {
       items.push(
         isNotInterested(e)
           ? { label: 'Reopen Enquiry', icon: RefreshCw, onClick: () => handleReopenEnquiry(e) }
+          // Also available as a one-click inline button next to "Mark
+          // Contacted" in the Update column (desktop table + mobile card)
+          // — kept here too so it's still reachable from the kebab for
+          // admins already in the habit of using it, or on rows where the
+          // inline button doesn't fit.
           : { label: 'Not Interested (Close Query)', icon: UserMinus, onClick: () => handleMarkNotInterested(e) }
       );
     }
@@ -1971,6 +1996,24 @@ export default function AdminEnquiries() {
       <div className="space-y-4 sm:space-y-6">
         <JourneyLifecycleLegend />
 
+        {/* Reporting breakdown — only meaningful once the admin is actually
+            looking at closed leads; scoped to whatever trip/search filters
+            are already active so it matches what's in the table below. */}
+        {filter === 'closed' && closedReasonBreakdown(scopedEnquiries).length > 0 && (
+          <div className="bg-white border border-background-warm rounded-lg px-4 py-3">
+            <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-2">
+              Why these didn't convert
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {closedReasonBreakdown(scopedEnquiries).map(r => (
+                <span key={r.label} className="inline-flex items-center gap-1.5 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-dark-muted">
+                  {r.label} <span className="text-dark">{r.count}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-center gap-3">
           <p className="text-dark-muted text-sm hidden sm:block">Log a WhatsApp, phone, or walk-in enquiry that didn't come through the website.</p>
           <Button variant="primary" size="sm" onClick={openAdd} className="ml-auto">
@@ -2586,7 +2629,7 @@ export default function AdminEnquiries() {
                             )}
                           </td>
                           <td className="px-2 py-3 text-center">
-                            <span title={`Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
+                            <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
                               <jb.icon size={12} className="shrink-0" />
                               {jb.label}
                             </span>
@@ -2616,6 +2659,16 @@ export default function AdminEnquiries() {
                                 >
                                   <nma.icon size={12} className="shrink-0" />
                                   {nma.label}
+                                </button>
+                              )}
+                              {canMarkNotInterested(e) && (
+                                <button
+                                  onClick={() => handleMarkNotInterested(e)}
+                                  disabled={updating === e.id || completingId === e.id}
+                                  title="Not Interested (Close Query)"
+                                  className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                                >
+                                  <UserMinus size={12} className="shrink-0" />
                                 </button>
                               )}
                               <ActionsMenu disabled={updating === e.id} items={buildRowActions(e)} />
@@ -2727,7 +2780,7 @@ export default function AdminEnquiries() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span title={`Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
+                        <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
                           <jb.icon size={12} className="shrink-0" />
                           {jb.label}
                         </span>
@@ -2927,6 +2980,16 @@ export default function AdminEnquiries() {
                               className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"
                             >
                               <nma.icon size={14} /> {nma.label}
+                            </button>
+                          )}
+                          {canMarkNotInterested(e) && (
+                            <button
+                              onClick={() => handleMarkNotInterested(e)}
+                              disabled={updating === e.id}
+                              title="Not Interested (Close Query)"
+                              className={`inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50 ${nma ? 'shrink-0' : 'flex-1'}`}
+                            >
+                              <UserMinus size={14} /> {nma ? '' : 'Not Interested'}
                             </button>
                           )}
                           <button
@@ -3685,6 +3748,27 @@ export default function AdminEnquiries() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Not Interested reason picker — see handleMarkNotInterested above. */}
+      <Modal isOpen={!!notInterestedTarget} onClose={() => setNotInterestedTarget(null)} title="Mark as Not Interested" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-dark-muted">
+            This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Reason</label>
+            <Select
+              value={closedReason}
+              onChange={val => setClosedReason(val as ClosedReason)}
+              options={CLOSED_REASON_OPTIONS}
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" size="md" onClick={() => setNotInterestedTarget(null)}>Cancel</Button>
+            <Button variant="primary" size="md" onClick={handleConfirmNotInterested} loading={!!notInterestedTarget && updating === notInterestedTarget.id}>Mark Not Interested</Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Cancel Booking Modal */}

@@ -229,6 +229,19 @@ export interface GalleryImage {
 export type JourneyStage = 'new_enquiry' | 'contacted' | 'advance_pending' | 'advance_paid'
   | 'confirmed' | 'balance_pending' | 'fully_paid' | 'checked_in' | 'completed' | 'cancelled' | 'not_interested';
 
+// Why a lead was closed out before ever becoming a booking — only ever set
+// alongside status: 'closed' (see updateEnquiryStatus in services/api.ts,
+// which clears this back to null on every non-closed status change,
+// including reopening). Deliberately doesn't include a bare "not_interested"
+// value — the closing action itself is already called "Not Interested"
+// throughout the UI (journey_stage, badge, button label), so a same-named
+// reason would just restate that without adding anything; "Other" covers
+// the generic/unspecified case instead. Optional/nullable since older
+// closed rows predate this column — see add_closed_reason.sql.
+export type ClosedReason =
+  | 'no_response' | 'price_too_high' | 'date_conflict' | 'destination_changed'
+  | 'booked_elsewhere' | 'will_join_later' | 'personal_reason' | 'other';
+
 export interface Enquiry {
   id: string;
   full_name: string;
@@ -241,6 +254,10 @@ export interface Enquiry {
   trip_id?: string;
   trip_title?: string;
   status: 'new' | 'contacted' | 'closed';
+  // Only meaningful when status === 'closed'; null/undefined for a closed
+  // row that predates add_closed_reason.sql or was bulk-closed without
+  // picking one. See ClosedReason above.
+  closed_reason?: ClosedReason | null;
   source: 'website' | 'whatsapp' | 'phone' | 'instagram' | 'walk_in' | 'other';
   is_paid: boolean;
   package_type: 'early_bird' | 'normal';

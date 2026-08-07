@@ -9,7 +9,7 @@
 // Everything here is intentionally stateless — no hooks, no local state —
 // so it's safe to call from anywhere.
 import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle, UserMinus } from 'lucide-react';
-import type { Enquiry, Payment, UpcomingTrip } from '../types/types-index';
+import type { ClosedReason, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
 import { formatDate, getActivePrice } from '../utils/utils-index';
 
 // Parses a money-field <input type="number"> value into a non-negative
@@ -179,6 +179,73 @@ export function journeyBadge(e: Enquiry) {
 export function isNotInterested(e: Enquiry): boolean {
   if (e.journey_stage === 'not_interested') return true;
   return e.status === 'closed' && !e.cancelled_at && (e.amount_paid || 0) <= 0 && !e.booking_id;
+}
+
+// Whether "Not Interested" is a valid action on this enquiry right now —
+// only before any money's changed hands (once there's a booking_id or a
+// payment on record, closing the lead out is a Cancel Booking decision
+// instead — different consequences: refunds, seat release, etc) and only
+// while it isn't already closed. Shared by the kebab-menu action and the
+// inline quick-action button in both AdminEnquiries.tsx and
+// AdminEnquiryDetail.tsx so the eligibility rule can't drift between them.
+export function canMarkNotInterested(e: Enquiry): boolean {
+  return !e.cancelled_at && !e.booking_id && (e.amount_paid || 0) <= 0 && !isNotInterested(e);
+}
+
+// Every reason an admin can pick when closing an enquiry out — see
+// supabase/migration/add_closed_reason.sql. No plain "Not Interested" entry
+// here: the closing action itself already carries that label everywhere
+// else in the UI (journey_stage, badge, button), so a same-named reason
+// would just restate it without adding information — "Other" is the
+// catch-all instead. Order here is the order shown in the picker (most
+// common first) and the order used for the reporting breakdown in
+// AdminEnquiries.tsx.
+export const CLOSED_REASON_CONFIG: Record<ClosedReason, { label: string }> = {
+  no_response: { label: 'No Response' },
+  price_too_high: { label: 'Price Too High' },
+  date_conflict: { label: "Date Doesn't Work" },
+  destination_changed: { label: 'Destination Changed' },
+  booked_elsewhere: { label: 'Booked Elsewhere' },
+  will_join_later: { label: 'Will Join Later' },
+  personal_reason: { label: 'Family / Personal Reason' },
+  other: { label: 'Other' },
+};
+
+export const CLOSED_REASON_OPTIONS: { value: ClosedReason; label: string }[] =
+  (Object.keys(CLOSED_REASON_CONFIG) as ClosedReason[]).map(value => ({
+    value,
+    label: CLOSED_REASON_CONFIG[value].label,
+  }));
+
+// Human label for why a closed enquiry didn't convert, or null when it
+// either isn't closed or predates add_closed_reason.sql (closed with no
+// reason on record). Used to enrich the "Not Interested" badge's tooltip
+// without cluttering the badge itself.
+export function closedReasonLabel(e: Enquiry): string | null {
+  if (!isNotInterested(e) || !e.closed_reason) return null;
+  return CLOSED_REASON_CONFIG[e.closed_reason]?.label ?? null;
+}
+
+// Counts closed-without-booking enquiries by reason, for the reporting
+// strip in AdminEnquiries.tsx (mirrors the "35 closed before booking: 15 no
+// response, 10 price..." breakdown). Rows closed before add_closed_reason.sql
+// shipped (or bulk-closed without picking a reason) have no closed_reason —
+// counted separately as "Unspecified" rather than silently dropped, so the
+// breakdown total always matches the Closed tab's count. Zero-count reasons
+// are omitted; the list is sorted highest-count first.
+export function closedReasonBreakdown(
+  enquiries: Enquiry[]
+): { label: string; count: number }[] {
+  const closed = enquiries.filter(isNotInterested);
+  const counts = new Map<string, number>();
+  for (const e of closed) {
+    const label = e.closed_reason ? CLOSED_REASON_CONFIG[e.closed_reason]?.label : undefined;
+    const key = label ?? 'Unspecified';
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
 // The one, single manual action that moves a booking's journey forward a
