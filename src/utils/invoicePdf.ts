@@ -250,8 +250,9 @@ function buildInvoiceHtml(
   }
  
   .booking-id-badge {
-    display: inline-block; background: #a0522d; color: #fff;
-    font-size: 11.5px; font-weight: 700; padding: 5px 16px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #a0522d; color: #fff; line-height: 1; white-space: nowrap;
+    font-size: 11.5px; font-weight: 700; padding: 7px 16px;
     border-radius: 5px; letter-spacing: 0.3px; margin-bottom: 10px;
   }
  
@@ -278,9 +279,10 @@ function buildInvoiceHtml(
   }
  
   .section-pill {
-    display: inline-block; background: #a0522d; color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #a0522d; color: #fff; line-height: 1; white-space: nowrap;
     font-size: 9.5px; font-weight: 700; letter-spacing: 0.9px;
-    text-transform: uppercase; padding: 5px 16px; border-radius: 4px;
+    text-transform: uppercase; padding: 7px 16px; border-radius: 4px;
     margin-bottom: 14px;
   }
  
