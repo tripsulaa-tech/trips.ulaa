@@ -8,7 +8,7 @@
 //      table component just to reuse a badge/label helper.
 // Everything here is intentionally stateless — no hooks, no local state —
 // so it's safe to call from anywhere.
-import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle, UserMinus } from 'lucide-react';
+import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle, UserMinus, CalendarClock } from 'lucide-react';
 import type { ClosedReason, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
 import { formatDate, getActivePrice } from '../utils/utils-index';
 
@@ -192,6 +192,40 @@ export function canMarkNotInterested(e: Enquiry): boolean {
   return !e.cancelled_at && !e.booking_id && (e.amount_paid || 0) <= 0 && !isNotInterested(e);
 }
 
+// Whether a follow-up reminder can be set on this enquiry right now — while
+// it's still a live, pre-booked conversation (journey_stage 'contacted',
+// 'advance_pending', or 'advance_paid' — the three stages status ===
+// 'contacted' can derive to, see computeJourneyStage/computeAutoStatus in
+// services/api.ts: status only flips off 'contacted' once amount_paid
+// reaches total_amount). Not offered on a fresh lead nobody's spoken to yet
+// (nothing to follow up on), nor once the booking's actually confirmed
+// (booking_amount reached) or later — those move it past the window
+// add_enquiry_follow_up.sql's check constraint allows follow_up_at to be
+// set in, and refreshJourneyStage() clears any existing reminder the
+// moment that happens.
+export function canSetFollowUp(e: Enquiry): boolean {
+  return e.journey_stage === 'contacted' || e.journey_stage === 'advance_pending' || e.journey_stage === 'advance_paid';
+}
+
+// Follow-up reminder chip shown next to a Contacted lead — auto-escalates
+// color/label as the date approaches so a due reminder actually reads as
+// urgent instead of blending into the row like a plain date would. Compares
+// on calendar day only (follow_up_at has no time component), so "today" is
+// today regardless of what time the admin looks. Returns null when there's
+// no reminder set, so callers can skip rendering the chip entirely.
+export function followUpStatus(e: Enquiry): { label: string; color: string; icon: typeof CalendarClock; isDue: boolean } | null {
+  if (!e.follow_up_at) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [y, m, d] = e.follow_up_at.split('-').map(Number);
+  const target = new Date(y, (m || 1) - 1, d || 1);
+  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const dateLabel = formatDate(e.follow_up_at, { day: 'numeric', month: 'short' });
+  if (diffDays < 0) return { label: `Overdue · ${dateLabel}`, color: 'bg-red-100 text-red-700', icon: CalendarClock, isDue: true };
+  if (diffDays === 0) return { label: 'Follow up today', color: 'bg-amber-100 text-amber-700', icon: CalendarClock, isDue: true };
+  return { label: `Follow up ${dateLabel}`, color: 'bg-blue-50 text-blue-700', icon: CalendarClock, isDue: false };
+}
+
 // Every reason an admin can pick when closing an enquiry out — see
 // supabase/migration/add_closed_reason.sql. No plain "Not Interested" entry
 // here: the closing action itself already carries that label everywhere
@@ -206,7 +240,9 @@ export const CLOSED_REASON_CONFIG: Record<ClosedReason, { label: string }> = {
   date_conflict: { label: "Date Doesn't Work" },
   destination_changed: { label: 'Destination Changed' },
   booked_elsewhere: { label: 'Booked Elsewhere' },
-  will_join_later: { label: 'Will Join Later' },
+  // No 'will_join_later' here any more — that was really "still warm,
+  // checking with family/friends", which isn't a closed reason at all (see
+  // canSetFollowUp / followUpStatus below and add_enquiry_follow_up.sql).
   personal_reason: { label: 'Family / Personal Reason' },
   other: { label: 'Other' },
 };

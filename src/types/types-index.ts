@@ -240,7 +240,7 @@ export type JourneyStage = 'new_enquiry' | 'contacted' | 'advance_pending' | 'ad
 // closed rows predate this column — see add_closed_reason.sql.
 export type ClosedReason =
   | 'no_response' | 'price_too_high' | 'date_conflict' | 'destination_changed'
-  | 'booked_elsewhere' | 'will_join_later' | 'personal_reason' | 'other';
+  | 'booked_elsewhere' | 'personal_reason' | 'other';
 
 export interface Enquiry {
   id: string;
@@ -312,6 +312,14 @@ export interface Enquiry {
   // Stamped when an admin marks the traveller checked in for the trip via
   // checkInEnquiry(). Null means not checked in yet.
   checked_in_at?: string | null;
+  // Reminder date for a still-warm Contacted lead that isn't ready to be
+  // closed either way ("checking with family, call back Aug 15") — a
+  // layer on top of the Contacted stage, not a terminal status. Only ever
+  // set while status === 'contacted' (see
+  // supabase/migration/add_enquiry_follow_up.sql's check constraint) and
+  // cleared automatically by refreshJourneyStage() in services/api.ts the
+  // moment the lead moves past that stage. 'YYYY-MM-DD', no time component.
+  follow_up_at?: string | null;
 }
 
 // One row per individual payment, refund, or raised-but-uncollected invoice

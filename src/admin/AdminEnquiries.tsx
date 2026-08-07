@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Receipt, BadgeCheck, Eye, UserX, UserCheck, LogIn, ExternalLink, UserMinus } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, CalendarClock, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Receipt, BadgeCheck, Eye, UserX, UserCheck, LogIn, ExternalLink, UserMinus } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import FoodMark from '../components/ui/FoodMark';
+import DatePicker from '../components/ui/DatePicker';
 import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
 import ActionsMenu from '../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../components/ui/ActionsMenu';
@@ -14,7 +15,7 @@ import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
 import type { SortDirection } from '../components/ui/dataTableUtils';
 import { useConfirm } from '../components/ui/useConfirm';
 import { useAlert } from '../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp } from '../services/api';
 import type { ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../utils/utils-index';
@@ -24,7 +25,7 @@ import {
   GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend,
-  CLOSED_REASON_OPTIONS, closedReasonLabel, closedReasonBreakdown,
+  CLOSED_REASON_OPTIONS, closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
 } from './enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
 
@@ -363,6 +364,12 @@ export default function AdminEnquiries() {
   const [groupFilter, setGroupFilter] = useState<'all' | 'group' | 'solo'>('all');
   const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | Enquiry['source']>('all');
+  // Quick toggle for "follow-ups due" — deliberately just a boolean chip
+  // (not a full FilterDropdown like Payment/Booking above) since there's
+  // only ever one meaningful thing to isolate here: reminders that are due
+  // today or overdue. See followUpStatus() in enquiryShared.tsx for what
+  // counts as "due".
+  const [followUpDueOnly, setFollowUpDueOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   // Table pagination — 50 rows per page, matching the reference table
   // design. Reset to page 1 whenever a filter or search term changes (see
@@ -372,7 +379,7 @@ export default function AdminEnquiries() {
   const { ref: tableScrollRef, isDragging, handlers: dragHandlers } = useDragScroll<HTMLDivElement>();
   // Column sorting — clicking a sortable header sorts the filtered list by
   // that column; clicking the same header again flips the direction.
-  type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status';
+  type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status' | 'follow_up';
   const [sortKey, setSortKey] = useState<EnquirySortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
   const handleSort = (key: EnquirySortKey) => {
@@ -1144,6 +1151,44 @@ export default function AdminEnquiries() {
     }
   };
 
+  // ---- Follow-up reminder (still warm, not ready to close either way) ----
+  // Mirrors the Not Interested modal's shape (target + form state, confirm
+  // handler) but writes just follow_up_at via setEnquiryFollowUp — this
+  // never touches status/journey_stage itself. See canSetFollowUp/
+  // followUpStatus in enquiryShared.tsx and add_enquiry_follow_up.sql.
+  const [followUpTarget, setFollowUpTarget] = useState<Enquiry | null>(null);
+  const [followUpDate, setFollowUpDate] = useState('');
+  const openFollowUpModal = (enquiry: Enquiry) => {
+    setFollowUpDate(enquiry.follow_up_at || '');
+    setFollowUpTarget(enquiry);
+  };
+  const handleSaveFollowUp = async () => {
+    if (!followUpTarget || !followUpDate) return;
+    setUpdating(followUpTarget.id);
+    try {
+      await setEnquiryFollowUp(followUpTarget.id, followUpDate);
+      setFollowUpTarget(null);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to set follow-up date.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+  const handleClearFollowUp = async (enquiry: Enquiry) => {
+    setUpdating(enquiry.id);
+    try {
+      await setEnquiryFollowUp(enquiry.id, null);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to clear follow-up date.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const handleReopenEnquiry = async (enquiry: Enquiry) => {
     setUpdating(enquiry.id);
     try {
@@ -1197,6 +1242,19 @@ export default function AdminEnquiries() {
     }
     if (e.journey_stage === 'checked_in') {
       items.push({ label: 'Undo Check In', icon: LogIn, onClick: () => handleUndoCheckIn(e) });
+    }
+    // Follow-up reminder — only offered while still genuinely Contacted
+    // (see canSetFollowUp); also reachable via the inline chip in the
+    // Follow-up column for rows where it's already set.
+    if (canSetFollowUp(e)) {
+      items.push(
+        e.follow_up_at
+          ? { label: 'Edit Follow-up Date', icon: CalendarClock, onClick: () => openFollowUpModal(e) }
+          : { label: 'Set Follow-up Reminder', icon: CalendarClock, onClick: () => openFollowUpModal(e) }
+      );
+      if (e.follow_up_at) {
+        items.push({ label: 'Clear Follow-up', icon: X, onClick: () => handleClearFollowUp(e) });
+      }
     }
     // "Not Interested" / "Reopen" only make sense before any money's
     // changed hands — once there's a booking_id or a payment on record,
@@ -1772,6 +1830,7 @@ export default function AdminEnquiries() {
     .filter(e => groupFilter === 'all' || (groupFilter === 'group' ? isGroupEntry(e) : !isGroupEntry(e)))
     .filter(e => foodFilter === 'all' || foodPreferenceKey(e) === foodFilter)
     .filter(e => sourceFilter === 'all' || e.source === sourceFilter)
+    .filter(e => !followUpDueOnly || !!followUpStatus(e)?.isDue)
     .filter(e => !trimmedSearch
       || e.full_name?.toLowerCase().includes(trimmedSearch)
       || e.phone?.toLowerCase().includes(trimmedSearch)
@@ -1789,6 +1848,15 @@ export default function AdminEnquiries() {
       case 'package': return dir * (a.package_type || 'normal').localeCompare(b.package_type || 'normal');
       case 'payment': return dir * ((a.amount_paid || 0) - (b.amount_paid || 0));
       case 'status': return dir * (a.status || '').localeCompare(b.status || '');
+      // Nulls (no reminder set) always sort to the end regardless of
+      // direction — an admin sorting this column wants due/upcoming dates
+      // grouped together, not chasing them past a block of blanks.
+      case 'follow_up': {
+        if (!a.follow_up_at && !b.follow_up_at) return 0;
+        if (!a.follow_up_at) return 1;
+        if (!b.follow_up_at) return -1;
+        return dir * (a.follow_up_at < b.follow_up_at ? -1 : a.follow_up_at > b.follow_up_at ? 1 : 0);
+      }
       default: return 0;
     }
   }) : filtered;
@@ -1806,7 +1874,7 @@ export default function AdminEnquiries() {
   // filters, trip scope, or search term change. Done during render
   // (comparing against the previous filter signature) rather than in an
   // effect — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const filterSignature = `${filter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${sourceFilter}|${selectedTripKey}|${trimmedSearch}`;
+  const filterSignature = `${filter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${sourceFilter}|${followUpDueOnly}|${selectedTripKey}|${trimmedSearch}`;
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
   if (filterSignature !== prevFilterSignature) {
     setPrevFilterSignature(filterSignature);
@@ -1847,7 +1915,8 @@ export default function AdminEnquiries() {
     acc[key] = scopedEnquiries.filter(e => e.source === key).length;
     return acc;
   }, { all: scopedEnquiries.length } as Record<string, number>);
-  const activeFilterCount = (selectedTripKey !== null ? 1 : 0) + (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (trimmedSearch ? 1 : 0);
+  const followUpDueCount = scopedEnquiries.filter(e => !!followUpStatus(e)?.isDue).length;
+  const activeFilterCount = (selectedTripKey !== null ? 1 : 0) + (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (followUpDueOnly ? 1 : 0) + (trimmedSearch ? 1 : 0);
 
   // Drives the "Clear all" action in the filter bar below.
   const clearAllFilters = () => {
@@ -1858,6 +1927,7 @@ export default function AdminEnquiries() {
     setGroupFilter('all');
     setFoodFilter('all');
     setSourceFilter('all');
+    setFollowUpDueOnly(false);
     setSearchQuery('');
     setOpenFilterPanel(null);
   };
@@ -2326,6 +2396,32 @@ export default function AdminEnquiries() {
                     )}
                   </div>
 
+                  {/* Follow-ups Due — a plain toggle chip (not a dropdown
+                      like the filters above) since there's only one
+                      meaningful thing to isolate: reminders due today or
+                      overdue. Only rendered when there's at least one, same
+                      as the General Enquiries chip above. */}
+                  {followUpDueCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFollowUpDueOnly(v => !v)}
+                      title="Contacted leads with a follow-up reminder due today or overdue"
+                      className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-button font-semibold rounded-md border-2 px-3 h-[38px] transition-colors whitespace-nowrap self-end ${
+                        followUpDueOnly
+                          ? 'bg-primary text-white border-primary'
+                          : 'border-background-warm text-dark hover:border-primary/30'
+                      }`}
+                    >
+                      <CalendarClock size={13} className="shrink-0" />
+                      Follow-ups Due
+                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-[10px] ${
+                        followUpDueOnly ? 'bg-white/20' : 'bg-background-warm'
+                      }`}>
+                        {followUpDueCount}
+                      </span>
+                    </button>
+                  )}
+
                   {/* Group / Solo */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
                     <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Group / Solo</label>
@@ -2507,6 +2603,7 @@ export default function AdminEnquiries() {
                       <SortableTh label="Package" sortKey="package" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-center whitespace-nowrap" />
                       <SortableTh label="Payment" sortKey="payment" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
                       <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-center whitespace-nowrap" />
+                      <SortableTh label="Follow-up" sortKey="follow_up" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap hidden md:table-cell" />
                       <th className="px-2 py-3 text-center whitespace-nowrap">Seat</th>
                       <th className="px-2 py-3 text-right whitespace-nowrap">Update</th>
                     </tr>
@@ -2633,6 +2730,37 @@ export default function AdminEnquiries() {
                               <jb.icon size={12} className="shrink-0" />
                               {jb.label}
                             </span>
+                          </td>
+                          <td className="px-2 py-3 text-left whitespace-nowrap hidden md:table-cell">
+                            {(() => {
+                              const fu = followUpStatus(e);
+                              if (fu) {
+                                return (
+                                  <button
+                                    onClick={() => openFollowUpModal(e)}
+                                    disabled={updating === e.id}
+                                    title="Click to change the follow-up date"
+                                    className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-50 ${fu.color}`}
+                                  >
+                                    <fu.icon size={12} className="shrink-0" />
+                                    {fu.label}
+                                  </button>
+                                );
+                              }
+                              if (canSetFollowUp(e)) {
+                                return (
+                                  <button
+                                    onClick={() => openFollowUpModal(e)}
+                                    disabled={updating === e.id}
+                                    title="Set a follow-up reminder"
+                                    className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                                  >
+                                    <CalendarClock size={12} className="shrink-0" /> Set
+                                  </button>
+                                );
+                              }
+                              return <span className="text-dark-muted/50 text-xs">—</span>;
+                            })()}
                           </td>
                           <td className="px-2 py-3 text-center">
                             <span
@@ -2780,6 +2908,11 @@ export default function AdminEnquiries() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        {followUpStatus(e)?.isDue && (
+                          <span title={followUpStatus(e)!.label} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${followUpStatus(e)!.color}`}>
+                            <CalendarClock size={12} className="shrink-0" />
+                          </span>
+                        )}
                         <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
                           <jb.icon size={12} className="shrink-0" />
                           {jb.label}
@@ -2967,6 +3100,23 @@ export default function AdminEnquiries() {
                             {seat.label}
                           </span>
                         </div>
+
+                        {/* Follow-up reminder — same eligibility/chip logic
+                            as the desktop table's dedicated column, just
+                            laid out as a full-width row here since there's
+                            no spare column on a mobile card. */}
+                        {(followUpStatus(e) || canSetFollowUp(e)) && (
+                          <button
+                            onClick={() => openFollowUpModal(e)}
+                            disabled={updating === e.id}
+                            className={`w-full inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap disabled:opacity-50 ${
+                              followUpStatus(e) ? followUpStatus(e)!.color : 'border border-background-warm text-dark-muted'
+                            }`}
+                          >
+                            <CalendarClock size={14} />
+                            {followUpStatus(e)?.label || 'Set Follow-up Reminder'}
+                          </button>
+                        )}
 
                         {/* Journey Advance + kebab ActionsMenu — mirrors the
                             desktop table's "Update" column so mobile isn't
@@ -3767,6 +3917,25 @@ export default function AdminEnquiries() {
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" onClick={() => setNotInterestedTarget(null)}>Cancel</Button>
             <Button variant="primary" size="md" onClick={handleConfirmNotInterested} loading={!!notInterestedTarget && updating === notInterestedTarget.id}>Mark Not Interested</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Follow-up reminder date picker — see openFollowUpModal above. */}
+      <Modal isOpen={!!followUpTarget} onClose={() => setFollowUpTarget(null)} title="Set Follow-up Reminder" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-dark-muted">
+            {followUpTarget?.follow_up_at
+              ? 'This lead is still warm — update when to check back in.'
+              : "This lead is still warm but not ready to close either way — pick a date to check back in. It'll show as due on that day, and clears automatically once this lead moves past Contacted."}
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
+            <DatePicker value={followUpDate} onChange={setFollowUpDate} />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" size="md" onClick={() => setFollowUpTarget(null)}>Cancel</Button>
+            <Button variant="primary" size="md" onClick={handleSaveFollowUp} disabled={!followUpDate} loading={!!followUpTarget && updating === followUpTarget.id}>Save</Button>
           </div>
         </div>
       </Modal>

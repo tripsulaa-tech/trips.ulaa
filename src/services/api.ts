@@ -990,16 +990,51 @@ async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
   if (error) throw error;
 
   const stage = computeJourneyStage(e);
-  if (stage === e.journey_stage) return e;
+
+  // follow_up_at (see add_enquiry_follow_up.sql) is only meaningful while
+  // the lead is still a live, pre-booked conversation — the DB's own check
+  // constraint enforces status === 'contacted', which covers 'contacted',
+  // 'advance_pending', and 'advance_paid' (status only flips off
+  // 'contacted' once amount_paid reaches total_amount — see
+  // computeAutoStatus above). Kept in sync with canSetFollowUp() in
+  // enquiryShared.tsx. Every mutating path that can move a lead past that
+  // point (booking confirmed, fully paid, closed as Not Interested,
+  // reopened, cancelled, etc.) already routes through here, so this is the
+  // one place a stale reminder needs clearing rather than every call site
+  // remembering to do it individually.
+  const stillFollowable = stage === 'contacted' || stage === 'advance_pending' || stage === 'advance_paid';
+  const clearFollowUp = !!e.follow_up_at && !stillFollowable;
+
+  if (stage === e.journey_stage && !clearFollowUp) return e;
+
+  const patch: Record<string, unknown> = {};
+  if (stage !== e.journey_stage) patch.journey_stage = stage;
+  if (clearFollowUp) patch.follow_up_at = null;
 
   const { data, error: updateError } = await supabase
     .from('enquiries')
-    .update({ journey_stage: stage })
+    .update(patch)
     .eq('id', enquiryId)
     .select()
     .single();
   if (updateError) throw updateError;
   return data;
+}
+
+// Sets or clears the follow-up reminder date on a Contacted lead that's
+// still warm but not ready to act on — "checking with family, call back
+// Aug 15". Deliberately separate from updateEnquiryStatus: this never
+// touches status/journey_stage itself, it's a reminder layered on top of
+// wherever the lead already sits (see canSetFollowUp/followUpStatus in
+// enquiryShared.tsx). The DB check constraint only allows a non-null value
+// while status = 'contacted' — refreshJourneyStage() clears it back to
+// null automatically once the lead moves on, so nothing else needs to.
+export async function setEnquiryFollowUp(id: string, followUpAt: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('enquiries')
+    .update({ follow_up_at: followUpAt })
+    .eq('id', id);
+  if (error) throw error;
 }
 
 // Manually advances an enquiry to 'checked_in' — the one journey stage with

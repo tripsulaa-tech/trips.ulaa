@@ -11,13 +11,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, FileText, Share2, Phone, MessageCircle, Users, User, Receipt,
   BadgeCheck, Plus, CheckCircle2, XCircle, UserX, UserCheck, LogIn, RefreshCw,
-  Trash2, IndianRupee, Pencil, UserMinus, Bird,
+  Trash2, IndianRupee, Pencil, UserMinus, Bird, CalendarClock, X,
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import FoodMark from '../components/ui/FoodMark';
+import DatePicker from '../components/ui/DatePicker';
 import ActionsMenu from '../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../components/ui/ActionsMenu';
 import { ContactQuickLinks } from '../components/ui/DataTableChrome';
@@ -28,7 +29,7 @@ import {
   recordPayment, recordTypedPayment, generatePendingInvoice, addExtraCharge,
   markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
-  recordRefund, deleteEnquiry, updateEnquiryDetails,
+  recordRefund, deleteEnquiry, updateEnquiryDetails, setEnquiryFollowUp,
 } from '../services/api';
 import type { ClosedReason, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
@@ -38,7 +39,7 @@ import {
   GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
-  CLOSED_REASON_OPTIONS, closedReasonLabel,
+  CLOSED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus,
 } from './enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
 
@@ -231,6 +232,47 @@ export default function AdminEnquiryDetail() {
       alert('Failed to reopen enquiry.');
     } finally {
       setBusyStatus(false);
+    }
+  };
+
+  // ---- Follow-up reminder (still warm, not ready to close either way) ----
+  // Same shape as Not Interested above (target-less here since this page is
+  // already scoped to one enquiry) but writes just follow_up_at via
+  // setEnquiryFollowUp — never touches status/journey_stage. See
+  // canSetFollowUp/followUpStatus in enquiryShared.tsx.
+  const [followUpOpen, setFollowUpOpen] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [busyFollowUp, setBusyFollowUp] = useState(false);
+  const handleOpenFollowUp = () => {
+    if (!enquiry) return;
+    setFollowUpDate(enquiry.follow_up_at || '');
+    setFollowUpOpen(true);
+  };
+  const handleSaveFollowUp = async () => {
+    if (!enquiry || !followUpDate) return;
+    setBusyFollowUp(true);
+    try {
+      await setEnquiryFollowUp(enquiry.id, followUpDate);
+      setFollowUpOpen(false);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to set follow-up date.');
+    } finally {
+      setBusyFollowUp(false);
+    }
+  };
+  const handleClearFollowUp = async () => {
+    if (!enquiry) return;
+    setBusyFollowUp(true);
+    try {
+      await setEnquiryFollowUp(enquiry.id, null);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to clear follow-up date.');
+    } finally {
+      setBusyFollowUp(false);
     }
   };
 
@@ -561,6 +603,16 @@ export default function AdminEnquiryDetail() {
         : { label: 'Not Interested (Close Query)', icon: UserMinus, onClick: handleMarkNotInterested }
     );
   }
+  if (canSetFollowUp(enquiry)) {
+    rowActions.push(
+      enquiry.follow_up_at
+        ? { label: 'Edit Follow-up Date', icon: CalendarClock, onClick: handleOpenFollowUp }
+        : { label: 'Set Follow-up Reminder', icon: CalendarClock, onClick: handleOpenFollowUp }
+    );
+    if (enquiry.follow_up_at) {
+      rowActions.push({ label: 'Clear Follow-up', icon: X, onClick: handleClearFollowUp });
+    }
+  }
   if (enquiry.booking_id) {
     rowActions.push(
       { label: 'Download Invoice', icon: FileText, onClick: handleDownloadInvoice, disabled: invoiceBusy },
@@ -624,6 +676,16 @@ export default function AdminEnquiryDetail() {
                     <UserMinus size={12} className="shrink-0" /> Not Interested{closedReasonLabel(enquiry) ? ` — ${closedReasonLabel(enquiry)}` : ''}
                   </span>
                 )}
+                {followUpStatus(enquiry) && (
+                  <button
+                    onClick={handleOpenFollowUp}
+                    disabled={busyFollowUp}
+                    title="Click to change the follow-up date"
+                    className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-50 ${followUpStatus(enquiry)!.color}`}
+                  >
+                    <CalendarClock size={12} className="shrink-0" /> {followUpStatus(enquiry)!.label}
+                  </button>
+                )}
                 {enquiry.group_size && enquiry.group_size > 1 ? (
                   <span className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
                     <Users size={10} /> Group of {enquiry.group_size} · seat {enquiry.group_seq}
@@ -647,6 +709,11 @@ export default function AdminEnquiryDetail() {
               {canMarkNotInterested(enquiry) && (
                 <Button variant="outline" size="sm" onClick={handleMarkNotInterested} disabled={busyAction || busyStatus}>
                   <UserMinus size={14} /> Not Interested
+                </Button>
+              )}
+              {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
+                <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
+                  <CalendarClock size={14} /> Set Follow-up
                 </Button>
               )}
               <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
@@ -1013,6 +1080,25 @@ export default function AdminEnquiryDetail() {
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" onClick={() => setNotInterestedOpen(false)}>Cancel</Button>
             <Button variant="primary" size="md" onClick={handleConfirmNotInterested} loading={busyStatus}>Mark Not Interested</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Follow-up reminder date picker — see handleOpenFollowUp above. */}
+      <Modal isOpen={followUpOpen} onClose={() => setFollowUpOpen(false)} title="Set Follow-up Reminder" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-dark-muted">
+            {enquiry.follow_up_at
+              ? 'This lead is still warm — update when to check back in.'
+              : "This lead is still warm but not ready to close either way — pick a date to check back in. It'll show as due on that day, and clears automatically once this lead moves past Contacted."}
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
+            <DatePicker value={followUpDate} onChange={setFollowUpDate} />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" size="md" onClick={() => setFollowUpOpen(false)}>Cancel</Button>
+            <Button variant="primary" size="md" onClick={handleSaveFollowUp} disabled={!followUpDate} loading={busyFollowUp}>Save</Button>
           </div>
         </div>
       </Modal>
