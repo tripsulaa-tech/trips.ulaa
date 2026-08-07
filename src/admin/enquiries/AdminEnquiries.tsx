@@ -1,13 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, CalendarClock, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Receipt, BadgeCheck, Eye, UserX, UserCheck, LogIn, ExternalLink, UserMinus } from 'lucide-react';
+import { RefreshCw, Plus, CheckCircle2, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, CalendarClock, Search, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Eye, UserX, UserCheck, LogIn, ExternalLink, UserMinus } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
-import Modal from '../components/ui/Modal';
-import Select from '../components/ui/Select';
 import FoodMark from '../components/ui/FoodMark';
-import DatePicker from '../components/ui/DatePicker';
 import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
 import ActionsMenu from '../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../components/ui/ActionsMenu';
@@ -21,326 +18,30 @@ import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
 import {
-  parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
-  GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
-  foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
-  journeyBadge, nextManualAction, BookingLifecycleStepper, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend,
-  CLOSED_REASON_OPTIONS, closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
+  PACKAGE_CONFIG, emptyGenerateInvoiceForm,
+  foodBadge, foodPreferenceKey, SOURCE_CONFIG,
+  journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend,
+  closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
 } from './enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
 
-// Digits-only phone "signature" used for fuzzy duplicate matching (3.5).
-// The DB's own duplicate guard only catches an *exact* string match on
-// (trip, name, phone, email), so "+91 98765-43210", "098765 43210", and
-// "9876543210" all count as different people to it even though they're
-// the same number typed three different ways. Comparing just the last 10
-// digits absorbs country-code/leading-zero/formatting differences without
-// needing a full phone-parsing library. Returns null for anything too
-// short to mean anything (avoids flagging two blank/junk phones as a match).
-function phoneSignature(phone: string | null | undefined): string | null {
-  const digits = (phone || '').replace(/\D/g, '');
-  if (digits.length < 6) return null;
-  return digits.slice(-10);
-}
-
-// Same idea for email — trims/lowercases so casing or stray whitespace
-// doesn't hide a match, and ignores the app's own "not provided" sentinel
-// (see createManualEnquiry/submitWaitlist) so two people who never gave an
-// email don't get flagged as duplicates of each other.
-function emailSignature(email: string | null | undefined): string | null {
-  const trimmed = (email || '').trim().toLowerCase();
-  if (!trimmed || trimmed === 'not-provided@ulaa.local') return null;
-  return trimmed;
-}
-
-// Cycled across group bookings (see groupColorMap below) so that every
-// group visible on screen at once gets a visually distinct row tint, left
-// accent, and badge color — the main way an admin tells "these rows are one
-// group" apart from "these rows just happen to be next to each other".
-const GROUP_COLOR_PALETTE = [
-  { row: 'bg-blue-50/60 hover:bg-blue-50', accent: 'border-blue-400', badge: 'bg-blue-100 text-blue-700' },
-  { row: 'bg-purple-50/60 hover:bg-purple-50', accent: 'border-purple-400', badge: 'bg-purple-100 text-purple-700' },
-  { row: 'bg-teal-50/60 hover:bg-teal-50', accent: 'border-teal-400', badge: 'bg-teal-100 text-teal-700' },
-  { row: 'bg-amber-50/60 hover:bg-amber-50', accent: 'border-amber-400', badge: 'bg-amber-100 text-amber-700' },
-  { row: 'bg-pink-50/60 hover:bg-pink-50', accent: 'border-pink-400', badge: 'bg-pink-100 text-pink-700' },
-  { row: 'bg-lime-50/60 hover:bg-lime-50', accent: 'border-lime-400', badge: 'bg-lime-100 text-lime-700' },
-  { row: 'bg-cyan-50/60 hover:bg-cyan-50', accent: 'border-cyan-400', badge: 'bg-cyan-100 text-cyan-700' },
-  { row: 'bg-rose-50/60 hover:bg-rose-50', accent: 'border-rose-400', badge: 'bg-rose-100 text-rose-700' },
-] as const;
-
-const STATUS_OPTIONS = [
-  { value: 'new', label: 'New' },
-  { value: 'contacted', label: 'Contacted' },
-  { value: 'closed', label: 'Closed' },
-];
-
-const SOURCE_OPTIONS = [
-  { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'phone', label: 'Phone Call' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'walk_in', label: 'Walk-in' },
-  { value: 'other', label: 'Other' },
-];
-
-// Bulk-edit fields are all opt-in — "No change" is the default for every
-// field so an admin can update just, say, Status across a selection without
-// accidentally blanking out everyone's Food Preference or Package. Only
-// fields the admin actually touches get applied when Bulk Save runs.
-const BULK_NO_CHANGE = 'no_change' as const;
-
-const BULK_STATUS_OPTIONS = [
-  { value: BULK_NO_CHANGE, label: 'No change' },
-  ...STATUS_OPTIONS,
-];
-
-const BULK_PACKAGE_OPTIONS = [
-  { value: BULK_NO_CHANGE, label: 'No change' },
-  ...PACKAGE_OPTIONS,
-];
-
-const BULK_FOOD_OPTIONS = [
-  { value: BULK_NO_CHANGE, label: 'No change' },
-  { value: 'not_set', label: 'Not asked / unknown' },
-  { value: 'veg', label: 'Veg' },
-  { value: 'non_veg', label: 'Non-veg' },
-];
-
-type BulkEditForm = {
-  food_preference: typeof BULK_NO_CHANGE | 'not_set' | 'veg' | 'non_veg';
-  package_type: typeof BULK_NO_CHANGE | Enquiry['package_type'];
-  // This is the trip price (total_amount), not what's been collected so far
-  // (amount_paid) — setting only amount_paid without a total_amount is what
-  // left rows stuck showing "Price not set" after a bulk save.
-  total_amount: number | '';
-  // What's actually been collected so far, set as a new running total (same
-  // semantics as recordPayment) — not a delta added on top of each row's
-  // current amount_paid. Left blank, every row's amount_paid is untouched.
-  amount_paid: number | '';
-  status: typeof BULK_NO_CHANGE | Enquiry['status'];
-};
-
-const emptyBulkForm: BulkEditForm = {
-  food_preference: BULK_NO_CHANGE,
-  package_type: BULK_NO_CHANGE,
-  total_amount: '',
-  amount_paid: '',
-  status: BULK_NO_CHANGE,
-};
-
-// The "Not set" (grey) label is the right, low-urgency default for a fresh
-// lead nobody's spoken to yet — there's nothing to flag. But once an admin
-// has marked the lead Contacted (see handleAdvance/handleStatusChange) and
-// still hasn't opened Track Payment to record a package/total, that same
-// grey "Not set" blended into the row and got missed — nothing distinguished
-// "haven't gotten to it yet" from "actively fell through the cracks after
-// being contacted". journey_stage === 'contacted' is exactly that second
-// case (computeJourneyStage only stays on 'contacted' when total_amount is
-// still unset — see src/services/api.ts), so it gets its own red, harder-to-
-// miss label instead.
-function paymentStatus(e: Enquiry): { label: string; color: string } {
-  if (!e.total_amount) {
-    if (e.journey_stage === 'contacted') return { label: 'Needs Pricing', color: 'bg-red-100 text-red-700' };
-    return { label: 'Not set', color: 'bg-slate-100 text-dark-muted' };
-  }
-  if (e.amount_paid <= 0) return { label: 'Unpaid', color: 'bg-red-100 text-red-700' };
-  if (e.amount_paid >= e.total_amount) return { label: 'Paid in full', color: 'bg-green-100 text-green-700' };
-  return { label: 'Partial', color: 'bg-amber-100 text-amber-700' };
-}
-
-// Small inline badge shown next to each enquiry's name — lets an admin spot
-// missing food preferences directly in the list, without opening the row.
-// (foodBadge itself now lives in enquiryShared.tsx, imported above.)
-
-function paymentBalance(e: Enquiry): number | null {
-  if (!e.total_amount) return null;
-  return Math.max(0, e.total_amount - (e.amount_paid || 0));
-}
-
-function paymentFilterKey(e: Enquiry): 'paid' | 'partial' | 'unpaid' | 'not_set' {
-  if (!e.total_amount) return 'not_set';
-  if (e.amount_paid <= 0) return 'unpaid';
-  if (e.amount_paid >= e.total_amount) return 'paid';
-  return 'partial';
-}
-
-// A seat is only actually held when money's been paid AND the booking
-// hasn't been cancelled since. amount_paid itself is left untouched by
-// cancellation — it's the historical record of what they paid — so
-// "booked" can't just check amount_paid > 0 anymore.
-function isBooked(e: Enquiry): boolean {
-  return !e.cancelled_at && e.amount_paid > 0;
-}
-
-// Cancelled is its own booking-filter bucket now (previously folded into
-// "Not booked"), so an admin can isolate cancellations without also seeing
-// enquiries that were simply never paid.
-function isCancelled(e: Enquiry): boolean {
-  return !!e.cancelled_at;
-}
-
-// Seat-status badge shown in the table/card — same underlying
-// booked/cancelled/not-booked states as before, but a cancelled booking
-// marked is_no_show gets its own label/color so admins can tell a no-show
-// apart from an ordinary cancellation at a glance (it forfeits the refund,
-// per policy, where a normal cancellation doesn't).
-function seatStatus(e: Enquiry): { label: string; title: string; color: string; icon: typeof CheckCircle2 } {
-  if (isBooked(e)) {
-    return { label: 'Booked', title: 'Seat booked automatically from payment', color: 'bg-green-100 text-green-700', icon: CheckCircle2 };
-  }
-  if (e.cancelled_at) {
-    return e.is_no_show
-      ? { label: 'No Show', title: 'No-show — seat released, forfeits refund per policy', color: 'bg-orange-100 text-orange-700', icon: XCircle }
-      : { label: 'Cancelled', title: 'Cancelled — seat released', color: 'bg-red-100 text-red-700', icon: XCircle };
-  }
-  return { label: 'Not booked', title: 'No payment recorded yet, so no seat is held', color: 'bg-background-warm text-dark-muted', icon: Circle };
-}
-
-// Group vs Solo is purely about whether this row is part of a multi-seat
-// signup (group_size > 1) — same test used everywhere else in this file
-// (row tinting, "Group x/y" badges) so the filter matches what's on screen.
-function isGroupEntry(e: Enquiry): boolean {
-  return !!(e.group_size && e.group_size > 1);
-}
-
-// Only relevant for cancelled bookings that had money on them. Tracks
-// refund_amount against amount_paid independently, so partial refunds
-// (processed in installments) show correctly as "pending" until they
-// fully catch up.
-function refundStatus(e: Enquiry): { label: string; color: string } | null {
-  if (!e.cancelled_at || e.amount_paid <= 0) return null;
-  const refunded = e.refund_amount || 0;
-  if (refunded >= e.amount_paid) return { label: 'Refunded', color: 'bg-green-100 text-green-700' };
-  if (refunded > 0) return { label: `Refund pending — ${formatPrice(e.amount_paid - refunded)} left`, color: 'bg-amber-100 text-amber-700' };
-  return { label: `Refund pending — ${formatPrice(e.amount_paid)}`, color: 'bg-red-100 text-red-700' };
-}
-
-const STATUS_CONFIG = {
-  new: { label: 'New', color: 'bg-blue-100 text-blue-700', icon: Clock },
-  contacted: { label: 'Contacted', color: 'bg-amber-100 text-amber-700', icon: RefreshCw },
-  closed: { label: 'Closed', color: 'bg-green-100 text-green-700', icon: CheckCircle },
-};
-
-// JOURNEY_STAGE_CONFIG / journeyBadge / nextManualAction / BookingLifecycleStepper
-// now all live in enquiryShared.tsx (imported above), shared with AdminEnquiryDetail.
-
-const PAY_FILTER_LABELS = {
-  all: 'All',
-  paid: 'Paid in full',
-  partial: 'Partial',
-  unpaid: 'Unpaid',
-  not_set: 'Price not set',
-} as const;
-
-const FOOD_FILTER_LABELS = {
-  all: 'All',
-  veg: 'Veg',
-  non_veg: 'Non-veg',
-  not_set: 'Not set',
-} as const;
-
-const BOOKING_FILTER_LABELS = {
-  all: 'All',
-  booked: 'Booked',
-  not_booked: 'Not booked',
-  cancelled: 'Cancelled',
-} as const;
-
-const GROUP_FILTER_LABELS = {
-  all: 'All',
-  group: 'Group',
-  solo: 'Solo',
-} as const;
-
-// foodPreferenceKey / SOURCE_CONFIG now live in enquiryShared.tsx (imported above).
-
-type EnquiryForm = {
-  full_name: string;
-  phone: string;
-  email: string;
-  age: number | '';
-  city: string;
-  trip_id: string;
-  source: Enquiry['source'];
-  message: string;
-  package_type: Enquiry['package_type'];
-  total_amount: number | '';
-  amount_paid: number | '';
-  food_preference: 'veg' | 'non_veg' | '';
-};
-
-const emptyForm: EnquiryForm = {
-  full_name: '', phone: '', email: '', age: '', city: '', trip_id: '', source: 'whatsapp', message: '',
-  package_type: 'normal', total_amount: '', amount_paid: '', food_preference: '',
-};
-
-// FOOD_PREFERENCE_OPTIONS now lives in enquiryShared.tsx (imported above).
-
-// One row of the bulk waitlist-conversion form — trip/package/notes stay
-// shared across the whole group (see `form`), but each person needs their
-// own identity + their own advance payment since a waitlist conversion
-// requires money on the booking before it counts as seated.
-type WaitlistPersonForm = {
-  full_name: string;
-  phone: string;
-  email: string;
-  age: number | '';
-  city: string;
-  food_preference: 'veg' | 'non_veg' | '';
-  amount_paid: number | '';
-};
-
-const emptyWaitlistPerson: WaitlistPersonForm = {
-  full_name: '', phone: '', email: '', age: '', city: '', food_preference: '', amount_paid: '',
-};
-
-// PaymentForm type now lives in enquiryShared.tsx (imported above).
-
-// Shared dropdown menu used by every filter box in the filter bar — a
-// vertical list of options with counts, the selected one highlighted.
-// Kept generic so the same component serves Query Status, Payment,
-// Booking, Group/Solo, Food, and Source without repeating markup.
-function FilterDropdown<T extends string>({
-  options,
-  value,
-  onSelect,
-  align = 'left',
-}: {
-  options: { key: T; label: string; count: number; section?: string }[];
-  value: T;
-  onSelect: (key: T) => void;
-  align?: 'left' | 'right';
-}) {
-  return (
-    <div
-      className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-md shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
-    >
-      {options.map((opt, i) => {
-        // A section header renders once, right before the first option
-        // that belongs to it — e.g. every completed trip gets grouped
-        // under one "Completed" label instead of each repeating it.
-        const showSectionHeader = !!opt.section && opt.section !== options[i - 1]?.section;
-        return (
-          <div key={opt.key}>
-            {showSectionHeader && (
-              <div className="px-3 pt-2.5 pb-1 text-[10px] font-button font-bold text-dark-muted/60 uppercase tracking-wide">
-                {opt.section}
-              </div>
-            )}
-            <button
-              onClick={() => onSelect(opt.key)}
-              className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-button text-left transition-colors ${
-                value === opt.key ? 'bg-primary/10 text-primary font-semibold' : 'text-dark-muted hover:bg-background-warm'
-              }`}
-            >
-              <span className="truncate">{opt.label}</span>
-              <span className="opacity-60 shrink-0">{opt.count}</span>
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+import {
+  phoneSignature, emailSignature, GROUP_COLOR_PALETTE,
+  BULK_NO_CHANGE,
+  paymentStatus, paymentBalance, paymentFilterKey, isBooked, isCancelled, seatStatus,
+  isGroupEntry, refundStatus, STATUS_CONFIG, PAY_FILTER_LABELS, FOOD_FILTER_LABELS,
+  BOOKING_FILTER_LABELS, GROUP_FILTER_LABELS, emptyForm, emptyWaitlistPerson, emptyBulkForm,
+} from './enquiries/adminEnquiriesShared';
+import type { BulkEditForm, EnquiryForm, WaitlistPersonForm } from './enquiries/adminEnquiriesShared';
+import FilterDropdown from './enquiries/FilterDropdown';
+import AddEnquiryModal from './enquiries/modals/AddEnquiryModal';
+import PaymentModal from './enquiries/modals/PaymentModal';
+import DetailsModal from './enquiries/modals/DetailsModal';
+import GenerateInvoiceModal from './enquiries/modals/GenerateInvoiceModal';
+import NotInterestedModal from './enquiries/modals/NotInterestedModal';
+import FollowUpModal from './enquiries/modals/FollowUpModal';
+import CancelModal from './enquiries/modals/CancelModal';
+import BulkEditModal from './enquiries/modals/BulkEditModal';
 
 export default function AdminEnquiries() {
   const confirm = useConfirm();
@@ -2059,8 +1760,6 @@ export default function AdminEnquiries() {
     </div>
   );
 
-  const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
-
   return (
     <AdminLayout title="Enquiries">
       <div className="space-y-4 sm:space-y-6">
@@ -3176,832 +2875,91 @@ export default function AdminEnquiries() {
         )}
       </div>
 
-      {/* Manual Add Enquiry Modal */}
-      <Modal isOpen={modalOpen} onClose={closeAddModal} title={convertingWaitlist ? 'Convert Waitlist Signup' : 'Log an Enquiry'} size="md">
-        {convertingWaitlist && (
-          <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-md px-3 py-2.5 mb-4 text-sm text-green-800">
-            <PartyPopper size={16} className="shrink-0 mt-0.5" />
-            <p>
-              {convertingWaitlist.slots > 1 ? (
-                <>
-                  <span className="font-semibold">{convertingWaitlist.slots} seats</span> just opened up for{' '}
-                  <span className="font-semibold">{convertingWaitlist.name}</span>'s group. Fill in each person below and
-                  record their payment — all {convertingWaitlist.slots} will be booked and marked "converted" on the
-                  waitlist together.
-                </>
-              ) : (
-                <>
-                  A seat opened up for <span className="font-semibold">{convertingWaitlist.name}</span>. Confirm the details
-                  below and record their payment to book the seat — they'll be marked "converted" on the waitlist automatically.
-                </>
-              )}
-            </p>
-          </div>
-        )}
+      <AddEnquiryModal
+        isOpen={modalOpen}
+        onClose={closeAddModal}
+        convertingWaitlist={convertingWaitlist}
+        form={form}
+        setForm={setForm}
+        trips={trips}
+        waitlistPeople={waitlistPeople}
+        updateWaitlistPerson={updateWaitlistPerson}
+        possibleDuplicates={possibleDuplicates}
+        applySuggestedAmount={applySuggestedAmount}
+        onSave={handleSave}
+        saving={saving}
+      />
 
-        {convertingWaitlist && convertingWaitlist.slots > 1 ? (
-          <>
-            {/* Shared trip/package/pricing — one trip, one price, several people */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-dark mb-1">Trip</label>
-                <Select
-                  value={form.trip_id}
-                  onChange={val => {
-                    setForm(f => ({ ...f, trip_id: val }));
-                    applySuggestedAmount(val, form.package_type);
-                  }}
-                  options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-dark mb-1">Package</label>
-                <Select
-                  value={form.package_type}
-                  onChange={val => {
-                    const packageType = val as Enquiry['package_type'];
-                    setForm(f => ({ ...f, package_type: packageType }));
-                    applySuggestedAmount(form.trip_id, packageType);
-                  }}
-                  options={PACKAGE_OPTIONS}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹) <span className="text-dark-muted font-normal">— per person</span></label>
-                <input
-                  type="number"
-                  min={0}
-                  value={form.total_amount}
-                  onChange={e => setForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
-                  className={inputClass}
-                  placeholder="e.g. 15000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
-                <Select
-                  value={form.source}
-                  onChange={val => setForm(f => ({ ...f, source: val as Enquiry['source'] }))}
-                  options={SOURCE_OPTIONS}
-                />
-              </div>
-            </div>
+      <PaymentModal
+        paymentTarget={paymentTarget}
+        onClose={() => setPaymentTarget(null)}
+        paymentForm={paymentForm}
+        setPaymentForm={setPaymentForm}
+        getTripPrice={getTripPrice}
+        paymentHistory={paymentHistory}
+        paymentHistoryLoading={paymentHistoryLoading}
+        togglingNoShow={togglingNoShow}
+        onToggleNoShow={handleToggleNoShow}
+        onSave={handleSavePayment}
+        savingPayment={savingPayment}
+      />
 
-            {/* One card per seat being filled this pass */}
-            <div className="space-y-4">
-              {waitlistPeople.map((p, i) => (
-                <div key={i} className="border-2 border-background-warm rounded-md p-3">
-                  <p className="text-xs font-button font-semibold text-dark-muted mb-2 flex items-center gap-1.5">
-                    <Users size={12} /> Seat {convertingWaitlist.groupSeq + i} of {convertingWaitlist.groupSize}
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-medium text-dark mb-1">Full Name *</label>
-                      <input value={p.full_name} onChange={e => updateWaitlistPerson(i, { full_name: e.target.value })} className={inputClass} placeholder="e.g. Priya Sharma" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-dark mb-1">Phone *</label>
-                      <input value={p.phone} onChange={e => updateWaitlistPerson(i, { phone: e.target.value })} className={inputClass} placeholder="e.g. 98765 43210" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-dark mb-1">Email</label>
-                      <input value={p.email} onChange={e => updateWaitlistPerson(i, { email: e.target.value })} className={inputClass} placeholder="Optional" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-dark mb-1">Age</label>
-                      <input type="number" min={0} value={p.age} onChange={e => updateWaitlistPerson(i, { age: e.target.value === '' ? '' : +e.target.value })} className={inputClass} placeholder="Optional" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-dark mb-1">Food Preference</label>
-                      <Select
-                        value={p.food_preference}
-                        onChange={val => updateWaitlistPerson(i, { food_preference: val as WaitlistPersonForm['food_preference'] })}
-                        options={FOOD_PREFERENCE_OPTIONS}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-medium text-dark mb-1">Amount Paid (₹) *</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={p.amount_paid}
-                        onChange={e => updateWaitlistPerson(i, { amount_paid: parseNonNegative(e.target.value) })}
-                        className={inputClass}
-                        placeholder="e.g. 5000 (advance)"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+      <DetailsModal
+        detailsTarget={detailsTarget}
+        onClose={() => setDetailsTarget(null)}
+        groupLabel={groupLabel}
+        isGeneralContactMessage={isGeneralContactMessage}
+        invoiceBusyId={invoiceBusyId}
+        onDownloadInvoice={handleDownloadInvoice}
+        onShareInvoice={handleShareInvoice}
+        completingId={completingId}
+        onMarkCompleted={handleMarkCompleted}
+        detailsInvoices={detailsInvoices}
+        detailsInvoicesLoading={detailsInvoicesLoading}
+        onOpenGenerateInvoice={handleOpenGenerateInvoice}
+        invoiceRowBusyId={invoiceRowBusyId}
+        onMarkInvoicePaid={handleMarkInvoicePaid}
+      />
 
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-dark mb-1">Notes</label>
-              <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this group" />
-            </div>
-          </>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
-              <input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} className={inputClass} placeholder="e.g. Priya Sharma" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Phone *</label>
-              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputClass} placeholder="e.g. 98765 43210" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Email</label>
-              <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="Optional" />
-            </div>
+      <GenerateInvoiceModal
+        generateInvoiceTarget={generateInvoiceTarget}
+        onClose={() => setGenerateInvoiceTarget(null)}
+        generateInvoiceForm={generateInvoiceForm}
+        setGenerateInvoiceForm={setGenerateInvoiceForm}
+        onSave={handleGenerateInvoice}
+        savingInvoice={savingInvoice}
+      />
 
-            {/* Possible-duplicate soft warning (3.5) — fuzzy phone/email
-                match against every enquiry already in the system, not just
-                this trip. Advisory only; doesn't block Save. */}
-            {possibleDuplicates.length > 0 && (
-              <div className="md:col-span-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2.5 text-amber-800">
-                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">
-                    Possible duplicate{possibleDuplicates.length > 1 ? 's' : ''} — {possibleDuplicates.length === 1 ? 'someone' : `${possibleDuplicates.length} people`} already in the system {possibleDuplicates.length === 1 ? 'shares' : 'share'} this phone or email
-                  </p>
-                  <p className="text-xs mt-0.5 text-amber-700">Double-check this isn't the same traveler before saving a new entry.</p>
-                  <ul className="mt-1.5 space-y-1">
-                    {possibleDuplicates.slice(0, 5).map(d => (
-                      <li key={d.id} className="text-xs flex items-center gap-1 flex-wrap">
-                        <span className="font-medium">{d.full_name}</span>
-                        <span className="text-amber-700/80">
-                          — {d.trip_title || 'No trip linked'} · {d.status}{d.cancelled_at ? ' · cancelled' : ''}
-                        </span>
-                      </li>
-                    ))}
-                    {possibleDuplicates.length > 5 && (
-                      <li className="text-xs text-amber-700/80">+ {possibleDuplicates.length - 5} more</li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            )}
+      <NotInterestedModal
+        notInterestedTarget={notInterestedTarget}
+        onClose={() => setNotInterestedTarget(null)}
+        closedReason={closedReason}
+        setClosedReason={setClosedReason}
+        onConfirm={handleConfirmNotInterested}
+        updating={updating}
+      />
 
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Age</label>
-              <input type="number" min={0} value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))} className={inputClass} placeholder="Optional" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">City</label>
-              <input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputClass} placeholder="Optional" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
-              <Select
-                value={form.source}
-                onChange={val => setForm(f => ({ ...f, source: val as Enquiry['source'] }))}
-                options={SOURCE_OPTIONS}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
-              <Select
-                value={form.food_preference}
-                onChange={val => setForm(f => ({ ...f, food_preference: val as EnquiryForm['food_preference'] }))}
-                options={FOOD_PREFERENCE_OPTIONS}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Trip</label>
-              <Select
-                value={form.trip_id}
-                onChange={val => {
-                  setForm(f => ({ ...f, trip_id: val }));
-                  applySuggestedAmount(val, form.package_type);
-                }}
-                options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Package</label>
-              <Select
-                value={form.package_type}
-                onChange={val => {
-                  const packageType = val as Enquiry['package_type'];
-                  setForm(f => ({ ...f, package_type: packageType }));
-                  applySuggestedAmount(form.trip_id, packageType);
-                }}
-                options={PACKAGE_OPTIONS}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
-              <input
-                type="number"
-                min={0}
-                value={form.total_amount}
-                onChange={e => setForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
-                className={inputClass}
-                placeholder="e.g. 15000"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
-              <input
-                type="number"
-                min={0}
-                value={form.amount_paid}
-                onChange={e => setForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
-                className={inputClass}
-                placeholder="e.g. 5000 (advance) — leave blank if unpaid"
-              />
-              <p className="text-[11px] text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Notes</label>
-              <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this enquiry" />
-            </div>
-          </div>
-        )}
+      <FollowUpModal
+        followUpTarget={followUpTarget}
+        onClose={() => setFollowUpTarget(null)}
+        followUpDate={followUpDate}
+        setFollowUpDate={setFollowUpDate}
+        onSave={handleSaveFollowUp}
+        updating={updating}
+      />
 
-        <div className="flex gap-3 mt-6">
-          <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeAddModal}>Cancel</Button>
-          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
-            {convertingWaitlist
-              ? convertingWaitlist.slots > 1
-                ? `Convert ${convertingWaitlist.slots} & Save`
-                : 'Convert & Save'
-              : 'Save Enquiry'}
-          </Button>
-        </div>
-      </Modal>
-
-      {/* Record Payment Modal */}
-      <Modal isOpen={!!paymentTarget} onClose={() => setPaymentTarget(null)} title="Track Payment" size="sm">
-        {paymentTarget && (
-          <div className="space-y-4">
-            <div className="bg-background-warm rounded-md px-4 py-3 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-medium text-dark truncate">{paymentTarget.full_name}</p>
-                <p className="text-dark-muted text-xs truncate">{paymentTarget.trip_title || 'No trip linked'}</p>
-              </div>
-              <span className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap shrink-0 ${foodBadge(paymentTarget).color}`}>
-                <FoodMark type={foodPreferenceKey(paymentTarget)} size={11} /> {foodBadge(paymentTarget).label}
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
-              <Select
-                value={paymentForm.food_preference}
-                onChange={val => setPaymentForm(f => ({ ...f, food_preference: val as PaymentForm['food_preference'] }))}
-                options={FOOD_PREFERENCE_OPTIONS}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Package</label>
-              <Select
-                value={paymentForm.package_type}
-                onChange={val => {
-                  const packageType = val as Enquiry['package_type'];
-                  const suggested = getTripPrice(paymentTarget.trip_id, packageType);
-                  setPaymentForm(f => ({ ...f, package_type: packageType, total_amount: suggested ?? f.total_amount }));
-                }}
-                options={PACKAGE_OPTIONS}
-              />
-              {paymentTarget.trip_id && (
-                <div className="text-xs mt-1">
-                  {(() => {
-                    const normal = getTripPrice(paymentTarget.trip_id, 'normal');
-                    const earlyBird = getTripPrice(paymentTarget.trip_id, 'early_bird');
-                    const parts = [];
-                    if (normal != null) parts.push(`Normal ${formatPrice(normal)}`);
-                    if (earlyBird != null) parts.push(`Early Bird ${formatPrice(earlyBird)}`);
-                    const missingOne = normal == null || earlyBird == null;
-                    const missingField = normal == null && earlyBird == null
-                      ? 'Regular Price per person and Early-Bird Price per person'
-                      : normal == null
-                        ? 'Regular Price per person'
-                        : 'Early-Bird Price per person';
-
-                    return (
-                      <>
-                        {parts.length > 0 && (
-                          <p className="text-dark-muted">Trip price — {parts.join(' · ')}</p>
-                        )}
-                        {missingOne && (
-                          <p className="text-amber-600 mt-0.5">
-                            {parts.length === 0
-                              ? "This trip has no price set, so we can't suggest an amount. "
-                              : `This trip's ${missingField} isn't set yet. `}
-                            Add it under{' '}
-                            <Link to="/admin/trips" className="underline font-medium" onClick={() => setPaymentTarget(null)}>
-                              Upcoming Trips → edit this trip → {missingField}
-                            </Link>.
-                          </p>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={paymentForm.total_amount}
-                  onChange={e => setPaymentForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
-                  className={inputClass}
-                  placeholder="e.g. 15000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={paymentForm.amount_paid}
-                  onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
-                  className={inputClass}
-                  placeholder="e.g. 5000 (advance)"
-                />
-              </div>
-            </div>
-
-            {paymentForm.total_amount !== '' && paymentForm.amount_paid !== '' && (
-              <p className="text-sm text-dark-muted">
-                Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, Number(paymentForm.total_amount) - Number(paymentForm.amount_paid)))}</span>
-              </p>
-            )}
-
-            {/* Inline payment history (Phase F) — read-only ledger so an
-                admin can see exactly what's already been recorded before
-                changing the running total above. */}
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Payment History</label>
-              {paymentHistoryLoading ? (
-                <p className="text-xs text-dark-muted">Loading…</p>
-              ) : paymentHistory.length === 0 ? (
-                <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">No payments recorded yet.</p>
-              ) : (
-                <div className="border border-background-warm rounded-md divide-y divide-background-warm max-h-40 overflow-y-auto">
-                  {paymentHistory.map(p => (
-                    <div key={p.id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
-                      <div className="min-w-0">
-                        <p className="text-dark font-medium truncate">
-                          {INVOICE_TYPE_LABEL[p.payment_type] || p.payment_type}
-                          {p.status === 'pending' && <span className="text-amber-600 font-normal"> · pending</span>}
-                        </p>
-                        <p className="text-dark-muted">
-                          {p.paid_at ? formatDate(p.paid_at, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not yet paid'}
-                          {p.payment_method ? ` · ${p.payment_method}` : ''}
-                        </p>
-                      </div>
-                      <p className={`shrink-0 font-semibold ${p.payment_type === 'refund' ? 'text-red-600' : 'text-green-700'}`}>
-                        {p.payment_type === 'refund' ? '−' : ''}{formatPrice(p.amount)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {paymentTarget.cancelled_at && (
-              <div className="bg-red-50 rounded-md p-3 space-y-2">
-                <p className="text-red-700 text-xs font-medium">This booking is cancelled. Track any refund here as you process it.</p>
-                <label className="flex items-start gap-2 text-xs text-dark cursor-pointer bg-white/60 rounded px-2 py-1.5">
-                  <input
-                    type="checkbox"
-                    checked={paymentTarget.is_no_show}
-                    disabled={togglingNoShow}
-                    onChange={ev => handleToggleNoShow(paymentTarget, ev.target.checked)}
-                    className="mt-0.5"
-                  />
-                  <span>
-                    Mark as <span className="font-medium">no-show</span>
-                    <span className="block text-[11px] text-dark-muted">No refund is given for no-shows, per policy — this locks the refund amount to ₹0. Unchecking unlocks it and recalculates the suggestion from the cancellation window.</span>
-                  </span>
-                </label>
-                {paymentTarget.is_no_show ? (
-                  <p className="text-xs text-dark-muted bg-white/60 rounded px-2 py-1.5">
-                    No refund — no-shows forfeit the full amount paid, per policy.
-                  </p>
-                ) : paymentTarget.suggested_refund_amount != null && (
-                  <p className="text-xs text-dark-muted bg-white/60 rounded px-2 py-1.5">
-                    Suggested refund (estimate — not binding, confirm before use): <span className="font-semibold text-dark">{formatPrice(paymentTarget.suggested_refund_amount)}</span>
-                    {paymentTarget.third_party_charges ? ` — after ${formatPrice(paymentTarget.third_party_charges)} in third-party charges` : ''}
-                  </p>
-                )}
-                <div>
-                  <label className="block text-sm font-medium text-dark mb-1">Refund Amount (₹)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={paymentForm.refund_amount}
-                    disabled={paymentTarget.is_no_show}
-                    onChange={e => setPaymentForm(f => ({ ...f, refund_amount: parseNonNegative(e.target.value) }))}
-                    className={`${inputClass} ${paymentTarget.is_no_show ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    placeholder="How much has been refunded so far"
-                  />
-                  <p className="text-[11px] text-dark-muted mt-1">
-                    {paymentTarget.is_no_show
-                      ? 'Locked at ₹0 for no-shows. Uncheck "no-show" above to enter a refund.'
-                      : `They paid ${formatPrice(paymentTarget.amount_paid || 0)} in total.`}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setPaymentTarget(null)}>Cancel</Button>
-              <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSavePayment} loading={savingPayment}>Save Payment</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Enquiry Details Popup — desktop replacement for the old inline
-          expand-in-row panel. Clicking a name in the table opens this
-          instead of pushing the row below it down. */}
-      <Modal isOpen={!!detailsTarget} onClose={() => setDetailsTarget(null)} title={detailsTarget?.full_name || 'Enquiry Details'} size="md">
-        {detailsTarget && (() => {
-          const srcCfg = SOURCE_CONFIG[detailsTarget.source] || SOURCE_CONFIG.other;
-          const food = foodBadge(detailsTarget);
-          return (
-            <div className="space-y-4">
-              <div className="flex items-center flex-wrap gap-1.5">
-                {detailsTarget.group_size && detailsTarget.group_size > 1 ? (
-                  <span
-                    title={`${groupLabel(detailsTarget)} — part of a group booking of ${detailsTarget.group_size}`}
-                    className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
-                  >
-                    <Users size={10} /> {groupLabel(detailsTarget)} · {detailsTarget.group_seq}/{detailsTarget.group_size}
-                  </span>
-                ) : (
-                  <span
-                    title="Booked individually, not part of a group"
-                    className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
-                  >
-                    <User size={10} /> Solo
-                  </span>
-                )}
-                <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
-                  <FoodMark type={foodPreferenceKey(detailsTarget)} size={10} /> {food.label}
-                </span>
-              </div>
-              {detailsTarget.booking_id && (
-                <div className="flex items-center justify-between bg-background-warm rounded-md px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="text-dark-muted text-xs">Booking ID</p>
-                    <p className="text-dark text-sm font-mono truncate">{detailsTarget.booking_id}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button variant="secondary" size="sm" onClick={() => handleDownloadInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
-                      <FileText size={14} /> Invoice
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => handleShareInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
-                      <Share2 size={14} /> Share
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {detailsTarget.booking_id && (
-                <div className="space-y-2.5">
-                  {/* Booking lifecycle — Confirmed → Fully Paid → Completed,
-                      with Cancelled as a terminal off-ramp. */}
-                  <BookingLifecycleStepper enquiry={detailsTarget} />
-                  {detailsTarget.booking_status && detailsTarget.booking_status !== 'cancelled' && detailsTarget.booking_status !== 'completed' && (
-                    <div className="flex justify-end">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleMarkCompleted(detailsTarget)}
-                        disabled={completingId === detailsTarget.id}
-                      >
-                        <CheckCircle2 size={13} /> Mark Trip Completed
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Booking Summary — Total / Paid / Pending, mirrors the
-                      price-summary strip on the PDF invoice itself. Pending
-                      here is simply what's left of the total, which stays
-                      correct whether it came from a not-yet-collected
-                      installment/balance invoice or from money nobody's
-                      raised an invoice for yet. */}
-                  <div className="grid grid-cols-3 gap-2 bg-background-warm rounded-md px-3 py-2.5">
-                    <div>
-                      <p className="text-dark-muted text-[11px]">Total</p>
-                      <p className="text-dark text-sm font-semibold">{formatPrice(detailsTarget.total_amount || 0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-dark-muted text-[11px]">Paid</p>
-                      <p className="text-green-700 text-sm font-semibold">{formatPrice(detailsTarget.amount_paid || 0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-dark-muted text-[11px]">Pending</p>
-                      <p className="text-amber-600 text-sm font-semibold">
-                        {formatPrice(Math.max(0, (detailsTarget.total_amount || 0) - (detailsTarget.amount_paid || 0)))}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Invoices — every payments row for this booking, each
-                      with its own invoice number/type/status. */}
-                  <div className="bg-white border border-background-warm rounded-md">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-background-warm">
-                      <p className="text-dark text-xs font-button font-semibold flex items-center gap-1.5">
-                        <Receipt size={13} className="shrink-0" /> Invoices
-                      </p>
-                      <Button variant="secondary" size="sm" onClick={() => handleOpenGenerateInvoice(detailsTarget)}>
-                        <Plus size={13} /> Generate Invoice
-                      </Button>
-                    </div>
-                    {detailsInvoicesLoading ? (
-                      <p className="text-dark-muted text-xs px-3 py-3">Loading invoices…</p>
-                    ) : detailsInvoices.length === 0 ? (
-                      <p className="text-dark-muted text-xs px-3 py-3">No invoices generated yet.</p>
-                    ) : (
-                      <ul className="divide-y divide-background-warm">
-                        {detailsInvoices.map(inv => {
-                          const isRefund = inv.payment_type === 'refund';
-                          const isPending = inv.status === 'pending';
-                          return (
-                            <li key={inv.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                              <div className="min-w-0">
-                                <p className="text-dark text-xs font-mono truncate">{inv.invoice_number || '—'}</p>
-                                <p className="text-dark-muted text-[11px]">
-                                  {INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type} · {formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className={`text-sm font-semibold ${isRefund ? 'text-red-600' : 'text-dark'}`}>
-                                  {isRefund ? '\u2212 ' : ''}{formatPrice(Math.abs(inv.amount))}
-                                </span>
-                                <span
-                                  className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                                    isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-                                  }`}
-                                >
-                                  <BadgeCheck size={10} /> {isPending ? 'Pending' : 'Paid'}
-                                </span>
-                                {isPending && (
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => handleMarkInvoicePaid(inv)}
-                                    disabled={invoiceRowBusyId === inv.id}
-                                  >
-                                    Mark Paid
-                                  </Button>
-                                )}
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
-                <div>
-                  <p className="text-dark-muted text-xs">Email</p>
-                  <p className="text-dark truncate">{detailsTarget.email}</p>
-                </div>
-                <div>
-                  <p className="text-dark-muted text-xs">Phone</p>
-                  <p className="text-dark truncate">{detailsTarget.phone}</p>
-                </div>
-                <div className="col-span-2 sm:col-span-3">
-                  <ContactQuickLinks phone={detailsTarget.phone} email={detailsTarget.email} name={detailsTarget.full_name} tripTitle={detailsTarget.trip_title} size="md" />
-                </div>
-                {/* Trip (3.8) — spelled out explicitly, including the
-                    no-trip case, instead of only being inferable from
-                    which Trip filter group the admin happens to be
-                    scoped to. */}
-                <div className="col-span-2 sm:col-span-3">
-                  <p className="text-dark-muted text-xs">Trip</p>
-                  <p className="text-dark truncate">
-                    {detailsTarget.trip_id ? detailsTarget.trip_title : (
-                      <span className="text-dark-muted italic">
-                        {isGeneralContactMessage(detailsTarget) ? 'None — Contact Us message' : 'None — logged without a trip'}
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-dark-muted text-xs">City</p>
-                  <p className="text-dark truncate">{detailsTarget.city || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-dark-muted text-xs">Age</p>
-                  <p className="text-dark truncate">{detailsTarget.age ?? '—'}</p>
-                </div>
-                <div>
-                  <p className="text-dark-muted text-xs">Source</p>
-                  <p className="text-dark truncate inline-flex items-center gap-1">
-                    <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-dark-muted text-xs">Package</p>
-                  <p className="text-dark truncate">{PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}</p>
-                </div>
-                <div>
-                  <p className="text-dark-muted text-xs">Date &amp; Time</p>
-                  <p className="text-dark truncate">
-                    {formatDate(detailsTarget.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(detailsTarget.created_at)}
-                  </p>
-                </div>
-              </div>
-              {detailsTarget.message && (
-                <div>
-                  <p className="text-dark-muted text-xs mb-1">Notes</p>
-                  <p className="text-dark text-sm bg-background-warm rounded-md px-3 py-2.5">{detailsTarget.message}</p>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </Modal>
-
-      {/* Generate Invoice Modal — raises one invoice line (Full Payment /
-          Advance / Balance / Installment / Extra Charge) against whichever
-          booking it was opened from. "Paid now" records real money via
-          recordTypedPayment/addExtraCharge; "Pending" raises the invoice
-          without touching amount_paid, via generatePendingInvoice, for
-          later settlement with the Mark Paid button in the Invoices list. */}
-      <Modal isOpen={!!generateInvoiceTarget} onClose={() => setGenerateInvoiceTarget(null)} title="Generate Invoice" size="sm">
-        {generateInvoiceTarget && (
-          <div className="space-y-4">
-            <div className="bg-background-warm rounded-md px-4 py-3">
-              <p className="font-medium text-dark">{generateInvoiceTarget.full_name}</p>
-              <p className="text-dark-muted text-xs">{generateInvoiceTarget.trip_title || 'No trip linked'}</p>
-              <p className="text-dark-muted text-xs mt-1">
-                Total {formatPrice(generateInvoiceTarget.total_amount || 0)} · Paid {formatPrice(generateInvoiceTarget.amount_paid || 0)}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Type</label>
-              <Select
-                value={generateInvoiceForm.type}
-                onChange={val => setGenerateInvoiceForm(f => ({ ...f, type: val }))}
-                options={GENERATE_INVOICE_TYPE_OPTIONS}
-              />
-              {generateInvoiceForm.type === 'extra_charge' && (
-                <p className="text-[11px] text-dark-muted mt-1">
-                  Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Amount (₹)</label>
-              <input
-                type="number"
-                min={0}
-                value={generateInvoiceForm.amount}
-                onChange={ev => setGenerateInvoiceForm(f => ({ ...f, amount: parseNonNegative(ev.target.value) }))}
-                className={inputClass}
-                placeholder="Amount for this invoice"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Status</label>
-              <Select
-                value={generateInvoiceForm.status}
-                onChange={val => setGenerateInvoiceForm(f => ({ ...f, status: val }))}
-                options={GENERATE_INVOICE_STATUS_OPTIONS}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
-              <input
-                type="text"
-                value={generateInvoiceForm.notes}
-                onChange={ev => setGenerateInvoiceForm(f => ({ ...f, notes: ev.target.value }))}
-                className={inputClass}
-                placeholder="e.g. Paid via UPI, hotel category upgrade, etc."
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setGenerateInvoiceTarget(null)}>Cancel</Button>
-              <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleGenerateInvoice} loading={savingInvoice}>
-                Generate Invoice
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Not Interested reason picker — see handleMarkNotInterested above. */}
-      <Modal isOpen={!!notInterestedTarget} onClose={() => setNotInterestedTarget(null)} title="Mark as Not Interested" size="sm">
-        <div className="space-y-4">
-          <p className="text-sm text-dark-muted">
-            This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.
-          </p>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Reason</label>
-            <Select
-              value={closedReason}
-              onChange={val => setClosedReason(val as ClosedReason)}
-              options={CLOSED_REASON_OPTIONS}
-            />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" size="md" onClick={() => setNotInterestedTarget(null)}>Cancel</Button>
-            <Button variant="primary" size="md" onClick={handleConfirmNotInterested} loading={!!notInterestedTarget && updating === notInterestedTarget.id}>Mark Not Interested</Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Follow-up reminder date picker — see openFollowUpModal above. */}
-      <Modal isOpen={!!followUpTarget} onClose={() => setFollowUpTarget(null)} title="Set Follow-up Reminder" size="sm">
-        <div className="space-y-4">
-          <p className="text-sm text-dark-muted">
-            {followUpTarget?.follow_up_at
-              ? 'This lead is still warm — update when to check back in.'
-              : "This lead is still warm but not ready to close either way — pick a date to check back in. It'll show as due on that day, and clears automatically once this lead moves past Contacted."}
-          </p>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
-            <DatePicker value={followUpDate} onChange={setFollowUpDate} />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" size="md" onClick={() => setFollowUpTarget(null)}>Cancel</Button>
-            <Button variant="primary" size="md" onClick={handleSaveFollowUp} disabled={!followUpDate} loading={!!followUpTarget && updating === followUpTarget.id}>Save</Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Cancel Booking Modal */}
-      <Modal isOpen={!!cancelTarget} onClose={() => setCancelTarget(null)} title="Cancel Booking" size="sm">
-        {cancelTarget && (
-          <div className="space-y-4">
-            <div className="bg-background-warm rounded-md px-4 py-3">
-              <p className="font-medium text-dark">{cancelTarget.full_name}</p>
-              <p className="text-dark-muted text-xs">{cancelTarget.trip_title || 'No trip linked'}</p>
-            </div>
-
-            <p className="text-sm text-dark-muted">
-              This frees up their seat right away. {cancelTarget.amount_paid > 0 && `They've paid ${formatPrice(cancelTarget.amount_paid)} so far — `}
-              amount paid stays on record; refunds are tracked separately from the Payment screen.
-            </p>
-
-            {cancelTarget.trip_id && waitlistWaitingCounts[cancelTarget.trip_id]?.entries > 0 && (
-              <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-md px-3 py-2.5 text-sm text-orange-800">
-                <Users size={16} className="shrink-0 mt-0.5" />
-                <p>
-                  <span className="font-semibold">
-                    {describeWaiting(waitlistWaitingCounts[cancelTarget.trip_id])} {waitlistWaitingCounts[cancelTarget.trip_id].entries === 1 ? 'is' : 'are'} waiting
-                  </span>{' '}
-                  for a seat on this trip. Once you cancel, that freed seat is bookable by anyone on the website — convert
-                  them first if you want to give them priority.
-                </p>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-dark mb-1">Third-Party Charges (₹)</label>
-              <input
-                type="number"
-                min={0}
-                value={cancelCharges}
-                onChange={ev => setCancelCharges(parseNonNegative(ev.target.value))}
-                className={inputClass}
-                placeholder="Airline/hotel penalties, if known — optional"
-              />
-              <p className="text-[11px] text-dark-muted mt-1">
-                Used to compute the suggested refund estimate. You can leave this blank and add it later.
-              </p>
-            </div>
-
-            <label className="flex items-start gap-2 text-sm text-dark cursor-pointer">
-              <input
-                type="checkbox"
-                checked={cancelIsNoShow}
-                onChange={ev => setCancelIsNoShow(ev.target.checked)}
-                className="mt-0.5"
-              />
-              <span>
-                This is a <span className="font-medium">no-show</span> (didn't report at the meeting point/date/time).
-                <span className="block text-[11px] text-dark-muted">Per policy, no-shows forfeit the full amount paid — the refund amount will be locked at ₹0.</span>
-              </span>
-            </label>
-
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setCancelTarget(null)}>Back</Button>
-              <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleConfirmCancel} loading={cancelling}>Confirm Cancellation</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <CancelModal
+        cancelTarget={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        cancelCharges={cancelCharges}
+        setCancelCharges={setCancelCharges}
+        cancelIsNoShow={cancelIsNoShow}
+        setCancelIsNoShow={setCancelIsNoShow}
+        waitlistWaitingCounts={waitlistWaitingCounts}
+        describeWaiting={describeWaiting}
+        onConfirm={handleConfirmCancel}
+        cancelling={cancelling}
+      />
 
       {/* Lightweight success toast — bulk-save confirmation only, doesn't
           block the admin the way the AlertDialog (errors/validation) does */}
@@ -4019,109 +2977,18 @@ export default function AdminEnquiries() {
         )}
       </AnimatePresence>
 
-      {/* Bulk Edit Modal */}
-      <Modal isOpen={bulkEditOpen} onClose={() => setBulkEditOpen(false)} title={`Bulk Edit — ${selectedIds.size} selected`} size="sm">
-        <div className="space-y-4">
-          {selectedTripName && (
-            <p className="text-xs font-medium text-primary bg-primary/10 rounded-md px-3 py-2">
-              Trip: {selectedTripName}
-            </p>
-          )}
-          <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">
-            Only fields you change here are applied — anything left on "No change" is left exactly as it is for every selected enquiry.
-          </p>
-
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
-            <Select
-              value={bulkForm.food_preference}
-              onChange={val => setBulkForm(f => ({ ...f, food_preference: val as BulkEditForm['food_preference'] }))}
-              options={BULK_FOOD_OPTIONS}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Package</label>
-            <Select
-              value={bulkForm.package_type}
-              onChange={val => {
-                const packageType = val as BulkEditForm['package_type'];
-                // Mirrors the single-row Track Payment modal: picking a
-                // package pulls in that package's configured trip price as
-                // the suggested Total Amount, so picking "Normal Price"
-                // actually sets a price instead of just relabeling the row.
-                const suggested = packageType !== BULK_NO_CHANGE && activeGroup?.trip
-                  ? getTripPrice(activeGroup.trip.id, packageType)
-                  : undefined;
-                setBulkForm(f => ({
-                  ...f,
-                  package_type: packageType,
-                  total_amount: suggested ?? f.total_amount,
-                }));
-              }}
-              options={BULK_PACKAGE_OPTIONS}
-            />
-            {bulkForm.package_type !== BULK_NO_CHANGE && !activeGroup?.trip && (
-              <p className="text-amber-600 text-[11px] mt-1">
-                These enquiries aren't linked to a trip, so there's no configured price to pull in — enter the amount manually below.
-              </p>
-            )}
-            {bulkForm.package_type !== BULK_NO_CHANGE && activeGroup?.trip && getTripPrice(activeGroup.trip.id, bulkForm.package_type) == null && (
-              <p className="text-amber-600 text-[11px] mt-1">
-                This trip's price for this package isn't set yet — enter the amount manually below, or add it under Upcoming Trips first.
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Enter Money — Total Amount (₹)</label>
-            <input
-              type="number"
-              min={0}
-              value={bulkForm.total_amount}
-              onChange={ev => setBulkForm(f => ({ ...f, total_amount: parseNonNegative(ev.target.value) }))}
-              className={inputClass}
-              placeholder="Leave blank to leave unchanged"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
-            <input
-              type="number"
-              min={0}
-              value={bulkForm.amount_paid}
-              onChange={ev => setBulkForm(f => ({ ...f, amount_paid: parseNonNegative(ev.target.value) }))}
-              className={inputClass}
-              placeholder="Leave blank to leave unchanged"
-            />
-            <p className="text-[11px] text-dark-muted mt-1">
-              Sets what's been collected so far for every selected enquiry, as a new total — not added on top of what's already recorded. Leave blank to leave each one's amount paid as-is.
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Status</label>
-            <Select
-              value={bulkForm.status}
-              onChange={val => setBulkForm(f => ({ ...f, status: val as BulkEditForm['status'] }))}
-              options={BULK_STATUS_OPTIONS}
-            />
-            {bulkForm.status === 'contacted' && (
-              <p className="text-[11px] text-dark-muted mt-1">
-                The Track Payment popup only appears for single-record updates, so it won't open here.
-              </p>
-            )}
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleBulkSave} loading={bulkSaving}>
-              Bulk Save
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <BulkEditModal
+        isOpen={bulkEditOpen}
+        onClose={() => setBulkEditOpen(false)}
+        selectedCount={selectedIds.size}
+        selectedTripName={selectedTripName}
+        bulkForm={bulkForm}
+        setBulkForm={setBulkForm}
+        activeGroupTripId={activeGroup?.trip?.id}
+        getTripPrice={getTripPrice}
+        onSave={handleBulkSave}
+        bulkSaving={bulkSaving}
+      />
     </AdminLayout>
   );
 }
