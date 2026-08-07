@@ -228,8 +228,8 @@ function buildInvoiceHtml(
   .header-right { text-align: right; }
  
   .invoice-title {
-    font-size: 24px; line-height: 1.3; font-weight: 800; letter-spacing: 1.5px;
-    color: #a0522d; margin-bottom: 4px;
+    font-size: 24px; line-height: 31.2px; font-weight: 800; letter-spacing: 1.5px;
+    color: #a0522d; margin-bottom: 4px; padding-bottom: 14px;
   }
  
   .title-rule {
