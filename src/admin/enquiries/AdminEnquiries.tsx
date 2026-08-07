@@ -473,7 +473,8 @@ export default function AdminEnquiries() {
     setSelectedIds(new Set());
   }
 
-  // ---- Record Contact Outcome (the New -> Contacted entry point) --------
+  // ---- Record Contact Outcome (New -> Contacted, and re-logging the next
+  // call while still Contacted) --------------------------------------------
   // Replaces the old direct "Mark Contacted" status flip: status only ever
   // becomes 'contacted' (or 'closed', for Not Interested/Wrong Number)
   // once this popup is saved — see ContactOutcomeModal.tsx and
@@ -589,7 +590,7 @@ export default function AdminEnquiries() {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to cancel booking.');
+      alert(err instanceof Error ? err.message : 'Failed to cancel booking.');
     } finally {
       setCancelling(false);
     }
@@ -831,6 +832,7 @@ export default function AdminEnquiries() {
   const handleAdvance = (enquiry: Enquiry) => {
     switch (enquiry.journey_stage) {
       case 'new_enquiry':
+      case 'contacted':
         return setContactOutcomeTarget(enquiry);
       case 'fully_paid':
         return handleCheckIn(enquiry);
@@ -995,11 +997,16 @@ export default function AdminEnquiries() {
           : { label: 'Not Interested (Close Query)', icon: UserMinus, onClick: () => handleMarkNotInterested(e) }
       );
     }
-    items.push(
-      e.cancelled_at
-        ? { label: 'Reactivate Booking', icon: RefreshCw, onClick: () => handleCancelToggle(e) }
-        : { label: 'Cancel Booking', icon: XCircle, danger: true, onClick: () => handleCancelToggle(e) }
-    );
+    // A Completed booking can't be cancelled (see cancelEnquiry's guard in
+    // services/api.ts) — omit the action entirely rather than showing it
+    // disabled or letting the click round-trip into an error alert.
+    if (e.cancelled_at || e.journey_stage !== 'completed') {
+      items.push(
+        e.cancelled_at
+          ? { label: 'Reactivate Booking', icon: RefreshCw, onClick: () => handleCancelToggle(e) }
+          : { label: 'Cancel Booking', icon: XCircle, danger: true, onClick: () => handleCancelToggle(e) }
+      );
+    }
     items.push({ label: 'Delete', icon: Trash2, danger: true, onClick: () => handleDelete(e) });
     return items;
   };

@@ -252,6 +252,12 @@ create table public.enquiries (
   -- Stamped when an admin marks the traveller checked in for the trip.
   -- NULL means not checked in yet.
   checked_in_at             timestamptz,
+  -- Independent "Booking State" (CRM spec section 3) — active vs cancelled.
+  -- Deliberately separate from journey_stage/booking_status so cancelling a
+  -- booking never overwrites which stage it had reached; cancelled_at
+  -- remains the authoritative timestamp, this is a denormalized label kept
+  -- in sync with it by on_enquiry_cancelled(). See add_booking_state.sql.
+  booking_state             text not null default 'active',
   constraint enquiries_pkey primary key (id),
   constraint enquiries_status_check
     check (status = any (array['new'::text, 'contacted'::text, 'closed'::text])),
@@ -277,13 +283,16 @@ create table public.enquiries (
   constraint enquiries_group_size_check
     check (group_size is null or group_size >= 2),
   constraint enquiries_group_seq_check
-    check (group_seq >= 1)
+    check (group_seq >= 1),
+  constraint enquiries_booking_state_check
+    check (booking_state = any (array['active'::text, 'cancelled'::text]))
 );
 
 create index enquiries_is_paid_idx on public.enquiries using btree (is_paid);
 create index enquiries_source_idx on public.enquiries using btree (source);
 create index enquiries_group_id_idx on public.enquiries using btree (group_id);
 create index enquiries_journey_stage_idx on public.enquiries using btree (journey_stage);
+create index enquiries_booking_state_idx on public.enquiries using btree (booking_state);
 
 -- Duplicate-submission protection, keyed so group bookings (N rows sharing
 -- identical name/phone/email/trip by design) can coexist — see
@@ -526,11 +535,12 @@ language plpgsql
 as $function$
 begin
   update public.enquiries
-     set booking_status = 'cancelled',
+     set booking_state = 'cancelled',
          cancelled_at = coalesce(cancelled_at, now())
    where balance_due_date is not null
      and balance_due_date < current_date
-     and booking_status not in ('fully_paid', 'cancelled', 'completed');
+     and booking_status not in ('fully_paid', 'cancelled', 'completed')
+     and booking_state = 'active';
 end;
 $function$;
 
@@ -1016,8 +1026,14 @@ returns trigger
 language plpgsql
 as $function$
 begin
+  -- Sets booking_state, not booking_status: booking_status/journey_stage
+  -- should keep reflecting whatever legitimate stage the booking had
+  -- reached, per the CRM spec ("Booking Journey should always preserve the
+  -- highest legitimate stage reached"). See add_booking_state.sql.
   if new.cancelled_at is not null and old.cancelled_at is null then
-    new.booking_status := 'cancelled';
+    new.booking_state := 'cancelled';
+  elsif new.cancelled_at is null and old.cancelled_at is not null then
+    new.booking_state := 'active';
   end if;
 
   if (new.cancelled_at is not null and old.cancelled_at is null)

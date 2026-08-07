@@ -43,6 +43,7 @@ import {
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus,
 } from '../enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
+import { isCancelled, bookingStateBadge, attendanceBadge } from './adminEnquiriesShared';
 import ContactOutcomeModal from './ContactOutcomeModal';
 import type { ContactOutcomeResult } from './ContactOutcomeModal';
 
@@ -421,7 +422,7 @@ export default function AdminEnquiryDetail() {
       setCancelOpen(false);
     } catch (err) {
       console.error(err);
-      alert('Failed to cancel booking.');
+      alert(err instanceof Error ? err.message : 'Failed to cancel booking.');
     } finally {
       setCancelling(false);
     }
@@ -488,6 +489,7 @@ export default function AdminEnquiryDetail() {
     if (!enquiry) return;
     switch (enquiry.journey_stage) {
       case 'new_enquiry':
+      case 'contacted':
         return setContactOutcomeOpen(true);
       case 'fully_paid':
         return handleCheckIn();
@@ -678,11 +680,17 @@ export default function AdminEnquiryDetail() {
   if (enquiry.journey_stage === 'checked_in') {
     rowActions.push({ label: 'Undo Check In', icon: LogIn, onClick: handleUndoCheckIn });
   }
-  rowActions.push(
-    enquiry.cancelled_at
-      ? { label: 'Reactivate Booking', icon: RefreshCw, onClick: handleCancelToggle }
-      : { label: 'Cancel Booking', icon: XCircle, danger: true, onClick: handleCancelToggle }
-  );
+  // A Completed booking can't be cancelled (see cancelEnquiry's guard in
+  // services/api.ts) — omit the action entirely rather than showing it
+  // disabled or letting the click round-trip into an error alert.
+  const isCompletedBooking = enquiry.journey_stage === 'completed';
+  if (enquiry.cancelled_at || !isCompletedBooking) {
+    rowActions.push(
+      enquiry.cancelled_at
+        ? { label: 'Reactivate Booking', icon: RefreshCw, onClick: handleCancelToggle }
+        : { label: 'Cancel Booking', icon: XCircle, danger: true, onClick: handleCancelToggle }
+    );
+  }
   rowActions.push({ label: 'Delete', icon: Trash2, danger: true, onClick: handleDelete });
 
   return (
@@ -704,6 +712,26 @@ export default function AdminEnquiryDetail() {
                 <span title={`Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
                   <jb.icon size={12} className="shrink-0" /> {jb.label}
                 </span>
+                {/* Booking State — independent of Booking Journey above, per
+                    CRM spec section 3. Only shown once there's an actual
+                    booking (cancelling a bare lead is "Not Interested", not
+                    this), and only called out when Cancelled — "Active" is
+                    the unremarkable default and would just add noise next to
+                    a Journey badge that already implies it. */}
+                {isCancelled(enquiry) && (
+                  <span title="Booking State" className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${bookingStateBadge(enquiry).color}`}>
+                    <XCircle size={12} className="shrink-0" /> {bookingStateBadge(enquiry).label}
+                  </span>
+                )}
+                {/* Attendance — independent of Journey/State, per CRM spec
+                    section 4. Only shown once it's meaningful (checked in or
+                    a recorded no-show); "Not Started" beforehand is implied
+                    by the Journey badge not yet reaching Checked In. */}
+                {(enquiry.checked_in_at || enquiry.is_no_show) && (
+                  <span title="Attendance" className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${attendanceBadge(enquiry).color}`}>
+                    <LogIn size={12} className="shrink-0" /> {attendanceBadge(enquiry).label}
+                  </span>
+                )}
                 {isNotInterested(enquiry) && (
                   <span title={closedReasonLabel(enquiry) ? `Closed — ${closedReasonLabel(enquiry)}` : 'Closed — this was just a query, no booking followed'} className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-red-50 text-red-600">
                     <UserMinus size={12} className="shrink-0" /> Not Interested{closedReasonLabel(enquiry) ? ` — ${closedReasonLabel(enquiry)}` : ''}

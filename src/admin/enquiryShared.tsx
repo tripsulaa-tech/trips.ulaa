@@ -351,11 +351,23 @@ export function closedReasonBreakdown(
 // side effect of recording a payment, so there's nothing for a generic
 // "next stage" button to do there; it's hidden for those stages instead of
 // shown disabled, since the Payment modal is the actual next action.
+//
+// 'contacted' re-opens the same Record Contact Outcome popup used for the
+// New -> Contacted transition — a lead that came back "Needs Time"/"Call
+// Later"/"No Response" still needs a way to log what the *next* call
+// actually resulted in (Interested, Not Interested, another retry, etc).
+// Deliberately stops offering this once total_amount is set (journey_stage
+// past 'contacted' — advance_pending/advance_paid/…): at that point Lead
+// Management has handed off to Booking Journey (per the CRM spec, Lead
+// Management "exists before a booking starts"), and Cancel Booking /
+// Payment actions are the right tools instead.
 export function nextManualAction(e: Enquiry): { label: string; icon: typeof Clock } | null {
   if (e.cancelled_at) return null;
   switch (e.journey_stage) {
     case 'new_enquiry':
       return { label: 'Mark Contacted', icon: RefreshCw };
+    case 'contacted':
+      return { label: 'Record Contact Outcome', icon: RefreshCw };
     case 'fully_paid':
       return { label: 'Check In', icon: LogIn };
     case 'checked_in':
@@ -381,10 +393,20 @@ const BOOKING_LIFECYCLE_STEPS: { key: 'booking_confirmed' | 'fully_paid' | 'comp
 // Renders enquiries.booking_status as a horizontal progress stepper.
 // booking_status is undefined until the first payment lands (no booking
 // exists yet), so this only shows once there's actually something to track.
-// 'cancelled' replaces the stepper entirely with a single red state, since
-// it can be reached from any step and isn't part of the forward sequence.
+//
+// Cancellation is Booking State (see Enquiry.booking_state /
+// add_booking_state.sql), not a journey stage, so a cancelled booking still
+// renders its real progress through the steps below — the red banner is an
+// overlay on top of that, not a replacement for it. This matches the CRM
+// spec's "Fully Paid + Cancelled -> Journey remains Fully Paid, State
+// becomes Cancelled" example. Legacy rows whose booking_status was already
+// overwritten to the old 'cancelled' value (written before this migration)
+// fall back to the plain banner below, since their real progress can't be
+// recovered.
 export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
   if (!enquiry.booking_status) return null;
+
+  const isCancelled = enquiry.booking_state === 'cancelled';
 
   if (enquiry.booking_status === 'cancelled') {
     return (
@@ -402,6 +424,11 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
 
   return (
     <div className="bg-white border border-background-warm rounded-md px-3 py-3">
+      {isCancelled && (
+        <div className="flex items-center gap-1.5 mb-2.5 bg-red-50 text-red-700 rounded-md px-2.5 py-1.5 text-[11px] font-button font-semibold">
+          <XCircle size={12} className="shrink-0" /> Cancelled — progress below is where it stood before cancellation
+        </div>
+      )}
       <div className="flex items-center">
         {BOOKING_LIFECYCLE_STEPS.map((step, i) => {
           const isDone = i < activeIndex;
@@ -426,7 +453,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
           );
         })}
       </div>
-      {enquiry.booking_status === 'balance_pending' && (
+      {enquiry.booking_status === 'balance_pending' && !isCancelled && (
         <div className="flex items-center gap-1.5 mt-2.5 bg-amber-50 text-amber-700 rounded-md px-2.5 py-1.5 text-[11px] font-button font-semibold">
           <AlertTriangle size={12} className="shrink-0" />
           Balance overdue{enquiry.balance_due_date ? ` — due ${formatDate(enquiry.balance_due_date, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}

@@ -149,9 +149,36 @@ export function isBooked(e: Enquiry): boolean {
 
 // Cancelled is its own booking-filter bucket now (previously folded into
 // "Not booked"), so an admin can isolate cancellations without also seeing
-// enquiries that were simply never paid.
+// enquiries that were simply never paid. Checks cancelled_at (the
+// authoritative timestamp) rather than booking_state so this keeps working
+// unchanged even against a row read before add_booking_state.sql landed —
+// see bookingState() below for the CRM "Booking State" field itself.
 export function isCancelled(e: Enquiry): boolean {
   return !!e.cancelled_at;
+}
+
+// "Booking State" (CRM spec section 3) as its own labelled badge, distinct
+// from the Booking Journey badge (journeyBadge() in enquiryShared.tsx) —
+// used on the enquiry detail page so Journey and State render as two
+// separate pieces of information instead of one field trying to carry
+// both, per the spec's core principle of not mixing responsibilities.
+export function bookingStateBadge(e: Enquiry): { label: string; color: string } {
+  return isCancelled(e)
+    ? { label: 'Cancelled', color: 'bg-red-100 text-red-700' }
+    : { label: 'Active', color: 'bg-green-100 text-green-700' };
+}
+
+// "Attendance" (CRM spec section 4) — independent of Booking Journey and
+// Booking State. A fully paid booking that never shows up stays
+// journey_stage 'fully_paid' / booking_state 'active' (or 'cancelled' if
+// also cancelled); only this badge changes. Derived from the same
+// checked_in_at / is_no_show columns already used elsewhere rather than a
+// new column, since both are already tracked independently — this is just
+// giving that pair a single named badge to render together.
+export function attendanceBadge(e: Enquiry): { label: string; color: string } {
+  if (e.is_no_show) return { label: 'No Show', color: 'bg-orange-100 text-orange-700' };
+  if (e.checked_in_at) return { label: 'Checked In', color: 'bg-indigo-100 text-indigo-700' };
+  return { label: 'Not Started', color: 'bg-slate-100 text-dark-muted' };
 }
 
 // Seat-status badge shown in the table/card — same underlying

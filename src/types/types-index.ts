@@ -226,6 +226,12 @@ export interface GalleryImage {
   created_at: string;
 }
 
+// 'cancelled' is kept in the union only for backward compatibility with
+// rows written before add_booking_state.sql — computeJourneyStage() no
+// longer produces it going forward. Whether a booking is cancelled now
+// lives entirely in Enquiry.booking_state, kept independent so journey_stage
+// always reports the highest legitimate stage actually reached, even after
+// cancellation (see add_booking_state.sql for the full rationale).
 export type JourneyStage = 'new_enquiry' | 'contacted' | 'advance_pending' | 'advance_paid'
   | 'confirmed' | 'balance_pending' | 'fully_paid' | 'checked_in' | 'completed' | 'cancelled' | 'not_interested';
 
@@ -318,6 +324,15 @@ export interface Enquiry {
   // mutating call, same pattern as status/booking_status. 'cancelled'
   // overrides every other stage. See add_booking_journey_stage.sql.
   journey_stage: JourneyStage;
+  // Independent "Booking State" — active vs cancelled (CRM spec section 3).
+  // Deliberately separate from journey_stage: cancelling a booking never
+  // overwrites which stage it had reached (journey_stage keeps reporting
+  // e.g. 'fully_paid'); booking_state is what flips to 'cancelled'.
+  // cancelled_at remains the authoritative timestamp — this is a synced
+  // label for filtering/display. Defaults to 'active' in the DB, so it's
+  // always present on rows fetched after add_booking_state.sql. See
+  // bookingState() in enquiryShared.tsx.
+  booking_state: 'active' | 'cancelled';
   // Stamped when an admin marks the traveller checked in for the trip via
   // checkInEnquiry(). Null means not checked in yet.
   checked_in_at?: string | null;

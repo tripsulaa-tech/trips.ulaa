@@ -917,7 +917,6 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
   // insert below, if any, is refreshed via refreshJourneyStage afterwards).
   const journeyStage = computeJourneyStage({
     status,
-    cancelled_at: null,
     amount_paid: 0,
     total_amount: totalAmount,
     booking_amount: enquiry.booking_amount || 0,
@@ -932,7 +931,7 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
   delete rest.amount_paid;
   const { data, error } = await supabase
     .from('enquiries')
-    .insert({ ...rest, amount_paid: 0, is_paid: isPaidFull, status, booking_status: bookingStatus, journey_stage: journeyStage })
+    .insert({ ...rest, amount_paid: 0, is_paid: isPaidFull, status, booking_status: bookingStatus, journey_stage: journeyStage, booking_state: 'active' })
     .select()
     .single();
   if (error) {
@@ -986,11 +985,18 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
 // table, from the same underlying columns computeAutoStatus/
 // computeBookingStatus already read — see add_booking_journey_stage.sql for
 // the full rationale on why each branch is ordered the way it is.
-// cancelled_at always wins; booking_status === 'completed' is next (both are
+//
+// Deliberately does NOT special-case cancelled_at (it used to: an earlier
+// version returned 'cancelled' as soon as cancelled_at was set, which
+// overwrote the stage the booking had actually reached — see
+// add_booking_state.sql). Cancellation is tracked independently in
+// Enquiry.booking_state instead, so this always reports the highest
+// legitimate stage reached, cancelled or not — matching the CRM spec's
+// "Fully Paid + Cancelled -> Journey remains Fully Paid, State becomes
+// Cancelled" rule. booking_status === 'completed' is checked first (that's
 // admin-explicit, never something a payment alone can undo).
 function computeJourneyStage(e: {
   status: Enquiry['status'];
-  cancelled_at?: string | null;
   amount_paid: number;
   total_amount?: number | null;
   booking_amount: number;
@@ -998,7 +1004,6 @@ function computeJourneyStage(e: {
   checked_in_at?: string | null;
   booking_status?: Enquiry['booking_status'];
 }): JourneyStage {
-  if (e.cancelled_at) return 'cancelled';
   if (e.booking_status === 'completed') return 'completed';
   if (e.checked_in_at) return 'checked_in';
   if (e.total_amount && e.total_amount > 0 && e.amount_paid >= e.total_amount) return 'fully_paid';
@@ -1039,6 +1044,12 @@ async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
   if (error) throw error;
 
   const stage = computeJourneyStage(e);
+  // booking_state is normally kept in sync by the on_enquiry_cancelled DB
+  // trigger the moment cancelled_at changes (see add_booking_state.sql).
+  // Recomputed here too, defensively, so a row read before that trigger
+  // has run (or a legacy row from before the migration) still shows the
+  // right value without needing a second round-trip.
+  const bookingState: Enquiry['booking_state'] = e.cancelled_at ? 'cancelled' : 'active';
 
   // follow_up_at (see add_enquiry_follow_up.sql) is only meaningful while
   // the lead is still a live, pre-booked conversation — the DB's own check
@@ -1054,10 +1065,11 @@ async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
   const stillFollowable = stage === 'contacted' || stage === 'advance_pending' || stage === 'advance_paid';
   const clearFollowUp = (!!e.follow_up_at || !!e.follow_up_time) && !stillFollowable;
 
-  if (stage === e.journey_stage && !clearFollowUp) return e;
+  if (stage === e.journey_stage && bookingState === e.booking_state && !clearFollowUp) return e;
 
   const patch: Record<string, unknown> = {};
   if (stage !== e.journey_stage) patch.journey_stage = stage;
+  if (bookingState !== e.booking_state) patch.booking_state = bookingState;
   if (clearFollowUp) {
     patch.follow_up_at = null;
     patch.follow_up_time = null;
@@ -1164,19 +1176,21 @@ function computeBookingStatus(
 // booking_status only ever reaches 'completed' through this explicit call —
 // computeBookingStatus() (used by every payment-driven update above) never
 // advances to it on its own, since "the trip happened" isn't something a
-// payment event can infer. Guards against completing a booking that was
-// cancelled or one that was never actually booked (no payment recorded, so
-// booking_status is still unset).
+// payment event can infer. Guards against completing a booking that's
+// currently cancelled (checked via booking_state — see add_booking_state.sql;
+// booking_status itself is no longer set to 'cancelled', so it can't be used
+// for this check anymore) or one that was never actually booked (no payment
+// recorded, so booking_status is still unset).
 export async function markEnquiryCompleted(enquiryId: string): Promise<Enquiry> {
   const { data: current, error: fetchError } = await supabase
     .from('enquiries')
-    .select('booking_status')
+    .select('booking_status, booking_state, cancelled_at')
     .eq('id', enquiryId)
     .single();
   if (fetchError) throw fetchError;
 
-  if (current.booking_status === 'cancelled') {
-    throw new Error('This booking was cancelled and cannot be marked completed.');
+  if (current.booking_state === 'cancelled' || current.cancelled_at) {
+    throw new Error('This booking was cancelled and cannot be marked completed. Reactivate it first if this was a mistake.');
   }
   if (!current.booking_status) {
     throw new Error('This enquiry has no booking on it yet (no payment recorded), so it cannot be marked completed.');
@@ -1552,19 +1566,31 @@ export async function markInvoicePaid(
 // separate from refund_amount which tracks what's been paid back.
 //
 // Setting cancelled_at fires a DB trigger that auto-computes
-// suggested_refund_amount and sets booking_status to 'cancelled' — this is
-// a SUGGESTION only, never authoritative; the admin still enters the real
-// refund_amount via recordRefund. Pass thirdPartyCharges if known at
-// cancellation time (airline/hotel penalties aren't derivable from stored
-// data) so the suggestion accounts for them. Pass isNoShow if the admin is
-// cancelling *because* the guest was a no-show — the DB trigger forces the
-// suggested refund to 0 in that case, per the site's no-refund-for-no-shows
-// policy, overriding the normal cancellation-window math.
+// suggested_refund_amount and sets booking_state to 'cancelled' (journey_stage
+// and booking_status are left untouched — see add_booking_state.sql, and
+// computeJourneyStage's doc comment for why cancellation no longer
+// overwrites the stage a booking had reached) — this is a SUGGESTION only,
+// never authoritative; the admin still enters the real refund_amount via
+// recordRefund. Pass thirdPartyCharges if known at cancellation time
+// (airline/hotel penalties aren't derivable from stored data) so the
+// suggestion accounts for them. Pass isNoShow if the admin is cancelling
+// *because* the guest was a no-show — the DB trigger forces the suggested
+// refund to 0 in that case, per the site's no-refund-for-no-shows policy,
+// overriding the normal cancellation-window math.
+//
+// Refuses to cancel a booking that's already Completed — per the CRM
+// spec's "Completed should never become Cancelled" rule, that's not a
+// legitimate transition (a completed trip is in the past; use a refund/
+// credit note against it instead of cancelling the booking record).
 //
 // The trip's seats_booked count frees up on its own: the
 // on_enquiries_seat_sync DB trigger recomputes it from real enquiries data
 // right after this update commits, so no manual adjustment is made here.
 export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number, isNoShow?: boolean): Promise<Enquiry> {
+  if (enquiry.journey_stage === 'completed' || enquiry.booking_status === 'completed') {
+    throw new Error('A completed booking can\u2019t be cancelled.');
+  }
+
   if (thirdPartyCharges !== undefined) {
     const { error: chargesError } = await supabase
       .from('enquiries')
@@ -1618,24 +1644,31 @@ export async function deleteEnquiry(enquiry: Enquiry): Promise<void> {
 }
 
 
-// Re-books the seat if they'd already paid something, and resets
-// booking_status back to whatever it would be given the current amount
-// paid (rather than leaving it stuck on 'cancelled'). Re-booking a seat
-// this way is still capacity-checked by the enforce_trip_capacity DB
-// trigger, and seats_booked is recomputed by on_enquiries_seat_sync right
-// after — no manual adjustment needed here.
+// Re-books the seat if they'd already paid something. Since booking_status
+// is no longer overwritten on cancellation (see add_booking_state.sql), it
+// still reflects the stage the booking had reached before it was
+// cancelled — including 'completed', which computeBookingStatus can't
+// derive from amount/dates alone — so this only recomputes it when it
+// wasn't already something legitimate (a defensive fallback for legacy
+// rows cancelled before this migration, where booking_status really was
+// stomped to 'cancelled'). Re-booking a seat this way is still
+// capacity-checked by the enforce_trip_capacity DB trigger, and
+// seats_booked is recomputed by on_enquiries_seat_sync right after — no
+// manual adjustment needed here.
 export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
-  const bookingStatus = computeBookingStatus(
-    enquiry.amount_paid,
-    enquiry.total_amount,
-    enquiry.booking_amount,
-    enquiry.balance_due_date,
-    undefined // force recompute rather than trusting the 'cancelled' value
-  );
+  const bookingStatus = enquiry.booking_status && enquiry.booking_status !== 'cancelled'
+    ? enquiry.booking_status
+    : computeBookingStatus(
+        enquiry.amount_paid,
+        enquiry.total_amount,
+        enquiry.booking_amount,
+        enquiry.balance_due_date,
+        undefined // force recompute rather than trusting the legacy 'cancelled' value
+      );
 
   const { error } = await supabase
     .from('enquiries')
-    .update({ cancelled_at: null, booking_status: bookingStatus, suggested_refund_amount: null })
+    .update({ cancelled_at: null, booking_state: 'active', booking_status: bookingStatus, suggested_refund_amount: null })
     .eq('id', enquiry.id);
   if (error) throw error;
 
