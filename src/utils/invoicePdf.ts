@@ -1,22 +1,23 @@
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import type { Enquiry, Payment } from '../types/types-index';
 import { formatPrice, formatDate } from './utils-index';
  
 // =============================================================================
-// Invoice generation via HTML → browser print-to-PDF.
+// Invoice generation via HTML → rasterized → real PDF file.
 //
-// Real-world approach: build a styled HTML document, open it in a dedicated
-// print window, and call window.print() so the browser's native PDF engine
-// renders it. This gives pixel-perfect, font-accurate output that coordinate-
-// based jsPDF drawing cannot match.
+// The invoice is built as a styled HTML document, rendered off-screen in a
+// hidden iframe so the browser lays out fonts/images exactly as designed,
+// then rasterized with html2canvas and assembled into an actual binary PDF
+// with jsPDF. The resulting PDF is downloaded directly (no browser print
+// dialog, no manual "Save as PDF" step).
 //
 // Flow:
-//   buildInvoiceHtml()   → full HTML document string
-//   downloadInvoicePdf() → opens print window; user saves as PDF via the
-//                          browser's native "Save as PDF" print destination
-//   invoiceAsFile()      → returns the HTML as a text/html File; most
-//                          platforms reject that MIME for Web Share API
-//                          file-sharing, so the caller falls back to
-//                          downloadInvoicePdf() + WhatsApp text.
+//   buildInvoiceHtml()      → full HTML document string
+//   renderInvoicePdfBlob()  → renders the HTML off-screen, rasterizes it,
+//                             and returns a real application/pdf Blob
+//   downloadInvoicePdf()    → triggers a direct browser download of that PDF
+//   invoiceAsFile()         → returns the same PDF as a File for Web Share
 // =============================================================================
  
 const BRAND = {
@@ -588,64 +589,118 @@ export function invoiceFileName(enquiry: Enquiry): string {
   return `ULAA-Invoice-${ref}.pdf`;
 }
  
+// A4 at 96dpi, used for the off-screen render frame.
+const RENDER_WIDTH_PX = 794;
+const RENDER_HEIGHT_PX = 1123;
+
 /**
- * Opens a dedicated print window containing the styled invoice HTML and
- * immediately triggers window.print().  The browser's built-in "Save as PDF"
- * print destination produces a pixel-perfect A4 PDF with no extra libraries.
+ * Waits for an off-screen iframe's document to finish loading, plus a short
+ * grace period so images (logo) and fonts have a chance to paint before we
+ * rasterize — otherwise the captured canvas can come out blank/half-drawn.
  */
-export async function downloadInvoicePdf(enquiry: Enquiry, payments: Payment[]): Promise<void> {
+function waitForIframeReady(iframe: HTMLIFrameElement): Promise<void> {
+  return new Promise((resolve) => {
+    const settle = () => requestAnimationFrame(() => setTimeout(resolve, 80));
+    const doc = iframe.contentDocument;
+    if (doc && doc.readyState === 'complete') {
+      settle();
+      return;
+    }
+    iframe.addEventListener('load', settle, { once: true });
+  });
+}
+
+/**
+ * Renders the invoice HTML off-screen, rasterizes it with html2canvas, and
+ * assembles a real, binary, multi-page-safe PDF with jsPDF. Returns the PDF
+ * as a Blob — this is the single source of truth used by both the direct
+ * download and the Web Share file path below.
+ */
+async function renderInvoicePdfBlob(enquiry: Enquiry, payments: Payment[]): Promise<Blob> {
   const logoDataUrl = await loadLogoDataUrl();
   const html = buildInvoiceHtml(enquiry, payments, logoDataUrl);
- 
-  const win = window.open('', '_blank', 'width=794,height=1123');
-  if (!win) {
-    // Pop-up blocked — fall back to blob URL in the current tab.
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    return;
-  }
- 
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
- 
-  // Wait for the document (and any embedded images / fonts) to finish loading
-  // before triggering print, so the output is never blank.
-  const triggerPrint = () => {
-    win.focus();
-    win.print();
-    // Some browsers close the window automatically after print; others do not.
-    // We do NOT call win.close() here because doing so before print is queued
-    // silently cancels the dialog on Firefox.
-  };
- 
-  if (win.document.readyState === 'complete') {
-    triggerPrint();
-  } else {
-    win.addEventListener('load', triggerPrint, { once: true });
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-10000px';
+  iframe.style.top = '0';
+  iframe.style.width = `${RENDER_WIDTH_PX}px`;
+  iframe.style.height = `${RENDER_HEIGHT_PX}px`;
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  try {
+    const doc = iframe.contentDocument;
+    if (!doc) throw new Error('Could not create invoice render frame');
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    await waitForIframeReady(iframe);
+
+    const target = doc.body;
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      windowWidth: RENDER_WIDTH_PX,
+      windowHeight: target.scrollHeight,
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    if (imgHeight <= pageHeight) {
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+    } else {
+      // Content taller than one A4 page — paginate the single tall image
+      // across as many pages as needed, each shifted up by one page height.
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+    }
+
+    return pdf.output('blob');
+  } finally {
+    document.body.removeChild(iframe);
   }
 }
- 
+
 /**
- * Returns the invoice as an HTML File.
- *
- * Most browsers reject `text/html` when `navigator.canShare({ files })` is
- * called, which causes the caller (AdminEnquiries handleShareInvoice) to
- * fall back to downloadInvoicePdf() + a WhatsApp text message — exactly the
- * right behaviour since we cannot generate a binary PDF File client-side
- * without a server-side renderer.
+ * Generates the invoice PDF and triggers an immediate, direct browser
+ * download — no print dialog, no manual "Save as PDF" step required.
+ */
+export async function downloadInvoicePdf(enquiry: Enquiry, payments: Payment[]): Promise<void> {
+  const blob = await renderInvoicePdfBlob(enquiry, payments);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = invoiceFileName(enquiry);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/**
+ * Returns the invoice as a real application/pdf File, suitable for the Web
+ * Share API (navigator.canShare({ files })) as well as any other file input.
  */
 export async function invoiceAsFile(enquiry: Enquiry, payments: Payment[]): Promise<File> {
-  const logoDataUrl = await loadLogoDataUrl();
-  const html = buildInvoiceHtml(enquiry, payments, logoDataUrl);
-  const blob = new Blob([html], { type: 'text/html' });
-  // Use .pdf extension so the filename looks right if canShare somehow
-  // succeeds; the HTML content is still a perfectly viewable invoice.
-  return new File([blob], invoiceFileName(enquiry), { type: 'text/html' });
+  const blob = await renderInvoicePdfBlob(enquiry, payments);
+  return new File([blob], invoiceFileName(enquiry), { type: 'application/pdf' });
 }
