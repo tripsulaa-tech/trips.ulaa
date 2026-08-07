@@ -8,7 +8,7 @@
 //      table component just to reuse a badge/label helper.
 // Everything here is intentionally stateless — no hooks, no local state —
 // so it's safe to call from anywhere.
-import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle } from 'lucide-react';
+import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle, UserMinus } from 'lucide-react';
 import type { Enquiry, Payment, UpcomingTrip } from '../types/types-index';
 import { formatDate, getActivePrice } from '../utils/utils-index';
 
@@ -156,7 +156,11 @@ export const JOURNEY_STAGE_CONFIG: Record<Enquiry['journey_stage'], { label: str
   checked_in: { label: 'Checked In', color: 'bg-indigo-100 text-indigo-700', icon: LogIn },
   completed: { label: 'Completed', color: 'bg-green-100 text-green-700', icon: PartyPopper },
   cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', icon: XCircle },
-};
+  // A lead that was contacted and said no — closed out before any money
+  // changed hands. Distinct from `cancelled` (which is always a booking
+  // that had money on it at some point). See add_not_interested_journey_stage.sql.
+  not_interested: { label: 'Not Interested', color: 'bg-slate-200 text-dark-muted', icon: UserMinus },
+} as const;
 
 export function journeyBadge(e: Enquiry) {
   return JOURNEY_STAGE_CONFIG[e.journey_stage] || JOURNEY_STAGE_CONFIG.new_enquiry;
@@ -168,8 +172,12 @@ export function journeyBadge(e: Enquiry) {
 // went through (see the Enquiry.status doc comment in types-index.ts: a
 // 'closed' lead can mean either "went nowhere" or "fully paid booking").
 // Used to show a distinct "Not Interested" badge/action instead of the
-// ambiguous generic 'closed' status, without needing a new DB value.
+// ambiguous generic 'closed' status. Checks journey_stage first (the
+// source of truth going forward — see add_not_interested_journey_stage.sql)
+// and falls back to the same derived check as before for any row whose
+// journey_stage hasn't been refreshed since that migration landed.
 export function isNotInterested(e: Enquiry): boolean {
+  if (e.journey_stage === 'not_interested') return true;
   return e.status === 'closed' && !e.cancelled_at && (e.amount_paid || 0) <= 0 && !e.booking_id;
 }
 
@@ -260,6 +268,54 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
           Balance overdue{enquiry.balance_due_date ? ` — due ${formatDate(enquiry.balance_due_date, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
         </div>
       )}
+    </div>
+  );
+}
+
+// The forward-moving path through JOURNEY_STAGE_CONFIG, in order — mirrors
+// BOOKING_LIFECYCLE_STEPS above but includes the two pre-payment stages
+// (new_enquiry, contacted) since this legend is meant to explain the whole
+// enquiry-to-completed journey at a glance, not just the money part of it.
+// balance_pending is left out here too, same reasoning as
+// BOOKING_LIFECYCLE_STEPS: it's a same-step warning on Confirmed, not a
+// distinct stage of forward progress.
+const LIFECYCLE_FLOW_STAGES: Enquiry['journey_stage'][] = [
+  'new_enquiry', 'contacted', 'advance_paid', 'confirmed', 'fully_paid', 'checked_in', 'completed',
+];
+
+// Compact "how a booking gets from enquiry to completed" reference strip —
+// meant to sit near the Add Enquiry button so it's the first thing an
+// admin orients against before logging or working an enquiry. Purely
+// informational (no clicks, no state); scrolls horizontally on narrow
+// screens instead of wrapping.
+export function JourneyLifecycleLegend() {
+  return (
+    <div className="bg-white border border-background-warm rounded-lg px-3 py-2.5 overflow-x-auto scrollbar-hide">
+      <div className="flex items-center gap-1.5 w-max">
+        <span className="text-[11px] font-button font-semibold text-dark-muted uppercase tracking-wide shrink-0 mr-1">
+          Booking Journey
+        </span>
+        {LIFECYCLE_FLOW_STAGES.map((key, i) => {
+          const cfg = JOURNEY_STAGE_CONFIG[key];
+          return (
+            <div key={key} className="flex items-center gap-1.5 shrink-0">
+              <span className={`inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
+                <cfg.icon size={11} className="shrink-0" /> {cfg.label}
+              </span>
+              {i < LIFECYCLE_FLOW_STAGES.length - 1 && (
+                <span className="text-dark-muted/50 text-xs" aria-hidden="true">→</span>
+              )}
+            </div>
+          );
+        })}
+        <span className="text-dark-muted/60 text-[11px] mx-1 shrink-0 whitespace-nowrap">or, at any point —</span>
+        <span className={`inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.not_interested.color}`}>
+          <UserMinus size={11} className="shrink-0" /> Not Interested
+        </span>
+        <span className={`inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.cancelled.color}`}>
+          <XCircle size={11} className="shrink-0" /> Cancelled
+        </span>
+      </div>
     </div>
   );
 }

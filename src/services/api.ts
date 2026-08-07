@@ -952,6 +952,14 @@ function computeJourneyStage(e: {
   }
   if (e.booking_amount > 0 && e.amount_paid >= e.booking_amount) return 'confirmed';
   if (e.amount_paid > 0) return 'advance_paid';
+  // A lead an admin closed out as "not interested" after contacting (or
+  // without ever contacting) — no money ever landed on it, so it's not a
+  // Cancelled booking, and status !== 'contacted' means it can't fall into
+  // either of the two branches below either. Without this, a closed lead
+  // silently fell all the way through to 'new_enquiry'. See
+  // add_not_interested_journey_stage.sql / isNotInterested() in
+  // enquiryShared.tsx for the full rationale.
+  if (e.status === 'closed') return 'not_interested';
   if (e.status === 'contacted' && e.total_amount) return 'advance_pending';
   if (e.status === 'contacted') return 'contacted';
   return 'new_enquiry';

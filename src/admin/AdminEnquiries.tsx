@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Receipt, BadgeCheck, Eye, UserX, UserCheck, LogIn, ExternalLink } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Receipt, BadgeCheck, Eye, UserX, UserCheck, LogIn, ExternalLink, UserMinus } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -23,7 +23,7 @@ import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
   GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
-  journeyBadge, nextManualAction, BookingLifecycleStepper,
+  journeyBadge, nextManualAction, BookingLifecycleStepper, isNotInterested, JourneyLifecycleLegend,
 } from './enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
 
@@ -1097,6 +1097,46 @@ export default function AdminEnquiries() {
     }
   };
 
+  // ---- Not Interested / Reopen (this is just a query, not a booking) ----
+  // Mirrors AdminEnquiryDetail.tsx's handling exactly — this only applies
+  // before anything's been paid, i.e. closing out a lead that went nowhere
+  // after being contacted, as opposed to Cancel Booking (money already on
+  // it). See isNotInterested()'s comment in enquiryShared.tsx for why
+  // 'closed' status alone is ambiguous without this. Added here (not just
+  // on the CRM detail page) so the admin doesn't have to open a row just
+  // to drop a lead that said no.
+  const handleMarkNotInterested = async (enquiry: Enquiry) => {
+    const ok = await confirm({
+      title: 'Mark as Not Interested?',
+      message: 'This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.',
+      confirmLabel: 'Mark Not Interested',
+    });
+    if (!ok) return;
+    setUpdating(enquiry.id);
+    try {
+      await updateEnquiryStatus(enquiry.id, 'closed');
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update status.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleReopenEnquiry = async (enquiry: Enquiry) => {
+    setUpdating(enquiry.id);
+    try {
+      await updateEnquiryStatus(enquiry.id, 'new');
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to reopen enquiry.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   // Consolidates every per-row action that used to be a separate icon
   // button (or, for Cancel/Delete, still is on narrower layouts) into one
   // kebab menu — Cancel/Reactivate, Mark/Undo No Show, invoice
@@ -1137,6 +1177,17 @@ export default function AdminEnquiries() {
     }
     if (e.journey_stage === 'checked_in') {
       items.push({ label: 'Undo Check In', icon: LogIn, onClick: () => handleUndoCheckIn(e) });
+    }
+    // "Not Interested" / "Reopen" only make sense before any money's
+    // changed hands — once there's a booking_id or a payment on record,
+    // closing the lead out is a Cancel Booking decision instead (different
+    // consequences: refunds, seat release, etc).
+    if (!e.cancelled_at && !e.booking_id && (e.amount_paid || 0) <= 0) {
+      items.push(
+        isNotInterested(e)
+          ? { label: 'Reopen Enquiry', icon: RefreshCw, onClick: () => handleReopenEnquiry(e) }
+          : { label: 'Not Interested (Close Query)', icon: UserMinus, onClick: () => handleMarkNotInterested(e) }
+      );
     }
     items.push(
       e.cancelled_at
@@ -1918,6 +1969,8 @@ export default function AdminEnquiries() {
   return (
     <AdminLayout title="Enquiries">
       <div className="space-y-4 sm:space-y-6">
+        <JourneyLifecycleLegend />
+
         <div className="flex justify-between items-center gap-3">
           <p className="text-dark-muted text-sm hidden sm:block">Log a WhatsApp, phone, or walk-in enquiry that didn't come through the website.</p>
           <Button variant="primary" size="sm" onClick={openAdd} className="ml-auto">
@@ -2585,6 +2638,7 @@ export default function AdminEnquiries() {
             <div className="sm:hidden space-y-3">
               {paginatedEnquiries.map((e, idx) => {
                 const jb = journeyBadge(e);
+                const nma = nextManualAction(e);
                 const seat = seatStatus(e);
                 const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                 const isOpen = expandedId === e.id;
@@ -2859,39 +2913,29 @@ export default function AdminEnquiries() {
                             <seat.icon size={14} />
                             {seat.label}
                           </span>
-                          <div className="flex-1">
-                            <Select
-                              value={e.status}
-                              disabled={updating === e.id}
-                              onChange={val => handleStatusChange(e, val as Enquiry['status'])}
-                              options={STATUS_OPTIONS}
-                              size="sm"
-                            />
-                          </div>
                         </div>
 
-                        <div className="flex items-stretch gap-2">
+                        {/* Journey Advance + kebab ActionsMenu — mirrors the
+                            desktop table's "Update" column so mobile isn't
+                            stuck with the old status dropdown / separate
+                            Cancel & Delete buttons. */}
+                        <div className="flex items-center gap-2">
+                          {nma && (
+                            <button
+                              onClick={() => handleAdvance(e)}
+                              disabled={updating === e.id}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"
+                            >
+                              <nma.icon size={14} /> {nma.label}
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleCancelToggle(e)}
-                            disabled={updating === e.id}
-                            className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full border transition-colors ${
-                              e.cancelled_at
-                                ? 'border-green-200 text-green-700 hover:bg-green-50'
-                                : 'border-red-200 text-red-600 hover:bg-red-50'
-                            }`}
+                            onClick={() => navigate(`/admin/enquiries/${e.id}`)}
+                            className={`inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap ${nma ? 'shrink-0' : 'flex-1'}`}
                           >
-                            {e.cancelled_at ? <RefreshCw size={13} /> : null}
-                            {e.cancelled_at ? 'Reactivate Booking' : 'Mark as Cancelled'}
+                            <ExternalLink size={14} /> {nma ? '' : 'Full CRM Page'}
                           </button>
-                          <button
-                            onClick={() => handleDelete(e)}
-                            disabled={updating === e.id}
-                            title="Delete enquiry"
-                            aria-label="Delete enquiry"
-                            className="shrink-0 w-10 rounded-full border border-red-200 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <ActionsMenu disabled={updating === e.id} items={buildRowActions(e)} />
                         </div>
                       </div>
                     )}

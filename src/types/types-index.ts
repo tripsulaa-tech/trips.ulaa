@@ -227,7 +227,7 @@ export interface GalleryImage {
 }
 
 export type JourneyStage = 'new_enquiry' | 'contacted' | 'advance_pending' | 'advance_paid'
-  | 'confirmed' | 'balance_pending' | 'fully_paid' | 'checked_in' | 'completed' | 'cancelled';
+  | 'confirmed' | 'balance_pending' | 'fully_paid' | 'checked_in' | 'completed' | 'cancelled' | 'not_interested';
 
 export interface Enquiry {
   id: string;

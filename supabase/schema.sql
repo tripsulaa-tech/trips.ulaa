@@ -272,7 +272,7 @@ create table public.enquiries (
     check (journey_stage = any (array[
       'new_enquiry'::text, 'contacted'::text, 'advance_pending'::text, 'advance_paid'::text,
       'confirmed'::text, 'balance_pending'::text, 'fully_paid'::text, 'checked_in'::text,
-      'completed'::text, 'cancelled'::text
+      'completed'::text, 'cancelled'::text, 'not_interested'::text
     ])),
   constraint enquiries_group_size_check
     check (group_size is null or group_size >= 2),
@@ -1128,7 +1128,47 @@ begin
 end;
 $function$;
 
--- Computes a suggested refund based on the trip's snapshotted departure
+-- Auto-quotes a brand-new, trip-linked enquiry at the trip's currently
+-- active price (early-bird if that price/deadline are set and today is
+-- still on or before the deadline, normal otherwise) whenever the caller
+-- didn't already supply total_amount. The public booking form never sends
+-- total_amount/package_type at all (see BookingFormData in
+-- src/types/types-index.ts), so this always fires for a normal website
+-- enquiry — without it, every fresh enquiry sat at total_amount NULL /
+-- package_type 'normal' regardless of an active early-bird window, showing
+-- "Not set" in the admin Payment column until someone manually priced it.
+-- Admin's manual-entry/Track Payment/bulk-edit flows already pick a
+-- package and price themselves (total_amount is supplied), so this leaves
+-- those untouched. Mirrors getActivePrice() in src/utils/utils-index.ts
+-- exactly. See add_enquiry_auto_pricing.sql.
+create or replace function public.set_enquiry_active_price()
+returns trigger
+language plpgsql
+as $function$
+declare
+  found_price               numeric(10, 2);
+  found_early_bird_price    numeric(10, 2);
+  found_early_bird_deadline date;
+begin
+  if new.trip_id is not null and new.total_amount is null then
+    select price, early_bird_price, early_bird_deadline
+      into found_price, found_early_bird_price, found_early_bird_deadline
+      from upcoming_trips where id = new.trip_id;
+
+    if found_early_bird_price is not null and found_early_bird_deadline is not null
+       and found_early_bird_deadline >= current_date then
+      new.total_amount := found_early_bird_price;
+      new.package_type := 'early_bird';
+    elsif found_price is not null then
+      new.total_amount := found_price;
+      new.package_type := 'normal';
+    end if;
+  end if;
+  return new;
+end;
+$function$;
+
+
 -- date, trip_type-specific cancellation windows, amount already paid
 -- (minus the non-refundable booking_amount), and any third-party charges
 -- to deduct. Returns null if the enquiry has no departure_date/trip_type
@@ -1330,6 +1370,9 @@ create trigger update_upcoming_trips_updated_at
 create trigger enquiry_trip_type_from_trip
   before insert on public.enquiries
   for each row execute function public.set_enquiry_trip_type();
+create trigger enquiry_price_from_trip
+  before insert on public.enquiries
+  for each row execute function public.set_enquiry_active_price();
 create trigger enquiry_cancelled_trigger
   before update on public.enquiries
   for each row execute function public.on_enquiry_cancelled();
