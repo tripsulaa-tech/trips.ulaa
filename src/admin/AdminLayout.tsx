@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Briefcase, BookOpen, Image, MessageCircle,
   LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles, ListChecks,
-  ChevronsLeft, ChevronsRight, UserCircle, PanelBottom, GripVertical
+  ChevronsLeft, ChevronsRight, UserCircle, PanelBottom, GripVertical, BarChart3
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
@@ -33,9 +33,10 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   'Bottom Nav Bar': { to: '/admin/bottom-nav', icon: PanelBottom },
   Enquiries: { to: '/admin/enquiries', icon: MessageCircle },
   Waitlist: { to: '/admin/waitlist', icon: ListChecks },
+  Reports: { to: '/admin/reports', icon: BarChart3 },
 };
 
-const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'About Page', 'Enquiries', 'Waitlist'];
+const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'About Page', 'Enquiries', 'Waitlist', 'Reports'];
 const DEFAULT_GROUP_CHILDREN_ORDER = ['Instagram Moments', 'Testimonials', 'Bottom Nav Bar', 'Founder', 'Why ULAA'];
 
 // "Dashboard" is the one item that renders as an expandable group (it's the

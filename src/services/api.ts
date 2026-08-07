@@ -1469,16 +1469,20 @@ export async function recordPayment(
 
   const delta = payment.amount_paid - (current.amount_paid || 0);
 
+  // Labels this transaction the way the invoice list shows it: the first
+  // money in is 'full_payment' if it settles the whole total in one go,
+  // otherwise 'advance'; anything after that is 'balance' if it's the
+  // payment that brings the booking to fully paid, otherwise 'installment'.
+  // Computed once, outside the `delta !== 0` guard below, so the same
+  // label is available for both the ledger insert and the activity-log
+  // entry further down without going out of scope between them.
+  const isFirstPayment = (current.amount_paid || 0) <= 0;
+  const completesTotal = !!newTotal && newTotal > 0 && payment.amount_paid >= newTotal;
+  const invoiceType = isFirstPayment
+    ? (completesTotal ? 'full_payment' : 'advance')
+    : (completesTotal ? 'balance' : 'installment');
+
   if (delta !== 0) {
-    const isFirstPayment = (current.amount_paid || 0) <= 0;
-    const completesTotal = !!newTotal && newTotal > 0 && payment.amount_paid >= newTotal;
-    // Labels this transaction the way the invoice list shows it: the first
-    // money in is 'full_payment' if it settles the whole total in one go,
-    // otherwise 'advance'; anything after that is 'balance' if it's the
-    // payment that brings the booking to fully paid, otherwise 'installment'.
-    const invoiceType = isFirstPayment
-      ? (completesTotal ? 'full_payment' : 'advance')
-      : (completesTotal ? 'balance' : 'installment');
     const { error: paymentError } = await supabase.from('payments').insert({
       enquiry_id: current.id,
       amount: delta,
