@@ -227,6 +227,21 @@ export const GROUP_FILTER_LABELS = {
   solo: 'Solo',
 } as const;
 
+// Package filter — Early Bird vs Normal pricing (see add_enquiry_auto_pricing.sql).
+// Same "row is undefined defaults to normal" convention used everywhere else
+// package_type is read (PACKAGE_CONFIG[e.package_type || 'normal']), so an
+// older row with no package_type set still lands under "Normal" here rather
+// than being invisible to both options.
+export const PACKAGE_FILTER_LABELS = {
+  all: 'All',
+  early_bird: 'Early Bird',
+  normal: 'Normal',
+} as const;
+
+export function packageFilterKey(e: Enquiry): 'early_bird' | 'normal' {
+  return e.package_type === 'early_bird' ? 'early_bird' : 'normal';
+}
+
 // foodPreferenceKey / SOURCE_CONFIG now live in enquiryShared.tsx (imported
 // by AdminEnquiries.tsx).
 

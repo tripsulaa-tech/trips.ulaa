@@ -13,35 +13,35 @@ import {
   BadgeCheck, Plus, CheckCircle2, XCircle, UserX, UserCheck, LogIn, RefreshCw,
   Trash2, IndianRupee, Pencil, UserMinus, Bird, CalendarClock, X,
 } from 'lucide-react';
-import AdminLayout from './AdminLayout';
-import Button from '../components/ui/Button';
-import Modal from '../components/ui/Modal';
-import Select from '../components/ui/Select';
-import FoodMark from '../components/ui/FoodMark';
-import DatePicker from '../components/ui/DatePicker';
-import ActionsMenu from '../components/ui/ActionsMenu';
-import type { ActionMenuItem } from '../components/ui/ActionsMenu';
-import { ContactQuickLinks } from '../components/ui/DataTableChrome';
-import { useConfirm } from '../components/ui/useConfirm';
-import { useAlert } from '../components/ui/useAlert';
+import AdminLayout from '../AdminLayout';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import Select from '../../components/ui/Select';
+import FoodMark from '../../components/ui/FoodMark';
+import DatePicker from '../../components/ui/DatePicker';
+import ActionsMenu from '../../components/ui/ActionsMenu';
+import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
+import { ContactQuickLinks } from '../../components/ui/DataTableChrome';
+import { useConfirm } from '../../components/ui/useConfirm';
+import { useAlert } from '../../components/ui/useAlert';
 import {
   getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin,
   recordPayment, recordTypedPayment, generatePendingInvoice, addExtraCharge,
   markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
   recordRefund, deleteEnquiry, updateEnquiryDetails, setEnquiryFollowUp,
-} from '../services/api';
-import type { ClosedReason, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
-import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
-import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../utils/utils-index';
+} from '../../services/api';
+import type { ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
+import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
+import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../../utils/utils-index';
 import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
   GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
   CLOSED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus,
-} from './enquiryShared';
-import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
+} from '../enquiryShared';
+import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
 
 const emptyPaymentForm: PaymentForm = {
   package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '', food_preference: '',

@@ -82,7 +82,7 @@ const AdminTrips = lazy(() => import('../admin/AdminTrips'));
 const AdminAlbums = lazy(() => import('../admin/AdminAlbums'));
 const AdminGallery = lazy(() => import('../admin/AdminGallery'));
 const AdminEnquiries = lazy(() => import('../admin/enquiries/AdminEnquiries'));
-const AdminEnquiryDetail = lazy(() => import('../admin/AdminEnquiryDetail'));
+const AdminEnquiryDetail = lazy(() => import('../admin/enquiries/AdminEnquiryDetail'));
 const AdminWaitlist = lazy(() => import('../admin/AdminWaitlist'));
 const AdminAbout = lazy(() => import('../admin/AdminAbout'));
 const AdminFounder = lazy(() => import('../admin/AdminFounder'));

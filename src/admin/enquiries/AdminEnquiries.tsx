@@ -30,7 +30,8 @@ import {
   BULK_NO_CHANGE,
   paymentStatus, paymentBalance, paymentFilterKey, isBooked, isCancelled, seatStatus,
   isGroupEntry, refundStatus, STATUS_CONFIG, PAY_FILTER_LABELS, FOOD_FILTER_LABELS,
-  BOOKING_FILTER_LABELS, GROUP_FILTER_LABELS, emptyForm, emptyWaitlistPerson, emptyBulkForm,
+  BOOKING_FILTER_LABELS, GROUP_FILTER_LABELS, PACKAGE_FILTER_LABELS, packageFilterKey,
+  emptyForm, emptyWaitlistPerson, emptyBulkForm,
 } from './adminEnquiriesShared';
 import type { BulkEditForm, EnquiryForm, WaitlistPersonForm } from './adminEnquiriesShared';
 import FilterDropdown from './FilterDropdown';
@@ -64,6 +65,7 @@ export default function AdminEnquiries() {
   const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked' | 'cancelled'>('all');
   const [groupFilter, setGroupFilter] = useState<'all' | 'group' | 'solo'>('all');
   const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
+  const [packageFilter, setPackageFilter] = useState<'all' | 'early_bird' | 'normal'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | Enquiry['source']>('all');
   // Quick toggle for "follow-ups due" — deliberately just a boolean chip
   // (not a full FilterDropdown like Payment/Booking above) since there's
@@ -94,7 +96,7 @@ export default function AdminEnquiries() {
   // Which single filter's dropdown is open — only one at a time. 'more'
   // is the overflow menu for less-frequently-used filters (currently just
   // Source), keeping the main bar to five compact boxes.
-  const [openFilterPanel, setOpenFilterPanel] = useState<'trip' | 'query' | 'pay' | 'booked' | 'group' | 'food' | 'more' | null>(null);
+  const [openFilterPanel, setOpenFilterPanel] = useState<'trip' | 'query' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null>(null);
   const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   // Enquiry id currently generating/sharing its invoice PDF — disables the
@@ -1530,6 +1532,7 @@ export default function AdminEnquiries() {
     ))
     .filter(e => groupFilter === 'all' || (groupFilter === 'group' ? isGroupEntry(e) : !isGroupEntry(e)))
     .filter(e => foodFilter === 'all' || foodPreferenceKey(e) === foodFilter)
+    .filter(e => packageFilter === 'all' || packageFilterKey(e) === packageFilter)
     .filter(e => sourceFilter === 'all' || e.source === sourceFilter)
     .filter(e => !followUpDueOnly || !!followUpStatus(e)?.isDue)
     .filter(e => !trimmedSearch
@@ -1575,7 +1578,7 @@ export default function AdminEnquiries() {
   // filters, trip scope, or search term change. Done during render
   // (comparing against the previous filter signature) rather than in an
   // effect — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const filterSignature = `${filter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${sourceFilter}|${followUpDueOnly}|${selectedTripKey}|${trimmedSearch}`;
+  const filterSignature = `${filter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${packageFilter}|${sourceFilter}|${followUpDueOnly}|${selectedTripKey}|${trimmedSearch}`;
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
   if (filterSignature !== prevFilterSignature) {
     setPrevFilterSignature(filterSignature);
@@ -1612,12 +1615,17 @@ export default function AdminEnquiries() {
     non_veg: scopedEnquiries.filter(e => foodPreferenceKey(e) === 'non_veg').length,
     not_set: scopedEnquiries.filter(e => foodPreferenceKey(e) === 'not_set').length,
   };
+  const packageCounts = {
+    all: scopedEnquiries.length,
+    early_bird: scopedEnquiries.filter(e => packageFilterKey(e) === 'early_bird').length,
+    normal: scopedEnquiries.filter(e => packageFilterKey(e) === 'normal').length,
+  };
   const sourceCounts = Object.keys(SOURCE_CONFIG).reduce((acc, key) => {
     acc[key] = scopedEnquiries.filter(e => e.source === key).length;
     return acc;
   }, { all: scopedEnquiries.length } as Record<string, number>);
   const followUpDueCount = scopedEnquiries.filter(e => !!followUpStatus(e)?.isDue).length;
-  const activeFilterCount = (selectedTripKey !== null ? 1 : 0) + (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (followUpDueOnly ? 1 : 0) + (trimmedSearch ? 1 : 0);
+  const activeFilterCount = (selectedTripKey !== null ? 1 : 0) + (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (packageFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (followUpDueOnly ? 1 : 0) + (trimmedSearch ? 1 : 0);
 
   // Drives the "Clear all" action in the filter bar below.
   const clearAllFilters = () => {
@@ -1627,6 +1635,7 @@ export default function AdminEnquiries() {
     setBookedFilter('all');
     setGroupFilter('all');
     setFoodFilter('all');
+    setPackageFilter('all');
     setSourceFilter('all');
     setFollowUpDueOnly(false);
     setSearchQuery('');
@@ -2162,6 +2171,31 @@ export default function AdminEnquiries() {
                         onSelect={key => { setFoodFilter(key); setOpenFilterPanel(null); }}
                         options={(['all', 'veg', 'non_veg', 'not_set'] as const).map(key => ({
                           key, label: FOOD_FILTER_LABELS[key], count: foodCounts[key],
+                        }))}
+                      />
+                    )}
+                  </div>
+
+                  {/* Package — Early Bird vs Normal pricing (added
+                      alongside auto-pricing; see add_enquiry_auto_pricing.sql
+                      and PACKAGE_FILTER_LABELS). */}
+                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Package</label>
+                    <button
+                      onClick={() => setOpenFilterPanel(p => (p === 'package' ? null : 'package'))}
+                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
+                        openFilterPanel === 'package' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
+                      }`}
+                    >
+                      <span className="text-sm font-button font-medium text-primary truncate">{PACKAGE_FILTER_LABELS[packageFilter]}</span>
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'package' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openFilterPanel === 'package' && (
+                      <FilterDropdown
+                        value={packageFilter}
+                        onSelect={key => { setPackageFilter(key); setOpenFilterPanel(null); }}
+                        options={(['all', 'early_bird', 'normal'] as const).map(key => ({
+                          key, label: PACKAGE_FILTER_LABELS[key], count: packageCounts[key],
                         }))}
                       />
                     )}
