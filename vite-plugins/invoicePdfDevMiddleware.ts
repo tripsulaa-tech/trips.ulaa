@@ -44,6 +44,7 @@ import {
   buildInvoiceHtml,
   describeSupabaseProjectMismatch,
   isAuthNetworkError,
+  probeNetworkFailureReason,
   supabaseProjectRef,
   InvoiceNotFoundError,
   type PdfCapableBrowser,
@@ -147,19 +148,16 @@ export function invoicePdfDevMiddleware(env: Record<string, string>): Plugin {
         if (authError || !userData?.user) {
           if (authError && isAuthNetworkError(authError)) {
             // The Auth API was never reached — a broken/refreshed token
-            // can't explain this, so don't suggest re-logging-in. On a dev
-            // machine this is almost always a corporate proxy intercepting
-            // outbound HTTPS (see the puppeteer-download comment above for
-            // the same class of issue), no internet access at all, or the
-            // Supabase project itself being paused (free-tier projects
-            // auto-pause after inactivity).
-            console.error('[dev] Could not reach Supabase Auth API:', authError.message);
+            // can't explain this, so don't suggest re-logging-in. Probe the
+            // same host directly (bypassing supabase-js, which discards the
+            // real cause) to say *why* — see probeNetworkFailureReason's
+            // doc comment.
+            const reason = await probeNetworkFailureReason(supabaseUrl);
+            console.error('[dev] Could not reach Supabase Auth API:', reason);
             sendJson(res, 502, {
               error:
-                `Could not reach Supabase's Auth API (${authError.message}) to verify your session — this is a ` +
-                `network problem on this machine, not an expired session. Check your internet connection, any ` +
-                `corporate proxy/VPN that might intercept HTTPS to *.supabase.co, and that the Supabase project ` +
-                `("${supabaseProjectRef(supabaseUrl)}") isn't paused in the dashboard.`,
+                `Could not reach Supabase's Auth API to verify your session — this is a network problem on ` +
+                `this machine, not an expired session. Cause: ${reason}. Project: "${supabaseProjectRef(supabaseUrl)}".`,
             });
             return;
           }

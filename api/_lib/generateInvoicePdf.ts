@@ -58,6 +58,69 @@ export function isAuthNetworkError(error: unknown): boolean {
   );
 }
 
+/** supabase-js's own error wrapping is a dead end for diagnosing *why* a
+ *  network call failed: internally it does
+ *  `throw new AuthRetryableFetchError(err.message, 0)`, which keeps only
+ *  `err.message` (always the generic "fetch failed") and drops `err.cause`
+ *  — the actual TLS/DNS/connection error Node's fetch attaches — on the
+ *  floor. There's no way to recover that detail from the error
+ *  `supabase.auth.getUser()` returns.
+ *
+ *  So when isAuthNetworkError() is true, this re-issues one plain `fetch`
+ *  straight at the same Auth API host (no supabase-js involved) purely to
+ *  read `.cause` off *that* failure and turn it into something a human can
+ *  act on — "self-signed certificate in certificate chain" (a corporate
+ *  SSL-inspecting proxy your browser trusts but Node doesn't — Node has its
+ *  own certificate store, separate from the OS/browser one) reads very
+ *  differently from "ENOTFOUND" (DNS / no network) or "ECONNREFUSED" (a
+ *  firewall actively blocking the connection). Local-dev diagnostics only —
+ *  never called from the production route. */
+export async function probeNetworkFailureReason(supabaseUrl: string): Promise<string> {
+  try {
+    await fetch(`${supabaseUrl}/auth/v1/health`, { signal: AbortSignal.timeout(5000) });
+    return 'the direct probe actually succeeded just now — this may have been transient, try the download again';
+  } catch (err) {
+    const cause = err instanceof Error ? err.cause : undefined;
+    const code = cause && typeof cause === 'object' && 'code' in cause ? String((cause as { code: unknown }).code) : undefined;
+    const causeMessage = cause instanceof Error ? cause.message : undefined;
+    const detail = causeMessage || (err instanceof Error ? err.message : String(err));
+    const hint = explainNetworkErrorCode(code);
+    return `${detail}${code ? ` [${code}]` : ''}${hint ? ` — ${hint}` : ''}`;
+  }
+}
+
+/** A given Node network-error code always needs a specific, different fix —
+ *  no point making someone map "ENOTFOUND" to "that's DNS" themselves when
+ *  the message can just say so. */
+function explainNetworkErrorCode(code: string | undefined): string | null {
+  switch (code) {
+    case 'ENOTFOUND':
+      return (
+        "Node couldn't resolve this hostname via the OS DNS resolver, even though your browser can reach it. " +
+        'Chrome/Edge use "Secure DNS" (DNS-over-HTTPS) by default, which bypasses the OS resolver entirely — ' +
+        "that's the most common reason a site loads fine in the browser while Node gets ENOTFOUND. Try " +
+        '`nslookup <host>` (or `ping <host>`) in the same terminal running `npm run dev`; if that also fails, ' +
+        "it's your OS/VPN DNS settings, not this app."
+      );
+    case 'ECONNREFUSED':
+      return 'something on this network is actively refusing the connection — check a firewall or VPN blocking outbound HTTPS.';
+    case 'ETIMEDOUT':
+    case 'UND_ERR_CONNECT_TIMEOUT':
+      return 'the connection attempt timed out — likely a firewall silently dropping the packets rather than refusing them.';
+    case 'DEPTH_ZERO_SELF_SIGNED_CERT':
+    case 'SELF_SIGNED_CERT_IN_CHAIN':
+    case 'UNABLE_TO_VERIFY_LEAF_SIGNATURE':
+    case 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY':
+      return (
+        "a certificate in the chain isn't trusted by Node — almost always a corporate SSL-inspecting proxy whose " +
+        'root CA is trusted by your OS/browser but not by Node (separate trust stores). Set ' +
+        "NODE_EXTRA_CA_CERTS to that proxy's root CA .pem file."
+      );
+    default:
+      return null;
+  }
+}
+
 /** Both invoice-PDF routes verify the admin's session token with a
  *  service-role client built from SUPABASE_URL — a *different* env var from
  *  the VITE_SUPABASE_URL the browser actually signs users in against. If
