@@ -71,6 +71,14 @@ ULAA/
    VITE_SUPABASE_URL=your-project-url
    VITE_SUPABASE_ANON_KEY=your-anon-key
    ```
+   To test "Download Invoice" in the admin panel locally, also add the two
+   server-only vars from `.env.example` (`SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY` — no `VITE_` prefix). `npm run dev` runs
+   plain Vite, which doesn't run Vercel's serverless functions, so a small
+   dev-only middleware (`vite-plugins/invoicePdfDevMiddleware.ts`) stands in
+   for `api/invoices/[id]/pdf.ts` locally; it needs those vars and the
+   `puppeteer` devDependency (`npm install` already pulls it in) the first
+   time you download an invoice in dev.
    **Note:** Write this file as plain UTF-8 without a BOM. `Set-Content -Encoding utf8` in Windows PowerShell adds a BOM by default and breaks Vite's env parsing silently (falls back to a placeholder client, no error shown). Use Python to write it safely if scripting:
    ```powershell
    python -c "open('.env','w',encoding='utf-8').write('VITE_SUPABASE_URL=...\nVITE_SUPABASE_ANON_KEY=...\n')"

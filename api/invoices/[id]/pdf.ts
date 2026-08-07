@@ -16,11 +16,24 @@
 // bundled into the public client):
 //   SUPABASE_URL                 (same value as VITE_SUPABASE_URL)
 //   SUPABASE_SERVICE_ROLE_KEY    (Supabase dashboard → Settings → API)
+//
+// NOTE: `npm run dev` runs plain `vite`, which does not run Vercel
+// serverless functions — this file is never invoked locally. For local
+// invoice-PDF testing see vite-plugins/invoicePdfDevMiddleware.ts, which
+// reuses fetchInvoiceRecord/renderInvoicePdfBuffer from
+// api/_lib/generateInvoicePdf.ts so both stay in sync.
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
-import { buildInvoiceHtml, type InvoiceEnquiry, type InvoicePayment } from '../../../src/lib/invoice/invoiceHtml';
+import {
+  fetchInvoiceRecord,
+  renderInvoicePdfBuffer,
+  isValidPdfBuffer,
+  logoDataUrlFromHttp,
+  buildInvoiceHtml,
+  InvoiceNotFoundError,
+} from '../../_lib/generateInvoicePdf';
 
 // Memory/duration for this function are configured in vercel.json's
 // "functions" block (headless Chromium needs more of both than the
@@ -62,44 +75,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // ── Fetch booking + payment ledger ─────────────────────────────────────
-  const { data: enquiry, error: enquiryError } = await supabaseAdmin
-    .from('enquiries')
-    .select('id, booking_id, full_name, phone, email, city, trip_title, departure_date, package_type, total_amount, amount_paid, group_id, group_size, group_seq')
-    .or(`id.eq.${id},booking_id.eq.${id}`)
-    .single();
-
-  if (enquiryError || !enquiry) {
-    res.status(404).json({ error: 'Booking not found.' });
-    return;
-  }
-
-  const { data: payments, error: paymentsError } = await supabaseAdmin
-    .from('payments')
-    .select('amount, payment_type, payment_method, paid_at')
-    .eq('enquiry_id', enquiry.id)
-    .order('paid_at', { ascending: true });
-
-  if (paymentsError) {
+  let record: Awaited<ReturnType<typeof fetchInvoiceRecord>>;
+  try {
+    record = await fetchInvoiceRecord(supabaseAdmin, id);
+  } catch (err) {
+    if (err instanceof InvoiceNotFoundError) {
+      res.status(404).json({ error: err.message });
+      return;
+    }
     res.status(500).json({ error: 'Failed to load payment history.' });
     return;
   }
+  const { enquiry, payments } = record;
 
   // ── Logo (same-origin static asset, fetched as a data URL so Puppeteer
   //    doesn't need a second network hop or CORS handling) ────────────────
-  let logoSrc: string | null = null;
-  try {
-    const host = req.headers['x-forwarded-host'] || req.headers.host;
-    const protocol = req.headers['x-forwarded-proto'] || 'https';
-    const logoRes = await fetch(`${protocol}://${host}/ULAA-logo.jpg`);
-    if (logoRes.ok) {
-      const buf = Buffer.from(await logoRes.arrayBuffer());
-      logoSrc = `data:image/jpeg;base64,${buf.toString('base64')}`;
-    }
-  } catch {
-    logoSrc = null;
-  }
+  const host = (req.headers['x-forwarded-host'] || req.headers.host) as string;
+  const protocol = (req.headers['x-forwarded-proto'] as string) || 'https';
+  const logoSrc = await logoDataUrlFromHttp(protocol, host);
 
-  const html = buildInvoiceHtml(enquiry as InvoiceEnquiry, (payments || []) as InvoicePayment[], { logoSrc });
+  const html = buildInvoiceHtml(enquiry, payments, { logoSrc });
 
   // ── Render with headless Chromium ──────────────────────────────────────
   let browser;
@@ -118,29 +113,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // page, which still produces *a* PDF, just not a valid/openable one.
       headless: chromium.headless,
     });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
-    });
 
-    // Puppeteer's page.pdf() resolves a Uint8Array (not always a real Node
-    // Buffer instance). @vercel/node's res.send() only recognizes actual
-    // Buffers as binary — anything else gets JSON.stringify'd into a text
-    // blob of byte indices, which downloads fine but isn't a valid PDF.
-    // Buffer.from(...) + res.end() sidesteps that body-sniffing entirely.
-    const buffer = Buffer.from(pdf);
+    const buffer = await renderInvoicePdfBuffer(browser, html);
 
     // Guard against ever shipping a broken file to the browser: a real PDF
     // always starts with the "%PDF-" magic bytes. If Chromium produced a
     // blank/corrupt render (or the process was killed mid-render), fail
     // loudly server-side instead of handing the client bytes that download
     // fine but show "We can't open this file" in the PDF viewer.
-    const isValidPdf = buffer.length > 0 && buffer.subarray(0, 5).toString('ascii') === '%PDF-';
-    if (!isValidPdf) {
+    if (!isValidPdfBuffer(buffer)) {
       console.error('Invoice PDF generation produced an invalid PDF buffer', {
         length: buffer.length,
         head: buffer.subarray(0, 20).toString('hex'),
