@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from '../enquiryShared';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, REFUND_METHOD_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from '../enquiryShared';
 import type { PaymentForm } from '../enquiryShared';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
@@ -213,6 +213,43 @@ export default function PaymentModal({
                     : `They paid ${formatPrice(paymentTarget.amount_paid || 0)} in total.`}
                 </p>
               </div>
+
+              {!paymentTarget.is_no_show && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-dark mb-1">Refund Method</label>
+                    <Select
+                      value={paymentForm.refund_method}
+                      onChange={val => setPaymentForm(f => ({ ...f, refund_method: val }))}
+                      options={REFUND_METHOD_OPTIONS}
+                      placeholder="Select method"
+                      size="sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-dark mb-1">Refund Date</label>
+                    <input
+                      type="date"
+                      value={paymentForm.refund_date}
+                      onChange={e => setPaymentForm(f => ({ ...f, refund_date: e.target.value }))}
+                      className={`${inputClass} text-sm`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!paymentTarget.is_no_show && (
+                <div>
+                  <label className="block text-sm font-medium text-dark mb-1">Refund Notes (optional)</label>
+                  <textarea
+                    value={paymentForm.refund_notes}
+                    onChange={e => setPaymentForm(f => ({ ...f, refund_notes: e.target.value }))}
+                    rows={2}
+                    className={`${inputClass} resize-none`}
+                    placeholder="e.g. partial refund after cancellation charges"
+                  />
+                </div>
+              )}
             </div>
           )}
 

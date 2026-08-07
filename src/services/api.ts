@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment, JourneyStage, ContactOutcome } from '../types/types-index';
+import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment, JourneyStage, ContactOutcome, CancellationReason, ActivityLogEntry } from '../types/types-index';
 
 // =============================================
 // Trip lifecycle
@@ -624,6 +624,60 @@ function isSeatsUnavailableError(error: { message?: string }): boolean {
   return !!error.message?.includes('SEATS_UNAVAILABLE');
 }
 
+// =============================================
+// Activity Timeline (CRM spec section 14)
+// =============================================
+// One append-only insert per meaningful admin action — "Website enquiry
+// submitted" is logged separately, straight from the DB (see
+// log_enquiry_created_activity() / on_enquiry_created_log_activity in
+// add_activity_log.sql), since it has to fire from both the authenticated
+// admin portal (createManualEnquiry) and the anonymous public form
+// (submitEnquiry/submitGroupEnquiry) — this helper only covers the
+// admin-portal side.
+//
+// Deliberately best-effort: a logging failure is caught and console.error'd
+// rather than thrown, so a transient activity_log insert problem can never
+// block the real action (recording a payment, checking someone in, ...) it
+// was describing. The trade-off is an occasional gap in the timeline rather
+// than a blocked booking — the right side to fail open on.
+// Local, log-message-only label map — deliberately NOT importing
+// INVOICE_TYPE_LABEL from admin/enquiryShared.tsx here: that file is UI
+// layer (and itself imports from this services file), so pulling it in
+// here would be a layering violation risking a circular import. This is
+// intentionally a smaller, log-copy-specific set of labels, not a shared
+// source of truth for the admin UI's own invoice-type labels.
+const PAYMENT_TYPE_LOG_LABEL: Record<string, string> = {
+  advance: 'Advance',
+  balance: 'Balance payment',
+  installment: 'Installment',
+  full_payment: 'Full payment',
+  booking_amount: 'Booking amount',
+  extra_charge: 'Extra charge',
+  refund: 'Refund',
+};
+
+async function logActivity(enquiryId: string, action: string, details?: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('activity_log')
+    .insert({ enquiry_id: enquiryId, action, details: details || null });
+  if (error) console.error('logActivity failed:', action, error);
+}
+
+// Full, chronological (oldest first) activity timeline for one enquiry —
+// powers the read-only "Activity Timeline" section on AdminEnquiryDetail.
+// Nothing in this table is ever updated or deleted (enforced by RLS: no
+// UPDATE/DELETE policy exists on activity_log at all), so what this
+// returns is always the complete, honest history.
+export async function getActivityLog(enquiryId: string): Promise<ActivityLogEntry[]> {
+  const { data, error } = await supabase
+    .from('activity_log')
+    .select('*')
+    .eq('enquiry_id', enquiryId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
 // The (trip_id, name, phone, email) unique constraint (active enquiries
 // only — cancelled ones are excluded) means an exact literal re-submission
 // throws a Postgres 23505. Surfaced as a distinct error so the UI can show
@@ -775,6 +829,11 @@ export async function updateEnquiryStatus(
     .eq('id', id);
   if (error) throw error;
   await refreshJourneyStage(id);
+  await logActivity(
+    id,
+    status === 'closed' ? 'Lead closed' : status === 'new' ? 'Lead reopened' : `Lead status → ${status}`,
+    status === 'closed' && closedReason ? closedReason.replace(/_/g, ' ') : null
+  );
 }
 
 // The one entry point for the "Record Contact Outcome" popup — this is how
@@ -823,7 +882,14 @@ export async function recordContactOutcome(
   };
   const { error } = await supabase.from('enquiries').update(patch).eq('id', id);
   if (error) throw error;
-  return refreshJourneyStage(id);
+  const updated = await refreshJourneyStage(id);
+  const outcomeLabel = args.outcome.replace(/_/g, ' ');
+  await logActivity(
+    id,
+    'Contact outcome recorded',
+    [outcomeLabel, args.notes?.trim() || null].filter(Boolean).join(' · ') || null
+  );
+  return updated;
 }
 
 // Corrects who/what an enquiry is actually about — full name, contact
@@ -1110,23 +1176,55 @@ export async function setEnquiryFollowUp(id: string, followUpAt: string | null):
 // booking is fully paid (checking in someone who still owes money is a
 // front-desk/ops decision, not blocked here, but the button that calls this
 // only appears once journey_stage is already 'fully_paid').
-export async function checkInEnquiry(enquiryId: string): Promise<Enquiry> {
+// Stamps checked_in_at, moving Attendance to "Checked In" (CRM spec section
+// 4) without touching Booking Journey or Booking State — those stay exactly
+// as they were. Gated per spec section 18's Check-In Rules: only a booking
+// that's Active, Fully Paid, and hasn't already started its Attendance
+// timeline (not already checked in, not a no-show) can be checked in. The
+// UI already hides the Check In action outside these conditions (see
+// nextManualAction/buildRowActions), but this is the one choke point every
+// check-in path calls, so it's guarded here too rather than trusted to the
+// UI alone.
+export async function checkInEnquiry(enquiry: Enquiry): Promise<Enquiry> {
+  if (enquiry.cancelled_at || enquiry.booking_state === 'cancelled') {
+    throw new Error('Cannot check in — this booking has been cancelled.');
+  }
+  if (enquiry.journey_stage !== 'fully_paid') {
+    throw new Error(
+      enquiry.journey_stage === 'checked_in' || enquiry.journey_stage === 'completed'
+        ? 'This traveller is already checked in.'
+        : 'Cannot check in because the balance payment is still pending.'
+    );
+  }
+  if (enquiry.is_no_show) {
+    throw new Error('Cannot check in — this booking is marked as a no-show. Undo the no-show first.');
+  }
+
   const { error } = await supabase
     .from('enquiries')
     .update({ checked_in_at: new Date().toISOString() })
-    .eq('id', enquiryId);
+    .eq('id', enquiry.id);
   if (error) throw error;
-  return refreshJourneyStage(enquiryId);
+  const updated = await refreshJourneyStage(enquiry.id);
+  await logActivity(enquiry.id, 'Checked In');
+  return updated;
 }
 
-// Undoes an accidental check-in.
+// Undoes an accidental check-in. Deliberately no eligibility guard beyond
+// "there's a check-in to undo" — this is a correction path (e.g. an admin
+// checked in the wrong row, or needs to reverse a check-in specifically so
+// they can Mark No Show instead, per spec section 18's "Checked In: Mark No
+// Show only if check-in is reversed" rule), not a forward business
+// transition, so it doesn't need the same prerequisites checkInEnquiry does.
 export async function undoCheckInEnquiry(enquiryId: string): Promise<Enquiry> {
   const { error } = await supabase
     .from('enquiries')
     .update({ checked_in_at: null })
     .eq('id', enquiryId);
   if (error) throw error;
-  return refreshJourneyStage(enquiryId);
+  const updated = await refreshJourneyStage(enquiryId);
+  await logActivity(enquiryId, 'Check-in undone');
+  return updated;
 }
 
 // Any payment — full or partial — reserves a seat, since a deposit is a
@@ -1201,7 +1299,9 @@ export async function markEnquiryCompleted(enquiryId: string): Promise<Enquiry> 
     .update({ booking_status: 'completed' })
     .eq('id', enquiryId);
   if (error) throw error;
-  return refreshJourneyStage(enquiryId);
+  const updated = await refreshJourneyStage(enquiryId);
+  await logActivity(enquiryId, 'Completed');
+  return updated;
 }
 
 // =============================================
@@ -1235,6 +1335,14 @@ export async function getWaitlistEntries(): Promise<WaitlistEntry[]> {
   return data || [];
 }
 
+// How long a "Seat Offered" holds before it's considered overdue (CRM spec
+// section 9's "Offer Expiry"). Purely advisory — see offer_expiry's doc
+// comment in types-index.ts — this just picks the window; nothing enforces
+// it automatically. 48h is a reasonable default for a travel booking
+// decision; if that ever needs to vary per trip/admin, this is the one
+// place to make it configurable instead of a magic number.
+const WAITLIST_OFFER_WINDOW_HOURS = 48;
+
 // For the manual status dropdown only — waiting / notified / declined.
 // 'converted' is never set through here; see markWaitlistConverted below.
 // The DB trigger (enforce_waitlist_conversion) rejects a bare 'converted'
@@ -1242,7 +1350,19 @@ export async function getWaitlistEntries(): Promise<WaitlistEntry[]> {
 // option in the first place.
 export async function updateWaitlistStatus(id: string, status: WaitlistEntry['status']): Promise<void> {
   const updates: Partial<WaitlistEntry> = { status };
-  if (status === 'notified') updates.notified_at = new Date().toISOString();
+  if (status === 'notified') {
+    // Offering a seat starts both the clock (notified_at = "Offer Sent
+    // At") and the deadline (offer_expiry) in the same update, so the two
+    // can never drift apart.
+    const now = new Date();
+    updates.notified_at = now.toISOString();
+    updates.offer_expiry = new Date(now.getTime() + WAITLIST_OFFER_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+  } else {
+    // Any other status (waiting/declined/expired) means there's no active
+    // offer outstanding — clear the deadline so a stale offer_expiry never
+    // lingers on a row that isn't actually "Seat Offered" anymore.
+    updates.offer_expiry = null;
+  }
   const { error } = await supabase.from('waitlist').update(updates).eq('id', id);
   if (error) throw error;
 }
@@ -1291,9 +1411,17 @@ export async function markWaitlistConverted(waitlistId: string, enquiryId: strin
 
   const { error } = await supabase
     .from('waitlist')
-    .update({ status: newStatus, converted_enquiry_ids: updatedIds })
+    .update({
+      status: newStatus,
+      converted_enquiry_ids: updatedIds,
+      // Converting closes out the offer — clear the deadline the same way
+      // updateWaitlistStatus does for declined/expired, so a fully
+      // converted row never shows a stale "Offer expires in..." badge.
+      ...(newStatus === 'converted' ? { offer_expiry: null } : {}),
+    })
     .eq('id', waitlistId);
   if (error) throw error;
+  await logActivity(enquiryId, 'Waitlist converted', entry.group_size && entry.group_size > 1 ? `Seat ${updatedIds.length} of ${needed}` : null);
 }
 
 export async function deleteWaitlistEntry(id: string): Promise<void> {
@@ -1396,7 +1524,15 @@ export async function recordPayment(
     })
     .eq('id', current.id);
   if (error) throw error;
-  return refreshJourneyStage(current.id);
+  const updated = await refreshJourneyStage(current.id);
+  if (delta !== 0) {
+    await logActivity(
+      current.id,
+      delta > 0 ? `${PAYMENT_TYPE_LOG_LABEL[invoiceType] || invoiceType} received` : 'Payment adjusted',
+      `₹${Math.abs(delta).toLocaleString('en-IN')}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
+    );
+  }
+  return updated;
 }
 
 // Full payment ledger for one enquiry (booking_amount / installment /
@@ -1473,7 +1609,13 @@ export async function recordTypedPayment(
     .update({ is_paid: isPaidFull, status, booking_status: bookingStatus })
     .eq('id', current.id);
   if (error) throw error;
-  return refreshJourneyStage(current.id);
+  const updated = await refreshJourneyStage(current.id);
+  await logActivity(
+    current.id,
+    `${PAYMENT_TYPE_LOG_LABEL[payment.type] || payment.type} received`,
+    `₹${payment.amount.toLocaleString('en-IN')}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
+  );
+  return updated;
 }
 
 // Raises an invoice for money that hasn't been collected yet — e.g. a
@@ -1496,6 +1638,7 @@ export async function generatePendingInvoice(
     .select()
     .single();
   if (error) throw error;
+  await logActivity(enquiryId, `Invoice generated · ${PAYMENT_TYPE_LOG_LABEL[type] || type}`, `₹${amount.toLocaleString('en-IN')} · pending`);
   return data;
 }
 
@@ -1533,7 +1676,9 @@ export async function addExtraCharge(
 
   const { data, error } = await supabase.from('enquiries').select('*').eq('id', current.id).single();
   if (error) throw error;
-  return refreshJourneyStage(data.id);
+  const updated = await refreshJourneyStage(data.id);
+  await logActivity(current.id, 'Extra charge added', `₹${amount.toLocaleString('en-IN')}${options?.collectedNow ? ' · collected' : ' · pending'}`);
+  return updated;
 }
 
 // Settles a 'pending' invoice (a balance/installment invoice raised ahead of
@@ -1545,8 +1690,16 @@ export async function markInvoicePaid(
   paymentId: string,
   options?: { payment_method?: string }
 ): Promise<Payment> {
+  // NOTE: this was previously updating the `enquiries` table by paymentId
+  // (a payments.id, not an enquiries.id) with columns (`status: 'paid'`,
+  // `paid_at`) that don't exist on `enquiries` — every call would fail
+  // (either no matching row, or a column-does-not-exist error). `status`/
+  // `paid_at`/`payment_method` are payments columns; the intended target
+  // was always this row itself. Fixed in place rather than left broken
+  // since it's the "Mark Paid" action the Invoice system (spec section 11)
+  // depends on.
   const { data, error } = await supabase
-    .from('enquiries')
+    .from('payments')
     .update({
       status: 'paid',
       paid_at: new Date().toISOString(),
@@ -1557,6 +1710,7 @@ export async function markInvoicePaid(
     .single();
   if (error) throw error;
   await refreshJourneyStage(data.enquiry_id);
+  await logActivity(data.enquiry_id, 'Invoice marked paid', `${data.payment_type} · ₹${data.amount.toLocaleString('en-IN')}${data.invoice_number ? ` · ${data.invoice_number}` : ''}`);
   return data;
 }
 
@@ -1583,12 +1737,34 @@ export async function markInvoicePaid(
 // legitimate transition (a completed trip is in the past; use a refund/
 // credit note against it instead of cancelling the booking record).
 //
+// Also refuses once the traveller has actually checked in — spec section
+// 18's Cancellation Rules stop at Fully Paid; Checked In explicitly can't
+// Cancel Booking ("If a traveller has physically checked in, cancellation
+// is no longer allowed"). Undo Check In first if a check-in needs
+// reversing before a cancellation can go through.
+//
 // The trip's seats_booked count frees up on its own: the
 // on_enquiries_seat_sync DB trigger recomputes it from real enquiries data
 // right after this update commits, so no manual adjustment is made here.
-export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number, isNoShow?: boolean): Promise<Enquiry> {
+//
+// reason/notes capture *why* the booking was cancelled (CRM spec section
+// 10's Cancellation Reason + Notes) — see CancellationReason in
+// types-index.ts and add_cancellation_reason.sql. Both are optional so
+// existing callers (and a bulk/legacy cancel with no reason picked) keep
+// working; the DB constraint only requires they be null when the booking
+// isn't cancelled, not that a cancelled booking has one.
+export async function cancelEnquiry(
+  enquiry: Enquiry,
+  thirdPartyCharges?: number,
+  isNoShow?: boolean,
+  reason?: CancellationReason,
+  notes?: string
+): Promise<Enquiry> {
   if (enquiry.journey_stage === 'completed' || enquiry.booking_status === 'completed') {
     throw new Error('A completed booking can\u2019t be cancelled.');
+  }
+  if (enquiry.checked_in_at) {
+    throw new Error('This traveller has already checked in — cancellation is no longer allowed. Undo Check In first if that was a mistake.');
   }
 
   if (thirdPartyCharges !== undefined) {
@@ -1604,11 +1780,19 @@ export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number
     .update({
       cancelled_at: new Date().toISOString(),
       ...(isNoShow !== undefined ? { is_no_show: isNoShow } : {}),
+      cancellation_reason: reason ?? null,
+      cancellation_notes: notes?.trim() ? notes.trim() : null,
     })
     .eq('id', enquiry.id);
   if (error) throw error;
 
-  return refreshJourneyStage(enquiry.id);
+  const updated = await refreshJourneyStage(enquiry.id);
+  await logActivity(
+    enquiry.id,
+    'Cancelled',
+    [reason?.replace(/_/g, ' ') || null, notes?.trim() || null].filter(Boolean).join(' · ') || null
+  );
+  return updated;
 }
 
 // Toggles is_no_show on its own, independent of cancellation — an admin may
@@ -1617,7 +1801,35 @@ export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number
 // cancelled. The on_enquiry_cancelled DB trigger reacts to this update and
 // recomputes suggested_refund_amount: forced to 0 while is_no_show is true,
 // or back to the normal cancellation-window math when unmarked.
+//
+// Marking a no-show (isNoShow: true) is gated per spec section 18's No Show
+// Rules — Active + Fully Paid + Attendance not already started (not
+// checked in, not already a no-show) + the trip date has actually arrived.
+// Un-marking (isNoShow: false) is a correction path, same reasoning as
+// undoCheckInEnquiry, so it isn't gated the same way.
 export async function setEnquiryNoShow(enquiry: Enquiry, isNoShow: boolean): Promise<Enquiry> {
+  if (isNoShow) {
+    if (enquiry.cancelled_at || enquiry.booking_state === 'cancelled') {
+      throw new Error('Cannot mark no-show — this booking has been cancelled.');
+    }
+    if (enquiry.journey_stage !== 'fully_paid') {
+      throw new Error('Cannot mark no-show — this booking has to be Fully Paid first.');
+    }
+    if (enquiry.checked_in_at) {
+      throw new Error('Cannot mark no-show — this traveller is already checked in. Undo the check-in first.');
+    }
+    if (enquiry.is_no_show) {
+      throw new Error('Already marked as a no-show.');
+    }
+    if (enquiry.departure_date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (new Date(enquiry.departure_date) > today) {
+        throw new Error("Cannot mark no-show before the trip's departure date.");
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from('enquiries')
     .update({ is_no_show: isNoShow })
@@ -1626,6 +1838,7 @@ export async function setEnquiryNoShow(enquiry: Enquiry, isNoShow: boolean): Pro
     .single();
   if (error) throw error;
 
+  await logActivity(enquiry.id, isNoShow ? 'Marked No Show' : 'No Show undone');
   return data;
 }
 
@@ -1668,11 +1881,23 @@ export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
 
   const { error } = await supabase
     .from('enquiries')
-    .update({ cancelled_at: null, booking_state: 'active', booking_status: bookingStatus, suggested_refund_amount: null })
+    .update({
+      cancelled_at: null,
+      booking_state: 'active',
+      booking_status: bookingStatus,
+      suggested_refund_amount: null,
+      // Cleared on reactivation, same pattern as closed_reason on reopening
+      // — a reason for a cancellation that no longer stands shouldn't
+      // linger (see add_cancellation_reason.sql).
+      cancellation_reason: null,
+      cancellation_notes: null,
+    })
     .eq('id', enquiry.id);
   if (error) throw error;
 
-  return refreshJourneyStage(enquiry.id);
+  const updated = await refreshJourneyStage(enquiry.id);
+  await logActivity(enquiry.id, 'Reactivated (cancellation reversed)');
+  return updated;
 }
 
 // Logs how much has been refunded so far for a cancelled booking.
@@ -1683,7 +1908,7 @@ export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
 export async function recordRefund(
   current: Enquiry,
   newRefundAmount: number,
-  options?: { payment_method?: string; notes?: string }
+  options?: { payment_method?: string; notes?: string; paid_at?: string }
 ): Promise<Enquiry> {
   // Same reasoning as the guard at the top of recordPayment above — this is
   // the one choke point every refund path calls, so bound-check here even
@@ -1709,6 +1934,10 @@ export async function recordRefund(
       payment_type: 'refund',
       payment_method: options?.payment_method,
       notes: options?.notes,
+      // Refund Date from the popup (CRM spec section 7) — falls back to the
+      // payments table's own now() default when not supplied, same as
+      // every other payment path.
+      ...(options?.paid_at ? { paid_at: options.paid_at } : {}),
     });
     if (refundError) throw refundError;
   }
@@ -1719,6 +1948,13 @@ export async function recordRefund(
     .eq('id', current.id)
     .single();
   if (error) throw error;
+  if (delta !== 0) {
+    await logActivity(
+      current.id,
+      'Refund processed',
+      `₹${Math.abs(delta).toLocaleString('en-IN')}${options?.payment_method ? ` · ${options.payment_method}` : ''}`
+    );
+  }
   return data;
 }
 

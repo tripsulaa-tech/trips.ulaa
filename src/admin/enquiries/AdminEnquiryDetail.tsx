@@ -1,17 +1,17 @@
 // Full CRM-style single-enquiry page — everything the Enquiries table's
 // row actions and "View Details" popup offer, but with room to actually
 // read it all: traveller/trip info, the Booking Journey stepper, a full
-// payment/invoice ledger, and every mutating action (Track Payment,
-// Generate Invoice, Check In, Cancel/Reactivate, Mark Completed, Delete).
-// Deliberately does NOT invent Documents/Activity-Log sections — there's
-// no backing data model for either yet, and this file only shows what's
-// real.
+// payment/invoice ledger, an Activity Timeline (CRM spec section 14), and
+// every mutating action (Track Payment, Generate Invoice, Check In,
+// Cancel/Reactivate, Mark Completed, Delete). Deliberately still does NOT
+// invent a Documents/Communication-History section — there's no backing
+// data model for either yet, and this file only shows what's real.
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, FileText, Share2, Phone, MessageCircle, Users, User, Receipt,
   BadgeCheck, Plus, CheckCircle2, XCircle, UserX, UserCheck, LogIn, RefreshCw,
-  Trash2, IndianRupee, Pencil, UserMinus, Bird, CalendarClock, X,
+  Trash2, IndianRupee, Pencil, UserMinus, Bird, CalendarClock, X, History,
 } from 'lucide-react';
 import AdminLayout from '../AdminLayout';
 import Button from '../../components/ui/Button';
@@ -25,14 +25,14 @@ import { ContactQuickLinks } from '../../components/ui/DataTableChrome';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
 import {
-  getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin,
+  getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin, getActivityLog,
   recordPayment, recordTypedPayment, generatePendingInvoice, addExtraCharge,
   markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
   recordRefund, deleteEnquiry, updateEnquiryDetails, setEnquiryFollowUp,
   recordContactOutcome,
 } from '../../services/api';
-import type { ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
+import type { ActivityLogEntry, CancellationReason, ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../../utils/utils-index';
 import {
@@ -41,6 +41,7 @@ import {
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus,
+  CANCELLATION_REASON_OPTIONS, REFUND_METHOD_OPTIONS,
 } from '../enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './adminEnquiriesShared';
@@ -48,7 +49,8 @@ import ContactOutcomeModal from './ContactOutcomeModal';
 import type { ContactOutcomeResult } from './ContactOutcomeModal';
 
 const emptyPaymentForm: PaymentForm = {
-  package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '', food_preference: '',
+  package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '',
+  refund_method: '', refund_date: '', refund_notes: '', food_preference: '',
 };
 
 type EditDetailsForm = {
@@ -72,6 +74,8 @@ export default function AdminEnquiryDetail() {
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+  const [activityLogLoading, setActivityLogLoading] = useState(false);
   const [busyAction, setBusyAction] = useState(false);
   const [invoiceBusy, setInvoiceBusy] = useState(false);
   // ---- Record Contact Outcome (the New -> Contacted entry point) --------
@@ -111,6 +115,25 @@ export default function AdminEnquiryDetail() {
     return () => { cancelled = true; };
   }, [enquiry?.id]);
 
+  // Activity Timeline (CRM spec section 14) — re-fetched every time `load()`
+  // sets a fresh `enquiry` object, same trigger as the payments effect
+  // above, so any action taken on this page (which all call load()
+  // afterward) picks up its own just-written log entry without a manual
+  // refresh.
+  useEffect(() => {
+    if (!enquiry) {
+      setActivityLog([]);
+      return;
+    }
+    let cancelled = false;
+    setActivityLogLoading(true);
+    getActivityLog(enquiry.id)
+      .then(rows => { if (!cancelled) setActivityLog(rows); })
+      .catch(err => console.error(err))
+      .finally(() => { if (!cancelled) setActivityLogLoading(false); });
+    return () => { cancelled = true; };
+  }, [enquiry?.id, enquiry?.updated_at]);
+
   // Fixed lookup for a specific package (used once the admin has picked
   // Early Bird / Normal explicitly in the Track Payment modal).
   const getTripPrice = (tripId: string | undefined, packageType: Enquiry['package_type']): number | undefined => {
@@ -147,6 +170,9 @@ export default function AdminEnquiryDetail() {
       total_amount: suggested ?? '',
       amount_paid: enquiry.amount_paid ?? 0,
       refund_amount: enquiry.is_no_show ? 0 : enquiry.refund_amount ?? 0,
+      refund_method: '',
+      refund_date: '',
+      refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
     });
     setPaymentOpen(true);
@@ -307,7 +333,11 @@ export default function AdminEnquiryDetail() {
         food_preference: paymentForm.food_preference || null,
       });
       if (enquiry.cancelled_at) {
-        updated = await recordRefund(enquiry, refundAmount);
+        updated = await recordRefund(enquiry, refundAmount, {
+          payment_method: paymentForm.refund_method || undefined,
+          notes: paymentForm.refund_notes || undefined,
+          paid_at: paymentForm.refund_date || undefined,
+        });
       }
       setEnquiry(updated);
       setPaymentOpen(false);
@@ -399,6 +429,8 @@ export default function AdminEnquiryDetail() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelCharges, setCancelCharges] = useState<number | ''>('');
   const [cancelIsNoShow, setCancelIsNoShow] = useState(false);
+  const [cancelReason, setCancelReason] = useState<CancellationReason | ''>('');
+  const [cancelNotes, setCancelNotes] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
   const handleCancelToggle = () => {
@@ -408,6 +440,8 @@ export default function AdminEnquiryDetail() {
     } else {
       setCancelCharges('');
       setCancelIsNoShow(false);
+      setCancelReason('');
+      setCancelNotes('');
       setCancelOpen(true);
     }
   };
@@ -417,7 +451,7 @@ export default function AdminEnquiryDetail() {
     setCancelling(true);
     try {
       const charges = cancelCharges === '' ? undefined : Number(cancelCharges);
-      const updated = await cancelEnquiry(enquiry, charges, cancelIsNoShow);
+      const updated = await cancelEnquiry(enquiry, charges, cancelIsNoShow, cancelReason || undefined, cancelNotes);
       setEnquiry(updated);
       setCancelOpen(false);
     } catch (err) {
@@ -447,7 +481,7 @@ export default function AdminEnquiryDetail() {
     if (!enquiry) return;
     setBusyAction(true);
     try {
-      setEnquiry(await checkInEnquiry(enquiry.id));
+      setEnquiry(await checkInEnquiry(enquiry));
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Failed to check in.');
@@ -670,21 +704,30 @@ export default function AdminEnquiryDetail() {
       { label: 'Call', icon: Phone, onClick: () => { window.location.href = `tel:${enquiry.phone}`; } },
     );
   }
-  if (!enquiry.cancelled_at) {
-    rowActions.push(
-      enquiry.is_no_show
-        ? { label: 'Undo No Show', icon: UserCheck, onClick: () => handleToggleNoShow(false) }
-        : { label: 'Mark No Show', icon: UserX, onClick: () => handleToggleNoShow(true) }
-    );
+  // Mark/Undo No Show — gated the same way setEnquiryNoShow() is
+  // server-side (spec section 18's No Show Rules): only offered on an
+  // active, Fully Paid booking whose Attendance hasn't started yet (not
+  // checked in), and only once the trip date has actually arrived. Undo
+  // No Show has no such gate — it's a correction path.
+  if (enquiry.is_no_show) {
+    rowActions.push({ label: 'Undo No Show', icon: UserCheck, onClick: () => handleToggleNoShow(false) });
+  } else if (
+    !enquiry.cancelled_at && enquiry.journey_stage === 'fully_paid' && !enquiry.checked_in_at
+    && (!enquiry.departure_date || new Date(enquiry.departure_date) <= new Date())
+  ) {
+    rowActions.push({ label: 'Mark No Show', icon: UserX, onClick: () => handleToggleNoShow(true) });
   }
   if (enquiry.journey_stage === 'checked_in') {
     rowActions.push({ label: 'Undo Check In', icon: LogIn, onClick: handleUndoCheckIn });
   }
-  // A Completed booking can't be cancelled (see cancelEnquiry's guard in
-  // services/api.ts) — omit the action entirely rather than showing it
-  // disabled or letting the click round-trip into an error alert.
+  // A Completed booking can't be cancelled, and neither can one that's
+  // already checked in (spec section 18: "Checked In ... Not Allowed:
+  // Cancel Booking" — undo the check-in first) — see cancelEnquiry's
+  // guards in services/api.ts. Omit the action entirely rather than
+  // showing it disabled or letting the click round-trip into an error
+  // alert.
   const isCompletedBooking = enquiry.journey_stage === 'completed';
-  if (enquiry.cancelled_at || !isCompletedBooking) {
+  if (enquiry.cancelled_at || (!isCompletedBooking && !enquiry.checked_in_at)) {
     rowActions.push(
       enquiry.cancelled_at
         ? { label: 'Reactivate Booking', icon: RefreshCw, onClick: handleCancelToggle }
@@ -956,6 +999,34 @@ export default function AdminEnquiryDetail() {
             </div>
           )}
         </div>
+
+        {/* Activity Timeline — CRM spec section 14. Every meaningful action
+            taken on this enquiry, chronological, oldest first, nothing
+            editable or removable (see activity_log's RLS: no UPDATE/DELETE
+            policy exists at all). */}
+        <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
+          <p className="text-dark text-sm font-button font-semibold mb-3 flex items-center gap-1.5">
+            <History size={14} className="shrink-0" /> Activity Timeline
+          </p>
+          {activityLogLoading ? (
+            <p className="text-dark-muted text-xs">Loading…</p>
+          ) : activityLog.length === 0 ? (
+            <p className="text-dark-muted text-xs bg-background-warm rounded-md px-3 py-2">No activity logged yet.</p>
+          ) : (
+            <ol className="relative border-l-2 border-background-warm pl-4 space-y-4 max-h-72 overflow-y-auto">
+              {activityLog.map(entry => (
+                <li key={entry.id} className="relative">
+                  <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-white" />
+                  <p className="text-dark text-sm font-medium">{entry.action}</p>
+                  {entry.details && <p className="text-dark-muted text-xs mt-0.5">{entry.details}</p>}
+                  <p className="text-dark-muted text-[11px] mt-0.5">
+                    {formatDate(entry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(entry.created_at)}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
       </div>
 
       {/* Track Payment modal */}
@@ -1066,6 +1137,41 @@ export default function AdminEnquiryDetail() {
                     onChange={e => setPaymentForm(f => ({ ...f, refund_amount: parseNonNegative(e.target.value) }))}
                     className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
                     placeholder="How much has been refunded so far"
+                  />
+                </div>
+              )}
+              {!enquiry.is_no_show && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-dark mb-1">Refund Method</label>
+                    <Select
+                      value={paymentForm.refund_method}
+                      onChange={val => setPaymentForm(f => ({ ...f, refund_method: val }))}
+                      options={REFUND_METHOD_OPTIONS}
+                      placeholder="Select method"
+                      size="sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-dark mb-1">Refund Date</label>
+                    <input
+                      type="date"
+                      value={paymentForm.refund_date}
+                      onChange={e => setPaymentForm(f => ({ ...f, refund_date: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+              {!enquiry.is_no_show && (
+                <div>
+                  <label className="block text-sm font-medium text-dark mb-1">Refund Notes (optional)</label>
+                  <textarea
+                    value={paymentForm.refund_notes}
+                    onChange={e => setPaymentForm(f => ({ ...f, refund_notes: e.target.value }))}
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none resize-none"
+                    placeholder="e.g. partial refund after cancellation charges"
                   />
                 </div>
               )}
@@ -1259,6 +1365,15 @@ export default function AdminEnquiryDetail() {
         <div className="space-y-4">
           <p className="text-sm text-dark-muted">This frees up the seat immediately. Amount paid stays on record — track any refund via Track Payment afterwards.</p>
           <div>
+            <label className="block text-sm font-medium text-dark mb-1">Cancellation Reason</label>
+            <Select
+              value={cancelReason}
+              onChange={val => setCancelReason(val as CancellationReason | '')}
+              options={CANCELLATION_REASON_OPTIONS}
+              placeholder="Select a reason — optional"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-dark mb-1">Third-Party Charges (₹, optional)</label>
             <input
               type="number"
@@ -1276,6 +1391,16 @@ export default function AdminEnquiryDetail() {
               <span className="block text-[11px] text-dark-muted">No refund is given for no-shows, per policy.</span>
             </span>
           </label>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
+            <textarea
+              value={cancelNotes}
+              onChange={e => setCancelNotes(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none resize-none"
+              placeholder="Anything worth recording about this cancellation"
+            />
+          </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" onClick={() => setCancelOpen(false)}>Back</Button>
             <Button variant="primary" size="md" onClick={handleConfirmCancel} loading={cancelling}>Confirm Cancellation</Button>

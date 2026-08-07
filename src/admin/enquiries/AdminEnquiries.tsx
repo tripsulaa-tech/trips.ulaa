@@ -13,7 +13,7 @@ import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, recordContactOutcome } from '../../services/api';
-import type { ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
+import type { CancellationReason, ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
@@ -149,7 +149,7 @@ export default function AdminEnquiries() {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
-  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '', food_preference: '' });
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '', refund_method: '', refund_date: '', refund_notes: '', food_preference: '' });
   const [savingPayment, setSavingPayment] = useState(false);
   // Read-only ledger shown inline in the Track Payment modal (Phase F) —
   // same on-demand fetch pattern as detailsInvoices above, just keyed to
@@ -159,6 +159,8 @@ export default function AdminEnquiries() {
   const [cancelTarget, setCancelTarget] = useState<Enquiry | null>(null);
   const [cancelCharges, setCancelCharges] = useState<number | ''>('');
   const [cancelIsNoShow, setCancelIsNoShow] = useState(false);
+  const [cancelReason, setCancelReason] = useState<CancellationReason | ''>('');
+  const [cancelNotes, setCancelNotes] = useState('');
   const [togglingNoShow, setTogglingNoShow] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   // How many waitlist signups — and how many actual people, since a group
@@ -539,6 +541,9 @@ export default function AdminEnquiries() {
       // No-shows forfeit the full amount paid, no exceptions — refund
       // amount is locked at 0 rather than showing whatever was last on record.
       refund_amount: enquiry.is_no_show ? 0 : enquiry.refund_amount ?? 0,
+      refund_method: '',
+      refund_date: '',
+      refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
     });
   };
@@ -571,6 +576,8 @@ export default function AdminEnquiries() {
       setCancelTarget(e);
       setCancelCharges('');
       setCancelIsNoShow(false);
+      setCancelReason('');
+      setCancelNotes('');
     }
   };
 
@@ -583,7 +590,7 @@ export default function AdminEnquiries() {
     setCancelling(true);
     try {
       const charges = cancelCharges === '' ? undefined : Number(cancelCharges);
-      await cancelEnquiry(cancelTarget, charges, cancelIsNoShow);
+      await cancelEnquiry(cancelTarget, charges, cancelIsNoShow, cancelReason || undefined, cancelNotes);
       setCancelTarget(null);
       const freshTrips = await getAllUpcomingTripsAdmin();
       setTrips(freshTrips);
@@ -804,7 +811,7 @@ export default function AdminEnquiries() {
   const handleCheckIn = async (enquiry: Enquiry) => {
     setUpdating(enquiry.id);
     try {
-      await checkInEnquiry(enquiry.id);
+      await checkInEnquiry(enquiry);
       load();
     } catch (err) {
       console.error(err);
@@ -958,12 +965,18 @@ export default function AdminEnquiries() {
         { label: 'Call', icon: Phone, onClick: () => { window.location.href = `tel:${e.phone}`; } },
       );
     }
-    if (!e.cancelled_at) {
-      items.push(
-        e.is_no_show
-          ? { label: 'Undo No Show', icon: UserCheck, onClick: () => handleToggleNoShow(e, false) }
-          : { label: 'Mark No Show', icon: UserX, onClick: () => handleToggleNoShow(e, true) }
-      );
+    // Mark/Undo No Show — gated the same way setEnquiryNoShow() is
+    // server-side (spec section 18's No Show Rules): only offered on an
+    // active, Fully Paid booking whose Attendance hasn't started yet (not
+    // checked in), and only once the trip date has actually arrived. Undo
+    // No Show has no such gate — it's a correction path.
+    if (e.is_no_show) {
+      items.push({ label: 'Undo No Show', icon: UserCheck, onClick: () => handleToggleNoShow(e, false) });
+    } else if (
+      !e.cancelled_at && e.journey_stage === 'fully_paid' && !e.checked_in_at
+      && (!e.departure_date || new Date(e.departure_date) <= new Date())
+    ) {
+      items.push({ label: 'Mark No Show', icon: UserX, onClick: () => handleToggleNoShow(e, true) });
     }
     if (e.journey_stage === 'checked_in') {
       items.push({ label: 'Undo Check In', icon: LogIn, onClick: () => handleUndoCheckIn(e) });
@@ -997,10 +1010,13 @@ export default function AdminEnquiries() {
           : { label: 'Not Interested (Close Query)', icon: UserMinus, onClick: () => handleMarkNotInterested(e) }
       );
     }
-    // A Completed booking can't be cancelled (see cancelEnquiry's guard in
-    // services/api.ts) — omit the action entirely rather than showing it
-    // disabled or letting the click round-trip into an error alert.
-    if (e.cancelled_at || e.journey_stage !== 'completed') {
+    // A Completed booking can't be cancelled, and neither can one that's
+    // already checked in (spec section 18: "Checked In ... Not Allowed:
+    // Cancel Booking" — undo the check-in first) — see cancelEnquiry's
+    // guards in services/api.ts. Omit the action entirely rather than
+    // showing it disabled or letting the click round-trip into an error
+    // alert.
+    if (e.cancelled_at || (e.journey_stage !== 'completed' && !e.checked_in_at)) {
       items.push(
         e.cancelled_at
           ? { label: 'Reactivate Booking', icon: RefreshCw, onClick: () => handleCancelToggle(e) }
@@ -1033,7 +1049,11 @@ export default function AdminEnquiries() {
         food_preference: paymentForm.food_preference || null,
       });
       if (paymentTarget.cancelled_at) {
-        await recordRefund(paymentTarget, refundAmount);
+        await recordRefund(paymentTarget, refundAmount, {
+          payment_method: paymentForm.refund_method || undefined,
+          notes: paymentForm.refund_notes || undefined,
+          paid_at: paymentForm.refund_date || undefined,
+        });
       }
       setPaymentTarget(null);
       const freshTrips = await getAllUpcomingTripsAdmin();
@@ -3023,6 +3043,10 @@ export default function AdminEnquiries() {
         setCancelCharges={setCancelCharges}
         cancelIsNoShow={cancelIsNoShow}
         setCancelIsNoShow={setCancelIsNoShow}
+        cancelReason={cancelReason}
+        setCancelReason={setCancelReason}
+        cancelNotes={cancelNotes}
+        setCancelNotes={setCancelNotes}
         waitlistWaitingCounts={waitlistWaitingCounts}
         describeWaiting={describeWaiting}
         onConfirm={handleConfirmCancel}

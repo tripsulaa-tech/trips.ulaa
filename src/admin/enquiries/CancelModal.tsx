@@ -2,8 +2,9 @@ import type { Dispatch, SetStateAction } from 'react';
 import { Users } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
-import { parseNonNegative } from '../enquiryShared';
-import type { Enquiry } from '../../types/types-index';
+import Select from '../../components/ui/Select';
+import { parseNonNegative, CANCELLATION_REASON_OPTIONS } from '../enquiryShared';
+import type { CancellationReason, Enquiry } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
 import { inputClass } from './adminEnquiriesShared';
 
@@ -14,6 +15,10 @@ export default function CancelModal({
   setCancelCharges,
   cancelIsNoShow,
   setCancelIsNoShow,
+  cancelReason,
+  setCancelReason,
+  cancelNotes,
+  setCancelNotes,
   waitlistWaitingCounts,
   describeWaiting,
   onConfirm,
@@ -25,6 +30,10 @@ export default function CancelModal({
   setCancelCharges: Dispatch<SetStateAction<number | ''>>;
   cancelIsNoShow: boolean;
   setCancelIsNoShow: Dispatch<SetStateAction<boolean>>;
+  cancelReason: CancellationReason | '';
+  setCancelReason: Dispatch<SetStateAction<CancellationReason | ''>>;
+  cancelNotes: string;
+  setCancelNotes: Dispatch<SetStateAction<string>>;
   waitlistWaitingCounts: Record<string, { entries: number; people: number }>;
   describeWaiting: (summary: { entries: number; people: number }) => string;
   onConfirm: () => void;
@@ -58,6 +67,16 @@ export default function CancelModal({
           )}
 
           <div>
+            <label className="block text-sm font-medium text-dark mb-1">Cancellation Reason</label>
+            <Select
+              value={cancelReason}
+              onChange={val => setCancelReason(val as CancellationReason | '')}
+              options={CANCELLATION_REASON_OPTIONS}
+              placeholder="Select a reason — optional"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-dark mb-1">Third-Party Charges (₹)</label>
             <input
               type="number"
@@ -84,6 +103,17 @@ export default function CancelModal({
               <span className="block text-[11px] text-dark-muted">Per policy, no-shows forfeit the full amount paid — the refund amount will be locked at ₹0.</span>
             </span>
           </label>
+
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
+            <textarea
+              value={cancelNotes}
+              onChange={ev => setCancelNotes(ev.target.value)}
+              rows={2}
+              className={`${inputClass} resize-none`}
+              placeholder="Anything worth recording about this cancellation"
+            />
+          </div>
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Back</Button>

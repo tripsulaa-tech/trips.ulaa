@@ -257,6 +257,17 @@ export type ContactOutcome =
   | 'interested' | 'needs_time' | 'call_later'
   | 'no_response' | 'not_interested' | 'wrong_number';
 
+// Why a booking was cancelled — captured in the Cancel Booking popup (CRM
+// spec section 10). Distinct from ClosedReason: this only ever applies to a
+// booking that had already started the Booking Journey (money on it, a
+// booking_id assigned), whereas ClosedReason is for a lead that never got
+// that far. No 'no_show' entry here — attendance is its own independent
+// axis (Enquiry.is_no_show, CRM spec section 4), captured via the separate
+// no-show checkbox in the same popup rather than folded into the reason
+// list. See add_cancellation_reason.sql.
+export type CancellationReason =
+  | 'medical' | 'personal' | 'emergency' | 'visa' | 'price' | 'other';
+
 export interface Enquiry {
   id: string;
   full_name: string;
@@ -280,6 +291,15 @@ export interface Enquiry {
   amount_paid: number;
   terms_accepted?: boolean;
   cancelled_at?: string | null;
+  // Why this booking was cancelled — only ever set alongside cancelled_at
+  // (see CancellationReason above). Null for bookings cancelled before
+  // add_cancellation_reason.sql, and cleared back to null on reactivation
+  // via uncancelEnquiry(), same pattern as closed_reason.
+  cancellation_reason?: CancellationReason | null;
+  // Free-text detail entered alongside cancellation_reason in the Cancel
+  // Booking popup — e.g. which document is missing for a visa cancellation.
+  // Also cleared on reactivation.
+  cancellation_notes?: string | null;
   refund_amount: number;
   created_at: string;
   updated_at: string;
@@ -380,6 +400,25 @@ export interface Payment {
   created_at: string;
   invoice_number?: string | null;
   status: 'paid' | 'pending';
+}
+
+// =============================================
+// Activity Timeline (CRM spec section 14)
+// =============================================
+// One immutable row per meaningful action taken on an enquiry/booking —
+// never updated or deleted after insert (see add_activity_log.sql and
+// logActivity() in services/api.ts). `action` is a short, already-formatted
+// label ("Advance received", "Checked In", ...); `details` is an optional
+// one-line elaboration ("₹5,000 via UPI"). Deliberately just two free-text
+// columns rather than a typed enum + structured payload — the timeline is
+// read-only display, not something other code branches on, so a rigid
+// schema would add ceremony without adding safety.
+export interface ActivityLogEntry {
+  id: string;
+  enquiry_id: string;
+  action: string;
+  details?: string | null;
+  created_at: string;
 }
 
 export interface AdminNotification {
@@ -491,6 +530,14 @@ export interface WaitlistEntry {
   message?: string;
   status: 'waiting' | 'notified' | 'converted' | 'declined' | 'expired';
   notified_at?: string | null;
+  // Set automatically alongside notified_at whenever an offer goes out
+  // (updateWaitlistStatus('notified')) — see WAITLIST_OFFER_WINDOW_HOURS in
+  // services/api.ts. Cleared if the entry moves back to 'waiting' (offer
+  // withdrawn) or forward to 'converted'/'declined'/'expired'. Purely
+  // advisory: nothing auto-expires the row on its own, an admin still has
+  // to act (convert, decline, or explicitly mark Expired) — see
+  // add_waitlist_offer_expiry.sql.
+  offer_expiry?: string | null;
   // Legacy single-conversion field — no longer written to (superseded by
   // converted_enquiry_ids below), kept only so old rows still type-check.
   converted_enquiry_id?: string | null;

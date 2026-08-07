@@ -9,7 +9,7 @@
 // Everything here is intentionally stateless — no hooks, no local state —
 // so it's safe to call from anywhere.
 import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle, UserMinus, CalendarClock } from 'lucide-react';
-import type { ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
+import type { CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
 import { formatDate, getActivePrice } from '../utils/utils-index';
 
 // Parses a money-field <input type="number"> value into a non-negative
@@ -87,6 +87,13 @@ export type PaymentForm = {
   total_amount: number | '';
   amount_paid: number | '';
   refund_amount: number | '';
+  // Refund Method / Refund Date / Notes — CRM spec section 7's Refund
+  // Popup fields, only meaningful (and only shown) alongside refund_amount
+  // on a cancelled booking. refund_date defaults to today when the field is
+  // touched; left '' it falls back to recordRefund's own now() default.
+  refund_method: string;
+  refund_date: string;
+  refund_notes: string;
   food_preference: 'veg' | 'non_veg' | '';
 };
 
@@ -263,6 +270,37 @@ export const CLOSED_REASON_OPTIONS: { value: ClosedReason; label: string }[] =
 export const NOT_INTERESTED_REASON_OPTIONS = CLOSED_REASON_OPTIONS.filter(
   o => o.value !== 'wrong_number'
 );
+
+// Every reason an admin can pick in the Cancel Booking popup — see
+// CancellationReason in types-index.ts and add_cancellation_reason.sql.
+// No 'no_show' entry: that's captured separately by the no-show checkbox in
+// the same popup (attendance is independent of why a booking was
+// cancelled — CRM spec section 4).
+export const CANCELLATION_REASON_CONFIG: Record<CancellationReason, { label: string }> = {
+  medical: { label: 'Medical' },
+  personal: { label: 'Personal' },
+  emergency: { label: 'Emergency' },
+  visa: { label: 'Visa' },
+  price: { label: 'Price' },
+  other: { label: 'Other' },
+};
+
+export const CANCELLATION_REASON_OPTIONS: { value: CancellationReason; label: string }[] =
+  (Object.keys(CANCELLATION_REASON_CONFIG) as CancellationReason[]).map(value => ({
+    value,
+    label: CANCELLATION_REASON_CONFIG[value].label,
+  }));
+
+// Methods offered in the Refund popup (CRM spec section 7) — mirrors the
+// three methods the site actually settles refunds through. payment_method
+// stays a free-text column on `payments` (same as every other payment type),
+// this is just a curated picker so refunds record a consistent value
+// instead of admins free-typing "upi"/"UPI"/"Upi" differently each time.
+export const REFUND_METHOD_OPTIONS: { value: string; label: string }[] = [
+  { value: 'UPI', label: 'UPI' },
+  { value: 'Bank', label: 'Bank Transfer' },
+  { value: 'Cash', label: 'Cash' },
+];
 
 // Outcomes offered in the "Record Contact Outcome" popup (see
 // ContactOutcomeModal.tsx) — the single entry point for moving a lead from

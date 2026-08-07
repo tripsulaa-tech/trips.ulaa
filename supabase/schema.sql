@@ -388,6 +388,25 @@ create table public.invoice_number_sequences (
 -- moment it's created, never overwriting one that's already set.
 
 -- ----------------------------------------------------------------------------
+-- activity_log
+-- ----------------------------------------------------------------------------
+-- One immutable row per meaningful action taken on an enquiry/booking (CRM
+-- spec section 14). Written by logActivity() in src/services/api.ts from
+-- every state-changing enquiry function; never updated or deleted. See
+-- add_activity_log.sql.
+create table public.activity_log (
+  id          uuid not null default uuid_generate_v4(),
+  enquiry_id  uuid not null references public.enquiries (id) on delete cascade,
+  action      text not null,
+  details     text,
+  created_at  timestamptz not null default now(),
+  constraint activity_log_pkey primary key (id)
+);
+
+create index activity_log_enquiry_id_idx on public.activity_log using btree (enquiry_id);
+create index activity_log_created_at_idx on public.activity_log using btree (created_at desc);
+
+-- ----------------------------------------------------------------------------
 -- waitlist
 -- ----------------------------------------------------------------------------
 -- trip_id is intentionally NOT a foreign key, same reasoning as
@@ -404,6 +423,11 @@ create table public.waitlist (
   message               text,
   status                text not null default 'waiting'::text,
   notified_at           timestamptz,
+  -- Set alongside notified_at whenever an offer goes out (status ->
+  -- 'notified'); cleared on any other status change. Advisory only —
+  -- nothing auto-expires the row, it just drives the "Offer expires in Xh"
+  -- / "Offer expired" UI. See add_waitlist_offer_expiry.sql.
+  offer_expiry          timestamptz,
   -- Set once this entry is converted into a real, paid booking (see
   -- markWaitlistConverted in api.ts). NOT a foreign key to enquiries in the
   -- sense of enforcing existence at insert time via app code, but IS a real
@@ -772,6 +796,31 @@ begin
     raise warning 'send-push call failed: %', sqlerrm;
   end;
 
+  return new;
+end;
+$function$;
+
+-- Logs "Website enquiry submitted" / "Enquiry logged (<source>)" to
+-- activity_log the moment any enquiries row is inserted — the one
+-- Activity Timeline event (CRM spec section 14) that has to fire
+-- regardless of whether the caller is an authenticated admin
+-- (createManualEnquiry) or the anonymous public booking form
+-- (submitEnquiry/submitGroupEnquiry). security definer, same escape hatch
+-- notify_new_enquiry() above already uses to write into `notifications`
+-- from an anonymous insert. See add_activity_log.sql.
+create or replace function public.log_enquiry_created_activity()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+begin
+  insert into public.activity_log (enquiry_id, action, details)
+  values (
+    new.id,
+    case when new.source = 'website' then 'Website enquiry submitted' else 'Enquiry logged (' || new.source || ')' end,
+    coalesce(new.trip_title, 'No trip selected')
+  );
   return new;
 end;
 $function$;
@@ -1398,6 +1447,9 @@ create trigger update_enquiries_updated_at
 create trigger on_enquiry_created
   after insert on public.enquiries
   for each row execute function public.notify_new_enquiry();
+create trigger on_enquiry_created_log_activity
+  after insert on public.enquiries
+  for each row execute function public.log_enquiry_created_activity();
 -- Must run before enquiry_cancelled_trigger/notify_new_enquiry care about
 -- ordering — Postgres fires same-timing triggers alphabetically by name,
 -- and "capacity" < "cancelled_trigger", so this rejects an overbooking
@@ -1470,6 +1522,7 @@ alter table public.completed_trips enable row level security;
 alter table public.upcoming_trips enable row level security;
 alter table public.enquiries enable row level security;
 alter table public.payments enable row level security;
+alter table public.activity_log enable row level security;
 alter table public.waitlist enable row level security;
 alter table public.gallery enable row level security;
 alter table public.trip_images enable row level security;
@@ -1505,6 +1558,14 @@ create policy "Admin delete enquiries" on public.enquiries
 -- written by the admin portal, never directly by the public form).
 create policy "Admin all payments" on public.payments
   for all using (auth.role() = 'authenticated');
+
+-- activity_log — admin can read and insert; deliberately no update/delete
+-- policy at all (for anyone, admin included) so a logged row can never be
+-- edited or removed by anyone through the API, only ever appended to.
+create policy "Admin read activity log" on public.activity_log
+  for select using (auth.role() = 'authenticated');
+create policy "Admin insert activity log" on public.activity_log
+  for insert with check (auth.role() = 'authenticated');
 
 -- waitlist — public can only insert (submit the waitlist form); everything
 -- else (read/update/delete) requires an authenticated admin session.

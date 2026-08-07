@@ -43,6 +43,22 @@ const EDITABLE_STATUS_OPTIONS = (['waiting', 'notified', 'declined', 'expired'] 
   label: key === 'notified' ? 'Offer Seat' : STATUS_CONFIG[key].label,
 }));
 
+// Renders the "Offer expires in Xh" / "Offer expired Xh ago" line under a
+// 'notified' entry's status control (CRM spec section 9's Offer Expiry
+// field). Purely a read display — nothing here auto-changes status; an
+// admin still has to convert/decline or explicitly pick "Expired" from the
+// dropdown, same as every other waitlist transition on this page.
+function offerExpiryLabel(offerExpiry: string | null | undefined): { text: string; overdue: boolean } | null {
+  if (!offerExpiry) return null;
+  const diffMs = new Date(offerExpiry).getTime() - Date.now();
+  if (diffMs <= 0) {
+    const hoursAgo = Math.round(Math.abs(diffMs) / (60 * 60 * 1000));
+    return { text: hoursAgo < 1 ? 'Offer expired' : `Offer expired ${hoursAgo}h ago`, overdue: true };
+  }
+  const hoursLeft = Math.round(diffMs / (60 * 60 * 1000));
+  return { text: hoursLeft < 1 ? 'Offer expires soon' : `Offer expires in ${hoursLeft}h`, overdue: false };
+}
+
 const FOOD_PREFERENCE_OPTIONS = [
   { value: '', label: 'Not asked / unknown' },
   { value: 'veg', label: 'Veg' },
@@ -928,13 +944,24 @@ export default function AdminWaitlist() {
                               </div>
                             </div>
                           ) : (
-                            <Select
-                              value={e.status}
-                              disabled={updating === e.id}
-                              onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
-                              options={EDITABLE_STATUS_OPTIONS}
-                              size="sm"
-                            />
+                            <div className="flex flex-col items-end gap-1">
+                              <Select
+                                value={e.status}
+                                disabled={updating === e.id}
+                                onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
+                                options={EDITABLE_STATUS_OPTIONS}
+                                size="sm"
+                              />
+                              {e.status === 'notified' && offerExpiryLabel(e.offer_expiry) && (
+                                <span
+                                  className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                    offerExpiryLabel(e.offer_expiry)!.overdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                                  }`}
+                                >
+                                  <Clock size={9} className="shrink-0" /> {offerExpiryLabel(e.offer_expiry)!.text}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="px-2 py-3 text-right">
@@ -1154,14 +1181,24 @@ export default function AdminWaitlist() {
                           </div>
                         </div>
                       ) : (
-                        <Select
-                          value={e.status}
-                          disabled={updating === e.id}
-                          onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
-                          options={EDITABLE_STATUS_OPTIONS}
-                          size="sm"
-                          className="flex-1"
-                        />
+                        <div className="flex-1 flex flex-col gap-1">
+                          <Select
+                            value={e.status}
+                            disabled={updating === e.id}
+                            onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
+                            options={EDITABLE_STATUS_OPTIONS}
+                            size="sm"
+                          />
+                          {e.status === 'notified' && offerExpiryLabel(e.offer_expiry) && (
+                            <span
+                              className={`inline-flex items-center gap-1 self-start text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                offerExpiryLabel(e.offer_expiry)!.overdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                              }`}
+                            >
+                              <Clock size={9} className="shrink-0" /> {offerExpiryLabel(e.offer_expiry)!.text}
+                            </span>
+                          )}
+                        </div>
                       )}
                       <button
                         onClick={() => handleDelete(e)}
