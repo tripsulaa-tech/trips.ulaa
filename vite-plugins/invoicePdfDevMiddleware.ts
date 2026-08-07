@@ -17,12 +17,15 @@
 // Vite's own dev server so the button works end-to-end locally too. It
 // reuses the exact same Supabase fetch + HTML template
 // (api/_lib/generateInvoicePdf.ts + src/lib/invoice/invoiceHtml.ts) as the
-// real route, so the invoice looks identical — the one difference is the
-// browser: production uses puppeteer-core + @sparticuz/chromium's
-// Lambda-optimized binary, which does not launch on a normal dev machine,
-// so this uses the full `puppeteer` package (bundles its own local
-// Chromium) instead. `puppeteer` is a devDependency only — never bundled
-// into the deployed site or the production function.
+// real route, so the invoice looks identical — the one difference is which
+// Chromium runs it: production uses puppeteer-core + @sparticuz/chromium's
+// Lambda-optimized binary, which doesn't launch on a normal dev machine.
+// This launches the dev machine's own already-installed Chrome (or Edge)
+// via puppeteer-core instead — NOT the full `puppeteer` package, which
+// tries to download its own Chromium on `npm install` and fails on
+// corporate networks whose SSL-inspecting proxy breaks that download
+// ("unable to get local issuer certificate"). puppeteer-core is already a
+// normal dependency, so this needs no extra install step at all.
 //
 // Wired into vite.config.ts for the `dev` command only (see
 // `command === 'serve'` there) — this file has zero effect on
@@ -33,6 +36,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
+import puppeteer from 'puppeteer-core';
 import {
   fetchInvoiceRecord,
   renderInvoicePdfBuffer,
@@ -44,6 +48,48 @@ import {
 
 const ROUTE = /^\/api\/invoices\/([^/]+)\/pdf\/?(?:\?.*)?$/;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// puppeteer-core's `channel` launch option only auto-detects Chrome in this
+// version (no 'msedge' channel), so Edge — the default browser on a lot of
+// corporate Windows images — needs its usual install paths checked by hand.
+const EDGE_PATH_CANDIDATES: Record<string, string[]> = {
+  win32: [
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+  ],
+  darwin: ['/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'],
+  linux: ['/usr/bin/microsoft-edge', '/usr/bin/microsoft-edge-stable'],
+};
+
+function findLocalEdgePath(): string | null {
+  const candidates = EDGE_PATH_CANDIDATES[process.platform] || [];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
+}
+
+/** Launches whatever Chromium-based browser is already installed on this
+ *  machine — no download, so this works the same whether or not the
+ *  network trusts npm's/Google's TLS certs. Order: an explicit
+ *  PUPPETEER_EXECUTABLE_PATH override, then installed Chrome (via
+ *  puppeteer-core's own detection), then a locally-installed Edge. */
+async function launchLocalBrowser(explicitPath: string | undefined): Promise<PdfCapableBrowser> {
+  if (explicitPath) {
+    return puppeteer.launch({ headless: true, executablePath: explicitPath });
+  }
+
+  try {
+    return await puppeteer.launch({ headless: true, channel: 'chrome' });
+  } catch (chromeErr) {
+    const edgePath = findLocalEdgePath();
+    if (edgePath) {
+      return puppeteer.launch({ headless: true, executablePath: edgePath });
+    }
+    throw new Error(
+      "No local Chrome or Edge browser found to render the invoice preview. Install Google Chrome, or set PUPPETEER_EXECUTABLE_PATH in .env to your browser's .exe path. " +
+        (chromeErr instanceof Error ? chromeErr.message : String(chromeErr)),
+      { cause: chromeErr }
+    );
+  }
+}
 
 function sendJson(res: import('node:http').ServerResponse, status: number, body: unknown) {
   res.statusCode = status;
@@ -112,24 +158,9 @@ export function invoicePdfDevMiddleware(env: Record<string, string>): Plugin {
 
         const html = buildInvoiceHtml(record.enquiry, record.payments, { logoSrc });
 
-        // Narrowed to just the one function we call (rather than typing the
-        // whole dynamically-imported module) to sidestep a messy
-        // self-referential type puppeteer's own .d.ts produces for
-        // `typeof import('puppeteer')` under project-reference type-checking.
-        let launchBrowser: typeof import('puppeteer')['default']['launch'];
-        try {
-          launchBrowser = (await import('puppeteer')).default.launch;
-        } catch {
-          sendJson(res, 500, {
-            error:
-              'Local invoice preview needs the `puppeteer` package (bundles its own Chromium — puppeteer-core alone is not enough for local dev). Run: npm install puppeteer --save-dev, then restart `npm run dev`.',
-          });
-          return;
-        }
-
         let browser: PdfCapableBrowser | undefined;
         try {
-          browser = await launchBrowser({ headless: true });
+          browser = await launchLocalBrowser(env.PUPPETEER_EXECUTABLE_PATH);
           const buffer = await renderInvoicePdfBuffer(browser, html);
 
           if (!isValidPdfBuffer(buffer)) {
@@ -149,7 +180,7 @@ export function invoicePdfDevMiddleware(env: Record<string, string>): Plugin {
           res.end(buffer);
         } catch (err) {
           console.error('[dev] Invoice PDF generation failed:', err);
-          sendJson(res, 500, { error: 'Failed to generate PDF.' });
+          sendJson(res, 500, { error: err instanceof Error ? err.message : 'Failed to generate PDF.' });
         } finally {
           if (browser) await browser.close();
         }
