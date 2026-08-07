@@ -9,8 +9,8 @@
 // Everything here is intentionally stateless — no hooks, no local state —
 // so it's safe to call from anywhere.
 import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle } from 'lucide-react';
-import type { Enquiry, Payment } from '../types/types-index';
-import { formatDate } from '../utils/utils-index';
+import type { Enquiry, Payment, UpcomingTrip } from '../types/types-index';
+import { formatDate, getActivePrice } from '../utils/utils-index';
 
 // Parses a money-field <input type="number"> value into a non-negative
 // number, or '' if the field is empty. The HTML `min={0}` attribute on
@@ -96,6 +96,26 @@ export const FOOD_PREFERENCE_OPTIONS = [
   { value: 'non_veg', label: 'Non-veg' },
 ];
 
+// Works out which price currently applies to a trip an enquiry is linked
+// to — early-bird if that price/deadline are set and today is still on or
+// before the deadline, normal otherwise — using the exact same clock the
+// public site's TripCard/TripDetailPage use (getActivePrice), so what an
+// admin sees here always matches what the traveller was actually quoted.
+// Returns null when there's no trip to price against.
+export function getTripActivePricing(
+  trip: UpcomingTrip | undefined
+): { amount: number; packageType: Enquiry['package_type']; isEarlyBird: boolean; deadline?: string | null } | null {
+  if (!trip) return null;
+  const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
+  if (activePrice == null) return null;
+  return {
+    amount: activePrice,
+    packageType: isEarlyBird ? 'early_bird' : 'normal',
+    isEarlyBird,
+    deadline: trip.early_bird_deadline,
+  };
+}
+
 // Small inline badge shown next to each enquiry's name — lets an admin spot
 // missing food preferences directly in the list, without opening the row.
 export function foodBadge(e: Enquiry): { label: string; color: string } {
@@ -140,6 +160,17 @@ export const JOURNEY_STAGE_CONFIG: Record<Enquiry['journey_stage'], { label: str
 
 export function journeyBadge(e: Enquiry) {
   return JOURNEY_STAGE_CONFIG[e.journey_stage] || JOURNEY_STAGE_CONFIG.new_enquiry;
+}
+
+// True when this enquiry was closed out before ever becoming a paying
+// booking — i.e. an admin followed up and the person just wasn't
+// interested, as opposed to `status: 'closed'` on a booking that actually
+// went through (see the Enquiry.status doc comment in types-index.ts: a
+// 'closed' lead can mean either "went nowhere" or "fully paid booking").
+// Used to show a distinct "Not Interested" badge/action instead of the
+// ambiguous generic 'closed' status, without needing a new DB value.
+export function isNotInterested(e: Enquiry): boolean {
+  return e.status === 'closed' && !e.cancelled_at && (e.amount_paid || 0) <= 0 && !e.booking_id;
 }
 
 // The one, single manual action that moves a booking's journey forward a

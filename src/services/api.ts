@@ -766,6 +766,71 @@ export async function updateEnquiryStatus(id: string, status: Enquiry['status'])
   await refreshJourneyStage(id);
 }
 
+// Corrects who/what an enquiry is actually about — full name, contact
+// details, and which trip it's linked to — for when an admin logged the
+// right enquiry against the wrong person (typo'd name/phone/email, picked
+// the wrong trip, etc). Deliberately separate from recordPayment/
+// createManualEnquiry: this never touches money, status, or journey_stage,
+// it only fixes the traveller-identity fields, so it can't accidentally
+// re-trigger booking/payment side effects. trip_id is included since
+// "wrong trip" is the same class of mistake as "wrong name" here; if it
+// changes, any already-tracked total_amount/package_type is left as-is —
+// re-open Track Payment afterwards if the new trip's price differs.
+export async function updateEnquiryDetails(
+  id: string,
+  fields: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    city?: string | null;
+    age?: number | null;
+    trip_id?: string | null;
+    // trip_title is snapshotted on the row at submit time (see
+    // AdminEnquiries.tsx), not looked up live from trip_id — so changing
+    // trip_id here must also pass the new trip's title, or the row ends up
+    // pointing at one trip while displaying another's name everywhere the
+    // snapshot (not a join) is what's shown.
+    trip_title?: string | null;
+    source?: Enquiry['source'];
+  }
+): Promise<Enquiry> {
+  const patch: Record<string, unknown> = {};
+  if (fields.full_name !== undefined) {
+    const trimmed = fields.full_name.trim();
+    if (!trimmed) throw new Error('Name cannot be empty.');
+    patch.full_name = trimmed;
+  }
+  if (fields.email !== undefined) patch.email = fields.email.trim();
+  if (fields.phone !== undefined) {
+    const trimmed = fields.phone.trim();
+    if (!trimmed) throw new Error('Phone cannot be empty.');
+    patch.phone = trimmed;
+  }
+  if (fields.city !== undefined) patch.city = fields.city || null;
+  if (fields.age !== undefined) patch.age = fields.age;
+  if (fields.trip_id !== undefined) patch.trip_id = fields.trip_id || null;
+  if (fields.trip_title !== undefined) patch.trip_title = fields.trip_title || null;
+  if (fields.source !== undefined) patch.source = fields.source;
+
+  const { data, error } = await supabase
+    .from('enquiries')
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) {
+    console.error('updateEnquiryDetails failed:', error.code, error.message, error.details, error.hint);
+    if (error.code === '23505') {
+      throw new Error('DUPLICATE_ENQUIRY');
+    }
+    if (isAgeNotEligibleError(error)) {
+      throw new Error('AGE_NOT_ELIGIBLE');
+    }
+    throw new Error(error.message || 'Failed to update enquiry details.');
+  }
+  return data;
+}
+
 // Manual enquiry entry — for walk-ins, phone calls, WhatsApp messages, etc.
 // that never came through the website's booking form. If an amount is paid
 // up front, this books a seat, logs it to the payments ledger, and sets

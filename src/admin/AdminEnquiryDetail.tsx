@@ -11,7 +11,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, FileText, Share2, Phone, MessageCircle, Users, User, Receipt,
   BadgeCheck, Plus, CheckCircle2, XCircle, UserX, UserCheck, LogIn, RefreshCw,
-  Trash2, IndianRupee,
+  Trash2, IndianRupee, Pencil, UserMinus, Bird,
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
@@ -28,7 +28,7 @@ import {
   recordPayment, recordTypedPayment, generatePendingInvoice, addExtraCharge,
   markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
-  recordRefund, deleteEnquiry,
+  recordRefund, deleteEnquiry, updateEnquiryDetails,
 } from '../services/api';
 import type { Enquiry, Payment, UpcomingTrip } from '../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
@@ -37,12 +37,21 @@ import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
   GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
-  journeyBadge, nextManualAction, BookingLifecycleStepper,
+  journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested,
 } from './enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
 
 const emptyPaymentForm: PaymentForm = {
   package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '', food_preference: '',
+};
+
+type EditDetailsForm = {
+  full_name: string;
+  email: string;
+  phone: string;
+  city: string;
+  age: number | '';
+  trip_id: string;
 };
 
 export default function AdminEnquiryDetail() {
@@ -91,12 +100,21 @@ export default function AdminEnquiryDetail() {
     return () => { cancelled = true; };
   }, [enquiry?.id]);
 
+  // Fixed lookup for a specific package (used once the admin has picked
+  // Early Bird / Normal explicitly in the Track Payment modal).
   const getTripPrice = (tripId: string | undefined, packageType: Enquiry['package_type']): number | undefined => {
     const trip = trips.find(t => t.id === tripId);
     if (!trip) return undefined;
     const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
     return price ?? undefined;
   };
+
+  // Which price is *currently* live for this enquiry's trip, worked out
+  // from today's date against the trip's early-bird deadline — same rule
+  // the public site uses to decide what a new visitor gets quoted. This is
+  // what a fresh enquiry (no total_amount recorded yet) should default to,
+  // instead of showing "Not set" until someone manually types a number in.
+  const activePricing = enquiry ? getTripActivePricing(trips.find(t => t.id === enquiry.trip_id)) : null;
 
   // ---- Track Payment modal --------------------------------------------
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -106,8 +124,13 @@ export default function AdminEnquiryDetail() {
 
   const openPayment = () => {
     if (!enquiry) return;
-    const packageType = enquiry.package_type || 'normal';
-    const suggested = enquiry.total_amount ?? getTripPrice(enquiry.trip_id, packageType);
+    // If the enquiry already has a package/total_amount on record, keep it
+    // — an admin's already-tracked payment shouldn't silently jump to a
+    // different price just because the early-bird window has since closed.
+    // Only a brand-new payment (nothing recorded yet) auto-picks whichever
+    // price is live right now.
+    const packageType = enquiry.package_type || activePricing?.packageType || 'normal';
+    const suggested = enquiry.total_amount ?? getTripPrice(enquiry.trip_id, packageType) ?? activePricing?.amount;
     setPaymentForm({
       package_type: packageType,
       total_amount: suggested ?? '',
@@ -116,6 +139,92 @@ export default function AdminEnquiryDetail() {
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
     });
     setPaymentOpen(true);
+  };
+
+  // ---- Edit Details modal (fixing wrong name/contact/trip) --------------
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<EditDetailsForm>({ full_name: '', email: '', phone: '', city: '', age: '', trip_id: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const openEdit = () => {
+    if (!enquiry) return;
+    setEditForm({
+      full_name: enquiry.full_name || '',
+      email: enquiry.email || '',
+      phone: enquiry.phone || '',
+      city: enquiry.city || '',
+      age: enquiry.age ?? '',
+      trip_id: enquiry.trip_id || '',
+    });
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!enquiry) return;
+    if (!editForm.full_name.trim() || !editForm.phone.trim()) {
+      alert('Name and phone are required.');
+      return;
+    }
+    try {
+      setSavingEdit(true);
+      const newTrip = editForm.trip_id ? trips.find(t => t.id === editForm.trip_id) : undefined;
+      const updated = await updateEnquiryDetails(enquiry.id, {
+        full_name: editForm.full_name,
+        email: editForm.email,
+        phone: editForm.phone,
+        city: editForm.city || null,
+        age: editForm.age === '' ? null : Number(editForm.age),
+        trip_id: editForm.trip_id || null,
+        trip_title: editForm.trip_id ? (newTrip?.title ?? null) : null,
+      });
+      setEnquiry(updated);
+      setEditOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to save details.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  // ---- Not Interested / Reopen (this is just a query, not a booking) ----
+  // Distinct from Cancel Booking, which is for a booking that had money on
+  // it. This only applies before anything's been paid — closing out a lead
+  // that went nowhere. See isNotInterested()'s comment in enquiryShared.tsx
+  // for why 'closed' status alone is ambiguous without this.
+  const [busyStatus, setBusyStatus] = useState(false);
+  const handleMarkNotInterested = async () => {
+    if (!enquiry) return;
+    const ok = await confirm({
+      title: 'Mark as Not Interested?',
+      message: 'This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.',
+      confirmLabel: 'Mark Not Interested',
+    });
+    if (!ok) return;
+    setBusyStatus(true);
+    try {
+      await updateEnquiryStatus(enquiry.id, 'closed');
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update status.');
+    } finally {
+      setBusyStatus(false);
+    }
+  };
+
+  const handleReopenEnquiry = async () => {
+    if (!enquiry) return;
+    setBusyStatus(true);
+    try {
+      await updateEnquiryStatus(enquiry.id, 'new');
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to reopen enquiry.');
+    } finally {
+      setBusyStatus(false);
+    }
   };
 
   const handleSavePayment = async () => {
@@ -431,7 +540,20 @@ export default function AdminEnquiryDetail() {
   const food = foodBadge(enquiry);
   const isGeneralContactMessage = !enquiry.trip_id && enquiry.source === 'website';
 
-  const rowActions: ActionMenuItem[] = [];
+  const rowActions: ActionMenuItem[] = [
+    { label: 'Edit Details', icon: Pencil, onClick: openEdit },
+  ];
+  // "Not Interested" / "Reopen" only make sense before any money's changed
+  // hands — once there's a booking_id or a payment on record, closing the
+  // lead out is a Cancel Booking decision instead (different consequences:
+  // refunds, seat release, etc).
+  if (!enquiry.cancelled_at && !enquiry.booking_id && (enquiry.amount_paid || 0) <= 0) {
+    rowActions.push(
+      isNotInterested(enquiry)
+        ? { label: 'Reopen Enquiry', icon: RefreshCw, onClick: handleReopenEnquiry }
+        : { label: 'Not Interested (Close Query)', icon: UserMinus, onClick: handleMarkNotInterested }
+    );
+  }
   if (enquiry.booking_id) {
     rowActions.push(
       { label: 'Download Invoice', icon: FileText, onClick: handleDownloadInvoice, disabled: invoiceBusy },
@@ -490,6 +612,11 @@ export default function AdminEnquiryDetail() {
                 <span title={`Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
                   <jb.icon size={12} className="shrink-0" /> {jb.label}
                 </span>
+                {isNotInterested(enquiry) && (
+                  <span title="Closed — this was just a query, no booking followed" className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-red-50 text-red-600">
+                    <UserMinus size={12} className="shrink-0" /> Not Interested
+                  </span>
+                )}
                 {enquiry.group_size && enquiry.group_size > 1 ? (
                   <span className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
                     <Users size={10} /> Group of {enquiry.group_size} · seat {enquiry.group_seq}
@@ -510,7 +637,7 @@ export default function AdminEnquiryDetail() {
                   <nma.icon size={14} /> {nma.label}
                 </Button>
               )}
-              <ActionsMenu items={rowActions} disabled={busyAction} />
+              <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
             </div>
           </div>
 
@@ -560,8 +687,21 @@ export default function AdminEnquiryDetail() {
           </div>
         )}
         {!enquiry.booking_id && (
-          <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 flex items-center justify-between gap-3">
-            <p className="text-dark-muted text-sm">No payment recorded yet — no booking exists on this enquiry.</p>
+          <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <p className="text-dark-muted text-sm">No payment recorded yet — no booking exists on this enquiry.</p>
+              {activePricing ? (
+                <p className="text-xs text-dark-muted mt-1 flex items-center gap-1">
+                  {activePricing.isEarlyBird && <Bird size={12} className="shrink-0 text-purple-600" />}
+                  Current price for this trip: <span className="font-semibold text-dark">{formatPrice(activePricing.amount)}</span>
+                  {' '}({activePricing.isEarlyBird ? 'Early Bird' : 'Normal'}
+                  {activePricing.isEarlyBird && activePricing.deadline ? ` · ends ${formatDate(activePricing.deadline, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''})
+                  — auto-filled when you track payment.
+                </p>
+              ) : enquiry.trip_id && (
+                <p className="text-xs text-dark-muted mt-1">This trip has no price set yet — set one in Admin → Trips first.</p>
+              )}
+            </div>
             <Button variant="primary" size="sm" onClick={openPayment}>
               <IndianRupee size={13} /> Track Payment
             </Button>
@@ -840,6 +980,88 @@ export default function AdminEnquiryDetail() {
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" onClick={() => setInvoiceModalOpen(false)}>Cancel</Button>
             <Button variant="primary" size="md" onClick={handleGenerateInvoice} loading={savingInvoice}>Generate</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Details modal — fixes wrong name/contact/trip entered for the
+          wrong person. Deliberately doesn't touch money/status/journey. */}
+      <Modal isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit Details" size="sm">
+        <div className="space-y-4">
+          <p className="text-xs text-dark-muted -mt-1">
+            Fixes who this enquiry is actually about. Doesn't affect payments, status, or booking journey.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Full Name</label>
+            <input
+              type="text"
+              value={editForm.full_name}
+              onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))}
+              className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
+              placeholder="e.g. Priya Sharma"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Phone</label>
+              <input
+                type="tel"
+                value={editForm.phone}
+                onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
+                placeholder="e.g. 98765 43210"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Email</label>
+              <input
+                type="email"
+                value={editForm.email}
+                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">City</label>
+              <input
+                type="text"
+                value={editForm.city}
+                onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))}
+                className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
+                placeholder="Optional"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Age</label>
+              <input
+                type="number"
+                min={0}
+                value={editForm.age}
+                onChange={e => setEditForm(f => ({ ...f, age: e.target.value === '' ? '' : Number(e.target.value) }))}
+                className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Trip</label>
+            <Select
+              value={editForm.trip_id}
+              onChange={val => setEditForm(f => ({ ...f, trip_id: val }))}
+              options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+            />
+            {editForm.trip_id !== (enquiry.trip_id || '') && (
+              <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1.5 mt-1.5">
+                Changing the trip doesn't update an already-tracked total amount — open Track Payment afterwards to re-check the price for the new trip.
+              </p>
+            )}
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" size="md" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button variant="primary" size="md" onClick={handleSaveEdit} loading={savingEdit}>Save Changes</Button>
           </div>
         </div>
       </Modal>
