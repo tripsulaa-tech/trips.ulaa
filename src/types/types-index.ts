@@ -226,6 +226,9 @@ export interface GalleryImage {
   created_at: string;
 }
 
+export type JourneyStage = 'new_enquiry' | 'contacted' | 'advance_pending' | 'advance_paid'
+  | 'confirmed' | 'balance_pending' | 'fully_paid' | 'checked_in' | 'completed' | 'cancelled';
+
 export interface Enquiry {
   id: string;
   full_name: string;
@@ -283,6 +286,15 @@ export interface Enquiry {
   // cleared afterwards (including on cancellation). Drives the "Download
   // Invoice" feature in AdminEnquiries.
   booking_id?: string | null;
+  // Single derived "Booking Journey" stage — supersedes reading `status` +
+  // `booking_status` together for display purposes. Computed client-side by
+  // computeJourneyStage() in src/services/api.ts and written on every
+  // mutating call, same pattern as status/booking_status. 'cancelled'
+  // overrides every other stage. See add_booking_journey_stage.sql.
+  journey_stage: JourneyStage;
+  // Stamped when an admin marks the traveller checked in for the trip via
+  // checkInEnquiry(). Null means not checked in yet.
+  checked_in_at?: string | null;
 }
 
 // One row per individual payment, refund, or raised-but-uncollected invoice
@@ -417,7 +429,7 @@ export interface WaitlistEntry {
   emergency_contact?: string | null;
   food_preference?: 'veg' | 'non_veg' | null;
   message?: string;
-  status: 'waiting' | 'notified' | 'converted' | 'declined';
+  status: 'waiting' | 'notified' | 'converted' | 'declined' | 'expired';
   notified_at?: string | null;
   // Legacy single-conversion field — no longer written to (superseded by
   // converted_enquiry_ids below), kept only so old rows still type-check.

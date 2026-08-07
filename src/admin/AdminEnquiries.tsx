@@ -1,35 +1,31 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Receipt, BadgeCheck } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Receipt, BadgeCheck, Eye, UserX, UserCheck, LogIn, ExternalLink } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import FoodMark from '../components/ui/FoodMark';
 import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
+import ActionsMenu from '../components/ui/ActionsMenu';
+import type { ActionMenuItem } from '../components/ui/ActionsMenu';
 import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
 import type { SortDirection } from '../components/ui/dataTableUtils';
 import { useConfirm } from '../components/ui/useConfirm';
 import { useAlert } from '../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid } from '../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry } from '../services/api';
 import type { Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
-import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
+import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
-
-// Parses a money-field <input type="number"> value into a non-negative
-// number, or '' if the field is empty. The HTML `min={0}` attribute on
-// these inputs is a visual hint only — some browsers still hand back a
-// negative number from a programmatic read (e.g. typing "-5000" and
-// tabbing away without the browser's spinner/blur clamp kicking in), so
-// every money field routes through this instead of a bare `+e.target.value`.
-function parseNonNegative(raw: string): number | '' {
-  if (raw === '') return '';
-  const n = Number(raw);
-  if (Number.isNaN(n)) return '';
-  return Math.max(0, n);
-}
+import {
+  parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
+  GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
+  foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
+  journeyBadge, nextManualAction, BookingLifecycleStepper,
+} from './enquiryShared';
+import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
 
 // Digits-only phone "signature" used for fuzzy duplicate matching (3.5).
 // The DB's own duplicate guard only catches an *exact* string match on
@@ -54,58 +50,6 @@ function emailSignature(email: string | null | undefined): string | null {
   if (!trimmed || trimmed === 'not-provided@ulaa.local') return null;
   return trimmed;
 }
-
-const PACKAGE_CONFIG = {
-  early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
-  normal: { label: 'Normal', color: 'bg-slate-100 text-slate-700' },
-} as const;
-
-// Display label for every invoice/payment-ledger type, including the ones
-// only ever set server-side (booking_amount) — used wherever a raw
-// payment_type value needs to read as a human label (Invoices list, Generate
-// Invoice modal).
-const INVOICE_TYPE_LABEL: Record<Payment['payment_type'], string> = {
-  booking_amount: 'Booking Amount',
-  installment: 'Installment',
-  balance: 'Balance',
-  refund: 'Refund',
-  full_payment: 'Full Payment',
-  advance: 'Advance',
-  extra_charge: 'Extra Charge',
-};
-
-// Types the admin can pick from the Generate Invoice modal. Refund isn't
-// offered here — it already has its own dedicated flow in the Cancel
-// Booking / Track Payment modal (recordRefund), which accounts for
-// cancellation/no-show rules that this generic modal doesn't know about.
-type GenerateInvoiceType = 'full_payment' | 'advance' | 'balance' | 'installment' | 'extra_charge';
-
-const GENERATE_INVOICE_TYPE_OPTIONS: { value: GenerateInvoiceType; label: string }[] = [
-  { value: 'full_payment', label: 'Full Payment' },
-  { value: 'advance', label: 'Advance' },
-  { value: 'balance', label: 'Balance' },
-  { value: 'installment', label: 'Installment' },
-  { value: 'extra_charge', label: 'Extra Charge' },
-];
-
-const GENERATE_INVOICE_STATUS_OPTIONS: { value: 'paid' | 'pending'; label: string }[] = [
-  { value: 'paid', label: 'Paid now — money already collected' },
-  { value: 'pending', label: 'Pending — invoice only, collect later' },
-];
-
-interface GenerateInvoiceForm {
-  type: GenerateInvoiceType;
-  amount: number | '';
-  status: 'paid' | 'pending';
-  notes: string;
-}
-
-const emptyGenerateInvoiceForm: GenerateInvoiceForm = {
-  type: 'advance',
-  amount: '',
-  status: 'paid',
-  notes: '',
-};
 
 // Cycled across group bookings (see groupColorMap below) so that every
 // group visible on screen at once gets a visually distinct row tint, left
@@ -134,11 +78,6 @@ const SOURCE_OPTIONS = [
   { value: 'instagram', label: 'Instagram' },
   { value: 'walk_in', label: 'Walk-in' },
   { value: 'other', label: 'Other' },
-];
-
-const PACKAGE_OPTIONS = [
-  { value: 'normal', label: 'Normal Price' },
-  { value: 'early_bird', label: 'Early Bird' },
 ];
 
 // Bulk-edit fields are all opt-in — "No change" is the default for every
@@ -195,11 +134,7 @@ function paymentStatus(e: Enquiry): { label: string; color: string } {
 
 // Small inline badge shown next to each enquiry's name — lets an admin spot
 // missing food preferences directly in the list, without opening the row.
-function foodBadge(e: Enquiry): { label: string; color: string } {
-  if (e.food_preference === 'veg') return { label: 'Veg', color: 'bg-green-100 text-green-700' };
-  if (e.food_preference === 'non_veg') return { label: 'Non-veg', color: 'bg-red-100 text-red-700' };
-  return { label: 'Food not set', color: 'bg-slate-100 text-dark-muted' };
-}
+// (foodBadge itself now lives in enquiryShared.tsx, imported above.)
 
 function paymentBalance(e: Enquiry): number | null {
   if (!e.total_amount) return null;
@@ -270,6 +205,9 @@ const STATUS_CONFIG = {
   closed: { label: 'Closed', color: 'bg-green-100 text-green-700', icon: CheckCircle },
 };
 
+// JOURNEY_STAGE_CONFIG / journeyBadge / nextManualAction / BookingLifecycleStepper
+// now all live in enquiryShared.tsx (imported above), shared with AdminEnquiryDetail.
+
 const PAY_FILTER_LABELS = {
   all: 'All',
   paid: 'Paid in full',
@@ -298,18 +236,7 @@ const GROUP_FILTER_LABELS = {
   solo: 'Solo',
 } as const;
 
-function foodPreferenceKey(e: Enquiry): 'veg' | 'non_veg' | 'not_set' {
-  return e.food_preference === 'veg' || e.food_preference === 'non_veg' ? e.food_preference : 'not_set';
-}
-
-const SOURCE_CONFIG = {
-  website: { label: 'Website', icon: Globe },
-  whatsapp: { label: 'WhatsApp', icon: MessageCircle },
-  phone: { label: 'Phone Call', icon: Phone },
-  instagram: { label: 'Instagram', icon: Camera },
-  walk_in: { label: 'Walk-in', icon: MapPin },
-  other: { label: 'Other', icon: HelpCircle },
-} as const;
+// foodPreferenceKey / SOURCE_CONFIG now live in enquiryShared.tsx (imported above).
 
 type EnquiryForm = {
   full_name: string;
@@ -331,11 +258,7 @@ const emptyForm: EnquiryForm = {
   package_type: 'normal', total_amount: '', amount_paid: '', food_preference: '',
 };
 
-const FOOD_PREFERENCE_OPTIONS = [
-  { value: '', label: 'Not asked / unknown' },
-  { value: 'veg', label: 'Veg' },
-  { value: 'non_veg', label: 'Non-veg' },
-];
+// FOOD_PREFERENCE_OPTIONS now lives in enquiryShared.tsx (imported above).
 
 // One row of the bulk waitlist-conversion form — trip/package/notes stay
 // shared across the whole group (see `form`), but each person needs their
@@ -355,13 +278,7 @@ const emptyWaitlistPerson: WaitlistPersonForm = {
   full_name: '', phone: '', email: '', age: '', city: '', food_preference: '', amount_paid: '',
 };
 
-type PaymentForm = {
-  package_type: Enquiry['package_type'];
-  total_amount: number | '';
-  amount_paid: number | '';
-  refund_amount: number | '';
-  food_preference: 'veg' | 'non_veg' | '';
-};
+// PaymentForm type now lives in enquiryShared.tsx (imported above).
 
 // Shared dropdown menu used by every filter box in the filter bar — a
 // vertical list of options with counts, the selected one highlighted.
@@ -472,6 +389,7 @@ export default function AdminEnquiries() {
   const [generateInvoiceTarget, setGenerateInvoiceTarget] = useState<Enquiry | null>(null);
   const [generateInvoiceForm, setGenerateInvoiceForm] = useState<GenerateInvoiceForm>(emptyGenerateInvoiceForm);
   const [savingInvoice, setSavingInvoice] = useState(false);
+  const [completingId, setCompletingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -507,6 +425,11 @@ export default function AdminEnquiries() {
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '', food_preference: '' });
   const [savingPayment, setSavingPayment] = useState(false);
+  // Read-only ledger shown inline in the Track Payment modal (Phase F) —
+  // same on-demand fetch pattern as detailsInvoices above, just keyed to
+  // paymentTarget instead of detailsTarget.
+  const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
+  const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<Enquiry | null>(null);
   const [cancelCharges, setCancelCharges] = useState<number | ''>('');
   const [cancelIsNoShow, setCancelIsNoShow] = useState(false);
@@ -588,6 +511,21 @@ export default function AdminEnquiries() {
       .finally(() => { if (!cancelled) setDetailsInvoicesLoading(false); });
     return () => { cancelled = true; };
   }, [detailsTarget?.id]);
+
+  // Same lazy-load pattern, for the Track Payment modal's inline history.
+  useEffect(() => {
+    if (!paymentTarget) {
+      setPaymentHistory([]);
+      return;
+    }
+    let cancelled = false;
+    setPaymentHistoryLoading(true);
+    getPaymentsForEnquiry(paymentTarget.id)
+      .then(rows => { if (!cancelled) setPaymentHistory(rows); })
+      .catch(err => console.error(err))
+      .finally(() => { if (!cancelled) setPaymentHistoryLoading(false); });
+    return () => { cancelled = true; };
+  }, [paymentTarget?.id]);
 
   const load = () => {
     getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
@@ -1097,6 +1035,116 @@ export default function AdminEnquiries() {
     } finally {
       setInvoiceRowBusyId(null);
     }
+  };
+
+  // Marks the trip as done — the one transition in booking_status's
+  // lifecycle that a payment event can never infer on its own (see
+  // markEnquiryCompleted's comment in services/api.ts).
+  const handleMarkCompleted = async (enquiry: Enquiry) => {
+    try {
+      setCompletingId(enquiry.id);
+      const updated = await markEnquiryCompleted(enquiry.id);
+      setDetailsTarget(updated);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to mark booking as completed.');
+    } finally {
+      setCompletingId(null);
+    }
+  };
+
+  // Stamps/clears checked_in_at — the one journey stage with no
+  // payment/status signal to derive it from.
+  const handleCheckIn = async (enquiry: Enquiry) => {
+    setUpdating(enquiry.id);
+    try {
+      await checkInEnquiry(enquiry.id);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to check in.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleUndoCheckIn = async (enquiry: Enquiry) => {
+    setUpdating(enquiry.id);
+    try {
+      await undoCheckInEnquiry(enquiry.id);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to undo check-in.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // Single entry point for the table's "Advance" button — dispatches to
+  // whichever manual action nextManualAction() says is next for this row.
+  const handleAdvance = (enquiry: Enquiry) => {
+    switch (enquiry.journey_stage) {
+      case 'new_enquiry':
+        return handleStatusChange(enquiry, 'contacted');
+      case 'fully_paid':
+        return handleCheckIn(enquiry);
+      case 'checked_in':
+        return handleMarkCompleted(enquiry);
+      default:
+        return undefined;
+    }
+  };
+
+  // Consolidates every per-row action that used to be a separate icon
+  // button (or, for Cancel/Delete, still is on narrower layouts) into one
+  // kebab menu — Cancel/Reactivate, Mark/Undo No Show, invoice
+  // download/share, View Details, WhatsApp, Call, Delete.
+  const buildRowActions = (e: Enquiry): ActionMenuItem[] => {
+    const items: ActionMenuItem[] = [
+      { label: 'View Details', icon: Eye, onClick: () => setDetailsTarget(e) },
+      { label: 'Open Full CRM Page', icon: ExternalLink, onClick: () => navigate(`/admin/enquiries/${e.id}`) },
+    ];
+    if (e.booking_id) {
+      items.push(
+        { label: 'Download Invoice', icon: FileText, onClick: () => handleDownloadInvoice(e), disabled: invoiceBusyId === e.id },
+        { label: 'Share Invoice', icon: Share2, onClick: () => handleShareInvoice(e), disabled: invoiceBusyId === e.id },
+      );
+    }
+    if (e.phone) {
+      const firstName = e.full_name?.trim().split(/\s+/)[0];
+      const greeting = firstName ? `Hi ${firstName}` : 'Hi';
+      items.push(
+        {
+          label: 'WhatsApp',
+          icon: MessageCircle,
+          onClick: () => window.open(
+            getWhatsAppLink(e.phone, `${greeting}, following up on your ${e.trip_title || 'enquiry'} with ULAA — `),
+            '_blank',
+            'noopener,noreferrer'
+          ),
+        },
+        { label: 'Call', icon: Phone, onClick: () => { window.location.href = `tel:${e.phone}`; } },
+      );
+    }
+    if (!e.cancelled_at) {
+      items.push(
+        e.is_no_show
+          ? { label: 'Undo No Show', icon: UserCheck, onClick: () => handleToggleNoShow(e, false) }
+          : { label: 'Mark No Show', icon: UserX, onClick: () => handleToggleNoShow(e, true) }
+      );
+    }
+    if (e.journey_stage === 'checked_in') {
+      items.push({ label: 'Undo Check In', icon: LogIn, onClick: () => handleUndoCheckIn(e) });
+    }
+    items.push(
+      e.cancelled_at
+        ? { label: 'Reactivate Booking', icon: RefreshCw, onClick: () => handleCancelToggle(e) }
+        : { label: 'Cancel Booking', icon: XCircle, danger: true, onClick: () => handleCancelToggle(e) }
+    );
+    items.push({ label: 'Delete', icon: Trash2, danger: true, onClick: () => handleDelete(e) });
+    return items;
   };
 
   const handleSavePayment = async () => {
@@ -2370,7 +2418,8 @@ export default function AdminEnquiries() {
                   <tbody className="divide-y divide-background-warm">
                     {paginatedEnquiries.map((e, pageIdx) => {
                       const idx = (enquiriesSafePage - 1) * ENQUIRIES_PAGE_SIZE + pageIdx;
-                      const cfg = STATUS_CONFIG[e.status];
+                      const jb = journeyBadge(e);
+                      const nma = nextManualAction(e);
                       const seat = seatStatus(e);
                       const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                       const isHighlighted = highlightId === e.id;
@@ -2463,46 +2512,30 @@ export default function AdminEnquiries() {
                           </td>
                           <td className="px-2 py-3 text-left whitespace-nowrap">
                             <button onClick={() => openPayment(e)} className="text-left hover:opacity-75 transition-opacity">
-                              <p className="text-dark font-medium text-xs">
-                                {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}
+                              <p className="text-dark text-xs">
+                                <span className="font-medium">{formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}</span>
+                                <span className="text-dark-muted"> · </span>
+                                <span className={`font-semibold ${
+                                  paymentStatus(e).color.includes('green') ? 'text-green-700'
+                                    : paymentStatus(e).color.includes('amber') ? 'text-amber-700'
+                                    : paymentStatus(e).color.includes('red') ? 'text-red-700'
+                                    : 'text-dark-muted'
+                                }`}>
+                                  {paymentStatus(e).label}
+                                </span>
+                                {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
+                                  <span className="text-amber-600"> · {formatPrice(paymentBalance(e)!)} Due</span>
+                                )}
                               </p>
-                              <span className={`inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${paymentStatus(e).color}`}>
-                                {paymentStatus(e).label}
-                              </span>
-                              {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                                <p className="text-amber-600 text-[10px] font-medium mt-0.5">
-                                  Balance {formatPrice(paymentBalance(e)!)}
-                                </p>
-                              )}
                             </button>
                             {e.booking_id && (
-                              <div className="mt-1 flex items-center gap-1">
-                                <span title="Booking ID" className="text-[10px] font-mono text-dark-muted truncate">{e.booking_id}</span>
-                                <button
-                                  onClick={() => handleDownloadInvoice(e)}
-                                  disabled={invoiceBusyId === e.id}
-                                  title="Download invoice"
-                                  aria-label="Download invoice"
-                                  className="shrink-0 text-primary hover:text-primary-dark disabled:opacity-50"
-                                >
-                                  <FileText size={12} />
-                                </button>
-                                <button
-                                  onClick={() => handleShareInvoice(e)}
-                                  disabled={invoiceBusyId === e.id}
-                                  title="Share invoice"
-                                  aria-label="Share invoice"
-                                  className="shrink-0 text-primary hover:text-primary-dark disabled:opacity-50"
-                                >
-                                  <Share2 size={12} />
-                                </button>
-                              </div>
+                              <span title="Booking ID" className="mt-0.5 block text-[10px] font-mono text-dark-muted truncate">{e.booking_id}</span>
                             )}
                           </td>
                           <td className="px-2 py-3 text-center">
-                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
-                              <cfg.icon size={12} className="shrink-0" />
-                              {cfg.label}
+                            <span title={`Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
+                              <jb.icon size={12} className="shrink-0" />
+                              {jb.label}
                             </span>
                           </td>
                           <td className="px-2 py-3 text-center">
@@ -2520,34 +2553,19 @@ export default function AdminEnquiries() {
                             )}
                           </td>
                           <td className="px-2 py-3 text-right">
-                            <Select
-                              value={e.status}
-                              disabled={updating === e.id}
-                              onChange={val => handleStatusChange(e, val as Enquiry['status'])}
-                              options={STATUS_OPTIONS}
-                              size="sm"
-                            />
-                            <div className="mt-1.5 flex items-stretch gap-1">
-                              <button
-                                onClick={() => handleCancelToggle(e)}
-                                disabled={updating === e.id}
-                                className={`flex-1 text-[11px] font-button font-semibold px-1.5 py-1 rounded border transition-colors whitespace-nowrap ${
-                                  e.cancelled_at
-                                    ? 'border-green-200 text-green-700 hover:bg-green-50'
-                                    : 'border-red-200 text-red-600 hover:bg-red-50'
-                                }`}
-                              >
-                                {e.cancelled_at ? 'Reactivate' : 'Cancel'}
-                              </button>
-                              <button
-                                onClick={() => handleDelete(e)}
-                                disabled={updating === e.id}
-                                title="Delete enquiry"
-                                aria-label="Delete enquiry"
-                                className="shrink-0 w-7 flex items-center justify-center rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-                              >
-                                <Trash2 size={13} />
-                              </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {nma && (
+                                <button
+                                  onClick={() => handleAdvance(e)}
+                                  disabled={updating === e.id || completingId === e.id}
+                                  title={nma.label}
+                                  className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"
+                                >
+                                  <nma.icon size={12} className="shrink-0" />
+                                  {nma.label}
+                                </button>
+                              )}
+                              <ActionsMenu disabled={updating === e.id} items={buildRowActions(e)} />
                             </div>
                           </td>
                         </motion.tr>
@@ -2566,7 +2584,7 @@ export default function AdminEnquiries() {
             {/* Mobile: tap a card to expand full details */}
             <div className="sm:hidden space-y-3">
               {paginatedEnquiries.map((e, idx) => {
-                const cfg = STATUS_CONFIG[e.status];
+                const jb = journeyBadge(e);
                 const seat = seatStatus(e);
                 const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                 const isOpen = expandedId === e.id;
@@ -2655,9 +2673,9 @@ export default function AdminEnquiries() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
-                          <cfg.icon size={12} className="shrink-0" />
-                          {cfg.label}
+                        <span title={`Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
+                          <jb.icon size={12} className="shrink-0" />
+                          {jb.label}
                         </span>
                         <ChevronDown size={16} className={`text-dark-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                       </div>
@@ -3260,6 +3278,38 @@ export default function AdminEnquiries() {
               </p>
             )}
 
+            {/* Inline payment history (Phase F) — read-only ledger so an
+                admin can see exactly what's already been recorded before
+                changing the running total above. */}
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Payment History</label>
+              {paymentHistoryLoading ? (
+                <p className="text-xs text-dark-muted">Loading…</p>
+              ) : paymentHistory.length === 0 ? (
+                <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">No payments recorded yet.</p>
+              ) : (
+                <div className="border border-background-warm rounded-md divide-y divide-background-warm max-h-40 overflow-y-auto">
+                  {paymentHistory.map(p => (
+                    <div key={p.id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
+                      <div className="min-w-0">
+                        <p className="text-dark font-medium truncate">
+                          {INVOICE_TYPE_LABEL[p.payment_type] || p.payment_type}
+                          {p.status === 'pending' && <span className="text-amber-600 font-normal"> · pending</span>}
+                        </p>
+                        <p className="text-dark-muted">
+                          {p.paid_at ? formatDate(p.paid_at, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not yet paid'}
+                          {p.payment_method ? ` · ${p.payment_method}` : ''}
+                        </p>
+                      </div>
+                      <p className={`shrink-0 font-semibold ${p.payment_type === 'refund' ? 'text-red-600' : 'text-green-700'}`}>
+                        {p.payment_type === 'refund' ? '−' : ''}{formatPrice(p.amount)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {paymentTarget.cancelled_at && (
               <div className="bg-red-50 rounded-md p-3 space-y-2">
                 <p className="text-red-700 text-xs font-medium">This booking is cancelled. Track any refund here as you process it.</p>
@@ -3361,6 +3411,22 @@ export default function AdminEnquiries() {
               )}
               {detailsTarget.booking_id && (
                 <div className="space-y-2.5">
+                  {/* Booking lifecycle — Confirmed → Fully Paid → Completed,
+                      with Cancelled as a terminal off-ramp. */}
+                  <BookingLifecycleStepper enquiry={detailsTarget} />
+                  {detailsTarget.booking_status && detailsTarget.booking_status !== 'cancelled' && detailsTarget.booking_status !== 'completed' && (
+                    <div className="flex justify-end">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleMarkCompleted(detailsTarget)}
+                        disabled={completingId === detailsTarget.id}
+                      >
+                        <CheckCircle2 size={13} /> Mark Trip Completed
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Booking Summary — Total / Paid / Pending, mirrors the
                       price-summary strip on the PDF invoice itself. Pending
                       here is simply what's left of the total, which stays

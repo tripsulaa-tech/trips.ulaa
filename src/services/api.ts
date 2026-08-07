@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment } from '../types/types-index';
+import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment, JourneyStage } from '../types/types-index';
 
 // =============================================
 // Trip lifecycle
@@ -763,6 +763,7 @@ export async function getEnquiries(): Promise<Enquiry[]> {
 export async function updateEnquiryStatus(id: string, status: Enquiry['status']): Promise<void> {
   const { error } = await supabase.from('enquiries').update({ status }).eq('id', id);
   if (error) throw error;
+  await refreshJourneyStage(id);
 }
 
 // Manual enquiry entry — for walk-ins, phone calls, WhatsApp messages, etc.
@@ -787,6 +788,18 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
     enquiry.balance_due_date,
     undefined
   );
+  // journey_stage computed as if amount_paid were already 0 (the ledger
+  // insert below, if any, is refreshed via refreshJourneyStage afterwards).
+  const journeyStage = computeJourneyStage({
+    status,
+    cancelled_at: null,
+    amount_paid: 0,
+    total_amount: totalAmount,
+    booking_amount: enquiry.booking_amount || 0,
+    balance_due_date: enquiry.balance_due_date,
+    checked_in_at: null,
+    booking_status: bookingStatus,
+  });
 
   // Don't insert amount_paid directly if we're about to log it to the
   // ledger — let the trigger set it, so the two never drift apart.
@@ -794,7 +807,7 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
   delete rest.amount_paid;
   const { data, error } = await supabase
     .from('enquiries')
-    .insert({ ...rest, amount_paid: 0, is_paid: isPaidFull, status, booking_status: bookingStatus })
+    .insert({ ...rest, amount_paid: 0, is_paid: isPaidFull, status, booking_status: bookingStatus, journey_stage: journeyStage })
     .select()
     .single();
   if (error) {
@@ -835,16 +848,98 @@ export async function createManualEnquiry(enquiry: Partial<Enquiry>): Promise<En
     // Re-fetch: inserting the payment above cascades, via DB triggers, into
     // both enquiries.amount_paid and the trip's seats_booked count being
     // recomputed from real data — no manual seat adjustment needed here.
-    const { data: refreshed, error: refetchError } = await supabase
-      .from('enquiries')
-      .select('*')
-      .eq('id', data.id)
-      .single();
-    if (refetchError) throw refetchError;
-    return refreshed;
+    // Also brings journey_stage in line with the real amount_paid, which
+    // may put it a stage further along than the pre-payment value computed
+    // above (e.g. straight to 'confirmed'/'fully_paid').
+    return refreshJourneyStage(data.id);
   }
 
   return data;
+}
+
+// Pure derivation of the single "Booking Journey" stage shown in the admin
+// table, from the same underlying columns computeAutoStatus/
+// computeBookingStatus already read — see add_booking_journey_stage.sql for
+// the full rationale on why each branch is ordered the way it is.
+// cancelled_at always wins; booking_status === 'completed' is next (both are
+// admin-explicit, never something a payment alone can undo).
+function computeJourneyStage(e: {
+  status: Enquiry['status'];
+  cancelled_at?: string | null;
+  amount_paid: number;
+  total_amount?: number | null;
+  booking_amount: number;
+  balance_due_date?: string | null;
+  checked_in_at?: string | null;
+  booking_status?: Enquiry['booking_status'];
+}): JourneyStage {
+  if (e.cancelled_at) return 'cancelled';
+  if (e.booking_status === 'completed') return 'completed';
+  if (e.checked_in_at) return 'checked_in';
+  if (e.total_amount && e.total_amount > 0 && e.amount_paid >= e.total_amount) return 'fully_paid';
+  if (
+    e.amount_paid > 0 &&
+    e.balance_due_date &&
+    new Date(e.balance_due_date) < new Date() &&
+    (!e.total_amount || e.amount_paid < e.total_amount)
+  ) {
+    return 'balance_pending';
+  }
+  if (e.booking_amount > 0 && e.amount_paid >= e.booking_amount) return 'confirmed';
+  if (e.amount_paid > 0) return 'advance_paid';
+  if (e.status === 'contacted' && e.total_amount) return 'advance_pending';
+  if (e.status === 'contacted') return 'contacted';
+  return 'new_enquiry';
+}
+
+// Re-reads an enquiry's current columns and writes the journey_stage they
+// derive to, if it's changed. Every mutating enquiry path below that can
+// possibly move the journey forward (or back to 'cancelled') calls this
+// once it's done, instead of trying to compute the new stage inline from
+// values that might not reflect what a DB trigger just wrote.
+async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
+  const { data: e, error } = await supabase
+    .from('enquiries')
+    .select('*')
+    .eq('id', enquiryId)
+    .single();
+  if (error) throw error;
+
+  const stage = computeJourneyStage(e);
+  if (stage === e.journey_stage) return e;
+
+  const { data, error: updateError } = await supabase
+    .from('enquiries')
+    .update({ journey_stage: stage })
+    .eq('id', enquiryId)
+    .select()
+    .single();
+  if (updateError) throw updateError;
+  return data;
+}
+
+// Manually advances an enquiry to 'checked_in' — the one journey stage with
+// no payment/status signal to derive it from. Only meaningful once the
+// booking is fully paid (checking in someone who still owes money is a
+// front-desk/ops decision, not blocked here, but the button that calls this
+// only appears once journey_stage is already 'fully_paid').
+export async function checkInEnquiry(enquiryId: string): Promise<Enquiry> {
+  const { error } = await supabase
+    .from('enquiries')
+    .update({ checked_in_at: new Date().toISOString() })
+    .eq('id', enquiryId);
+  if (error) throw error;
+  return refreshJourneyStage(enquiryId);
+}
+
+// Undoes an accidental check-in.
+export async function undoCheckInEnquiry(enquiryId: string): Promise<Enquiry> {
+  const { error } = await supabase
+    .from('enquiries')
+    .update({ checked_in_at: null })
+    .eq('id', enquiryId);
+  if (error) throw error;
+  return refreshJourneyStage(enquiryId);
 }
 
 // Any payment — full or partial — reserves a seat, since a deposit is a
@@ -889,6 +984,36 @@ function computeBookingStatus(
 // manual +/-1 adjustment here double-counted every change (e.g. a
 // cancellation would free the seat via the trigger AND get decremented
 // again by this function), which is what caused seat counts to drift.
+
+// Manually marks a booking's trip as completed once it's wrapped up.
+// booking_status only ever reaches 'completed' through this explicit call —
+// computeBookingStatus() (used by every payment-driven update above) never
+// advances to it on its own, since "the trip happened" isn't something a
+// payment event can infer. Guards against completing a booking that was
+// cancelled or one that was never actually booked (no payment recorded, so
+// booking_status is still unset).
+export async function markEnquiryCompleted(enquiryId: string): Promise<Enquiry> {
+  const { data: current, error: fetchError } = await supabase
+    .from('enquiries')
+    .select('booking_status')
+    .eq('id', enquiryId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  if (current.booking_status === 'cancelled') {
+    throw new Error('This booking was cancelled and cannot be marked completed.');
+  }
+  if (!current.booking_status) {
+    throw new Error('This enquiry has no booking on it yet (no payment recorded), so it cannot be marked completed.');
+  }
+
+  const { error } = await supabase
+    .from('enquiries')
+    .update({ booking_status: 'completed' })
+    .eq('id', enquiryId);
+  if (error) throw error;
+  return refreshJourneyStage(enquiryId);
+}
 
 // =============================================
 // Waitlist
@@ -1070,7 +1195,7 @@ export async function recordPayment(
     refreshed.booking_status
   );
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('enquiries')
     .update({
       total_amount: newTotal,
@@ -1080,11 +1205,9 @@ export async function recordPayment(
       status,
       booking_status: bookingStatus,
     })
-    .eq('id', current.id)
-    .select()
-    .single();
+    .eq('id', current.id);
   if (error) throw error;
-  return data;
+  return refreshJourneyStage(current.id);
 }
 
 // Full payment ledger for one enquiry (booking_amount / installment /
@@ -1156,14 +1279,12 @@ export async function recordTypedPayment(
     refreshed.booking_status
   );
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('enquiries')
     .update({ is_paid: isPaidFull, status, booking_status: bookingStatus })
-    .eq('id', current.id)
-    .select()
-    .single();
+    .eq('id', current.id);
   if (error) throw error;
-  return data;
+  return refreshJourneyStage(current.id);
 }
 
 // Raises an invoice for money that hasn't been collected yet — e.g. a
@@ -1223,7 +1344,7 @@ export async function addExtraCharge(
 
   const { data, error } = await supabase.from('enquiries').select('*').eq('id', current.id).single();
   if (error) throw error;
-  return data;
+  return refreshJourneyStage(data.id);
 }
 
 // Settles a 'pending' invoice (a balance/installment invoice raised ahead of
@@ -1236,7 +1357,7 @@ export async function markInvoicePaid(
   options?: { payment_method?: string }
 ): Promise<Payment> {
   const { data, error } = await supabase
-    .from('payments')
+    .from('enquiries')
     .update({
       status: 'paid',
       paid_at: new Date().toISOString(),
@@ -1246,6 +1367,7 @@ export async function markInvoicePaid(
     .select()
     .single();
   if (error) throw error;
+  await refreshJourneyStage(data.enquiry_id);
   return data;
 }
 
@@ -1276,18 +1398,16 @@ export async function cancelEnquiry(enquiry: Enquiry, thirdPartyCharges?: number
     if (chargesError) throw chargesError;
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('enquiries')
     .update({
       cancelled_at: new Date().toISOString(),
       ...(isNoShow !== undefined ? { is_no_show: isNoShow } : {}),
     })
-    .eq('id', enquiry.id)
-    .select()
-    .single();
+    .eq('id', enquiry.id);
   if (error) throw error;
 
-  return data;
+  return refreshJourneyStage(enquiry.id);
 }
 
 // Toggles is_no_show on its own, independent of cancellation — an admin may
@@ -1338,15 +1458,13 @@ export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
     undefined // force recompute rather than trusting the 'cancelled' value
   );
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('enquiries')
     .update({ cancelled_at: null, booking_status: bookingStatus, suggested_refund_amount: null })
-    .eq('id', enquiry.id)
-    .select()
-    .single();
+    .eq('id', enquiry.id);
   if (error) throw error;
 
-  return data;
+  return refreshJourneyStage(enquiry.id);
 }
 
 // Logs how much has been refunded so far for a cancelled booking.

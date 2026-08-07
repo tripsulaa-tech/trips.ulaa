@@ -242,6 +242,16 @@ create table public.enquiries (
   -- cancellation. Drives the admin's invoice PDF. See
   -- add_booking_id_invoice.sql.
   booking_id                text,
+  -- Single derived "Booking Journey" stage, superseding the combination of
+  -- `status` + `booking_status` for display purposes (both are still kept
+  -- and written as before — this is additive). Computed client-side by
+  -- computeJourneyStage() in src/services/api.ts on every mutating call,
+  -- same pattern as status/booking_status. See
+  -- add_booking_journey_stage.sql.
+  journey_stage             text not null default 'new_enquiry',
+  -- Stamped when an admin marks the traveller checked in for the trip.
+  -- NULL means not checked in yet.
+  checked_in_at             timestamptz,
   constraint enquiries_pkey primary key (id),
   constraint enquiries_status_check
     check (status = any (array['new'::text, 'contacted'::text, 'closed'::text])),
@@ -258,6 +268,12 @@ create table public.enquiries (
       'booking_confirmed'::text, 'balance_pending'::text, 'fully_paid'::text,
       'cancelled'::text, 'completed'::text
     ])),
+  constraint enquiries_journey_stage_check
+    check (journey_stage = any (array[
+      'new_enquiry'::text, 'contacted'::text, 'advance_pending'::text, 'advance_paid'::text,
+      'confirmed'::text, 'balance_pending'::text, 'fully_paid'::text, 'checked_in'::text,
+      'completed'::text, 'cancelled'::text
+    ])),
   constraint enquiries_group_size_check
     check (group_size is null or group_size >= 2),
   constraint enquiries_group_seq_check
@@ -267,6 +283,7 @@ create table public.enquiries (
 create index enquiries_is_paid_idx on public.enquiries using btree (is_paid);
 create index enquiries_source_idx on public.enquiries using btree (source);
 create index enquiries_group_id_idx on public.enquiries using btree (group_id);
+create index enquiries_journey_stage_idx on public.enquiries using btree (journey_stage);
 
 -- Duplicate-submission protection, keyed so group bookings (N rows sharing
 -- identical name/phone/email/trip by design) can coexist — see
@@ -389,7 +406,7 @@ create table public.waitlist (
   created_at            timestamptz not null default now(),
   constraint waitlist_pkey primary key (id),
   constraint waitlist_status_check
-    check (status = any (array['waiting'::text, 'notified'::text, 'converted'::text, 'declined'::text])),
+    check (status = any (array['waiting'::text, 'notified'::text, 'converted'::text, 'declined'::text, 'expired'::text])),
   -- Prevents the same person from spamming the same sold-out trip's
   -- waitlist with repeat submissions.
   constraint waitlist_trip_email_unique unique (trip_id, email)

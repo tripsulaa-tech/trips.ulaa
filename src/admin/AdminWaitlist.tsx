@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, ChevronDown, SlidersHorizontal, RefreshCw, Search, X, Plus, User, CalendarDays } from 'lucide-react';
+import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, ChevronDown, SlidersHorizontal, RefreshCw, Search, X, Plus, User, CalendarDays, Clock } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
@@ -19,9 +19,15 @@ import type { WaitlistEntry, UpcomingTrip, CompletedTrip, Enquiry } from '../typ
 
 const STATUS_CONFIG = {
   waiting: { label: 'Waiting', color: 'bg-amber-100 text-amber-700', icon: Circle },
-  notified: { label: 'Notified', color: 'bg-blue-100 text-blue-700', icon: Bell },
+  // Displayed label is deliberately "Offer Sent" rather than "Notified" —
+  // the underlying DB value/status key stays 'notified' (no migration
+  // needed), only the admin-facing copy changed.
+  notified: { label: 'Offer Sent', color: 'bg-blue-100 text-blue-700', icon: Bell },
   converted: { label: 'Converted', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
   declined: { label: 'Declined', color: 'bg-red-100 text-red-700', icon: XCircle },
+  // A waiting entry that sat too long without being offered a seat or
+  // converting — manually set by the admin, same as declined.
+  expired: { label: 'Expired', color: 'bg-slate-200 text-dark-muted', icon: Clock },
 } as const;
 
 // 'converted' is deliberately excluded here — it's never manually
@@ -29,9 +35,12 @@ const STATUS_CONFIG = {
 // with an actual advance payment exists (see AdminEnquiries.handleSave /
 // markWaitlistConverted). The DB trigger enforces this too, but the point
 // is to not even offer the option that led to the bug in the first place.
-const EDITABLE_STATUS_OPTIONS = (['waiting', 'notified', 'declined'] as const).map(key => ({
+// The 'notified' option is labeled "Offer Seat" here (the action an admin
+// takes), distinct from the "Offer Sent" label STATUS_CONFIG shows once
+// that status is already active.
+const EDITABLE_STATUS_OPTIONS = (['waiting', 'notified', 'declined', 'expired'] as const).map(key => ({
   value: key,
-  label: STATUS_CONFIG[key].label,
+  label: key === 'notified' ? 'Offer Seat' : STATUS_CONFIG[key].label,
 }));
 
 const FOOD_PREFERENCE_OPTIONS = [
@@ -367,6 +376,7 @@ export default function AdminWaitlist() {
     notified: entries.filter(e => e.status === 'notified').length,
     converted: entries.filter(e => e.status === 'converted').length,
     declined: entries.filter(e => e.status === 'declined').length,
+    expired: entries.filter(e => e.status === 'expired').length,
   };
 
   const tripCounts: Record<string, number> = { all: entries.length };
@@ -408,15 +418,16 @@ export default function AdminWaitlist() {
   };
 
   // KPI summary cards — same visual style as the Enquiries page, adapted
-  // to waitlist statuses: Total signups, Waiting, Notified, Converted,
-  // Declined.
+  // to waitlist statuses: Total signups, Waiting, Offer Sent, Converted,
+  // Declined, Expired.
   const kpiPct = (n: number) => (counts.all ? Math.round((n / counts.all) * 100) : 0);
   const KPI_CARDS = [
     { label: 'Total Signups', value: counts.all, sub: 'All time', icon: Users },
     { label: 'Waiting', value: counts.waiting, sub: `${kpiPct(counts.waiting)}% of total`, icon: Circle },
-    { label: 'Notified', value: counts.notified, sub: `${kpiPct(counts.notified)}% of total`, icon: Bell },
+    { label: 'Offer Sent', value: counts.notified, sub: `${kpiPct(counts.notified)}% of total`, icon: Bell },
     { label: 'Converted', value: counts.converted, sub: `${kpiPct(counts.converted)}% of total`, icon: CheckCircle2 },
     { label: 'Declined', value: counts.declined, sub: `${kpiPct(counts.declined)}% of total`, icon: XCircle },
+    { label: 'Expired', value: counts.expired, sub: `${kpiPct(counts.expired)}% of total`, icon: Clock },
   ] as const;
 
   // Icon style matches the Dashboard's KPI cards: no background circle,
@@ -691,7 +702,7 @@ export default function AdminWaitlist() {
                   <FilterDropdown
                     value={statusFilter}
                     onSelect={key => { setStatusFilter(key); setOpenFilterPanel(null); }}
-                    options={(['all', 'waiting', 'notified', 'converted', 'declined'] as const).map(key => ({
+                    options={(['all', 'waiting', 'notified', 'converted', 'declined', 'expired'] as const).map(key => ({
                       key, label: key === 'all' ? 'All' : STATUS_CONFIG[key].label, count: counts[key],
                     }))}
                   />
