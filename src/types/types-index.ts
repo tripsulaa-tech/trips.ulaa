@@ -240,7 +240,16 @@ export type JourneyStage = 'new_enquiry' | 'contacted' | 'advance_pending' | 'ad
 // closed rows predate this column — see add_closed_reason.sql.
 export type ClosedReason =
   | 'no_response' | 'price_too_high' | 'date_conflict' | 'destination_changed'
-  | 'booked_elsewhere' | 'personal_reason' | 'other';
+  | 'booked_elsewhere' | 'personal_reason' | 'wrong_number' | 'other';
+
+// Outcome picked in the "Record Contact Outcome" popup shown when an admin
+// moves a lead from New to Contacted — see recordContactOutcome() in
+// services/api.ts and ContactOutcomeModal.tsx. Distinct from ClosedReason:
+// several outcomes (interested/needs_time/call_later/no_response) don't
+// close the lead at all. See add_contact_outcome.sql.
+export type ContactOutcome =
+  | 'interested' | 'needs_time' | 'call_later'
+  | 'no_response' | 'not_interested' | 'wrong_number';
 
 export interface Enquiry {
   id: string;
@@ -320,6 +329,17 @@ export interface Enquiry {
   // cleared automatically by refreshJourneyStage() in services/api.ts the
   // moment the lead moves past that stage. 'YYYY-MM-DD', no time component.
   follow_up_at?: string | null;
+  // Companion time-of-day for follow_up_at above, 'HH:MM' 24-hour. Only
+  // ever set alongside a follow_up_at date — see
+  // add_contact_outcome.sql.
+  follow_up_time?: string | null;
+  // What was recorded the last time an admin logged a "Record Contact
+  // Outcome" call against this lead — see ContactOutcome above,
+  // ContactOutcomeModal.tsx, and recordContactOutcome() in services/api.ts.
+  // Reflects only the most recent call, not a full history.
+  last_contact_outcome?: ContactOutcome | null;
+  last_contact_notes?: string | null;
+  last_contact_at?: string | null;
 }
 
 // One row per individual payment, refund, or raised-but-uncollected invoice

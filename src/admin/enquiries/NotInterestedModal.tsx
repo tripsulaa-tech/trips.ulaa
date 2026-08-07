@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
-import { CLOSED_REASON_OPTIONS } from '../enquiryShared';
+import { NOT_INTERESTED_REASON_OPTIONS } from '../enquiryShared';
 import type { ClosedReason, Enquiry } from '../../types/types-index';
 
 export default function NotInterestedModal({
@@ -31,7 +31,7 @@ export default function NotInterestedModal({
           <Select
             value={closedReason}
             onChange={val => setClosedReason(val as ClosedReason)}
-            options={CLOSED_REASON_OPTIONS}
+            options={NOT_INTERESTED_REASON_OPTIONS}
           />
         </div>
         <div className="flex gap-3 pt-2">

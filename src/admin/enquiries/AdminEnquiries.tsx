@@ -12,7 +12,7 @@ import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp } from '../../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, recordContactOutcome } from '../../services/api';
 import type { ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../../utils/utils-index';
@@ -41,6 +41,8 @@ import DetailsModal from './DetailsModal';
 import GenerateInvoiceModal from './GenerateInvoiceModal';
 import NotInterestedModal from './NotInterestedModal';
 import FollowUpModal from './FollowUpModal';
+import ContactOutcomeModal from './ContactOutcomeModal';
+import type { ContactOutcomeResult } from './ContactOutcomeModal';
 import CancelModal from './CancelModal';
 import BulkEditModal from './BulkEditModal';
 
@@ -471,20 +473,38 @@ export default function AdminEnquiries() {
     setSelectedIds(new Set());
   }
 
-  // Single-record status change from the per-row dropdown. Bulk status
-  // changes never go through here — they're applied in handleBulkSave
-  // instead — which is what keeps the Track Payment popup from appearing
-  // during a bulk update to Contacted.
-  const handleStatusChange = async (enquiry: Enquiry, status: Enquiry['status']) => {
-    const wasContacted = enquiry.status === status;
-    setUpdating(enquiry.id);
-    await updateEnquiryStatus(enquiry.id, status).catch(console.error);
-    load();
-    setUpdating(null);
-    // Only pop up Track Payment when this single update actually moved the
-    // status to Contacted — not on a no-op re-select of the same value.
-    if (status === 'contacted' && !wasContacted) {
-      openPayment({ ...enquiry, status });
+  // ---- Record Contact Outcome (the New -> Contacted entry point) --------
+  // Replaces the old direct "Mark Contacted" status flip: status only ever
+  // becomes 'contacted' (or 'closed', for Not Interested/Wrong Number)
+  // once this popup is saved — see ContactOutcomeModal.tsx and
+  // recordContactOutcome() in services/api.ts.
+  const [contactOutcomeTarget, setContactOutcomeTarget] = useState<Enquiry | null>(null);
+  const [savingContactOutcome, setSavingContactOutcome] = useState(false);
+  const handleSaveContactOutcome = async (result: ContactOutcomeResult) => {
+    if (!contactOutcomeTarget) return;
+    setSavingContactOutcome(true);
+    try {
+      await recordContactOutcome(contactOutcomeTarget.id, {
+        outcome: result.outcome,
+        notes: result.notes,
+        followUpAt: result.followUpAt || null,
+        followUpTime: result.followUpTime || null,
+        closedReason: result.closedReason,
+      });
+      const target = contactOutcomeTarget;
+      setContactOutcomeTarget(null);
+      load();
+      // Interested is the one outcome that moves towards a booking — open
+      // Track Payment right away, same as the old auto-open-on-Contacted
+      // behaviour, so the admin can record the advance in one flow.
+      if (result.outcome === 'interested') {
+        openPayment({ ...target, status: 'contacted' });
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to record contact outcome.');
+    } finally {
+      setSavingContactOutcome(false);
     }
   };
 
@@ -811,7 +831,7 @@ export default function AdminEnquiries() {
   const handleAdvance = (enquiry: Enquiry) => {
     switch (enquiry.journey_stage) {
       case 'new_enquiry':
-        return handleStatusChange(enquiry, 'contacted');
+        return setContactOutcomeTarget(enquiry);
       case 'fully_paid':
         return handleCheckIn(enquiry);
       case 'checked_in':
@@ -2962,6 +2982,13 @@ export default function AdminEnquiries() {
         setGenerateInvoiceForm={setGenerateInvoiceForm}
         onSave={handleGenerateInvoice}
         savingInvoice={savingInvoice}
+      />
+
+      <ContactOutcomeModal
+        target={contactOutcomeTarget}
+        onClose={() => setContactOutcomeTarget(null)}
+        onSave={handleSaveContactOutcome}
+        saving={savingContactOutcome}
       />
 
       <NotInterestedModal

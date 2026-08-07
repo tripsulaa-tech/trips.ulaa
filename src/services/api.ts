@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment, JourneyStage } from '../types/types-index';
+import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment, JourneyStage, ContactOutcome } from '../types/types-index';
 
 // =============================================
 // Trip lifecycle
@@ -777,6 +777,55 @@ export async function updateEnquiryStatus(
   await refreshJourneyStage(id);
 }
 
+// The one entry point for the "Record Contact Outcome" popup — this is how
+// a lead is meant to move from New to Contacted (see nextManualAction /
+// ContactOutcomeModal.tsx), and how a Contacted lead's next call attempt is
+// logged. Deliberately a single atomic update, not a call to
+// updateEnquiryStatus + setEnquiryFollowUp in sequence, so status never
+// visibly settles on 'contacted' with a stale/missing outcome if the second
+// call were to fail — the popup only ever reflects "saved" or "not saved",
+// never a half-saved state (see the "Status must NEVER become Contacted
+// until popup is successfully saved" rule this implements).
+//
+// Branching mirrors CONTACT_OUTCOME_CONFIG.effect in enquiryShared.tsx:
+//   - interested            -> status 'contacted', journey_stage advances
+//                               towards Advance Pending as soon as the
+//                               caller opens Track Payment and total_amount
+//                               is set (this call alone only gets it to
+//                               Contacted — see computeJourneyStage).
+//   - needs_time/call_later/
+//     no_response            -> status 'contacted', follow_up_at/time set.
+//   - not_interested/
+//     wrong_number           -> status 'closed', closed_reason set
+//                               ('wrong_number' is forced for that outcome
+//                               regardless of what's passed in).
+export async function recordContactOutcome(
+  id: string,
+  args: {
+    outcome: ContactOutcome;
+    notes?: string | null;
+    followUpAt?: string | null;
+    followUpTime?: string | null;
+    closedReason?: Enquiry['closed_reason'];
+  }
+): Promise<Enquiry> {
+  const isClosed = args.outcome === 'not_interested' || args.outcome === 'wrong_number';
+  const patch: Record<string, unknown> = {
+    status: isClosed ? 'closed' : 'contacted',
+    closed_reason: isClosed
+      ? (args.outcome === 'wrong_number' ? 'wrong_number' : (args.closedReason ?? null))
+      : null,
+    follow_up_at: isClosed ? null : (args.followUpAt || null),
+    follow_up_time: isClosed ? null : (args.followUpTime || null),
+    last_contact_outcome: args.outcome,
+    last_contact_notes: args.notes?.trim() || null,
+    last_contact_at: new Date().toISOString(),
+  };
+  const { error } = await supabase.from('enquiries').update(patch).eq('id', id);
+  if (error) throw error;
+  return refreshJourneyStage(id);
+}
+
 // Corrects who/what an enquiry is actually about — full name, contact
 // details, and which trip it's linked to — for when an admin logged the
 // right enquiry against the wrong person (typo'd name/phone/email, picked
@@ -1003,13 +1052,16 @@ async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
   // one place a stale reminder needs clearing rather than every call site
   // remembering to do it individually.
   const stillFollowable = stage === 'contacted' || stage === 'advance_pending' || stage === 'advance_paid';
-  const clearFollowUp = !!e.follow_up_at && !stillFollowable;
+  const clearFollowUp = (!!e.follow_up_at || !!e.follow_up_time) && !stillFollowable;
 
   if (stage === e.journey_stage && !clearFollowUp) return e;
 
   const patch: Record<string, unknown> = {};
   if (stage !== e.journey_stage) patch.journey_stage = stage;
-  if (clearFollowUp) patch.follow_up_at = null;
+  if (clearFollowUp) {
+    patch.follow_up_at = null;
+    patch.follow_up_time = null;
+  }
 
   const { data, error: updateError } = await supabase
     .from('enquiries')
@@ -1032,7 +1084,11 @@ async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
 export async function setEnquiryFollowUp(id: string, followUpAt: string | null): Promise<void> {
   const { error } = await supabase
     .from('enquiries')
-    .update({ follow_up_at: followUpAt })
+    // Clearing the date must also clear the time (see
+    // enquiries_follow_up_time_requires_date in add_contact_outcome.sql) —
+    // this modal only ever edits the date, so a time set earlier via the
+    // Contact Outcome popup would otherwise be left dangling.
+    .update(followUpAt ? { follow_up_at: followUpAt } : { follow_up_at: null, follow_up_time: null })
     .eq('id', id);
   if (error) throw error;
 }

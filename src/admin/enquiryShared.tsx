@@ -9,7 +9,7 @@
 // Everything here is intentionally stateless — no hooks, no local state —
 // so it's safe to call from anywhere.
 import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle, UserMinus, CalendarClock } from 'lucide-react';
-import type { ClosedReason, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
+import type { ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
 import { formatDate, getActivePrice } from '../utils/utils-index';
 
 // Parses a money-field <input type="number"> value into a non-negative
@@ -244,6 +244,10 @@ export const CLOSED_REASON_CONFIG: Record<ClosedReason, { label: string }> = {
   // checking with family/friends", which isn't a closed reason at all (see
   // canSetFollowUp / followUpStatus below and add_enquiry_follow_up.sql).
   personal_reason: { label: 'Family / Personal Reason' },
+  // Also reachable directly as a Contact Outcome (see CONTACT_OUTCOME_CONFIG
+  // below) — kept here too since it's still a closed_reason value under the
+  // hood, e.g. for the closed-reason breakdown in reporting.
+  wrong_number: { label: 'Wrong Number' },
   other: { label: 'Other' },
 };
 
@@ -251,6 +255,63 @@ export const CLOSED_REASON_OPTIONS: { value: ClosedReason; label: string }[] =
   (Object.keys(CLOSED_REASON_CONFIG) as ClosedReason[]).map(value => ({
     value,
     label: CLOSED_REASON_CONFIG[value].label,
+  }));
+
+// Options offered in the Not Interested reason picker specifically —
+// excludes 'wrong_number', which has its own dedicated Contact Outcome and
+// would just duplicate it here.
+export const NOT_INTERESTED_REASON_OPTIONS = CLOSED_REASON_OPTIONS.filter(
+  o => o.value !== 'wrong_number'
+);
+
+// Outcomes offered in the "Record Contact Outcome" popup (see
+// ContactOutcomeModal.tsx) — the single entry point for moving a lead from
+// New to Contacted. Order here is the order shown in the popup.
+export const CONTACT_OUTCOME_CONFIG: Record<ContactOutcome, {
+  label: string;
+  description: string;
+  // What this outcome does to the lead once saved — drives
+  // ContactOutcomeModal's conditional fields and recordContactOutcome()'s
+  // branching. 'stays_contacted' outcomes always create a Lead Follow-up
+  // (follow_up_at/time); 'closed' outcomes always end in status = 'closed'.
+  effect: 'advance' | 'stays_contacted' | 'closed';
+}> = {
+  interested: {
+    label: 'Interested',
+    description: "They want to book — this opens Track Payment to move them to Advance Pending.",
+    effect: 'advance',
+  },
+  needs_time: {
+    label: 'Needs Time',
+    description: 'Checking with family/friends — stays Contacted with a follow-up reminder.',
+    effect: 'stays_contacted',
+  },
+  call_later: {
+    label: 'Call Later',
+    description: "Asked to be called back — stays Contacted with a follow-up reminder.",
+    effect: 'stays_contacted',
+  },
+  no_response: {
+    label: 'No Response',
+    description: "Didn't pick up — stays Contacted with a retry reminder.",
+    effect: 'stays_contacted',
+  },
+  not_interested: {
+    label: 'Not Interested',
+    description: 'Closes this lead. Pick a reason below.',
+    effect: 'closed',
+  },
+  wrong_number: {
+    label: 'Wrong Number',
+    description: 'Closes this lead as an invalid contact.',
+    effect: 'closed',
+  },
+};
+
+export const CONTACT_OUTCOME_OPTIONS: { value: ContactOutcome; label: string }[] =
+  (Object.keys(CONTACT_OUTCOME_CONFIG) as ContactOutcome[]).map(value => ({
+    value,
+    label: CONTACT_OUTCOME_CONFIG[value].label,
   }));
 
 // Human label for why a closed enquiry didn't convert, or null when it

@@ -109,7 +109,7 @@ export const BULK_FOOD_OPTIONS = [
 
 // The "Not set" (grey) label is the right, low-urgency default for a fresh
 // lead nobody's spoken to yet — there's nothing to flag. But once an admin
-// has marked the lead Contacted (see handleAdvance/handleStatusChange) and
+// has marked the lead Contacted (see handleAdvance/recordContactOutcome) and
 // still hasn't opened Track Payment to record a package/total, that same
 // grey "Not set" blended into the row and got missed — nothing distinguished
 // "haven't gotten to it yet" from "actively fell through the cracks after

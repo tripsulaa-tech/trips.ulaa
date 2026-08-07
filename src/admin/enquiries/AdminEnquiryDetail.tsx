@@ -30,6 +30,7 @@ import {
   markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
   recordRefund, deleteEnquiry, updateEnquiryDetails, setEnquiryFollowUp,
+  recordContactOutcome,
 } from '../../services/api';
 import type { ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
@@ -39,9 +40,11 @@ import {
   GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
-  CLOSED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus,
+  NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus,
 } from '../enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
+import ContactOutcomeModal from './ContactOutcomeModal';
+import type { ContactOutcomeResult } from './ContactOutcomeModal';
 
 const emptyPaymentForm: PaymentForm = {
   package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '', food_preference: '',
@@ -70,6 +73,11 @@ export default function AdminEnquiryDetail() {
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [busyAction, setBusyAction] = useState(false);
   const [invoiceBusy, setInvoiceBusy] = useState(false);
+  // ---- Record Contact Outcome (the New -> Contacted entry point) --------
+  // Mirrors AdminEnquiries.tsx's wiring of the same popup — see
+  // ContactOutcomeModal.tsx and recordContactOutcome() in services/api.ts.
+  const [contactOutcomeOpen, setContactOutcomeOpen] = useState(false);
+  const [savingContactOutcome, setSavingContactOutcome] = useState(false);
 
   const load = () => {
     getEnquiries()
@@ -480,17 +488,42 @@ export default function AdminEnquiryDetail() {
     if (!enquiry) return;
     switch (enquiry.journey_stage) {
       case 'new_enquiry':
-        setBusyAction(true);
-        await updateEnquiryStatus(enquiry.id, 'contacted').catch(err => { console.error(err); alert('Failed to update status.'); });
-        load();
-        setBusyAction(false);
-        return;
+        return setContactOutcomeOpen(true);
       case 'fully_paid':
         return handleCheckIn();
       case 'checked_in':
         return handleMarkCompleted();
       default:
         return;
+    }
+  };
+
+  // Save handler for the Contact Outcome popup above — see
+  // AdminEnquiries.tsx's identical handleSaveContactOutcome.
+  const handleSaveContactOutcome = async (result: ContactOutcomeResult) => {
+    if (!enquiry) return;
+    setSavingContactOutcome(true);
+    try {
+      const updated = await recordContactOutcome(enquiry.id, {
+        outcome: result.outcome,
+        notes: result.notes,
+        followUpAt: result.followUpAt || null,
+        followUpTime: result.followUpTime || null,
+        closedReason: result.closedReason,
+      });
+      setEnquiry(updated);
+      setContactOutcomeOpen(false);
+      // Interested is the one outcome that moves towards a booking — open
+      // Track Payment right away so the admin can record the advance in
+      // one flow, same as the old auto-open-on-Contacted behaviour.
+      if (result.outcome === 'interested') {
+        openPayment();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to record contact outcome.');
+    } finally {
+      setSavingContactOutcome(false);
     }
   };
 
@@ -1063,6 +1096,14 @@ export default function AdminEnquiryDetail() {
         </div>
       </Modal>
 
+      {/* Record Contact Outcome — the New -> Contacted entry point. */}
+      <ContactOutcomeModal
+        target={contactOutcomeOpen ? enquiry : null}
+        onClose={() => setContactOutcomeOpen(false)}
+        onSave={handleSaveContactOutcome}
+        saving={savingContactOutcome}
+      />
+
       {/* Not Interested reason picker — see handleMarkNotInterested above. */}
       <Modal isOpen={notInterestedOpen} onClose={() => setNotInterestedOpen(false)} title="Mark as Not Interested" size="sm">
         <div className="space-y-4">
@@ -1074,7 +1115,7 @@ export default function AdminEnquiryDetail() {
             <Select
               value={closedReason}
               onChange={val => setClosedReason(val as ClosedReason)}
-              options={CLOSED_REASON_OPTIONS}
+              options={NOT_INTERESTED_REASON_OPTIONS}
             />
           </div>
           <div className="flex gap-3 pt-2">
