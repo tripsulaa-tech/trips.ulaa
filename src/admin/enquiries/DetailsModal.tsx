@@ -1,14 +1,14 @@
 import { CheckCircle2, FileText, Share2, Receipt, BadgeCheck, Plus, Users, User } from 'lucide-react';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/ui/Modal';
-import FoodMark from '../../../components/ui/FoodMark';
-import { ContactQuickLinks } from '../../../components/ui/DataTableChrome';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import FoodMark from '../../components/ui/FoodMark';
+import { ContactQuickLinks } from '../../components/ui/DataTableChrome';
 import {
   PACKAGE_CONFIG, INVOICE_TYPE_LABEL, SOURCE_CONFIG, foodBadge, foodPreferenceKey,
   BookingLifecycleStepper,
-} from '../../enquiryShared';
-import type { Enquiry, Payment } from '../../../types/types-index';
-import { formatDate, formatPrice, formatTime } from '../../../utils/utils-index';
+} from '../enquiryShared';
+import type { Enquiry, Payment } from '../../types/types-index';
+import { formatDate, formatPrice, formatTime } from '../../utils/utils-index';
 
 export default function DetailsModal({
   detailsTarget,

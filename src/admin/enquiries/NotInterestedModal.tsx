@@ -1,9 +1,9 @@
 import type { Dispatch, SetStateAction } from 'react';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/ui/Modal';
-import Select from '../../../components/ui/Select';
-import { CLOSED_REASON_OPTIONS } from '../../enquiryShared';
-import type { ClosedReason, Enquiry } from '../../../types/types-index';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import Select from '../../components/ui/Select';
+import { CLOSED_REASON_OPTIONS } from '../enquiryShared';
+import type { ClosedReason, Enquiry } from '../../types/types-index';
 
 export default function NotInterestedModal({
   notInterestedTarget,

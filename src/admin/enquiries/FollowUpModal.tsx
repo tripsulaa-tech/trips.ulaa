@@ -1,8 +1,8 @@
 import type { Dispatch, SetStateAction } from 'react';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/ui/Modal';
-import DatePicker from '../../../components/ui/DatePicker';
-import type { Enquiry } from '../../../types/types-index';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import DatePicker from '../../components/ui/DatePicker';
+import type { Enquiry } from '../../types/types-index';
 
 export default function FollowUpModal({
   followUpTarget,

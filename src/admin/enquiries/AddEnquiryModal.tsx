@@ -1,12 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { AlertTriangle, PartyPopper, Users } from 'lucide-react';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/ui/Modal';
-import Select from '../../../components/ui/Select';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS } from '../../enquiryShared';
-import type { Enquiry, UpcomingTrip } from '../../../types/types-index';
-import { inputClass, type EnquiryForm, type WaitlistPersonForm } from '../adminEnquiriesShared';
-import { SOURCE_OPTIONS } from '../adminEnquiriesShared';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import Select from '../../components/ui/Select';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS } from '../enquiryShared';
+import type { Enquiry, UpcomingTrip } from '../../types/types-index';
+import { inputClass, type EnquiryForm, type WaitlistPersonForm } from './adminEnquiriesShared';
+import { SOURCE_OPTIONS } from './adminEnquiriesShared';
 
 type ConvertingWaitlist = { id: string; name: string; groupId: string | null; groupSize: number | null; groupSeq: number; slots: number };
 

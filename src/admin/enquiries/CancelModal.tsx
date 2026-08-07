@@ -1,11 +1,11 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { Users } from 'lucide-react';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/ui/Modal';
-import { parseNonNegative } from '../../enquiryShared';
-import type { Enquiry } from '../../../types/types-index';
-import { formatPrice } from '../../../utils/utils-index';
-import { inputClass } from '../adminEnquiriesShared';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import { parseNonNegative } from '../enquiryShared';
+import type { Enquiry } from '../../types/types-index';
+import { formatPrice } from '../../utils/utils-index';
+import { inputClass } from './adminEnquiriesShared';
 
 export default function CancelModal({
   cancelTarget,

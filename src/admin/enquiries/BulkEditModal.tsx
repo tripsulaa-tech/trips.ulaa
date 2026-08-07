@@ -1,14 +1,14 @@
 import type { Dispatch, SetStateAction } from 'react';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/ui/Modal';
-import Select from '../../../components/ui/Select';
-import type { Enquiry } from '../../../types/types-index';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import Select from '../../components/ui/Select';
+import type { Enquiry } from '../../types/types-index';
 import {
   BULK_NO_CHANGE, BULK_FOOD_OPTIONS, BULK_PACKAGE_OPTIONS, BULK_STATUS_OPTIONS,
   inputClass,
-} from '../adminEnquiriesShared';
-import type { BulkEditForm } from '../adminEnquiriesShared';
-import { parseNonNegative } from '../../enquiryShared';
+} from './adminEnquiriesShared';
+import type { BulkEditForm } from './adminEnquiriesShared';
+import { parseNonNegative } from '../enquiryShared';
 
 export default function BulkEditModal({
   isOpen,

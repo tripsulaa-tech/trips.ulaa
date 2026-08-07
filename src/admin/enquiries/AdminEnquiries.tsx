@@ -2,28 +2,28 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Plus, CheckCircle2, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, CalendarClock, Search, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Eye, UserX, UserCheck, LogIn, ExternalLink, UserMinus } from 'lucide-react';
-import AdminLayout from './AdminLayout';
-import Button from '../components/ui/Button';
-import FoodMark from '../components/ui/FoodMark';
-import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
-import ActionsMenu from '../components/ui/ActionsMenu';
-import type { ActionMenuItem } from '../components/ui/ActionsMenu';
-import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
-import type { SortDirection } from '../components/ui/dataTableUtils';
-import { useConfirm } from '../components/ui/useConfirm';
-import { useAlert } from '../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp } from '../services/api';
-import type { ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../types/types-index';
-import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
-import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../utils/utils-index';
-import type { GroupUnit } from '../utils/utils-index';
+import AdminLayout from '../AdminLayout';
+import Button from '../../components/ui/Button';
+import FoodMark from '../../components/ui/FoodMark';
+import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '../../components/ui/DataTableChrome';
+import ActionsMenu from '../../components/ui/ActionsMenu';
+import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
+import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
+import type { SortDirection } from '../../components/ui/dataTableUtils';
+import { useConfirm } from '../../components/ui/useConfirm';
+import { useAlert } from '../../components/ui/useAlert';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp } from '../../services/api';
+import type { ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
+import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
+import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../../utils/utils-index';
+import type { GroupUnit } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, SOURCE_CONFIG,
   journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend,
   closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
-} from './enquiryShared';
-import type { GenerateInvoiceForm, PaymentForm } from './enquiryShared';
+} from '../enquiryShared';
+import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
 
 import {
   phoneSignature, emailSignature, GROUP_COLOR_PALETTE,
@@ -31,17 +31,17 @@ import {
   paymentStatus, paymentBalance, paymentFilterKey, isBooked, isCancelled, seatStatus,
   isGroupEntry, refundStatus, STATUS_CONFIG, PAY_FILTER_LABELS, FOOD_FILTER_LABELS,
   BOOKING_FILTER_LABELS, GROUP_FILTER_LABELS, emptyForm, emptyWaitlistPerson, emptyBulkForm,
-} from './enquiries/adminEnquiriesShared';
-import type { BulkEditForm, EnquiryForm, WaitlistPersonForm } from './enquiries/adminEnquiriesShared';
-import FilterDropdown from './enquiries/FilterDropdown';
-import AddEnquiryModal from './enquiries/modals/AddEnquiryModal';
-import PaymentModal from './enquiries/modals/PaymentModal';
-import DetailsModal from './enquiries/modals/DetailsModal';
-import GenerateInvoiceModal from './enquiries/modals/GenerateInvoiceModal';
-import NotInterestedModal from './enquiries/modals/NotInterestedModal';
-import FollowUpModal from './enquiries/modals/FollowUpModal';
-import CancelModal from './enquiries/modals/CancelModal';
-import BulkEditModal from './enquiries/modals/BulkEditModal';
+} from './adminEnquiriesShared';
+import type { BulkEditForm, EnquiryForm, WaitlistPersonForm } from './adminEnquiriesShared';
+import FilterDropdown from './FilterDropdown';
+import AddEnquiryModal from './AddEnquiryModal';
+import PaymentModal from './PaymentModal';
+import DetailsModal from './DetailsModal';
+import GenerateInvoiceModal from './GenerateInvoiceModal';
+import NotInterestedModal from './NotInterestedModal';
+import FollowUpModal from './FollowUpModal';
+import CancelModal from './CancelModal';
+import BulkEditModal from './BulkEditModal';
 
 export default function AdminEnquiries() {
   const confirm = useConfirm();

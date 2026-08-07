@@ -1,14 +1,14 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { Link } from 'react-router-dom';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/ui/Modal';
-import Select from '../../../components/ui/Select';
-import FoodMark from '../../../components/ui/FoodMark';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from '../../enquiryShared';
-import type { PaymentForm } from '../../enquiryShared';
-import type { Enquiry, Payment } from '../../../types/types-index';
-import { formatDate, formatPrice } from '../../../utils/utils-index';
-import { inputClass } from '../adminEnquiriesShared';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import Select from '../../components/ui/Select';
+import FoodMark from '../../components/ui/FoodMark';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from '../enquiryShared';
+import type { PaymentForm } from '../enquiryShared';
+import type { Enquiry, Payment } from '../../types/types-index';
+import { formatDate, formatPrice } from '../../utils/utils-index';
+import { inputClass } from './adminEnquiriesShared';
 
 export default function PaymentModal({
   paymentTarget,

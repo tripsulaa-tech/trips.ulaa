@@ -1,12 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/ui/Modal';
-import Select from '../../../components/ui/Select';
-import { parseNonNegative, GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS } from '../../enquiryShared';
-import type { GenerateInvoiceForm } from '../../enquiryShared';
-import type { Enquiry } from '../../../types/types-index';
-import { formatPrice } from '../../../utils/utils-index';
-import { inputClass } from '../adminEnquiriesShared';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import Select from '../../components/ui/Select';
+import { parseNonNegative, GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS } from '../enquiryShared';
+import type { GenerateInvoiceForm } from '../enquiryShared';
+import type { Enquiry } from '../../types/types-index';
+import { formatPrice } from '../../utils/utils-index';
+import { inputClass } from './adminEnquiriesShared';
 
 // Raises one invoice line (Full Payment / Advance / Balance / Installment /
 // Extra Charge) against whichever booking it was opened from. "Paid now"
