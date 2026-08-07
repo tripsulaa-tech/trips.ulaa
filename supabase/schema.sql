@@ -315,15 +315,51 @@ create table public.payments (
   paid_at         timestamptz not null default now(),
   notes           text,
   created_at      timestamptz not null default now(),
+  -- Per-transaction invoice reference, e.g. 'INV-2026-00101' — assigned
+  -- automatically by trg_payments_assign_invoice_number the moment the row
+  -- is inserted. See add_invoice_generation.sql.
+  invoice_number  text,
+  -- 'paid' (default — matches every historical row) vs 'pending': an
+  -- invoice that's been raised (a balance/installment invoice ahead of
+  -- collection, an extra charge not yet paid) but hasn't been collected
+  -- yet. Only 'paid' rows count towards enquiries.amount_paid/refund_amount
+  -- — see sync_enquiry_amount_paid(). See add_invoice_generation.sql.
+  status          text not null default 'paid',
   constraint payments_pkey primary key (id),
   constraint payments_enquiry_id_fkey foreign key (enquiry_id)
     references public.enquiries (id) on delete cascade,
   constraint payments_payment_type_check
-    check (payment_type = any (array['booking_amount'::text, 'balance'::text, 'installment'::text, 'refund'::text]))
+    check (payment_type = any (array[
+      'booking_amount'::text, 'balance'::text, 'installment'::text, 'refund'::text,
+      'full_payment'::text, 'advance'::text, 'extra_charge'::text
+    ])),
+  constraint payments_status_check
+    check (status = any (array['paid'::text, 'pending'::text]))
 );
 
 create index payments_enquiry_id_idx on public.payments using btree (enquiry_id);
 create index payments_paid_at_idx on public.payments using btree (paid_at desc);
+create unique index payments_invoice_number_unique
+  on public.payments (invoice_number)
+  where (invoice_number is not null);
+
+-- ----------------------------------------------------------------------------
+-- invoice_number_sequences
+-- ----------------------------------------------------------------------------
+-- One row per calendar year, tracking the last invoice number sequence
+-- issued that year — same pattern as booking_id_sequences above.
+-- next_invoice_number() returns 'INV-<year>-<5-digit seq>' and bumps this.
+-- See add_invoice_generation.sql.
+create table public.invoice_number_sequences (
+  year      integer not null,
+  last_seq  integer not null default 0,
+  constraint invoice_number_sequences_pkey primary key (year)
+);
+
+-- next_invoice_number() / assign_invoice_number() /
+-- trg_payments_assign_invoice_number: BEFORE INSERT trigger on payments —
+-- every payment or refund row (paid or pending) gets an invoice_number the
+-- moment it's created, never overwriting one that's already set.
 
 -- ----------------------------------------------------------------------------
 -- waitlist
@@ -1133,8 +1169,10 @@ $function$;
 
 -- Keeps enquiries.amount_paid and enquiries.refund_amount in sync with the
 -- sum of their payments rows, any time a payment is inserted, updated, or
--- deleted. refund_amount sums rows where payment_type = 'refund';
--- amount_paid sums everything else.
+-- deleted. refund_amount sums 'paid' rows where payment_type = 'refund';
+-- amount_paid sums every other 'paid' row. Rows with status = 'pending'
+-- (an invoice raised but not yet collected — see add_invoice_generation.sql)
+-- are excluded from both sums until they're marked paid.
 create or replace function public.sync_enquiry_amount_paid()
 returns trigger
 language plpgsql
@@ -1146,8 +1184,8 @@ declare
 begin
   target_enquiry_id := coalesce(new.enquiry_id, old.enquiry_id);
 
-  select coalesce(sum(amount) filter (where payment_type != 'refund'), 0),
-         coalesce(sum(amount) filter (where payment_type = 'refund'), 0)
+  select coalesce(sum(amount) filter (where payment_type != 'refund' and status = 'paid'), 0),
+         coalesce(sum(amount) filter (where payment_type = 'refund' and status = 'paid'), 0)
     into new_amount_paid, new_refund_amount
     from public.payments
    where enquiry_id = target_enquiry_id;
@@ -1160,6 +1198,39 @@ begin
   return null;
 end;
 $function$;
+
+-- next_invoice_number(): returns 'INV-<year>-<5-digit seq>' for the current
+-- year, bumping invoice_number_sequences. See add_invoice_generation.sql.
+create or replace function public.next_invoice_number() returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  yr integer := extract(year from now())::integer;
+  seq integer;
+begin
+  insert into public.invoice_number_sequences (year, last_seq)
+  values (yr, 1)
+  on conflict (year) do update set last_seq = public.invoice_number_sequences.last_seq + 1
+  returning last_seq into seq;
+
+  return 'INV-' || yr || '-' || lpad(seq::text, 5, '0');
+end;
+$$;
+
+create or replace function public.assign_invoice_number() returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.invoice_number is null then
+    new.invoice_number := public.next_invoice_number();
+  end if;
+  return new;
+end;
+$$;
 
 -- Copies any upcoming_trips row whose start_date has passed into
 -- completed_trips (as unpublished, ready for the admin to fill in a story /
@@ -1293,6 +1364,12 @@ create trigger on_trip_seat_freed
 create trigger sync_amount_paid_on_payments_change
   after insert or update or delete on public.payments
   for each row execute function public.sync_enquiry_amount_paid();
+-- Assigns invoice_number before sync_amount_paid_on_payments_change runs
+-- (BEFORE vs AFTER), so every ledger row is issued its invoice number the
+-- moment it's created — see add_invoice_generation.sql.
+create trigger trg_payments_assign_invoice_number
+  before insert on public.payments
+  for each row execute function public.assign_invoice_number();
 
 create trigger site_content_updated_at
   before update on public.site_content

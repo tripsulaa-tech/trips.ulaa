@@ -59,6 +59,9 @@ const PAYMENT_TYPE_LABEL: Record<Payment['payment_type'], string> = {
   installment: 'Installment',
   balance: 'Balance payment',
   refund: 'Refund',
+  full_payment: 'Full Payment',
+  advance: 'Advance',
+  extra_charge: 'Extra Charge',
 };
  
 function esc(text: string | null | undefined): string {
@@ -135,18 +138,21 @@ function buildInvoiceHtml(
   // Payment rows
   const paymentRows =
     payments.length === 0
-      ? `<tr><td colspan="4" class="no-payments">No payments recorded yet.</td></tr>`
+      ? `<tr><td colspan="6" class="no-payments">No payments recorded yet.</td></tr>`
       : payments
           .map((p, i) => {
             const isRefund = p.payment_type === 'refund';
+            const isPending = p.status === 'pending';
             const rowClass = i % 2 === 0 ? 'row-even' : 'row-odd';
             return `<tr class="${rowClass}">
+              <td class="invoice-no-col">${esc(p.invoice_number)}</td>
               <td>${fdate(p.paid_at)}</td>
               <td>${esc(PAYMENT_TYPE_LABEL[p.payment_type] ?? p.payment_type)}</td>
               <td>${esc(p.payment_method)}</td>
               <td class="amount-col ${isRefund ? 'amount-refund' : 'amount-paid'}">
                 ${isRefund ? '− ' : ''}${money(Math.abs(p.amount))}
               </td>
+              <td class="status-col"><span class="status-badge ${isPending ? 'status-pending' : 'status-paid'}">${isPending ? 'Pending' : 'Paid'}</span></td>
             </tr>`;
           })
           .join('');
@@ -362,6 +368,16 @@ function buildInvoiceHtml(
  
   .amount-paid   { color: #1e7d4e; }
   .amount-refund { color: #c0392b; }
+
+  .invoice-no-col { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .status-col { text-align: center; }
+  .status-badge {
+    display: inline-block; font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.4px; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .status-paid    { background: #e6f7ef; color: #1e7d4e; }
+  .status-pending { background: #fff3e0; color: #b06a00; }
  
   .row-even td { background: #ffffff; }
   .row-odd  td { background: #faf5f0; }
@@ -568,10 +584,12 @@ function buildInvoiceHtml(
     <table class="payment-table">
       <thead>
         <tr>
+          <th>Invoice #</th>
           <th>Date</th>
           <th>Type</th>
           <th>Method</th>
           <th class="amount-col">Amount</th>
+          <th class="status-col">Status</th>
         </tr>
       </thead>
       <tbody>

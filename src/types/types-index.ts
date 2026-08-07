@@ -285,19 +285,29 @@ export interface Enquiry {
   booking_id?: string | null;
 }
 
-// One row per individual payment or refund against an enquiry. This is the
-// source of truth for enquiries.amount_paid / refund_amount, which are kept
-// in sync via a DB trigger — never write those columns directly once you're
-// recording a real payment event; insert here instead.
+// One row per individual payment, refund, or raised-but-uncollected invoice
+// against an enquiry. This is the source of truth for enquiries.amount_paid
+// / refund_amount, which are kept in sync via a DB trigger (only rows with
+// status = 'paid' count towards either sum) — never write those columns
+// directly once you're recording a real payment event; insert here instead.
+//
+// Every row doubles as an "invoice": invoice_number is assigned
+// automatically on insert (e.g. 'INV-2026-00101'), and status distinguishes
+// money actually collected ('paid') from an invoice that's been raised but
+// not yet paid ('pending') — e.g. a balance/installment invoice generated
+// ahead of collection, or an extra charge not yet settled. See
+// add_invoice_generation.sql.
 export interface Payment {
   id: string;
   enquiry_id: string;
   amount: number;
-  payment_type: 'booking_amount' | 'balance' | 'installment' | 'refund';
+  payment_type: 'booking_amount' | 'balance' | 'installment' | 'refund' | 'full_payment' | 'advance' | 'extra_charge';
   payment_method?: string;
   paid_at: string;
   notes?: string;
   created_at: string;
+  invoice_number?: string | null;
+  status: 'paid' | 'pending';
 }
 
 export interface AdminNotification {

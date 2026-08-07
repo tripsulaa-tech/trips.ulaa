@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2 } from 'lucide-react';
+import { CheckCircle, Clock, RefreshCw, Plus, CheckCircle2, Circle, XCircle, MessageCircle, Phone, Camera, MapPin, Globe, HelpCircle, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, PartyPopper, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, Search, AlertTriangle, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Receipt, BadgeCheck } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -12,8 +12,8 @@ import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
 import type { SortDirection } from '../components/ui/dataTableUtils';
 import { useConfirm } from '../components/ui/useConfirm';
 import { useAlert } from '../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry } from '../services/api';
-import type { Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry } from '../types/types-index';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid } from '../services/api';
+import type { Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
 import type { GroupUnit } from '../utils/utils-index';
@@ -59,6 +59,53 @@ const PACKAGE_CONFIG = {
   early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
   normal: { label: 'Normal', color: 'bg-slate-100 text-slate-700' },
 } as const;
+
+// Display label for every invoice/payment-ledger type, including the ones
+// only ever set server-side (booking_amount) — used wherever a raw
+// payment_type value needs to read as a human label (Invoices list, Generate
+// Invoice modal).
+const INVOICE_TYPE_LABEL: Record<Payment['payment_type'], string> = {
+  booking_amount: 'Booking Amount',
+  installment: 'Installment',
+  balance: 'Balance',
+  refund: 'Refund',
+  full_payment: 'Full Payment',
+  advance: 'Advance',
+  extra_charge: 'Extra Charge',
+};
+
+// Types the admin can pick from the Generate Invoice modal. Refund isn't
+// offered here — it already has its own dedicated flow in the Cancel
+// Booking / Track Payment modal (recordRefund), which accounts for
+// cancellation/no-show rules that this generic modal doesn't know about.
+type GenerateInvoiceType = 'full_payment' | 'advance' | 'balance' | 'installment' | 'extra_charge';
+
+const GENERATE_INVOICE_TYPE_OPTIONS: { value: GenerateInvoiceType; label: string }[] = [
+  { value: 'full_payment', label: 'Full Payment' },
+  { value: 'advance', label: 'Advance' },
+  { value: 'balance', label: 'Balance' },
+  { value: 'installment', label: 'Installment' },
+  { value: 'extra_charge', label: 'Extra Charge' },
+];
+
+const GENERATE_INVOICE_STATUS_OPTIONS: { value: 'paid' | 'pending'; label: string }[] = [
+  { value: 'paid', label: 'Paid now — money already collected' },
+  { value: 'pending', label: 'Pending — invoice only, collect later' },
+];
+
+interface GenerateInvoiceForm {
+  type: GenerateInvoiceType;
+  amount: number | '';
+  status: 'paid' | 'pending';
+  notes: string;
+}
+
+const emptyGenerateInvoiceForm: GenerateInvoiceForm = {
+  type: 'advance',
+  amount: '',
+  status: 'paid',
+  notes: '',
+};
 
 // Cycled across group bookings (see groupColorMap below) so that every
 // group visible on screen at once gets a visually distinct row tint, left
@@ -415,6 +462,16 @@ export default function AdminEnquiries() {
   // invoice buttons on that one row only while the payments ledger fetch +
   // PDF build (or the native share sheet) is in flight.
   const [invoiceBusyId, setInvoiceBusyId] = useState<string | null>(null);
+  // Per-payment invoices for whichever enquiry is open in the Details
+  // modal — fetched on demand (see the useEffect keyed on detailsTarget?.id
+  // below), same lazy-load pattern as handleDownloadInvoice already used
+  // for the cumulative PDF.
+  const [detailsInvoices, setDetailsInvoices] = useState<Payment[]>([]);
+  const [detailsInvoicesLoading, setDetailsInvoicesLoading] = useState(false);
+  const [invoiceRowBusyId, setInvoiceRowBusyId] = useState<string | null>(null);
+  const [generateInvoiceTarget, setGenerateInvoiceTarget] = useState<Enquiry | null>(null);
+  const [generateInvoiceForm, setGenerateInvoiceForm] = useState<GenerateInvoiceForm>(emptyGenerateInvoiceForm);
+  const [savingInvoice, setSavingInvoice] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -513,6 +570,24 @@ export default function AdminEnquiries() {
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // Loads the per-payment invoice list whenever the Enquiry Details modal is
+  // opened for a different (or no) enquiry — same on-demand fetch pattern as
+  // handleDownloadInvoice, just kept around so the Invoices section can
+  // render without an extra click.
+  useEffect(() => {
+    if (!detailsTarget) {
+      setDetailsInvoices([]);
+      return;
+    }
+    let cancelled = false;
+    setDetailsInvoicesLoading(true);
+    getPaymentsForEnquiry(detailsTarget.id)
+      .then(rows => { if (!cancelled) setDetailsInvoices(rows); })
+      .catch(err => console.error(err))
+      .finally(() => { if (!cancelled) setDetailsInvoicesLoading(false); });
+    return () => { cancelled = true; };
+  }, [detailsTarget?.id]);
 
   const load = () => {
     getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
@@ -943,6 +1018,84 @@ export default function AdminEnquiries() {
       alert('Failed to share invoice.');
     } finally {
       setInvoiceBusyId(null);
+    }
+  };
+
+  // Opens the Generate Invoice modal for a given booking — reset to a fresh
+  // form each time so a leftover amount/type from the last invoice doesn't
+  // carry over.
+  const handleOpenGenerateInvoice = (e: Enquiry) => {
+    setGenerateInvoiceForm(emptyGenerateInvoiceForm);
+    setGenerateInvoiceTarget(e);
+  };
+
+  // Generates one invoice line for the booking, routed to the right
+  // services/api.ts function depending on type + status:
+  //   - extra_charge          -> addExtraCharge (also bumps total_amount)
+  //   - anything else, pending -> generatePendingInvoice (invoice only, no
+  //                                money counted yet)
+  //   - anything else, paid    -> recordTypedPayment (money collected now)
+  // Refund isn't offered here — see GENERATE_INVOICE_TYPE_OPTIONS above.
+  const handleGenerateInvoice = async () => {
+    if (!generateInvoiceTarget) return;
+    const amount = generateInvoiceForm.amount === '' ? 0 : Number(generateInvoiceForm.amount);
+    if (amount <= 0) {
+      alert('Enter an amount greater than zero.');
+      return;
+    }
+    try {
+      setSavingInvoice(true);
+      const notes = generateInvoiceForm.notes.trim() || undefined;
+      let updatedEnquiry: Enquiry = generateInvoiceTarget;
+
+      if (generateInvoiceForm.type === 'extra_charge') {
+        updatedEnquiry = await addExtraCharge(generateInvoiceTarget, amount, {
+          collectedNow: generateInvoiceForm.status === 'paid',
+          notes,
+        });
+      } else if (generateInvoiceForm.status === 'pending') {
+        await generatePendingInvoice(generateInvoiceTarget.id, generateInvoiceForm.type, amount, notes);
+      } else {
+        updatedEnquiry = await recordTypedPayment(generateInvoiceTarget, {
+          type: generateInvoiceForm.type,
+          amount,
+          notes,
+        });
+      }
+
+      setGenerateInvoiceTarget(null);
+      const freshInvoices = await getPaymentsForEnquiry(generateInvoiceTarget.id);
+      setDetailsInvoices(freshInvoices);
+      setDetailsTarget(updatedEnquiry);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to generate invoice.');
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
+
+  // Settles a pending invoice once the money's actually in hand. Updates
+  // the invoice row and the booking's running total in place, then
+  // refreshes the enquiries list in the background so the table (and any
+  // seat/status side effects the DB trigger produced) stay in sync.
+  const handleMarkInvoicePaid = async (payment: Payment) => {
+    try {
+      setInvoiceRowBusyId(payment.id);
+      const updatedPayment = await markInvoicePaid(payment.id);
+      setDetailsInvoices(prev => prev.map(p => (p.id === updatedPayment.id ? updatedPayment : p)));
+      setDetailsTarget(prev => {
+        if (!prev) return prev;
+        const isRefund = updatedPayment.payment_type === 'refund';
+        return { ...prev, amount_paid: (prev.amount_paid || 0) + (isRefund ? 0 : updatedPayment.amount) };
+      });
+      load();
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to mark invoice as paid.');
+    } finally {
+      setInvoiceRowBusyId(null);
     }
   };
 
@@ -3206,6 +3359,89 @@ export default function AdminEnquiries() {
                   </div>
                 </div>
               )}
+              {detailsTarget.booking_id && (
+                <div className="space-y-2.5">
+                  {/* Booking Summary — Total / Paid / Pending, mirrors the
+                      price-summary strip on the PDF invoice itself. Pending
+                      here is simply what's left of the total, which stays
+                      correct whether it came from a not-yet-collected
+                      installment/balance invoice or from money nobody's
+                      raised an invoice for yet. */}
+                  <div className="grid grid-cols-3 gap-2 bg-background-warm rounded-md px-3 py-2.5">
+                    <div>
+                      <p className="text-dark-muted text-[11px]">Total</p>
+                      <p className="text-dark text-sm font-semibold">{formatPrice(detailsTarget.total_amount || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-dark-muted text-[11px]">Paid</p>
+                      <p className="text-green-700 text-sm font-semibold">{formatPrice(detailsTarget.amount_paid || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-dark-muted text-[11px]">Pending</p>
+                      <p className="text-amber-600 text-sm font-semibold">
+                        {formatPrice(Math.max(0, (detailsTarget.total_amount || 0) - (detailsTarget.amount_paid || 0)))}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Invoices — every payments row for this booking, each
+                      with its own invoice number/type/status. */}
+                  <div className="bg-white border border-background-warm rounded-md">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-background-warm">
+                      <p className="text-dark text-xs font-button font-semibold flex items-center gap-1.5">
+                        <Receipt size={13} className="shrink-0" /> Invoices
+                      </p>
+                      <Button variant="secondary" size="sm" onClick={() => handleOpenGenerateInvoice(detailsTarget)}>
+                        <Plus size={13} /> Generate Invoice
+                      </Button>
+                    </div>
+                    {detailsInvoicesLoading ? (
+                      <p className="text-dark-muted text-xs px-3 py-3">Loading invoices…</p>
+                    ) : detailsInvoices.length === 0 ? (
+                      <p className="text-dark-muted text-xs px-3 py-3">No invoices generated yet.</p>
+                    ) : (
+                      <ul className="divide-y divide-background-warm">
+                        {detailsInvoices.map(inv => {
+                          const isRefund = inv.payment_type === 'refund';
+                          const isPending = inv.status === 'pending';
+                          return (
+                            <li key={inv.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                              <div className="min-w-0">
+                                <p className="text-dark text-xs font-mono truncate">{inv.invoice_number || '—'}</p>
+                                <p className="text-dark-muted text-[11px]">
+                                  {INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type} · {formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-sm font-semibold ${isRefund ? 'text-red-600' : 'text-dark'}`}>
+                                  {isRefund ? '\u2212 ' : ''}{formatPrice(Math.abs(inv.amount))}
+                                </span>
+                                <span
+                                  className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                    isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                                  }`}
+                                >
+                                  <BadgeCheck size={10} /> {isPending ? 'Pending' : 'Paid'}
+                                </span>
+                                {isPending && (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleMarkInvoicePaid(inv)}
+                                    disabled={invoiceRowBusyId === inv.id}
+                                  >
+                                    Mark Paid
+                                  </Button>
+                                )}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
                 <div>
                   <p className="text-dark-muted text-xs">Email</p>
@@ -3266,6 +3502,79 @@ export default function AdminEnquiries() {
             </div>
           );
         })()}
+      </Modal>
+
+      {/* Generate Invoice Modal — raises one invoice line (Full Payment /
+          Advance / Balance / Installment / Extra Charge) against whichever
+          booking it was opened from. "Paid now" records real money via
+          recordTypedPayment/addExtraCharge; "Pending" raises the invoice
+          without touching amount_paid, via generatePendingInvoice, for
+          later settlement with the Mark Paid button in the Invoices list. */}
+      <Modal isOpen={!!generateInvoiceTarget} onClose={() => setGenerateInvoiceTarget(null)} title="Generate Invoice" size="sm">
+        {generateInvoiceTarget && (
+          <div className="space-y-4">
+            <div className="bg-background-warm rounded-md px-4 py-3">
+              <p className="font-medium text-dark">{generateInvoiceTarget.full_name}</p>
+              <p className="text-dark-muted text-xs">{generateInvoiceTarget.trip_title || 'No trip linked'}</p>
+              <p className="text-dark-muted text-xs mt-1">
+                Total {formatPrice(generateInvoiceTarget.total_amount || 0)} · Paid {formatPrice(generateInvoiceTarget.amount_paid || 0)}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Type</label>
+              <Select
+                value={generateInvoiceForm.type}
+                onChange={val => setGenerateInvoiceForm(f => ({ ...f, type: val }))}
+                options={GENERATE_INVOICE_TYPE_OPTIONS}
+              />
+              {generateInvoiceForm.type === 'extra_charge' && (
+                <p className="text-[11px] text-dark-muted mt-1">
+                  Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Amount (₹)</label>
+              <input
+                type="number"
+                min={0}
+                value={generateInvoiceForm.amount}
+                onChange={ev => setGenerateInvoiceForm(f => ({ ...f, amount: parseNonNegative(ev.target.value) }))}
+                className={inputClass}
+                placeholder="Amount for this invoice"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Status</label>
+              <Select
+                value={generateInvoiceForm.status}
+                onChange={val => setGenerateInvoiceForm(f => ({ ...f, status: val }))}
+                options={GENERATE_INVOICE_STATUS_OPTIONS}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
+              <input
+                type="text"
+                value={generateInvoiceForm.notes}
+                onChange={ev => setGenerateInvoiceForm(f => ({ ...f, notes: ev.target.value }))}
+                className={inputClass}
+                placeholder="e.g. Paid via UPI, hotel category upgrade, etc."
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setGenerateInvoiceTarget(null)}>Cancel</Button>
+              <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleGenerateInvoice} loading={savingInvoice}>
+                Generate Invoice
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Cancel Booking Modal */}
