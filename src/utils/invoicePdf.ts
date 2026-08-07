@@ -28,6 +28,31 @@ const BRAND = {
   phone: '+91 63813 36772',
   bottomTagline: 'Empowering women to explore, together.',
 };
+
+// ---------------------------------------------------------------------------
+// Icon set — mirrors the exact lucide-react icons used elsewhere in the app
+// (see AdminEnquiries.tsx, Footer.tsx, socialIcons.tsx) so the invoice reads
+// as the same product instead of falling back to platform emoji, which
+// render inconsistently (or as ugly placeholder boxes) across OSes/browsers
+// and looked out of place next to the app's line-icon style.
+// ---------------------------------------------------------------------------
+const LUCIDE_ATTRS =
+  'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+  'stroke-linecap="round" stroke-linejoin="round"';
+
+const ICONS = {
+  globe: `<svg ${LUCIDE_ATTRS}><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
+  mail: `<svg ${LUCIDE_ATTRS}><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>`,
+  phone: `<svg ${LUCIDE_ATTRS}><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>`,
+  calendar: `<svg ${LUCIDE_ATTRS}><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>`,
+  wallet: `<svg ${LUCIDE_ATTRS}><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>`,
+  creditCard: `<svg ${LUCIDE_ATTRS}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>`,
+  receipt: `<svg ${LUCIDE_ATTRS}><path d="M12 17V7"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"/><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"/></svg>`,
+  info: `<svg ${LUCIDE_ATTRS}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`,
+  // Filled brand marks (Instagram/WhatsApp) — matches src/utils/socialIcons.tsx
+  instagram: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c2.717 0 3.056.01 4.122.06 1.065.05 1.79.217 2.428.465.66.256 1.216.6 1.772 1.153a4.908 4.908 0 011.153 1.772c.247.637.415 1.363.465 2.428.047 1.066.06 1.405.06 4.122 0 2.717-.01 3.056-.06 4.122-.05 1.065-.218 1.79-.465 2.428a4.883 4.883 0 01-1.153 1.772 4.915 4.915 0 01-1.772 1.153c-.637.247-1.363.415-2.428.465-1.066.047-1.405.06-4.122.06-2.717 0-3.056-.01-4.122-.06-1.065-.05-1.79-.218-2.428-.465a4.89 4.89 0 01-1.772-1.153 4.904 4.904 0 01-1.153-1.772c-.248-.637-.415-1.363-.465-2.428C2.013 15.056 2 14.717 2 12c0-2.717.01-3.056.06-4.122.05-1.066.217-1.79.465-2.428a4.88 4.88 0 011.153-1.772A4.897 4.897 0 015.45 2.525c.638-.248 1.362-.415 2.428-.465C8.944 2.013 9.283 2 12 2zm0 5a5 5 0 100 10 5 5 0 000-10zm0 8.25a3.25 3.25 0 110-6.5 3.25 3.25 0 010 6.5zM17.5 6a1.17 1.17 0 100 2.34A1.17 1.17 0 0017.5 6z"/></svg>`,
+  whatsapp: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`,
+};
  
 const PAYMENT_TYPE_LABEL: Record<Payment['payment_type'], string> = {
   booking_amount: 'Booking amount',
@@ -193,21 +218,23 @@ function buildInvoiceHtml(
   .contact-icon {
     width: 18px; height: 18px; border-radius: 50%;
     background: #ecdece; display: flex; align-items: center;
-    justify-content: center; font-size: 9px; flex-shrink: 0;
+    justify-content: center; flex-shrink: 0;
     color: #a0522d;
   }
+
+  .contact-icon svg { width: 10px; height: 10px; }
  
   /* right column */
   .header-right { text-align: right; }
  
   .invoice-title {
-    font-size: 24px; font-weight: 800; letter-spacing: 1.5px;
+    font-size: 24px; line-height: 1.3; font-weight: 800; letter-spacing: 1.5px;
     color: #a0522d; margin-bottom: 4px;
   }
  
   .title-rule {
     display: flex; align-items: center; justify-content: flex-end;
-    gap: 6px; margin-bottom: 14px;
+    gap: 6px; margin-top: 6px; margin-bottom: 14px;
   }
   .title-rule-line {
     height: 1.5px; background: #c8a07a; flex: 1; max-width: 160px;
@@ -236,8 +263,10 @@ function buildInvoiceHtml(
   .cal-icon {
     width: 18px; height: 18px; border-radius: 4px;
     background: #ecdece; display: flex; align-items: center;
-    justify-content: center; font-size: 10px;
+    justify-content: center; color: #a0522d;
   }
+
+  .cal-icon svg { width: 11px; height: 11px; }
  
   /* ── BODY ───────────────────────────────────────── */
   .body { flex: 1; padding: 26px 40px 20px; }
@@ -280,12 +309,14 @@ function buildInvoiceHtml(
   .price-icon-circle {
     width: 42px; height: 42px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 19px; flex-shrink: 0;
+    flex-shrink: 0;
   }
- 
-  .icon-total   { background: #fff3e8; }
-  .icon-paid    { background: #e6f7ef; }
-  .icon-balance { background: #fef0ee; }
+
+  .price-icon-circle svg { width: 20px; height: 20px; }
+
+  .icon-total   { background: #fff3e8; color: #b06a3a; }
+  .icon-paid    { background: #e6f7ef; color: #1e7d4e; }
+  .icon-balance { background: #fef0ee; color: #c0392b; }
  
   .price-label {
     font-size: 9.5px; color: #9a7060; text-transform: uppercase;
@@ -349,9 +380,10 @@ function buildInvoiceHtml(
   .info-icon {
     width: 22px; height: 22px; border-radius: 50%;
     background: #dde8ff; display: flex; align-items: center;
-    justify-content: center; font-size: 12px; font-weight: 700;
-    color: #3a5fc8; flex-shrink: 0; line-height: 1;
+    justify-content: center; color: #3a5fc8; flex-shrink: 0;
   }
+
+  .info-icon svg { width: 13px; height: 13px; }
  
   .footer-note-text {
     font-size: 10.5px; color: #7a5030; line-height: 1.55;
@@ -406,8 +438,10 @@ function buildInvoiceHtml(
     width: 26px; height: 26px; border-radius: 50%;
     background: rgba(255,255,255,0.25);
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; color: #fff;
+    color: #fff;
   }
+
+  .social-icon svg { width: 13px; height: 13px; }
  
   /* ── PRINT RESET ────────────────────────────────── */
   @media print {
@@ -430,15 +464,15 @@ function buildInvoiceHtml(
       <div class="brand-tagline">${esc(BRAND.tagline)}</div>
       <div class="contact-list">
         <div class="contact-row">
-          <div class="contact-icon">&#9679;</div>
+          <div class="contact-icon">${ICONS.globe}</div>
           <span>${esc(BRAND.website)}</span>
         </div>
         <div class="contact-row">
-          <div class="contact-icon">&#9993;</div>
+          <div class="contact-icon">${ICONS.mail}</div>
           <span>${esc(BRAND.email)}</span>
         </div>
         <div class="contact-row">
-          <div class="contact-icon">&#9742;</div>
+          <div class="contact-icon">${ICONS.phone}</div>
           <span>${esc(BRAND.phone)}</span>
         </div>
       </div>
@@ -453,7 +487,7 @@ function buildInvoiceHtml(
       <div class="booking-id-label">Booking ID:</div>
       <div class="booking-id-badge">${esc(enquiry.booking_id)}</div>
       <div class="invoice-date-row">
-        <div class="cal-icon">&#128197;</div>
+        <div class="cal-icon">${ICONS.calendar}</div>
         <span>Invoice Date: ${invoiceDate}</span>
       </div>
     </div>
@@ -505,21 +539,21 @@ function buildInvoiceHtml(
     <!-- ── Price summary ── -->
     <div class="price-summary">
       <div class="price-card">
-        <div class="price-icon-circle icon-total">&#128176;</div>
+        <div class="price-icon-circle icon-total">${ICONS.wallet}</div>
         <div>
           <div class="price-label">Total Amount</div>
           <div class="price-amount amount-total">${money(total)}</div>
         </div>
       </div>
       <div class="price-card">
-        <div class="price-icon-circle icon-paid">&#128179;</div>
+        <div class="price-icon-circle icon-paid">${ICONS.creditCard}</div>
         <div>
           <div class="price-label">Amount Paid</div>
           <div class="price-amount amount-paid">${money(paid)}</div>
         </div>
       </div>
       <div class="price-card">
-        <div class="price-icon-circle icon-balance">&#128203;</div>
+        <div class="price-icon-circle icon-balance">${ICONS.receipt}</div>
         <div>
           <div class="price-label">Balance Due</div>
           <div class="price-amount ${balance > 0 ? 'amount-balance-due' : 'amount-balance-zero'}">${money(balance)}</div>
@@ -545,7 +579,7 @@ function buildInvoiceHtml(
  
     <!-- ── Footer note ── -->
     <div class="footer-note">
-      <div class="info-icon">i</div>
+      <div class="info-icon">${ICONS.info}</div>
       <div class="footer-note-text">
         This invoice reflects amounts recorded for this booking only.
         Cancellation and refund amounts, if any, are governed by ULAA&rsquo;s
@@ -567,9 +601,9 @@ function buildInvoiceHtml(
     <div class="bottom-right">
       <span class="follow-label">Follow Us</span>
       <div class="social-icons">
-        <div class="social-icon">&#128247;</div>
-        <div class="social-icon">&#128172;</div>
-        <div class="social-icon">&#127760;</div>
+        <div class="social-icon">${ICONS.instagram}</div>
+        <div class="social-icon">${ICONS.whatsapp}</div>
+        <div class="social-icon">${ICONS.globe}</div>
       </div>
     </div>
   </footer>
@@ -657,7 +691,15 @@ async function renderInvoicePdfBlob(enquiry: Enquiry, payments: Payment[]): Prom
     const imgWidth = pageWidth;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    if (imgHeight <= pageHeight) {
+    // Sub-pixel/rounding differences between the rendered canvas and the
+    // A4 page size (e.g. 297.02mm vs 297mm) used to trip the "content is
+    // taller than one page" branch below by a fraction of a millimeter,
+    // producing a spurious, entirely blank second page. A small tolerance
+    // absorbs that rounding noise while still paginating genuinely long
+    // invoices (long payment histories) correctly.
+    const ROUNDING_TOLERANCE_MM = 2;
+
+    if (imgHeight <= pageHeight + ROUNDING_TOLERANCE_MM) {
       pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
     } else {
       // Content taller than one A4 page — paginate the single tall image
@@ -666,7 +708,7 @@ async function renderInvoicePdfBlob(enquiry: Enquiry, payments: Payment[]): Prom
       let position = 0;
       pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-      while (heightLeft > 0) {
+      while (heightLeft > ROUNDING_TOLERANCE_MM) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);

@@ -21,6 +21,26 @@ export default defineConfig({
         main: path.resolve(__dirname, 'index.html'),
         admin: path.resolve(__dirname, 'admin.html'),
       },
+      output: {
+        // Split heavy, rarely-changing vendor code out of the main app
+        // chunk. This doesn't shrink total bytes shipped, but it lets the
+        // browser cache these separately (they change far less often than
+        // app code, so a new deploy won't force users to re-download React
+        // etc.) and lets the browser fetch them in parallel.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('react-dom') || id.includes('/react/') || id.includes('react-router')) {
+            return 'vendor-react';
+          }
+          if (id.includes('framer-motion')) {
+            return 'vendor-motion';
+          }
+          if (id.includes('@supabase')) {
+            return 'vendor-supabase';
+          }
+          return undefined;
+        },
+      },
     },
     minify: 'terser',
     terserOptions: {

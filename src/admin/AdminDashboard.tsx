@@ -10,7 +10,7 @@ import {
   syncStartedTripAlbums,
 } from '../services/api';
 import type { UpcomingTrip, Enquiry } from '../types/types-index';
-import bannerImg from '../assets/hero.png';
+import bannerImg from '../assets/hero.webp';
 
 const STATUS_STYLES: Record<Enquiry['status'], string> = {
   new: 'bg-orange-50 text-primary',

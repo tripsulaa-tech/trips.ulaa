@@ -3,7 +3,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Button from '../../components/ui/Button';
-import heroImg from '../../assets/hero.png';
+import heroImg from '../../assets/hero.webp';
 
 export default function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null);
