@@ -151,11 +151,8 @@ export default function DetailsModal({
                               <p className="text-dark text-xs font-mono truncate">{inv.invoice_number || '—'}</p>
                               <p className="text-dark-muted text-[11px]">
                                 {INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type} · {formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
-<<<<<<< HEAD
-=======
                                 {inv.payment_method ? ` · ${inv.payment_method}` : ''}
                                 {inv.utr_number ? ` · UTR ${inv.utr_number}` : ''}
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
                               </p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">

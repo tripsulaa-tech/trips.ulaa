@@ -148,11 +148,7 @@ function buildInvoiceHtml(
               <td class="invoice-no-col">${esc(p.invoice_number)}</td>
               <td>${fdate(p.paid_at)}</td>
               <td>${esc(PAYMENT_TYPE_LABEL[p.payment_type] ?? p.payment_type)}</td>
-<<<<<<< HEAD
-              <td>${esc(p.payment_method)}</td>
-=======
               <td>${esc(p.payment_method)}${p.utr_number ? `<br/><span class="utr-note">UTR: ${esc(p.utr_number)}</span>` : ''}</td>
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
               <td class="amount-col ${isRefund ? 'amount-refund' : 'amount-paid'}">
                 ${isRefund ? '− ' : ''}${money(Math.abs(p.amount))}
               </td>
@@ -369,10 +365,7 @@ function buildInvoiceHtml(
   }
  
   .payment-table td.amount-col { text-align: right; font-weight: 600; }
-<<<<<<< HEAD
-=======
   .utr-note { font-size: 10px; color: #8a7a6a; font-weight: 400; }
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
  
   .amount-paid   { color: #1e7d4e; }
   .amount-refund { color: #c0392b; }

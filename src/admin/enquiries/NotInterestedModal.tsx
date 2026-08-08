@@ -2,10 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
-<<<<<<< HEAD
-=======
 import { useConfirm } from '../../components/ui/useConfirm';
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 import { NOT_INTERESTED_REASON_OPTIONS } from '../enquiryShared';
 import type { ClosedReason, Enquiry } from '../../types/types-index';
 
@@ -24,10 +21,6 @@ export default function NotInterestedModal({
   onConfirm: () => void;
   updating: string | null;
 }) {
-<<<<<<< HEAD
-  return (
-    <Modal isOpen={!!notInterestedTarget} onClose={onClose} title="Mark as Not Interested" size="sm">
-=======
   const confirm = useConfirm();
   const isDirty = closedReason !== 'no_response';
 
@@ -47,7 +40,6 @@ export default function NotInterestedModal({
 
   return (
     <Modal isOpen={!!notInterestedTarget} onClose={requestClose} title="Mark as Not Interested" size="sm">
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       <div className="space-y-4">
         <p className="text-sm text-dark-muted">
           This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.

@@ -40,10 +40,7 @@ import AddEnquiryModal from './AddEnquiryModal';
 import PaymentModal from './PaymentModal';
 import DetailsModal from './DetailsModal';
 import GenerateInvoiceModal from './GenerateInvoiceModal';
-<<<<<<< HEAD
-=======
 import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './MarkPaidModal';
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 import NotInterestedModal from './NotInterestedModal';
 import FollowUpModal from './FollowUpModal';
 import BookingFollowUpModal, { type BookingFollowUpResult } from './BookingFollowUpModal';
@@ -127,12 +124,9 @@ export default function AdminEnquiries() {
   const [detailsInvoices, setDetailsInvoices] = useState<Payment[]>([]);
   const [detailsInvoicesLoading, setDetailsInvoicesLoading] = useState(false);
   const [invoiceRowBusyId, setInvoiceRowBusyId] = useState<string | null>(null);
-<<<<<<< HEAD
-=======
   const [markPaidTarget, setMarkPaidTarget] = useState<Payment | null>(null);
   const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm>(emptyMarkPaidForm);
   const [savingMarkPaid, setSavingMarkPaid] = useState(false);
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   const [generateInvoiceTarget, setGenerateInvoiceTarget] = useState<Enquiry | null>(null);
   const [generateInvoiceForm, setGenerateInvoiceForm] = useState<GenerateInvoiceForm>(emptyGenerateInvoiceForm);
   const [savingInvoice, setSavingInvoice] = useState(false);
@@ -170,11 +164,7 @@ export default function AdminEnquiries() {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
-<<<<<<< HEAD
-  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '', refund_method: '', refund_date: '', refund_notes: '', food_preference: '' });
-=======
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '' });
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   const [savingPayment, setSavingPayment] = useState(false);
   // Read-only ledger shown inline in the Track Payment modal (Phase F) —
   // same on-demand fetch pattern as detailsInvoices above, just keyed to
@@ -563,19 +553,13 @@ export default function AdminEnquiries() {
       package_type: packageType,
       total_amount: suggested ?? '',
       amount_paid: enquiry.amount_paid ?? 0,
-<<<<<<< HEAD
-=======
       payment_method: '',
       payment_utr: '',
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       // No-shows forfeit the full amount paid, no exceptions — refund
       // amount is locked at 0 rather than showing whatever was last on record.
       refund_amount: enquiry.is_no_show ? 0 : enquiry.refund_amount ?? 0,
       refund_method: '',
-<<<<<<< HEAD
-=======
       refund_utr: '',
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       refund_date: '',
       refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
@@ -772,11 +756,6 @@ export default function AdminEnquiries() {
       const notes = generateInvoiceForm.notes.trim() || undefined;
       let updatedEnquiry: Enquiry = generateInvoiceTarget;
 
-<<<<<<< HEAD
-      if (generateInvoiceForm.type === 'extra_charge') {
-        updatedEnquiry = await addExtraCharge(generateInvoiceTarget, amount, {
-          collectedNow: generateInvoiceForm.status === 'paid',
-=======
       const payment_method = generateInvoiceForm.status === 'paid' ? (generateInvoiceForm.payment_method || undefined) : undefined;
       const utr_number = generateInvoiceForm.status === 'paid' ? (generateInvoiceForm.utr_number || undefined) : undefined;
 
@@ -785,7 +764,6 @@ export default function AdminEnquiries() {
           collectedNow: generateInvoiceForm.status === 'paid',
           payment_method,
           utr_number,
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
           notes,
         });
       } else if (generateInvoiceForm.status === 'pending') {
@@ -794,11 +772,8 @@ export default function AdminEnquiries() {
         updatedEnquiry = await recordTypedPayment(generateInvoiceTarget, {
           type: generateInvoiceForm.type,
           amount,
-<<<<<<< HEAD
-=======
           payment_method,
           utr_number,
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
           notes,
         });
       }
@@ -820,12 +795,6 @@ export default function AdminEnquiries() {
   // the invoice row and the booking's running total in place, then
   // refreshes the enquiries list in the background so the table (and any
   // seat/status side effects the DB trigger produced) stay in sync.
-<<<<<<< HEAD
-  const handleMarkInvoicePaid = async (payment: Payment) => {
-    try {
-      setInvoiceRowBusyId(payment.id);
-      const updatedPayment = await markInvoicePaid(payment.id);
-=======
   // Opens the Mark Paid confirmation modal so the admin can capture payment
   // method + UTR/reference for this settlement (spec §6/9/46-48) instead of
   // firing the update straight away.
@@ -844,27 +813,20 @@ export default function AdminEnquiries() {
         payment_method: markPaidForm.payment_method || undefined,
         utr_number: markPaidForm.utr_number || undefined,
       });
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       setDetailsInvoices(prev => prev.map(p => (p.id === updatedPayment.id ? updatedPayment : p)));
       setDetailsTarget(prev => {
         if (!prev) return prev;
         const isRefund = updatedPayment.payment_type === 'refund';
         return { ...prev, amount_paid: (prev.amount_paid || 0) + (isRefund ? 0 : updatedPayment.amount) };
       });
-<<<<<<< HEAD
-=======
       setMarkPaidTarget(null);
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       load();
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Failed to mark invoice as paid.');
     } finally {
       setInvoiceRowBusyId(null);
-<<<<<<< HEAD
-=======
       setSavingMarkPaid(false);
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
     }
   };
 
@@ -1036,11 +998,7 @@ export default function AdminEnquiries() {
   const handleReopenEnquiry = async (enquiry: Enquiry) => {
     setUpdating(enquiry.id);
     try {
-<<<<<<< HEAD
-      await updateEnquiryStatus(enquiry.id, 'new');
-=======
       await updateEnquiryStatus(enquiry.id, 'contacted');
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       load();
     } catch (err) {
       console.error(err);
@@ -1182,10 +1140,7 @@ export default function AdminEnquiries() {
       if (paymentTarget.cancelled_at) {
         await recordRefund(paymentTarget, refundAmount, {
           payment_method: paymentForm.refund_method || undefined,
-<<<<<<< HEAD
-=======
           utr_number: paymentForm.refund_utr || undefined,
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
           notes: paymentForm.refund_notes || undefined,
           paid_at: paymentForm.refund_date || undefined,
         });
@@ -3248,40 +3203,6 @@ export default function AdminEnquiries() {
         savingInvoice={savingInvoice}
       />
 
-<<<<<<< HEAD
-      <ContactOutcomeModal
-        target={contactOutcomeTarget}
-        onClose={() => setContactOutcomeTarget(null)}
-        onSave={handleSaveContactOutcome}
-        saving={savingContactOutcome}
-      />
-
-      <NotInterestedModal
-        notInterestedTarget={notInterestedTarget}
-        onClose={() => setNotInterestedTarget(null)}
-        closedReason={closedReason}
-        setClosedReason={setClosedReason}
-        onConfirm={handleConfirmNotInterested}
-        updating={updating}
-      />
-
-      <FollowUpModal
-        followUpTarget={followUpTarget}
-        onClose={() => setFollowUpTarget(null)}
-        followUpDate={followUpDate}
-        setFollowUpDate={setFollowUpDate}
-        onSave={handleSaveFollowUp}
-        updating={updating}
-      />
-
-      <BookingFollowUpModal
-        target={bookingFollowUpTarget}
-        onClose={() => setBookingFollowUpTarget(null)}
-        onSave={handleSaveBookingFollowUp}
-        saving={!!bookingFollowUpTarget && updating === bookingFollowUpTarget.id}
-      />
-
-=======
       <MarkPaidModal
         target={markPaidTarget}
         onClose={() => setMarkPaidTarget(null)}
@@ -3323,7 +3244,6 @@ export default function AdminEnquiries() {
         saving={!!bookingFollowUpTarget && updating === bookingFollowUpTarget.id}
       />
 
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       <CancelModal
         cancelTarget={cancelTarget}
         onClose={() => setCancelTarget(null)}

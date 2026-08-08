@@ -3,12 +3,8 @@ import { AlertTriangle, PartyPopper, Users } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
-<<<<<<< HEAD
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS } from '../enquiryShared';
-=======
 import { useConfirm } from '../../components/ui/useConfirm';
 import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS } from '../enquiryShared';
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { inputClass, type EnquiryForm, type WaitlistPersonForm } from './adminEnquiriesShared';
 import { SOURCE_OPTIONS } from './adminEnquiriesShared';
@@ -42,10 +38,6 @@ export default function AddEnquiryModal({
   onSave: () => void;
   saving: boolean;
 }) {
-<<<<<<< HEAD
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={convertingWaitlist ? 'Convert Waitlist Signup' : 'Log an Enquiry'} size="md">
-=======
   const confirm = useConfirm();
   const isDirty = form.full_name.trim() !== '' || form.phone.trim() !== '' || (form.amount_paid !== '' && Number(form.amount_paid) > 0);
 
@@ -65,7 +57,6 @@ export default function AddEnquiryModal({
 
   return (
     <Modal isOpen={isOpen} onClose={requestClose} title={convertingWaitlist ? 'Convert Waitlist Signup' : 'Log an Enquiry'} size="md">
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       {convertingWaitlist && (
         <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-md px-3 py-2.5 mb-4 text-sm text-green-800">
           <PartyPopper size={16} className="shrink-0 mt-0.5" />
@@ -133,8 +124,6 @@ export default function AddEnquiryModal({
                 options={SOURCE_OPTIONS}
               />
             </div>
-<<<<<<< HEAD
-=======
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Payment Method <span className="text-dark-muted font-normal">— for everyone's advance</span></label>
               <Select
@@ -155,7 +144,6 @@ export default function AddEnquiryModal({
                 placeholder={form.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
               />
             </div>
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
           </div>
 
           {/* One card per seat being filled this pass */}
@@ -324,8 +312,6 @@ export default function AddEnquiryModal({
             />
             <p className="text-[11px] text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
           </div>
-<<<<<<< HEAD
-=======
           {(Number(form.amount_paid) || 0) > 0 && (
             <div className="grid grid-cols-2 gap-4 md:col-span-2">
               <div>
@@ -351,7 +337,6 @@ export default function AddEnquiryModal({
               </div>
             </div>
           )}
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Notes</label>
             <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this enquiry" />

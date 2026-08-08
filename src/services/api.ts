@@ -831,11 +831,7 @@ export async function updateEnquiryStatus(
   await refreshJourneyStage(id);
   await logActivity(
     id,
-<<<<<<< HEAD
-    status === 'closed' ? 'Lead closed' : status === 'new' ? 'Lead reopened' : `Lead status → ${status}`,
-=======
     status === 'closed' ? 'Lead closed' : status === 'contacted' ? 'Lead reopened' : `Lead status → ${status}`,
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
     status === 'closed' && closedReason ? closedReason.replace(/_/g, ' ') : null
   );
 }
@@ -1022,11 +1018,8 @@ export async function createManualEnquiry(
       enquiry_id: data.id,
       amount: amountPaid,
       payment_type: isPaidFull ? 'full_payment' : 'advance',
-<<<<<<< HEAD
-=======
       payment_method: paymentOptions?.payment_method,
       utr_number: paymentOptions?.utr_number || null,
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       notes: 'Initial payment recorded at enquiry creation',
     });
     if (paymentError) {
@@ -1264,8 +1257,6 @@ export async function checkInEnquiry(enquiry: Enquiry): Promise<Enquiry> {
   if (enquiry.is_no_show) {
     throw new Error('Cannot check in — this booking is marked as a no-show. Undo the no-show first.');
   }
-<<<<<<< HEAD
-=======
   // §26: trip attendance point must have been reached before check-in is allowed.
   if (enquiry.trip_id) {
     const { data: trip } = await supabase
@@ -1283,7 +1274,6 @@ export async function checkInEnquiry(enquiry: Enquiry): Promise<Enquiry> {
       }
     }
   }
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 
   const { error } = await supabase
     .from('enquiries')
@@ -1367,11 +1357,7 @@ function computeBookingStatus(
 export async function markEnquiryCompleted(enquiryId: string): Promise<Enquiry> {
   const { data: current, error: fetchError } = await supabase
     .from('enquiries')
-<<<<<<< HEAD
-    .select('booking_status, booking_state, cancelled_at')
-=======
     .select('booking_status, booking_state, cancelled_at, journey_stage')
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
     .eq('id', enquiryId)
     .single();
   if (fetchError) throw fetchError;
@@ -1382,12 +1368,9 @@ export async function markEnquiryCompleted(enquiryId: string): Promise<Enquiry> 
   if (!current.booking_status) {
     throw new Error('This enquiry has no booking on it yet (no payment recorded), so it cannot be marked completed.');
   }
-<<<<<<< HEAD
-=======
   if (current.journey_stage !== 'checked_in') {
     throw new Error('This booking must be checked in before it can be marked completed.');
   }
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 
   const { error } = await supabase
     .from('enquiries')
@@ -1665,10 +1648,7 @@ export async function recordTypedPayment(
     type: 'full_payment' | 'advance' | 'balance' | 'installment';
     amount: number;
     payment_method?: string;
-<<<<<<< HEAD
-=======
     utr_number?: string;
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
     notes?: string;
   }
 ): Promise<Enquiry> {
@@ -1685,10 +1665,7 @@ export async function recordTypedPayment(
     amount: payment.amount,
     payment_type: payment.type,
     payment_method: payment.payment_method,
-<<<<<<< HEAD
-=======
     utr_number: payment.utr_number || null,
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
     notes: payment.notes,
   });
   if (paymentError) throw paymentError;
@@ -1760,11 +1737,7 @@ export async function generatePendingInvoice(
 export async function addExtraCharge(
   current: Enquiry,
   amount: number,
-<<<<<<< HEAD
-  options?: { collectedNow?: boolean; payment_method?: string; notes?: string }
-=======
   options?: { collectedNow?: boolean; payment_method?: string; utr_number?: string; notes?: string }
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 ): Promise<Enquiry> {
   if (amount <= 0) {
     throw new Error('Extra charge amount must be greater than zero.');
@@ -1783,10 +1756,7 @@ export async function addExtraCharge(
     payment_type: 'extra_charge',
     status: options?.collectedNow ? 'paid' : 'pending',
     payment_method: options?.payment_method,
-<<<<<<< HEAD
-=======
     utr_number: options?.collectedNow ? (options?.utr_number || null) : null,
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
     notes: options?.notes,
   });
   if (paymentError) throw paymentError;
@@ -1805,11 +1775,7 @@ export async function addExtraCharge(
 // way it does on insert, folding the amount into enquiries.amount_paid.
 export async function markInvoicePaid(
   paymentId: string,
-<<<<<<< HEAD
-  options?: { payment_method?: string }
-=======
   options?: { payment_method?: string; utr_number?: string }
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 ): Promise<Payment> {
   // NOTE: this was previously updating the `enquiries` table by paymentId
   // (a payments.id, not an enquiries.id) with columns (`status: 'paid'`,
@@ -1825,10 +1791,7 @@ export async function markInvoicePaid(
       status: 'paid',
       paid_at: new Date().toISOString(),
       ...(options?.payment_method ? { payment_method: options.payment_method } : {}),
-<<<<<<< HEAD
-=======
       ...(options?.utr_number ? { utr_number: options.utr_number } : {}),
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
     })
     .eq('id', paymentId)
     .select()
@@ -2044,11 +2007,7 @@ export async function uncancelEnquiry(enquiry: Enquiry): Promise<Enquiry> {
 export async function recordRefund(
   current: Enquiry,
   newRefundAmount: number,
-<<<<<<< HEAD
-  options?: { payment_method?: string; notes?: string; paid_at?: string }
-=======
   options?: { payment_method?: string; utr_number?: string; notes?: string; paid_at?: string }
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 ): Promise<Enquiry> {
   // Same reasoning as the guard at the top of recordPayment above — this is
   // the one choke point every refund path calls, so bound-check here even

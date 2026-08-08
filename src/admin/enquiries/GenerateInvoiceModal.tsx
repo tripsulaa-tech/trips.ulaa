@@ -2,12 +2,8 @@ import type { Dispatch, SetStateAction } from 'react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
-<<<<<<< HEAD
-import { parseNonNegative, GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS } from '../enquiryShared';
-=======
 import { useConfirm } from '../../components/ui/useConfirm';
 import { parseNonNegative, GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS } from '../enquiryShared';
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 import type { GenerateInvoiceForm } from '../enquiryShared';
 import type { Enquiry } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -34,10 +30,6 @@ export default function GenerateInvoiceModal({
   onSave: () => void;
   savingInvoice: boolean;
 }) {
-<<<<<<< HEAD
-  return (
-    <Modal isOpen={!!generateInvoiceTarget} onClose={onClose} title="Generate Invoice" size="sm">
-=======
   const confirm = useConfirm();
   const isDirty =
     generateInvoiceForm.amount !== '' ||
@@ -61,7 +53,6 @@ export default function GenerateInvoiceModal({
 
   return (
     <Modal isOpen={!!generateInvoiceTarget} onClose={requestClose} title="Generate Invoice" size="sm">
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       {generateInvoiceTarget && (
         <div className="space-y-4">
           <div className="bg-background-warm rounded-md px-4 py-3">
@@ -107,8 +98,6 @@ export default function GenerateInvoiceModal({
             />
           </div>
 
-<<<<<<< HEAD
-=======
           {generateInvoiceForm.status === 'paid' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -135,7 +124,6 @@ export default function GenerateInvoiceModal({
             </div>
           )}
 
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
             <input
@@ -143,11 +131,7 @@ export default function GenerateInvoiceModal({
               value={generateInvoiceForm.notes}
               onChange={ev => setGenerateInvoiceForm(f => ({ ...f, notes: ev.target.value }))}
               className={inputClass}
-<<<<<<< HEAD
-              placeholder="e.g. Paid via UPI, hotel category upgrade, etc."
-=======
               placeholder="Any additional context for this invoice"
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
             />
           </div>
 

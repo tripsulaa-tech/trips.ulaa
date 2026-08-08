@@ -284,24 +284,17 @@ export type EnquiryForm = {
   package_type: Enquiry['package_type'];
   total_amount: number | '';
   amount_paid: number | '';
-<<<<<<< HEAD
-=======
   // How the initial advance (amount_paid above) was actually settled, if
   // anything was paid up front — CRM spec sections 6/9. Only meaningful
   // when amount_paid > 0.
   payment_method: string;
   payment_utr: string;
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   food_preference: 'veg' | 'non_veg' | '';
 };
 
 export const emptyForm: EnquiryForm = {
   full_name: '', phone: '', email: '', age: '', city: '', trip_id: '', source: 'whatsapp', message: '',
-<<<<<<< HEAD
-  package_type: 'normal', total_amount: '', amount_paid: '', food_preference: '',
-=======
   package_type: 'normal', total_amount: '', amount_paid: '', payment_method: '', payment_utr: '', food_preference: '',
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 };
 
 // One row of the bulk waitlist-conversion form — trip/package/notes stay

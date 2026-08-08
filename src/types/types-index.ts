@@ -254,11 +254,7 @@ export type ClosedReason =
 // several outcomes (interested/needs_time/call_later/no_response) don't
 // close the lead at all. See add_contact_outcome.sql.
 export type ContactOutcome =
-<<<<<<< HEAD
-  | 'interested' | 'needs_time' | 'call_later'
-=======
   | 'interested' | 'needs_time' | 'call_later' | 'payment_arrangement'
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   | 'no_response' | 'not_interested' | 'wrong_number';
 
 // Why a booking was cancelled — captured in the Cancel Booking popup (CRM
