@@ -268,6 +268,17 @@ export type ContactOutcome =
 export type CancellationReason =
   | 'medical' | 'personal' | 'emergency' | 'visa' | 'price' | 'other';
 
+// What a Booking Follow-up reminder is actually about — see
+// add_booking_follow_up.sql (CRM spec section 8B). Distinct from
+// ContactOutcome/ClosedReason: this only ever applies once a booking has
+// started (past Advance Pending), whereas those apply before one exists.
+// Also distinct from the plain lead follow_up_at date, which carries no
+// type at all — a bare date doesn't say whether the admin needs to chase a
+// balance payment or a passport copy.
+export type BookingFollowUpType =
+  | 'balance_payment' | 'document' | 'passport'
+  | 'medical_declaration' | 'final_itinerary' | 'other';
+
 export interface Enquiry {
   id: string;
   full_name: string;
@@ -375,6 +386,16 @@ export interface Enquiry {
   last_contact_outcome?: ContactOutcome | null;
   last_contact_notes?: string | null;
   last_contact_at?: string | null;
+  // Booking Follow-up (CRM spec section 8B) — a reminder for something that
+  // needs chasing after the booking has started (balance payment,
+  // passport, documents, etc.), completely separate from the Lead
+  // Follow-up fields above. See canSetBookingFollowUp/bookingFollowUpStatus
+  // in enquiryShared.tsx and add_booking_follow_up.sql for the DB
+  // constraint keeping the two windows from overlapping on the same row.
+  booking_follow_up_at?: string | null;
+  booking_follow_up_time?: string | null;
+  booking_follow_up_type?: BookingFollowUpType | null;
+  booking_follow_up_notes?: string | null;
 }
 
 // One row per individual payment, refund, or raised-but-uncollected invoice

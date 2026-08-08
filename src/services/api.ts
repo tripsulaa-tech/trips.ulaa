@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment, JourneyStage, ContactOutcome, CancellationReason, ActivityLogEntry } from '../types/types-index';
+import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment, JourneyStage, ContactOutcome, CancellationReason, ActivityLogEntry, BookingFollowUpType } from '../types/types-index';
 
 // =============================================
 // Trip lifecycle
@@ -1131,7 +1131,18 @@ async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
   const stillFollowable = stage === 'contacted' || stage === 'advance_pending' || stage === 'advance_paid';
   const clearFollowUp = (!!e.follow_up_at || !!e.follow_up_time) && !stillFollowable;
 
-  if (stage === e.journey_stage && bookingState === e.booking_state && !clearFollowUp) return e;
+  // Booking Follow-up (see add_booking_follow_up.sql) is only meaningful
+  // once a booking has actually started (past Advance Pending) and while
+  // it's still active — the DB's own check constraint enforces both, this
+  // is the same defensive belt-and-suspenders clear as clearFollowUp
+  // above, on the mirror-image window.
+  const stillBookingFollowable = bookingState === 'active' && (
+    stage === 'advance_pending' || stage === 'advance_paid' || stage === 'confirmed'
+    || stage === 'balance_pending' || stage === 'fully_paid' || stage === 'checked_in'
+  );
+  const clearBookingFollowUp = !!e.booking_follow_up_at && !stillBookingFollowable;
+
+  if (stage === e.journey_stage && bookingState === e.booking_state && !clearFollowUp && !clearBookingFollowUp) return e;
 
   const patch: Record<string, unknown> = {};
   if (stage !== e.journey_stage) patch.journey_stage = stage;
@@ -1139,6 +1150,12 @@ async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
   if (clearFollowUp) {
     patch.follow_up_at = null;
     patch.follow_up_time = null;
+  }
+  if (clearBookingFollowUp) {
+    patch.booking_follow_up_at = null;
+    patch.booking_follow_up_time = null;
+    patch.booking_follow_up_type = null;
+    patch.booking_follow_up_notes = null;
   }
 
   const { data, error: updateError } = await supabase
@@ -1167,6 +1184,42 @@ export async function setEnquiryFollowUp(id: string, followUpAt: string | null):
     // this modal only ever edits the date, so a time set earlier via the
     // Contact Outcome popup would otherwise be left dangling.
     .update(followUpAt ? { follow_up_at: followUpAt } : { follow_up_at: null, follow_up_time: null })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// Sets or clears the Booking Follow-up reminder (CRM spec section 8B) —
+// the post-booking counterpart to setEnquiryFollowUp above, for things
+// like a balance-payment or passport reminder rather than a warm-lead
+// callback. Deliberately its own function/fields (booking_follow_up_*)
+// rather than reusing follow_up_at: the two windows (before vs after
+// Advance Pending) never overlap, enforced by the DB check constraints in
+// add_booking_follow_up.sql, and this never touches journey_stage/status
+// either. Passing null for `at` clears all four fields together — a type
+// or note without a date is meaningless (see
+// enquiries_booking_follow_up_type_requires_date).
+export async function setBookingFollowUp(
+  id: string,
+  at: string | null,
+  fields?: { time?: string | null; type?: BookingFollowUpType | null; notes?: string | null }
+): Promise<void> {
+  const { error } = await supabase
+    .from('enquiries')
+    .update(
+      at
+        ? {
+            booking_follow_up_at: at,
+            booking_follow_up_time: fields?.time || null,
+            booking_follow_up_type: fields?.type || null,
+            booking_follow_up_notes: fields?.notes || null,
+          }
+        : {
+            booking_follow_up_at: null,
+            booking_follow_up_time: null,
+            booking_follow_up_type: null,
+            booking_follow_up_notes: null,
+          }
+    )
     .eq('id', id);
   if (error) throw error;
 }

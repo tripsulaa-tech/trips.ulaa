@@ -12,7 +12,7 @@ import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, recordContactOutcome } from '../../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
 import type { CancellationReason, ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../../utils/utils-index';
@@ -22,6 +22,7 @@ import {
   foodBadge, foodPreferenceKey, SOURCE_CONFIG,
   journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend,
   closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
+  canSetBookingFollowUp, bookingFollowUpStatus,
 } from '../enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
 
@@ -41,6 +42,7 @@ import DetailsModal from './DetailsModal';
 import GenerateInvoiceModal from './GenerateInvoiceModal';
 import NotInterestedModal from './NotInterestedModal';
 import FollowUpModal from './FollowUpModal';
+import BookingFollowUpModal, { type BookingFollowUpResult } from './BookingFollowUpModal';
 import ContactOutcomeModal from './ContactOutcomeModal';
 import type { ContactOutcomeResult } from './ContactOutcomeModal';
 import CancelModal from './CancelModal';
@@ -921,6 +923,39 @@ export default function AdminEnquiries() {
     }
   };
 
+  // ---- Booking Follow-up (CRM spec section 8B) — post-booking reminder ----
+  // Mirrors the Lead Follow-up block above, but for balance-payment/
+  // document/passport-type reminders that only make sense once a booking
+  // has actually started. See canSetBookingFollowUp/bookingFollowUpStatus
+  // in enquiryShared.tsx and add_booking_follow_up.sql.
+  const [bookingFollowUpTarget, setBookingFollowUpTarget] = useState<Enquiry | null>(null);
+  const handleSaveBookingFollowUp = async (result: BookingFollowUpResult) => {
+    if (!bookingFollowUpTarget) return;
+    setUpdating(bookingFollowUpTarget.id);
+    try {
+      await setBookingFollowUp(bookingFollowUpTarget.id, result.at, { time: result.time, type: result.type, notes: result.notes });
+      setBookingFollowUpTarget(null);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to set booking follow-up.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+  const handleClearBookingFollowUp = async (enquiry: Enquiry) => {
+    setUpdating(enquiry.id);
+    try {
+      await setBookingFollowUp(enquiry.id, null);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to clear booking follow-up.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const handleReopenEnquiry = async (enquiry: Enquiry) => {
     setUpdating(enquiry.id);
     try {
@@ -992,6 +1027,19 @@ export default function AdminEnquiries() {
       );
       if (e.follow_up_at) {
         items.push({ label: 'Clear Follow-up', icon: X, onClick: () => handleClearFollowUp(e) });
+      }
+    }
+    // Booking Follow-up — only offered once the booking has actually
+    // started (see canSetBookingFollowUp); also reachable via the inline
+    // chip in the Follow-up column for rows where it's already set.
+    if (canSetBookingFollowUp(e)) {
+      items.push(
+        e.booking_follow_up_at
+          ? { label: 'Edit Booking Follow-up', icon: CalendarClock, onClick: () => setBookingFollowUpTarget(e) }
+          : { label: 'Set Booking Follow-up', icon: CalendarClock, onClick: () => setBookingFollowUpTarget(e) }
+      );
+      if (e.booking_follow_up_at) {
+        items.push({ label: 'Clear Booking Follow-up', icon: X, onClick: () => handleClearBookingFollowUp(e) });
       }
     }
     // "Not Interested" / "Reopen" only make sense before any money's
@@ -2539,6 +2587,36 @@ export default function AdminEnquiries() {
                                   </button>
                                 );
                               }
+                              // Booking Follow-up — the post-booking
+                              // counterpart, only reachable once the lead
+                              // window above no longer applies (the two
+                              // never overlap on the same row).
+                              const bfu = bookingFollowUpStatus(e);
+                              if (bfu) {
+                                return (
+                                  <button
+                                    onClick={() => setBookingFollowUpTarget(e)}
+                                    disabled={updating === e.id}
+                                    title="Click to change the booking follow-up"
+                                    className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-50 ${bfu.color}`}
+                                  >
+                                    <bfu.icon size={12} className="shrink-0" />
+                                    {bfu.label}
+                                  </button>
+                                );
+                              }
+                              if (canSetBookingFollowUp(e)) {
+                                return (
+                                  <button
+                                    onClick={() => setBookingFollowUpTarget(e)}
+                                    disabled={updating === e.id}
+                                    title="Set a booking follow-up reminder"
+                                    className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                                  >
+                                    <CalendarClock size={12} className="shrink-0" /> Set
+                                  </button>
+                                );
+                              }
                               return <span className="text-dark-muted/50 text-xs">—</span>;
                             })()}
                           </td>
@@ -2690,6 +2768,11 @@ export default function AdminEnquiries() {
                       <div className="flex items-center gap-2 shrink-0">
                         {followUpStatus(e)?.isDue && (
                           <span title={followUpStatus(e)!.label} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${followUpStatus(e)!.color}`}>
+                            <CalendarClock size={12} className="shrink-0" />
+                          </span>
+                        )}
+                        {bookingFollowUpStatus(e)?.isDue && (
+                          <span title={bookingFollowUpStatus(e)!.label} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${bookingFollowUpStatus(e)!.color}`}>
                             <CalendarClock size={12} className="shrink-0" />
                           </span>
                         )}
@@ -2898,6 +2981,22 @@ export default function AdminEnquiries() {
                           </button>
                         )}
 
+                        {/* Booking Follow-up — the post-booking counterpart,
+                            same layout, only shown once the Lead Follow-up
+                            window above no longer applies. */}
+                        {!followUpStatus(e) && !canSetFollowUp(e) && (bookingFollowUpStatus(e) || canSetBookingFollowUp(e)) && (
+                          <button
+                            onClick={() => setBookingFollowUpTarget(e)}
+                            disabled={updating === e.id}
+                            className={`w-full inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap disabled:opacity-50 ${
+                              bookingFollowUpStatus(e) ? bookingFollowUpStatus(e)!.color : 'border border-background-warm text-dark-muted'
+                            }`}
+                          >
+                            <CalendarClock size={14} />
+                            {bookingFollowUpStatus(e)?.label || 'Set Booking Follow-up'}
+                          </button>
+                        )}
+
                         {/* Journey Advance + kebab ActionsMenu — mirrors the
                             desktop table's "Update" column so mobile isn't
                             stuck with the old status dropdown / separate
@@ -3034,6 +3133,13 @@ export default function AdminEnquiries() {
         setFollowUpDate={setFollowUpDate}
         onSave={handleSaveFollowUp}
         updating={updating}
+      />
+
+      <BookingFollowUpModal
+        target={bookingFollowUpTarget}
+        onClose={() => setBookingFollowUpTarget(null)}
+        onSave={handleSaveBookingFollowUp}
+        saving={!!bookingFollowUpTarget && updating === bookingFollowUpTarget.id}
       />
 
       <CancelModal

@@ -9,7 +9,7 @@
 // Everything here is intentionally stateless — no hooks, no local state —
 // so it's safe to call from anywhere.
 import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle, UserMinus, CalendarClock } from 'lucide-react';
-import type { CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
+import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
 import { formatDate, getActivePrice } from '../utils/utils-index';
 
 // Parses a money-field <input type="number"> value into a non-negative
@@ -231,6 +231,51 @@ export function followUpStatus(e: Enquiry): { label: string; color: string; icon
   if (diffDays < 0) return { label: `Overdue · ${dateLabel}`, color: 'bg-red-100 text-red-700', icon: CalendarClock, isDue: true };
   if (diffDays === 0) return { label: 'Follow up today', color: 'bg-amber-100 text-amber-700', icon: CalendarClock, isDue: true };
   return { label: `Follow up ${dateLabel}`, color: 'bg-blue-50 text-blue-700', icon: CalendarClock, isDue: false };
+}
+
+// Whether a Booking Follow-up reminder can be set on this enquiry right
+// now — CRM spec section 8B: only after the booking has started (past
+// Advance Pending) and while it's still active. Mirrors
+// canSetFollowUp() above on the opposite side of the same row's
+// lifecycle — the two windows never overlap, enforced by the DB check
+// constraints in add_booking_follow_up.sql and the clearing logic in
+// refreshJourneyStage() (src/services/api.ts).
+export function canSetBookingFollowUp(e: Enquiry): boolean {
+  return e.booking_state === 'active' && (
+    e.journey_stage === 'advance_pending' || e.journey_stage === 'advance_paid'
+    || e.journey_stage === 'confirmed' || e.journey_stage === 'balance_pending'
+    || e.journey_stage === 'fully_paid' || e.journey_stage === 'checked_in'
+  );
+}
+
+// Human-readable label for each Booking Follow-up type — see
+// BookingFollowUpType in types-index.ts.
+export const BOOKING_FOLLOW_UP_TYPE_CONFIG: Record<BookingFollowUpType, { label: string }> = {
+  balance_payment: { label: 'Balance Payment Reminder' },
+  document: { label: 'Document Reminder' },
+  passport: { label: 'Passport Reminder' },
+  medical_declaration: { label: 'Medical Declaration' },
+  final_itinerary: { label: 'Final Itinerary Reminder' },
+  other: { label: 'Other' },
+};
+
+// Booking Follow-up reminder chip — same escalating urgency treatment as
+// followUpStatus() above (overdue/today/upcoming), but labelled with what
+// the reminder is actually about (e.g. "Balance Payment Reminder") instead
+// of a bare date, since that's the whole point of carrying a type here.
+// Returns null when no Booking Follow-up is set.
+export function bookingFollowUpStatus(e: Enquiry): { label: string; color: string; icon: typeof CalendarClock; isDue: boolean } | null {
+  if (!e.booking_follow_up_at) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [y, m, d] = e.booking_follow_up_at.split('-').map(Number);
+  const target = new Date(y, (m || 1) - 1, d || 1);
+  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const dateLabel = formatDate(e.booking_follow_up_at, { day: 'numeric', month: 'short' });
+  const typeLabel = e.booking_follow_up_type ? BOOKING_FOLLOW_UP_TYPE_CONFIG[e.booking_follow_up_type].label : 'Booking Follow-up';
+  if (diffDays < 0) return { label: `${typeLabel} · Overdue · ${dateLabel}`, color: 'bg-red-100 text-red-700', icon: CalendarClock, isDue: true };
+  if (diffDays === 0) return { label: `${typeLabel} · Today`, color: 'bg-amber-100 text-amber-700', icon: CalendarClock, isDue: true };
+  return { label: `${typeLabel} · ${dateLabel}`, color: 'bg-blue-50 text-blue-700', icon: CalendarClock, isDue: false };
 }
 
 // Every reason an admin can pick when closing an enquiry out — see
