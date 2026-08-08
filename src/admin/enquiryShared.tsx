@@ -248,6 +248,21 @@ export function canSetBookingFollowUp(e: Enquiry): boolean {
   );
 }
 
+// Whether "Cancel Booking" should be offered right now — CRM spec section
+// 18's Cancellation Rules: only once a booking has actually started (past
+// Advance Pending), and only until the traveller checks in or the trip
+// completes. Previously the UI offered Cancel Booking on any non-completed,
+// non-checked-in row — including a brand-new lead nobody's even contacted
+// yet, which the spec explicitly calls out as not allowed ("Cannot cancel
+// because customer has not agreed to book yet"). cancelEnquiry() in
+// services/api.ts enforces the same rule server-side as a backstop. Does
+// NOT cover the "already cancelled -> offer Reactivate instead" case —
+// callers check e.cancelled_at separately for that, same as before.
+export function canCancelBooking(e: Enquiry): boolean {
+  if (e.cancelled_at || e.checked_in_at || e.journey_stage === 'completed') return false;
+  return e.journey_stage !== 'new_enquiry' && e.journey_stage !== 'contacted' && e.journey_stage !== 'not_interested';
+}
+
 // Human-readable label for each Booking Follow-up type — see
 // BookingFollowUpType in types-index.ts.
 export const BOOKING_FOLLOW_UP_TYPE_CONFIG: Record<BookingFollowUpType, { label: string }> = {

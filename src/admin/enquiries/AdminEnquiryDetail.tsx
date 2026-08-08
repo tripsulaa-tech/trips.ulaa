@@ -40,7 +40,7 @@ import {
   GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
-  NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus,
+  NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus, canCancelBooking,
   CANCELLATION_REASON_OPTIONS, REFUND_METHOD_OPTIONS,
 } from '../enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
@@ -722,12 +722,13 @@ export default function AdminEnquiryDetail() {
   }
   // A Completed booking can't be cancelled, and neither can one that's
   // already checked in (spec section 18: "Checked In ... Not Allowed:
-  // Cancel Booking" — undo the check-in first) — see cancelEnquiry's
+  // Cancel Booking" — undo the check-in first), nor a lead that hasn't
+  // agreed to book yet ("New"/"Contacted": "Not Allowed: Cancel Booking" —
+  // see canCancelBooking() in enquiryShared.tsx) — see cancelEnquiry's
   // guards in services/api.ts. Omit the action entirely rather than
   // showing it disabled or letting the click round-trip into an error
   // alert.
-  const isCompletedBooking = enquiry.journey_stage === 'completed';
-  if (enquiry.cancelled_at || (!isCompletedBooking && !enquiry.checked_in_at)) {
+  if (enquiry.cancelled_at || canCancelBooking(enquiry)) {
     rowActions.push(
       enquiry.cancelled_at
         ? { label: 'Reactivate Booking', icon: RefreshCw, onClick: handleCancelToggle }

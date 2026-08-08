@@ -1823,6 +1823,17 @@ export async function cancelEnquiry(
   if (enquiry.checked_in_at) {
     throw new Error('This traveller has already checked in — cancellation is no longer allowed. Undo Check In first if that was a mistake.');
   }
+  // Spec section 18's Cancellation Rules: cancelling only makes sense once
+  // a booking has actually started (past Advance Pending) — a lead that
+  // hasn't agreed to book yet has nothing to cancel. Mirrors
+  // canCancelBooking() in enquiryShared.tsx, which already keeps the
+  // button hidden in this state; this is the server-side backstop.
+  if (
+    enquiry.journey_stage === 'new_enquiry' || enquiry.journey_stage === 'contacted'
+    || enquiry.journey_stage === 'not_interested'
+  ) {
+    throw new Error('Cannot cancel — this lead hasn\u2019t agreed to book yet.');
+  }
 
   if (thirdPartyCharges !== undefined) {
     const { error: chargesError } = await supabase

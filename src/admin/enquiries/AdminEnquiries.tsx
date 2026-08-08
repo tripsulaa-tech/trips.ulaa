@@ -20,9 +20,9 @@ import type { GroupUnit } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, SOURCE_CONFIG,
-  journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend,
+  journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend, JOURNEY_STAGE_CONFIG,
   closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
-  canSetBookingFollowUp, bookingFollowUpStatus,
+  canSetBookingFollowUp, bookingFollowUpStatus, canCancelBooking,
 } from '../enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
 
@@ -65,6 +65,15 @@ export default function AdminEnquiries() {
   const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | Enquiry['status']>('all');
+  // Booking Journey filter — a separate, finer-grained dimension from
+  // `filter` above (Lead Status: new/contacted/closed only). Lets an admin
+  // isolate a specific stage of the pipeline the Status column already
+  // shows per row (e.g. just "Fully Paid" or "Checked In"), which the
+  // existing Lead Status/Booking filters couldn't reach on their own.
+  // Excludes 'cancelled' — that's Booking State, already covered by the
+  // Booking filter's Cancelled option (isCancelled()), not a journey stage
+  // going forward (see JOURNEY_STAGE_CONFIG's comment on that legacy value).
+  const [journeyFilter, setJourneyFilter] = useState<'all' | Exclude<Enquiry['journey_stage'], 'cancelled'>>('all');
   const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
   const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked' | 'cancelled'>('all');
   const [groupFilter, setGroupFilter] = useState<'all' | 'group' | 'solo'>('all');
@@ -100,7 +109,7 @@ export default function AdminEnquiries() {
   // Which single filter's dropdown is open — only one at a time. 'more'
   // is the overflow menu for less-frequently-used filters (currently just
   // Source), keeping the main bar to five compact boxes.
-  const [openFilterPanel, setOpenFilterPanel] = useState<'trip' | 'query' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null>(null);
+  const [openFilterPanel, setOpenFilterPanel] = useState<'trip' | 'query' | 'journey' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null>(null);
   const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   // Enquiry id currently generating/sharing its invoice PDF — disables the
@@ -1064,7 +1073,7 @@ export default function AdminEnquiries() {
     // guards in services/api.ts. Omit the action entirely rather than
     // showing it disabled or letting the click round-trip into an error
     // alert.
-    if (e.cancelled_at || (e.journey_stage !== 'completed' && !e.checked_in_at)) {
+    if (e.cancelled_at || canCancelBooking(e)) {
       items.push(
         e.cancelled_at
           ? { label: 'Reactivate Booking', icon: RefreshCw, onClick: () => handleCancelToggle(e) }
@@ -1619,6 +1628,7 @@ export default function AdminEnquiries() {
   const trimmedSearch = searchQuery.trim().toLowerCase();
   const filtered = sortedScoped
     .filter(e => filter === 'all' || e.status === filter)
+    .filter(e => journeyFilter === 'all' || e.journey_stage === journeyFilter)
     .filter(e => payFilter === 'all' || paymentFilterKey(e) === payFilter)
     .filter(e => bookedFilter === 'all' || (
       bookedFilter === 'cancelled' ? isCancelled(e)
@@ -1673,7 +1683,7 @@ export default function AdminEnquiries() {
   // filters, trip scope, or search term change. Done during render
   // (comparing against the previous filter signature) rather than in an
   // effect — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const filterSignature = `${filter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${packageFilter}|${sourceFilter}|${followUpDueOnly}|${selectedTripKey}|${trimmedSearch}`;
+  const filterSignature = `${filter}|${journeyFilter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${packageFilter}|${sourceFilter}|${followUpDueOnly}|${selectedTripKey}|${trimmedSearch}`;
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
   if (filterSignature !== prevFilterSignature) {
     setPrevFilterSignature(filterSignature);
@@ -1685,6 +1695,19 @@ export default function AdminEnquiries() {
     new: scopedEnquiries.filter(e => e.status === 'new').length,
     contacted: scopedEnquiries.filter(e => e.status === 'contacted').length,
     closed: scopedEnquiries.filter(e => e.status === 'closed').length,
+  };
+  const journeyCounts = {
+    all: scopedEnquiries.length,
+    new_enquiry: scopedEnquiries.filter(e => e.journey_stage === 'new_enquiry').length,
+    contacted: scopedEnquiries.filter(e => e.journey_stage === 'contacted').length,
+    advance_pending: scopedEnquiries.filter(e => e.journey_stage === 'advance_pending').length,
+    advance_paid: scopedEnquiries.filter(e => e.journey_stage === 'advance_paid').length,
+    confirmed: scopedEnquiries.filter(e => e.journey_stage === 'confirmed').length,
+    balance_pending: scopedEnquiries.filter(e => e.journey_stage === 'balance_pending').length,
+    fully_paid: scopedEnquiries.filter(e => e.journey_stage === 'fully_paid').length,
+    checked_in: scopedEnquiries.filter(e => e.journey_stage === 'checked_in').length,
+    completed: scopedEnquiries.filter(e => e.journey_stage === 'completed').length,
+    not_interested: scopedEnquiries.filter(e => e.journey_stage === 'not_interested').length,
   };
   const payCounts = {
     all: scopedEnquiries.length,
@@ -1720,12 +1743,13 @@ export default function AdminEnquiries() {
     return acc;
   }, { all: scopedEnquiries.length } as Record<string, number>);
   const followUpDueCount = scopedEnquiries.filter(e => !!followUpStatus(e)?.isDue).length;
-  const activeFilterCount = (selectedTripKey !== null ? 1 : 0) + (filter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (packageFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (followUpDueOnly ? 1 : 0) + (trimmedSearch ? 1 : 0);
+  const activeFilterCount = (selectedTripKey !== null ? 1 : 0) + (filter !== 'all' ? 1 : 0) + (journeyFilter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (packageFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (followUpDueOnly ? 1 : 0) + (trimmedSearch ? 1 : 0);
 
   // Drives the "Clear all" action in the filter bar below.
   const clearAllFilters = () => {
     setSelectedTripKey(null);
     setFilter('all');
+    setJourneyFilter('all');
     setPayFilter('all');
     setBookedFilter('all');
     setGroupFilter('all');
@@ -2130,9 +2154,14 @@ export default function AdminEnquiries() {
                     </button>
                   )}
 
-                  {/* Query Status */}
+                  {/* Lead Status — renamed from "Query Status" for clarity
+                      now that the table's own Status column shows the full
+                      combined Booking Journey pipeline (New Enquiry ...
+                      Completed) rather than this new/contacted/closed lead
+                      state alone; this filter only ever reaches the three
+                      lead values (see Enquiry.status). */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Query Status</label>
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Lead Status</label>
                     <button
                       onClick={() => setOpenFilterPanel(p => (p === 'query' ? null : 'query'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
@@ -2148,6 +2177,37 @@ export default function AdminEnquiries() {
                         onSelect={key => { setFilter(key); setOpenFilterPanel(null); }}
                         options={(['all', 'new', 'contacted', 'closed'] as const).map(key => ({
                           key, label: key === 'all' ? 'All' : STATUS_CONFIG[key].label, count: counts[key],
+                        }))}
+                      />
+                    )}
+                  </div>
+
+                  {/* Booking Journey — a separate, finer-grained dimension
+                      from Lead Status above (see journeyFilter's own
+                      comment). Lets an admin isolate a specific pipeline
+                      stage, e.g. everyone currently "Fully Paid" or "Checked
+                      In", which neither Lead Status nor the coarser Booking
+                      (booked/not booked/cancelled) filter below can reach. */}
+                  <div className="relative w-full sm:w-auto sm:min-w-[160px]">
+                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking Journey</label>
+                    <button
+                      onClick={() => setOpenFilterPanel(p => (p === 'journey' ? null : 'journey'))}
+                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
+                        openFilterPanel === 'journey' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
+                      }`}
+                    >
+                      <span className="text-sm font-button font-medium text-primary truncate">{journeyFilter === 'all' ? 'All' : JOURNEY_STAGE_CONFIG[journeyFilter].label}</span>
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'journey' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openFilterPanel === 'journey' && (
+                      <FilterDropdown
+                        value={journeyFilter}
+                        onSelect={key => { setJourneyFilter(key); setOpenFilterPanel(null); }}
+                        options={([
+                          'all', 'new_enquiry', 'contacted', 'advance_pending', 'advance_paid', 'confirmed',
+                          'balance_pending', 'fully_paid', 'checked_in', 'completed', 'not_interested',
+                        ] as const).map(key => ({
+                          key, label: key === 'all' ? 'All' : JOURNEY_STAGE_CONFIG[key].label, count: journeyCounts[key],
                         }))}
                       />
                     )}
@@ -2552,6 +2612,11 @@ export default function AdminEnquiries() {
                             {e.booking_id && (
                               <span title="Booking ID" className="mt-0.5 block text-[10px] font-mono text-dark-muted truncate">{e.booking_id}</span>
                             )}
+                            {refundStatus(e) && (
+                              <p className={`text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
+                                {refundStatus(e)!.label}
+                              </p>
+                            )}
                           </td>
                           <td className="px-2 py-3 text-center">
                             <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
@@ -2628,11 +2693,6 @@ export default function AdminEnquiries() {
                               <seat.icon size={12} className="shrink-0" />
                               {seat.label}
                             </span>
-                            {refundStatus(e) && (
-                              <p className={`text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
-                                {refundStatus(e)!.label}
-                              </p>
-                            )}
                           </td>
                           <td className="px-2 py-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">

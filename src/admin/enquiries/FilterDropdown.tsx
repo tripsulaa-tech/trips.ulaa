@@ -1,7 +1,7 @@
 // Shared dropdown menu used by every filter box in the filter bar — a
 // vertical list of options with counts, the selected one highlighted.
-// Kept generic so the same component serves Query Status, Payment,
-// Booking, Group/Solo, Food, and Source without repeating markup.
+// Kept generic so the same component serves Lead Status, Booking Journey,
+// Payment, Booking, Group/Solo, Food, and Source without repeating markup.
 export default function FilterDropdown<T extends string>({
   options,
   value,
