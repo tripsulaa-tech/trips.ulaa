@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MoreVertical } from 'lucide-react';
 
 // One row in an ActionsMenu — pass `hidden: true` to omit the item entirely
@@ -14,29 +15,80 @@ export interface ActionMenuItem {
   title?: string;
 }
 
+const MENU_WIDTH = 192; // w-48
+const MENU_MARGIN = 4; // gap between button and menu, and menu and viewport edge
+
 // Generic kebab (⋮) action menu used to consolidate a row's scattered icon
 // buttons into one dropdown — e.g. AdminEnquiries' per-booking Cancel/Mark
 // No Show/View Invoice/View Details/Download Receipt/WhatsApp/Call actions.
-// Closes on outside click; each item closes the menu before running its
-// own onClick.
+//
+// The dropdown itself is rendered into a portal (document.body) with
+// `position: fixed` coordinates computed from the trigger button, instead of
+// being positioned `absolute` inside the button's own wrapper. Enquiry rows
+// live inside cards with `overflow-hidden` (for their rounded corners), so
+// an absolutely-positioned menu near the bottom of a card was getting
+// clipped by the card's own edge — this portal approach isn't constrained
+// by any ancestor's overflow, and also flips upward automatically when
+// there isn't room below the button (e.g. the last row on screen).
+//
+// Closes on outside click / scroll / resize; each item closes the menu
+// before running its own onClick.
 export default function ActionsMenu({ items, disabled, label = 'Actions' }: { items: ActionMenuItem[]; disabled?: boolean; label?: string }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; openUp: boolean } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const visibleItems = items.filter(i => !i.hidden);
+
+  const updatePosition = () => {
+    const btn = buttonRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const menuHeight = menuRef.current?.offsetHeight ?? visibleItems.length * 33 + 8;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < menuHeight + MENU_MARGIN && rect.top > menuHeight + MENU_MARGIN;
+    const left = Math.min(
+      Math.max(MENU_MARGIN, rect.right - MENU_WIDTH),
+      window.innerWidth - MENU_WIDTH - MENU_MARGIN
+    );
+    const top = openUp ? rect.top - menuHeight - MENU_MARGIN : rect.bottom + MENU_MARGIN;
+    setCoords({ top, left, openUp });
+  };
+
+  // Recompute once the menu has actually rendered (so we know its real
+  // height for the flip-up check), then keep it pinned to the button while
+  // open — cards can scroll independently of the page on mobile.
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, visibleItems.length]);
 
   useEffect(() => {
     if (!open) return;
     const onClick = (ev: MouseEvent) => {
-      if (ref.current && !ref.current.contains(ev.target as Node)) setOpen(false);
+      const target = ev.target as Node;
+      if (buttonRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
     };
+    const onScrollOrResize = () => updatePosition();
     document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const visibleItems = items.filter(i => !i.hidden);
-
   return (
-    <div className="relative inline-block text-left" ref={ref}>
+    <>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
         disabled={disabled}
@@ -48,10 +100,12 @@ export default function ActionsMenu({ items, disabled, label = 'Actions' }: { it
       >
         <MoreVertical size={14} />
       </button>
-      {open && (
+      {open && coords && createPortal(
         <div
+          ref={menuRef}
           role="menu"
-          className="absolute right-0 z-30 mt-1 w-48 bg-white rounded-md shadow-lg border border-background-warm py-1"
+          style={{ position: 'fixed', top: coords.top, left: coords.left, width: MENU_WIDTH }}
+          className="z-50 bg-white rounded-md shadow-lg border border-background-warm py-1"
         >
           {visibleItems.map((item, i) => (
             <button
@@ -69,8 +123,9 @@ export default function ActionsMenu({ items, disabled, label = 'Actions' }: { it
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
