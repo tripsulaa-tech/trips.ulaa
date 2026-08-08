@@ -254,7 +254,11 @@ export type ClosedReason =
 // several outcomes (interested/needs_time/call_later/no_response) don't
 // close the lead at all. See add_contact_outcome.sql.
 export type ContactOutcome =
+<<<<<<< HEAD
   | 'interested' | 'needs_time' | 'call_later'
+=======
+  | 'interested' | 'needs_time' | 'call_later' | 'payment_arrangement'
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   | 'no_response' | 'not_interested' | 'wrong_number';
 
 // Why a booking was cancelled — captured in the Cancel Booking popup (CRM
@@ -416,6 +420,10 @@ export interface Payment {
   amount: number;
   payment_type: 'booking_amount' | 'balance' | 'installment' | 'refund' | 'full_payment' | 'advance' | 'extra_charge';
   payment_method?: string;
+  // Bank/UPI transaction reference, manually entered by the admin — N/A for
+  // cash. Distinct from invoice_number (ULAA's own auto-assigned per-
+  // transaction identifier). See add_payment_utr_reference.sql.
+  utr_number?: string | null;
   paid_at: string;
   notes?: string;
   created_at: string;

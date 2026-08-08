@@ -351,6 +351,15 @@ create table public.payments (
   -- yet. Only 'paid' rows count towards enquiries.amount_paid/refund_amount
   -- — see sync_enquiry_amount_paid(). See add_invoice_generation.sql.
   status          text not null default 'paid',
+<<<<<<< HEAD
+=======
+  -- Bank/UPI transaction reference the admin manually enters when recording
+  -- a real payment or refund — distinct from invoice_number (ULAA's own
+  -- auto-assigned identifier above). Null for cash (N/A) and for existing
+  -- historical rows recorded before this existed. See
+  -- add_payment_utr_reference.sql.
+  utr_number      text,
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   constraint payments_pkey primary key (id),
   constraint payments_enquiry_id_fkey foreign key (enquiry_id)
     references public.enquiries (id) on delete cascade,

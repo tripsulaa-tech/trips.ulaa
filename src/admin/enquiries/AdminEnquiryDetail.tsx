@@ -47,10 +47,18 @@ import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './adminEnquiriesShared';
 import ContactOutcomeModal from './ContactOutcomeModal';
 import type { ContactOutcomeResult } from './ContactOutcomeModal';
+<<<<<<< HEAD
 
 const emptyPaymentForm: PaymentForm = {
   package_type: 'normal', total_amount: '', amount_paid: '', refund_amount: '',
   refund_method: '', refund_date: '', refund_notes: '', food_preference: '',
+=======
+import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './MarkPaidModal';
+
+const emptyPaymentForm: PaymentForm = {
+  package_type: 'normal', total_amount: '', amount_paid: '', payment_method: '', payment_utr: '', refund_amount: '',
+  refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '',
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 };
 
 type EditDetailsForm = {
@@ -169,8 +177,16 @@ export default function AdminEnquiryDetail() {
       package_type: packageType,
       total_amount: suggested ?? '',
       amount_paid: enquiry.amount_paid ?? 0,
+<<<<<<< HEAD
       refund_amount: enquiry.is_no_show ? 0 : enquiry.refund_amount ?? 0,
       refund_method: '',
+=======
+      payment_method: '',
+      payment_utr: '',
+      refund_amount: enquiry.is_no_show ? 0 : enquiry.refund_amount ?? 0,
+      refund_method: '',
+      refund_utr: '',
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       refund_date: '',
       refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
@@ -260,7 +276,11 @@ export default function AdminEnquiryDetail() {
     if (!enquiry) return;
     setBusyStatus(true);
     try {
+<<<<<<< HEAD
       await updateEnquiryStatus(enquiry.id, 'new');
+=======
+      await updateEnquiryStatus(enquiry.id, 'contacted');
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       load();
     } catch (err) {
       console.error(err);
@@ -331,10 +351,19 @@ export default function AdminEnquiryDetail() {
         total_amount: totalAmount,
         package_type: paymentForm.package_type,
         food_preference: paymentForm.food_preference || null,
+<<<<<<< HEAD
+=======
+        payment_method: paymentForm.payment_method || undefined,
+        utr_number: paymentForm.payment_utr || undefined,
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       });
       if (enquiry.cancelled_at) {
         updated = await recordRefund(enquiry, refundAmount, {
           payment_method: paymentForm.refund_method || undefined,
+<<<<<<< HEAD
+=======
+          utr_number: paymentForm.refund_utr || undefined,
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
           notes: paymentForm.refund_notes || undefined,
           paid_at: paymentForm.refund_date || undefined,
         });
@@ -370,6 +399,12 @@ export default function AdminEnquiryDetail() {
   const [invoiceForm, setInvoiceForm] = useState<GenerateInvoiceForm>(emptyGenerateInvoiceForm);
   const [savingInvoice, setSavingInvoice] = useState(false);
   const [invoiceRowBusyId, setInvoiceRowBusyId] = useState<string | null>(null);
+<<<<<<< HEAD
+=======
+  const [markPaidTarget, setMarkPaidTarget] = useState<Payment | null>(null);
+  const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm>(emptyMarkPaidForm);
+  const [savingMarkPaid, setSavingMarkPaid] = useState(false);
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 
   const openGenerateInvoice = () => {
     setInvoiceForm(emptyGenerateInvoiceForm);
@@ -386,6 +421,7 @@ export default function AdminEnquiryDetail() {
     try {
       setSavingInvoice(true);
       const notes = invoiceForm.notes.trim() || undefined;
+<<<<<<< HEAD
       let updated: Enquiry = enquiry;
       if (invoiceForm.type === 'extra_charge') {
         updated = await addExtraCharge(enquiry, amount, { collectedNow: invoiceForm.status === 'paid', notes });
@@ -393,6 +429,17 @@ export default function AdminEnquiryDetail() {
         await generatePendingInvoice(enquiry.id, invoiceForm.type, amount, notes);
       } else {
         updated = await recordTypedPayment(enquiry, { type: invoiceForm.type, amount, notes });
+=======
+      const payment_method = invoiceForm.status === 'paid' ? (invoiceForm.payment_method || undefined) : undefined;
+      const utr_number = invoiceForm.status === 'paid' ? (invoiceForm.utr_number || undefined) : undefined;
+      let updated: Enquiry = enquiry;
+      if (invoiceForm.type === 'extra_charge') {
+        updated = await addExtraCharge(enquiry, amount, { collectedNow: invoiceForm.status === 'paid', payment_method, utr_number, notes });
+      } else if (invoiceForm.status === 'pending') {
+        await generatePendingInvoice(enquiry.id, invoiceForm.type, amount, notes);
+      } else {
+        updated = await recordTypedPayment(enquiry, { type: invoiceForm.type, amount, payment_method, utr_number, notes });
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       }
       setEnquiry(updated);
       setInvoiceModalOpen(false);
@@ -405,23 +452,49 @@ export default function AdminEnquiryDetail() {
     }
   };
 
+<<<<<<< HEAD
   const handleMarkInvoicePaid = async (payment: Payment) => {
     if (!enquiry) return;
     try {
       setInvoiceRowBusyId(payment.id);
       const updatedPayment = await markInvoicePaid(payment.id);
+=======
+  const handleMarkInvoicePaid = (payment: Payment) => {
+    setMarkPaidForm(emptyMarkPaidForm);
+    setMarkPaidTarget(payment);
+  };
+
+  const handleConfirmMarkPaid = async () => {
+    if (!markPaidTarget) return;
+    const payment = markPaidTarget;
+    try {
+      setSavingMarkPaid(true);
+      setInvoiceRowBusyId(payment.id);
+      const updatedPayment = await markInvoicePaid(payment.id, {
+        payment_method: markPaidForm.payment_method || undefined,
+        utr_number: markPaidForm.utr_number || undefined,
+      });
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       setPayments(prev => prev.map(p => (p.id === updatedPayment.id ? updatedPayment : p)));
       setEnquiry(prev => {
         if (!prev) return prev;
         const isRefund = updatedPayment.payment_type === 'refund';
         return { ...prev, amount_paid: (prev.amount_paid || 0) + (isRefund ? 0 : updatedPayment.amount) };
       });
+<<<<<<< HEAD
+=======
+      setMarkPaidTarget(null);
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       load();
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Failed to mark invoice as paid.');
     } finally {
       setInvoiceRowBusyId(null);
+<<<<<<< HEAD
+=======
+      setSavingMarkPaid(false);
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
     }
   };
 
@@ -918,6 +991,11 @@ export default function AdminEnquiryDetail() {
                         <p className="text-dark text-xs font-mono truncate">{inv.invoice_number || '—'}</p>
                         <p className="text-dark-muted text-[11px]">
                           {INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type} · {formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
+<<<<<<< HEAD
+=======
+                          {inv.payment_method ? ` · ${inv.payment_method}` : ''}
+                          {inv.utr_number ? ` · UTR ${inv.utr_number}` : ''}
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -1239,6 +1317,18 @@ export default function AdminEnquiryDetail() {
         saving={savingContactOutcome}
       />
 
+<<<<<<< HEAD
+=======
+      <MarkPaidModal
+        target={markPaidTarget}
+        onClose={() => setMarkPaidTarget(null)}
+        form={markPaidForm}
+        setForm={setMarkPaidForm}
+        onConfirm={handleConfirmMarkPaid}
+        saving={savingMarkPaid}
+      />
+
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       {/* Not Interested reason picker — see handleMarkNotInterested above. */}
       <Modal isOpen={notInterestedOpen} onClose={() => setNotInterestedOpen(false)} title="Mark as Not Interested" size="sm">
         <div className="space-y-4">

@@ -2,7 +2,12 @@ import type { Dispatch, SetStateAction } from 'react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
+<<<<<<< HEAD
 import { parseNonNegative, GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS } from '../enquiryShared';
+=======
+import { useConfirm } from '../../components/ui/useConfirm';
+import { parseNonNegative, GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS } from '../enquiryShared';
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 import type { GenerateInvoiceForm } from '../enquiryShared';
 import type { Enquiry } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -29,8 +34,34 @@ export default function GenerateInvoiceModal({
   onSave: () => void;
   savingInvoice: boolean;
 }) {
+<<<<<<< HEAD
   return (
     <Modal isOpen={!!generateInvoiceTarget} onClose={onClose} title="Generate Invoice" size="sm">
+=======
+  const confirm = useConfirm();
+  const isDirty =
+    generateInvoiceForm.amount !== '' ||
+    generateInvoiceForm.notes !== '' ||
+    generateInvoiceForm.payment_method !== '' ||
+    generateInvoiceForm.utr_number !== '';
+
+  const requestClose = async () => {
+    if (isDirty) {
+      const ok = await confirm({
+        title: 'Discard unsaved changes?',
+        message: "You've entered invoice details that haven't been saved yet.",
+        confirmLabel: 'Discard',
+        cancelLabel: 'Continue Editing',
+        variant: 'danger',
+      });
+      if (!ok) return;
+    }
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={!!generateInvoiceTarget} onClose={requestClose} title="Generate Invoice" size="sm">
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       {generateInvoiceTarget && (
         <div className="space-y-4">
           <div className="bg-background-warm rounded-md px-4 py-3">
@@ -76,6 +107,35 @@ export default function GenerateInvoiceModal({
             />
           </div>
 
+<<<<<<< HEAD
+=======
+          {generateInvoiceForm.status === 'paid' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Payment Method</label>
+                <Select
+                  value={generateInvoiceForm.payment_method}
+                  onChange={val => setGenerateInvoiceForm(f => ({ ...f, payment_method: val, utr_number: val === 'Cash' ? '' : f.utr_number }))}
+                  options={PAYMENT_METHOD_OPTIONS}
+                  placeholder="Select method"
+                  size="sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
+                <input
+                  type="text"
+                  value={generateInvoiceForm.utr_number}
+                  disabled={generateInvoiceForm.payment_method === 'Cash'}
+                  onChange={ev => setGenerateInvoiceForm(f => ({ ...f, utr_number: ev.target.value }))}
+                  className={`${inputClass} ${generateInvoiceForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  placeholder={generateInvoiceForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
+                />
+              </div>
+            </div>
+          )}
+
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
             <input
@@ -83,7 +143,11 @@ export default function GenerateInvoiceModal({
               value={generateInvoiceForm.notes}
               onChange={ev => setGenerateInvoiceForm(f => ({ ...f, notes: ev.target.value }))}
               className={inputClass}
+<<<<<<< HEAD
               placeholder="e.g. Paid via UPI, hotel category upgrade, etc."
+=======
+              placeholder="Any additional context for this invoice"
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
             />
           </div>
 

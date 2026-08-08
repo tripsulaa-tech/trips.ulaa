@@ -4,7 +4,12 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
+<<<<<<< HEAD
 import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, REFUND_METHOD_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from '../enquiryShared';
+=======
+import { useConfirm } from '../../components/ui/useConfirm';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from '../enquiryShared';
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 import type { PaymentForm } from '../enquiryShared';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
@@ -35,8 +40,38 @@ export default function PaymentModal({
   onSave: () => void;
   savingPayment: boolean;
 }) {
+<<<<<<< HEAD
   return (
     <Modal isOpen={!!paymentTarget} onClose={onClose} title="Track Payment" size="sm">
+=======
+  const confirm = useConfirm();
+  const isDirty =
+    paymentForm.total_amount !== '' ||
+    paymentForm.amount_paid !== '' ||
+    paymentForm.payment_method !== '' ||
+    paymentForm.payment_utr !== '' ||
+    paymentForm.refund_amount !== '' ||
+    paymentForm.refund_method !== '' ||
+    paymentForm.refund_utr !== '' ||
+    paymentForm.refund_notes !== '';
+
+  const requestClose = async () => {
+    if (isDirty) {
+      const ok = await confirm({
+        title: 'Discard unsaved changes?',
+        message: "You've entered payment details that haven't been saved yet.",
+        confirmLabel: 'Discard',
+        cancelLabel: 'Continue Editing',
+        variant: 'danger',
+      });
+      if (!ok) return;
+    }
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={!!paymentTarget} onClose={requestClose} title="Track Payment" size="sm">
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       {paymentTarget && (
         <div className="space-y-4">
           <div className="bg-background-warm rounded-md px-4 py-3 flex items-center justify-between gap-2">
@@ -138,6 +173,33 @@ export default function PaymentModal({
             </p>
           )}
 
+<<<<<<< HEAD
+=======
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">Payment Method</label>
+              <Select
+                value={paymentForm.payment_method}
+                onChange={val => setPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
+                options={PAYMENT_METHOD_OPTIONS}
+                placeholder="Select method"
+                size="sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
+              <input
+                type="text"
+                value={paymentForm.payment_utr}
+                disabled={paymentForm.payment_method === 'Cash'}
+                onChange={e => setPaymentForm(f => ({ ...f, payment_utr: e.target.value }))}
+                className={`${inputClass} ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                placeholder={paymentForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
+              />
+            </div>
+          </div>
+
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
           {/* Inline payment history (Phase F) — read-only ledger so an
               admin can see exactly what's already been recorded before
               changing the running total above. */}
@@ -159,6 +221,10 @@ export default function PaymentModal({
                       <p className="text-dark-muted">
                         {p.paid_at ? formatDate(p.paid_at, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not yet paid'}
                         {p.payment_method ? ` · ${p.payment_method}` : ''}
+<<<<<<< HEAD
+=======
+                        {p.utr_number ? ` · UTR ${p.utr_number}` : ''}
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
                       </p>
                     </div>
                     <p className={`shrink-0 font-semibold ${p.payment_type === 'refund' ? 'text-red-600' : 'text-green-700'}`}>
@@ -220,13 +286,31 @@ export default function PaymentModal({
                     <label className="block text-sm font-medium text-dark mb-1">Refund Method</label>
                     <Select
                       value={paymentForm.refund_method}
+<<<<<<< HEAD
                       onChange={val => setPaymentForm(f => ({ ...f, refund_method: val }))}
+=======
+                      onChange={val => setPaymentForm(f => ({ ...f, refund_method: val, refund_utr: val === 'Cash' ? '' : f.refund_utr }))}
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
                       options={REFUND_METHOD_OPTIONS}
                       placeholder="Select method"
                       size="sm"
                     />
                   </div>
                   <div>
+<<<<<<< HEAD
+=======
+                    <label className="block text-sm font-medium text-dark mb-1">Refund UTR / Reference</label>
+                    <input
+                      type="text"
+                      value={paymentForm.refund_utr}
+                      disabled={paymentForm.refund_method === 'Cash'}
+                      onChange={e => setPaymentForm(f => ({ ...f, refund_utr: e.target.value }))}
+                      className={`${inputClass} ${paymentForm.refund_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      placeholder={paymentForm.refund_method === 'Cash' ? 'N/A for cash' : 'e.g. 987654XXXX'}
+                    />
+                  </div>
+                  <div className="col-span-2">
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
                     <label className="block text-sm font-medium text-dark mb-1">Refund Date</label>
                     <input
                       type="date"

@@ -72,6 +72,14 @@ export interface GenerateInvoiceForm {
   type: GenerateInvoiceType;
   amount: number | '';
   status: 'paid' | 'pending';
+<<<<<<< HEAD
+=======
+  // Only meaningful when status is 'paid' — a pending invoice hasn't
+  // actually been settled yet, so there's no method/reference to record
+  // (CRM spec sections 6/46).
+  payment_method: string;
+  utr_number: string;
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   notes: string;
 }
 
@@ -79,6 +87,11 @@ export const emptyGenerateInvoiceForm: GenerateInvoiceForm = {
   type: 'advance',
   amount: '',
   status: 'paid',
+<<<<<<< HEAD
+=======
+  payment_method: '',
+  utr_number: '',
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   notes: '',
 };
 
@@ -86,12 +99,29 @@ export type PaymentForm = {
   package_type: Enquiry['package_type'];
   total_amount: number | '';
   amount_paid: number | '';
+<<<<<<< HEAD
   refund_amount: number | '';
   // Refund Method / Refund Date / Notes — CRM spec section 7's Refund
   // Popup fields, only meaningful (and only shown) alongside refund_amount
   // on a cancelled booking. refund_date defaults to today when the field is
   // touched; left '' it falls back to recordRefund's own now() default.
   refund_method: string;
+=======
+  // Payment Method / UTR — CRM spec sections 6/9/47: how this payment leg
+  // (the amount_paid change above) was actually settled, and its bank/UPI
+  // reference. Optional — only meaningful when amount_paid actually
+  // changes; recordPayment silently ignores them on a no-op save.
+  payment_method: string;
+  payment_utr: string;
+  refund_amount: number | '';
+  // Refund Method / Refund UTR / Refund Date / Notes — CRM spec section 7's
+  // Refund Popup fields, only meaningful (and only shown) alongside
+  // refund_amount on a cancelled booking. refund_date defaults to today
+  // when the field is touched; left '' it falls back to recordRefund's own
+  // now() default.
+  refund_method: string;
+  refund_utr: string;
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   refund_date: string;
   refund_notes: string;
   food_preference: 'veg' | 'non_veg' | '';
@@ -351,6 +381,7 @@ export const CANCELLATION_REASON_OPTIONS: { value: CancellationReason; label: st
     label: CANCELLATION_REASON_CONFIG[value].label,
   }));
 
+<<<<<<< HEAD
 // Methods offered in the Refund popup (CRM spec section 7) — mirrors the
 // three methods the site actually settles refunds through. payment_method
 // stays a free-text column on `payments` (same as every other payment type),
@@ -362,6 +393,26 @@ export const REFUND_METHOD_OPTIONS: { value: string; label: string }[] = [
   { value: 'Cash', label: 'Cash' },
 ];
 
+=======
+// Methods offered when recording any real money movement — a payment
+// (Track Payment / Generate Invoice) or a refund (Refund popup). One
+// canonical list (CRM spec sections 6/8) instead of two that could drift
+// apart; payment_method stays a free-text column on `payments` (same as
+// every other payment type), this is just a curated picker so admins
+// record a consistent value instead of free-typing "upi"/"UPI"/"Upi"
+// differently each time.
+export const PAYMENT_METHOD_OPTIONS: { value: string; label: string }[] = [
+  { value: 'UPI', label: 'UPI' },
+  { value: 'Bank', label: 'Bank Transfer' },
+  { value: 'Cash', label: 'Cash' },
+  { value: 'Other', label: 'Other' },
+];
+
+// Refunds settle through the exact same methods as payments — reuse the
+// same canonical list rather than a second, potentially-diverging one.
+export const REFUND_METHOD_OPTIONS = PAYMENT_METHOD_OPTIONS;
+
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 // Outcomes offered in the "Record Contact Outcome" popup (see
 // ContactOutcomeModal.tsx) — the single entry point for moving a lead from
 // New to Contacted. Order here is the order shown in the popup.
@@ -389,6 +440,14 @@ export const CONTACT_OUTCOME_CONFIG: Record<ContactOutcome, {
     description: "Asked to be called back — stays Contacted with a follow-up reminder.",
     effect: 'stays_contacted',
   },
+<<<<<<< HEAD
+=======
+  payment_arrangement: {
+    label: 'Payment Arrangement Needed',
+    description: 'Wants to book but needs time to arrange funds — stays Contacted with a follow-up reminder.',
+    effect: 'stays_contacted',
+  },
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   no_response: {
     label: 'No Response',
     description: "Didn't pick up — stays Contacted with a retry reminder.",

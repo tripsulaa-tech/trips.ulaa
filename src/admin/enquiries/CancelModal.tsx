@@ -3,6 +3,10 @@ import { Users } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
+<<<<<<< HEAD
+=======
+import { useConfirm } from '../../components/ui/useConfirm';
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
 import { parseNonNegative, CANCELLATION_REASON_OPTIONS } from '../enquiryShared';
 import type { CancellationReason, Enquiry } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -39,8 +43,30 @@ export default function CancelModal({
   onConfirm: () => void;
   cancelling: boolean;
 }) {
+<<<<<<< HEAD
   return (
     <Modal isOpen={!!cancelTarget} onClose={onClose} title="Cancel Booking" size="sm">
+=======
+  const confirm = useConfirm();
+  const isDirty = cancelCharges !== '' || cancelReason !== '' || cancelNotes.trim() !== '' || cancelIsNoShow;
+
+  const requestClose = async () => {
+    if (isDirty) {
+      const ok = await confirm({
+        title: 'Discard unsaved changes?',
+        message: "You've entered cancellation details that haven't been saved yet.",
+        confirmLabel: 'Discard',
+        cancelLabel: 'Continue Editing',
+        variant: 'danger',
+      });
+      if (!ok) return;
+    }
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={!!cancelTarget} onClose={requestClose} title="Cancel Booking" size="sm">
+>>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
       {cancelTarget && (
         <div className="space-y-4">
           <div className="bg-background-warm rounded-md px-4 py-3">
