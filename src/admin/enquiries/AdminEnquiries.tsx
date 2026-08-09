@@ -33,21 +33,21 @@ import {
   isGroupEntry, refundStatus, STATUS_CONFIG, PAY_FILTER_LABELS, FOOD_FILTER_LABELS,
   BOOKING_FILTER_LABELS, GROUP_FILTER_LABELS, PACKAGE_FILTER_LABELS, packageFilterKey,
   emptyForm, emptyWaitlistPerson, emptyBulkForm,
-} from './adminEnquiriesShared';
-import type { BulkEditForm, EnquiryForm, WaitlistPersonForm } from './adminEnquiriesShared';
-import FilterDropdown from './FilterDropdown';
-import AddEnquiryModal from './AddEnquiryModal';
-import PaymentModal from './PaymentModal';
-import DetailsModal from './DetailsModal';
-import GenerateInvoiceModal from './GenerateInvoiceModal';
-import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './MarkPaidModal';
-import NotInterestedModal from './NotInterestedModal';
-import FollowUpModal from './FollowUpModal';
-import BookingFollowUpModal, { type BookingFollowUpResult } from './BookingFollowUpModal';
-import ContactOutcomeModal from './ContactOutcomeModal';
-import type { ContactOutcomeResult } from './ContactOutcomeModal';
-import CancelModal from './CancelModal';
-import BulkEditModal from './BulkEditModal';
+} from './AdminEnquiriesShared';
+import type { BulkEditForm, EnquiryForm, WaitlistPersonForm } from './AdminEnquiriesShared';
+import FilterDropdown from './AdminFilterDropdown';
+import AddEnquiryModal from './AdminAddEnquiryModal';
+import PaymentModal from './AdminPaymentModal';
+import DetailsModal from './AdminDetailsModal';
+import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
+import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
+import NotInterestedModal from './AdminNotInterestedModal';
+import FollowUpModal from './AdminFollowUpModal';
+import BookingFollowUpModal, { type BookingFollowUpResult } from './AdminBookingFollowUpModal';
+import ContactOutcomeModal from './AdminContactOutcomeModal';
+import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
+import CancelModal from './AdminCancelModal';
+import BulkEditModal from './AdminBulkEditModal';
 
 export default function AdminEnquiries() {
   const confirm = useConfirm();
@@ -164,7 +164,7 @@ export default function AdminEnquiries() {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
-  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '' });
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '' });
   const [savingPayment, setSavingPayment] = useState(false);
   // Read-only ledger shown inline in the Track Payment modal (Phase F) —
   // same on-demand fetch pattern as detailsInvoices above, just keyed to
@@ -552,7 +552,13 @@ export default function AdminEnquiries() {
     setPaymentForm({
       package_type: packageType,
       total_amount: suggested ?? '',
-      amount_paid: enquiry.amount_paid ?? 0,
+      // Blank, not enquiry.amount_paid — this field is now "amount for this
+      // payment," matching Generate Invoice, not a running total to edit
+      // down to. Package/total/food-preference edits below can still be
+      // saved with amount_paid left blank; that's a no-op on the ledger.
+      amount_paid: '',
+      payment_type: 'advance',
+      status: 'paid',
       payment_method: '',
       payment_utr: '',
       // No-shows forfeit the full amount paid, no exceptions — refund
@@ -1114,31 +1120,97 @@ export default function AdminEnquiries() {
     return items;
   };
 
+  // Extra Charge and Pending both raise their own invoice row via the same
+  // services/api.ts functions Generate Invoice uses (addExtraCharge /
+  // generatePendingInvoice) rather than moving amount_paid through
+  // recordPayment's running-total math — recordPayment's `type` override
+  // still only covers the original four (full_payment/advance/balance/
+  // installment) since Extra Charge changes total_amount itself and
+  // Pending doesn't touch amount_paid at all. Either way, any total/
+  // package/food edits sitting in the same form still need saving, so
+  // those always go through a recordPayment call first (a no-op on the
+  // ledger when the payment itself is routed elsewhere).
   const handleSavePayment = async () => {
     if (!paymentTarget) return;
     const totalAmount = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
-    const amountPaid = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
-    if (totalAmount != null && amountPaid > totalAmount) {
-      alert("Amount paid can't be more than the total amount.");
+    // amount_paid is this transaction's own amount now (Generate Invoice's
+    // semantics), so the running total recordPayment actually needs is the
+    // existing amount_paid plus whatever's being entered here.
+    const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
+    const isExtraCharge = paymentForm.payment_type === 'extra_charge';
+    const isPending = paymentForm.status === 'pending';
+    const newRunningTotal = (paymentTarget.amount_paid || 0) + thisPayment;
+    if (!isExtraCharge && !isPending && totalAmount != null && newRunningTotal > totalAmount) {
+      alert("This payment would take the amount paid past the total amount.");
+      return;
+    }
+    if ((isExtraCharge || isPending) && thisPayment <= 0) {
+      alert(isExtraCharge ? 'Enter an extra charge amount greater than zero.' : 'Enter an amount greater than zero for the pending invoice.');
       return;
     }
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
-    if (refundAmount > amountPaid) {
+    // Extra Charge collected now folds straight into amount_paid (below);
+    // Pending never does, whatever the type — so the refund bound uses
+    // what amount_paid will actually become, not the naive "already paid +
+    // this payment" that only holds for a normal paid-now payment.
+    const effectiveAmountPaid = isPending
+      ? (paymentTarget.amount_paid || 0)
+      : isExtraCharge
+        ? (paymentTarget.amount_paid || 0) + thisPayment
+        : newRunningTotal;
+    if (refundAmount > effectiveAmountPaid) {
       alert("Refund amount can't be more than what was actually paid.");
       return;
     }
     try {
       setSavingPayment(true);
-      await recordPayment(paymentTarget, {
-        amount_paid: amountPaid,
-        total_amount: totalAmount,
-        package_type: paymentForm.package_type,
-        food_preference: paymentForm.food_preference || null,
-        payment_method: paymentForm.payment_method || undefined,
-        utr_number: paymentForm.payment_utr || undefined,
-      });
+      let updated: Enquiry = paymentTarget;
+
+      if (isExtraCharge) {
+        // Total Amount is disabled in the UI for this type — addExtraCharge
+        // bumps it by thisPayment itself, so there's nothing to reconcile.
+        updated = await recordPayment(paymentTarget, {
+          amount_paid: paymentTarget.amount_paid || 0,
+          package_type: paymentForm.package_type,
+          food_preference: paymentForm.food_preference || null,
+        });
+        updated = await addExtraCharge(updated, thisPayment, {
+          collectedNow: !isPending,
+          payment_method: paymentForm.payment_method || undefined,
+          utr_number: paymentForm.payment_utr || undefined,
+        });
+      } else if (isPending) {
+        updated = await recordPayment(paymentTarget, {
+          amount_paid: paymentTarget.amount_paid || 0,
+          total_amount: totalAmount,
+          package_type: paymentForm.package_type,
+          food_preference: paymentForm.food_preference || null,
+        });
+        if (thisPayment > 0) {
+          // Not extra_charge in this branch (handled above), so this is
+          // always one of the four types generatePendingInvoice accepts.
+          await generatePendingInvoice(paymentTarget.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment);
+        }
+      } else {
+        updated = await recordPayment(paymentTarget, {
+          amount_paid: newRunningTotal,
+          total_amount: totalAmount,
+          package_type: paymentForm.package_type,
+          food_preference: paymentForm.food_preference || null,
+          payment_method: paymentForm.payment_method || undefined,
+          utr_number: paymentForm.payment_utr || undefined,
+          // Only meaningful when money is actually moving — recordPayment's
+          // delta !== 0 guard already no-ops the ledger insert otherwise, so
+          // there's no case where an unused type value could mislabel a
+          // profile-only edit (total/package/food with no payment amount).
+          // Not extra_charge in this branch (handled above), so this is
+          // always one of the four types recordPayment's override accepts.
+          type: thisPayment > 0 ? (paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment') : undefined,
+        });
+      }
+
       if (paymentTarget.cancelled_at) {
-        await recordRefund(paymentTarget, refundAmount, {
+        await recordRefund(updated, refundAmount, {
           payment_method: paymentForm.refund_method || undefined,
           utr_number: paymentForm.refund_utr || undefined,
           notes: paymentForm.refund_notes || undefined,

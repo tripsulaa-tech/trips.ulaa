@@ -92,11 +92,34 @@ export const emptyGenerateInvoiceForm: GenerateInvoiceForm = {
 export type PaymentForm = {
   package_type: Enquiry['package_type'];
   total_amount: number | '';
+  // This transaction's own amount — not a running total. Matches Generate
+  // Invoice's "Amount" field: the admin enters what's coming in right now,
+  // and picks payment_type directly below, the same way Generate Invoice's
+  // Type dropdown works. recordPayment still does delta/running-total math
+  // internally (every other caller of it needs that), but the UI here no
+  // longer asks the admin to do that addition themselves.
   amount_paid: number | '';
+  // Full Payment / Advance / Balance / Installment / Extra Charge — picked
+  // manually here, same options and same meaning as Generate Invoice's Type
+  // dropdown (see PAYMENT_TYPE_OPTIONS below, which is now literally
+  // GENERATE_INVOICE_TYPE_OPTIONS — one shared list, no risk of the two
+  // dropdowns drifting). 'extra_charge' routes through addExtraCharge
+  // instead of recordPayment's `type` override (which still only accepts
+  // the original four) — see handleSavePayment for the branch.
+  payment_type: GenerateInvoiceType;
+  // Paid now vs pending — same meaning and same options
+  // (GENERATE_INVOICE_STATUS_OPTIONS) as Generate Invoice's Status dropdown.
+  // 'pending' raises an invoice without touching amount_paid (via
+  // generatePendingInvoice, or addExtraCharge's collectedNow: false for the
+  // extra_charge type), for later settlement with the Mark Paid button in
+  // the Invoices list — same as Generate Invoice, Track Payment just also
+  // lets that pending invoice ride alongside a total/package/food edit.
+  status: 'paid' | 'pending';
   // Payment Method / UTR — CRM spec sections 6/9/47: how this payment leg
   // (the amount_paid change above) was actually settled, and its bank/UPI
-  // reference. Optional — only meaningful when amount_paid actually
-  // changes; recordPayment silently ignores them on a no-op save.
+  // reference. Optional — only meaningful when status is 'paid' and
+  // amount_paid actually changes; recordPayment/addExtraCharge silently
+  // ignore them otherwise.
   payment_method: string;
   payment_utr: string;
   refund_amount: number | '';
@@ -111,6 +134,14 @@ export type PaymentForm = {
   refund_notes: string;
   food_preference: 'veg' | 'non_veg' | '';
 };
+
+// Same types Generate Invoice offers, including Extra Charge and the
+// paid/pending Status (refund is still excluded — it has its own dedicated,
+// cancellation-aware flow here in Track Payment's cancelled-booking
+// section). Literally the same array as GENERATE_INVOICE_TYPE_OPTIONS now —
+// aliased under this name so Track Payment's imports/intent stay readable —
+// so wording can never drift between the two dropdowns.
+export const PAYMENT_TYPE_OPTIONS: { value: PaymentForm['payment_type']; label: string }[] = GENERATE_INVOICE_TYPE_OPTIONS;
 
 export const FOOD_PREFERENCE_OPTIONS = [
   { value: '', label: 'Not asked / unknown' },

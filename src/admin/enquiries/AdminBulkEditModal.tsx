@@ -6,8 +6,8 @@ import type { Enquiry } from '../../types/types-index';
 import {
   BULK_NO_CHANGE, BULK_FOOD_OPTIONS, BULK_PACKAGE_OPTIONS, BULK_STATUS_OPTIONS,
   inputClass,
-} from './adminEnquiriesShared';
-import type { BulkEditForm } from './adminEnquiriesShared';
+} from './AdminEnquiriesShared';
+import type { BulkEditForm } from './AdminEnquiriesShared';
 import { parseNonNegative } from '../enquiryShared';
 
 export default function BulkEditModal({

@@ -23,7 +23,7 @@ import {
 import AdminLayout from './AdminLayout';
 import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin } from '../services/api';
 import type { Enquiry, UpcomingTrip, CompletedTrip } from '../types/types-index';
-import { isBooked, isCancelled } from './enquiries/adminEnquiriesShared';
+import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiryShared';
 import { formatPrice } from '../utils/utils-index';
 

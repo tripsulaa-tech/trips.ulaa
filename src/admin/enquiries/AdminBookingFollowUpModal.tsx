@@ -6,7 +6,7 @@ import DatePicker from '../../components/ui/DatePicker';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { BOOKING_FOLLOW_UP_TYPE_CONFIG } from '../enquiryShared';
 import type { BookingFollowUpType, Enquiry } from '../../types/types-index';
-import { inputClass } from './adminEnquiriesShared';
+import { inputClass } from './AdminEnquiriesShared';
 
 export interface BookingFollowUpResult {
   at: string;

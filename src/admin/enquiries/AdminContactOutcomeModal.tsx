@@ -8,7 +8,7 @@ import {
   CONTACT_OUTCOME_CONFIG, CONTACT_OUTCOME_OPTIONS, NOT_INTERESTED_REASON_OPTIONS,
 } from '../enquiryShared';
 import type { ClosedReason, ContactOutcome, Enquiry } from '../../types/types-index';
-import { inputClass } from './adminEnquiriesShared';
+import { inputClass } from './AdminEnquiriesShared';
 
 export interface ContactOutcomeResult {
   outcome: ContactOutcome;

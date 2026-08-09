@@ -37,20 +37,20 @@ import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../../utils/utils-index';
 import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
-  GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, emptyGenerateInvoiceForm,
+  GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_TYPE_OPTIONS, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus, canCancelBooking,
-  CANCELLATION_REASON_OPTIONS, REFUND_METHOD_OPTIONS,
+  CANCELLATION_REASON_OPTIONS, REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
 } from '../enquiryShared';
 import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
-import { isCancelled, bookingStateBadge, attendanceBadge } from './adminEnquiriesShared';
-import ContactOutcomeModal from './ContactOutcomeModal';
-import type { ContactOutcomeResult } from './ContactOutcomeModal';
-import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './MarkPaidModal';
+import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquiriesShared';
+import ContactOutcomeModal from './AdminContactOutcomeModal';
+import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
+import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
 
 const emptyPaymentForm: PaymentForm = {
-  package_type: 'normal', total_amount: '', amount_paid: '', payment_method: '', payment_utr: '', refund_amount: '',
+  package_type: 'normal', total_amount: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '',
   refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '',
 };
 
@@ -169,7 +169,12 @@ export default function AdminEnquiryDetail() {
     setPaymentForm({
       package_type: packageType,
       total_amount: suggested ?? '',
-      amount_paid: enquiry.amount_paid ?? 0,
+      // Blank, not enquiry.amount_paid — same reasoning as AdminEnquiries'
+      // openPayment: this field is this-payment's-own-amount now, matching
+      // Generate Invoice, not a running total to edit down to.
+      amount_paid: '',
+      payment_type: 'advance',
+      status: 'paid',
       payment_method: '',
       payment_utr: '',
       refund_amount: enquiry.is_no_show ? 0 : enquiry.refund_amount ?? 0,
@@ -315,31 +320,79 @@ export default function AdminEnquiryDetail() {
     }
   };
 
+  // Extra Charge and Pending both raise their own invoice row via the same
+  // services/api.ts functions Generate Invoice uses (addExtraCharge /
+  // generatePendingInvoice) rather than moving amount_paid through
+  // recordPayment's running-total math — see the matching handleSavePayment
+  // in AdminEnquiries.tsx for the full reasoning; kept in sync with it.
   const handleSavePayment = async () => {
     if (!enquiry) return;
     const totalAmount = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
-    const amountPaid = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
-    if (totalAmount != null && amountPaid > totalAmount) {
-      alert("Amount paid can't be more than the total amount.");
+    const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
+    const isExtraCharge = paymentForm.payment_type === 'extra_charge';
+    const isPending = paymentForm.status === 'pending';
+    const newRunningTotal = (enquiry.amount_paid || 0) + thisPayment;
+    if (!isExtraCharge && !isPending && totalAmount != null && newRunningTotal > totalAmount) {
+      alert("This payment would take the amount paid past the total amount.");
+      return;
+    }
+    if ((isExtraCharge || isPending) && thisPayment <= 0) {
+      alert(isExtraCharge ? 'Enter an extra charge amount greater than zero.' : 'Enter an amount greater than zero for the pending invoice.');
       return;
     }
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
-    if (refundAmount > amountPaid) {
+    const effectiveAmountPaid = isPending
+      ? (enquiry.amount_paid || 0)
+      : isExtraCharge
+        ? (enquiry.amount_paid || 0) + thisPayment
+        : newRunningTotal;
+    if (refundAmount > effectiveAmountPaid) {
       alert("Refund amount can't be more than what was actually paid.");
       return;
     }
     try {
       setSavingPayment(true);
-      let updated = await recordPayment(enquiry, {
-        amount_paid: amountPaid,
-        total_amount: totalAmount,
-        package_type: paymentForm.package_type,
-        food_preference: paymentForm.food_preference || null,
-        payment_method: paymentForm.payment_method || undefined,
-        utr_number: paymentForm.payment_utr || undefined,
-      });
+      let updated = enquiry;
+
+      if (isExtraCharge) {
+        updated = await recordPayment(enquiry, {
+          amount_paid: enquiry.amount_paid || 0,
+          package_type: paymentForm.package_type,
+          food_preference: paymentForm.food_preference || null,
+        });
+        updated = await addExtraCharge(updated, thisPayment, {
+          collectedNow: !isPending,
+          payment_method: paymentForm.payment_method || undefined,
+          utr_number: paymentForm.payment_utr || undefined,
+        });
+      } else if (isPending) {
+        updated = await recordPayment(enquiry, {
+          amount_paid: enquiry.amount_paid || 0,
+          total_amount: totalAmount,
+          package_type: paymentForm.package_type,
+          food_preference: paymentForm.food_preference || null,
+        });
+        if (thisPayment > 0) {
+          // Not extra_charge in this branch (handled above), so this is
+          // always one of the four types generatePendingInvoice accepts.
+          await generatePendingInvoice(enquiry.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment);
+        }
+      } else {
+        updated = await recordPayment(enquiry, {
+          amount_paid: newRunningTotal,
+          total_amount: totalAmount,
+          package_type: paymentForm.package_type,
+          food_preference: paymentForm.food_preference || null,
+          payment_method: paymentForm.payment_method || undefined,
+          utr_number: paymentForm.payment_utr || undefined,
+          // Not extra_charge in this branch (handled above), so this is
+          // always one of the four types recordPayment's override accepts.
+          type: thisPayment > 0 ? (paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment') : undefined,
+        });
+      }
+
       if (enquiry.cancelled_at) {
-        updated = await recordRefund(enquiry, refundAmount, {
+        updated = await recordRefund(updated, refundAmount, {
           payment_method: paymentForm.refund_method || undefined,
           utr_number: paymentForm.refund_utr || undefined,
           notes: paymentForm.refund_notes || undefined,
@@ -1085,29 +1138,101 @@ export default function AdminEnquiryDetail() {
               <input
                 type="number"
                 min={0}
-                value={paymentForm.total_amount}
+                value={paymentForm.payment_type === 'extra_charge' ? '' : paymentForm.total_amount}
+                disabled={paymentForm.payment_type === 'extra_charge'}
                 onChange={e => setPaymentForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
-                className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
-                placeholder="e.g. 15000"
+                className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                placeholder={paymentForm.payment_type === 'extra_charge' ? 'Updates automatically' : 'e.g. 15000'}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
+              <label className="block text-sm font-medium text-dark mb-1">
+                {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
+              </label>
               <input
                 type="number"
                 min={0}
                 value={paymentForm.amount_paid}
                 onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
                 className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
-                placeholder="e.g. 5000 (advance)"
+                placeholder="e.g. 5000"
               />
             </div>
           </div>
-          {paymentForm.total_amount !== '' && paymentForm.amount_paid !== '' && (
-            <p className="text-sm text-dark-muted">
-              Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, Number(paymentForm.total_amount) - Number(paymentForm.amount_paid)))}</span>
-            </p>
+
+          {/* This transaction's own amount + a manually-picked type — same
+              shape as Generate Invoice, rather than a running total the
+              label gets inferred from. */}
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Payment Type</label>
+            <Select
+              value={paymentForm.payment_type}
+              onChange={val => setPaymentForm(f => ({ ...f, payment_type: val as PaymentForm['payment_type'] }))}
+              options={PAYMENT_TYPE_OPTIONS}
+            />
+            {paymentForm.payment_type === 'extra_charge' && (
+              <p className="text-[11px] text-dark-muted mt-1">
+                Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Status</label>
+            <Select
+              value={paymentForm.status}
+              onChange={val => setPaymentForm(f => ({ ...f, status: val as PaymentForm['status'] }))}
+              options={GENERATE_INVOICE_STATUS_OPTIONS}
+            />
+          </div>
+
+          {paymentForm.status === 'paid' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">Payment Method</label>
+                <Select
+                  value={paymentForm.payment_method}
+                  onChange={val => setPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
+                  options={PAYMENT_METHOD_OPTIONS}
+                  placeholder="Select method"
+                  size="sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
+                <input
+                  type="text"
+                  value={paymentForm.payment_utr}
+                  disabled={paymentForm.payment_method === 'Cash'}
+                  onChange={e => setPaymentForm(f => ({ ...f, payment_utr: e.target.value }))}
+                  className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  placeholder={paymentForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
+                />
+              </div>
+            </div>
           )}
+
+          {(() => {
+            const alreadyPaid = enquiry.amount_paid || 0;
+            const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
+            const isExtraCharge = paymentForm.payment_type === 'extra_charge';
+            const isPending = paymentForm.status === 'pending';
+            const projectedTotal = isPending ? alreadyPaid : alreadyPaid + thisPayment;
+            const projectedBookingTotal = isExtraCharge && paymentForm.total_amount !== ''
+              ? Number(paymentForm.total_amount) + thisPayment
+              : paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
+            return (
+              <p className="text-sm text-dark-muted">
+                Already paid <span className="font-medium text-dark">{formatPrice(alreadyPaid)}</span>
+                {thisPayment > 0 && !isPending && <> · after this payment: <span className="font-semibold text-dark">{formatPrice(projectedTotal)}</span></>}
+                {thisPayment > 0 && isPending && <> · <span className="font-semibold text-amber-700">{formatPrice(thisPayment)} raised as pending</span>, not yet counted as paid</>}
+                {isExtraCharge && thisPayment > 0 && <> · booking total will rise by <span className="font-semibold text-dark">{formatPrice(thisPayment)}</span></>}
+                {projectedBookingTotal != null && (
+                  <> · Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, projectedBookingTotal - projectedTotal))}</span></>
+                )}
+              </p>
+            );
+          })()}
 
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Payment History</label>

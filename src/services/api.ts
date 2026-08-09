@@ -1512,11 +1512,17 @@ export async function deleteWaitlistEntry(id: string): Promise<void> {
 // triggers a DB-side recalculation of enquiries.amount_paid — this function
 // never writes amount_paid directly, to avoid it drifting from the ledger.
 //
-// `newAmountPaid` is the *running total* the admin enters in the UI (kept
-// this way so the form still just shows one "amount paid so far" field);
-// this function does the delta math and inserts one ledger row for the
-// difference. Passing a newAmountPaid equal to current.amount_paid is a
-// no-op (e.g. saving the form after only changing total_amount/package_type).
+// `newAmountPaid` is the running total after this transaction is applied —
+// every caller (bulk edit, manual-enquiry creation, and the Track Payment
+// modal) computes it before calling in, so this function only has to do the
+// delta math once. Passing a newAmountPaid equal to current.amount_paid is
+// a no-op (e.g. saving the form after only changing total_amount/package_type).
+//
+// `type`, if passed, is an explicit Full Payment/Advance/Balance/Installment
+// override — used by the Track Payment modal, which (like Generate Invoice)
+// has the admin pick the label directly rather than inferring it. Omitted,
+// the label is auto-classified from isFirstPayment/completesTotal below, as
+// every other caller of this function still relies on.
 export async function recordPayment(
   current: Enquiry,
   payment: {
@@ -1527,6 +1533,7 @@ export async function recordPayment(
     payment_method?: string;
     utr_number?: string;
     notes?: string;
+    type?: 'full_payment' | 'advance' | 'balance' | 'installment';
   }
 ): Promise<Enquiry> {
   const newTotal = payment.total_amount !== undefined ? payment.total_amount : current.total_amount;
@@ -1554,12 +1561,13 @@ export async function recordPayment(
   // payment that brings the booking to fully paid, otherwise 'installment'.
   // Computed once, outside the `delta !== 0` guard below, so the same
   // label is available for both the ledger insert and the activity-log
-  // entry further down without going out of scope between them.
+  // entry further down without going out of scope between them. Skipped
+  // entirely when the caller already supplied an explicit type.
   const isFirstPayment = (current.amount_paid || 0) <= 0;
   const completesTotal = !!newTotal && newTotal > 0 && payment.amount_paid >= newTotal;
-  const invoiceType = isFirstPayment
+  const invoiceType = payment.type ?? (isFirstPayment
     ? (completesTotal ? 'full_payment' : 'advance')
-    : (completesTotal ? 'balance' : 'installment');
+    : (completesTotal ? 'balance' : 'installment'));
 
   if (delta !== 0) {
     const { error: paymentError } = await supabase.from('payments').insert({
