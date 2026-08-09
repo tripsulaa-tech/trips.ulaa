@@ -9,8 +9,8 @@
 // Everything here is intentionally stateless — no hooks, no local state —
 // so it's safe to call from anywhere.
 import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle, UserMinus, CalendarClock } from 'lucide-react';
-import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../types/types-index';
-import { formatDate, getActivePrice } from '../utils/utils-index';
+import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
+import { formatDate, getActivePrice } from '../../utils/utils-index';
 
 // Parses a money-field <input type="number"> value into a non-negative
 // number, or '' if the field is empty. The HTML `min={0}` attribute on
@@ -150,13 +150,24 @@ export const PAYMENT_TYPE_OPTIONS: { value: PaymentForm['payment_type']; label: 
 // doesn't actually zero out the amount due, leaving the ledger's own
 // labels misleading. Only 'Balance' is gated this way; every other type
 // (including 'Installment') stays freely selectable.
+// 'Balance' is meant for the payment that clears whatever's left owing —
+// unlike 'Installment', which is any partial payment with more expected
+// after it. Nothing else in the data model enforces that distinction, so
+// without this check an admin could pick 'Balance' on a payment that
+// doesn't actually zero out the amount due, leaving the ledger's own
+// labels misleading. Only 'Balance' is gated this way; every other type
+// (including 'Installment') stays freely selectable. Shared by both Track
+// Payment (PaymentForm) and Generate Invoice (GenerateInvoiceForm) below.
+function amountClearsBalance(totalAmount: number | '', alreadyPaid: number, thisAmount: number | ''): boolean {
+  if (totalAmount === '') return false;
+  const amt = thisAmount === '' ? 0 : Number(thisAmount);
+  if (amt <= 0) return false;
+  return Number(totalAmount) - alreadyPaid - amt <= 0;
+}
+
 export function clearsBalance(paymentForm: PaymentForm, alreadyPaid: number): boolean {
   if (paymentForm.payment_type === 'extra_charge') return false;
-  if (paymentForm.total_amount === '') return false;
-  const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
-  if (thisPayment <= 0) return false;
-  const remaining = Number(paymentForm.total_amount) - alreadyPaid - thisPayment;
-  return remaining <= 0;
+  return amountClearsBalance(paymentForm.total_amount, alreadyPaid, paymentForm.amount_paid);
 }
 
 // Same list as PAYMENT_TYPE_OPTIONS, minus 'Balance' when this payment
@@ -166,6 +177,22 @@ export function clearsBalance(paymentForm: PaymentForm, alreadyPaid: number): bo
 // picking it), so the Select's current value always stays in this list.
 export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPaid: number): { value: PaymentForm['payment_type']; label: string }[] {
   return clearsBalance(paymentForm, alreadyPaid) ? PAYMENT_TYPE_OPTIONS : PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'balance');
+}
+
+// Generate Invoice's own amount/type fields don't carry the booking's
+// total or already-paid figures — those live on the Enquiry the invoice
+// is being raised against — so callers pass them in separately.
+export function clearsBalanceForInvoice(form: GenerateInvoiceForm, totalAmount: number, alreadyPaid: number): boolean {
+  if (form.type === 'extra_charge') return false;
+  return amountClearsBalance(totalAmount, alreadyPaid, form.amount);
+}
+
+// Same list as GENERATE_INVOICE_TYPE_OPTIONS, minus 'Balance' unless this
+// invoice's amount actually clears what's owed. Pair with an effect that
+// steers type off 'balance' once it stops qualifying, same as Track
+// Payment above.
+export function availableInvoiceTypeOptions(form: GenerateInvoiceForm, totalAmount: number, alreadyPaid: number): { value: GenerateInvoiceType; label: string }[] {
+  return clearsBalanceForInvoice(form, totalAmount, alreadyPaid) ? GENERATE_INVOICE_TYPE_OPTIONS : GENERATE_INVOICE_TYPE_OPTIONS.filter(o => o.value !== 'balance');
 }
 
 export const FOOD_PREFERENCE_OPTIONS = [

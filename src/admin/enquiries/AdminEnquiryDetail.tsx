@@ -37,7 +37,8 @@ import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../../utils/utils-index';
 import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
-  GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, availablePaymentTypeOptions, clearsBalance, emptyGenerateInvoiceForm,
+  GENERATE_INVOICE_STATUS_OPTIONS, availablePaymentTypeOptions, clearsBalance,
+  availableInvoiceTypeOptions, clearsBalanceForInvoice, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus, canCancelBooking,
@@ -442,6 +443,18 @@ export default function AdminEnquiryDetail() {
   const [invoiceForm, setInvoiceForm] = useState<GenerateInvoiceForm>(emptyGenerateInvoiceForm);
   const [savingInvoice, setSavingInvoice] = useState(false);
   const [invoiceRowBusyId, setInvoiceRowBusyId] = useState<string | null>(null);
+
+  // 'Balance' is only meant for the invoice that actually zeroes out the
+  // amount due — if the admin picked it and then edits the amount so it
+  // no longer does, drop back to 'Installment' rather than leaving
+  // 'Balance' selected but no longer true. See clearsBalanceForInvoice in
+  // AdminEnquiryCommon.
+  useEffect(() => {
+    if (!enquiry) return;
+    if (invoiceForm.type === 'balance' && !clearsBalanceForInvoice(invoiceForm, enquiry.total_amount || 0, enquiry.amount_paid || 0)) {
+      setInvoiceForm(f => ({ ...f, type: 'installment' }));
+    }
+  }, [enquiry, invoiceForm]);
   const [markPaidTarget, setMarkPaidTarget] = useState<Payment | null>(null);
   const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm>(emptyMarkPaidForm);
   const [savingMarkPaid, setSavingMarkPaid] = useState(false);
@@ -1362,8 +1375,13 @@ export default function AdminEnquiryDetail() {
             <Select
               value={invoiceForm.type}
               onChange={val => setInvoiceForm(f => ({ ...f, type: val as GenerateInvoiceForm['type'] }))}
-              options={GENERATE_INVOICE_TYPE_OPTIONS}
+              options={availableInvoiceTypeOptions(invoiceForm, enquiry.total_amount || 0, enquiry.amount_paid || 0)}
             />
+            {invoiceForm.type !== 'extra_charge' && !clearsBalanceForInvoice(invoiceForm, enquiry.total_amount || 0, enquiry.amount_paid || 0) && (
+              <p className="text-[11px] text-dark-muted mt-1">
+                'Balance' will appear here once the amount below clears what's still owed.
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Amount (₹)</label>

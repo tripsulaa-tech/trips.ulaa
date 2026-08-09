@@ -1,9 +1,9 @@
-import type { Dispatch, SetStateAction } from 'react';
+import { useEffect, type Dispatch, type SetStateAction } from 'react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS } from './AdminEnquiryCommon';
+import { parseNonNegative, availableInvoiceTypeOptions, clearsBalanceForInvoice, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS } from './AdminEnquiryCommon';
 import type { GenerateInvoiceForm } from './AdminEnquiryCommon';
 import type { Enquiry } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -31,6 +31,19 @@ export default function GenerateInvoiceModal({
   savingInvoice: boolean;
 }) {
   const confirm = useConfirm();
+
+  // 'Balance' is only meant for the invoice that actually zeroes out the
+  // amount due — if the admin picked it and then edits the amount so it
+  // no longer does, drop back to 'Installment' rather than leaving
+  // 'Balance' selected but no longer true. See clearsBalanceForInvoice in
+  // AdminEnquiryCommon.
+  useEffect(() => {
+    if (!generateInvoiceTarget) return;
+    if (generateInvoiceForm.type === 'balance' && !clearsBalanceForInvoice(generateInvoiceForm, generateInvoiceTarget.total_amount || 0, generateInvoiceTarget.amount_paid || 0)) {
+      setGenerateInvoiceForm(f => ({ ...f, type: 'installment' }));
+    }
+  }, [generateInvoiceTarget, generateInvoiceForm, setGenerateInvoiceForm]);
+
   const isDirty =
     generateInvoiceForm.amount !== '' ||
     generateInvoiceForm.notes !== '' ||
@@ -68,11 +81,16 @@ export default function GenerateInvoiceModal({
             <Select
               value={generateInvoiceForm.type}
               onChange={val => setGenerateInvoiceForm(f => ({ ...f, type: val }))}
-              options={GENERATE_INVOICE_TYPE_OPTIONS}
+              options={availableInvoiceTypeOptions(generateInvoiceForm, generateInvoiceTarget.total_amount || 0, generateInvoiceTarget.amount_paid || 0)}
             />
             {generateInvoiceForm.type === 'extra_charge' && (
               <p className="text-[11px] text-dark-muted mt-1">
                 Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
+              </p>
+            )}
+            {generateInvoiceForm.type !== 'extra_charge' && !clearsBalanceForInvoice(generateInvoiceForm, generateInvoiceTarget.total_amount || 0, generateInvoiceTarget.amount_paid || 0) && (
+              <p className="text-[11px] text-dark-muted mt-1">
+                'Balance' will appear here once the amount below clears what's still owed.
               </p>
             )}
           </div>
