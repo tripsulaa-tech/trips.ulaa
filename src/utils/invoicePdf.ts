@@ -316,7 +316,7 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
   ];
   const contactIconSize = 8;
   for (const row of contactRows) {
-    await drawVectorIcon(doc, row.icon, MARGIN, contactY - contactIconSize + 1.5, contactIconSize, COLORS.secondary);
+    await drawVectorIcon(doc, row.icon, MARGIN, contactY - contactIconSize + 1.5, contactIconSize, COLORS.primaryDark);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     setText(COLORS.darkMuted);
@@ -369,9 +369,9 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     const w = doc.getTextWidth(text) + 20;
-    setFill(COLORS.backgroundWarm);
+    setFill(COLORS.primaryDark);
     doc.roundedRect(x, y, w, 18, 3, 3, 'F');
-    setText(COLORS.primaryDark);
+    setText(COLORS.white);
     doc.text(text, x + w / 2, y + 12.5, { align: 'center' });
   }
 
@@ -480,11 +480,12 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
   cy += 24;
 
   const colInvoice = MARGIN;
-  const colDate = MARGIN + 95;
-  const colType = MARGIN + 165;
-  const colMethod = MARGIN + 260;
-  const colAmountRight = MARGIN + CONTENT_W - 80;
-  const colStatus = MARGIN + CONTENT_W - 70;
+  const colDate = MARGIN + 78;
+  const colType = MARGIN + 138;
+  const colMethod = MARGIN + 200;
+  const colUtr = MARGIN + 265;
+  const colAmountRight = MARGIN + CONTENT_W - 95;
+  const colStatus = MARGIN + CONTENT_W - 85;
 
   function drawTableHeader() {
     setFill(COLORS.primaryDark);
@@ -496,6 +497,7 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
     doc.text('DATE', colDate, cy + 15.5);
     doc.text('TYPE', colType, cy + 15.5);
     doc.text('METHOD', colMethod, cy + 15.5);
+    doc.text('UTR / TXN ID', colUtr, cy + 15.5);
     doc.text('AMOUNT', colAmountRight, cy + 15.5, { align: 'right' });
     doc.text('STATUS', colStatus + 32, cy + 15.5, { align: 'center' });
     cy += 24;
@@ -514,8 +516,7 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
     cy += 30;
   } else {
     payments.forEach((p, i) => {
-      const hasUtr = !!p.utr_number;
-      const rowH = hasUtr ? 34 : 24;
+      const rowH = 24;
 
       // If a break happens here, redraw the table header on the new page
       // so a reader who lands mid-table on page 2 still sees column
@@ -538,7 +539,7 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
         doc.rect(MARGIN, cy, CONTENT_W, rowH, 'F');
       }
 
-      const textY = cy + (hasUtr ? 15 : 15.5);
+      const textY = cy + 15.5;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       setText(COLORS.dark);
@@ -546,14 +547,14 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
       doc.text(fdate(p.paid_at), colDate, textY);
       doc.text(PAYMENT_TYPE_LABEL[p.payment_type] ?? p.payment_type, colType, textY);
 
-      const methodLines = doc.splitTextToSize(val(p.payment_method), 78);
+      const methodLines = doc.splitTextToSize(val(p.payment_method), 58);
       doc.text(methodLines[0], colMethod, textY);
-      if (hasUtr) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.5);
-        setText(COLORS.darkMuted);
-        doc.text(`UTR: ${sanitizeForPdf(p.utr_number)}`, colMethod, textY + 11);
-      }
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.8);
+      setText(p.utr_number ? COLORS.dark : COLORS.darkMuted);
+      const utrLines = doc.splitTextToSize(val(p.utr_number), 88);
+      doc.text(utrLines[0], colUtr, textY);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.5);
