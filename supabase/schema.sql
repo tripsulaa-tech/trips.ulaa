@@ -161,6 +161,9 @@ create table public.upcoming_trips (
   --                 image + title (teaser), hiding itinerary/pricing/booking
   --   published   - public, full bookable trip page
   status                  text not null default 'draft',
+  -- When true, hides the "Download itinerary PDF" option from the public
+  -- Trip Detail page for this trip. See add_trip_hide_pdf_download.sql.
+  hide_pdf_download       boolean not null default false,
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
   constraint upcoming_trips_status_check

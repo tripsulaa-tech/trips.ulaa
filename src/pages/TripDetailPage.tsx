@@ -524,17 +524,19 @@ export default function TripDetailPage() {
                 {isFull ? 'Join Waitlist' : 'Book Your Seat'}
                 {!isFull && <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={pdfLoading}
-                className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 !px-3 !py-2 !text-sm !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
-              >
-                {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
-                {pdfLoading ? 'Preparing…' : 'Download'}
-              </Button>
+              {!trip.hide_pdf_download && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={pdfLoading}
+                  className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 !px-3 !py-2 !text-sm !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
+                >
+                  {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+                  {pdfLoading ? 'Preparing…' : 'Download'}
+                </Button>
+              )}
             </div>
             <div className="order-7 sm:order-6 mt-1 sm:mt-0 flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 text-white/70 text-xs sm:text-sm mb-4 sm:mb-0">
               <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
@@ -660,16 +662,18 @@ export default function TripDetailPage() {
             >
               <CalendarPlus size={16} />
             </button>
-            <button
-              type="button"
-              onClick={handleDownloadPdf}
-              disabled={pdfLoading}
-              aria-label="Download itinerary PDF"
-              title="Download itinerary PDF"
-              className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors disabled:opacity-50"
-            >
-              {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <><FileDown size={15} className="sm:hidden" /><FileDown size={16} className="hidden sm:block" /></>}
-            </button>
+            {!trip.hide_pdf_download && (
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={pdfLoading}
+                aria-label="Download itinerary PDF"
+                title="Download itinerary PDF"
+                className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors disabled:opacity-50"
+              >
+                {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <><FileDown size={15} className="sm:hidden" /><FileDown size={16} className="hidden sm:block" /></>}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1310,17 +1314,21 @@ export default function TripDetailPage() {
                     <Share2 size={14} /> Share this trip
                   </button>
 
-                  <span className="text-background-warm">|</span>
+                  {!trip.hide_pdf_download && (
+                    <>
+                      <span className="text-background-warm">|</span>
 
-                  <button
-                    type="button"
-                    onClick={handleDownloadPdf}
-                    disabled={pdfLoading}
-                    className="flex items-center gap-1.5 whitespace-nowrap text-sm text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
-                  >
-                    {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-                    {pdfLoading ? 'Preparing PDF…' : 'Download itinerary'}
-                  </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadPdf}
+                        disabled={pdfLoading}
+                        className="flex items-center gap-1.5 whitespace-nowrap text-sm text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
+                      >
+                        {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+                        {pdfLoading ? 'Preparing PDF…' : 'Download itinerary'}
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex items-start justify-center gap-1.5 text-xs text-dark-muted mt-4">

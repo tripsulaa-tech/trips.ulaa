@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload, Search, ClipboardList, X, Hourglass, FileDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload, Search, ClipboardList, X, Hourglass, FileDown, FileX } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
@@ -719,6 +719,14 @@ export default function AdminTrips() {
     load();
   };
 
+  // Toggles whether the public Trip Detail page's "Download itinerary PDF"
+  // option is shown for this trip. Purely a visibility flag for the public
+  // site — doesn't touch this admin table's own download button above.
+  const toggleHidePdfDownload = async (trip: UpcomingTrip) => {
+    await updateUpcomingTrip(trip.id, { hide_pdf_download: !trip.hide_pdf_download });
+    load();
+  };
+
   const handleDownloadTripPdf = async (trip: UpcomingTrip) => {
     if (pdfDownloadingId) return;
     setPdfDownloadingId(trip.id);
@@ -850,6 +858,13 @@ export default function AdminTrips() {
                             title="Download itinerary PDF"
                           >
                             <FileDown size={15} className={pdfDownloadingId === trip.id ? 'animate-pulse' : ''} />
+                          </button>
+                          <button
+                            onClick={() => toggleHidePdfDownload(trip)}
+                            className={`flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background transition-colors ${trip.hide_pdf_download ? 'text-red-600' : 'text-dark-muted hover:text-primary'}`}
+                            title={trip.hide_pdf_download ? 'PDF download hidden from users on the trip page — click to show it again' : 'Hide the PDF download option from users on the trip page'}
+                          >
+                            <FileX size={15} />
                           </button>
                           <button onClick={() => openEdit(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title="Edit">
                             <Edit2 size={15} />

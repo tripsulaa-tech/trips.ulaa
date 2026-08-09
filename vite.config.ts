@@ -11,15 +11,20 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
   build: {
     sourcemap: false,
+    // jspdf/html2canvas (PDF export) and the shared icon set are
+    // legitimately this size for what they do; splitting further would
+    // mean hand-chunking hundreds of individual icon imports for little
+    // real benefit. Raise the warning threshold instead of chasing it.
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.html'),
-        admin: path.resolve(__dirname, 'admin.html'),
+        main: path.resolve(import.meta.dirname, 'index.html'),
+        admin: path.resolve(import.meta.dirname, 'admin.html'),
       },
       output: {
         // Split heavy, rarely-changing vendor code out of the main app
@@ -37,6 +42,9 @@ export default defineConfig({
           }
           if (id.includes('@supabase')) {
             return 'vendor-supabase';
+          }
+          if (id.includes('react-hook-form')) {
+            return 'vendor-form';
           }
           return undefined;
         },

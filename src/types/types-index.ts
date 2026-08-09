@@ -163,6 +163,13 @@ export interface UpcomingTrip {
   //                 hiding itinerary/pricing/booking content
   //   published   - public, full bookable trip page
   status: 'draft' | 'coming_soon' | 'published';
+  // When true, hides the "Download itinerary PDF" option from the public
+  // Trip Detail page for this trip (all three entry points — hero button,
+  // header icon, and booking-panel link). Admin's own itinerary PDF
+  // download (Admin → Upcoming Trips) is unaffected. Defaults to false
+  // (shown) so existing trips keep working with no migration. See
+  // add_trip_hide_pdf_download.sql.
+  hide_pdf_download?: boolean;
   created_at: string;
   updated_at: string;
 }
