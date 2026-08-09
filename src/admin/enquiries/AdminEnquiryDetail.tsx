@@ -816,7 +816,7 @@ export default function AdminEnquiryDetail() {
 
   return (
     <AdminLayout title="Enquiry Details" subtitle={enquiry.full_name}>
-      <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-4">
+      <div className="max-w-4xl mx-auto space-y-4">
         <button
           onClick={() => navigate('/admin/enquiries')}
           className="inline-flex items-center gap-1.5 text-sm font-button font-medium text-dark-muted hover:text-primary transition-colors"
@@ -917,13 +917,6 @@ export default function AdminEnquiryDetail() {
           <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-3">
             <p className="text-dark text-sm font-button font-semibold">Booking Journey</p>
             <BookingLifecycleStepper enquiry={enquiry} />
-            {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
-              <div className="flex justify-end">
-                <Button variant="secondary" size="sm" onClick={handleMarkCompleted} disabled={busyAction}>
-                  <CheckCircle2 size={13} /> Mark Trip Completed
-                </Button>
-              </div>
-            )}
             <div className="grid grid-cols-3 gap-2 bg-background-warm rounded-md px-3 py-2.5">
               <div>
                 <p className="text-dark-muted text-[11px]">Total</p>
@@ -945,6 +938,13 @@ export default function AdminEnquiryDetail() {
                 <IndianRupee size={13} /> Track Payment
               </Button>
             </div>
+            {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
+              <div className="flex justify-end">
+                <Button variant="secondary" size="sm" onClick={handleMarkCompleted} disabled={busyAction}>
+                  <CheckCircle2 size={13} /> Mark Trip Completed
+                </Button>
+              </div>
+            )}
           </div>
         )}
         {!enquiry.booking_id && (
@@ -972,11 +972,11 @@ export default function AdminEnquiryDetail() {
         {/* Invoices / payment ledger */}
         {enquiry.booking_id && (
           <div className="bg-white rounded-lg shadow-card">
-            <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-background-warm">
+            <div className="flex flex-col gap-2 px-4 sm:px-5 py-3 border-b border-background-warm">
               <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
                 <Receipt size={14} className="shrink-0" /> Invoices &amp; Payments
               </p>
-              <Button variant="secondary" size="sm" onClick={() => generateInvoice.open(enquiry)}>
+              <Button variant="secondary" size="sm" className="self-start" onClick={() => generateInvoice.open(enquiry)}>
                 <Plus size={13} /> Generate Invoice
               </Button>
             </div>

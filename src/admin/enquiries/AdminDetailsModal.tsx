@@ -89,18 +89,6 @@ export default function DetailsModal({
                 {/* Booking lifecycle — Confirmed → Fully Paid → Completed,
                     with Cancelled as a terminal off-ramp. */}
                 <BookingLifecycleStepper enquiry={detailsTarget} />
-                {detailsTarget.booking_status && detailsTarget.booking_status !== 'cancelled' && detailsTarget.booking_status !== 'completed' && (
-                  <div className="flex justify-end">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onMarkCompleted(detailsTarget)}
-                      disabled={completingId === detailsTarget.id}
-                    >
-                      <CheckCircle2 size={13} /> Mark Trip Completed
-                    </Button>
-                  </div>
-                )}
 
                 {/* Booking Summary — Total / Paid / Pending, mirrors the
                     price-summary strip on the PDF invoice itself. Pending
@@ -125,14 +113,27 @@ export default function DetailsModal({
                   </div>
                 </div>
 
+                {detailsTarget.booking_status && detailsTarget.booking_status !== 'cancelled' && detailsTarget.booking_status !== 'completed' && (
+                  <div className="flex justify-end">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onMarkCompleted(detailsTarget)}
+                      disabled={completingId === detailsTarget.id}
+                    >
+                      <CheckCircle2 size={13} /> Mark Trip Completed
+                    </Button>
+                  </div>
+                )}
+
                 {/* Invoices — every payments row for this booking, each
                     with its own invoice number/type/status. */}
                 <div className="bg-white border border-background-warm rounded-md">
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-background-warm">
+                  <div className="flex flex-col gap-2 px-3 py-2 border-b border-background-warm">
                     <p className="text-dark text-xs font-button font-semibold flex items-center gap-1.5">
                       <Receipt size={13} className="shrink-0" /> Invoices
                     </p>
-                    <Button variant="secondary" size="sm" onClick={() => onOpenGenerateInvoice(detailsTarget)}>
+                    <Button variant="secondary" size="sm" className="self-start" onClick={() => onOpenGenerateInvoice(detailsTarget)}>
                       <Plus size={13} /> Generate Invoice
                     </Button>
                   </div>
