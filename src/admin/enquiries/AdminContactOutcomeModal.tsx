@@ -75,7 +75,7 @@ export default function ContactOutcomeModal({
   const canSave = needsFollowUp ? !!followUpAt : true;
 
   return (
-    <Modal isOpen={!!target} onClose={requestClose} title="Record Contact Outcome" size="sm">
+    <Modal isOpen={!!target} onClose={requestClose} title="Log Call Outcome" size="sm">
       {target && (
         <div className="space-y-4">
           <div className="bg-background-warm rounded-md px-4 py-3">

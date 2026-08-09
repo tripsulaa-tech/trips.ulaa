@@ -575,7 +575,7 @@ export function nextManualAction(e: Enquiry): { label: string; icon: typeof Cloc
     case 'new_enquiry':
       return { label: 'Mark Contacted', icon: RefreshCw };
     case 'contacted':
-      return { label: 'Record Contact Outcome', icon: RefreshCw };
+      return { label: 'Log Call Outcome', icon: RefreshCw };
     case 'fully_paid':
       return { label: 'Check In', icon: LogIn };
     case 'checked_in':
