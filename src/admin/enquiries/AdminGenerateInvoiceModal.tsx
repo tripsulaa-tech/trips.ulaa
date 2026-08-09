@@ -1,9 +1,9 @@
-import { useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, availableInvoiceTypeOptions, clearsBalanceForInvoice, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS, INVOICE_TYPE_LABEL } from './AdminEnquiryCommon';
+import { parseNonNegative, availableInvoiceTypeOptions, clearsBalanceForInvoice, validateGenerateInvoiceForm, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS, INVOICE_TYPE_LABEL } from './AdminEnquiryCommon';
 import type { GenerateInvoiceForm } from './AdminEnquiryCommon';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
@@ -35,6 +35,26 @@ export default function GenerateInvoiceModal({
   paymentHistoryLoading: boolean;
 }) {
   const confirm = useConfirm();
+  const errorClass = 'text-red-500 text-xs mt-1';
+  // Whether the Amount field has been blurred yet — the "amount required"
+  // error would otherwise fire the instant the modal opens (amount starts
+  // at ''), before the admin has looked at the field. Resets whenever a
+  // new target is opened.
+  const [amountTouched, setAmountTouched] = useState(false);
+  useEffect(() => {
+    setAmountTouched(false);
+  }, [generateInvoiceTarget?.id]);
+
+  // Live, field-level errors — recomputed on every render so a missing
+  // amount, payment method, etc. show up as the admin fills the form,
+  // instead of only surfacing behind an alert() after Save. Gated on
+  // amountTouched so the "amount required" error (and everything that
+  // depends on a real amount) doesn't flash the moment the modal opens,
+  // before the admin has looked at the field — same reasoning as Track
+  // Payment's touch-gating, just needed here since amount is required
+  // rather than merely bounded.
+  const invoiceErrors = generateInvoiceTarget ? validateGenerateInvoiceForm(generateInvoiceForm, amountTouched) : {};
+  const hasInvoiceErrors = Object.keys(invoiceErrors).length > 0;
 
   // 'Balance' is only meant for the invoice that actually zeroes out the
   // amount due — if the admin picked it and then edits the amount so it
@@ -106,9 +126,11 @@ export default function GenerateInvoiceModal({
               min={0}
               value={generateInvoiceForm.amount}
               onChange={ev => setGenerateInvoiceForm(f => ({ ...f, amount: parseNonNegative(ev.target.value) }))}
+              onBlur={() => setAmountTouched(true)}
               className={inputClass}
               placeholder="Amount for this invoice"
             />
+            {invoiceErrors.amount && <p className={errorClass}>{invoiceErrors.amount}</p>}
           </div>
 
           <div>
@@ -155,6 +177,7 @@ export default function GenerateInvoiceModal({
                   placeholder="Select method"
                   size="sm"
                 />
+                {invoiceErrors.payment_method && <p className={errorClass}>{invoiceErrors.payment_method}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
@@ -166,6 +189,7 @@ export default function GenerateInvoiceModal({
                   className={`${inputClass} ${generateInvoiceForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder={generateInvoiceForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
                 />
+                {invoiceErrors.utr_number && <p className={errorClass}>{invoiceErrors.utr_number}</p>}
               </div>
             </div>
           )}
@@ -213,7 +237,18 @@ export default function GenerateInvoiceModal({
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onSave} loading={savingInvoice}>
+            <Button
+              variant="primary"
+              size="md"
+              className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+              onClick={() => {
+                setAmountTouched(true);
+                onSave();
+              }}
+              loading={savingInvoice}
+              disabled={hasInvoiceErrors}
+              title={hasInvoiceErrors ? 'Fix the highlighted fields before saving' : undefined}
+            >
               Generate Invoice
             </Button>
           </div>

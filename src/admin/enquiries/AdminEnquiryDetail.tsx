@@ -213,6 +213,16 @@ export default function AdminEnquiryDetail() {
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<EditDetailsForm>({ full_name: '', email: '', phone: '', city: '', age: '', trip_id: '' });
   const [savingEdit, setSavingEdit] = useState(false);
+  // Which fields have been blurred yet — same reasoning as the Track
+  // Payment / Generate Invoice modals: full_name/phone are required, but
+  // showing that the instant the modal opens (before the admin has even
+  // looked at the field) would be premature, especially since this modal
+  // usually opens pre-filled from the existing enquiry.
+  const [editTouched, setEditTouched] = useState<Set<string>>(new Set());
+  const editErrors: { full_name?: string; phone?: string } = {};
+  if (!editForm.full_name.trim()) editErrors.full_name = 'Full name is required.';
+  if (!editForm.phone.trim()) editErrors.phone = 'Phone number is required.';
+  const hasEditErrors = !!(editErrors.full_name || editErrors.phone);
 
   const openEdit = () => {
     if (!enquiry) return;
@@ -224,13 +234,17 @@ export default function AdminEnquiryDetail() {
       age: enquiry.age ?? '',
       trip_id: enquiry.trip_id || '',
     });
+    setEditTouched(new Set());
     setEditOpen(true);
   };
 
   const handleSaveEdit = async () => {
     if (!enquiry) return;
-    if (!editForm.full_name.trim() || !editForm.phone.trim()) {
-      alert('Name and phone are required.');
+    // Live in the modal already, plus this defense-in-depth gate in case
+    // Save is reached some other way — same editErrors computed above, so
+    // the two can never drift.
+    if (editErrors.full_name || editErrors.phone) {
+      alert(editErrors.full_name || editErrors.phone);
       return;
     }
     try {
@@ -1433,9 +1447,11 @@ export default function AdminEnquiryDetail() {
               type="text"
               value={editForm.full_name}
               onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))}
+              onBlur={() => setEditTouched(prev => new Set(prev).add('full_name'))}
               className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
               placeholder="e.g. Priya Sharma"
             />
+            {editTouched.has('full_name') && editErrors.full_name && <p className="text-red-500 text-xs mt-1">{editErrors.full_name}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -1444,9 +1460,11 @@ export default function AdminEnquiryDetail() {
                 type="tel"
                 value={editForm.phone}
                 onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                onBlur={() => setEditTouched(prev => new Set(prev).add('phone'))}
                 className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
                 placeholder="e.g. 98765 43210"
               />
+              {editTouched.has('phone') && editErrors.phone && <p className="text-red-500 text-xs mt-1">{editErrors.phone}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-dark mb-1">Email</label>
@@ -1497,7 +1515,19 @@ export default function AdminEnquiryDetail() {
           </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="md" onClick={handleSaveEdit} loading={savingEdit}>Save Changes</Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => {
+                setEditTouched(new Set(['full_name', 'phone']));
+                handleSaveEdit();
+              }}
+              loading={savingEdit}
+              disabled={hasEditErrors}
+              title={hasEditErrors ? 'Fix the highlighted fields before saving' : undefined}
+            >
+              Save Changes
+            </Button>
           </div>
         </div>
       </Modal>

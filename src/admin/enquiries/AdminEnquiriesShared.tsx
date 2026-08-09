@@ -315,6 +315,85 @@ export const emptyWaitlistPerson: WaitlistPersonForm = {
   full_name: '', phone: '', email: '', age: '', city: '', food_preference: '', amount_paid: '',
 };
 
+// Field-level errors for the solo "Log an Enquiry" / single-seat "Convert
+// Waitlist Signup" form (AddEnquiryModal). Same three checks handleSave
+// used to only enforce after the fact via alert(): name & phone required,
+// amount paid can't exceed the total, and (only when converting a
+// waitlist entry) an advance is required to actually seat the booking.
+// Shared by the modal (live, as the admin types) and handleSave as the
+// final save-time gate, so the two can never drift.
+export type EnquiryFormErrors = Partial<Record<'full_name' | 'phone' | 'amount_paid', string>>;
+
+export function validateEnquiryForm(form: EnquiryForm, isConvertingWaitlist: boolean): EnquiryFormErrors {
+  const errors: EnquiryFormErrors = {};
+  if (!form.full_name.trim()) errors.full_name = 'Full name is required.';
+  if (!form.phone.trim()) errors.phone = 'Phone number is required.';
+
+  const totalAmount = form.total_amount === '' ? null : Number(form.total_amount);
+  const amountPaid = form.amount_paid === '' ? 0 : Number(form.amount_paid);
+  if (totalAmount != null && amountPaid > totalAmount) {
+    errors.amount_paid = "Amount paid can't be more than the total amount.";
+  } else if (isConvertingWaitlist && amountPaid <= 0) {
+    errors.amount_paid = 'An advance payment is required to convert a waitlist entry into a booking.';
+  }
+
+  return errors;
+}
+
+// Same shape as EnquiryFormErrors, for one row of the bulk waitlist-group
+// conversion form — every seat in the group needs its own name/phone and
+// its own qualifying advance (the shared per-person total_amount is passed
+// in separately since it lives on the parent `form`, not each person).
+export type WaitlistPersonFormErrors = Partial<Record<'full_name' | 'phone' | 'amount_paid', string>>;
+
+export function validateWaitlistPersonForm(p: WaitlistPersonForm, totalAmount: number | ''): WaitlistPersonFormErrors {
+  const errors: WaitlistPersonFormErrors = {};
+  if (!p.full_name.trim()) errors.full_name = 'Full name is required.';
+  if (!p.phone.trim()) errors.phone = 'Phone number is required.';
+
+  const amountPaid = p.amount_paid === '' ? 0 : Number(p.amount_paid);
+  const total = totalAmount === '' ? null : Number(totalAmount);
+  if (amountPaid <= 0) {
+    errors.amount_paid = 'An advance payment is required to convert this person into a booking.';
+  } else if (total != null && amountPaid > total) {
+    errors.amount_paid = "Amount paid can't be more than the total amount.";
+  }
+
+  return errors;
+}
+
+// Live version of handleBulkSave's two save-time checks — "pick at least
+// one field to change" and "amount paid can't exceed the total amount for
+// anyone in the selection" — so the Bulk Edit modal can surface both as the
+// admin fills the form instead of only behind an alert() after Save.
+// Unlike the single-enquiry validators above, this one needs the actual
+// selected rows (targets) to check the per-row total_amount fallback, so it
+// takes them as a parameter rather than closing over component state.
+export function validateBulkEditForm(bulkForm: BulkEditForm, targets: Enquiry[]): {
+  touchesPaymentFields: boolean;
+  touchesStatus: boolean;
+  hasChanges: boolean;
+  overpaid: Enquiry | null;
+} {
+  const touchesPaymentFields = bulkForm.food_preference !== BULK_NO_CHANGE
+    || bulkForm.package_type !== BULK_NO_CHANGE
+    || bulkForm.total_amount !== ''
+    || bulkForm.amount_paid !== '';
+  const touchesStatus = bulkForm.status !== BULK_NO_CHANGE;
+
+  let overpaid: Enquiry | null = null;
+  if (touchesPaymentFields && bulkForm.amount_paid !== '') {
+    const bulkTotal = bulkForm.total_amount === '' ? null : Number(bulkForm.total_amount);
+    const bulkPaid = Number(bulkForm.amount_paid);
+    overpaid = targets.find(e => {
+      const effectiveTotal = bulkTotal != null ? bulkTotal : e.total_amount;
+      return effectiveTotal != null && bulkPaid > effectiveTotal;
+    }) || null;
+  }
+
+  return { touchesPaymentFields, touchesStatus, hasChanges: touchesPaymentFields || touchesStatus, overpaid };
+}
+
 // Shared input styling used by every plain text/number field across the
 // Admin Enquiries page and its modals.
 export const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;

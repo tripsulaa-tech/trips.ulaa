@@ -190,6 +190,16 @@ export default function AdminWaitlist() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const showToast = (message: string) => setToast(message);
+  // Which fields have been blurred yet — same reasoning as the Enquiries
+  // page's Add Enquiry modal: name/phone/trip are required, but showing
+  // that the instant the modal opens (before the admin has looked at the
+  // field) would be premature since they all start blank.
+  const [formTouched, setFormTouched] = useState<Set<string>>(new Set());
+  const formErrors: { full_name?: string; phone?: string; trip_id?: string } = {};
+  if (!form.full_name.trim()) formErrors.full_name = 'Full name is required.';
+  if (!form.phone.trim()) formErrors.phone = 'Phone number is required.';
+  if (!form.trip_id) formErrors.trip_id = "Pick which trip they're waiting for.";
+  const hasFormErrors = !!(formErrors.full_name || formErrors.phone || formErrors.trip_id);
 
   useEffect(() => {
     if (!toast) return;
@@ -199,16 +209,20 @@ export default function AdminWaitlist() {
 
   const openAdd = () => {
     setForm(emptyWaitlistForm);
+    setFormTouched(new Set());
     setModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.full_name.trim() || !form.phone.trim()) {
+    // Live in the modal already, plus this defense-in-depth gate in case
+    // Save is reached some other way — same formErrors computed above, so
+    // the two can never drift.
+    if (formErrors.full_name || formErrors.phone) {
       alert('Name and phone are required.');
       return;
     }
-    if (!form.trip_id) {
-      alert('Pick which trip they\'re waiting for.');
+    if (formErrors.trip_id) {
+      alert(formErrors.trip_id);
       return;
     }
     const trip = allTrips.find(t => t.id === form.trip_id);
@@ -1239,9 +1253,11 @@ export default function AdminWaitlist() {
               type="text"
               value={form.full_name}
               onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+              onBlur={() => setFormTouched(prev => new Set(prev).add('full_name'))}
               className={inputClass}
               placeholder="e.g. Priya Sharma"
             />
+            {formTouched.has('full_name') && formErrors.full_name && <p className="text-red-500 text-xs mt-1">{formErrors.full_name}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Phone *</label>
@@ -1249,9 +1265,11 @@ export default function AdminWaitlist() {
               type="tel"
               value={form.phone}
               onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              onBlur={() => setFormTouched(prev => new Set(prev).add('phone'))}
               className={inputClass}
               placeholder="e.g. 98765 43210"
             />
+            {formTouched.has('phone') && formErrors.phone && <p className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Email</label>
@@ -1298,9 +1316,13 @@ export default function AdminWaitlist() {
             <label className="block text-sm font-medium text-dark mb-1">Trip *</label>
             <Select
               value={form.trip_id}
-              onChange={val => setForm(f => ({ ...f, trip_id: val }))}
+              onChange={val => {
+                setForm(f => ({ ...f, trip_id: val }));
+                setFormTouched(prev => new Set(prev).add('trip_id'));
+              }}
               options={[{ value: '', label: '— Select a trip —' }, ...allTrips.map(t => ({ value: t.id, label: t.title }))]}
             />
+            {formTouched.has('trip_id') && formErrors.trip_id && <p className="text-red-500 text-xs mt-1">{formErrors.trip_id}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
@@ -1337,7 +1359,18 @@ export default function AdminWaitlist() {
 
         <div className="flex gap-3 pt-5">
           <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setModalOpen(false)}>Cancel</Button>
-          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
+          <Button
+            variant="primary"
+            size="md"
+            className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+            onClick={() => {
+              setFormTouched(new Set(['full_name', 'phone', 'trip_id']));
+              handleSave();
+            }}
+            loading={saving}
+            disabled={hasFormErrors}
+            title={hasFormErrors ? 'Fix the highlighted fields before saving' : undefined}
+          >
             <span className="hidden sm:inline">Save Changes</span>
             <span className="sm:hidden">Save</span>
           </Button>

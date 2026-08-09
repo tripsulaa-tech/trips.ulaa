@@ -5,7 +5,7 @@ import Select from '../../components/ui/Select';
 import type { Enquiry } from '../../types/types-index';
 import {
   BULK_NO_CHANGE, BULK_FOOD_OPTIONS, BULK_PACKAGE_OPTIONS, BULK_STATUS_OPTIONS,
-  inputClass,
+  inputClass, validateBulkEditForm,
 } from './AdminEnquiriesShared';
 import type { BulkEditForm } from './AdminEnquiriesShared';
 import { parseNonNegative } from './AdminEnquiryCommon';
@@ -15,6 +15,7 @@ export default function BulkEditModal({
   onClose,
   selectedCount,
   selectedTripName,
+  targets,
   bulkForm,
   setBulkForm,
   activeGroupTripId,
@@ -26,6 +27,10 @@ export default function BulkEditModal({
   onClose: () => void;
   selectedCount: number;
   selectedTripName: string | null;
+  // The actual selected rows, only needed to check each one's total_amount
+  // fallback for the "amount paid can't exceed total" rule live — see
+  // validateBulkEditForm.
+  targets: Enquiry[];
   bulkForm: BulkEditForm;
   setBulkForm: Dispatch<SetStateAction<BulkEditForm>>;
   activeGroupTripId: string | undefined;
@@ -33,6 +38,14 @@ export default function BulkEditModal({
   onSave: () => void;
   bulkSaving: boolean;
 }) {
+  const errorClass = 'text-red-500 text-xs mt-1';
+  // Live version of handleBulkSave's two save-time checks — recomputed on
+  // every render so "nothing changed yet" / "this would overpay someone"
+  // show up as the admin fills the form, instead of only behind an
+  // alert() after Bulk Save.
+  const { hasChanges, overpaid } = validateBulkEditForm(bulkForm, targets);
+  const hasBulkErrors = !hasChanges || !!overpaid;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Bulk Edit — ${selectedCount} selected`} size="sm">
       <div className="space-y-4">
@@ -112,6 +125,11 @@ export default function BulkEditModal({
           <p className="text-[11px] text-dark-muted mt-1">
             Sets what's been collected so far for every selected enquiry, as a new total — not added on top of what's already recorded. Leave blank to leave each one's amount paid as-is.
           </p>
+          {overpaid && (
+            <p className={errorClass}>
+              Amount paid can't exceed the total amount — this would overpay {overpaid.full_name}. Adjust the amount or set a matching total amount for the selection.
+            </p>
+          )}
         </div>
 
         <div>
@@ -128,9 +146,21 @@ export default function BulkEditModal({
           )}
         </div>
 
+        {!hasChanges && (
+          <p className={errorClass}>Pick at least one field to change before saving — everything is still set to "No change".</p>
+        )}
+
         <div className="flex gap-3 pt-2">
           <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onSave} loading={bulkSaving}>
+          <Button
+            variant="primary"
+            size="md"
+            className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+            onClick={onSave}
+            loading={bulkSaving}
+            disabled={hasBulkErrors}
+            title={hasBulkErrors ? 'Fix the highlighted fields before saving' : undefined}
+          >
             Bulk Save
           </Button>
         </div>

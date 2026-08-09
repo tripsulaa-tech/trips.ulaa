@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { AlertTriangle, PartyPopper, Users } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -6,7 +6,7 @@ import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS } from './AdminEnquiryCommon';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
-import { inputClass, type EnquiryForm, type WaitlistPersonForm } from './AdminEnquiriesShared';
+import { inputClass, validateEnquiryForm, validateWaitlistPersonForm, type EnquiryForm, type WaitlistPersonForm } from './AdminEnquiriesShared';
 import { SOURCE_OPTIONS } from './AdminEnquiriesShared';
 
 type ConvertingWaitlist = { id: string; name: string; groupId: string | null; groupSize: number | null; groupSeq: number; slots: number };
@@ -39,7 +39,41 @@ export default function AddEnquiryModal({
   saving: boolean;
 }) {
   const confirm = useConfirm();
+  const errorClass = 'text-red-500 text-xs mt-1';
   const isDirty = form.full_name.trim() !== '' || form.phone.trim() !== '' || (form.amount_paid !== '' && Number(form.amount_paid) > 0);
+
+  // Which fields have been blurred yet — required-field errors (name,
+  // phone, and the "advance required to convert" amount check) would
+  // otherwise fire the instant the modal opens, since these all start
+  // blank/zero. Resets whenever the modal is (re)opened. A plain Set keyed
+  // by field name for the solo form; a Set of `${index}:${field}` for the
+  // per-seat group form below, since each row needs its own touched state.
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [touchedPeople, setTouchedPeople] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (isOpen) {
+      setTouched(new Set());
+      setTouchedPeople(new Set());
+    }
+  }, [isOpen, convertingWaitlist?.id]);
+  const touch = (field: string) => setTouched(prev => new Set(prev).add(field));
+  const touchPerson = (i: number, field: string) => setTouchedPeople(prev => new Set(prev).add(`${i}:${field}`));
+
+  // Live, field-level errors for the solo form — recomputed on every
+  // render so a missing name/phone or an amount that doesn't qualify for
+  // a waitlist conversion show up as the admin fills the form, instead of
+  // only surfacing behind an alert() after Save.
+  const soloErrors = validateEnquiryForm(form, !!convertingWaitlist);
+  const soloErrorsVisible = {
+    full_name: touched.has('full_name') ? soloErrors.full_name : undefined,
+    phone: touched.has('phone') ? soloErrors.phone : undefined,
+    amount_paid: touched.has('amount_paid') ? soloErrors.amount_paid : undefined,
+  };
+  const hasSoloErrors = Object.keys(soloErrors).length > 0;
+
+  // Same, per row, for the group (multi-seat waitlist conversion) form.
+  const groupErrors = waitlistPeople.map(p => validateWaitlistPersonForm(p, form.total_amount));
+  const hasGroupErrors = groupErrors.some(e => Object.keys(e).length > 0);
 
   const requestClose = async () => {
     if (isDirty) {
@@ -156,11 +190,25 @@ export default function AddEnquiryModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-dark mb-1">Full Name *</label>
-                    <input value={p.full_name} onChange={e => updateWaitlistPerson(i, { full_name: e.target.value })} className={inputClass} placeholder="e.g. Priya Sharma" />
+                    <input
+                      value={p.full_name}
+                      onChange={e => updateWaitlistPerson(i, { full_name: e.target.value })}
+                      onBlur={() => touchPerson(i, 'full_name')}
+                      className={inputClass}
+                      placeholder="e.g. Priya Sharma"
+                    />
+                    {touchedPeople.has(`${i}:full_name`) && groupErrors[i].full_name && <p className={errorClass}>{groupErrors[i].full_name}</p>}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-dark mb-1">Phone *</label>
-                    <input value={p.phone} onChange={e => updateWaitlistPerson(i, { phone: e.target.value })} className={inputClass} placeholder="e.g. 98765 43210" />
+                    <input
+                      value={p.phone}
+                      onChange={e => updateWaitlistPerson(i, { phone: e.target.value })}
+                      onBlur={() => touchPerson(i, 'phone')}
+                      className={inputClass}
+                      placeholder="e.g. 98765 43210"
+                    />
+                    {touchedPeople.has(`${i}:phone`) && groupErrors[i].phone && <p className={errorClass}>{groupErrors[i].phone}</p>}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-dark mb-1">Email</label>
@@ -185,9 +233,11 @@ export default function AddEnquiryModal({
                       min={0}
                       value={p.amount_paid}
                       onChange={e => updateWaitlistPerson(i, { amount_paid: parseNonNegative(e.target.value) })}
+                      onBlur={() => touchPerson(i, 'amount_paid')}
                       className={inputClass}
                       placeholder="e.g. 5000 (advance)"
                     />
+                    {touchedPeople.has(`${i}:amount_paid`) && groupErrors[i].amount_paid && <p className={errorClass}>{groupErrors[i].amount_paid}</p>}
                   </div>
                 </div>
               </div>
@@ -203,11 +253,25 @@ export default function AddEnquiryModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
-            <input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} className={inputClass} placeholder="e.g. Priya Sharma" />
+            <input
+              value={form.full_name}
+              onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+              onBlur={() => touch('full_name')}
+              className={inputClass}
+              placeholder="e.g. Priya Sharma"
+            />
+            {soloErrorsVisible.full_name && <p className={errorClass}>{soloErrorsVisible.full_name}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Phone *</label>
-            <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputClass} placeholder="e.g. 98765 43210" />
+            <input
+              value={form.phone}
+              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              onBlur={() => touch('phone')}
+              className={inputClass}
+              placeholder="e.g. 98765 43210"
+            />
+            {soloErrorsVisible.phone && <p className={errorClass}>{soloErrorsVisible.phone}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Email</label>
@@ -307,10 +371,12 @@ export default function AddEnquiryModal({
               min={0}
               value={form.amount_paid}
               onChange={e => setForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
+              onBlur={() => touch('amount_paid')}
               className={inputClass}
               placeholder="e.g. 5000 (advance) — leave blank if unpaid"
             />
             <p className="text-[11px] text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
+            {soloErrorsVisible.amount_paid && <p className={errorClass}>{soloErrorsVisible.amount_paid}</p>}
           </div>
           {(Number(form.amount_paid) || 0) > 0 && (
             <div className="grid grid-cols-2 gap-4 md:col-span-2">
@@ -346,7 +412,26 @@ export default function AddEnquiryModal({
 
       <div className="flex gap-3 mt-6">
         <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onSave} loading={saving}>
+        <Button
+          variant="primary"
+          size="md"
+          className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+          onClick={() => {
+            if (convertingWaitlist && convertingWaitlist.slots > 1) {
+              setTouchedPeople(prev => {
+                const next = new Set(prev);
+                waitlistPeople.forEach((_, i) => { next.add(`${i}:full_name`); next.add(`${i}:phone`); next.add(`${i}:amount_paid`); });
+                return next;
+              });
+            } else {
+              setTouched(new Set(['full_name', 'phone', 'amount_paid']));
+            }
+            onSave();
+          }}
+          loading={saving}
+          disabled={convertingWaitlist && convertingWaitlist.slots > 1 ? hasGroupErrors : hasSoloErrors}
+          title={(convertingWaitlist && convertingWaitlist.slots > 1 ? hasGroupErrors : hasSoloErrors) ? 'Fix the highlighted fields before saving' : undefined}
+        >
           {convertingWaitlist
             ? convertingWaitlist.slots > 1
               ? `Convert ${convertingWaitlist.slots} & Save`

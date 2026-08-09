@@ -35,6 +35,7 @@ import {
   isGroupEntry, refundStatus, STATUS_CONFIG, PAY_FILTER_LABELS, FOOD_FILTER_LABELS,
   BOOKING_FILTER_LABELS, GROUP_FILTER_LABELS, PACKAGE_FILTER_LABELS, packageFilterKey,
   emptyForm, emptyWaitlistPerson, emptyBulkForm,
+  validateEnquiryForm, validateWaitlistPersonForm, validateBulkEditForm,
 } from './AdminEnquiriesShared';
 import type { BulkEditForm, EnquiryForm, WaitlistPersonForm } from './AdminEnquiriesShared';
 import FilterDropdown from './AdminFilterDropdown';
@@ -1198,39 +1199,19 @@ export default function AdminEnquiries() {
     const targets = enquiries.filter(e => selectedIds.has(e.id));
     if (targets.length === 0) return;
 
-    const touchesPaymentFields = bulkForm.food_preference !== BULK_NO_CHANGE
-      || bulkForm.package_type !== BULK_NO_CHANGE
-      || bulkForm.total_amount !== ''
-      || bulkForm.amount_paid !== '';
-    const touchesStatus = bulkForm.status !== BULK_NO_CHANGE;
-
-    // Every field defaults to "No change" — if the admin hits Bulk Save
-    // without touching anything, the loop below would silently do nothing
-    // and still look like a success. Catch that here instead of guessing.
-    if (!touchesPaymentFields && !touchesStatus) {
+    // Same shared validator the modal uses live — this is the defense-in-
+    // depth save-time gate, checked here up front so the DB's per-row CHECK
+    // constraint never has to reject some rows partway through the loop
+    // below (which would leave the batch half-applied with a confusing
+    // generic error).
+    const { touchesPaymentFields, hasChanges, overpaid } = validateBulkEditForm(bulkForm, targets);
+    if (!hasChanges) {
       alert('Pick at least one field to change before saving — everything is still set to "No change".');
       return;
     }
-
-    // Unlike the single-enquiry payment modal, bulk edit applies one
-    // total_amount/amount_paid pair across a whole selection whose rows can
-    // each already have different total_amounts. Check every affected row
-    // up front instead of letting the DB's per-row CHECK constraint reject
-    // some rows partway through the loop below, which would leave the
-    // batch half-applied with a confusing generic error.
-    if (touchesPaymentFields) {
-      const bulkTotal = bulkForm.total_amount === '' ? null : Number(bulkForm.total_amount);
-      const bulkPaid = bulkForm.amount_paid === '' ? null : Number(bulkForm.amount_paid);
-      if (bulkPaid != null) {
-        const overpaid = targets.find(e => {
-          const effectiveTotal = bulkTotal != null ? bulkTotal : e.total_amount;
-          return effectiveTotal != null && bulkPaid > effectiveTotal;
-        });
-        if (overpaid) {
-          alert(`Amount paid can't exceed the total amount — this would overpay ${overpaid.full_name}. Adjust the amount or set a matching total amount for the selection.`);
-          return;
-        }
-      }
+    if (touchesPaymentFields && overpaid) {
+      alert(`Amount paid can't exceed the total amount — this would overpay ${overpaid.full_name}. Adjust the amount or set a matching total amount for the selection.`);
+      return;
     }
 
     setBulkSaving(true);
@@ -1340,23 +1321,20 @@ export default function AdminEnquiries() {
     if (convertingWaitlist && convertingWaitlist.slots > 1) {
       return handleSaveWaitlistGroup();
     }
-    if (!form.full_name.trim() || !form.phone.trim()) {
-      alert('Name and phone are required.');
+    // The modal already shows every one of these live, field-by-field, and
+    // disables Save while any are present — this is just the defense-in-
+    // depth gate in case Save is reached some other way. Same shared
+    // validator as AdminAddEnquiryModal.tsx, so the rules can't drift
+    // between "what the admin sees live" and "what actually blocks the
+    // save".
+    const formErrors = validateEnquiryForm(form, !!convertingWaitlist);
+    const firstError = formErrors.full_name || formErrors.phone || formErrors.amount_paid;
+    if (firstError) {
+      alert(firstError);
       return;
     }
     const totalAmount = form.total_amount === '' ? undefined : Number(form.total_amount);
     const amountPaid = form.amount_paid === '' ? 0 : Number(form.amount_paid);
-    if (totalAmount != null && amountPaid > totalAmount) {
-      alert("Amount paid can't be more than the total amount.");
-      return;
-    }
-    // A waitlist entry can only become "converted" once real money is on
-    // the booking — the DB trigger enforces this too, but check here first
-    // so the admin gets a clear message instead of a generic save failure.
-    if (convertingWaitlist && amountPaid <= 0) {
-      alert('An advance payment is required to convert a waitlist entry into a booking. Enter at least the booking amount before saving.');
-      return;
-    }
     try {
       setSaving(true);
       const trip = trips.find(t => t.id === form.trip_id);
@@ -1430,23 +1408,17 @@ export default function AdminEnquiries() {
   const handleSaveWaitlistGroup = async () => {
     if (!convertingWaitlist) return;
 
-    const missing = waitlistPeople.find(p => !p.full_name.trim() || !p.phone.trim());
-    if (missing) {
-      alert('Every person needs at least a name and phone number.');
-      return;
-    }
     const totalAmount = form.total_amount === '' ? undefined : Number(form.total_amount);
+    // Same shared validator the modal uses live for each seat's card — this
+    // is the defense-in-depth save-time gate, checked here up front so a
+    // bad row partway through the batch doesn't fail after some people are
+    // already seated.
     for (const p of waitlistPeople) {
-      const amountPaid = p.amount_paid === '' ? 0 : Number(p.amount_paid);
-      // Same rule as the single-conversion path: no waitlist entry becomes
-      // a real booking without an advance payment on it (the DB trigger
-      // enforces this too).
-      if (amountPaid <= 0) {
-        alert(`An advance payment is required to convert ${p.full_name.trim() || 'each person'} into a booking. Enter at least the booking amount for everyone before saving.`);
-        return;
-      }
-      if (totalAmount != null && amountPaid > totalAmount) {
-        alert(`${p.full_name.trim() || 'One person'}'s amount paid can't be more than the total amount.`);
+      const errors = validateWaitlistPersonForm(p, totalAmount ?? '');
+      const firstError = errors.full_name || errors.phone || errors.amount_paid;
+      if (firstError) {
+        const name = p.full_name.trim() || 'One person';
+        alert(errors.full_name || errors.phone ? 'Every person needs at least a name and phone number.' : `${name}: ${firstError}`);
         return;
       }
     }
@@ -3290,6 +3262,7 @@ export default function AdminEnquiries() {
         onClose={() => setBulkEditOpen(false)}
         selectedCount={selectedIds.size}
         selectedTripName={selectedTripName}
+        targets={enquiries.filter(e => selectedIds.has(e.id))}
         bulkForm={bulkForm}
         setBulkForm={setBulkForm}
         activeGroupTripId={activeGroup?.trip?.id}

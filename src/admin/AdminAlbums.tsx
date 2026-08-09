@@ -28,6 +28,22 @@ interface AlbumForm {
 
 type AlbumFormErrors = Partial<Record<'title' | 'destination' | 'trip_date' | 'description', string>>;
 
+// Same title+batch duplicate check handleSave used to only run after the
+// fact via alert() — pulled out so the modal can also compute it live, as
+// the admin types, instead of only surfacing behind an alert() after
+// clicking Save. All the data this needs (the full album list) is already
+// on the page, so there's no reason it has to wait for a save attempt.
+function findDuplicateAlbum(form: AlbumForm, albums: CompletedTrip[], editingId: string | undefined): CompletedTrip | null {
+  const titleNorm = form.title.trim().toLowerCase();
+  if (!titleNorm) return null;
+  const batchNorm = form.batch.trim().toLowerCase();
+  return albums.find(a =>
+    a.id !== editingId &&
+    a.title.trim().toLowerCase() === titleNorm &&
+    (a.batch || '').trim().toLowerCase() === batchNorm
+  ) || null;
+}
+
 export default function AdminAlbums() {
   const confirm = useConfirm();
   const [albums, setAlbums] = useState<CompletedTrip[]>([]);
@@ -83,13 +99,7 @@ export default function AdminAlbums() {
     setErrors({});
 
     const batch = form.batch.trim() || undefined;
-    const titleNorm = form.title.trim().toLowerCase();
-    const batchNorm = (batch || '').trim().toLowerCase();
-    const duplicate = albums.some(a =>
-      a.id !== editing?.id &&
-      a.title.trim().toLowerCase() === titleNorm &&
-      (a.batch || '').trim().toLowerCase() === batchNorm
-    );
+    const duplicate = findDuplicateAlbum(form, albums, editing?.id);
     if (duplicate) {
       alert('An album with this title already exists' + (batch ? ' for this batch' : '') + '. Use a different batch, or change the title.');
       return;
@@ -160,6 +170,11 @@ export default function AdminAlbums() {
   };
 
   const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+
+  // Live, as the admin types — recomputed on every render so a
+  // title+batch clash shows up immediately instead of only behind an
+  // alert() after Save.
+  const duplicateAlbum = findDuplicateAlbum(form, albums, editing?.id);
 
   return (
     <AdminLayout title="Completed Trips">
@@ -288,7 +303,12 @@ export default function AdminAlbums() {
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Batch (optional)</label>
-            <input value={form.batch} onChange={e => setForm(f => ({ ...f, batch: e.target.value }))} className={inputClass} placeholder="e.g. 1 (shows as 'Batch 1')" />
+            <input value={form.batch} onChange={e => setForm(f => ({ ...f, batch: e.target.value }))} className={`${inputClass} ${duplicateAlbum ? '!border-red-400' : ''}`} placeholder="e.g. 1 (shows as 'Batch 1')" />
+            {duplicateAlbum && (
+              <p className="text-xs text-red-500 mt-1">
+                An album with this title already exists{form.batch.trim() ? ' for this batch' : ''}. Use a different batch, or change the title.
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Trip Date *</label>
@@ -348,7 +368,15 @@ export default function AdminAlbums() {
         </div>
         <div className="flex gap-3 mt-6">
           <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeModal}>Cancel</Button>
-          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
+          <Button
+            variant="primary"
+            size="md"
+            className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+            onClick={handleSave}
+            loading={saving}
+            disabled={!!duplicateAlbum}
+            title={duplicateAlbum ? 'Fix the highlighted fields before saving' : undefined}
+          >
             {editing ? 'Save Changes' : 'Create Album'}
           </Button>
         </div>

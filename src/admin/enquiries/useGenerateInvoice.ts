@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { addExtraCharge, generatePendingInvoice, recordTypedPayment } from '../../services/api';
 import type { Enquiry } from '../../types/types-index';
-import { emptyGenerateInvoiceForm, type GenerateInvoiceForm } from './AdminEnquiryCommon';
+import { emptyGenerateInvoiceForm, validateGenerateInvoiceForm, type GenerateInvoiceForm } from './AdminEnquiryCommon';
 import { useAlert } from '../../components/ui/useAlert';
 
 // Single source of truth for "Generate Invoice": owns the target/form/saving
@@ -29,16 +29,17 @@ export function useGenerateInvoice(onSuccess: (updatedEnquiry: Enquiry, target: 
   const save = async () => {
     if (!target) return;
     const amount = form.amount === '' ? 0 : Number(form.amount);
-    if (amount <= 0) {
-      alert('Enter an amount greater than zero.');
-      return;
-    }
-    if (form.status === 'paid' && !form.payment_method) {
-      alert('Select a payment method.');
-      return;
-    }
-    if (form.status === 'paid' && form.payment_method !== 'Cash' && !form.utr_number.trim()) {
-      alert('Enter a UTR / reference number.');
+    // The modal already shows every one of these live, field-by-field, and
+    // disables Save while any are present — this is just the defense-in-
+    // depth gate in case Save is reached some other way. Same shared
+    // validator as AdminGenerateInvoiceModal.tsx (amountTouched forced true
+    // here, since actually clicking Save is itself an attempt), so the
+    // rules can't drift between "what the admin sees live" and "what
+    // actually blocks the save".
+    const formErrors = validateGenerateInvoiceForm(form, true);
+    const firstError = Object.values(formErrors)[0];
+    if (firstError) {
+      alert(firstError);
       return;
     }
     try {

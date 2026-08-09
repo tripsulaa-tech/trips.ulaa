@@ -251,6 +251,44 @@ export function availableInvoiceTypeOptions(form: GenerateInvoiceForm, totalAmou
   return clearsBalanceForInvoice(form, totalAmount, alreadyPaid) ? GENERATE_INVOICE_TYPE_OPTIONS : GENERATE_INVOICE_TYPE_OPTIONS.filter(o => o.value !== 'balance');
 }
 
+// Field-level errors for the Generate Invoice form (AdminGenerateInvoiceModal)
+// — same shape/spirit as PaymentFormErrors above, and the same three checks
+// useGenerateInvoice's save() used to only enforce after the fact via
+// alert(): amount required, payment method required, UTR required. Shared
+// by the modal (live, as the admin types/selects) and useGenerateInvoice's
+// save() as the final save-time gate, so the two can never drift.
+//
+// Unlike PaymentForm's amount_paid (where 0/'' is a legitimate "not
+// changing the payment right now" state), Generate Invoice always raises a
+// real invoice line, so its amount is required rather than merely bounded.
+// That means the "required" error would fire the instant the modal opens
+// (amount starts at ''), before the admin has even looked at the field —
+// so callers pass amountTouched (true once the Amount field has been
+// blurred, or the save button has actually been clicked) to gate it.
+export type GenerateInvoiceFormErrors = Partial<Record<'amount' | 'payment_method' | 'utr_number', string>>;
+
+export function validateGenerateInvoiceForm(form: GenerateInvoiceForm, amountTouched: boolean): GenerateInvoiceFormErrors {
+  const errors: GenerateInvoiceFormErrors = {};
+  const amount = form.amount === '' ? 0 : Number(form.amount);
+
+  if (amountTouched && amount <= 0) {
+    errors.amount = 'Enter an invoice amount greater than zero.';
+  }
+
+  // Payment method/UTR only matter once there's an actual amount to collect
+  // and the invoice is being marked paid now — a pending invoice or a
+  // still-empty amount field has nothing to nag about yet.
+  if (amount > 0 && form.status === 'paid') {
+    if (!form.payment_method) {
+      errors.payment_method = 'Select a payment method.';
+    } else if (form.payment_method !== 'Cash' && !form.utr_number.trim()) {
+      errors.utr_number = 'Enter a UTR / reference number.';
+    }
+  }
+
+  return errors;
+}
+
 export const FOOD_PREFERENCE_OPTIONS = [
   { value: '', label: 'Not asked / unknown' },
   { value: 'veg', label: 'Veg' },
