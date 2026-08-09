@@ -3052,13 +3052,13 @@ export default function AdminEnquiries() {
                               <p className="text-dark-muted text-[10px]">Booking ID</p>
                               <p className="text-dark text-xs font-mono truncate">{e.booking_id}</p>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-3 shrink-0">
                               <button
                                 onClick={() => handleDownloadInvoice(e)}
                                 disabled={invoiceBusyId === e.id}
                                 title="Download invoice"
                                 aria-label="Download invoice"
-                                className="text-primary hover:text-primary-dark disabled:opacity-50"
+                                className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
                               >
                                 <FileText size={16} />
                               </button>
@@ -3067,7 +3067,7 @@ export default function AdminEnquiries() {
                                 disabled={invoiceBusyId === e.id}
                                 title="Share invoice"
                                 aria-label="Share invoice"
-                                className="text-primary hover:text-primary-dark disabled:opacity-50"
+                                className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
                               >
                                 <Share2 size={16} />
                               </button>
