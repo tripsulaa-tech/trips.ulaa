@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
 import type { Enquiry, Payment } from '../types/types-index';
 import { formatPrice, formatDate } from './utils-index';
 
@@ -68,6 +69,34 @@ const BRAND = {
   phone: '+91 63813 36772',
   bottomTagline: 'Empowering women to explore, together.',
 };
+
+// Exact lucide-react icon path data (same shapes rendered by the site's
+// header/footer contact rows — see src/components/layout/Footer.tsx), kept
+// here so the PDF's header icons are true vectors rather than raster art.
+// Lucide icons are drawn on a 24x24 viewBox, stroke-only, 2pt stroke,
+// round caps/joins — matching that spec here keeps them identical to the
+// website's icon set.
+const ICON_GLOBE = '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>';
+const ICON_MAIL = '<path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/>';
+const ICON_PHONE = '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>';
+
+/** Renders one lucide-style icon (stroke-only, 24x24 viewBox) as a real
+ *  vector shape at (x, y) sized to `size` points — via svg2pdf.js, which
+ *  converts an actual SVG element into native jsPDF drawing commands. This
+ *  is why the icon stays crisp at any zoom and costs almost nothing in
+ *  file size, unlike pasting in a rasterized icon. */
+async function drawVectorIcon(
+  doc: jsPDF,
+  innerSvg: string,
+  x: number,
+  y: number,
+  size: number,
+  color: RGB
+): Promise<void> {
+  const markup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="rgb(${color[0]},${color[1]},${color[2]})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${innerSvg}</svg>`;
+  const svgEl = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement;
+  await svg2pdf(svgEl, doc, { x, y, width: size, height: size });
+}
 
 const PAYMENT_TYPE_LABEL: Record<Payment['payment_type'], string> = {
   booking_amount: 'Booking amount',
@@ -152,6 +181,43 @@ async function loadLogo(): Promise<{ dataUrl: string; ratio: number } | null> {
   }
 }
 
+// Same best-effort/never-throws contract as loadLogo() above, for the
+// bottom brand banner (palm trees / sailboat artwork with the "Follow us"
+// row baked into the image). Ratio is width/height, used to size the
+// image to the content width while keeping it undistorted.
+async function loadFooterBanner(): Promise<{ dataUrl: string; ratio: number } | null> {
+  try {
+    const res = await fetch('/ulaa-invoice-footer-banner.png');
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('read failed'));
+      reader.readAsDataURL(blob);
+    });
+    const ratio = await new Promise<number>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img.naturalWidth / img.naturalHeight);
+      img.onerror = () => reject(new Error('decode failed'));
+      img.src = dataUrl;
+    });
+    return { dataUrl, ratio };
+  } catch {
+    return null;
+  }
+}
+
+// Clickable hotspots baked into the footer banner artwork, as fractions of
+// the image's own width/height (0–1). Measured directly against the source
+// PNG (1254x252) so they stay correctly aligned at any print size. Order:
+// Instagram handle, WhatsApp, website.
+const FOOTER_BANNER_LINKS: { x1: number; y1: number; x2: number; y2: number; url: string }[] = [
+  { x1: 415 / 1254, y1: 78 / 252, x2: 585 / 1254, y2: 132 / 252, url: 'https://instagram.com/ulaa.trips' },
+  { x1: 600 / 1254, y1: 78 / 252, x2: 780 / 1254, y2: 132 / 252, url: 'https://wa.me/916381336772?text=' + encodeURIComponent('Hi! I am interested in ULAA trips.') },
+  { x1: 795 / 1254, y1: 78 / 252, x2: 1030 / 1254, y2: 132 / 252, url: 'https://www.ulaatrips.com' },
+];
+
 /**
  * Builds the invoice as a native jsPDF document — every field pulled
  * straight from `enquiry`/`payments`, so it always reflects exactly what's
@@ -160,6 +226,7 @@ async function loadLogo(): Promise<{ dataUrl: string; ratio: number } | null> {
  */
 export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]): Promise<jsPDF> {
   const logo = await loadLogo();
+  const footerBanner = await loadFooterBanner();
 
   const total = enquiry.total_amount || 0;
   const paid = enquiry.amount_paid || 0;
@@ -238,16 +305,24 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
   setText(COLORS.darkMuted);
   doc.text(BRAND.tagline, MARGIN, headerTop + logoBoxH + 12);
 
+  // Website / email / phone rows — each led by the same lucide icon (Globe
+  // / Mail / Phone) the site itself uses in the footer's contact list,
+  // drawn as real vector shapes instead of the old plain bullet dot.
   let contactY = headerTop + logoBoxH + 28;
-  [BRAND.website, BRAND.email, BRAND.phone].forEach((line) => {
-    setFill(COLORS.secondary);
-    doc.circle(MARGIN + 2.2, contactY - 3, 2, 'F');
+  const contactRows: { text: string; icon: string }[] = [
+    { text: BRAND.website, icon: ICON_GLOBE },
+    { text: BRAND.email, icon: ICON_MAIL },
+    { text: BRAND.phone, icon: ICON_PHONE },
+  ];
+  const contactIconSize = 8;
+  for (const row of contactRows) {
+    await drawVectorIcon(doc, row.icon, MARGIN, contactY - contactIconSize + 1.5, contactIconSize, COLORS.secondary);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     setText(COLORS.darkMuted);
-    doc.text(line, MARGIN + 10, contactY);
+    doc.text(row.text, MARGIN + contactIconSize + 5, contactY);
     contactY += 13;
-  });
+  }
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(19);
@@ -295,7 +370,7 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
     doc.setFontSize(9);
     const w = doc.getTextWidth(text) + 20;
     setFill(COLORS.backgroundWarm);
-    doc.roundedRect(x, y, w, 18, 9, 9, 'F');
+    doc.roundedRect(x, y, w, 18, 3, 3, 'F');
     setText(COLORS.primaryDark);
     doc.text(text, x + w / 2, y + 12.5, { align: 'center' });
   }
@@ -367,7 +442,7 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
     setFill(COLORS.cream);
     setDraw(COLORS.grayLineSoft);
     doc.setLineWidth(0.75);
-    doc.roundedRect(x, cy, cardW, cardH, 8, 8, 'FD');
+    doc.roundedRect(x, cy, cardW, cardH, 3, 3, 'FD');
     drawIconCircle(x + 28, cy + cardH / 2, iconBg, color, kind);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
@@ -413,7 +488,7 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
 
   function drawTableHeader() {
     setFill(COLORS.primaryDark);
-    doc.roundedRect(MARGIN, cy, CONTENT_W, 24, 4, 4, 'F');
+    doc.rect(MARGIN, cy, CONTENT_W, 24, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     setText(COLORS.white);
@@ -525,30 +600,85 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
   doc.text(noteLines, MARGIN + 16, cy + 3);
   cy += noteLines.length * 11 + 20;
 
-  checkPageBreak(24);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  setText(COLORS.primary);
-  doc.text('Thank you! \u2665', PAGE_W / 2, cy, { align: 'center' });
-  cy += 26;
+  // Bottom brand banner — the "Empowering women to explore, together" /
+  // "Follow us — Instagram / WhatsApp / website" artwork, dropped in as one
+  // full-width image (replaces the old plain-text tagline + link line).
+  // The Instagram, WhatsApp, and website spots printed on the artwork are
+  // wired up as real clickable regions via doc.link() so the banner behaves
+  // like the text version did, just drawn as art rather than type.
+  //
+  // Flush against the physical bottom edge of the page (not the old
+  // FOOTER_RESERVE gap), so a short invoice doesn't leave it stranded
+  // mid-page with empty space beneath it. The page-number badge is drawn
+  // afterwards (see below) directly on top of the banner's bottom-right
+  // corner, rather than in a separate reserved strip under it. If content
+  // already runs past where the banner would sit, it's pushed to a fresh
+  // page instead of overlapping.
+  if (footerBanner) {
+    const bannerW = CONTENT_W;
+    const bannerH = bannerW / footerBanner.ratio;
+    let bannerY = PAGE_H - bannerH;
+    if (bannerY < cy) {
+      newPage();
+      bannerY = PAGE_H - bannerH;
+    }
+    const format = footerBanner.dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+    doc.addImage(footerBanner.dataUrl, format, MARGIN, bannerY, bannerW, bannerH);
+    FOOTER_BANNER_LINKS.forEach((l) => {
+      doc.link(
+        MARGIN + l.x1 * bannerW,
+        bannerY + l.y1 * bannerH,
+        (l.x2 - l.x1) * bannerW,
+        (l.y2 - l.y1) * bannerH,
+        { url: l.url }
+      );
+    });
+  } else {
+    // Best-effort text fallback if the banner image fails to load, so the
+    // footer still carries the brand + clickable links either way — also
+    // flush to the bottom of the page for the same reason as above.
+    const barH = 34;
+    let barY = PAGE_H - barH;
+    if (barY < cy) {
+      newPage();
+      barY = PAGE_H - barH;
+    }
+    setFill(COLORS.backgroundWarm);
+    doc.rect(MARGIN, barY, CONTENT_W, barH, 'F');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    setText(COLORS.darkMuted);
+    doc.text(BRAND.bottomTagline, MARGIN + 14, barY + 21);
 
-  checkPageBreak(40);
-  setFill(COLORS.backgroundWarm);
-  doc.rect(MARGIN, cy, CONTENT_W, 34, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  setText(COLORS.primaryDark);
-  doc.text(BRAND.name, MARGIN + 14, cy + 21);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  setText(COLORS.darkMuted);
-  doc.text(BRAND.bottomTagline, MARGIN + 14 + doc.getTextWidth(BRAND.name) + 14, cy + 21);
-  doc.text(`Follow us \u2014 Instagram ${BRAND.instagram}  \u2022  WhatsApp  \u2022  ${BRAND.website}`, PAGE_W - MARGIN - 14, cy + 21, {
-    align: 'right',
-  });
+    const instagramUrl = `https://instagram.com/${BRAND.instagram.replace(/^@/, '')}`;
+    const websiteUrl = `https://${BRAND.website}`;
+    const followSegments: { text: string; link?: string }[] = [
+      { text: 'Follow us \u2014 Instagram ' },
+      { text: BRAND.instagram, link: instagramUrl },
+      { text: '  \u2022  WhatsApp  \u2022  ' },
+      { text: BRAND.website, link: websiteUrl },
+    ];
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    const followTotalW = followSegments.reduce((w, s) => w + doc.getTextWidth(s.text), 0);
+    let followX = PAGE_W - MARGIN - 14 - followTotalW;
+    followSegments.forEach((s) => {
+      if (s.link) {
+        doc.setFont('helvetica', 'bold');
+        setText(COLORS.primaryDark);
+        doc.textWithLink(s.text, followX, barY + 21, { url: s.link });
+        doc.setFont('helvetica', 'normal');
+      } else {
+        setText(COLORS.darkMuted);
+        doc.text(s.text, followX, barY + 21);
+      }
+      followX += doc.getTextWidth(s.text);
+    });
+  }
 
   // ---------------------------------------------------------------------
-  // Page-number badge on every page, added last so the final total is
+  // Page-number badge on every page, added last (and therefore drawn on
+  // top of the footer banner's bottom-right corner) so the final total is
   // known no matter how many pages the payment history needed.
   // ---------------------------------------------------------------------
   const pageCount = doc.getNumberOfPages();
