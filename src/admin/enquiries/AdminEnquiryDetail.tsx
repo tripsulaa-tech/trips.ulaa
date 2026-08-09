@@ -244,7 +244,7 @@ export default function AdminEnquiryDetail() {
     // Save is reached some other way — same editErrors computed above, so
     // the two can never drift.
     if (editErrors.full_name || editErrors.phone) {
-      alert(editErrors.full_name || editErrors.phone);
+      alert(editErrors.full_name || editErrors.phone || 'Please fix the highlighted fields.');
       return;
     }
     try {
