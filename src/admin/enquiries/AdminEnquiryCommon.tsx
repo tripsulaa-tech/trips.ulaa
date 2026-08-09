@@ -179,6 +179,62 @@ export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPai
   return clearsBalance(paymentForm, alreadyPaid) ? PAYMENT_TYPE_OPTIONS : PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'balance');
 }
 
+// Field-level errors for the Track Payment form (AdminPaymentModal), keyed
+// by the field each message should render under. Shared by the modal
+// (live, as the admin types/selects) and both handleSavePayment call sites
+// (AdminEnquiries.tsx list view + AdminEnquiryDetail.tsx detail view) as
+// the final save-time gate — one source of truth so the two screens can
+// never drift on what counts as a valid payment.
+export type PaymentFormErrors = Partial<Record<
+  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr',
+  string
+>>;
+
+export function validatePaymentForm(paymentForm: PaymentForm, alreadyPaid: number): PaymentFormErrors {
+  const errors: PaymentFormErrors = {};
+  const totalAmount = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
+  const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
+  const isExtraCharge = paymentForm.payment_type === 'extra_charge';
+  const isPending = paymentForm.status === 'pending';
+  const newRunningTotal = alreadyPaid + thisPayment;
+
+  if (!isExtraCharge && !isPending && totalAmount != null && thisPayment > 0 && newRunningTotal > totalAmount) {
+    errors.amount_paid = 'This would take the amount paid past the total amount.';
+  } else if ((isExtraCharge || isPending) && thisPayment <= 0) {
+    errors.amount_paid = isExtraCharge
+      ? 'Enter an extra charge amount greater than zero.'
+      : 'Enter an amount greater than zero for the pending invoice.';
+  }
+
+  // Money is actually changing hands right now (not a pending invoice)
+  // whenever thisPayment > 0 — whether that's a normal payment or an extra
+  // charge collected immediately — so we need to know how.
+  if (!isPending && thisPayment > 0 && !paymentForm.payment_method) {
+    errors.payment_method = 'Select a payment method.';
+  }
+  if (!isPending && thisPayment > 0 && paymentForm.payment_method && paymentForm.payment_method !== 'Cash' && !paymentForm.payment_utr.trim()) {
+    errors.payment_utr = 'Enter a UTR / reference number.';
+  }
+
+  const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
+  if (refundAmount > 0 && !paymentForm.refund_method) {
+    errors.refund_method = 'Select a refund method.';
+  }
+  if (refundAmount > 0 && paymentForm.refund_method && paymentForm.refund_method !== 'Cash' && !paymentForm.refund_utr.trim()) {
+    errors.refund_utr = 'Enter a refund UTR / reference number.';
+  }
+  // Extra Charge collected now folds straight into amount_paid; Pending
+  // never does, whatever the type — so the refund bound uses what
+  // amount_paid will actually become, not the naive "already paid + this
+  // payment" that only holds for a normal paid-now payment.
+  const effectiveAmountPaid = isPending ? alreadyPaid : isExtraCharge ? alreadyPaid + thisPayment : newRunningTotal;
+  if (refundAmount > effectiveAmountPaid) {
+    errors.refund_amount = "Refund amount can't be more than what was actually paid.";
+  }
+
+  return errors;
+}
+
 // Generate Invoice's own amount/type fields don't carry the booking's
 // total or already-paid figures — those live on the Enquiry the invoice
 // is being raised against — so callers pass them in separately.

@@ -23,6 +23,7 @@ import {
   journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend, JOURNEY_STAGE_CONFIG,
   closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus, canCancelBooking,
+  validatePaymentForm,
 } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { useGenerateInvoice } from './useGenerateInvoice';
@@ -1083,45 +1084,16 @@ export default function AdminEnquiries() {
     const isExtraCharge = paymentForm.payment_type === 'extra_charge';
     const isPending = paymentForm.status === 'pending';
     const newRunningTotal = (paymentTarget.amount_paid || 0) + thisPayment;
-    if (!isExtraCharge && !isPending && totalAmount != null && newRunningTotal > totalAmount) {
-      alert("This payment would take the amount paid past the total amount.");
-      return;
-    }
-    if ((isExtraCharge || isPending) && thisPayment <= 0) {
-      alert(isExtraCharge ? 'Enter an extra charge amount greater than zero.' : 'Enter an amount greater than zero for the pending invoice.');
-      return;
-    }
-    // Money is actually changing hands right now (not a pending invoice)
-    // whenever thisPayment > 0 — whether that's a normal payment or an
-    // extra charge collected immediately — so we need to know how.
-    if (!isPending && thisPayment > 0 && !paymentForm.payment_method) {
-      alert('Select a payment method.');
-      return;
-    }
-    if (!isPending && thisPayment > 0 && paymentForm.payment_method !== 'Cash' && !paymentForm.payment_utr.trim()) {
-      alert('Enter a UTR / reference number.');
-      return;
-    }
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
-    if (refundAmount > 0 && !paymentForm.refund_method) {
-      alert('Select a refund method.');
-      return;
-    }
-    if (refundAmount > 0 && paymentForm.refund_method !== 'Cash' && !paymentForm.refund_utr.trim()) {
-      alert('Enter a refund UTR / reference number.');
-      return;
-    }
-    // Extra Charge collected now folds straight into amount_paid (below);
-    // Pending never does, whatever the type — so the refund bound uses
-    // what amount_paid will actually become, not the naive "already paid +
-    // this payment" that only holds for a normal paid-now payment.
-    const effectiveAmountPaid = isPending
-      ? (paymentTarget.amount_paid || 0)
-      : isExtraCharge
-        ? (paymentTarget.amount_paid || 0) + thisPayment
-        : newRunningTotal;
-    if (refundAmount > effectiveAmountPaid) {
-      alert("Refund amount can't be more than what was actually paid.");
+    // The modal already shows every one of these live, field-by-field, and
+    // disables Save while any are present — this is just the defense-in-
+    // depth gate in case Save is reached some other way. Same shared
+    // validator, so the rules can't drift between "what the admin sees
+    // live" and "what actually blocks the save".
+    const formErrors = validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0);
+    const firstError = Object.values(formErrors)[0];
+    if (firstError) {
+      alert(firstError);
       return;
     }
     try {

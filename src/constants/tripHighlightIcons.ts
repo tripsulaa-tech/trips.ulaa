@@ -1827,6 +1827,13 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'pill', label: 'Personal Medicines', Icon: Pill, keywords: ['personal medicines', 'medicines', 'medicine', 'medication', 'pills', 'first aid'] },
   { key: 'id-card', label: 'Government ID Proof', Icon: IdCard, keywords: ['government id proof', 'id proof', 'id card', 'passport', 'aadhar', 'adhar', 'voter id', 'license', 'documents'] },
   { key: 'glass-water', label: 'Water Bottle', Icon: GlassWater, keywords: ['water bottle', 'bottle', 'water', 'hydration', 'flask'] },
+  { key: 'stamp-visa-approval', label: 'ETA / Visa Approval', Icon: LucideIcons.Stamp as LucideIcon, keywords: ['eta approval', 'eta', 'visa', 'visa approval', 'travel authorization', 'entry permit', 'immigration approval'] },
+  { key: 'ticket-flight', label: 'Flight Tickets', Icon: Plane, keywords: ['flight tickets', 'flight ticket', 'air ticket', 'air tickets', 'boarding pass', 'plane ticket', 'itinerary'] },
+  { key: 'shield-travel-insurance', label: 'Travel Insurance', Icon: ShieldCheck, keywords: ['travel insurance', 'insurance', 'insurance copy', 'medical insurance', 'policy copy'] },
+  { key: 'camera-passport-photo', label: 'Passport-size Photo', Icon: Camera, keywords: ['passport photo', 'passport size photo', 'passport-size photograph', 'photograph', 'photographs', 'photo id', 'passport pic'] },
+  { key: 'file-travel-documents', label: 'Document Copies', Icon: LucideIcons.FileCheck as LucideIcon, keywords: ['document copies', 'travel documents', 'copies of documents', 'digital copy', 'physical copy', 'important documents'] },
+  { key: 'credit-card-currency', label: 'Cards & Currency', Icon: LucideIcons.CreditCard as LucideIcon, keywords: ['debit card', 'credit card', 'cards', 'cash', 'currency', 'local currency', 'rupees', 'small expenses'] },
+  { key: 'plug-travel-adapter', label: 'Travel Adapter', Icon: LucideIcons.PlugZap as LucideIcon, keywords: ['travel adapter', 'universal adapter', 'plug adapter', 'power adapter', 'converter'] },
 
   // Moods & questions (mainly for "Have You Ever…" style prompts)
   { key: 'x', label: 'Cancelled', Icon: X, keywords: ['cancelled', 'cancel', 'no', 'plans fell through', 'let down'] },

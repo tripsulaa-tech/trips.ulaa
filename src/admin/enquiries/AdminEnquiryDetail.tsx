@@ -42,6 +42,7 @@ import {
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus, canCancelBooking,
   CANCELLATION_REASON_OPTIONS, REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
+  validatePaymentForm,
 } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquiriesShared';
@@ -157,6 +158,13 @@ export default function AdminEnquiryDetail() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>(emptyPaymentForm);
   const [savingPayment, setSavingPayment] = useState(false);
+  // Live, field-level errors for the Track Payment modal below — recomputed
+  // every render so a bad amount, a missing payment method, etc. show up
+  // the moment it's entered/selected, instead of only surfacing behind an
+  // alert() after Save. Same shared validator AdminPaymentModal uses.
+  const paymentErrors = paymentOpen ? validatePaymentForm(paymentForm, enquiry?.amount_paid || 0) : {};
+  const hasPaymentErrors = Object.keys(paymentErrors).length > 0;
+  const paymentErrorClass = 'text-red-500 text-xs mt-1';
   const [togglingNoShow, setTogglingNoShow] = useState(false);
 
   // 'Balance' is only meant for the payment that actually zeroes out the
@@ -346,41 +354,16 @@ export default function AdminEnquiryDetail() {
     const isExtraCharge = paymentForm.payment_type === 'extra_charge';
     const isPending = paymentForm.status === 'pending';
     const newRunningTotal = (enquiry.amount_paid || 0) + thisPayment;
-    if (!isExtraCharge && !isPending && totalAmount != null && newRunningTotal > totalAmount) {
-      alert("This payment would take the amount paid past the total amount.");
-      return;
-    }
-    if ((isExtraCharge || isPending) && thisPayment <= 0) {
-      alert(isExtraCharge ? 'Enter an extra charge amount greater than zero.' : 'Enter an amount greater than zero for the pending invoice.');
-      return;
-    }
-    // Money is actually changing hands right now (not a pending invoice)
-    // whenever thisPayment > 0 — whether that's a normal payment or an
-    // extra charge collected immediately — so we need to know how.
-    if (!isPending && thisPayment > 0 && !paymentForm.payment_method) {
-      alert('Select a payment method.');
-      return;
-    }
-    if (!isPending && thisPayment > 0 && paymentForm.payment_method !== 'Cash' && !paymentForm.payment_utr.trim()) {
-      alert('Enter a UTR / reference number.');
-      return;
-    }
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
-    if (refundAmount > 0 && !paymentForm.refund_method) {
-      alert('Select a refund method.');
-      return;
-    }
-    if (refundAmount > 0 && paymentForm.refund_method !== 'Cash' && !paymentForm.refund_utr.trim()) {
-      alert('Enter a refund UTR / reference number.');
-      return;
-    }
-    const effectiveAmountPaid = isPending
-      ? (enquiry.amount_paid || 0)
-      : isExtraCharge
-        ? (enquiry.amount_paid || 0) + thisPayment
-        : newRunningTotal;
-    if (refundAmount > effectiveAmountPaid) {
-      alert("Refund amount can't be more than what was actually paid.");
+    // The modal already shows every one of these live, field-by-field, and
+    // disables Save while any are present — this is just the defense-in-
+    // depth gate in case Save is reached some other way. Same shared
+    // validator as AdminEnquiries.tsx, so the rules can't drift between
+    // "what the admin sees live" and "what actually blocks the save".
+    const formErrors = validatePaymentForm(paymentForm, enquiry.amount_paid || 0);
+    const firstError = Object.values(formErrors)[0];
+    if (firstError) {
+      alert(firstError);
       return;
     }
     try {
@@ -1157,6 +1140,7 @@ export default function AdminEnquiryDetail() {
                 className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
                 placeholder="e.g. 5000"
               />
+              {paymentErrors.amount_paid && <p className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
             </div>
           </div>
 
@@ -1202,6 +1186,7 @@ export default function AdminEnquiryDetail() {
                   placeholder="Select method"
                   size="sm"
                 />
+                {paymentErrors.payment_method && <p className={paymentErrorClass}>{paymentErrors.payment_method}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
@@ -1213,6 +1198,7 @@ export default function AdminEnquiryDetail() {
                   className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder={paymentForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
                 />
+                {paymentErrors.payment_utr && <p className={paymentErrorClass}>{paymentErrors.payment_utr}</p>}
               </div>
             </div>
           )}
@@ -1295,6 +1281,7 @@ export default function AdminEnquiryDetail() {
                     className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
                     placeholder="How much has been refunded so far"
                   />
+                  {paymentErrors.refund_amount && <p className={paymentErrorClass}>{paymentErrors.refund_amount}</p>}
                 </div>
               )}
               {!enquiry.is_no_show && (
@@ -1303,13 +1290,26 @@ export default function AdminEnquiryDetail() {
                     <label className="block text-sm font-medium text-dark mb-1">Refund Method</label>
                     <Select
                       value={paymentForm.refund_method}
-                      onChange={val => setPaymentForm(f => ({ ...f, refund_method: val }))}
+                      onChange={val => setPaymentForm(f => ({ ...f, refund_method: val, refund_utr: val === 'Cash' ? '' : f.refund_utr }))}
                       options={REFUND_METHOD_OPTIONS}
                       placeholder="Select method"
                       size="sm"
                     />
+                    {paymentErrors.refund_method && <p className={paymentErrorClass}>{paymentErrors.refund_method}</p>}
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-dark mb-1">Refund UTR / Reference</label>
+                    <input
+                      type="text"
+                      value={paymentForm.refund_utr}
+                      disabled={paymentForm.refund_method === 'Cash'}
+                      onChange={e => setPaymentForm(f => ({ ...f, refund_utr: e.target.value }))}
+                      className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.refund_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      placeholder={paymentForm.refund_method === 'Cash' ? 'N/A for cash' : 'e.g. 987654XXXX'}
+                    />
+                    {paymentErrors.refund_utr && <p className={paymentErrorClass}>{paymentErrors.refund_utr}</p>}
+                  </div>
+                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-dark mb-1">Refund Date</label>
                     <input
                       type="date"
@@ -1337,7 +1337,16 @@ export default function AdminEnquiryDetail() {
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" onClick={() => setPaymentOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="md" onClick={handleSavePayment} loading={savingPayment}>Save Payment</Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleSavePayment}
+              loading={savingPayment}
+              disabled={hasPaymentErrors}
+              title={hasPaymentErrors ? 'Fix the highlighted fields before saving' : undefined}
+            >
+              Save Payment
+            </Button>
           </div>
         </div>
       </Modal>

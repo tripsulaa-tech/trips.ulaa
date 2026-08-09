@@ -25,7 +25,7 @@ import {
   Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight, Play,
   ChevronDown, ChevronUp, BadgeCheck,
   Shirt, Footprints, Glasses, HatGlasses, Headphones, BatteryCharging, Pill, SprayCan, Droplet, GlassWater,
-  Cookie, Sparkles, FileText, IdCard, Hand, ShieldCheck, Flame, type LucideIcon,
+  Cookie, Sparkles, FileText, IdCard, Hand, ShieldCheck, Flame, Stamp, Plane, CreditCard, Camera, PlugZap, type LucideIcon,
 } from 'lucide-react';
 
 // Tracks whether the viewport is at/above the `sm` breakpoint (640px) so
@@ -74,6 +74,7 @@ const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
   [/cap|hat/i, HatGlasses],
   [/glove|mitten/i, Hand],
   [/earphone|headphone|earbud/i, Headphones],
+  [/adapter|\bplug\b|converter/i, PlugZap],
   [/power ?bank|charger|battery/i, BatteryCharging],
   [/medicine|medication|pill|first aid/i, Pill],
   [/sunscreen|spf/i, SprayCan],
@@ -82,7 +83,14 @@ const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
   [/snack|food/i, Cookie],
   [/wipe|sanitiz|towel/i, Sparkles],
   [/tissue|paper/i, FileText],
-  [/id proof|passport|aadhar|adhar|govern|voter|licen/i, IdCard],
+  // Photo/photograph checked before the passport/id-proof rule below, since
+  // "Passport-size photographs" would otherwise match on "passport".
+  [/passport.{0,10}photo|photograph/i, Camera],
+  [/\beta\b|visa|travel authoriz|entry permit/i, Stamp],
+  [/flight|air ticket|boarding pass|\bticket/i, Plane],
+  [/insurance/i, ShieldCheck],
+  [/debit card|credit card|currency|rupee|\bcash\b/i, CreditCard],
+  [/id proof|passport|aadhar|adhar|govern|voter|licen|document/i, IdCard],
 ];
 
 function getThingsToCarryIcon(item: string): LucideIcon {

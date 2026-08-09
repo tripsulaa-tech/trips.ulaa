@@ -5,7 +5,7 @@ import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, GENERATE_INVOICE_STATUS_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from './AdminEnquiryCommon';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, validatePaymentForm, GENERATE_INVOICE_STATUS_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
@@ -37,6 +37,12 @@ export default function PaymentModal({
   savingPayment: boolean;
 }) {
   const confirm = useConfirm();
+  const errorClass = 'text-red-500 text-xs mt-1';
+  // Live, field-level errors — recomputed on every render so a bad amount,
+  // a missing payment method, etc. show up the moment the admin enters or
+  // selects it, instead of only surfacing behind an alert() after Save.
+  const paymentErrors = paymentTarget ? validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0) : {};
+  const hasPaymentErrors = Object.keys(paymentErrors).length > 0;
   const isDirty =
     paymentForm.total_amount !== '' ||
     paymentForm.amount_paid !== '' ||
@@ -170,6 +176,7 @@ export default function PaymentModal({
                 className={inputClass}
                 placeholder="e.g. 5000"
               />
+              {paymentErrors.amount_paid && <p className={errorClass}>{paymentErrors.amount_paid}</p>}
             </div>
           </div>
 
@@ -241,6 +248,7 @@ export default function PaymentModal({
                   placeholder="Select method"
                   size="sm"
                 />
+                {paymentErrors.payment_method && <p className={errorClass}>{paymentErrors.payment_method}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
@@ -252,6 +260,7 @@ export default function PaymentModal({
                   className={`${inputClass} ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder={paymentForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
                 />
+                {paymentErrors.payment_utr && <p className={errorClass}>{paymentErrors.payment_utr}</p>}
               </div>
             </div>
           )}
@@ -331,6 +340,7 @@ export default function PaymentModal({
                     ? 'Locked at ₹0 for no-shows. Uncheck "no-show" above to enter a refund.'
                     : `They paid ${formatPrice(paymentTarget.amount_paid || 0)} in total.`}
                 </p>
+                {paymentErrors.refund_amount && <p className={errorClass}>{paymentErrors.refund_amount}</p>}
               </div>
 
               {!paymentTarget.is_no_show && (
@@ -344,6 +354,7 @@ export default function PaymentModal({
                       placeholder="Select method"
                       size="sm"
                     />
+                    {paymentErrors.refund_method && <p className={errorClass}>{paymentErrors.refund_method}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-dark mb-1">Refund UTR / Reference</label>
@@ -355,6 +366,7 @@ export default function PaymentModal({
                       className={`${inputClass} ${paymentForm.refund_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
                       placeholder={paymentForm.refund_method === 'Cash' ? 'N/A for cash' : 'e.g. 987654XXXX'}
                     />
+                    {paymentErrors.refund_utr && <p className={errorClass}>{paymentErrors.refund_utr}</p>}
                   </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-dark mb-1">Refund Date</label>
@@ -385,7 +397,17 @@ export default function PaymentModal({
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onSave} loading={savingPayment}>Save Payment</Button>
+            <Button
+              variant="primary"
+              size="md"
+              className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+              onClick={onSave}
+              loading={savingPayment}
+              disabled={hasPaymentErrors}
+              title={hasPaymentErrors ? 'Fix the highlighted fields before saving' : undefined}
+            >
+              Save Payment
+            </Button>
           </div>
         </div>
       )}

@@ -155,7 +155,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<BookingFormData>();
+  } = useForm<BookingFormData>({
+    // Default is 'onSubmit', which only runs validation (and shows errors)
+    // after the first Save attempt. 'onChange' validates on every keystroke
+    // instead, so a bad phone/email/name shows its error message live as
+    // the user types rather than only surfacing on save.
+    mode: 'onChange',
+  });
 
   const onSubmit = async (data: BookingFormData) => {
     // Trim all text fields to strip accidental leading/trailing whitespace
