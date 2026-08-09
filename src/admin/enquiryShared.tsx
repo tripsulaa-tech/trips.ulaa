@@ -143,6 +143,31 @@ export type PaymentForm = {
 // so wording can never drift between the two dropdowns.
 export const PAYMENT_TYPE_OPTIONS: { value: PaymentForm['payment_type']; label: string }[] = GENERATE_INVOICE_TYPE_OPTIONS;
 
+// 'Balance' is meant for the payment that clears whatever's left owing —
+// unlike 'Installment', which is any partial payment with more expected
+// after it. Nothing else in the data model enforces that distinction, so
+// without this check an admin could pick 'Balance' on a payment that
+// doesn't actually zero out the amount due, leaving the ledger's own
+// labels misleading. Only 'Balance' is gated this way; every other type
+// (including 'Installment') stays freely selectable.
+export function clearsBalance(paymentForm: PaymentForm, alreadyPaid: number): boolean {
+  if (paymentForm.payment_type === 'extra_charge') return false;
+  if (paymentForm.total_amount === '') return false;
+  const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
+  if (thisPayment <= 0) return false;
+  const remaining = Number(paymentForm.total_amount) - alreadyPaid - thisPayment;
+  return remaining <= 0;
+}
+
+// Same list as PAYMENT_TYPE_OPTIONS, minus 'Balance' when this payment
+// wouldn't actually clear the amount due — see clearsBalance above. Callers
+// pair this with an effect that steers payment_type off 'balance' the
+// moment it stops qualifying (e.g. the admin lowers the amount after
+// picking it), so the Select's current value always stays in this list.
+export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPaid: number): { value: PaymentForm['payment_type']; label: string }[] {
+  return clearsBalance(paymentForm, alreadyPaid) ? PAYMENT_TYPE_OPTIONS : PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'balance');
+}
+
 export const FOOD_PREFERENCE_OPTIONS = [
   { value: '', label: 'Not asked / unknown' },
   { value: 'veg', label: 'Veg' },

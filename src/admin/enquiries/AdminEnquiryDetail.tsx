@@ -37,7 +37,7 @@ import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../../utils/utils-index';
 import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
-  GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_TYPE_OPTIONS, emptyGenerateInvoiceForm,
+  GENERATE_INVOICE_TYPE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, availablePaymentTypeOptions, clearsBalance, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus, canCancelBooking,
@@ -156,6 +156,18 @@ export default function AdminEnquiryDetail() {
   const [paymentForm, setPaymentForm] = useState<PaymentForm>(emptyPaymentForm);
   const [savingPayment, setSavingPayment] = useState(false);
   const [togglingNoShow, setTogglingNoShow] = useState(false);
+
+  // 'Balance' is only meant for the payment that actually zeroes out the
+  // amount due — if the admin picked it and then edits the amount (or
+  // total) so it no longer does, drop back to 'Installment' rather than
+  // leaving 'Balance' selected but no longer true. See clearsBalance in
+  // enquiryShared.
+  useEffect(() => {
+    if (!enquiry) return;
+    if (paymentForm.payment_type === 'balance' && !clearsBalance(paymentForm, enquiry.amount_paid || 0)) {
+      setPaymentForm(f => ({ ...f, payment_type: 'installment' }));
+    }
+  }, [enquiry, paymentForm]);
 
   const openPayment = () => {
     if (!enquiry) return;
@@ -1168,11 +1180,16 @@ export default function AdminEnquiryDetail() {
             <Select
               value={paymentForm.payment_type}
               onChange={val => setPaymentForm(f => ({ ...f, payment_type: val as PaymentForm['payment_type'] }))}
-              options={PAYMENT_TYPE_OPTIONS}
+              options={availablePaymentTypeOptions(paymentForm, enquiry.amount_paid || 0)}
             />
             {paymentForm.payment_type === 'extra_charge' && (
               <p className="text-[11px] text-dark-muted mt-1">
                 Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
+              </p>
+            )}
+            {paymentForm.payment_type !== 'extra_charge' && !clearsBalance(paymentForm, enquiry.amount_paid || 0) && (
+              <p className="text-[11px] text-dark-muted mt-1">
+                'Balance' will appear here once the amount above clears what's still owed.
               </p>
             )}
           </div>
