@@ -556,7 +556,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
                     <p className="px-4 py-2 text-xs text-dark-muted truncate border-b border-background-warm mb-1">{user?.email}</p>
                     <button
                       onClick={handleSignOut}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-dark hover:bg-red-50 hover:text-red-600 w-full transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-dark hover:bg-primary/5 hover:text-primary w-full transition-colors"
                     >
                       <LogOut size={16} />
                       Sign Out

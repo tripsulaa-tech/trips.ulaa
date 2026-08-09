@@ -80,6 +80,14 @@ const ICON_GLOBE = '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0
 const ICON_MAIL = '<path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/>';
 const ICON_PHONE = '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>';
 
+// Price-summary-card icons (Total Amount / Amount Paid / Balance Due), same
+// lucide set as above: Wallet, CircleCheckBig, ReceiptIndianRupee — swapped
+// in for the old hand-drawn line-primitive icons so these read as crisp,
+// recognizable glyphs instead of rough approximations.
+const ICON_WALLET = '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>';
+const ICON_CIRCLE_CHECK = '<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>';
+const ICON_RECEIPT_RUPEE = '<path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"/><path d="M8 11h8"/><path d="M8 7h8"/><path d="M9 7a4 4 0 0 1 0 8H8l3 2"/>';
+
 /** Renders one lucide-style icon (stroke-only, 24x24 viewBox) as a real
  *  vector shape at (x, y) sized to `size` points — via svg2pdf.js, which
  *  converts an actual SVG element into native jsPDF drawing commands. This
@@ -417,33 +425,21 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
   const cardW = (CONTENT_W - cardGap * 2) / 3;
   const cardH = 62;
 
-  function drawIconCircle(cx: number, cy0: number, bg: RGB, fg: RGB, kind: 'wallet' | 'card' | 'receipt') {
+  const CARD_ICONS = { wallet: ICON_WALLET, card: ICON_CIRCLE_CHECK, receipt: ICON_RECEIPT_RUPEE };
+
+  async function drawIconCircle(cx: number, cy0: number, bg: RGB, fg: RGB, kind: 'wallet' | 'card' | 'receipt') {
     setFill(bg);
     doc.circle(cx, cy0, 15, 'F');
-    setDraw(fg);
-    doc.setLineWidth(1.4);
-    if (kind === 'wallet') {
-      doc.roundedRect(cx - 7, cy0 - 5, 14, 10, 1.5, 1.5, 'S');
-      doc.line(cx + 2, cy0, cx + 7, cy0);
-    } else if (kind === 'card') {
-      doc.roundedRect(cx - 7, cy0 - 5, 14, 10, 1.5, 1.5, 'S');
-      doc.line(cx - 7, cy0 - 1.5, cx + 7, cy0 - 1.5);
-    } else {
-      doc.line(cx - 5, cy0 - 6, cx - 5, cy0 + 6);
-      doc.line(cx + 5, cy0 - 6, cx + 5, cy0 + 6);
-      doc.line(cx - 5, cy0 - 6, cx + 5, cy0 - 6);
-      doc.line(cx - 5, cy0 + 6, cx + 5, cy0 + 6);
-      doc.line(cx - 2.5, cy0 - 2, cx + 2.5, cy0 - 2);
-      doc.line(cx - 2.5, cy0 + 2, cx + 2.5, cy0 + 2);
-    }
+    const size = 16;
+    await drawVectorIcon(doc, CARD_ICONS[kind], cx - size / 2, cy0 - size / 2, size, fg);
   }
 
-  function drawPriceCard(x: number, label: string, amount: string, color: RGB, iconBg: RGB, kind: 'wallet' | 'card' | 'receipt') {
+  async function drawPriceCard(x: number, label: string, amount: string, color: RGB, iconBg: RGB, kind: 'wallet' | 'card' | 'receipt') {
     setFill(COLORS.cream);
     setDraw(COLORS.grayLineSoft);
     doc.setLineWidth(0.75);
     doc.roundedRect(x, cy, cardW, cardH, 3, 3, 'FD');
-    drawIconCircle(x + 28, cy + cardH / 2, iconBg, color, kind);
+    await drawIconCircle(x + 28, cy + cardH / 2, iconBg, color, kind);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     setText(COLORS.darkMuted);
@@ -454,9 +450,9 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
     doc.text(amount, x + 50, cy + cardH / 2 + 12);
   }
 
-  drawPriceCard(MARGIN, 'Total Amount', money(total), COLORS.dark, COLORS.backgroundWarm, 'wallet');
-  drawPriceCard(MARGIN + cardW + cardGap, 'Amount Paid', money(paid), COLORS.green, COLORS.greenBg, 'card');
-  drawPriceCard(
+  await drawPriceCard(MARGIN, 'Total Amount', money(total), COLORS.dark, COLORS.backgroundWarm, 'wallet');
+  await drawPriceCard(MARGIN + cardW + cardGap, 'Amount Paid', money(paid), COLORS.green, COLORS.greenBg, 'card');
+  await drawPriceCard(
     MARGIN + (cardW + cardGap) * 2,
     'Balance Due',
     money(balance),
@@ -479,13 +475,26 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
   doc.line(MARGIN, cy + 6, PAGE_W - MARGIN, cy + 6);
   cy += 24;
 
-  const colInvoice = MARGIN;
-  const colDate = MARGIN + 78;
-  const colType = MARGIN + 138;
-  const colMethod = MARGIN + 200;
-  const colUtr = MARGIN + 265;
-  const colAmountRight = MARGIN + CONTENT_W - 95;
-  const colStatus = MARGIN + CONTENT_W - 85;
+  // Column x-positions, sized from actual measured max text widths for
+  // each column's content (invoice numbers, dates, UTR strings, etc.) plus
+  // a fixed buffer — not guesses — so no column's text can ever run into
+  // the next column or its divider line, regardless of content length.
+  const colInvoice = MARGIN;       // 40
+  const colDate = MARGIN + 88;     // 128
+  const colType = MARGIN + 149;    // 189
+  const colMethod = MARGIN + 228;  // 268
+  const colUtr = MARGIN + 293;     // 333
+  const colAmountRight = MARGIN + 443; // 483, right-aligned
+  const colStatus = MARGIN + 447;      // 487, badge centered at colStatus+32
+
+  // Vertical divider x-positions, one centered in each gap between columns.
+  const TABLE_DIVIDERS = [123, 184, 263, 328, 423, 488];
+
+  function drawColumnDividers(y: number, h: number, color: RGB) {
+    setDraw(color);
+    doc.setLineWidth(0.5);
+    TABLE_DIVIDERS.forEach((x) => doc.line(x, y, x, y + h));
+  }
 
   function drawTableHeader() {
     setFill(COLORS.primaryDark);
@@ -500,6 +509,7 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
     doc.text('UTR / TXN ID', colUtr, cy + 15.5);
     doc.text('AMOUNT', colAmountRight, cy + 15.5, { align: 'right' });
     doc.text('STATUS', colStatus + 32, cy + 15.5, { align: 'center' });
+    drawColumnDividers(cy, 24, COLORS.secondary);
     cy += 24;
   }
 
@@ -547,13 +557,13 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
       doc.text(fdate(p.paid_at), colDate, textY);
       doc.text(PAYMENT_TYPE_LABEL[p.payment_type] ?? p.payment_type, colType, textY);
 
-      const methodLines = doc.splitTextToSize(val(p.payment_method), 58);
+      const methodLines = doc.splitTextToSize(val(p.payment_method), 55);
       doc.text(methodLines[0], colMethod, textY);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.8);
       setText(p.utr_number ? COLORS.dark : COLORS.darkMuted);
-      const utrLines = doc.splitTextToSize(val(p.utr_number), 88);
+      const utrLines = doc.splitTextToSize(val(p.utr_number), 85);
       doc.text(utrLines[0], colUtr, textY);
 
       doc.setFont('helvetica', 'bold');
@@ -571,6 +581,7 @@ export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]):
       setText(isPending ? COLORS.primaryDark : COLORS.green);
       doc.text(badgeText, colStatus + 32, cy + rowH / 2 + 3, { align: 'center' });
 
+      drawColumnDividers(cy, rowH, COLORS.grayLineSoft);
       cy += rowH;
     });
   }

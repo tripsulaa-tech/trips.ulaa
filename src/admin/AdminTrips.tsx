@@ -869,7 +869,7 @@ export default function AdminTrips() {
                           <button onClick={() => openEdit(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title="Edit">
                             <Edit2 size={15} />
                           </button>
-                          <button onClick={() => handleDelete(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-red-50 active:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Delete">
+                          <button onClick={() => handleDelete(trip)} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-primary/5 active:bg-primary/5 text-dark-muted hover:text-primary transition-colors" title="Delete">
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -1128,7 +1128,7 @@ export default function AdminTrips() {
                   <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Photo {i + 1}</span>
-                      <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: f.gallery_items.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: f.gallery_items.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} /></button>
                     </div>
                     <ImageUploadField
                       label=""
@@ -1190,7 +1190,7 @@ export default function AdminTrips() {
                   <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Card {i + 1}</span>
-                      <button type="button" onClick={() => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} /></button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
@@ -1245,7 +1245,7 @@ export default function AdminTrips() {
                 <div key={gi} className="border border-background-warm rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Group {gi + 1}</span>
-                    <button type="button" onClick={() => setForm(f => ({ ...f, included_groups: f.included_groups.filter((_, idx) => idx !== gi) }))} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, included_groups: f.included_groups.filter((_, idx) => idx !== gi) }))} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} /></button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -1293,7 +1293,7 @@ export default function AdminTrips() {
                             <button
                               type="button"
                               onClick={() => setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, bullets: g.bullets.filter((_, i) => i !== bi) } : g) }))}
-                              className="text-dark-muted hover:text-red-600 transition-colors shrink-0"
+                              className="text-dark-muted hover:text-primary transition-colors shrink-0"
                               title="Remove"
                             >
                               <X size={15} />
@@ -1332,7 +1332,7 @@ export default function AdminTrips() {
                     />
                   </div>
                   <input value={item.description} onChange={e => setForm(f => ({ ...f, things_to_carry_items: f.things_to_carry_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. Warm jacket" />
-                  <button type="button" onClick={() => setForm(f => ({ ...f, things_to_carry_items: f.things_to_carry_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
+                  <button type="button" onClick={() => setForm(f => ({ ...f, things_to_carry_items: f.things_to_carry_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
                 </div>
               ))}
               {form.things_to_carry_items.length === 0 && <p className="text-xs text-dark-muted">No items yet. Click "Add Item" to begin.</p>}
@@ -1364,7 +1364,7 @@ export default function AdminTrips() {
                     />
                   </div>
                   <input value={item.description} onChange={e => setForm(f => ({ ...f, confidence_items: f.confidence_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. 24/7 on-ground support" />
-                  <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: f.confidence_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
+                  <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: f.confidence_items.filter((_, idx) => idx !== i) }))} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} /></button>
                 </div>
               ))}
               {form.confidence_items.length === 0 && <p className="text-xs text-dark-muted">No confidence items yet.</p>}

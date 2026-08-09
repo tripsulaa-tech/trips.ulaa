@@ -244,7 +244,7 @@ export default function AdminTestimonials() {
                             {t.is_published ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                           <button onClick={() => openEdit(t)} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDelete(t.id)} className="p-2 rounded hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
+                          <button onClick={() => handleDelete(t.id)} className="p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </motion.tr>

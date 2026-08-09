@@ -75,10 +75,10 @@ export default function DetailsModal({
                   <p className="text-dark text-sm font-mono truncate">{detailsTarget.booking_id}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Button variant="secondary" size="sm" onClick={() => onDownloadInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
+                  <Button variant="outline" size="sm" onClick={() => onDownloadInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
                     <FileText size={14} /> Invoice
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={() => onShareInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
+                  <Button variant="outline" size="sm" onClick={() => onShareInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
                     <Share2 size={14} /> Share
                   </Button>
                 </div>
@@ -116,7 +116,7 @@ export default function DetailsModal({
                 {detailsTarget.booking_status && detailsTarget.booking_status !== 'cancelled' && detailsTarget.booking_status !== 'completed' && (
                   <div className="flex justify-end">
                     <Button
-                      variant="secondary"
+                      variant="primary"
                       size="sm"
                       onClick={() => onMarkCompleted(detailsTarget)}
                       disabled={completingId === detailsTarget.id}
@@ -133,7 +133,7 @@ export default function DetailsModal({
                     <p className="text-dark text-xs font-button font-semibold flex items-center gap-1.5">
                       <Receipt size={13} className="shrink-0" /> Invoices
                     </p>
-                    <Button variant="secondary" size="sm" className="self-start" onClick={() => onOpenGenerateInvoice(detailsTarget)}>
+                    <Button variant="primary" size="sm" className="self-start" onClick={() => onOpenGenerateInvoice(detailsTarget)}>
                       <Plus size={13} /> Generate Invoice
                     </Button>
                   </div>
@@ -169,7 +169,7 @@ export default function DetailsModal({
                               </span>
                               {isPending && (
                                 <Button
-                                  variant="secondary"
+                                  variant="primary"
                                   size="sm"
                                   onClick={() => onMarkInvoicePaid(inv)}
                                   disabled={invoiceRowBusyId === inv.id}

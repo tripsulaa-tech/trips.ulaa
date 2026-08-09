@@ -148,7 +148,7 @@ export default function AdminBottomNav() {
                   <button
                     type="button"
                     onClick={() => removeTab(index)}
-                    className="mt-5 p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+                    className="mt-5 p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
                     title="Remove tab"
                   >
                     <Trash2 size={15} />

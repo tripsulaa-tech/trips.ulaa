@@ -2503,7 +2503,7 @@ export default function AdminEnquiries() {
                   <button
                     onClick={handleBulkDelete}
                     disabled={bulkDeleting}
-                    className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-60"
+                    className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-primary/30 text-primary hover:bg-primary/5 transition-colors disabled:opacity-60"
                   >
                     <Trash2 size={14} /> {bulkDeleting ? 'Deleting…' : 'Delete'}
                   </button>

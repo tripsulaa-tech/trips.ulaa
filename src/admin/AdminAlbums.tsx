@@ -221,7 +221,7 @@ export default function AdminAlbums() {
                             {album.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
                           </button>
                           <button onClick={() => openEdit(album)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={15} /></button>
-                          <button onClick={() => handleDelete(album)} className="p-1.5 rounded hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
+                          <button onClick={() => handleDelete(album)} className="p-1.5 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={15} /></button>
                         </div>
                       </td>
                     </motion.tr>

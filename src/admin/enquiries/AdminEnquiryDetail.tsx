@@ -721,7 +721,7 @@ export default function AdminEnquiryDetail() {
       <AdminLayout title="Enquiry Details">
         <div className="p-6 space-y-3">
           <p className="text-dark-muted text-sm">This enquiry couldn't be found — it may have been deleted.</p>
-          <Button variant="secondary" size="sm" onClick={() => navigate('/admin/enquiries')}>
+          <Button variant="primary" size="sm" onClick={() => navigate('/admin/enquiries')}>
             <ArrowLeft size={14} /> Back to Enquiries
           </Button>
         </div>
@@ -884,7 +884,7 @@ export default function AdminEnquiryDetail() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {nma && (
-                <Button variant="outline" size="sm" onClick={handleAdvance} disabled={busyAction} className="!border-primary/30 !text-primary">
+                <Button variant="primary" size="sm" onClick={handleAdvance} disabled={busyAction}>
                   <nma.icon size={14} /> {nma.label}
                 </Button>
               )}
@@ -934,13 +934,13 @@ export default function AdminEnquiryDetail() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button variant="secondary" size="sm" onClick={openPayment}>
+              <Button variant="outline" size="sm" onClick={openPayment}>
                 <IndianRupee size={13} /> Track Payment
               </Button>
             </div>
             {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
               <div className="flex justify-end">
-                <Button variant="secondary" size="sm" onClick={handleMarkCompleted} disabled={busyAction}>
+                <Button variant="primary" size="sm" onClick={handleMarkCompleted} disabled={busyAction}>
                   <CheckCircle2 size={13} /> Mark Trip Completed
                 </Button>
               </div>
@@ -976,7 +976,7 @@ export default function AdminEnquiryDetail() {
               <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
                 <Receipt size={14} className="shrink-0" /> Invoices &amp; Payments
               </p>
-              <Button variant="secondary" size="sm" className="self-start" onClick={() => generateInvoice.open(enquiry)}>
+              <Button variant="primary" size="sm" className="self-start" onClick={() => generateInvoice.open(enquiry)}>
                 <Plus size={13} /> Generate Invoice
               </Button>
             </div>
@@ -1009,7 +1009,7 @@ export default function AdminEnquiryDetail() {
                           <BadgeCheck size={10} /> {isPending ? 'Pending' : 'Paid'}
                         </span>
                         {isPending && (
-                          <Button variant="secondary" size="sm" onClick={() => handleMarkInvoicePaid(inv)} disabled={invoiceRowBusyId === inv.id}>
+                          <Button variant="primary" size="sm" onClick={() => handleMarkInvoicePaid(inv)} disabled={invoiceRowBusyId === inv.id}>
                             Mark Paid
                           </Button>
                         )}

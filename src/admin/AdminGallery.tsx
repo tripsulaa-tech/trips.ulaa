@@ -129,7 +129,7 @@ export default function AdminGallery() {
                     </button>
                     <button
                       onClick={() => handleDelete(img)}
-                      className="p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
+                      className="p-2 rounded bg-primary text-white hover:bg-primary-dark transition-colors"
                       title="Delete"
                     >
                       <Trash2 size={16} />

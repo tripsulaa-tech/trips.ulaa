@@ -616,7 +616,7 @@ export default function AdminAbout() {
                   <button
                     type="button"
                     onClick={() => removeHYEItem(i)}
-                    className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
                     title="Remove"
                   >
                     <Trash2 size={15} />
@@ -675,7 +675,7 @@ export default function AdminAbout() {
                   <button
                     type="button"
                     onClick={() => removeWTUItem(i)}
-                    className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
                     title="Remove"
                   >
                     <Trash2 size={15} />
@@ -741,7 +741,7 @@ export default function AdminAbout() {
                   <button
                     type="button"
                     onClick={() => removeWhyCard(i)}
-                    className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -947,7 +947,7 @@ export default function AdminAbout() {
                     <button
                       type="button"
                       onClick={() => removeStep(i)}
-                      className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
                     >
                       <Trash2 size={14} />
                     </button>
