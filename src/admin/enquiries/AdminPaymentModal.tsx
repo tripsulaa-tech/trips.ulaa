@@ -5,8 +5,8 @@ import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, GENERATE_INVOICE_STATUS_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from '../enquiryShared';
-import type { PaymentForm } from '../enquiryShared';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, GENERATE_INVOICE_STATUS_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from './AdminEnquiryCommon';
+import type { PaymentForm } from './AdminEnquiryCommon';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
 import { inputClass } from './AdminEnquiriesShared';
@@ -51,7 +51,7 @@ export default function PaymentModal({
   // amount due — if the admin picked it and then edits the amount (or
   // total) so it no longer does, drop back to 'Installment' rather than
   // leaving 'Balance' selected but no longer true. See clearsBalance in
-  // enquiryShared.
+  // AdminEnquiryCommon.
   useEffect(() => {
     if (!paymentTarget) return;
     if (paymentForm.payment_type === 'balance' && !clearsBalance(paymentForm, paymentTarget.amount_paid || 0)) {

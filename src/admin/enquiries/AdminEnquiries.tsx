@@ -23,8 +23,8 @@ import {
   journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend, JOURNEY_STAGE_CONFIG,
   closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus, canCancelBooking,
-} from '../enquiryShared';
-import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
+} from './AdminEnquiryCommon';
+import type { GenerateInvoiceForm, PaymentForm } from './AdminEnquiryCommon';
 
 import {
   phoneSignature, emailSignature, GROUP_COLOR_PALETTE,
@@ -84,7 +84,7 @@ export default function AdminEnquiries() {
   // Quick toggle for "follow-ups due" — deliberately just a boolean chip
   // (not a full FilterDropdown like Payment/Booking above) since there's
   // only ever one meaningful thing to isolate here: reminders that are due
-  // today or overdue. See followUpStatus() in enquiryShared.tsx for what
+  // today or overdue. See followUpStatus() in AdminEnquiryCommon.tsx for what
   // counts as "due".
   const [followUpDueOnly, setFollowUpDueOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -901,7 +901,7 @@ export default function AdminEnquiries() {
   // Mirrors AdminEnquiryDetail.tsx's handling exactly — this only applies
   // before anything's been paid, i.e. closing out a lead that went nowhere
   // after being contacted, as opposed to Cancel Booking (money already on
-  // it). See isNotInterested()'s comment in enquiryShared.tsx for why
+  // it). See isNotInterested()'s comment in AdminEnquiryCommon.tsx for why
   // 'closed' status alone is ambiguous without this. Added here (not just
   // on the CRM detail page) so the admin doesn't have to open a row just
   // to drop a lead that said no.
@@ -934,7 +934,7 @@ export default function AdminEnquiries() {
   // Mirrors the Not Interested modal's shape (target + form state, confirm
   // handler) but writes just follow_up_at via setEnquiryFollowUp — this
   // never touches status/journey_stage itself. See canSetFollowUp/
-  // followUpStatus in enquiryShared.tsx and add_enquiry_follow_up.sql.
+  // followUpStatus in AdminEnquiryCommon.tsx and add_enquiry_follow_up.sql.
   const [followUpTarget, setFollowUpTarget] = useState<Enquiry | null>(null);
   const [followUpDate, setFollowUpDate] = useState('');
   const openFollowUpModal = (enquiry: Enquiry) => {
@@ -972,7 +972,7 @@ export default function AdminEnquiries() {
   // Mirrors the Lead Follow-up block above, but for balance-payment/
   // document/passport-type reminders that only make sense once a booking
   // has actually started. See canSetBookingFollowUp/bookingFollowUpStatus
-  // in enquiryShared.tsx and add_booking_follow_up.sql.
+  // in AdminEnquiryCommon.tsx and add_booking_follow_up.sql.
   const [bookingFollowUpTarget, setBookingFollowUpTarget] = useState<Enquiry | null>(null);
   const handleSaveBookingFollowUp = async (result: BookingFollowUpResult) => {
     if (!bookingFollowUpTarget) return;

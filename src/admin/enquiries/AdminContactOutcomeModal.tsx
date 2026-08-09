@@ -6,7 +6,7 @@ import DatePicker from '../../components/ui/DatePicker';
 import { useConfirm } from '../../components/ui/useConfirm';
 import {
   CONTACT_OUTCOME_CONFIG, CONTACT_OUTCOME_OPTIONS, NOT_INTERESTED_REASON_OPTIONS,
-} from '../enquiryShared';
+} from './AdminEnquiryCommon';
 import type { ClosedReason, ContactOutcome, Enquiry } from '../../types/types-index';
 import { inputClass } from './AdminEnquiriesShared';
 

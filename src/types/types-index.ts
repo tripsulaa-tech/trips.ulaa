@@ -362,7 +362,7 @@ export interface Enquiry {
   // cancelled_at remains the authoritative timestamp — this is a synced
   // label for filtering/display. Defaults to 'active' in the DB, so it's
   // always present on rows fetched after add_booking_state.sql. See
-  // bookingState() in enquiryShared.tsx.
+  // bookingState() in AdminEnquiryCommon.tsx.
   booking_state: 'active' | 'cancelled';
   // Stamped when an admin marks the traveller checked in for the trip via
   // checkInEnquiry(). Null means not checked in yet.
@@ -390,7 +390,7 @@ export interface Enquiry {
   // needs chasing after the booking has started (balance payment,
   // passport, documents, etc.), completely separate from the Lead
   // Follow-up fields above. See canSetBookingFollowUp/bookingFollowUpStatus
-  // in enquiryShared.tsx and add_booking_follow_up.sql for the DB
+  // in AdminEnquiryCommon.tsx and add_booking_follow_up.sql for the DB
   // constraint keeping the two windows from overlapping on the same row.
   booking_follow_up_at?: string | null;
   booking_follow_up_time?: string | null;

@@ -8,7 +8,7 @@ import {
   inputClass,
 } from './AdminEnquiriesShared';
 import type { BulkEditForm } from './AdminEnquiriesShared';
-import { parseNonNegative } from '../enquiryShared';
+import { parseNonNegative } from './AdminEnquiryCommon';
 
 export default function BulkEditModal({
   isOpen,

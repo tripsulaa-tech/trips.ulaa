@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, CANCELLATION_REASON_OPTIONS } from '../enquiryShared';
+import { parseNonNegative, CANCELLATION_REASON_OPTIONS } from './AdminEnquiryCommon';
 import type { CancellationReason, Enquiry } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
 import { inputClass } from './AdminEnquiriesShared';

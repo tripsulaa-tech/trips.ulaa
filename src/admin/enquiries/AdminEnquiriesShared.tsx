@@ -6,7 +6,7 @@
 import { CheckCircle2, Clock, RefreshCw, CheckCircle, XCircle, Circle } from 'lucide-react';
 import type { Enquiry } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
-import { PACKAGE_OPTIONS } from '../enquiryShared';
+import { PACKAGE_OPTIONS } from './AdminEnquiryCommon';
 
 // Digits-only phone "signature" used for fuzzy duplicate matching (3.5).
 // The DB's own duplicate guard only catches an *exact* string match on
@@ -158,7 +158,7 @@ export function isCancelled(e: Enquiry): boolean {
 }
 
 // "Booking State" (CRM spec section 3) as its own labelled badge, distinct
-// from the Booking Journey badge (journeyBadge() in enquiryShared.tsx) —
+// from the Booking Journey badge (journeyBadge() in AdminEnquiryCommon.tsx) —
 // used on the enquiry detail page so Journey and State render as two
 // separate pieces of information instead of one field trying to carry
 // both, per the spec's core principle of not mixing responsibilities.
@@ -224,7 +224,7 @@ export const STATUS_CONFIG = {
 };
 
 // JOURNEY_STAGE_CONFIG / journeyBadge / nextManualAction / BookingLifecycleStepper
-// now all live in enquiryShared.tsx (imported by AdminEnquiries.tsx).
+// now all live in AdminEnquiryCommon.tsx (imported by AdminEnquiries.tsx).
 
 export const PAY_FILTER_LABELS = {
   all: 'All',
@@ -269,7 +269,7 @@ export function packageFilterKey(e: Enquiry): 'early_bird' | 'normal' {
   return e.package_type === 'early_bird' ? 'early_bird' : 'normal';
 }
 
-// foodPreferenceKey / SOURCE_CONFIG now live in enquiryShared.tsx (imported
+// foodPreferenceKey / SOURCE_CONFIG now live in AdminEnquiryCommon.tsx (imported
 // by AdminEnquiries.tsx).
 
 export type EnquiryForm = {

@@ -3,7 +3,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { NOT_INTERESTED_REASON_OPTIONS } from '../enquiryShared';
+import { NOT_INTERESTED_REASON_OPTIONS } from './AdminEnquiryCommon';
 import type { ClosedReason, Enquiry } from '../../types/types-index';
 
 export default function NotInterestedModal({

@@ -42,8 +42,8 @@ import {
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus, canCancelBooking,
   CANCELLATION_REASON_OPTIONS, REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
-} from '../enquiryShared';
-import type { GenerateInvoiceForm, PaymentForm } from '../enquiryShared';
+} from './AdminEnquiryCommon';
+import type { GenerateInvoiceForm, PaymentForm } from './AdminEnquiryCommon';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquiriesShared';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
@@ -161,7 +161,7 @@ export default function AdminEnquiryDetail() {
   // amount due — if the admin picked it and then edits the amount (or
   // total) so it no longer does, drop back to 'Installment' rather than
   // leaving 'Balance' selected but no longer true. See clearsBalance in
-  // enquiryShared.
+  // AdminEnquiryCommon.
   useEffect(() => {
     if (!enquiry) return;
     if (paymentForm.payment_type === 'balance' && !clearsBalance(paymentForm, enquiry.amount_paid || 0)) {
@@ -248,7 +248,7 @@ export default function AdminEnquiryDetail() {
   // ---- Not Interested / Reopen (this is just a query, not a booking) ----
   // Distinct from Cancel Booking, which is for a booking that had money on
   // it. This only applies before anything's been paid — closing out a lead
-  // that went nowhere. See isNotInterested()'s comment in enquiryShared.tsx
+  // that went nowhere. See isNotInterested()'s comment in AdminEnquiryCommon.tsx
   // for why 'closed' status alone is ambiguous without this.
   const [busyStatus, setBusyStatus] = useState(false);
   // Opens the reason-picker modal below instead of closing immediately —
@@ -295,7 +295,7 @@ export default function AdminEnquiryDetail() {
   // Same shape as Not Interested above (target-less here since this page is
   // already scoped to one enquiry) but writes just follow_up_at via
   // setEnquiryFollowUp — never touches status/journey_stage. See
-  // canSetFollowUp/followUpStatus in enquiryShared.tsx.
+  // canSetFollowUp/followUpStatus in AdminEnquiryCommon.tsx.
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [followUpDate, setFollowUpDate] = useState('');
   const [busyFollowUp, setBusyFollowUp] = useState(false);
@@ -813,7 +813,7 @@ export default function AdminEnquiryDetail() {
   // already checked in (spec section 18: "Checked In ... Not Allowed:
   // Cancel Booking" — undo the check-in first), nor a lead that hasn't
   // agreed to book yet ("New"/"Contacted": "Not Allowed: Cancel Booking" —
-  // see canCancelBooking() in enquiryShared.tsx) — see cancelEnquiry's
+  // see canCancelBooking() in AdminEnquiryCommon.tsx) — see cancelEnquiry's
   // guards in services/api.ts. Omit the action entirely rather than
   // showing it disabled or letting the click round-trip into an error
   // alert.

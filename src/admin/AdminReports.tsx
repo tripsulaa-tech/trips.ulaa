@@ -24,7 +24,7 @@ import AdminLayout from './AdminLayout';
 import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin } from '../services/api';
 import type { Enquiry, UpcomingTrip, CompletedTrip } from '../types/types-index';
 import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
-import { closedReasonBreakdown, isNotInterested } from './enquiryShared';
+import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
 
 type Period = 'all' | 'month' | '30d';

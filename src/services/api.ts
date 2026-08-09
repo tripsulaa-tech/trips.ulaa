@@ -641,7 +641,7 @@ function isSeatsUnavailableError(error: { message?: string }): boolean {
 // was describing. The trade-off is an occasional gap in the timeline rather
 // than a blocked booking — the right side to fail open on.
 // Local, log-message-only label map — deliberately NOT importing
-// INVOICE_TYPE_LABEL from admin/enquiryShared.tsx here: that file is UI
+// INVOICE_TYPE_LABEL from admin/AdminEnquiryCommon.tsx here: that file is UI
 // layer (and itself imports from this services file), so pulling it in
 // here would be a layering violation risking a circular import. This is
 // intentionally a smaller, log-copy-specific set of labels, not a shared
@@ -846,7 +846,7 @@ export async function updateEnquiryStatus(
 // never a half-saved state (see the "Status must NEVER become Contacted
 // until popup is successfully saved" rule this implements).
 //
-// Branching mirrors CONTACT_OUTCOME_CONFIG.effect in enquiryShared.tsx:
+// Branching mirrors CONTACT_OUTCOME_CONFIG.effect in AdminEnquiryCommon.tsx:
 //   - interested            -> status 'contacted', journey_stage advances
 //                               towards Advance Pending as soon as the
 //                               caller opens Track Payment and total_amount
@@ -1094,7 +1094,7 @@ function computeJourneyStage(e: {
   // either of the two branches below either. Without this, a closed lead
   // silently fell all the way through to 'new_enquiry'. See
   // add_not_interested_journey_stage.sql / isNotInterested() in
-  // enquiryShared.tsx for the full rationale.
+  // AdminEnquiryCommon.tsx for the full rationale.
   if (e.status === 'closed') return 'not_interested';
   if (e.status === 'contacted' && e.total_amount) return 'advance_pending';
   if (e.status === 'contacted') return 'contacted';
@@ -1128,7 +1128,7 @@ async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
   // 'advance_pending', and 'advance_paid' (status only flips off
   // 'contacted' once amount_paid reaches total_amount — see
   // computeAutoStatus above). Kept in sync with canSetFollowUp() in
-  // enquiryShared.tsx. Every mutating path that can move a lead past that
+  // AdminEnquiryCommon.tsx. Every mutating path that can move a lead past that
   // point (booking confirmed, fully paid, closed as Not Interested,
   // reopened, cancelled, etc.) already routes through here, so this is the
   // one place a stale reminder needs clearing rather than every call site
@@ -1178,7 +1178,7 @@ async function refreshJourneyStage(enquiryId: string): Promise<Enquiry> {
 // Aug 15". Deliberately separate from updateEnquiryStatus: this never
 // touches status/journey_stage itself, it's a reminder layered on top of
 // wherever the lead already sits (see canSetFollowUp/followUpStatus in
-// enquiryShared.tsx). The DB check constraint only allows a non-null value
+// AdminEnquiryCommon.tsx). The DB check constraint only allows a non-null value
 // while status = 'contacted' — refreshJourneyStage() clears it back to
 // null automatically once the lead moves on, so nothing else needs to.
 export async function setEnquiryFollowUp(id: string, followUpAt: string | null): Promise<void> {
@@ -1865,7 +1865,7 @@ export async function cancelEnquiry(
   // Spec section 18's Cancellation Rules: cancelling only makes sense once
   // a booking has actually started (past Advance Pending) — a lead that
   // hasn't agreed to book yet has nothing to cancel. Mirrors
-  // canCancelBooking() in enquiryShared.tsx, which already keeps the
+  // canCancelBooking() in AdminEnquiryCommon.tsx, which already keeps the
   // button hidden in this state; this is the server-side backstop.
   if (
     enquiry.journey_stage === 'new_enquiry' || enquiry.journey_stage === 'contacted'

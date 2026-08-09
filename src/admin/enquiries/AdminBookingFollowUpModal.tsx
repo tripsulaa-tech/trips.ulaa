@@ -4,7 +4,7 @@ import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import DatePicker from '../../components/ui/DatePicker';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { BOOKING_FOLLOW_UP_TYPE_CONFIG } from '../enquiryShared';
+import { BOOKING_FOLLOW_UP_TYPE_CONFIG } from './AdminEnquiryCommon';
 import type { BookingFollowUpType, Enquiry } from '../../types/types-index';
 import { inputClass } from './AdminEnquiriesShared';
 
