@@ -197,7 +197,7 @@ export default function TripDetailPage() {
   }, [trip?.id]);
 
   // Deep-link support for "?book=1" (e.g. the downloaded itinerary PDF's
-  // "Secure Your Spot" link) — opens the booking modal automatically once
+  // "Pack Your Bags" link) — opens the booking modal automatically once
   // the trip has loaded, instead of requiring the visitor to find the CTA.
   useEffect(() => {
     if (trip && searchParams.get('book') === '1') setBookingOpen(true);
@@ -521,7 +521,7 @@ export default function TripDetailPage() {
                 onClick={() => setBookingOpen(true)}
                 className="group/btn flex-1 sm:flex-none whitespace-nowrap sm:w-auto !px-3 !py-2 !text-sm !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
               >
-                {isFull ? 'Join Waitlist' : 'Book Your Seat'}
+                {isFull ? 'Join Waitlist' : 'Pack Your Bags'}
                 {!isFull && <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />}
               </Button>
               {!trip.hide_pdf_download && (
@@ -542,7 +542,7 @@ export default function TripDetailPage() {
               <span className="flex items-center gap-2"><Calendar size={14} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
               <span className="flex items-center gap-2"><Clock size={14} /> {trip.duration}</span>
               <span className="flex items-center gap-2"><Users size={14} />
-                {isFull ? 'Sold out' : isAlmostFull ? 'Almost full — hurry!' : `Group of ${trip.total_seats}`}
+                {isFull ? 'Sold out' : isAlmostFull ? 'Almost full — hurry!' : `${trip.total_seats} Travellers`}
               </span>
               {(trip.min_age != null || trip.max_age != null) && (
                 <span className="flex items-center gap-2"><UserCheck size={14} /> {formatAgeRange(trip.min_age, trip.max_age)}</span>
@@ -693,7 +693,7 @@ export default function TripDetailPage() {
                   <motion.button
                     type="button"
                     onClick={() => setBookingOpen(true)}
-                    aria-label="Trip starts soon — tap to book your seat"
+                    aria-label="Trip starts soon — tap to Pack Your Bags"
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.985 }}
                     transition={{ duration: 0.25, ease: 'easeOut' }}
@@ -770,15 +770,15 @@ export default function TripDetailPage() {
 
                       <div className="flex flex-col items-center lg:items-end gap-2 lg:w-56 lg:shrink-0">
                         <span className="hidden lg:inline-flex items-center gap-2 bg-gradient-to-r from-primary-light/20 to-amber-300/10 border border-primary-light/30 text-primary-light font-button font-bold text-sm px-5 py-2.5 rounded-full transition-colors group-hover/btn:from-primary-light/30 group-hover/btn:to-amber-300/20">
-                          Book Your Seat
+                          Pack Your Bags
                           <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
                         </span>
                         <p className="flex items-center gap-1.5 text-white/55 text-[11px] font-medium lg:hidden">
-                          Don't miss out — tap to secure your spot
+                          Don't miss out — tap to Pack Your Bags
                           <ArrowRight size={12} className="text-primary-light transition-transform group-hover/btn:translate-x-1" />
                         </p>
                         <p className="hidden lg:block text-white/35 text-xs">
-                          Don't miss out — tap to secure your spot
+                          Don't miss out — tap to Pack Your Bags
                         </p>
                       </div>
                     </div>
@@ -1124,7 +1124,7 @@ export default function TripDetailPage() {
               </section>
             )}
 
-            {/* Book Your Seat — sits directly below Fashion Aesthetics / Gallery, matching the quick-jump nav order.
+            {/* Pack Your Bags — sits directly below Fashion Aesthetics / Gallery, matching the quick-jump nav order.
                 Travel with Confidence sits to its left as its own separate card. */}
             <div className={`grid grid-cols-1 gap-5 sm:gap-6 ${hasConfidenceItems ? 'lg:grid-cols-[1fr_640px] lg:divide-x lg:divide-background-warm' : ''}`}>
             {hasConfidenceItems && (
@@ -1259,7 +1259,7 @@ export default function TripDetailPage() {
                   ) : trip.advance_amount != null ? (
                     <span className="flex flex-col items-center leading-tight">
                       <span className="flex items-center gap-1.5">
-                        Secure Your Spot
+                        Pack Your Bags
                         <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
                       </span>
                       <span className="text-xs font-medium opacity-90 mt-0.5">
@@ -1268,7 +1268,7 @@ export default function TripDetailPage() {
                     </span>
                   ) : (
                     <span className="flex items-center gap-1.5">
-                      Book Your Seat
+                      Pack Your Bags
                       <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
                     </span>
                   )}
@@ -1569,7 +1569,7 @@ export default function TripDetailPage() {
             className="!rounded-lg !px-4 !py-2 shrink-0 flex flex-col items-center !gap-0 leading-tight"
           >
             <span className="text-sm font-bold whitespace-nowrap">
-              {isFull ? 'Join Waitlist' : 'Book Your Seat'}
+              {isFull ? 'Join Waitlist' : 'Pack Your Bags'}
             </span>
             {isAlmostFull && (
               <span className="text-[9px] font-normal text-white/85 mt-0.5">
@@ -1636,7 +1636,7 @@ export default function TripDetailPage() {
       <Modal
         isOpen={bookingOpen}
         onClose={() => setBookingOpen(false)}
-        title={isFull ? 'Join Waitlist' : 'Book Your Seat'}
+        title={isFull ? 'Join Waitlist' : 'Pack Your Bags'}
         size="lg"
       >
         <BookingForm
