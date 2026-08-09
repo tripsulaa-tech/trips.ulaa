@@ -26,7 +26,7 @@ import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
 import {
   getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin, getActivityLog,
-  recordPayment, recordTypedPayment, generatePendingInvoice, addExtraCharge,
+  recordPayment, generatePendingInvoice, addExtraCharge,
   markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
   recordRefund, deleteEnquiry, updateEnquiryDetails, setEnquiryFollowUp,
@@ -38,17 +38,18 @@ import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../../util
 import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
   GENERATE_INVOICE_STATUS_OPTIONS, availablePaymentTypeOptions, clearsBalance,
-  availableInvoiceTypeOptions, clearsBalanceForInvoice, emptyGenerateInvoiceForm,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
   journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus, canCancelBooking,
   CANCELLATION_REASON_OPTIONS, REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
 } from './AdminEnquiryCommon';
-import type { GenerateInvoiceForm, PaymentForm } from './AdminEnquiryCommon';
+import type { PaymentForm } from './AdminEnquiryCommon';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquiriesShared';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
 import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
+import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
+import { useGenerateInvoice } from './useGenerateInvoice';
 
 const emptyPaymentForm: PaymentForm = {
   package_type: 'normal', total_amount: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '',
@@ -353,7 +354,26 @@ export default function AdminEnquiryDetail() {
       alert(isExtraCharge ? 'Enter an extra charge amount greater than zero.' : 'Enter an amount greater than zero for the pending invoice.');
       return;
     }
+    // Money is actually changing hands right now (not a pending invoice)
+    // whenever thisPayment > 0 — whether that's a normal payment or an
+    // extra charge collected immediately — so we need to know how.
+    if (!isPending && thisPayment > 0 && !paymentForm.payment_method) {
+      alert('Select a payment method.');
+      return;
+    }
+    if (!isPending && thisPayment > 0 && paymentForm.payment_method !== 'Cash' && !paymentForm.payment_utr.trim()) {
+      alert('Enter a UTR / reference number.');
+      return;
+    }
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
+    if (refundAmount > 0 && !paymentForm.refund_method) {
+      alert('Select a refund method.');
+      return;
+    }
+    if (refundAmount > 0 && paymentForm.refund_method !== 'Cash' && !paymentForm.refund_utr.trim()) {
+      alert('Enter a refund UTR / reference number.');
+      return;
+    }
     const effectiveAmountPaid = isPending
       ? (enquiry.amount_paid || 0)
       : isExtraCharge
@@ -439,61 +459,16 @@ export default function AdminEnquiryDetail() {
   };
 
   // ---- Generate Invoice modal -------------------------------------------
-  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [invoiceForm, setInvoiceForm] = useState<GenerateInvoiceForm>(emptyGenerateInvoiceForm);
-  const [savingInvoice, setSavingInvoice] = useState(false);
+  // Shared with the Enquiries list page — see useGenerateInvoice for why
+  // the state/save logic lives there instead of being duplicated here.
+  const generateInvoice = useGenerateInvoice(async updated => {
+    setEnquiry(updated);
+    getPaymentsForEnquiry(updated.id).then(setPayments).catch(console.error);
+  });
   const [invoiceRowBusyId, setInvoiceRowBusyId] = useState<string | null>(null);
-
-  // 'Balance' is only meant for the invoice that actually zeroes out the
-  // amount due — if the admin picked it and then edits the amount so it
-  // no longer does, drop back to 'Installment' rather than leaving
-  // 'Balance' selected but no longer true. See clearsBalanceForInvoice in
-  // AdminEnquiryCommon.
-  useEffect(() => {
-    if (!enquiry) return;
-    if (invoiceForm.type === 'balance' && !clearsBalanceForInvoice(invoiceForm, enquiry.total_amount || 0, enquiry.amount_paid || 0)) {
-      setInvoiceForm(f => ({ ...f, type: 'installment' }));
-    }
-  }, [enquiry, invoiceForm]);
   const [markPaidTarget, setMarkPaidTarget] = useState<Payment | null>(null);
   const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm>(emptyMarkPaidForm);
   const [savingMarkPaid, setSavingMarkPaid] = useState(false);
-
-  const openGenerateInvoice = () => {
-    setInvoiceForm(emptyGenerateInvoiceForm);
-    setInvoiceModalOpen(true);
-  };
-
-  const handleGenerateInvoice = async () => {
-    if (!enquiry) return;
-    const amount = invoiceForm.amount === '' ? 0 : Number(invoiceForm.amount);
-    if (amount <= 0) {
-      alert('Enter an amount greater than zero.');
-      return;
-    }
-    try {
-      setSavingInvoice(true);
-      const notes = invoiceForm.notes.trim() || undefined;
-      const payment_method = invoiceForm.status === 'paid' ? (invoiceForm.payment_method || undefined) : undefined;
-      const utr_number = invoiceForm.status === 'paid' ? (invoiceForm.utr_number || undefined) : undefined;
-      let updated: Enquiry = enquiry;
-      if (invoiceForm.type === 'extra_charge') {
-        updated = await addExtraCharge(enquiry, amount, { collectedNow: invoiceForm.status === 'paid', payment_method, utr_number, notes });
-      } else if (invoiceForm.status === 'pending') {
-        await generatePendingInvoice(enquiry.id, invoiceForm.type, amount, notes);
-      } else {
-        updated = await recordTypedPayment(enquiry, { type: invoiceForm.type, amount, payment_method, utr_number, notes });
-      }
-      setEnquiry(updated);
-      setInvoiceModalOpen(false);
-      getPaymentsForEnquiry(enquiry.id).then(setPayments).catch(console.error);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to generate invoice.');
-    } finally {
-      setSavingInvoice(false);
-    }
-  };
 
   const handleMarkInvoicePaid = (payment: Payment) => {
     setMarkPaidForm(emptyMarkPaidForm);
@@ -1001,7 +976,7 @@ export default function AdminEnquiryDetail() {
               <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
                 <Receipt size={14} className="shrink-0" /> Invoices &amp; Payments
               </p>
-              <Button variant="secondary" size="sm" onClick={openGenerateInvoice}>
+              <Button variant="secondary" size="sm" onClick={() => generateInvoice.open(enquiry)}>
                 <Plus size={13} /> Generate Invoice
               </Button>
             </div>
@@ -1367,55 +1342,17 @@ export default function AdminEnquiryDetail() {
         </div>
       </Modal>
 
-      {/* Generate Invoice modal */}
-      <Modal isOpen={invoiceModalOpen} onClose={() => setInvoiceModalOpen(false)} title="Generate Invoice" size="sm">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Invoice Type</label>
-            <Select
-              value={invoiceForm.type}
-              onChange={val => setInvoiceForm(f => ({ ...f, type: val as GenerateInvoiceForm['type'] }))}
-              options={availableInvoiceTypeOptions(invoiceForm, enquiry.total_amount || 0, enquiry.amount_paid || 0)}
-            />
-            {invoiceForm.type !== 'extra_charge' && !clearsBalanceForInvoice(invoiceForm, enquiry.total_amount || 0, enquiry.amount_paid || 0) && (
-              <p className="text-[11px] text-dark-muted mt-1">
-                'Balance' will appear here once the amount below clears what's still owed.
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Amount (₹)</label>
-            <input
-              type="number"
-              min={0}
-              value={invoiceForm.amount}
-              onChange={e => setInvoiceForm(f => ({ ...f, amount: parseNonNegative(e.target.value) }))}
-              className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Status</label>
-            <Select
-              value={invoiceForm.status}
-              onChange={val => setInvoiceForm(f => ({ ...f, status: val as GenerateInvoiceForm['status'] }))}
-              options={GENERATE_INVOICE_STATUS_OPTIONS}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
-            <input
-              type="text"
-              value={invoiceForm.notes}
-              onChange={e => setInvoiceForm(f => ({ ...f, notes: e.target.value }))}
-              className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
-            />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" size="md" onClick={() => setInvoiceModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="md" onClick={handleGenerateInvoice} loading={savingInvoice}>Generate</Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Generate Invoice modal — same component the Enquiries list uses. */}
+      <GenerateInvoiceModal
+        generateInvoiceTarget={generateInvoice.target}
+        onClose={generateInvoice.close}
+        generateInvoiceForm={generateInvoice.form}
+        setGenerateInvoiceForm={generateInvoice.setForm}
+        onSave={generateInvoice.save}
+        savingInvoice={generateInvoice.saving}
+        paymentHistory={payments}
+        paymentHistoryLoading={paymentsLoading}
+      />
 
       {/* Record Contact Outcome — the New -> Contacted entry point. */}
       <ContactOutcomeModal

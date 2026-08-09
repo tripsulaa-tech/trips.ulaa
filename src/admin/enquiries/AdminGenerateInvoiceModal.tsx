@@ -3,10 +3,10 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, availableInvoiceTypeOptions, clearsBalanceForInvoice, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS } from './AdminEnquiryCommon';
+import { parseNonNegative, availableInvoiceTypeOptions, clearsBalanceForInvoice, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS, INVOICE_TYPE_LABEL } from './AdminEnquiryCommon';
 import type { GenerateInvoiceForm } from './AdminEnquiryCommon';
-import type { Enquiry } from '../../types/types-index';
-import { formatPrice } from '../../utils/utils-index';
+import type { Enquiry, Payment } from '../../types/types-index';
+import { formatDate, formatPrice } from '../../utils/utils-index';
 import { inputClass } from './AdminEnquiriesShared';
 
 // Raises one invoice line (Full Payment / Advance / Balance / Installment /
@@ -22,6 +22,8 @@ export default function GenerateInvoiceModal({
   setGenerateInvoiceForm,
   onSave,
   savingInvoice,
+  paymentHistory,
+  paymentHistoryLoading,
 }: {
   generateInvoiceTarget: Enquiry | null;
   onClose: () => void;
@@ -29,6 +31,8 @@ export default function GenerateInvoiceModal({
   setGenerateInvoiceForm: Dispatch<SetStateAction<GenerateInvoiceForm>>;
   onSave: () => void;
   savingInvoice: boolean;
+  paymentHistory: Payment[];
+  paymentHistoryLoading: boolean;
 }) {
   const confirm = useConfirm();
 
@@ -116,6 +120,30 @@ export default function GenerateInvoiceModal({
             />
           </div>
 
+          {(() => {
+            const alreadyPaid = generateInvoiceTarget.amount_paid || 0;
+            const thisAmount = generateInvoiceForm.amount === '' ? 0 : Number(generateInvoiceForm.amount);
+            const isExtraCharge = generateInvoiceForm.type === 'extra_charge';
+            const isPending = generateInvoiceForm.status === 'pending';
+            // Extra Charge (collected now) and a normal paid-now invoice both
+            // land in amount_paid right away; a Pending invoice — extra
+            // charge or otherwise — doesn't touch it until it's later marked
+            // paid, so the preview shouldn't claim it does.
+            const projectedTotal = isPending ? alreadyPaid : alreadyPaid + thisAmount;
+            const projectedBookingTotal = isExtraCharge
+              ? (generateInvoiceTarget.total_amount || 0) + thisAmount
+              : (generateInvoiceTarget.total_amount || 0);
+            return (
+              <p className="text-sm text-dark-muted">
+                Already paid <span className="font-medium text-dark">{formatPrice(alreadyPaid)}</span>
+                {thisAmount > 0 && !isPending && <> · after this payment: <span className="font-semibold text-dark">{formatPrice(projectedTotal)}</span></>}
+                {thisAmount > 0 && isPending && <> · <span className="font-semibold text-amber-700">{formatPrice(thisAmount)} raised as pending</span>, not yet counted as paid</>}
+                {isExtraCharge && thisAmount > 0 && <> · booking total will rise by <span className="font-semibold text-dark">{formatPrice(thisAmount)}</span></>}
+                {' '}· Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, projectedBookingTotal - projectedTotal))}</span>
+              </p>
+            );
+          })()}
+
           {generateInvoiceForm.status === 'paid' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -141,6 +169,36 @@ export default function GenerateInvoiceModal({
               </div>
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-medium text-dark mb-1">Payment History</label>
+            {paymentHistoryLoading ? (
+              <p className="text-xs text-dark-muted">Loading…</p>
+            ) : paymentHistory.length === 0 ? (
+              <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">No payments recorded yet.</p>
+            ) : (
+              <div className="border border-background-warm rounded-md divide-y divide-background-warm max-h-40 overflow-y-auto">
+                {paymentHistory.map(p => (
+                  <div key={p.id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
+                    <div className="min-w-0">
+                      <p className="text-dark font-medium truncate">
+                        {INVOICE_TYPE_LABEL[p.payment_type] || p.payment_type}
+                        {p.status === 'pending' && <span className="text-amber-600 font-normal"> · pending</span>}
+                      </p>
+                      <p className="text-dark-muted">
+                        {p.paid_at ? formatDate(p.paid_at, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not yet paid'}
+                        {p.payment_method ? ` · ${p.payment_method}` : ''}
+                        {p.utr_number ? ` · UTR ${p.utr_number}` : ''}
+                      </p>
+                    </div>
+                    <p className={`shrink-0 font-semibold ${p.payment_type === 'refund' ? 'text-red-600' : 'text-green-700'}`}>
+                      {p.payment_type === 'refund' ? '−' : ''}{formatPrice(p.amount)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>

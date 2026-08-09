@@ -12,19 +12,20 @@ import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, recordTypedPayment, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
+import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
 import type { CancellationReason, ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
 import {
-  PACKAGE_CONFIG, emptyGenerateInvoiceForm,
+  PACKAGE_CONFIG,
   foodBadge, foodPreferenceKey, SOURCE_CONFIG,
   journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend, JOURNEY_STAGE_CONFIG,
   closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus, canCancelBooking,
 } from './AdminEnquiryCommon';
-import type { GenerateInvoiceForm, PaymentForm } from './AdminEnquiryCommon';
+import type { PaymentForm } from './AdminEnquiryCommon';
+import { useGenerateInvoice } from './useGenerateInvoice';
 
 import {
   phoneSignature, emailSignature, GROUP_COLOR_PALETTE,
@@ -127,9 +128,6 @@ export default function AdminEnquiries() {
   const [markPaidTarget, setMarkPaidTarget] = useState<Payment | null>(null);
   const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm>(emptyMarkPaidForm);
   const [savingMarkPaid, setSavingMarkPaid] = useState(false);
-  const [generateInvoiceTarget, setGenerateInvoiceTarget] = useState<Enquiry | null>(null);
-  const [generateInvoiceForm, setGenerateInvoiceForm] = useState<GenerateInvoiceForm>(emptyGenerateInvoiceForm);
-  const [savingInvoice, setSavingInvoice] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
@@ -273,6 +271,13 @@ export default function AdminEnquiries() {
   const load = () => {
     getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
   };
+
+  const generateInvoice = useGenerateInvoice(async (updatedEnquiry, target) => {
+    const freshInvoices = await getPaymentsForEnquiry(target.id);
+    setDetailsInvoices(freshInvoices);
+    setDetailsTarget(updatedEnquiry);
+    load();
+  });
 
   const loadWaitlistCounts = () => {
     getWaitlistEntries()
@@ -735,68 +740,6 @@ export default function AdminEnquiries() {
     }
   };
 
-  // Opens the Generate Invoice modal for a given booking — reset to a fresh
-  // form each time so a leftover amount/type from the last invoice doesn't
-  // carry over.
-  const handleOpenGenerateInvoice = (e: Enquiry) => {
-    setGenerateInvoiceForm(emptyGenerateInvoiceForm);
-    setGenerateInvoiceTarget(e);
-  };
-
-  // Generates one invoice line for the booking, routed to the right
-  // services/api.ts function depending on type + status:
-  //   - extra_charge          -> addExtraCharge (also bumps total_amount)
-  //   - anything else, pending -> generatePendingInvoice (invoice only, no
-  //                                money counted yet)
-  //   - anything else, paid    -> recordTypedPayment (money collected now)
-  // Refund isn't offered here — see GENERATE_INVOICE_TYPE_OPTIONS above.
-  const handleGenerateInvoice = async () => {
-    if (!generateInvoiceTarget) return;
-    const amount = generateInvoiceForm.amount === '' ? 0 : Number(generateInvoiceForm.amount);
-    if (amount <= 0) {
-      alert('Enter an amount greater than zero.');
-      return;
-    }
-    try {
-      setSavingInvoice(true);
-      const notes = generateInvoiceForm.notes.trim() || undefined;
-      let updatedEnquiry: Enquiry = generateInvoiceTarget;
-
-      const payment_method = generateInvoiceForm.status === 'paid' ? (generateInvoiceForm.payment_method || undefined) : undefined;
-      const utr_number = generateInvoiceForm.status === 'paid' ? (generateInvoiceForm.utr_number || undefined) : undefined;
-
-      if (generateInvoiceForm.type === 'extra_charge') {
-        updatedEnquiry = await addExtraCharge(generateInvoiceTarget, amount, {
-          collectedNow: generateInvoiceForm.status === 'paid',
-          payment_method,
-          utr_number,
-          notes,
-        });
-      } else if (generateInvoiceForm.status === 'pending') {
-        await generatePendingInvoice(generateInvoiceTarget.id, generateInvoiceForm.type, amount, notes);
-      } else {
-        updatedEnquiry = await recordTypedPayment(generateInvoiceTarget, {
-          type: generateInvoiceForm.type,
-          amount,
-          payment_method,
-          utr_number,
-          notes,
-        });
-      }
-
-      setGenerateInvoiceTarget(null);
-      const freshInvoices = await getPaymentsForEnquiry(generateInvoiceTarget.id);
-      setDetailsInvoices(freshInvoices);
-      setDetailsTarget(updatedEnquiry);
-      load();
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to generate invoice.');
-    } finally {
-      setSavingInvoice(false);
-    }
-  };
-
   // Settles a pending invoice once the money's actually in hand. Updates
   // the invoice row and the booking's running total in place, then
   // refreshes the enquiries list in the background so the table (and any
@@ -1148,7 +1091,26 @@ export default function AdminEnquiries() {
       alert(isExtraCharge ? 'Enter an extra charge amount greater than zero.' : 'Enter an amount greater than zero for the pending invoice.');
       return;
     }
+    // Money is actually changing hands right now (not a pending invoice)
+    // whenever thisPayment > 0 — whether that's a normal payment or an
+    // extra charge collected immediately — so we need to know how.
+    if (!isPending && thisPayment > 0 && !paymentForm.payment_method) {
+      alert('Select a payment method.');
+      return;
+    }
+    if (!isPending && thisPayment > 0 && paymentForm.payment_method !== 'Cash' && !paymentForm.payment_utr.trim()) {
+      alert('Enter a UTR / reference number.');
+      return;
+    }
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
+    if (refundAmount > 0 && !paymentForm.refund_method) {
+      alert('Select a refund method.');
+      return;
+    }
+    if (refundAmount > 0 && paymentForm.refund_method !== 'Cash' && !paymentForm.refund_utr.trim()) {
+      alert('Enter a refund UTR / reference number.');
+      return;
+    }
     // Extra Charge collected now folds straight into amount_paid (below);
     // Pending never does, whatever the type — so the refund bound uses
     // what amount_paid will actually become, not the naive "already paid +
@@ -3261,18 +3223,20 @@ export default function AdminEnquiries() {
         onMarkCompleted={handleMarkCompleted}
         detailsInvoices={detailsInvoices}
         detailsInvoicesLoading={detailsInvoicesLoading}
-        onOpenGenerateInvoice={handleOpenGenerateInvoice}
+        onOpenGenerateInvoice={generateInvoice.open}
         invoiceRowBusyId={invoiceRowBusyId}
         onMarkInvoicePaid={handleMarkInvoicePaid}
       />
 
       <GenerateInvoiceModal
-        generateInvoiceTarget={generateInvoiceTarget}
-        onClose={() => setGenerateInvoiceTarget(null)}
-        generateInvoiceForm={generateInvoiceForm}
-        setGenerateInvoiceForm={setGenerateInvoiceForm}
-        onSave={handleGenerateInvoice}
-        savingInvoice={savingInvoice}
+        generateInvoiceTarget={generateInvoice.target}
+        onClose={generateInvoice.close}
+        generateInvoiceForm={generateInvoice.form}
+        setGenerateInvoiceForm={generateInvoice.setForm}
+        onSave={generateInvoice.save}
+        savingInvoice={generateInvoice.saving}
+        paymentHistory={detailsInvoices}
+        paymentHistoryLoading={detailsInvoicesLoading}
       />
 
       <MarkPaidModal
