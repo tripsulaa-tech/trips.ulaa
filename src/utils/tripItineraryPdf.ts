@@ -328,7 +328,8 @@ async function loadCoverCroppedImage(
   url: string,
   targetWpt: number,
   targetHpt: number,
-  cornerRadiusPt = 0
+  cornerRadiusPt = 0,
+  backgroundHex = '#ffffff'
 ): Promise<string | null> {
   try {
     const dataUrl = await fetchAsDataUrl(url);
@@ -346,11 +347,14 @@ async function loadCoverCroppedImage(
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // Fill white first. JPEG has no alpha channel, so any pixels left
-    // untouched outside a rounded/circular clip path below would otherwise
-    // get flattened to black on export — visible as black corners poking
-    // out around circular avatars (e.g. the Trip Leader photo).
-    ctx.fillStyle = '#ffffff';
+    // Fill first with backgroundHex (defaults to white). JPEG has no alpha
+    // channel, so any pixels left untouched outside a rounded/circular clip
+    // path below would otherwise get flattened to black on export — visible
+    // as corners poking out around circular avatars (e.g. the Trip Leader
+    // photo). Passing the page's own background color here (rather than the
+    // default white) makes those corners blend in instead of standing out
+    // as a slightly-off-white patch against a cream page.
+    ctx.fillStyle = backgroundHex;
     ctx.fillRect(0, 0, w, h);
 
     if (r > 0) {
@@ -2446,11 +2450,11 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const cardCX = rightX + rightW / 2; // horizontal center of the booking card, for the centered layout below
 
     function cardShell(x: number, w: number) {
-      setFill(COLORS.cream);
-      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 14, 14, 'F');
+      setFill(COLORS.white);
+      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 16, 16, 'F');
       setDraw(COLORS.grayLine);
       doc.setLineWidth(1);
-      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 14, 14, 'S');
+      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 16, 16, 'S');
     }
     // Only the booking card gets the bordered/filled card shell — the
     // "Meet Your Trip Leader" side sits directly on the page background now.
@@ -2461,10 +2465,6 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14.5);
     doc.text('Meet Your Trip Leader', leftX + PAD, CARDS_TOP + PAD + 6);
-    // Short accent underline beneath the section heading
-    setDraw(COLORS.secondary);
-    doc.setLineWidth(2);
-    doc.line(leftX + PAD, CARDS_TOP + PAD + 12, leftX + PAD + 30, CARDS_TOP + PAD + 12);
 
     const founder = trip.trip_founder;
     if (founder && (founder.name || founder.photo)) {
@@ -2473,7 +2473,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       const photoY = CARDS_TOP + PAD + 22;
       let photoDrawn = false;
       if (founder.photo) {
-        const cropped = await loadCoverCroppedImage(founder.photo, photoD, photoD, photoD / 2);
+        const cropped = await loadCoverCroppedImage(founder.photo, photoD, photoD, photoD / 2, rgbToHex(COLORS.background));
         if (cropped) {
           try {
             doc.addImage(cropped, 'JPEG', photoX, photoY, photoD, photoD);
@@ -2491,9 +2491,16 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         doc.setFontSize(46);
         doc.text((founder.name || '?').charAt(0).toUpperCase(), photoX + photoD / 2, photoY + photoD / 2 + 16, { align: 'center' });
       }
-      setDraw(COLORS.secondary);
-      doc.setLineWidth(2);
+      // Two-tone frame: a white/background ring sits right against the
+      // photo (the gap/padding effect), then a slightly larger orange
+      // accent ring sits just outside it — so the photo reads as
+      // white-matted with an orange frame, not one or the other.
+      setDraw(COLORS.background);
+      doc.setLineWidth(4);
       doc.circle(photoX + photoD / 2, photoY + photoD / 2, photoD / 2, 'S');
+      setDraw(COLORS.secondary);
+      doc.setLineWidth(2.5);
+      doc.circle(photoX + photoD / 2, photoY + photoD / 2, photoD / 2 + 3, 'S');
 
       const textX = photoX + photoD + 14;
       const textW = leftX + leftW - PAD - textX;
@@ -2509,30 +2516,51 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.setFontSize(9.5);
       doc.text('Founder & Trip Leader', textX, ny);
       ny += 7;
-      // Short accent underline beneath the designation, matching the one
-      // under the section heading above.
-      setDraw(COLORS.secondary);
-      doc.setLineWidth(1.5);
-      doc.line(textX, ny, textX + 26, ny);
-      ny += 5;
       setDraw(COLORS.grayLineSoft);
       doc.setLineWidth(1);
       doc.line(textX, ny, leftX + leftW - PAD, ny);
 
+      // Wrap the founder's bio as one continuous flow that runs in the
+      // narrow column beside the photo while there's room, then
+      // automatically widens to the full card width once it passes below
+      // the photo's bottom edge — a magazine-style "text wraps around the
+      // image" effect, rather than being split into separate fixed blocks.
       const paragraphs = (founder.description || '').split(/\n+/).map(p => p.trim()).filter(Boolean);
-      const descTop = Math.max(ny + 12, photoY + photoD + 12);
-      const descBottom = CARDS_BOTTOM - PAD;
-      let dy = descTop;
-      let linesLeft = Math.max(2, Math.floor((descBottom - descTop) / 12.2));
+      const paraFontSize = 10.5;
+      const paraLineHeight = 18; // more spacing between lines
+      const paraGap = 6; // extra breathing room between paragraphs
+      const rightColTop = ny + 22; // more breathing room below the divider line
+      const rightColBottom = photoY + photoD + 16; // clears the photo's border rings and the next line's ascenders
+      const fullX = leftX + PAD;
+      const fullW = leftW - PAD * 2;
+      const bottomLimit = CARDS_BOTTOM - PAD;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(paraFontSize);
+      setText(COLORS.darkMuted);
+
+      let dy = rightColTop;
       for (const para of paragraphs) {
-        if (linesLeft <= 0) break;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.6);
-        const lines = clampLines(para, leftW - PAD * 2, linesLeft);
-        setText(COLORS.darkMuted);
-        doc.text(lines, leftX + PAD, dy);
-        dy += lines.length * 12.2 + 5;
-        linesLeft -= lines.length;
+        if (dy > bottomLimit) break;
+        const words = para.split(/\s+/).filter(Boolean);
+        let wi = 0;
+        while (wi < words.length && dy <= bottomLimit) {
+          const inColumn = dy < rightColBottom;
+          const lineX = inColumn ? textX : fullX;
+          const lineW = inColumn ? textW : fullW;
+          let lineWords: string[] = [];
+          let lineText = '';
+          while (wi < words.length) {
+            const candidate = lineWords.length ? `${lineText} ${words[wi]}` : words[wi];
+            if (doc.getTextWidth(candidate) > lineW && lineWords.length > 0) break;
+            lineWords.push(words[wi]);
+            lineText = candidate;
+            wi++;
+          }
+          doc.text(lineText, lineX, dy);
+          dy += paraLineHeight;
+        }
+        dy += paraGap;
       }
     } else {
       setText(COLORS.darkMuted);

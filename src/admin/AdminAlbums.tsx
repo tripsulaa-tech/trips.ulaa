@@ -107,8 +107,14 @@ export default function AdminAlbums() {
 
     try {
       setSaving(true);
+      // The slug is a storage-folder path (see the `albums/{slug}/...`
+      // pathPrefixes used throughout this form), so it must stay stable
+      // once an album exists -- recomputing it from the title/batch on
+      // every save would silently point the album at a new, empty
+      // folder while its photos stay behind in the old one. Only set it
+      // on create; on edit, the existing slug column is left untouched.
       const slugSource = batch ? `${form.title} ${batch}` : form.title;
-      const data = { ...form, batch, slug: slugify(slugSource) };
+      const data = { ...form, batch, ...(editing ? {} : { slug: slugify(slugSource) }) };
       if (editing) await updateCompletedTrip(editing.id, data);
       else await createCompletedTrip(data);
       // All uploads committed to DB — nothing to clean up on close.
