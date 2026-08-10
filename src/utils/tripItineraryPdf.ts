@@ -11,7 +11,8 @@ import {
   Shirt, Footprints, Glasses, HatGlasses, Hand, Headphones, BatteryCharging,
   Pill, SprayCan, Droplet, GlassWater, Cookie, Sparkles, FileText, IdCard,
   Calendar, Clock, Users, UserCheck, Phone, Mail, Globe, MessageSquare,
-  ShieldCheck, BadgeCheck,
+  ShieldCheck, BadgeCheck, PlugZap, Camera, Stamp, Plane, CreditCard,
+  Clock3, CalendarClock, UserX, PackageX, Building2, CheckCircle2,
 } from 'lucide-react';
 import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, TripInclusionItem, ItineraryDay, ButtonLabelsConfig } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
@@ -70,6 +71,7 @@ const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
   [/cap|hat/i, HatGlasses],
   [/glove|mitten/i, Hand],
   [/earphone|headphone|earbud/i, Headphones],
+  [/adapter|\bplug\b|converter/i, PlugZap],
   [/power ?bank|charger|battery/i, BatteryCharging],
   [/medicine|medication|pill|first aid/i, Pill],
   [/sunscreen|spf/i, SprayCan],
@@ -78,7 +80,14 @@ const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
   [/snack|food/i, Cookie],
   [/wipe|sanitiz|towel/i, Sparkles],
   [/tissue|paper/i, FileText],
-  [/id proof|passport|aadhar|adhar|govern|voter|licen/i, IdCard],
+  // Photo/photograph checked before the passport/id-proof rule below, since
+  // "Passport-size photographs" would otherwise match on "passport".
+  [/passport.{0,10}photo|photograph/i, Camera],
+  [/\beta\b|visa|travel authoriz|entry permit/i, Stamp],
+  [/flight|air ticket|boarding pass|\bticket/i, Plane],
+  [/insurance/i, ShieldCheck],
+  [/debit card|credit card|currency|rupee|\bcash\b/i, CreditCard],
+  [/id proof|passport|aadhar|adhar|govern|voter|licen|document/i, IdCard],
 ];
 
 function getThingsToCarryFallbackIcon(item: string): LucideIcon {
@@ -852,15 +861,20 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.line(cx - r, cy, cx + r, cy);
     },
     instagram(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
-      const w = s * 0.72;
+      // Sized/weighted to match the real lucide-react icons used for the
+      // other contact-bar entries (Headphones/Phone/Mail/Globe), which fill
+      // most of their `s`-sized box — this hand-drawn glyph previously used
+      // only 72% of that box at a thinner stroke, so it read smaller and
+      // lighter than its neighbors in the footer row.
+      const w = s * 0.86;
       const rx = x + (s - w) / 2;
-      const ry = y - s * 0.82;
+      const ry = y - s / 2 - w / 2;
       setDraw(color);
-      doc.setLineWidth(1.3);
+      doc.setLineWidth(1.4);
       doc.roundedRect(rx, ry, w, w, w * 0.28, w * 0.28, 'S');
-      doc.circle(rx + w / 2, ry + w / 2, w * 0.24, 'S');
+      doc.circle(rx + w / 2, ry + w / 2, w * 0.26, 'S');
       setFill(color);
-      doc.circle(rx + w * 0.78, ry + w * 0.22, w * 0.06, 'F');
+      doc.circle(rx + w * 0.76, ry + w * 0.24, w * 0.07, 'F');
     },
     headset(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
       const cx = x + s * 0.5;
@@ -2065,48 +2079,47 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.setFontSize(9.5);
       doc.text('Pack smart. Travel light. Stay ready.', carryX, top);
 
-      const perRow = twoCol ? 2 : 5;
-      const gap = 14;
-      const chipW = (carryW - gap * (perRow - 1)) / perRow;
-      const chipH = 46;
+      // Auto-width, single-line wrapped pill chips — mirrors the site's
+      // exact "Things to Carry" chip markup (inline-flex, bg-background-warm/60,
+      // rounded-lg, icon + whitespace-nowrap label sized to its own content)
+      // instead of a fixed equal-width grid with 2-line wrapped text, so
+      // short and long items size and wrap exactly like TripDetailPage.tsx.
+      const chipH = 25;
+      const padX = 10;
+      const iconSize = 13;
+      const iconGap = 6;
+      const chipGapX = 8;
+      const chipGapY = 8;
 
-      let y = top + 30;
-      let col = 0;
-      for (let i = 0; i < trip.things_to_carry.length; i++) {
-        if (col === 0 && y + chipH > listBottom) break;
-
-        const item = trip.things_to_carry[i];
-        const x = carryX + col * (chipW + gap);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      let x = carryX;
+      let y = top + 26;
+      for (const item of trip.things_to_carry) {
+        const w = doc.getTextWidth(item.description) + padX * 2 + iconSize + iconGap;
+        if (x > carryX && x + w > carryX + carryW) {
+          x = carryX;
+          y += chipH + chipGapY;
+        }
+        if (y + chipH > listBottom) break;
 
         setFill(COLORS.backgroundWarm);
-        doc.roundedRect(x, y, chipW, chipH, 8, 8, 'F');
-        setDraw(COLORS.grayLineSoft);
-        doc.setLineWidth(0.75);
-        doc.roundedRect(x, y, chipW, chipH, 8, 8, 'S');
+        doc.roundedRect(x, y, w, chipH, 6, 6, 'F');
 
         // Mirrors TripDetailPage.tsx exactly: the admin-picked icon when
-        // set, else the same keyword-matched fallback (getThingsToCarryIcon).
-        // Icon badge sized up to match the visual weight of the icon chips
-        // on the live site (a roomier filled circle, not a cramped dot).
+        // set, else the same keyword-matched fallback (getThingsToCarryIcon),
+        // drawn inline in the primary color — not boxed in a filled circle.
         const itemIcon = resolveIcon(item.icon, getThingsToCarryFallbackIcon(item.description));
-        const iconCx = x + 23;
+        const iconX = x + padX;
         const iconCy = y + chipH / 2;
-        setFill(COLORS.primary);
-        doc.circle(iconCx, iconCy, 13, 'F');
-        await drawLucideIcon(itemIcon, iconCx - 9, iconCy + 9, 18, COLORS.white);
+        await drawLucideIcon(itemIcon, iconX, iconCy + iconSize / 2, iconSize, COLORS.primary);
 
         setText(COLORS.dark);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        const lines = clampLines(item.description, chipW - 52, 2);
-        const lineY = y + chipH / 2 - ((lines.length - 1) * 11) / 2 + 3;
-        doc.text(lines, x + 44, lineY);
+        doc.text(item.description, iconX + iconSize + iconGap, iconCy + 3.2);
 
-        col++;
-        if (col >= perRow) {
-          col = 0;
-          y += chipH + gap;
-        }
+        x += w + chipGapX;
       }
     }
 
@@ -2381,40 +2394,59 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
-  // SLIDES — Cancellation Policy (numbered clauses, 2-column, paginated)
+  // SLIDES — Cancellation Policy (icon-badged clauses, 2-column, paginated)
+  // -----------------------------------------------------------------------
+  // Mirrors CancellationPolicyDisplay.tsx exactly: same 8 clauses in the
+  // same order (including "Minimum Group Size", previously missing here)
+  // with the same lucide-react icon per clause instead of a plain number
+  // badge, plus the same closing acceptance disclaimer the site shows below
+  // all the cards.
   // =========================================================================
-  function renderCancellationPolicy() {
+  async function renderCancellationPolicy() {
     const policy = trip.cancellation_policy;
     if (!policy) return;
 
-    type Clause = { title: string; body: string[] };
+    type Clause = { title: string; body: string[]; icon: LucideIcon };
     const clauses: Clause[] = [
-      { title: 'Booking Confirmation', body: STATIC.bookingConfirmation },
+      { title: 'Booking Confirmation', body: STATIC.bookingConfirmation, icon: ShieldCheck },
       {
         title: 'Payment Schedule',
         body: [
           `The remaining trip balance must be paid at least ${policy.payment_due_days} days before the departure date, unless otherwise communicated. Failure to complete the payment by the due date may result in automatic cancellation of your booking without prior notice.`,
         ],
+        icon: Clock3,
       },
       {
         title: 'Cancellation by Participant',
         body: policy.tiers.map(tier => `${tierLabel(tier)}: ${tier.description}`),
+        icon: CalendarClock,
       },
-      { title: 'No Show', body: [STATIC.noShow] },
-      { title: 'Missed Services', body: [STATIC.missedServices] },
-      { title: 'Trip Cancellation by Organizer', body: STATIC.organizerCancellation },
+      { title: 'No Show', body: [STATIC.noShow], icon: UserX },
+      { title: 'Missed Services', body: [STATIC.missedServices], icon: PackageX },
+      { title: 'Trip Cancellation by Organizer', body: STATIC.organizerCancellation, icon: Building2 },
+      {
+        title: 'Minimum Group Size',
+        body: [STATIC.minimumGroupSize.intro, ...STATIC.minimumGroupSize.options.map(o => `\u2022 ${o}`)],
+        icon: Users,
+      },
       {
         title: 'Refund Timeline',
         body: [
           `Where applicable, approved refunds will be processed within ${policy.refund_min_days}\u2013${policy.refund_max_days} working days, subject to the receipt of refunds from the respective third-party service providers.`,
         ],
+        icon: CheckCircle2,
       },
     ];
 
     const colGap = 36;
     const colW = (CONTENT_W - colGap) / 2;
     const top = 92;
-    const availH = CONTENT_BOTTOM - top;
+    // Reserve a band on every page for the closing acceptance note so its
+    // box sits at the same fixed spot regardless of which page turns out
+    // to be last — only that page actually draws text into it.
+    const footerReserve = 46;
+    const footerTop = CONTENT_BOTTOM - footerReserve + 10;
+    const availH = CONTENT_BOTTOM - footerReserve - top;
 
     const measureClause = (c: Clause) => {
       const titleH = 18;
@@ -2424,41 +2456,52 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
 
     const balanced = paginateTwoColumns(clauses, measureClause, availH);
 
-    const numbers = new Map<Clause, number>();
-    clauses.forEach((c, i) => numbers.set(c, i + 1));
-
-    function drawColumn(x: number, startY: number, items: Clause[]) {
+    async function drawColumn(x: number, startY: number, items: Clause[]) {
       let y = startY;
-      items.forEach(clause => {
-        const num = numbers.get(clause)!;
-        setFill(COLORS.primary);
-        doc.circle(x + 9, y - 5, 9, 'F');
-        setText(COLORS.white);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.text(String(num), x + 9, y - 1.5, { align: 'center' });
+      for (const clause of items) {
+        const badgeCx = x + 10;
+        const badgeCy = y - 5;
+        const badgeSize = 21;
+        setFill(COLORS.backgroundWarm);
+        doc.roundedRect(badgeCx - badgeSize / 2, badgeCy - badgeSize / 2, badgeSize, badgeSize, 5, 5, 'F');
+        await drawLucideIcon(clause.icon, badgeCx - badgeSize / 2 + 2, badgeCy + badgeSize / 2 - 2, badgeSize - 4, COLORS.primary);
 
         setText(COLORS.dark);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11.5);
-        doc.text(clause.title, x + 24, y);
+        doc.text(clause.title, x + 26, y);
         y += 17;
 
         clause.body.forEach(line => {
-          y = drawParagraph(line, x + 24, y, colW - 24, { size: 9.3, color: COLORS.darkMuted, lineHeight: 13.2 });
+          y = drawParagraph(line, x + 26, y, colW - 26, { size: 9.3, color: COLORS.darkMuted, lineHeight: 13.2 });
           y += 3;
         });
         y += 16;
-      });
+      }
     }
 
-    balanced.forEach((page, p) => {
+    for (let p = 0; p < balanced.length; p++) {
+      const page = balanced[p];
       newSlide();
       slideHeader(null, p === 0 ? 'Cancellation Policy' : 'Cancellation Policy (continued)');
-      const startY = centeredTop(top, CONTENT_BOTTOM, Math.max(page.leftH, page.rightH));
-      if (page.left.length) drawColumn(MARGIN, startY, page.left);
-      if (page.right.length) drawColumn(MARGIN + colW + colGap, startY, page.right);
-    });
+      const startY = centeredTop(top, CONTENT_BOTTOM - footerReserve, Math.max(page.leftH, page.rightH));
+      if (page.left.length) await drawColumn(MARGIN, startY, page.left);
+      if (page.right.length) await drawColumn(MARGIN + colW + colGap, startY, page.right);
+
+      // Closing acceptance disclaimer — only on the final Cancellation
+      // Policy slide, same as the single note at the bottom of the site's
+      // CancellationPolicyDisplay (below all the section cards).
+      if (p === balanced.length - 1) {
+        setFill(COLORS.backgroundWarm);
+        doc.roundedRect(MARGIN, footerTop, CONTENT_W, footerReserve - 14, 6, 6, 'F');
+        drawParagraph(STATIC.acceptance, MARGIN + 16, footerTop + 15, CONTENT_W - 32, {
+          size: 8.5,
+          color: COLORS.darkMuted,
+          lineHeight: 12,
+          maxLines: 2,
+        });
+      }
+    }
   }
 
   // =========================================================================
@@ -2958,7 +3001,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   await renderFashion();
   await renderConfidenceAndCarry();
   renderFaqs();
-  renderCancellationPolicy();
+  await renderCancellationPolicy();
   await renderTripLeaderAndBooking();
 
   // ---------------------------------------------------------------------
