@@ -11,7 +11,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, FileText, Share2, Phone, MessageCircle, Users, User,
   BadgeCheck, Plus, CheckCircle2, XCircle, UserX, UserCheck, LogIn, RefreshCw,
-  Trash2, IndianRupee, Pencil, UserMinus, Bird, CalendarClock, X, History,
+  Trash2, IndianRupee, Pencil, UserMinus, Bird, CalendarClock, X, History, Copy, Check,
 } from 'lucide-react';
 import AdminLayout from '../AdminLayout';
 import Button from '../../components/ui/Button';
@@ -85,6 +85,20 @@ export default function AdminEnquiryDetail() {
   const [activityLogLoading, setActivityLogLoading] = useState(false);
   const [busyAction, setBusyAction] = useState(false);
   const [invoiceBusy, setInvoiceBusy] = useState(false);
+  // Brief "Copied" checkmark swap after tapping the Booking ID's copy icon —
+  // resets itself after 1.5s, no toast/alert needed for something this minor.
+  const [bookingIdCopied, setBookingIdCopied] = useState(false);
+  const handleCopyBookingId = async () => {
+    if (!enquiry.booking_id) return;
+    try {
+      await navigator.clipboard.writeText(enquiry.booking_id);
+      setBookingIdCopied(true);
+      setTimeout(() => setBookingIdCopied(false), 1500);
+    } catch {
+      // Clipboard API can fail (e.g. insecure context) — nothing useful to
+      // surface for a convenience action, so just no-op.
+    }
+  };
   // ---- Record Contact Outcome (the New -> Contacted entry point) --------
   // Mirrors AdminEnquiries.tsx's wiring of the same popup — see
   // ContactOutcomeModal.tsx and recordContactOutcome() in services/api.ts.
@@ -926,7 +940,18 @@ export default function AdminEnquiryDetail() {
             <div className="flex items-center justify-between gap-2 pt-3 border-t border-background-warm">
               <div className="min-w-0">
                 <p className="text-dark-muted text-xs">Booking ID</p>
-                <p className="text-dark text-sm font-mono truncate">{enquiry.booking_id}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-dark text-sm font-mono truncate">{enquiry.booking_id}</p>
+                  <button
+                    type="button"
+                    onClick={handleCopyBookingId}
+                    aria-label="Copy Booking ID"
+                    title="Copy Booking ID"
+                    className="shrink-0 p-1 rounded text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
+                  >
+                    {bookingIdCopied ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
@@ -962,12 +987,12 @@ export default function AdminEnquiryDetail() {
               </div>
             </div>
 
-            <div className="flex justify-end items-center gap-2">
-              <Button variant="outline" size="sm" onClick={openPayment}>
+            <div className={`grid gap-2 ${enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <Button variant="outline" size="sm" fullWidth onClick={openPayment}>
                 <IndianRupee size={13} /> Payment
               </Button>
               {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
-                <Button variant="primary" size="sm" onClick={handleMarkCompleted} disabled={busyAction}>
+                <Button variant="primary" size="sm" fullWidth onClick={handleMarkCompleted} disabled={busyAction}>
                   <CheckCircle2 size={13} /> Complete Trip
                 </Button>
               )}
@@ -1000,8 +1025,8 @@ export default function AdminEnquiryDetail() {
         {enquiry.booking_id && (
           <div className="bg-white rounded-lg shadow-card">
             <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-background-warm">
-              <p className="text-dark text-sm font-button font-semibold">
-                Invoices &amp; Payments
+              <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
+                <FileText size={14} className="shrink-0" /> Invoices &amp; Payments
               </p>
               <Button variant="primary" size="sm" onClick={() => generateInvoice.open(enquiry)}>
                 <Plus size={13} /> Add Invoice
@@ -1151,10 +1176,10 @@ export default function AdminEnquiryDetail() {
           ) : activityLog.length === 0 ? (
             <p className="text-dark-muted text-xs bg-background-warm rounded-md px-3 py-2">No activity logged yet.</p>
           ) : (
-            <ol className="relative border-l-2 border-background-warm pl-4 space-y-4 max-h-[600px] overflow-y-auto">
+            <ol className="relative border-l-2 border-[#D9C7AC] pl-4 space-y-4 max-h-[600px] overflow-y-auto">
               {activityLog.map(entry => (
                 <li key={entry.id} className="relative">
-                  <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-white" />
+                  <span className="absolute -left-[21px] top-1 z-10 w-3 h-3 rounded-full bg-primary border-2 border-white shadow-sm" />
                   <p className="text-dark text-sm font-medium">{entry.action}</p>
                   {entry.details && <p className="text-dark-muted text-xs mt-0.5">{entry.details}</p>}
                   <p className="text-dark-muted text-[11px] mt-0.5">
@@ -1262,7 +1287,6 @@ export default function AdminEnquiryDetail() {
                   onChange={val => setPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
                   options={PAYMENT_METHOD_OPTIONS}
                   placeholder="Select method"
-                  size="sm"
                 />
                 {paymentErrors.payment_method && <p className={paymentErrorClass}>{paymentErrors.payment_method}</p>}
               </div>
