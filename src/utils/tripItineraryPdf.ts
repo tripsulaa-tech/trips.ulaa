@@ -2468,7 +2468,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
 
     const founder = trip.trip_founder;
     if (founder && (founder.name || founder.photo)) {
-      const photoD = 92;
+      const photoD = 150;
       const photoX = leftX + PAD;
       const photoY = CARDS_TOP + PAD + 22;
       let photoDrawn = false;
@@ -2488,8 +2488,8 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         doc.circle(photoX + photoD / 2, photoY + photoD / 2, photoD / 2, 'F');
         setText(COLORS.primary);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(28);
-        doc.text((founder.name || '?').charAt(0).toUpperCase(), photoX + photoD / 2, photoY + photoD / 2 + 10, { align: 'center' });
+        doc.setFontSize(46);
+        doc.text((founder.name || '?').charAt(0).toUpperCase(), photoX + photoD / 2, photoY + photoD / 2 + 16, { align: 'center' });
       }
       setDraw(COLORS.secondary);
       doc.setLineWidth(2);
@@ -2497,16 +2497,16 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
 
       const textX = photoX + photoD + 14;
       const textW = leftX + leftW - PAD - textX;
-      let ny = photoY + 16;
+      let ny = photoY + 18;
       setText(COLORS.dark);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12.5);
+      doc.setFontSize(14);
       const nameLines = clampLines(founder.name || '', textW, 2);
       doc.text(nameLines, textX, ny);
-      ny += nameLines.length * 14 + 2;
+      ny += nameLines.length * 16 + 2;
       setText(COLORS.secondary);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
+      doc.setFontSize(9.5);
       doc.text('Founder & Trip Leader', textX, ny);
       ny += 7;
       // Short accent underline beneath the designation, matching the one

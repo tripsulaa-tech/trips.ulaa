@@ -647,7 +647,15 @@ export default function AdminTrips() {
       setSaving(true);
       const data = {
         ...form,
-        slug: slugify(form.title),
+        // The slug is a public URL and a storage-folder path (see the
+        // `trips/{slug}/...` pathPrefixes throughout this form), so it must
+        // stay stable once a trip exists — recomputing it from the title on
+        // every save would silently split an edited trip's images across
+        // two folders (old-slug and new-slug) and break any previously
+        // shared/bookmarked trip link. Only set it on create; on edit, the
+        // existing slug column is left untouched (own it via a dedicated
+        // rename flow if it ever needs to change deliberately).
+        ...(editingTrip ? {} : { slug: slugify(form.title) }),
         price: form.price,
         early_bird_price: form.early_bird_price === '' ? null : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || null,
