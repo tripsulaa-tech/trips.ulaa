@@ -9,6 +9,7 @@ import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '
 import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
+import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
@@ -68,6 +69,11 @@ export default function AdminEnquiries() {
   // it's only needed for this lookup, not for editing/booking flows.
   const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
   const [loading, setLoading] = useState(true);
+  // Restores scroll position when the admin comes back to this list — e.g.
+  // expand a card, tap "View Full CRM", then go back — instead of always
+  // landing back at the top. Waits for `!loading` so it restores against
+  // the page's real height, not the loading skeleton's.
+  useScrollRestoration('/admin/enquiries', !loading);
   const [filter, setFilter] = useState<'all' | Enquiry['status']>('all');
   // Booking Journey filter — a separate, finer-grained dimension from
   // `filter` above (Lead Status: new/contacted/closed only). Lets an admin
@@ -152,7 +158,26 @@ export default function AdminEnquiries() {
   // Left empty for solo/single-slot conversions, which still use the plain
   // `form` fields below exactly as before.
   const [waitlistPeople, setWaitlistPeople] = useState<WaitlistPersonForm[]>([]);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Which mobile card is expanded — restored from sessionStorage on mount so
+  // that expanding a card, tapping "View Full CRM" to drill into the detail
+  // page, then coming back (browser back / in-app back) lands the admin
+  // exactly where they left off: same card still expanded, same scroll
+  // position (see useScrollRestoration below). Previously this was plain
+  // local state, so navigating away and back always collapsed everything
+  // and reset the scroll to the top.
+  const [expandedId, setExpandedId] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('ulaa:admin-enquiries:expandedId');
+    } catch {
+      return null;
+    }
+  });
+  // Tracks whether the expandedId above came from a restore (vs. a fresh
+  // tap) so the scroll-into-view effect further down can skip its
+  // scroll/animate step just once — useScrollRestoration already puts the
+  // page at the exact saved scrollY, and re-running scrollIntoView on top
+  // of that would fight it and produce a visible jump.
+  const restoredExpandedIdRef = useRef(expandedId !== null);
   // Desktop: clicking a name opens a details popup instead of expanding an
   // inline row (mobile keeps the tap-to-expand card behavior via
   // expandedId above).
@@ -457,8 +482,27 @@ export default function AdminEnquiries() {
     applySuggestedAmount(form.trip_id, form.package_type);
   }, [convertingWaitlist, trips, form.trip_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep sessionStorage in sync so a later mount (e.g. coming back from the
+  // full CRM detail page) can restore this exact card as expanded.
+  useEffect(() => {
+    try {
+      if (expandedId) sessionStorage.setItem('ulaa:admin-enquiries:expandedId', expandedId);
+      else sessionStorage.removeItem('ulaa:admin-enquiries:expandedId');
+    } catch {
+      // sessionStorage unavailable (private browsing, etc.) — expand state
+      // just won't survive a navigation; not worth failing anything over.
+    }
+  }, [expandedId]);
+
   useEffect(() => {
     if (!expandedId) return;
+    if (restoredExpandedIdRef.current) {
+      // This run is the restored card, not a fresh tap — skip the
+      // scroll-into-view animation once so it doesn't fight the scrollY
+      // restoration below, then behave normally for every expand after.
+      restoredExpandedIdRef.current = false;
+      return;
+    }
     const el = cardRefs.current[expandedId];
     if (!el) return;
     // Wait a beat for the expand animation/layout to settle, then decide
@@ -3023,30 +3067,40 @@ export default function AdminEnquiries() {
                             a primary "View Full CRM" CTA. Payment, seat
                             status, Journey Advance, Not Interested, and the
                             rest now live in the kebab so the card footer
-                            stays to these two buttons. */}
+                            stays to these two buttons. Themed to match the
+                            "Payment" (outline) / "Add Invoice" (primary)
+                            buttons on the enquiry detail page — same Button
+                            component, same size, same variants — so the
+                            list and detail views feel consistent. */}
                         <div className="flex items-center gap-2 pt-3">
                           {(followUpStatus(e) || canSetFollowUp(e) || bookingFollowUpStatus(e) || canSetBookingFollowUp(e)) && (
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              fullWidth
                               onClick={() => (followUpStatus(e) || canSetFollowUp(e) ? openFollowUpModal(e) : setBookingFollowUpTarget(e))}
                               disabled={updating === e.id}
-                              className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2.5 rounded-full whitespace-nowrap border disabled:opacity-50 transition-colors ${
+                              className={`text-xs !gap-1.5 whitespace-nowrap ${
                                 followUpStatus(e)
-                                  ? followUpStatus(e)!.color
+                                  ? `!border-transparent ${followUpStatus(e)!.color}`
                                   : bookingFollowUpStatus(e)
-                                  ? bookingFollowUpStatus(e)!.color
-                                  : 'border-background-warm text-dark-muted hover:bg-background-warm'
+                                  ? `!border-transparent ${bookingFollowUpStatus(e)!.color}`
+                                  : ''
                               }`}
                             >
                               <CalendarClock size={14} />
                               {followUpStatus(e)?.label || bookingFollowUpStatus(e)?.label || 'Set Follow-up'}
-                            </button>
+                            </Button>
                           )}
-                          <button
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            fullWidth
                             onClick={() => navigate(`/admin/enquiries/${e.id}`)}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2.5 rounded-full whitespace-nowrap bg-dark text-white hover:bg-dark/90 transition-colors"
+                            className="text-xs !gap-1.5 whitespace-nowrap"
                           >
                             View Full CRM <ArrowRight size={14} />
-                          </button>
+                          </Button>
                           <ActionsMenu
                             disabled={updating === e.id}
                             items={[
