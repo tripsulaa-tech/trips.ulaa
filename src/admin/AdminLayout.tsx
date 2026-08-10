@@ -517,7 +517,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
       {/* Main */}
       <div className={`flex-1 min-w-0 min-h-screen flex flex-col transition-all duration-200 ${collapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
         {/* Top bar */}
-        <header className="bg-white border-b border-background-warm px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20">
+        <header className="bg-white border-b border-background-warm px-4 sm:px-6 lg:px-8 py-4 sm:py-6 min-h-[76px] sm:min-h-[92px] flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}

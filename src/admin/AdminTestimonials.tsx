@@ -205,18 +205,18 @@ export default function AdminTestimonials() {
               <table className="w-full text-sm">
                 <thead className="bg-background-warm text-dark font-medium">
                   <tr>
-                    <th className="px-4 py-3 text-left">Traveler</th>
-                    <th className="px-4 py-3 text-left hidden md:table-cell">Destination</th>
-                    <th className="px-4 py-3 text-left hidden md:table-cell">Rating</th>
-                    <th className="px-4 py-3 text-left hidden lg:table-cell">Review</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-4 text-left">Traveler</th>
+                    <th className="px-4 py-4 text-left hidden md:table-cell">Destination</th>
+                    <th className="px-4 py-4 text-left hidden md:table-cell">Rating</th>
+                    <th className="px-4 py-4 text-left hidden lg:table-cell">Review</th>
+                    <th className="px-4 py-4 text-center">Status</th>
+                    <th className="px-4 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-background-warm">
                   {items.map((t, index) => (
                     <motion.tr key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-3 font-medium text-dark">
+                      <td className="px-4 py-4 font-medium text-dark">
                         <div className="flex items-center gap-2">
                           <div className="flex flex-col">
                             <button onClick={() => move(index, -1)} disabled={index === 0} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={12} /></button>
@@ -226,19 +226,19 @@ export default function AdminTestimonials() {
                           <span className="truncate max-w-[140px]">{t.name}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell">{t.destination}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell">
+                      <td className="px-4 py-4 text-dark-muted hidden md:table-cell">{t.destination}</td>
+                      <td className="px-4 py-4 text-dark-muted hidden md:table-cell">
                         <div className="flex items-center gap-0.5">
                           {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={12} className="fill-secondary text-secondary" />)}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-dark-muted hidden lg:table-cell max-w-[280px] truncate">{t.review}</td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[280px] truncate">{t.review}</td>
+                      <td className="px-4 py-4 text-center">
                         <span className={`text-xs font-button font-semibold px-3 py-1 rounded-md ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                           {t.is_published ? 'Published' : 'Draft'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => togglePublish(t)} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
                             {t.is_published ? <EyeOff size={16} /> : <Eye size={16} />}

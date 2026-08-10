@@ -816,20 +816,20 @@ export default function AdminWaitlist() {
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
                     <tr>
-                      <SortableTh label="Name" sortKey="name" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left" />
-                      <SortableTh label="Group" sortKey="group" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
-                      <SortableTh label="Food" sortKey="food" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
-                      <SortableTh label="Trip" sortKey="trip" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left hidden lg:table-cell" />
-                      <th className="px-4 py-3 text-left hidden md:table-cell">Contact</th>
-                      <SortableTh label="Joined" sortKey="joined" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left hidden lg:table-cell" />
-                      <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-right whitespace-nowrap" />
-                      <th className="px-2 py-3 text-right whitespace-nowrap"></th>
+                      <SortableTh label="Name" sortKey="name" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left" />
+                      <SortableTh label="Group" sortKey="group" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
+                      <SortableTh label="Food" sortKey="food" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
+                      <SortableTh label="Trip" sortKey="trip" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left hidden lg:table-cell" />
+                      <th className="px-4 py-4 text-left hidden md:table-cell">Contact</th>
+                      <SortableTh label="Joined" sortKey="joined" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left hidden lg:table-cell" />
+                      <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-right whitespace-nowrap" />
+                      <th className="px-2 py-4 text-right whitespace-nowrap"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-background-warm">
                     {paginatedEntries.map(e => (
                       <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                        <td className="px-4 py-3 max-w-[160px] sm:max-w-none">
+                        <td className="px-4 py-4 max-w-[160px] sm:max-w-none">
                           <p className="font-medium text-dark truncate flex items-center gap-1.5">
                             {e.full_name}
                             {canConvert(e) && (queueRank.get(e.id)?.total ?? 0) > 1 && (
@@ -864,7 +864,7 @@ export default function AdminWaitlist() {
                             </p>
                           )}
                         </td>
-                        <td className="px-2 py-3 whitespace-nowrap">
+                        <td className="px-2 py-4 whitespace-nowrap">
                           {e.group_size && e.group_size > 1 ? (
                             <span
                               title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
@@ -881,7 +881,7 @@ export default function AdminWaitlist() {
                             </span>
                           )}
                         </td>
-                        <td className="px-2 py-3 whitespace-nowrap">
+                        <td className="px-2 py-4 whitespace-nowrap">
                           {foodBreakdown(e) ? (
                             <span className="inline-flex items-center gap-2 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-background-warm">
                               <span className="inline-flex items-center gap-1 text-green-700">
@@ -898,7 +898,7 @@ export default function AdminWaitlist() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-dark-muted hidden lg:table-cell max-w-[180px]">
+                        <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[180px]">
                           <p className="truncate">{e.trip_title || '—'}</p>
                           {hasSeatOpen(e) && (
                             <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
@@ -915,7 +915,7 @@ export default function AdminWaitlist() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-dark-muted hidden md:table-cell">
+                        <td className="px-4 py-4 text-dark-muted hidden md:table-cell">
                           <p className="flex items-center gap-1 text-xs"><Mail size={11} className="shrink-0" /> {e.email}</p>
                           <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" /> {e.phone}</p>
                           {e.city && <p className="text-xs mt-0.5">{e.city}</p>}
@@ -924,10 +924,10 @@ export default function AdminWaitlist() {
                             <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">
+                        <td className="px-4 py-4 text-dark-muted hidden lg:table-cell whitespace-nowrap">
                           {formatDate(e.created_at, { day: 'numeric', month: 'short' })}
                         </td>
-                        <td className="px-2 py-3 text-right">
+                        <td className="px-2 py-4 text-right">
                           {e.status === 'converted' ? (
                             <div className="flex flex-col items-end gap-1">
                               <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
@@ -978,7 +978,7 @@ export default function AdminWaitlist() {
                             </div>
                           )}
                         </td>
-                        <td className="px-2 py-3 text-right">
+                        <td className="px-2 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             {canConvert(e) && (
                               <button

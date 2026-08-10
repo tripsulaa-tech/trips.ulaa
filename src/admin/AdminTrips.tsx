@@ -814,18 +814,18 @@ export default function AdminTrips() {
               <table className="w-full text-sm">
                 <thead className="bg-background-warm text-dark font-medium">
                   <tr>
-                    <th className="px-4 py-3 text-left">Trip</th>
-                    <th className="px-4 py-3 text-left hidden md:table-cell">Destination</th>
-                    <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
-                    <th className="px-4 py-3 text-left hidden md:table-cell">Seats</th>
-                    <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
-                    <th className="px-3 py-3 text-right whitespace-nowrap w-[112px] sm:w-auto">Actions</th>
+                    <th className="px-4 py-4 text-left">Trip</th>
+                    <th className="px-4 py-4 text-left hidden md:table-cell">Destination</th>
+                    <th className="px-4 py-4 text-left hidden lg:table-cell">Date</th>
+                    <th className="px-4 py-4 text-left hidden md:table-cell">Seats</th>
+                    <th className="px-2 py-4 text-center whitespace-nowrap">Status</th>
+                    <th className="px-3 py-4 text-right whitespace-nowrap w-[112px] sm:w-auto">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-background-warm">
                   {trips.map(trip => (
                     <motion.tr key={trip.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-3 font-medium text-dark truncate max-w-[150px] sm:max-w-none">
+                      <td className="px-4 py-4 font-medium text-dark truncate max-w-[150px] sm:max-w-none">
                         <button
                           onClick={() => setViewingTrip(trip)}
                           className="text-left hover:text-primary hover:underline underline-offset-2 truncate"
@@ -834,15 +834,15 @@ export default function AdminTrips() {
                           {trip.title}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{trip.destination}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(trip.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">
+                      <td className="px-4 py-4 text-dark-muted hidden md:table-cell truncate">{trip.destination}</td>
+                      <td className="px-4 py-4 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(trip.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                      <td className="px-4 py-4 text-dark-muted hidden md:table-cell whitespace-nowrap">
                         {trip.seats_booked}/{trip.total_seats}
                         <span className="text-xs text-dark-muted/70 ml-1">
                           ({Math.max(0, trip.total_seats - trip.seats_booked)} left)
                         </span>
                       </td>
-                      <td className="px-2 py-3 text-center">
+                      <td className="px-2 py-4 text-center">
                         <span className={`inline-block text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
                           trip.status === 'published' ? 'bg-green-100 text-green-700'
                           : trip.status === 'coming_soon' ? 'bg-amber-100 text-amber-700'
@@ -851,7 +851,7 @@ export default function AdminTrips() {
                           {trip.status === 'published' ? 'Published' : trip.status === 'coming_soon' ? 'Coming Soon' : 'Draft'}
                         </span>
                       </td>
-                      <td className="pl-2 pr-2 sm:pl-4 sm:pr-3 py-3 whitespace-nowrap">
+                      <td className="pl-2 pr-2 sm:pl-4 sm:pr-3 py-4 whitespace-nowrap">
                         <div className="flex items-center justify-end gap-0.5 sm:gap-1.5">
                           <button onClick={() => toggleComingSoon(trip)} className={`flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background transition-colors ${trip.status === 'coming_soon' ? 'text-amber-600' : 'text-dark-muted hover:text-primary'}`} title={trip.status === 'coming_soon' ? 'Switch to fully Published (show full trip)' : 'Mark as Coming Soon (show only cover + title)'}>
                             <Hourglass size={15} />

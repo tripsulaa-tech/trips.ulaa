@@ -198,19 +198,19 @@ export default function AdminAlbums() {
               <table className="w-full text-sm">
                 <thead className="bg-background-warm text-dark font-medium">
                   <tr>
-                    <th className="px-4 py-3 text-left">Album</th>
-                    <th className="px-4 py-3 text-left hidden md:table-cell">Destination</th>
-                    <th className="px-4 py-3 text-left hidden md:table-cell">Date</th>
-                    <th className="px-4 py-3 text-left hidden lg:table-cell">Participants</th>
-                    <th className="px-4 py-3 text-left hidden lg:table-cell">Photos</th>
-                    <th className="px-2 py-3 text-center whitespace-nowrap">Status</th>
-                    <th className="px-3 py-3 text-right whitespace-nowrap">Actions</th>
+                    <th className="px-4 py-4 text-left">Album</th>
+                    <th className="px-4 py-4 text-left hidden md:table-cell">Destination</th>
+                    <th className="px-4 py-4 text-left hidden md:table-cell">Date</th>
+                    <th className="px-4 py-4 text-left hidden lg:table-cell">Participants</th>
+                    <th className="px-4 py-4 text-left hidden lg:table-cell">Photos</th>
+                    <th className="px-2 py-4 text-center whitespace-nowrap">Status</th>
+                    <th className="px-3 py-4 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-background-warm">
                   {albums.map(album => (
                     <motion.tr key={album.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-3 font-medium text-dark max-w-[150px] sm:max-w-none">
+                      <td className="px-4 py-4 font-medium text-dark max-w-[150px] sm:max-w-none">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <button
                             onClick={() => setViewing(album)}
@@ -227,16 +227,16 @@ export default function AdminAlbums() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell truncate">{album.destination}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{album.participants}</td>
-                      <td className="px-4 py-3 text-dark-muted hidden lg:table-cell">{album.gallery_images?.length || 0}</td>
-                      <td className="px-2 py-3 text-center">
+                      <td className="px-4 py-4 text-dark-muted hidden md:table-cell truncate">{album.destination}</td>
+                      <td className="px-4 py-4 text-dark-muted hidden md:table-cell whitespace-nowrap">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</td>
+                      <td className="px-4 py-4 text-dark-muted hidden lg:table-cell">{album.participants}</td>
+                      <td className="px-4 py-4 text-dark-muted hidden lg:table-cell">{album.gallery_images?.length || 0}</td>
+                      <td className="px-2 py-4 text-center">
                         <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                           {album.is_published ? 'Published' : 'Draft'}
                         </span>
                       </td>
-                      <td className="pl-4 pr-3 py-3">
+                      <td className="pl-4 pr-3 py-4">
                         <div className="flex items-center justify-end gap-1.5">
                           <button onClick={() => togglePublish(album)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
                             {album.is_published ? <EyeOff size={15} /> : <Eye size={15} />}

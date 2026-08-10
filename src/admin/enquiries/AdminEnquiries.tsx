@@ -2483,7 +2483,7 @@ export default function AdminEnquiries() {
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
                     <tr>
-                      <th className="px-3 py-3 text-left w-8">
+                      <th className="px-3 py-4 text-left w-8">
                         <input
                           type="checkbox"
                           checked={paginatedEnquiries.length > 0 && paginatedEnquiries.every(e => selectedIds.has(e.id))}
@@ -2492,19 +2492,19 @@ export default function AdminEnquiries() {
                           className="w-4 h-4 rounded border-background-warm accent-primary cursor-pointer"
                         />
                       </th>
-                      <th className="px-3 py-3 text-left hidden md:table-cell">S.No</th>
-                      <SortableTh label="Name" sortKey="name" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left" />
-                      <SortableTh label="Group" sortKey="group" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
-                      <SortableTh label="Food" sortKey="food" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
-                      <th className="px-4 py-3 text-left hidden sm:table-cell">Contact</th>
-                      <SortableTh label="Source" sortKey="source" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left hidden lg:table-cell" />
-                      <SortableTh label="Date & Time" sortKey="date" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-3 text-left hidden lg:table-cell" />
-                      <SortableTh label="Package" sortKey="package" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-center whitespace-nowrap" />
-                      <SortableTh label="Payment" sortKey="payment" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap" />
-                      <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-center whitespace-nowrap" />
-                      <SortableTh label="Follow-up" sortKey="follow_up" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-3 text-left whitespace-nowrap hidden md:table-cell" />
-                      <th className="px-2 py-3 text-center whitespace-nowrap">Seat</th>
-                      <th className="px-2 py-3 text-right whitespace-nowrap">Update</th>
+                      <th className="px-3 py-4 text-left hidden md:table-cell">S.No</th>
+                      <SortableTh label="Name" sortKey="name" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left" />
+                      <SortableTh label="Group" sortKey="group" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
+                      <SortableTh label="Food" sortKey="food" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
+                      <th className="px-4 py-4 text-left hidden sm:table-cell">Contact</th>
+                      <SortableTh label="Source" sortKey="source" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left hidden lg:table-cell" />
+                      <SortableTh label="Date & Time" sortKey="date" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left hidden lg:table-cell" />
+                      <SortableTh label="Package" sortKey="package" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-center whitespace-nowrap" />
+                      <SortableTh label="Payment" sortKey="payment" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
+                      <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-center whitespace-nowrap" />
+                      <SortableTh label="Follow-up" sortKey="follow_up" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap hidden md:table-cell" />
+                      <th className="px-2 py-4 text-center whitespace-nowrap">Seat</th>
+                      <th className="px-2 py-4 text-right whitespace-nowrap">Update</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-background-warm">
@@ -2527,7 +2527,7 @@ export default function AdminEnquiries() {
                             isHighlighted ? 'bg-amber-50 ring-2 ring-inset ring-primary/40' : clr ? clr.row : 'hover:bg-background/50'
                           }`}
                         >
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-4">
                             <input
                               type="checkbox"
                               checked={selectedIds.has(e.id)}
@@ -2536,8 +2536,8 @@ export default function AdminEnquiries() {
                               className="w-4 h-4 rounded border-background-warm accent-primary cursor-pointer"
                             />
                           </td>
-                          <td className="px-3 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">{idx + 1}</td>
-                          <td className="px-4 py-3 max-w-[150px] sm:max-w-none">
+                          <td className="px-3 py-4 text-dark-muted hidden md:table-cell whitespace-nowrap">{idx + 1}</td>
+                          <td className="px-4 py-4 max-w-[150px] sm:max-w-none">
                             <button
                               onClick={() => setDetailsTarget(e)}
                               className="text-left w-full group"
@@ -2557,7 +2557,7 @@ export default function AdminEnquiries() {
                               <p className="text-dark-muted text-xs truncate sm:hidden">{e.email}</p>
                             </button>
                           </td>
-                          <td className="px-2 py-3 whitespace-nowrap">
+                          <td className="px-2 py-4 whitespace-nowrap">
                             {e.group_size && e.group_size > 1 ? (
                               <span
                                 title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
@@ -2574,27 +2574,27 @@ export default function AdminEnquiries() {
                               </span>
                             )}
                           </td>
-                          <td className="px-2 py-3 whitespace-nowrap">
+                          <td className="px-2 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
                               e.food_preference === 'veg' ? 'text-green-700' : e.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark-muted'
                             }`}>
                               <FoodMark type={foodPreferenceKey(e)} size={12} /> {food.label}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-dark-muted hidden sm:table-cell">
+                          <td className="px-4 py-4 text-dark-muted hidden sm:table-cell">
                             <p className="text-xs truncate">{e.email}</p>
                             <p className="text-xs mt-0.5">{e.phone}</p>
                           </td>
-                          <td className="px-4 py-3 text-dark-muted hidden lg:table-cell truncate">
+                          <td className="px-4 py-4 text-dark-muted hidden lg:table-cell truncate">
                             <span className="text-xs">
                               {srcCfg.label}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-dark-muted hidden lg:table-cell whitespace-nowrap">
+                          <td className="px-4 py-4 text-dark-muted hidden lg:table-cell whitespace-nowrap">
                             <p>{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</p>
                             <p className="text-[11px] text-dark-muted/80">{formatTime(e.created_at)}</p>
                           </td>
-                          <td className="px-2 py-3 text-center">
+                          <td className="px-2 py-4 text-center">
                             <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
                               e.package_type === 'early_bird' ? 'text-purple-700' : 'text-slate-700'
                             }`}>
@@ -2602,7 +2602,7 @@ export default function AdminEnquiries() {
                               {PACKAGE_CONFIG[e.package_type || 'normal'].label}
                             </span>
                           </td>
-                          <td className="px-2 py-3 text-left whitespace-nowrap">
+                          <td className="px-2 py-4 text-left whitespace-nowrap">
                             <button onClick={() => openPayment(e)} className="text-left hover:opacity-75 transition-opacity">
                               <p className="text-dark text-xs">
                                 <span className="font-medium">{formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}</span>
@@ -2629,13 +2629,13 @@ export default function AdminEnquiries() {
                               </p>
                             )}
                           </td>
-                          <td className="px-2 py-3 text-center">
+                          <td className="px-2 py-4 text-center">
                             <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
                               <jb.icon size={12} className="shrink-0" />
                               {jb.label}
                             </span>
                           </td>
-                          <td className="px-2 py-3 text-left whitespace-nowrap hidden md:table-cell">
+                          <td className="px-2 py-4 text-left whitespace-nowrap hidden md:table-cell">
                             {(() => {
                               const fu = followUpStatus(e);
                               if (fu) {
@@ -2696,7 +2696,7 @@ export default function AdminEnquiries() {
                               return <span className="text-dark-muted/50 text-xs">—</span>;
                             })()}
                           </td>
-                          <td className="px-2 py-3 text-center">
+                          <td className="px-2 py-4 text-center">
                             <span
                               title={seat.title}
                               className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${seat.color}`}
@@ -2705,7 +2705,7 @@ export default function AdminEnquiries() {
                               {seat.label}
                             </span>
                           </td>
-                          <td className="px-2 py-3 text-right">
+                          <td className="px-2 py-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               {nma && (
                                 <button
