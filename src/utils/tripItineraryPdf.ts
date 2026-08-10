@@ -282,6 +282,7 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
     meeting_point: trip.meeting_point ? sanitizeForPdf(trip.meeting_point) : trip.meeting_point,
     gallery_description: trip.gallery_description ? sanitizeForPdf(trip.gallery_description) : trip.gallery_description,
     gallery_items: trip.gallery_items?.map(item => ({ ...item, description: sanitizeForPdf(item.description) })),
+    accommodation_description: trip.accommodation_description ? sanitizeForPdf(trip.accommodation_description) : trip.accommodation_description,
     fashion_description: trip.fashion_description ? sanitizeForPdf(trip.fashion_description) : trip.fashion_description,
     confidence_description: trip.confidence_description ? sanitizeForPdf(trip.confidence_description) : trip.confidence_description,
     confidence_items: trip.confidence_items?.map(item => ({ ...item, description: sanitizeForPdf(item.description) })),
@@ -2261,12 +2262,117 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   }
 
   // =========================================================================
+  // Shared square-photo-wall grid used by both the Accommodation and Fashion
+  // Aesthetics slides. Two rows: row 1 holds up to 4 photos, row 2 holds up
+  // to 3 — so a 7th photo gets a real tile in row 1 instead of being folded
+  // into a "+N" overlay. For 6 or fewer photos, row 1 stays at 3 across
+  // (matching the original 3x2 layout); it only grows to 4 once a 7th photo
+  // needs a home. Anything past 7 photos still collapses into a dimmed
+  // "+N" badge on the last tile.
+  async function drawSquarePhotoWall(allPhotos: string[], contentTop: number): Promise<void> {
+    const ROW1_MAX = 4;
+    const ROW2_MAX = 3;
+    const CAP = ROW1_MAX + ROW2_MAX;
+    const shown = allPhotos.slice(0, CAP);
+    const remaining = allPhotos.length - shown.length;
+
+    const row1Count = shown.length >= 7 ? ROW1_MAX : Math.min(3, shown.length);
+    const row2Count = shown.length - row1Count;
+    const rowCounts = row2Count > 0 ? [row1Count, row2Count] : [row1Count];
+    const maxCols = Math.max(...rowCounts, 1);
+    const rows = rowCounts.length;
+
+    const colGap = 14;
+    const rowGap = 14;
+
+    // Square size is whichever of width- or height-driven fits smaller, so
+    // the grid always stays made of true squares. Left-aligned to MARGIN
+    // (not centered), so any leftover width sits to the right of the grid
+    // instead of splitting evenly.
+    const squareByWidth = (CONTENT_W - colGap * (maxCols - 1)) / maxCols;
+    const availH = CONTENT_BOTTOM - contentTop;
+    const squareByHeight = (availH - rowGap * (rows - 1)) / rows;
+    const square = Math.min(squareByWidth, squareByHeight);
+
+    const gridH = rows * square + rowGap * (rows - 1);
+    const gridX = MARGIN;
+    const gridY = centeredTop(contentTop, CONTENT_BOTTOM, gridH);
+
+    const crops = await Promise.all(shown.map(url => loadCoverCroppedImage(url, square, square, 8)));
+
+    let i = 0;
+    rowCounts.forEach((count, row) => {
+      for (let col = 0; col < count; col++) {
+        const cropped = crops[i];
+        const x = gridX + col * (square + colGap);
+        const y = gridY + row * (square + rowGap);
+        if (cropped) {
+          try {
+            doc.addImage(cropped, 'JPEG', x, y, square, square);
+          } catch {
+            setFill(COLORS.backgroundWarm);
+            doc.roundedRect(x, y, square, square, 8, 8, 'F');
+            setDraw(COLORS.grayLineSoft);
+            doc.setLineWidth(0.75);
+            doc.roundedRect(x, y, square, square, 8, 8, 'S');
+          }
+        } else {
+          setFill(COLORS.backgroundWarm);
+          doc.roundedRect(x, y, square, square, 8, 8, 'F');
+          setDraw(COLORS.grayLineSoft);
+          doc.setLineWidth(0.75);
+          doc.roundedRect(x, y, square, square, 8, 8, 'S');
+        }
+
+        if (i === shown.length - 1 && remaining > 0) {
+          withOpacity(0.55, () => {
+            setFill(COLORS.dark);
+            doc.roundedRect(x, y, square, square, 8, 8, 'F');
+          });
+          setText(COLORS.white);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(16);
+          doc.text(`+${remaining}`, x + square / 2, y + square / 2 + 5, { align: 'center' });
+        }
+
+        i++;
+      }
+    });
+  }
+
+  // =========================================================================
+  // SLIDE — Accommodation (photo grid) — "Stay. Relax. Repeat."
+  // =========================================================================
+  // Same shape/theme as `renderFashion` below (square photo wall via
+  // `drawSquarePhotoWall`) but for the trip's handpicked accommodation
+  // photos. Sits right before "What's Included" in the slide order. Falls
+  // back to a default tagline when the trip has no admin-entered
+  // accommodation_description.
+  async function renderAccommodation() {
+    const allPhotos = trip.accommodation_photos ?? [];
+    if (allPhotos.length === 0) return;
+
+    newSlide();
+    slideHeader(null, 'Stay. Relax. Repeat.');
+
+    const description = trip.accommodation_description
+      || 'More than just a place to stay—these handpicked accommodations are where you\'ll relax, laugh, share stories, and create unforgettable memories with your travel sisters.';
+
+    const contentTop = drawParagraph(description, MARGIN, 92, CONTENT_W, {
+      size: 10,
+      color: COLORS.darkMuted,
+      lineHeight: 14,
+      maxLines: 2,
+    }) + 14;
+
+    await drawSquarePhotoWall(allPhotos, contentTop);
+  }
+
+  // =========================================================================
   // SLIDE — Fashion Aesthetics (photo grid)
   // =========================================================================
   // Same shape as `renderGallery` above (optional intro paragraph + a fixed,
-  // non-paginated wall of square photos) but as a 3-across, 2-row grid (6
-  // photos) instead of Places' 4-across, 2-row wall. Shows a "+N" overlay
-  // on the last tile when there are more than 6 photos.
+  // non-paginated square photo wall via `drawSquarePhotoWall`).
   async function renderFashion() {
     const allPhotos = trip.fashion_photos ?? [];
     if (allPhotos.length === 0) return;
@@ -2284,62 +2390,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       }) + 14;
     }
 
-    const cols = 3;
-    const rows = 2;
-    const colGap = 14;
-    const rowGap = 14;
-    const photos = allPhotos.slice(0, cols * rows);
-    const remaining = allPhotos.length - photos.length;
-
-    // Square size is whichever of width- or height-driven fits smaller, so
-    // the grid always stays made of true squares. Left-aligned to MARGIN
-    // (not centered) — same approach as renderGallery, so any leftover
-    // width sits to the right of the grid instead of splitting evenly.
-    const squareByWidth = (CONTENT_W - colGap * (cols - 1)) / cols;
-    const availH = CONTENT_BOTTOM - contentTop;
-    const squareByHeight = (availH - rowGap * (rows - 1)) / rows;
-    const square = Math.min(squareByWidth, squareByHeight);
-
-    const gridH = rows * square + rowGap * (rows - 1);
-    const gridX = MARGIN;
-    const gridY = centeredTop(contentTop, CONTENT_BOTTOM, gridH);
-
-    const crops = await Promise.all(photos.map(url => loadCoverCroppedImage(url, square, square, 8)));
-
-    crops.forEach((cropped, i) => {
-      const row = Math.floor(i / cols);
-      const col = i % cols;
-      const x = gridX + col * (square + colGap);
-      const y = gridY + row * (square + rowGap);
-      if (cropped) {
-        try {
-          doc.addImage(cropped, 'JPEG', x, y, square, square);
-        } catch {
-          setFill(COLORS.backgroundWarm);
-          doc.roundedRect(x, y, square, square, 8, 8, 'F');
-          setDraw(COLORS.grayLineSoft);
-          doc.setLineWidth(0.75);
-          doc.roundedRect(x, y, square, square, 8, 8, 'S');
-        }
-      } else {
-        setFill(COLORS.backgroundWarm);
-        doc.roundedRect(x, y, square, square, 8, 8, 'F');
-        setDraw(COLORS.grayLineSoft);
-        doc.setLineWidth(0.75);
-        doc.roundedRect(x, y, square, square, 8, 8, 'S');
-      }
-
-      if (i === photos.length - 1 && remaining > 0) {
-        withOpacity(0.55, () => {
-          setFill(COLORS.dark);
-          doc.roundedRect(x, y, square, square, 8, 8, 'F');
-        });
-        setText(COLORS.white);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.text(`+${remaining}`, x + square / 2, y + square / 2 + 5, { align: 'center' });
-      }
-    });
+    await drawSquarePhotoWall(allPhotos, contentTop);
   }
 
   // =========================================================================
@@ -3014,6 +3065,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   await renderCover();
   await renderHighlightsAndDays();
   await renderItinerary();
+  await renderAccommodation();
   await renderInclusions();
   await renderGallery();
   await renderFashion();
