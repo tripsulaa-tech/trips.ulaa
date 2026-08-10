@@ -1252,7 +1252,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const metaParts = [
       formatDateRange(trip.start_date, trip.end_date),
       trip.duration,
-      trip.total_seats ? `Group of ${trip.total_seats}` : '',
+      trip.total_seats ? `${trip.total_seats} Travelers` : '',
       formatAgeRange(trip.min_age, trip.max_age),
       isEarlyBird && activePrice ? `Early Bird ${money(activePrice)}` : '',
     ]
@@ -2224,17 +2224,17 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const photos = allPhotos.slice(0, cols * rows);
 
     // Square size is whichever of width- or height-driven fits smaller, so
-    // the grid always stays made of true squares; centeredTop/horizontal
-    // centering below then spreads that grid evenly across whatever space
-    // is left over in the other dimension.
+    // the grid always stays made of true squares. The grid itself is left-
+    // aligned to MARGIN (not centered) — when height is the binding
+    // constraint, any leftover width just sits to the right of the grid
+    // rather than splitting evenly on both sides.
     const squareByWidth = (CONTENT_W - colGap * (cols - 1)) / cols;
     const availH = CONTENT_BOTTOM - contentTop;
     const squareByHeight = (availH - rowGap * (rows - 1)) / rows;
     const square = Math.min(squareByWidth, squareByHeight);
 
-    const gridW = cols * square + colGap * (cols - 1);
     const gridH = rows * square + rowGap * (rows - 1);
-    const gridX = MARGIN + (CONTENT_W - gridW) / 2;
+    const gridX = MARGIN;
     const gridY = centeredTop(contentTop, CONTENT_BOTTOM, gridH);
 
     const crops = await Promise.all(photos.map(url => loadCoverCroppedImage(url, square, square, 8)));
@@ -2292,17 +2292,16 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const remaining = allPhotos.length - photos.length;
 
     // Square size is whichever of width- or height-driven fits smaller, so
-    // the grid always stays made of true squares; centeredTop/horizontal
-    // centering below then spreads that grid evenly across whatever space
-    // is left over in the other dimension. Same approach as renderGallery.
+    // the grid always stays made of true squares. Left-aligned to MARGIN
+    // (not centered) — same approach as renderGallery, so any leftover
+    // width sits to the right of the grid instead of splitting evenly.
     const squareByWidth = (CONTENT_W - colGap * (cols - 1)) / cols;
     const availH = CONTENT_BOTTOM - contentTop;
     const squareByHeight = (availH - rowGap * (rows - 1)) / rows;
     const square = Math.min(squareByWidth, squareByHeight);
 
-    const gridW = cols * square + colGap * (cols - 1);
     const gridH = rows * square + rowGap * (rows - 1);
-    const gridX = MARGIN + (CONTENT_W - gridW) / 2;
+    const gridX = MARGIN;
     const gridY = centeredTop(contentTop, CONTENT_BOTTOM, gridH);
 
     const crops = await Promise.all(photos.map(url => loadCoverCroppedImage(url, square, square, 8)));
@@ -2448,35 +2447,54 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const footerTop = CONTENT_BOTTOM - footerReserve + 10;
     const availH = CONTENT_BOTTOM - footerReserve - top;
 
-    const measureClause = (c: Clause) => {
-      const titleH = 18;
-      const bodyH = c.body.reduce((sum, line) => sum + measureParagraphHeight(line, colW - 40, 9.3, 13.2) + 3, 0);
-      return titleH + bodyH + 20;
-    };
-
-    const balanced = paginateTwoColumns(clauses, measureClause, availH);
+    // All 8 clauses are meant to read as one policy, so this tries to keep
+    // them on a single slide by shrinking type size/line-height/spacing in
+    // small steps — same clauses, same order, just more compact — rather
+    // than spilling onto a "(continued)" slide. Only falls back to a
+    // second slide at the smallest (still-readable) scale if it genuinely
+    // doesn't fit even then.
+    const SCALES = [1, 0.94, 0.88, 0.82, 0.76, 0.7];
+    let scale = SCALES[SCALES.length - 1];
+    let balanced: ReturnType<typeof paginateTwoColumns<Clause>> = [];
+    for (const s of SCALES) {
+      const measureAtScale = (c: Clause) => {
+        const titleH = 17 * s;
+        const bodySize = 9.3 * s;
+        const bodyLineH = 13.2 * s;
+        const bodyGap = 3 * s;
+        const trailingGap = 16 * s;
+        const bodyH = c.body.reduce((sum, line) => sum + measureParagraphHeight(line, colW - 26, bodySize, bodyLineH) + bodyGap, 0);
+        return titleH + bodyH + trailingGap;
+      };
+      const attempt = paginateTwoColumns(clauses, measureAtScale, availH);
+      scale = s;
+      balanced = attempt;
+      if (attempt.length === 1) break;
+    }
 
     async function drawColumn(x: number, startY: number, items: Clause[]) {
       let y = startY;
       for (const clause of items) {
-        const badgeCx = x + 10;
-        const badgeCy = y - 5;
-        const badgeSize = 21;
+        const badgeSize = Math.max(15, 21 * scale);
+        const badgeCx = x + badgeSize / 2 - 0.5;
+        const badgeCy = y - 5 * scale;
         setFill(COLORS.backgroundWarm);
         doc.roundedRect(badgeCx - badgeSize / 2, badgeCy - badgeSize / 2, badgeSize, badgeSize, 5, 5, 'F');
         await drawLucideIcon(clause.icon, badgeCx - badgeSize / 2 + 2, badgeCy + badgeSize / 2 - 2, badgeSize - 4, COLORS.primary);
 
+        const textX = x + badgeSize + 5;
+        const textW = colW - (badgeSize + 5);
         setText(COLORS.dark);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11.5);
-        doc.text(clause.title, x + 26, y);
-        y += 17;
+        doc.setFontSize(11.5 * scale);
+        doc.text(clause.title, textX, y);
+        y += 17 * scale;
 
         clause.body.forEach(line => {
-          y = drawParagraph(line, x + 26, y, colW - 26, { size: 9.3, color: COLORS.darkMuted, lineHeight: 13.2 });
-          y += 3;
+          y = drawParagraph(line, textX, y, textW, { size: 9.3 * scale, color: COLORS.darkMuted, lineHeight: 13.2 * scale });
+          y += 3 * scale;
         });
-        y += 16;
+        y += 16 * scale;
       }
     }
 

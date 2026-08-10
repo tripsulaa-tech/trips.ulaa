@@ -42,7 +42,7 @@ function formatDateRange(start?: string, end?: string) {
     return s.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
   if (sameMonth) {
-    return `${s.getDate()} – ${e.getDate()} ${monthYear}`;
+    return `${s.getDate()} - ${e.getDate()} ${monthYear}`;
   }
   return `${formatDate(start)} – ${formatDate(end)}`;
 }

@@ -84,10 +84,18 @@ export function getStrikeThroughPrice(
   return undefined;
 }
 
-/** Format a date range */
+/** Format a date range. Same month & year condenses to "17 - 22 Oct 2026"
+ *  (no repeated month); otherwise falls back to the full "17 Dec 2026 –
+ *  3 Jan 2027" form. */
 export function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
   const e = new Date(end);
+  const sameMonth = s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth();
+  if (sameMonth) {
+    const startDay = s.toLocaleDateString('en-IN', { day: 'numeric' });
+    const endStr = e.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `${startDay} - ${endStr}`;
+  }
   const startStr = s.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   const endStr = e.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   return `${startStr} – ${endStr}`;
