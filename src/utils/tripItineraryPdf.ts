@@ -11,6 +11,7 @@ import {
   Shirt, Footprints, Glasses, HatGlasses, Hand, Headphones, BatteryCharging,
   Pill, SprayCan, Droplet, GlassWater, Cookie, Sparkles, FileText, IdCard,
   Calendar, Clock, Users, UserCheck, Phone, Mail, Globe, MessageSquare,
+  ShieldCheck, BadgeCheck,
 } from 'lucide-react';
 import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, TripInclusionItem, ItineraryDay, ButtonLabelsConfig } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
@@ -19,6 +20,7 @@ import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import { getSiteContent } from '../services/api';
 import { formatDateRange, formatAgeRange, formatPrice, formatDate, getActivePrice, getStrikeThroughPrice, publicSeatsLeft } from './utils-index';
 import { PARISIENNE_FONT_BASE64 } from './parisienneFont';
+import { RUPEE_SANS_REGULAR_BASE64, RUPEE_SANS_BOLD_BASE64 } from './rupeeFont';
 
 // =============================================================================
 // Icon fidelity with the live site
@@ -199,8 +201,15 @@ function money(amount: number): string {
  *  capital 'R' at that size. Using "RS" instead keeps both letters the same
  *  (capital) height, so the currency prefix reads as evenly weighted
  *  next to the price rather than lopsided. */
-function heroMoney(amount: number): string {
-  return money(amount).replace(/^Rs\./, 'RS');
+/** Same figure as `heroMoney()` would have produced, but with the real ₹
+ *  glyph instead of the "RS" text fallback — for use only where the
+ *  `RupeeSans` font (see rupeeFont.ts) is active, i.e. the hero price on
+ *  the "Trip Leader & Booking" slide, matching TripDetailPage's
+ *  <BookingForm>. Every other price on this PDF still goes through
+ *  `money()`, which keeps the "Rs." text form since it draws with
+ *  helvetica, whose Windows-1252 charset can't render ₹. */
+function heroMoneyRupee(amount: number): string {
+  return formatPrice(amount); // e.g. "₹39,999" — same shape as TripDetailPage
 }
 
 // `included_groups` carries the site's grouped "What's Included" content
@@ -436,6 +445,20 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.addFont('Parisienne-Regular.ttf', 'Parisienne', 'normal');
   } catch {
     /* falls back to the default font — see comment above */
+  }
+
+  // Register a tiny Roboto subset (digits, comma, period, space, "RS" and
+  // the ₹ glyph itself) so the hero price on the "Trip Leader & Booking"
+  // slide can show the real ₹ symbol — helvetica's Windows-1252 charset
+  // doesn't include it (see heroMoneyRupee() below). Same best-effort
+  // pattern as Parisienne above: on failure, callers fall back to helvetica.
+  try {
+    doc.addFileToVFS('RupeeSans-Regular.ttf', RUPEE_SANS_REGULAR_BASE64);
+    doc.addFont('RupeeSans-Regular.ttf', 'RupeeSans', 'normal');
+    doc.addFileToVFS('RupeeSans-Bold.ttf', RUPEE_SANS_BOLD_BASE64);
+    doc.addFont('RupeeSans-Bold.ttf', 'RupeeSans', 'bold');
+  } catch {
+    /* falls back to jsPDF's default font — see comment above */
   }
 
   // ---------------------------------------------------------------------
@@ -2460,16 +2483,24 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const rightW = CONTENT_W - leftW - colGapCards;
     const cardCX = rightX + rightW / 2; // horizontal center of the booking card, for the centered layout below
 
-    function cardShell(x: number, w: number) {
+    // The booking card sits a little higher than the left column (shifted up
+    // by BOOK_CARD_RAISE), giving it a touch more breathing room above
+    // "Secure Your Spot Soon" without disturbing the "Meet Your Trip Leader"
+    // side, which still anchors to CARDS_TOP/CARDS_BOTTOM directly.
+    const BOOK_CARD_RAISE = 10;
+    const RIGHT_TOP = CARDS_TOP - BOOK_CARD_RAISE;
+    const RIGHT_BOTTOM = CARDS_BOTTOM - BOOK_CARD_RAISE;
+
+    function cardShell(x: number, w: number, top: number, bottom: number) {
       setFill(COLORS.white);
-      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 8, 8, 'F');
+      doc.roundedRect(x, top, w, bottom - top, 8, 8, 'F');
       setDraw(COLORS.grayLine);
       doc.setLineWidth(1);
-      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 8, 8, 'S');
+      doc.roundedRect(x, top, w, bottom - top, 8, 8, 'S');
     }
     // Only the booking card gets the bordered/filled card shell — the
     // "Meet Your Trip Leader" side sits directly on the page background now.
-    cardShell(rightX, rightW);
+    cardShell(rightX, rightW, RIGHT_TOP, RIGHT_BOTTOM);
 
     // -- Left: Meet Your Trip Leader (from trip.trip_founder) --
     // "Meet Your Trip Leader" sits above the name column (not the photo),
@@ -2482,10 +2513,12 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14.5);
     doc.text('Meet Your Trip Leader', headingX, CARDS_TOP + PAD + 6);
-    const headingW = doc.getTextWidth('Meet Your Trip Leader');
+    // Underline only "Meet" (not the full heading), with a little more
+    // breathing room between the text baseline and the rule below it.
+    const meetW = doc.getTextWidth('Meet');
     setDraw(COLORS.secondary);
     doc.setLineWidth(2);
-    doc.line(headingX, CARDS_TOP + PAD + 10, headingX + headingW, CARDS_TOP + PAD + 10);
+    doc.line(headingX, CARDS_TOP + PAD + 13, headingX + meetW, CARDS_TOP + PAD + 13);
 
     const founder = trip.trip_founder;
     if (founder && (founder.name || founder.photo)) {
@@ -2594,7 +2627,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     setText(COLORS.dark);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14.5);
-    doc.text('Secure Your Spot Soon', cardCX, CARDS_TOP + PAD + 6, { align: 'center' });
+    doc.text('Secure Your Spot Soon', cardCX, RIGHT_TOP + PAD + 6, { align: 'center' });
 
     const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
     const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
@@ -2604,40 +2637,44 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const remainingAfterAdvance =
       activePrice != null && trip.advance_amount != null ? Math.max(0, activePrice - trip.advance_amount) : null;
 
-    const BOOK_TOP = CARDS_TOP + PAD + 34; // clears the "Secure Your Spot Soon" heading above
+    const BOOK_TOP = RIGHT_TOP + PAD + 34; // clears the "Secure Your Spot Soon" heading above
     const innerLeft = rightX + PAD;
     const innerRight = rightX + rightW - PAD;
     const innerW = innerRight - innerLeft;
 
     let ry = BOOK_TOP;
 
-    // Price row: main price + strikethrough, centered as one group
+    // Price row: main price + strikethrough, centered as one group. Uses the
+    // embedded RupeeSans subset (see rupeeFont.ts) so the real ₹ glyph shows
+    // here, matching TripDetailPage's <BookingForm> — helvetica can't render
+    // it (see money()/formatPrice()), which is why every other price on this PDF still
+    // falls back to the "Rs."/"RS" text form.
     if (activePrice != null) {
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('RupeeSans', 'bold');
       doc.setFontSize(24);
-      const priceStr = heroMoney(activePrice);
+      const priceStr = heroMoneyRupee(activePrice);
       const priceW = doc.getTextWidth(priceStr);
 
       let strikeStr = '';
       let strikeW = 0;
       if (strikeThroughPrice != null) {
-        doc.setFont('helvetica', 'normal');
+        doc.setFont('RupeeSans', 'normal');
         doc.setFontSize(12);
-        strikeStr = heroMoney(strikeThroughPrice);
+        strikeStr = heroMoneyRupee(strikeThroughPrice);
         strikeW = doc.getTextWidth(strikeStr);
       }
       const gap1 = strikeStr ? 10 : 0;
       let px = cardCX - (priceW + gap1 + strikeW) / 2;
 
       setText(COLORS.primary);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('RupeeSans', 'bold');
       doc.setFontSize(24);
       doc.text(priceStr, px, ry);
       px += priceW + gap1;
 
       if (strikeStr) {
         setText(COLORS.darkMuted);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont('RupeeSans', 'normal');
         doc.setFontSize(12);
         doc.text(strikeStr, px, ry);
         setDraw(COLORS.darkMuted);
@@ -2743,7 +2780,14 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       const line1TextW = mixedLineWidth(line1Parts, 9.4);
       const line1GroupW = line1IconGap + line1TextW;
       const line1StartX = cardCX - line1GroupW / 2;
-      icons.check(line1StartX - 6, boxTop + boxH / 2, 18, COLORS.green);
+      // Green circle + white ShieldCheck glyph — same combo TripDetailPage's
+      // <BookingForm> uses for this box (w-9 h-9 bg-green-600 circle behind
+      // a white ShieldCheck), instead of the hand-drawn check mark.
+      const shieldCX = line1StartX - 6 + 9;
+      const shieldCY = boxTop + boxH / 2 - 7.2;
+      setFill(COLORS.green);
+      doc.circle(shieldCX, shieldCY, 7.2, 'F');
+      await drawLucideIcon(ShieldCheck, shieldCX - 5, shieldCY + 5, 10, COLORS.white);
       drawMixedLine(line1StartX + line1IconGap - 6, boxTop + 16, line1Parts, 9.4);
 
       if (remainingAfterAdvance != null) {
@@ -2767,9 +2811,6 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     ry = boxTop + boxH + 12;
 
     // Trip-facts list: label+icon on the left, value right-aligned
-    setDraw(COLORS.grayLineSoft);
-    doc.setLineWidth(1);
-    doc.line(innerLeft, ry, innerRight, ry);
     ry += 15;
 
     const metaItems: { icon: LucideIcon; label: string; value: string }[] = [
@@ -2826,13 +2867,14 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     });
     ry = btnY + btnH + 16;
 
-    // Reassurance note, centered with a small check icon before the first line
+    // Reassurance note, centered with a small check icon before the first
+    // line — BadgeCheck, same glyph TripDetailPage uses next to this note.
     setText(COLORS.darkMuted);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.6);
     const noteLines: string[] = doc.splitTextToSize("No payment required to enquire. We'll contact you within 24 hours.", innerW - 20);
     const firstLineW = doc.getTextWidth(noteLines[0]);
-    icons.check(cardCX - firstLineW / 2 - 12, ry + 2, 10, COLORS.green);
+    await drawLucideIcon(BadgeCheck, cardCX - firstLineW / 2 - 12, ry + 3, 10, COLORS.green);
     noteLines.forEach((line, i) => {
       doc.text(line, cardCX, ry + i * 10, { align: 'center' });
     });
@@ -2852,6 +2894,9 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       { icon: Phone, title: 'Call / WhatsApp', value: BRAND.phone, url: `https://wa.me/${BRAND.phone.replace(/\D/g, '')}` },
       { icon: Mail, title: 'Email Us', value: BRAND.email, url: `mailto:${BRAND.email}` },
       { icon: Globe, title: 'Website', value: BRAND.website, url: `https://${siteDomain}` },
+      // `icon` here is unused for this entry — see the "Follow Us" special
+      // case below, which draws the hand-drawn `icons.instagram` glyph
+      // instead. Kept as a placeholder only to satisfy the array's type.
       { icon: MessageSquare, title: 'Follow Us', value: BRAND.instagram, url: `https://instagram.com/${BRAND.instagram.replace('@', '')}` },
     ];
     const contactColW = CONTENT_W / contactItems.length;
@@ -2863,11 +2908,18 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       setFill(COLORS.backgroundWarm);
       doc.circle(cx0 + 12, contactMidY, 15, 'F');
       // Real lucide-react icons, not the hand-drawn `icons.*` set — those
-      // were coming out visually messy/misaligned inside this circle.
+      // were coming out visually messy/misaligned inside this circle. The
+      // one exception is Instagram: lucide dropped brand icons a few
+      // versions back, so "Follow Us" uses the hand-drawn `icons.instagram`
+      // glyph instead, at matching size/position.
       // Icon glyph is slightly smaller than the circle behind it (16 vs the
       // circle's radius-15 background), centered within it.
       const contactIconS = 16;
-      await drawLucideIcon(item.icon, cx0 + 12 - contactIconS / 2, contactMidY + contactIconS / 2, contactIconS, COLORS.primary);
+      if (item.title === 'Follow Us') {
+        icons.instagram(cx0 + 12 - contactIconS / 2, contactMidY + contactIconS / 2, contactIconS, COLORS.primary);
+      } else {
+        await drawLucideIcon(item.icon, cx0 + 12 - contactIconS / 2, contactMidY + contactIconS / 2, contactIconS, COLORS.primary);
+      }
 
       const tx = cx0 + 30;
       setText(COLORS.dark);
