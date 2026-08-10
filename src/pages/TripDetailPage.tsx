@@ -14,12 +14,13 @@ import PagedCarousel, { type PagedCarouselHandle } from '../components/ui/PagedC
 import { useResponsiveItemsPerView } from '../components/ui/useResponsiveItemsPerView';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { getTripHighlightIcon, getTripHighlightPalette } from '../constants/tripHighlightIcons';
-import { getUpcomingTripBySlug } from '../services/api';
+import { getUpcomingTripBySlug, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
-import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripConfidenceItem } from '../types/types-index';
+import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripConfidenceItem, ButtonLabelsConfig } from '../types/types-index';
 import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice, getStrikeThroughPrice, formatAgeRange, getCoverImageStyle } from '../utils/utils-index';
 import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/calendar';
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
+import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import {
   MapPin, Calendar, Clock, Users, UserCheck, CheckCircle, XCircle,
   Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight, Play,
@@ -103,6 +104,7 @@ export default function TripDetailPage() {
   const [searchParams] = useSearchParams();
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
   const [loading, setLoading] = useState(true);
+  const [buttonLabels, setButtonLabels] = useState<ButtonLabelsConfig>(DEFAULT_BUTTON_LABELS);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('highlights');
   const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
@@ -182,6 +184,34 @@ export default function TripDetailPage() {
       .catch(() => setTrip(null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Admin-editable "Pack Your Bags" / "Join Waitlist" button text (see
+  // /admin/button-labels — AdminButtonLabels.tsx). Starts from the defaults
+  // so there's no flash of missing text, then swaps in the saved copy once
+  // it loads, and stays live via the same site_content Realtime channel
+  // BottomNav.tsx subscribes to for its own admin-edited content.
+  useEffect(() => {
+    getSiteContent<ButtonLabelsConfig>('button_labels')
+      .then(data => {
+        if (data && data.primaryCta) setButtonLabels(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToTable(
+      'site_content',
+      () => {
+        getSiteContent<ButtonLabelsConfig>('button_labels')
+          .then(data => {
+            if (data && data.primaryCta) setButtonLabels(data);
+          })
+          .catch(() => {});
+      },
+      'key=eq.button_labels'
+    );
+    return unsubscribe;
+  }, []);
 
   // Live status — if the admin flips "Coming Soon" (or edits seats, price,
   // etc.) while someone is already sitting on this trip's page, merge the
@@ -529,7 +559,7 @@ export default function TripDetailPage() {
                 onClick={() => setBookingOpen(true)}
                 className="group/btn flex-1 sm:flex-none whitespace-nowrap sm:w-auto !px-3 !py-2 !text-sm !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
               >
-                {isFull ? 'Join Waitlist' : 'Pack Your Bags'}
+                {isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta}
                 {!isFull && <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />}
               </Button>
               {!trip.hide_pdf_download && (
@@ -701,7 +731,7 @@ export default function TripDetailPage() {
                   <motion.button
                     type="button"
                     onClick={() => setBookingOpen(true)}
-                    aria-label="Trip starts soon — tap to Pack Your Bags"
+                    aria-label={`Trip starts soon — tap to ${buttonLabels.primaryCta}`}
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.985 }}
                     transition={{ duration: 0.25, ease: 'easeOut' }}
@@ -778,15 +808,15 @@ export default function TripDetailPage() {
 
                       <div className="flex flex-col items-center lg:items-end gap-2 lg:w-56 lg:shrink-0">
                         <span className="hidden lg:inline-flex items-center gap-2 bg-gradient-to-r from-primary-light/20 to-amber-300/10 border border-primary-light/30 text-primary-light font-button font-bold text-sm px-5 py-2.5 rounded-full transition-colors group-hover/btn:from-primary-light/30 group-hover/btn:to-amber-300/20">
-                          Pack Your Bags
+                          {buttonLabels.primaryCta}
                           <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
                         </span>
                         <p className="flex items-center gap-1.5 text-white/55 text-[11px] font-medium lg:hidden">
-                          Don't miss out — tap to Pack Your Bags
+                          Don't miss out — tap to {buttonLabels.primaryCta}
                           <ArrowRight size={12} className="text-primary-light transition-transform group-hover/btn:translate-x-1" />
                         </p>
                         <p className="hidden lg:block text-white/35 text-xs">
-                          Don't miss out — tap to Pack Your Bags
+                          Don't miss out — tap to {buttonLabels.primaryCta}
                         </p>
                       </div>
                     </div>
@@ -1263,11 +1293,11 @@ export default function TripDetailPage() {
                   className="group/btn"
                 >
                   {isFull ? (
-                    'Join Waitlist'
+                    buttonLabels.waitlistCta
                   ) : trip.advance_amount != null ? (
                     <span className="flex flex-col items-center leading-tight">
                       <span className="flex items-center gap-1.5">
-                        Pack Your Bags
+                        {buttonLabels.primaryCta}
                         <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
                       </span>
                       <span className="text-xs font-medium opacity-90 mt-0.5">
@@ -1276,7 +1306,7 @@ export default function TripDetailPage() {
                     </span>
                   ) : (
                     <span className="flex items-center gap-1.5">
-                      Pack Your Bags
+                      {buttonLabels.primaryCta}
                       <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
                     </span>
                   )}
@@ -1577,7 +1607,7 @@ export default function TripDetailPage() {
             className="!rounded-lg !px-4 !py-2 shrink-0 flex flex-col items-center !gap-0 leading-tight"
           >
             <span className="text-sm font-bold whitespace-nowrap">
-              {isFull ? 'Join Waitlist' : 'Pack Your Bags'}
+              {isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta}
             </span>
             {isAlmostFull && (
               <span className="text-[9px] font-normal text-white/85 mt-0.5">
@@ -1644,7 +1674,7 @@ export default function TripDetailPage() {
       <Modal
         isOpen={bookingOpen}
         onClose={() => setBookingOpen(false)}
-        title={isFull ? 'Join Waitlist' : 'Pack Your Bags'}
+        title={isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta}
         size="lg"
       >
         <BookingForm

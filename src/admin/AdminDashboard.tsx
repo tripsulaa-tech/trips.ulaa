@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Briefcase, BookOpen, Users, TrendingUp, ChevronRight,
-  PlusCircle, FolderPlus, ImagePlus, ListChecks,
+  PlusCircle, FolderPlus, ImagePlus, ListChecks, Type,
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import {
@@ -103,6 +103,7 @@ export default function AdminDashboard() {
     { label: 'Upload Photos', desc: 'Add photos to Instagram Moments', icon: ImagePlus, color: 'text-primary', to: '/admin/instagram-moments' },
     { label: 'View Enquiries', desc: 'Manage booking requests', icon: Users, color: 'text-primary', to: '/admin/enquiries' },
     { label: 'View Waitlist', desc: "See who's waiting for a seat", icon: ListChecks, color: 'text-primary', to: '/admin/waitlist' },
+    { label: 'Button Naming', desc: 'Rename trip booking CTA buttons', icon: Type, color: 'text-primary', to: '/admin/button-labels' },
   ];
 
   const recentEnquiries = enquiries.slice(0, 5);
@@ -180,7 +181,7 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         <div>
           <h3 className="font-display text-base sm:text-lg font-bold text-dark mb-3 sm:mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-5">
             {quickActions.map(({ label, desc, icon: Icon, color, to }) => (
               <Link
                 key={label}

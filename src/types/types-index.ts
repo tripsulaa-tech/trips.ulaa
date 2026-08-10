@@ -771,6 +771,19 @@ export interface BottomNavItemConfig {
   icon: string;
 }
 
+// =============================================
+// Trip CTA button text (editable via Admin — see AdminButtonLabels.tsx).
+// Drives the main "Pack Your Bags" style buttons on TripDetailPage AND the
+// equivalent CTA button on the generated trip itinerary PDF, so an admin
+// only has to change the wording in one place for it to show everywhere.
+// =============================================
+export interface ButtonLabelsConfig {
+  /** Shown on the main booking CTA when seats are available, e.g. "Pack Your Bags". */
+  primaryCta: string;
+  /** Shown on the same CTA once the trip is full, e.g. "Join Waitlist". */
+  waitlistCta: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

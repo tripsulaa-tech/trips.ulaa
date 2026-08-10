@@ -12,9 +12,11 @@ import {
   Pill, SprayCan, Droplet, GlassWater, Cookie, Sparkles, FileText, IdCard,
   Calendar, Clock, Users, UserCheck, Phone, Mail, Globe, MessageSquare,
 } from 'lucide-react';
-import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, TripInclusionItem, ItineraryDay } from '../types/types-index';
+import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, TripInclusionItem, ItineraryDay, ButtonLabelsConfig } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
+import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
+import { getSiteContent } from '../services/api';
 import { formatDateRange, formatAgeRange, formatPrice, formatDate, getActivePrice, getStrikeThroughPrice, publicSeatsLeft } from './utils-index';
 import { PARISIENNE_FONT_BASE64 } from './parisienneFont';
 
@@ -411,6 +413,15 @@ async function loadContainImage(url: string): Promise<{ dataUrl: string; ratio: 
 export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<jsPDF> {
   const trip = sanitizeTrip(rawTrip);
   const doc = new jsPDF({ unit: 'pt', format: [PAGE_W, PAGE_H], orientation: 'landscape' });
+
+  // Admin-editable "Pack Your Bags" / "Join Waitlist" button text (see
+  // /admin/button-labels — AdminButtonLabels.tsx). Read once up front so the
+  // CTA button on the Trip Leader & Booking slide matches whatever the live
+  // trip detail page is currently showing. Falls back to the defaults if
+  // nothing's been saved yet or the fetch fails.
+  const buttonLabels: ButtonLabelsConfig = await getSiteContent<ButtonLabelsConfig>('button_labels')
+    .then(data => (data && data.primaryCta ? data : DEFAULT_BUTTON_LABELS))
+    .catch(() => DEFAULT_BUTTON_LABELS);
 
   // Register the cursive "Parisienne" script font (site-wide --font-script,
   // see globals.css) for the closing slide's handwritten-style headings.
@@ -2451,26 +2462,33 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
 
     function cardShell(x: number, w: number) {
       setFill(COLORS.white);
-      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 16, 16, 'F');
+      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 8, 8, 'F');
       setDraw(COLORS.grayLine);
       doc.setLineWidth(1);
-      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 16, 16, 'S');
+      doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 8, 8, 'S');
     }
     // Only the booking card gets the bordered/filled card shell — the
     // "Meet Your Trip Leader" side sits directly on the page background now.
     cardShell(rightX, rightW);
 
     // -- Left: Meet Your Trip Leader (from trip.trip_founder) --
+    // "Meet Your Trip Leader" sits above the name column (not the photo),
+    // right-shifted to align with the founder's name/title below it.
+    const photoD = 150;
+    const photoX = leftX + PAD;
+    const photoY = CARDS_TOP + PAD + 22;
+    const headingX = photoX + photoD + 14;
     setText(COLORS.dark);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14.5);
-    doc.text('Meet Your Trip Leader', leftX + PAD, CARDS_TOP + PAD + 6);
+    doc.text('Meet Your Trip Leader', headingX, CARDS_TOP + PAD + 6);
+    const headingW = doc.getTextWidth('Meet Your Trip Leader');
+    setDraw(COLORS.secondary);
+    doc.setLineWidth(2);
+    doc.line(headingX, CARDS_TOP + PAD + 10, headingX + headingW, CARDS_TOP + PAD + 10);
 
     const founder = trip.trip_founder;
     if (founder && (founder.name || founder.photo)) {
-      const photoD = 150;
-      const photoX = leftX + PAD;
-      const photoY = CARDS_TOP + PAD + 22;
       let photoDrawn = false;
       if (founder.photo) {
         const cropped = await loadCoverCroppedImage(founder.photo, photoD, photoD, photoD / 2, rgbToHex(COLORS.background));
@@ -2784,11 +2802,11 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const btnH = showAdvance ? 36 : 32;
     const btnY = ry;
     setFill(COLORS.primary);
-    doc.roundedRect(innerLeft, btnY, innerW, btnH, 10, 10, 'F');
+    doc.roundedRect(innerLeft, btnY, innerW, btnH, 5, 5, 'F');
     setText(COLORS.white);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    const ctaLabel = isFull ? 'Join Waitlist' : showAdvance ? 'Secure Your Spot' : 'Book Your Seat';
+    const ctaLabel = isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta;
     const ctaLabelW = doc.getTextWidth(ctaLabel);
     const ctaGroupW = ctaLabelW + 8 + 12;
     const ctaTextY = showAdvance ? btnY + 16 : btnY + btnH / 2 + 4;
@@ -2820,13 +2838,13 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     });
 
     // ---- Contact bar (from BRAND — the site's existing contact info) ----
-    const CONTACT_TOP = 460;
-    const CONTACT_BOTTOM = 500;
+    const CONTACT_TOP = 456;
+    const CONTACT_BOTTOM = 506;
     setFill(COLORS.cream);
-    doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 12, 12, 'F');
+    doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 6, 6, 'F');
     setDraw(COLORS.grayLine);
     doc.setLineWidth(1);
-    doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 12, 12, 'S');
+    doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 6, 6, 'S');
 
     const siteDomain = BRAND.website.replace('www.', '');
     const contactItems: { icon: LucideIcon; title: string; value: string; url?: string }[] = [
