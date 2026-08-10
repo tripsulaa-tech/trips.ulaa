@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, FileText, Share2, Phone, MessageCircle, Users, User, Receipt,
+  ArrowLeft, FileText, Share2, Phone, MessageCircle, Users, User,
   BadgeCheck, Plus, CheckCircle2, XCircle, UserX, UserCheck, LogIn, RefreshCw,
   Trash2, IndianRupee, Pencil, UserMinus, Bird, CalendarClock, X, History,
 } from 'lucide-react';
@@ -78,6 +78,9 @@ export default function AdminEnquiryDetail() {
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
+  // Invoices & Payments list shows the first 3 by default with a "View All
+  // Invoices" read-more toggle — see the Invoices & Payments card below.
+  const [showAllInvoices, setShowAllInvoices] = useState(false);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
   const [activityLogLoading, setActivityLogLoading] = useState(false);
   const [busyAction, setBusyAction] = useState(false);
@@ -890,23 +893,22 @@ export default function AdminEnquiryDetail() {
                   <UserMinus size={14} /> Not Interested
                 </Button>
               )}
-              {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
-                <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
-                  <CalendarClock size={14} /> Set Follow-up
-                </Button>
+              {/* When there's no booking yet, Follow-up + the 3-dot menu stay
+                  here in the header. Once a booking exists, they move down
+                  next to the Booking ID row in the Booking Journey card
+                  below instead. */}
+              {!enquiry.booking_id && (
+                <>
+                  {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
+                    <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
+                      <CalendarClock size={14} /> Set Follow-up
+                    </Button>
+                  )}
+                  <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
+                </>
               )}
-              <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
             </div>
           </div>
-
-          {enquiry.booking_id && (
-            <div className="flex items-center justify-between bg-background-warm rounded-md px-3 py-2">
-              <div className="min-w-0">
-                <p className="text-dark-muted text-xs">Booking ID</p>
-                <p className="text-dark text-sm font-mono truncate">{enquiry.booking_id}</p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Booking Journey */}
@@ -930,18 +932,35 @@ export default function AdminEnquiryDetail() {
                 </p>
               </div>
             </div>
-            <div className="flex justify-end">
+
+            {/* Booking ID, moved down here (below Paid/Total/Pending), with
+                Follow-up + the 3-dot actions menu alongside it in the same
+                row — see the header above for the no-booking fallback. */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-dark-muted text-xs">Booking ID</p>
+                <p className="text-dark text-sm font-mono truncate">{enquiry.booking_id}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
+                  <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
+                    <CalendarClock size={14} /> Set Follow-up
+                  </Button>
+                )}
+                <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
+              </div>
+            </div>
+
+            <div className="flex justify-end items-center gap-2">
               <Button variant="outline" size="sm" onClick={openPayment}>
                 <IndianRupee size={13} /> Track Payment
               </Button>
-            </div>
-            {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
-              <div className="flex justify-end">
+              {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
                 <Button variant="primary" size="sm" onClick={handleMarkCompleted} disabled={busyAction}>
                   <CheckCircle2 size={13} /> Mark Trip Completed
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
         {!enquiry.booking_id && (
@@ -969,11 +988,11 @@ export default function AdminEnquiryDetail() {
         {/* Invoices / payment ledger */}
         {enquiry.booking_id && (
           <div className="bg-white rounded-lg shadow-card">
-            <div className="flex flex-col gap-2 px-4 sm:px-5 py-3 border-b border-background-warm">
-              <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
-                <Receipt size={14} className="shrink-0" /> Invoices &amp; Payments
+            <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-background-warm">
+              <p className="text-dark text-sm font-button font-semibold">
+                Invoices &amp; Payments
               </p>
-              <Button variant="primary" size="sm" className="self-start" onClick={() => generateInvoice.open(enquiry)}>
+              <Button variant="primary" size="sm" onClick={() => generateInvoice.open(enquiry)}>
                 <Plus size={13} /> Generate Invoice
               </Button>
             </div>
@@ -982,39 +1001,51 @@ export default function AdminEnquiryDetail() {
             ) : payments.length === 0 ? (
               <p className="text-dark-muted text-xs px-4 sm:px-5 py-4">No invoices generated yet.</p>
             ) : (
-              <ul className="divide-y divide-background-warm">
-                {payments.map(inv => {
-                  const isRefund = inv.payment_type === 'refund';
-                  const isPending = inv.status === 'pending';
-                  return (
-                    <li key={inv.id} className="flex items-center justify-between gap-2 px-4 sm:px-5 py-2.5">
-                      <div className="min-w-0">
-                        <p className="text-dark text-xs font-mono truncate">{inv.invoice_number || '—'}</p>
-                        <p className="text-dark-muted text-[11px]">
-                          {INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type} · {formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
-                          {inv.payment_method ? ` · ${inv.payment_method}` : ''}
-                          {inv.utr_number ? ` · UTR ${inv.utr_number}` : ''}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-sm font-semibold ${isRefund ? 'text-red-600' : 'text-dark'}`}>
-                          {isRefund ? '− ' : ''}{formatPrice(Math.abs(inv.amount))}
-                        </span>
-                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                          isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-                        }`}>
-                          <BadgeCheck size={10} /> {isPending ? 'Pending' : 'Paid'}
-                        </span>
-                        {isPending && (
-                          <Button variant="primary" size="sm" onClick={() => handleMarkInvoicePaid(inv)} disabled={invoiceRowBusyId === inv.id}>
-                            Mark Paid
-                          </Button>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <>
+                <ul className="divide-y divide-background-warm">
+                  {(showAllInvoices ? payments : payments.slice(0, 3)).map(inv => {
+                    const isRefund = inv.payment_type === 'refund';
+                    const isPending = inv.status === 'pending';
+                    return (
+                      <li key={inv.id} className="flex items-center justify-between gap-2 px-4 sm:px-5 py-2.5">
+                        <div className="min-w-0">
+                          <p className="text-dark text-xs font-mono truncate">{inv.invoice_number || '—'}</p>
+                          <p className="text-dark-muted text-[11px]">
+                            {INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type} · {formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {inv.payment_method ? ` · ${inv.payment_method}` : ''}
+                            {inv.utr_number ? ` · UTR ${inv.utr_number}` : ''}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-sm font-semibold ${isRefund ? 'text-red-600' : 'text-dark'}`}>
+                            {isRefund ? '− ' : ''}{formatPrice(Math.abs(inv.amount))}
+                          </span>
+                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                            isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                          }`}>
+                            <BadgeCheck size={10} /> {isPending ? 'Pending' : 'Paid'}
+                          </span>
+                          {isPending && (
+                            <Button variant="primary" size="sm" onClick={() => handleMarkInvoicePaid(inv)} disabled={invoiceRowBusyId === inv.id}>
+                              Mark Paid
+                            </Button>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {/* Only show 3 invoices by default; "View All Invoices"
+                    expands the rest in place, like a read-more. */}
+                {!showAllInvoices && payments.length > 3 && (
+                  <button
+                    onClick={() => setShowAllInvoices(true)}
+                    className="w-full text-center text-primary text-xs font-button font-semibold px-4 sm:px-5 py-2.5 border-t border-background-warm hover:bg-background-warm transition-colors"
+                  >
+                    View All Invoices ({payments.length}) &gt;
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

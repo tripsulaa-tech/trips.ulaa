@@ -1,8 +1,86 @@
 import { jsPDF } from 'jspdf';
-import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, ItineraryDay } from '../types/types-index';
+// Side-effect import — patches jsPDF's prototype with `.svg(element, opts)`,
+// used by `drawLucideIcon` below to draw real lucide-react icons as crisp
+// vector paths instead of hand-drawn approximations.
+import 'svg2pdf.js';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Star, CheckCircle, XCircle, Backpack,
+  Shirt, Footprints, Glasses, HatGlasses, Hand, Headphones, BatteryCharging,
+  Pill, SprayCan, Droplet, GlassWater, Cookie, Sparkles, FileText, IdCard,
+  Calendar, Clock, Users, UserCheck, Phone, Mail, Globe, MessageSquare,
+} from 'lucide-react';
+import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, TripInclusionItem, ItineraryDay } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
+import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
 import { formatDateRange, formatAgeRange, formatPrice, formatDate, getActivePrice, getStrikeThroughPrice, publicSeatsLeft } from './utils-index';
 import { PARISIENNE_FONT_BASE64 } from './parisienneFont';
+
+// =============================================================================
+// Icon fidelity with the live site
+// -----------------------------------------------------------------------------
+// Highlight cards, "What's Included" groups/items, "Travel with Confidence"
+// items, "Things to Carry" items, and each itinerary day can all have an
+// admin-picked icon (a `lucide-react` key resolved via `getTripHighlightIcon`
+// — see src/constants/tripHighlightIcons.ts). `drawLucideIcon` renders that
+// *exact* icon component into the PDF as real vector paths (via svg2pdf.js),
+// the same way `TripHighlightIconDisplay.tsx` renders it on TripDetailPage —
+// rather than approximating it with a hand-drawn glyph from the `icons` set
+// below (which is reserved for chrome that has no per-trip icon field:
+// calendar, share, download, contact icons, etc.).
+//
+// Fallback icons below mirror the exact fallbacks TripDetailPage.tsx uses
+// when a trip predates the icon picker (or a field has no icon set):
+//   - Included item with no icon      -> CheckCircle (green)
+//   - Not-included item                -> XCircle (red) — always, no icon field
+//   - Things to Carry item with no icon -> keyword match against
+//     THINGS_TO_CARRY_ICON_RULES, else Backpack (mirrors getThingsToCarryIcon
+//     in TripDetailPage.tsx)
+//   - Highlight card / group / confidence item / itinerary day with an
+//     unrecognized or legacy (emoji) icon value -> Star, as a neutral default
+//     print can always render (emoji glyphs aren't in the PDF font's charset
+//     — see sanitizeForPdf above).
+// =============================================================================
+
+function rgbToHex([r, g, b]: RGB): string {
+  return `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Resolves an admin-picked icon-library key (e.g. "shield-check") to its
+ *  actual lucide-react component, falling back for empty/legacy values. */
+function resolveIcon(key: string | undefined | null, fallback: LucideIcon): LucideIcon {
+  const meta = key ? getTripHighlightIcon(key) : undefined;
+  return meta ? meta.Icon : fallback;
+}
+
+// Mirrors THINGS_TO_CARRY_ICON_RULES / getThingsToCarryIcon in
+// src/pages/TripDetailPage.tsx exactly, so an admin-typed "Things to Carry"
+// item with no explicit icon still resolves to the same glyph in the PDF as
+// it does on the live site.
+const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
+  [/jacket|sweater|hoodie|fleece|thermal/i, Shirt],
+  [/shoe|boot|sandal|footwear|trek/i, Footprints],
+  [/sunglass|goggle/i, Glasses],
+  [/cap|hat/i, HatGlasses],
+  [/glove|mitten/i, Hand],
+  [/earphone|headphone|earbud/i, Headphones],
+  [/power ?bank|charger|battery/i, BatteryCharging],
+  [/medicine|medication|pill|first aid/i, Pill],
+  [/sunscreen|spf/i, SprayCan],
+  [/moistur|lotion|cream/i, Droplet],
+  [/water ?bottle|bottle/i, GlassWater],
+  [/snack|food/i, Cookie],
+  [/wipe|sanitiz|towel/i, Sparkles],
+  [/tissue|paper/i, FileText],
+  [/id proof|passport|aadhar|adhar|govern|voter|licen/i, IdCard],
+];
+
+function getThingsToCarryFallbackIcon(item: string): LucideIcon {
+  const rule = THINGS_TO_CARRY_ICON_RULES.find(([pattern]) => pattern.test(item));
+  return rule ? rule[1] : Backpack;
+}
 
 // =============================================================================
 // "Download Itinerary PDF" — renders a trip's public detail page as a clean,
@@ -126,24 +204,27 @@ function heroMoney(amount: number): string {
 // `included_groups` carries the site's grouped "What's Included" content
 // (icon + heading + bulleted sub-items) straight through so the PDF can draw
 // the same heading-card layout as TripDetailPage. `included` is a flattened
-// fallback (just descriptions) used only when a trip has no groups, drawn as
+// fallback (description + icon) used only when a trip has no groups, drawn as
 // the plain icon-card grid instead. `not_included` prefers not_included_items'
 // descriptions when present, else the legacy plain-text list — same
-// precedence TripDetailPage itself uses.
+// precedence TripDetailPage itself uses. `included`/`things_to_carry` keep
+// each item's `icon` key (not just its description) so the PDF can resolve
+// and draw the exact same lucide-react glyph the live site does — see
+// `drawLucideIcon` above.
+type PdfListItem = Pick<TripInclusionItem, 'description' | 'icon'>;
+
 type PdfTrip = UpcomingTrip & {
   highlight_cards: TripHighlightCard[];
   included_groups: TripIncludedGroup[];
-  included: string[];
-  things_to_carry: string[];
+  included: PdfListItem[];
+  things_to_carry: PdfListItem[];
 };
 
 function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
   // Things to Carry now has an icon-based rich variant (things_to_carry_items)
   // that the admin form treats as the source of truth — see AdminTrips.tsx.
-  // The PDF only ever needed the description text, so prefer that when
-  // present.
   const thingsToCarrySource = (trip.things_to_carry_items?.length ?? 0) > 0
-    ? trip.things_to_carry_items!.map(item => item.description)
+    ? trip.things_to_carry_items!
     : [];
   const hasIncludedGroups = (trip.included_groups?.length ?? 0) > 0;
   const notIncludedSource = (trip.not_included_items?.length ?? 0) > 0
@@ -173,9 +254,11 @@ function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
           bullets: group.bullets.map(sanitizeForPdf),
         }))
       : [],
-    included: hasIncludedGroups ? [] : (trip.included_items ?? []).map(item => sanitizeForPdf(item.description)),
+    included: hasIncludedGroups
+      ? []
+      : (trip.included_items ?? []).map(item => ({ description: sanitizeForPdf(item.description), icon: item.icon })),
     not_included: notIncludedSource.map(sanitizeForPdf),
-    things_to_carry: thingsToCarrySource.map(sanitizeForPdf),
+    things_to_carry: thingsToCarrySource.map(item => ({ description: sanitizeForPdf(item.description), icon: item.icon })),
     meeting_point: trip.meeting_point ? sanitizeForPdf(trip.meeting_point) : trip.meeting_point,
     gallery_description: trip.gallery_description ? sanitizeForPdf(trip.gallery_description) : trip.gallery_description,
     gallery_items: trip.gallery_items?.map(item => ({ ...item, description: sanitizeForPdf(item.description) })),
@@ -265,15 +348,23 @@ async function loadCoverCroppedImage(
 
     if (r > 0) {
       ctx.beginPath();
-      ctx.moveTo(r, 0);
-      ctx.lineTo(w - r, 0);
-      ctx.quadraticCurveTo(w, 0, w, r);
-      ctx.lineTo(w, h - r);
-      ctx.quadraticCurveTo(w, h, w - r, h);
-      ctx.lineTo(r, h);
-      ctx.quadraticCurveTo(0, h, 0, h - r);
-      ctx.lineTo(0, r);
-      ctx.quadraticCurveTo(0, 0, r, 0);
+      if (r * 2 >= Math.min(w, h)) {
+        // Fully rounded — a true circle (e.g. the Trip Leader avatar).
+        // The quadratic-corner path below is only a rough approximation
+        // of round at this radius (visibly flattens/bulges around the
+        // 45° points), so use a real arc instead for a perfect circle.
+        ctx.arc(w / 2, h / 2, Math.min(w, h) / 2, 0, Math.PI * 2);
+      } else {
+        ctx.moveTo(r, 0);
+        ctx.lineTo(w - r, 0);
+        ctx.quadraticCurveTo(w, 0, w, r);
+        ctx.lineTo(w, h - r);
+        ctx.quadraticCurveTo(w, h, w - r, h);
+        ctx.lineTo(r, h);
+        ctx.quadraticCurveTo(0, h, 0, h - r);
+        ctx.lineTo(0, r);
+        ctx.quadraticCurveTo(0, 0, r, 0);
+      }
       ctx.closePath();
       ctx.clip();
     }
@@ -838,21 +929,26 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     },
   };
 
-  /** Keyword match from an admin-typed "Things to Carry" item to the icon
-   *  that best represents it, so the chip grid doesn't need a dedicated
-   *  icon field in the data — falls back to a plain checkmark for anything
-   *  that doesn't match a known category (still always correct, just less
-   *  specific). */
-  function carryIconFor(item: string): (x: number, y: number, s?: number, color?: RGB) => void {
-    const t = item.toLowerCase();
-    if (/passport|\bvisa\b|\bid\b|identity|documents?/.test(t)) return icons.idcard;
-    if (/\bcash\b|\bcards?\b|money|wallet|currency|forex/.test(t)) return icons.cash;
-    if (/sunscreen|sunglasses|shades|\bspf\b|lotion/.test(t)) return icons.sun;
-    if (/medicine|medication|\bpills?\b|first[\s-]?aid|health kit/.test(t)) return icons.pill;
-    if (/charger|power\s*bank|adapter|\bcable\b|battery|electronics?/.test(t)) return icons.plug;
-    if (/\bshoes?\b|footwear|sneakers?|sandals?|slippers?/.test(t)) return icons.shoe;
-    if (/clothes|clothing|jacket|sweater|\bwear\b|dress|outfit|apparel/.test(t)) return icons.shirt;
-    return icons.check;
+  /** Renders an actual lucide-react icon (the same component
+   *  TripHighlightIconDisplay / TripDetailPage.tsx render on the live site)
+   *  into the PDF as real vector paths via svg2pdf.js — not a hand-drawn
+   *  approximation from the `icons` set above. Follows the same
+   *  "x, y = bottom-left anchor" convention as every `icons.*` helper so
+   *  call sites read the same either way: `y` is the icon's bottom edge,
+   *  `s` is both its width and height. Best-effort: a failed render (e.g.
+   *  an unsupported SVG feature) is swallowed rather than breaking the
+   *  whole PDF, matching the same defensive pattern used for image loads
+   *  elsewhere in this file. */
+  async function drawLucideIcon(Icon: LucideIcon, x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+    try {
+      const markup = renderToStaticMarkup(
+        createElement(Icon, { size: s, color: rgbToHex(color), strokeWidth: 2 })
+      );
+      const svgEl = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement;
+      await doc.svg(svgEl, { x, y: y - s, width: s, height: s });
+    } catch {
+      /* icon glyph skipped — see comment above */
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -1158,7 +1254,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     return top + 34;
   }
 
-  function drawHighlightCard(card: TripHighlightCard, x: number, y: number, w: number, h: number, color: RGB) {
+  async function drawHighlightCard(card: TripHighlightCard, x: number, y: number, w: number, h: number, color: RGB) {
     setFill(COLORS.cream);
     doc.roundedRect(x, y, w, h, 10, 10, 'F');
     setDraw(COLORS.grayLineSoft);
@@ -1169,7 +1265,10 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const iconCy = y + 28;
     setFill(color);
     doc.circle(cx, iconCy, 15, 'F');
-    icons.star(cx - 7, iconCy + 5.6, 14, COLORS.white);
+    // The admin's actual picked icon (same TripHighlightIconDisplay renders
+    // on the live site), not a fixed star — falls back to Star only for
+    // legacy/emoji values the picker predates.
+    await drawLucideIcon(resolveIcon(card.icon, Star), cx - 9, iconCy + 9, 18, COLORS.white);
 
     let ty = iconCy + 32;
     setText(COLORS.dark);
@@ -1192,16 +1291,16 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
 
   /** Draws up to `cards.length` highlight cards as a wrapping 3-across grid
    *  and returns the y position immediately below the grid. */
-  function drawHighlightGrid(cards: TripHighlightCard[], top: number): number {
+  async function drawHighlightGrid(cards: TripHighlightCard[], top: number): Promise<number> {
     const colGap = 20;
     const cardW = (CONTENT_W - colGap * (HIGHLIGHT_PER_ROW - 1)) / HIGHLIGHT_PER_ROW;
-    cards.forEach((card, i) => {
+    for (let i = 0; i < cards.length; i++) {
       const row = Math.floor(i / HIGHLIGHT_PER_ROW);
       const col = i % HIGHLIGHT_PER_ROW;
       const x = MARGIN + col * (cardW + colGap);
       const y = top + row * (HIGHLIGHT_CARD_H + HIGHLIGHT_ROW_GAP);
-      drawHighlightCard(card, x, y, cardW, HIGHLIGHT_CARD_H, CARD_PALETTE[i % CARD_PALETTE.length]);
-    });
+      await drawHighlightCard(cards[i], x, y, cardW, HIGHLIGHT_CARD_H, CARD_PALETTE[i % CARD_PALETTE.length]);
+    }
     const rows = Math.ceil(cards.length / HIGHLIGHT_PER_ROW);
     return top + rows * HIGHLIGHT_CARD_H + Math.max(0, rows - 1) * HIGHLIGHT_ROW_GAP;
   }
@@ -1214,8 +1313,11 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
    *  by a dotted line, with the day's title underneath — echoing the
    *  itinerary-day strip at the top of the public trip page. `totalLabel`
    *  lets a continuation slide keep showing the true overall day count
-   *  while only laying out its own chunk of days. */
-  function drawDaysSection(days: ItineraryDay[], top: number, totalLabel?: string) {
+   *  while only laying out its own chunk of days. When a day has an
+   *  admin-picked icon (day.icon), the badge shows that icon instead of the
+   *  day number — matching the live site's itinerary-day button, which
+   *  swaps in the same icon in place of the number once one is set. */
+  async function drawDaysSection(days: ItineraryDay[], top: number, totalLabel?: string) {
     setText(COLORS.dark);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
@@ -1227,7 +1329,8 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const cellW = CONTENT_W / perRow;
     const circleR = 20;
 
-    days.forEach((day, i) => {
+    for (let i = 0; i < days.length; i++) {
+      const day = days[i];
       const row = Math.floor(i / perRow);
       const col = i % perRow;
       const cx = MARGIN + col * cellW + cellW / 2;
@@ -1244,40 +1347,45 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
 
       setFill(COLORS.primary);
       doc.circle(cx, cy, circleR, 'F');
-      setText(COLORS.white);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.5);
-      doc.text('DAY', cx, cy - 4, { align: 'center' });
-      doc.setFontSize(13);
-      doc.text(String(day.day), cx, cy + 9, { align: 'center' });
+      const dayMeta = day.icon ? getTripHighlightIcon(day.icon) : undefined;
+      if (dayMeta) {
+        await drawLucideIcon(dayMeta.Icon, cx - 10, cy + 10, 20, COLORS.white);
+      } else {
+        setText(COLORS.white);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.text('DAY', cx, cy - 4, { align: 'center' });
+        doc.setFontSize(13);
+        doc.text(String(day.day), cx, cy + 9, { align: 'center' });
+      }
 
       setText(COLORS.dark);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.5);
       const titleLines = clampLines(day.title, cellW - 12, 2);
       doc.text(titleLines, cx, cy + circleR + 16, { align: 'center' });
-    });
+    }
   }
 
-  function renderHighlightCardsSlides(cards: TripHighlightCard[]) {
+  async function renderHighlightCardsSlides(cards: TripHighlightCard[]) {
     const perSlide = HIGHLIGHT_PER_ROW * 2;
     for (let i = 0; i < cards.length; i += perSlide) {
       newSlide();
       const top = drawSectionTitle("Why You'll Love This Trip", MARGIN);
-      drawHighlightGrid(cards.slice(i, i + perSlide), top);
+      await drawHighlightGrid(cards.slice(i, i + perSlide), top);
     }
   }
 
-  function renderDaySlides(days: ItineraryDay[]) {
+  async function renderDaySlides(days: ItineraryDay[]) {
     const perSlide = DAY_PER_ROW * 2;
     for (let i = 0; i < days.length; i += perSlide) {
       newSlide();
       const label = `${days.length} Day${days.length === 1 ? '' : 's'} of Unforgettable Moments`;
-      drawDaysSection(days.slice(i, i + perSlide), MARGIN, label);
+      await drawDaysSection(days.slice(i, i + perSlide), MARGIN, label);
     }
   }
 
-  function renderHighlightsAndDays() {
+  async function renderHighlightsAndDays() {
     const cards = trip.highlight_cards;
     const days = trip.itinerary;
     if (cards.length === 0 && days.length === 0) return;
@@ -1295,17 +1403,18 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       let y = MARGIN;
       if (cards.length) {
         y = drawSectionTitle("Why You'll Love This Trip", y);
-        y = drawHighlightGrid(cards, y);
+        y = await drawHighlightGrid(cards, y);
         y += gapBetween;
       }
       if (days.length) {
-        drawDaysSection(days, y);
+        await drawDaysSection(days, y);
       }
     } else {
-      if (cards.length) renderHighlightCardsSlides(cards);
-      if (days.length) renderDaySlides(days);
+      if (cards.length) await renderHighlightCardsSlides(cards);
+      if (days.length) await renderDaySlides(days);
     }
   }
+
 
   // =========================================================================
   // SLIDES — Detailed Itinerary (2×2 photo cards per slide, paginated)
@@ -1463,14 +1572,20 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     return GROUP_CARD_PAD * 2 + headingBlockH + bulletsH;
   }
 
-  function drawGroupCard(group: TripIncludedGroup, x: number, y: number, w: number, h: number) {
+  async function drawGroupCard(group: TripIncludedGroup, x: number, y: number, w: number, h: number, index: number): Promise<void> {
     setFill(COLORS.backgroundWarm);
     doc.roundedRect(x, y, w, h, 10, 10, 'F');
+
+    // Admin-picked group icon (same TripHighlightIconDisplay pastel circle
+    // the site shows next to the heading) — only drawn when the group
+    // actually has one set, matching the site's `group.icon &&` guard.
+    const meta = group.icon ? getTripHighlightIcon(group.icon) : undefined;
+    const headingX = meta ? x + GROUP_CARD_PAD + 26 : x + GROUP_CARD_PAD;
 
     setText(COLORS.dark);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11.5);
-    doc.text(group.heading, x + GROUP_CARD_PAD, y + GROUP_CARD_PAD + 10);
+    doc.text(group.heading, headingX, y + GROUP_CARD_PAD + 10);
 
     const bulletsTop = y + GROUP_CARD_PAD + 28;
     drawBulletList(group.bullets, x + GROUP_CARD_PAD, bulletsTop, w - GROUP_CARD_PAD * 2, {
@@ -1478,55 +1593,141 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       color: COLORS.darkMuted,
       lineHeight: 12,
     });
+
+    if (!meta) return;
+    const { bg, fg } = CONFIDENCE_PALETTE[index % CONFIDENCE_PALETTE.length];
+    const iconCx = x + GROUP_CARD_PAD + 10;
+    const iconCy = y + GROUP_CARD_PAD + 5;
+    setFill(bg);
+    doc.circle(iconCx, iconCy, 11, 'F');
+    await drawLucideIcon(meta.Icon, iconCx - 8, iconCy + 8, 16, fg);
+  }
+
+  type GroupPos = { group: TripIncludedGroup; x: number; y: number; w: number; h: number; index: number };
+
+  /** True masonry packing, not fixed row-pairs: each card keeps its own
+   *  natural height (never stretched to match a neighbour), and each group
+   *  in turn drops into whichever column currently has the most room used
+   *  up the least — so a short card and a tall card don't get force-paired
+   *  into one row (wasting space under the short one), and a later short
+   *  card can backfill space next to an earlier tall one. Places as many
+   *  groups as fit under `maxBottom` starting from `top`; the caller
+   *  continues anything left over on a fresh page. Pass `maxBottom =
+   *  Infinity` to lay out (or just measure) a whole list with no page
+   *  break, which is what `groupGridH`/`drawGroupGrid` below do for the
+   *  common case where everything already fits on one slide. */
+  function packGroupsMasonry(
+    groups: TripIncludedGroup[],
+    cardW: number,
+    top: number,
+    maxBottom: number,
+    indexOffset: number,
+  ): { positions: GroupPos[]; placed: number; bottom: number } {
+    const colX = Array.from({ length: GROUP_COLS }, (_, c) => MARGIN + c * (cardW + GROUP_COL_GAP));
+    const colY = Array.from({ length: GROUP_COLS }, () => top);
+    const positions: GroupPos[] = [];
+    let placed = 0;
+    for (let i = 0; i < groups.length; i++) {
+      const h = measureGroupCardH(groups[i], cardW);
+      const col = colY.indexOf(Math.min(...colY));
+      const y = colY[col];
+      if (y + h > maxBottom) break;
+      positions.push({ group: groups[i], x: colX[col], y, w: cardW, h, index: indexOffset + i });
+      colY[col] = y + h + GROUP_ROW_GAP;
+      placed++;
+    }
+    const bottom = groups.length ? Math.max(...colY) - GROUP_ROW_GAP : top;
+    return { positions, placed, bottom };
   }
 
   function groupGridH(groups: TripIncludedGroup[]): number {
     if (groups.length === 0) return 0;
-    const cardW = groupCardW();
-    let total = 0;
-    for (let i = 0; i < groups.length; i += GROUP_COLS) {
-      const rowGroups = groups.slice(i, i + GROUP_COLS);
-      const rowH = Math.max(...rowGroups.map(g => measureGroupCardH(g, cardW)));
-      total += rowH + GROUP_ROW_GAP;
-    }
-    return total - GROUP_ROW_GAP;
+    const { bottom } = packGroupsMasonry(groups, groupCardW(), 0, Infinity, 0);
+    return bottom;
   }
 
-  function drawGroupGrid(groups: TripIncludedGroup[], top: number): number {
-    const cardW = groupCardW();
-    let y = top;
-    for (let i = 0; i < groups.length; i += GROUP_COLS) {
-      const rowGroups = groups.slice(i, i + GROUP_COLS);
-      const rowH = Math.max(...rowGroups.map(g => measureGroupCardH(g, cardW)));
-      rowGroups.forEach((group, idx) => {
-        const x = MARGIN + idx * (cardW + GROUP_COL_GAP);
-        drawGroupCard(group, x, y, cardW, rowH);
-      });
-      y += rowH + GROUP_ROW_GAP;
+  /** Draws a masonry-packed list that's already known to fit in the space
+   *  available (no page breaks) — used both for the common single-slide
+   *  case and for each already-sliced page in the paginated path below. */
+  async function drawGroupGrid(groups: TripIncludedGroup[], top: number, indexOffset = 0): Promise<number> {
+    const { positions, bottom } = packGroupsMasonry(groups, groupCardW(), top, Infinity, indexOffset);
+    for (const pos of positions) {
+      await drawGroupCard(pos.group, pos.x, pos.y, pos.w, pos.h, pos.index);
     }
-    return y - GROUP_ROW_GAP;
+    return bottom;
+  }
+
+  /** Multi-page version: masonry-packs groups starting at `top` on the
+   *  current slide, spilling onto additional "(continued)" slides for
+   *  whatever doesn't fit — each page independently packed to its own
+   *  actual content, not a size borrowed from elsewhere in the list. */
+  /** Returns the y position immediately below the last group placed, so the
+   *  caller can pack "What's Not Included" onto the same trailing page
+   *  instead of always starting a fresh one. */
+  async function drawGroupsMasonryPaginated(groups: TripIncludedGroup[], top: number): Promise<number> {
+    const cardW = groupCardW();
+    let remaining = groups;
+    let indexCursor = 0;
+    let pageNum = 0;
+    let lastBottom = top;
+    while (remaining.length > 0) {
+      newSlide();
+      slideHeader(null, pageNum === 0 ? "What's Included" : "What's Included (continued)");
+      const { positions, placed, bottom } = packGroupsMasonry(remaining, cardW, top, CONTENT_BOTTOM, indexCursor);
+      if (placed === 0) {
+        // A single group taller than a whole page — place it alone rather
+        // than looping forever; it'll simply run past the page bottom.
+        const h = measureGroupCardH(remaining[0], cardW);
+        await drawGroupCard(remaining[0], MARGIN, top, cardW, h, indexCursor);
+        lastBottom = top + h;
+        remaining = remaining.slice(1);
+        indexCursor += 1;
+      } else {
+        for (const pos of positions) {
+          await drawGroupCard(pos.group, pos.x, pos.y, pos.w, pos.h, pos.index);
+        }
+        lastBottom = bottom;
+        remaining = remaining.slice(placed);
+        indexCursor += placed;
+      }
+      pageNum++;
+    }
+    return lastBottom;
   }
 
   // ---- "What's Included" fallback — flat icon-card grid, used only when
-  // the trip has no included_groups (just included_items descriptions) ----
+  // the trip has no included_groups (just included_items) ----
   const FLAT_CARD_H = 78;
   const FLAT_ROW_GAP = 10;
   const FLAT_PER_ROW = 3;
 
-  function drawFlatIncludedCard(text: string, x: number, y: number, w: number, h: number) {
+  async function drawFlatIncludedCard(item: PdfListItem, x: number, y: number, w: number, h: number, index: number) {
     setFill(COLORS.backgroundWarm);
     doc.roundedRect(x, y, w, h, 10, 10, 'F');
 
     const cx = x + w / 2;
     const iconCy = y + 22;
-    setFill(COLORS.green);
-    doc.circle(cx, iconCy, 11, 'F');
-    drawCheck(cx, iconCy, 7, COLORS.white, 1.7);
+    // Mirrors the site exactly: an admin-picked icon (in its pastel
+    // TripHighlightIconDisplay circle) when the item has one, else the
+    // plain green CheckCircle fallback.
+    const meta = item.icon ? getTripHighlightIcon(item.icon) : undefined;
+    if (meta) {
+      const { bg, fg } = CONFIDENCE_PALETTE[index % CONFIDENCE_PALETTE.length];
+      setFill(bg);
+      doc.circle(cx, iconCy, 11, 'F');
+      await drawLucideIcon(meta.Icon, cx - 8, iconCy + 8, 16, fg);
+    } else {
+      // Matches the site's exact fallback styling: a pale green-100 circle
+      // with a green-600 CheckCircle icon (not solid green/white).
+      setFill(GREEN_100);
+      doc.circle(cx, iconCy, 11, 'F');
+      await drawLucideIcon(CheckCircle, cx - 8, iconCy + 8, 16, GREEN_600);
+    }
 
     setText(COLORS.dark);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.2);
-    const lines = clampLines(text, w - 20, 3);
+    const lines = clampLines(item.description, w - 20, 3);
     doc.text(lines, cx, iconCy + 22, { align: 'center', lineHeightFactor: 1.3 });
   }
 
@@ -1536,16 +1737,16 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     return rows * FLAT_CARD_H + Math.max(0, rows - 1) * FLAT_ROW_GAP;
   }
 
-  function drawFlatGrid(items: string[], top: number): number {
+  async function drawFlatGrid(items: PdfListItem[], top: number, indexOffset = 0): Promise<number> {
     const colGap = 20;
     const cardW = (CONTENT_W - colGap * (FLAT_PER_ROW - 1)) / FLAT_PER_ROW;
-    items.forEach((item, i) => {
+    for (let i = 0; i < items.length; i++) {
       const row = Math.floor(i / FLAT_PER_ROW);
       const col = i % FLAT_PER_ROW;
       const x = MARGIN + col * (cardW + colGap);
       const y = top + row * (FLAT_CARD_H + FLAT_ROW_GAP);
-      drawFlatIncludedCard(item, x, y, cardW, FLAT_CARD_H);
-    });
+      await drawFlatIncludedCard(items[i], x, y, cardW, FLAT_CARD_H, indexOffset + i);
+    }
     const rows = Math.ceil(items.length / FLAT_PER_ROW);
     return top + rows * FLAT_CARD_H + Math.max(0, rows - 1) * FLAT_ROW_GAP;
   }
@@ -1578,12 +1779,22 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     return rows * CHIP_H + Math.max(0, rows - 1) * CHIP_GAP_Y;
   }
 
-  function drawChipRow(items: string[], top: number): number {
+  // Not-included items always use XCircle (red-400), regardless of any
+  // per-item icon field — the site never wires an icon picker into this
+  // section either (see the "What's Not Included" chip row in
+  // TripDetailPage.tsx), so this is already a faithful match.
+  const NOT_INCLUDED_RED: RGB = [248, 113, 113];
+  // Tailwind green-100 / green-600 — matches the site's exact fallback
+  // styling for an included item with no admin-picked icon.
+  const GREEN_100: RGB = [220, 252, 231];
+  const GREEN_600: RGB = [22, 163, 74];
+
+  async function drawChipRow(items: string[], top: number): Promise<number> {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     let x = MARGIN;
     let y = top;
-    items.forEach(item => {
+    for (const item of items) {
       const w = chipWidth(item);
       if (x > MARGIN && x + w > MARGIN + CONTENT_W) {
         x = MARGIN;
@@ -1594,18 +1805,16 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
 
       const iconCx = x + CHIP_PAD_X + CHIP_ICON_R;
       const iconCy = y + CHIP_H / 2;
-      setFill(COLORS.red);
-      doc.circle(iconCx, iconCy, CHIP_ICON_R, 'F');
-      drawCross(iconCx, iconCy, CHIP_ICON_R * 0.68, COLORS.white, 1.4);
+      await drawLucideIcon(XCircle, iconCx - CHIP_ICON_R, iconCy + CHIP_ICON_R, CHIP_ICON_R * 2, NOT_INCLUDED_RED);
 
       setText(COLORS.dark);
       doc.text(item, iconCx + CHIP_ICON_R + 8, iconCy + 3.2);
       x += w + CHIP_GAP_X;
-    });
+    }
     return y + CHIP_H;
   }
 
-  function renderInclusions() {
+  async function renderInclusions() {
     const hasGroups = trip.included_groups.length > 0;
     const hasFlatIncluded = !hasGroups && trip.included.length > 0;
     const hasIncluded = hasGroups || hasFlatIncluded;
@@ -1628,45 +1837,54 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       if (hasIncluded) {
         drawSectionHeading("What's Included", y);
         y += SECTION_TITLE_H;
-        y = hasGroups ? drawGroupGrid(trip.included_groups, y) : drawFlatGrid(trip.included, y);
+        y = hasGroups ? await drawGroupGrid(trip.included_groups, y) : await drawFlatGrid(trip.included, y);
         y += gapBetween;
       }
       if (hasNotIncluded) {
         drawSectionHeading("What's Not Included", y);
         y += SECTION_TITLE_H;
-        drawChipRow(trip.not_included, y);
+        await drawChipRow(trip.not_included, y);
       }
       return;
     }
 
     // Too tall for one slide — paginate each section independently, each
     // getting its own slide(s), so long lists never overflow or get cut off.
+    // Whichever section's pagination runs last tracks how much room is left
+    // on its trailing page, so "What's Not Included" can reuse it instead
+    // of always claiming a fresh slide.
+    let lastBottom = top;
     if (hasGroups) {
-      const cardW = groupCardW();
-      const rowH = trip.included_groups.length
-        ? Math.max(...trip.included_groups.map(g => measureGroupCardH(g, cardW)))
-        : 0;
-      const rowsPerPage = Math.max(1, Math.floor((availH - SECTION_TITLE_H) / (rowH + GROUP_ROW_GAP)));
-      const perPage = rowsPerPage * GROUP_COLS;
-      for (let i = 0; i < trip.included_groups.length; i += perPage) {
-        newSlide();
-        slideHeader(null, i === 0 ? "What's Included" : "What's Included (continued)");
-        drawGroupGrid(trip.included_groups.slice(i, i + perPage), top);
-      }
+      // True masonry packing across as many "(continued)" slides as needed
+      // — see drawGroupsMasonryPaginated / packGroupsMasonry above. Each
+      // card keeps its own natural height and flows into whichever column
+      // has room, rather than being force-paired into equal-height rows.
+      lastBottom = await drawGroupsMasonryPaginated(trip.included_groups, top);
     } else if (hasFlatIncluded) {
       const rowsPerPage = Math.max(1, Math.floor((availH - SECTION_TITLE_H) / (FLAT_CARD_H + FLAT_ROW_GAP)));
       const perPage = rowsPerPage * FLAT_PER_ROW;
       for (let i = 0; i < trip.included.length; i += perPage) {
         newSlide();
         slideHeader(null, i === 0 ? "What's Included" : "What's Included (continued)");
-        drawFlatGrid(trip.included.slice(i, i + perPage), top);
+        lastBottom = await drawFlatGrid(trip.included.slice(i, i + perPage), top, i);
       }
     }
 
     if (hasNotIncluded) {
-      newSlide();
-      slideHeader(null, "What's Not Included");
-      drawChipRow(trip.not_included, top);
+      const chipsH = SECTION_TITLE_H + measureChipRowH(trip.not_included);
+      // Reuse the leftover space at the bottom of the included list's last
+      // page when it fits, instead of unconditionally starting a fresh
+      // slide just for the not-included chips.
+      if (hasIncluded && lastBottom + SECTION_GAP + chipsH <= CONTENT_BOTTOM) {
+        let y = lastBottom + SECTION_GAP;
+        drawSectionHeading("What's Not Included", y);
+        y += SECTION_TITLE_H;
+        await drawChipRow(trip.not_included, y);
+      } else {
+        newSlide();
+        slideHeader(null, "What's Not Included");
+        await drawChipRow(trip.not_included, top);
+      }
     }
   }
 
@@ -1683,7 +1901,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   // base/unfilled state). The two checklist/chip columns don't paginate —
   // if a list is too long to fit above the bottom cards, drawing simply
   // stops rather than overflowing the slide.
-  function renderConfidenceAndCarry() {
+  async function renderConfidenceAndCarry() {
     const confidenceItems = trip.confidence_items ?? [];
     const hasConfidence = confidenceItems.length > 0;
     const hasCarry = trip.things_to_carry.length > 0;
@@ -1738,21 +1956,29 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
       for (let i = 0; i < confidenceItems.length; i++) {
-        const lines: string[] = doc.splitTextToSize(confidenceItems[i].description, textW);
-        const rowH = Math.max(circleR * 2, lines.length * 13);
+        // Mirrors the site's `item.icon && <TripHighlightIconDisplay .../>`
+        // guard — an item with no icon set gets no icon circle at all, and
+        // its text starts flush left instead of indented past one.
+        const meta = confidenceItems[i].icon ? getTripHighlightIcon(confidenceItems[i].icon) : undefined;
+        const itemTextX = meta ? textX : MARGIN;
+        const itemTextW = meta ? textW : leftW;
+        const lines: string[] = doc.splitTextToSize(confidenceItems[i].description, itemTextW);
+        const rowH = Math.max(meta ? circleR * 2 : 0, lines.length * 13);
         if (y + rowH > listBottom) break;
 
-        const { bg, fg } = CONFIDENCE_PALETTE[i % CONFIDENCE_PALETTE.length];
-        const cx = MARGIN + circleR;
         const cy = y + rowH / 2;
-        setFill(bg);
-        doc.circle(cx, cy, circleR, 'F');
-        drawCheck(cx, cy, circleR * 0.55, fg, 1.8);
+        if (meta) {
+          const { bg, fg } = CONFIDENCE_PALETTE[i % CONFIDENCE_PALETTE.length];
+          const cx = MARGIN + circleR;
+          setFill(bg);
+          doc.circle(cx, cy, circleR, 'F');
+          await drawLucideIcon(meta.Icon, cx - circleR * 0.72, cy + circleR * 0.72, circleR * 1.44, fg);
+        }
 
         setText(COLORS.dark);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
-        doc.text(lines, textX, cy - ((lines.length - 1) * 13) / 2 + 3.5);
+        doc.text(lines, itemTextX, cy - ((lines.length - 1) * 13) / 2 + 3.5);
 
         y += rowH + itemGap;
       }
@@ -1801,17 +2027,23 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         doc.setLineWidth(0.75);
         doc.roundedRect(x, y, chipW, chipH, 8, 8, 'S');
 
-        const itemIcon = carryIconFor(item);
+        // Mirrors TripDetailPage.tsx exactly: the admin-picked icon when
+        // set, else the same keyword-matched fallback (getThingsToCarryIcon).
+        // Icon badge sized up to match the visual weight of the icon chips
+        // on the live site (a roomier filled circle, not a cramped dot).
+        const itemIcon = resolveIcon(item.icon, getThingsToCarryFallbackIcon(item.description));
+        const iconCx = x + 23;
+        const iconCy = y + chipH / 2;
         setFill(COLORS.primary);
-        doc.circle(x + 20, y + chipH / 2, 8, 'F');
-        itemIcon(x + 20 - 7, y + chipH / 2 + 7, 14, COLORS.white);
+        doc.circle(iconCx, iconCy, 13, 'F');
+        await drawLucideIcon(itemIcon, iconCx - 9, iconCy + 9, 18, COLORS.white);
 
         setText(COLORS.dark);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        const lines = clampLines(item, chipW - 44, 2);
+        const lines = clampLines(item.description, chipW - 52, 2);
         const lineY = y + chipH / 2 - ((lines.length - 1) * 11) / 2 + 3;
-        doc.text(lines, x + 34, lineY);
+        doc.text(lines, x + 44, lineY);
 
         col++;
         if (col >= perRow) {
@@ -2296,12 +2528,12 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const remainingAfterAdvance =
       activePrice != null && trip.advance_amount != null ? Math.max(0, activePrice - trip.advance_amount) : null;
 
-    const BOOK_TOP = CARDS_TOP + 30; // clears the "Secure Your Spot Soon" heading above
+    const BOOK_TOP = CARDS_TOP + PAD + 34; // clears the "Secure Your Spot Soon" heading above
     const innerLeft = rightX + PAD;
     const innerRight = rightX + rightW - PAD;
     const innerW = innerRight - innerLeft;
 
-    let ry = BOOK_TOP + 8;
+    let ry = BOOK_TOP;
 
     // Price row: main price + strikethrough, centered as one group
     if (activePrice != null) {
@@ -2464,15 +2696,18 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.line(innerLeft, ry, innerRight, ry);
     ry += 15;
 
-    const metaItems: { icon: (x: number, y: number, s?: number, color?: RGB) => void; label: string; value: string }[] = [
-      { icon: icons.calendar, label: 'Dates', value: formatDateRange(trip.start_date, trip.end_date) },
-      { icon: icons.clock, label: 'Duration', value: trip.duration },
-      { icon: icons.users, label: 'Group Size', value: `Max ${trip.total_seats}` },
-      { icon: icons.userCheck, label: 'Age Range', value: formatAgeRange(trip.min_age, trip.max_age) },
+    const metaItems: { icon: LucideIcon; label: string; value: string }[] = [
+      { icon: Calendar, label: 'Dates', value: formatDateRange(trip.start_date, trip.end_date) },
+      { icon: Clock, label: 'Duration', value: trip.duration },
+      { icon: Users, label: 'Group Size', value: `Max ${trip.total_seats}` },
+      { icon: UserCheck, label: 'Age Range', value: formatAgeRange(trip.min_age, trip.max_age) },
     ];
     const rowH = 15;
-    metaItems.forEach(item => {
-      item.icon(innerLeft + 6, ry - 3, 12, COLORS.primary);
+    for (const item of metaItems) {
+      // Real lucide-react icons (same Calendar/Clock/Users/UserCheck the
+      // live booking widget uses), not the hand-drawn `icons.*` set — those
+      // were coming out visually cramped/misaligned at this small size.
+      await drawLucideIcon(item.icon, innerLeft + 6, ry + 4, 12, COLORS.primary);
       setText(COLORS.darkMuted);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
@@ -2482,7 +2717,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.setFontSize(9.5);
       doc.text(item.value, innerRight, ry, { align: 'right' });
       ry += rowH;
-    });
+    }
     ry += 6;
 
     // CTA button — full width, label + arrow icon (no lock glyph, per the
@@ -2563,21 +2798,24 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 12, 12, 'S');
 
     const siteDomain = BRAND.website.replace('www.', '');
-    const contactItems: { icon: (x: number, y: number, s?: number, color?: RGB) => void; title: string; value: string; url?: string }[] = [
-      { icon: icons.headset, title: 'Need Help?', value: "We're just a message away!", url: `https://${siteDomain}/contact` },
-      { icon: icons.whatsapp, title: 'Call / WhatsApp', value: BRAND.phone, url: `https://wa.me/${BRAND.phone.replace(/\D/g, '')}` },
-      { icon: icons.mail, title: 'Email Us', value: BRAND.email, url: `mailto:${BRAND.email}` },
-      { icon: icons.globe, title: 'Website', value: BRAND.website, url: `https://${siteDomain}` },
-      { icon: icons.instagram, title: 'Follow Us', value: BRAND.instagram, url: `https://instagram.com/${BRAND.instagram.replace('@', '')}` },
+    const contactItems: { icon: LucideIcon; title: string; value: string; url?: string }[] = [
+      { icon: Headphones, title: 'Need Help?', value: "We're just a message away!", url: `https://${siteDomain}/contact` },
+      { icon: Phone, title: 'Call / WhatsApp', value: BRAND.phone, url: `https://wa.me/${BRAND.phone.replace(/\D/g, '')}` },
+      { icon: Mail, title: 'Email Us', value: BRAND.email, url: `mailto:${BRAND.email}` },
+      { icon: Globe, title: 'Website', value: BRAND.website, url: `https://${siteDomain}` },
+      { icon: MessageSquare, title: 'Follow Us', value: BRAND.instagram, url: `https://instagram.com/${BRAND.instagram.replace('@', '')}` },
     ];
     const contactColW = CONTENT_W / contactItems.length;
     const contactMidY = CONTACT_TOP + (CONTACT_BOTTOM - CONTACT_TOP) / 2;
-    contactItems.forEach((item, i) => {
+    for (let i = 0; i < contactItems.length; i++) {
+      const item = contactItems[i];
       const colX = MARGIN + contactColW * i;
       const cx0 = colX + 18;
       setFill(COLORS.backgroundWarm);
       doc.circle(cx0 + 12, contactMidY, 15, 'F');
-      item.icon(cx0, contactMidY + 12, 20, COLORS.primary);
+      // Real lucide-react icons, not the hand-drawn `icons.*` set — those
+      // were coming out visually messy/misaligned inside this circle.
+      await drawLucideIcon(item.icon, cx0 + 2, contactMidY + 10, 20, COLORS.primary);
 
       const tx = cx0 + 30;
       setText(COLORS.dark);
@@ -2600,7 +2838,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
         setDraw(COLORS.grayLineSoft);
         doc.line(MARGIN + contactColW * (i + 1), CONTACT_TOP + 8, MARGIN + contactColW * (i + 1), CONTACT_BOTTOM - 8);
       }
-    });
+    }
   }
 
   // =========================================================================
@@ -2609,12 +2847,12 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
   // always exactly what this specific trip's content needs.
   // =========================================================================
   await renderCover();
-  renderHighlightsAndDays();
+  await renderHighlightsAndDays();
   await renderItinerary();
-  renderInclusions();
+  await renderInclusions();
   await renderGallery();
   await renderFashion();
-  renderConfidenceAndCarry();
+  await renderConfidenceAndCarry();
   renderFaqs();
   renderCancellationPolicy();
   await renderTripLeaderAndBooking();
