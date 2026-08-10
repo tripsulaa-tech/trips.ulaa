@@ -816,13 +816,21 @@ export default function AdminEnquiryDetail() {
 
   return (
     <AdminLayout title="Enquiry Details" subtitle={enquiry.full_name}>
-      <div className="max-w-4xl mx-auto space-y-4">
+      <div className="max-w-7xl mx-auto space-y-4">
         <button
           onClick={() => navigate('/admin/enquiries')}
           className="inline-flex items-center gap-1.5 text-sm font-button font-medium text-dark-muted hover:text-primary transition-colors"
         >
           <ArrowLeft size={15} /> Back to Enquiries
         </button>
+
+        {/* Desktop: main record (header, journey, ledger) on the left ~2/3,
+            a fixed-context sidebar (who/what + history) on the right ~1/3 —
+            the sidebar column never needs to scroll past the main column to
+            check who you're talking to. Collapses to a single stacked
+            column below the lg breakpoint. */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div className="lg:col-span-2 space-y-4 min-w-0">
 
         {/* Header */}
         <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-3">
@@ -1053,58 +1061,75 @@ export default function AdminEnquiryDetail() {
           </div>
         )}
 
-        {/* Traveller & trip info */}
+        </div>{/* /main column */}
+
+        <div className="lg:col-span-1 space-y-4 min-w-0">
+
+        {/* Traveller & trip info — an avatar-icon'd contact row up top
+            (email + phone, each with a circular icon badge, plus the
+            WhatsApp/call/email quick-links riding alongside), then two
+            divider-separated 3-across rows for the rest. Matches the sidebar
+            card's ~1/3-page width: each cell truncates/wraps rather than
+            forcing the row wider. */}
         <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
-          <p className="text-dark text-sm font-button font-semibold mb-3">Traveller &amp; Trip</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
-            <div>
+          <p className="text-dark text-base font-display font-bold mb-4 flex items-center gap-2">
+            <User size={18} className="shrink-0 text-dark-muted" /> Traveller &amp; Trip
+          </p>
+
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-4 border-b border-background-warm">
+            <div className="min-w-0">
               <p className="text-dark-muted text-xs">Email</p>
-              <p className="text-dark truncate">{enquiry.email}</p>
+              <p className="text-dark text-sm font-semibold truncate">{enquiry.email}</p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-dark-muted text-xs">Phone</p>
-              <p className="text-dark truncate">{enquiry.phone}</p>
+              <p className="text-dark text-sm font-semibold truncate">{enquiry.phone}</p>
             </div>
-            <div className="col-span-2 sm:col-span-3">
-              <ContactQuickLinks phone={enquiry.phone} email={enquiry.email} name={enquiry.full_name} tripTitle={enquiry.trip_title} size="md" />
-            </div>
-            <div className="col-span-2 sm:col-span-3">
+            <ContactQuickLinks phone={enquiry.phone} email={enquiry.email} name={enquiry.full_name} tripTitle={enquiry.trip_title} size="md" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-x-4 gap-y-3 py-4 border-b border-background-warm text-sm">
+            <div className="min-w-0">
               <p className="text-dark-muted text-xs">Trip</p>
-              <p className="text-dark truncate">
+              <p className="text-dark font-semibold">
                 {enquiry.trip_id ? enquiry.trip_title : (
-                  <span className="text-dark-muted italic">
+                  <span className="text-dark-muted italic font-normal">
                     {isGeneralContactMessage ? 'None — Contact Us message' : 'None — logged without a trip'}
                   </span>
                 )}
               </p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-dark-muted text-xs">City</p>
-              <p className="text-dark truncate">{enquiry.city || '—'}</p>
+              <p className="text-dark font-semibold truncate">{enquiry.city || '—'}</p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-dark-muted text-xs">Age</p>
-              <p className="text-dark truncate">{enquiry.age ?? '—'}</p>
+              <p className="text-dark font-semibold truncate">{enquiry.age ?? '—'}</p>
             </div>
-            <div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 pt-4 text-sm">
+            <div className="min-w-0">
               <p className="text-dark-muted text-xs">Source</p>
-              <p className="text-dark truncate inline-flex items-center gap-1">
+              <p className="text-dark font-semibold truncate inline-flex items-center gap-1">
                 <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
               </p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-dark-muted text-xs">Package</p>
-              <p className="text-dark truncate">{PACKAGE_CONFIG[enquiry.package_type || 'normal'].label}</p>
+              <p className="text-dark font-semibold truncate">{PACKAGE_CONFIG[enquiry.package_type || 'normal'].label}</p>
             </div>
-            <div>
+            <div className="min-w-0 col-span-2 sm:col-span-1">
               <p className="text-dark-muted text-xs">Date &amp; Time</p>
-              <p className="text-dark truncate">
+              <p className="text-dark font-semibold">
                 {formatDate(enquiry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(enquiry.created_at)}
               </p>
             </div>
           </div>
+
           {enquiry.message && (
-            <div className="mt-3 pt-3 border-t border-background-warm">
+            <div className="mt-4 pt-4 border-t border-background-warm">
               <p className="text-dark-muted text-xs mb-1">Message</p>
               <p className="text-dark text-sm whitespace-pre-wrap">{enquiry.message}</p>
             </div>
@@ -1114,7 +1139,9 @@ export default function AdminEnquiryDetail() {
         {/* Activity Timeline — CRM spec section 14. Every meaningful action
             taken on this enquiry, chronological, oldest first, nothing
             editable or removable (see activity_log's RLS: no UPDATE/DELETE
-            policy exists at all). */}
+            policy exists at all). Sits below Traveller & Trip in the same
+            sidebar column, so its scroll cap is taller than before — it's
+            no longer competing with a wide main column for vertical rhythm. */}
         <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
           <p className="text-dark text-sm font-button font-semibold mb-3 flex items-center gap-1.5">
             <History size={14} className="shrink-0" /> Activity Timeline
@@ -1124,7 +1151,7 @@ export default function AdminEnquiryDetail() {
           ) : activityLog.length === 0 ? (
             <p className="text-dark-muted text-xs bg-background-warm rounded-md px-3 py-2">No activity logged yet.</p>
           ) : (
-            <ol className="relative border-l-2 border-background-warm pl-4 space-y-4 max-h-72 overflow-y-auto">
+            <ol className="relative border-l-2 border-background-warm pl-4 space-y-4 max-h-[600px] overflow-y-auto">
               {activityLog.map(entry => (
                 <li key={entry.id} className="relative">
                   <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-white" />
@@ -1138,6 +1165,9 @@ export default function AdminEnquiryDetail() {
             </ol>
           )}
         </div>
+
+        </div>{/* /sidebar column */}
+        </div>{/* /grid */}
       </div>
 
       {/* Track Payment modal */}
