@@ -346,6 +346,13 @@ async function loadCoverCroppedImage(
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
+    // Fill white first. JPEG has no alpha channel, so any pixels left
+    // untouched outside a rounded/circular clip path below would otherwise
+    // get flattened to black on export — visible as black corners poking
+    // out around circular avatars (e.g. the Trip Leader photo).
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+
     if (r > 0) {
       ctx.beginPath();
       if (r * 2 >= Math.min(w, h)) {
@@ -532,6 +539,18 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.text(part.text, runX, y);
       runX += doc.getTextWidth(part.text);
     });
+  }
+
+  /** Measures the total width of a mixed-style line (see drawMixedLine)
+   *  without drawing it, so callers can center the group before drawing. */
+  function mixedLineWidth(parts: { text: string; bold?: boolean }[], size: number): number {
+    let w = 0;
+    parts.forEach(part => {
+      doc.setFont('helvetica', part.bold ? 'bold' : 'normal');
+      doc.setFontSize(size);
+      w += doc.getTextWidth(part.text);
+    });
+    return w;
   }
 
   /** Simple line-art icon set, drawn as vectors (never rasterized) so they
@@ -2417,7 +2436,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     slideHeader(null, 'Trip Leader & Booking', 'Meet your host, then reserve your seat below');
 
     const CARDS_TOP = 108;
-    const CARDS_BOTTOM = 415;
+    const CARDS_BOTTOM = 450;
     const PAD = 20;
     const leftW = 470;
     const colGapCards = 20;
@@ -2433,7 +2452,8 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.setLineWidth(1);
       doc.roundedRect(x, CARDS_TOP, w, CARDS_BOTTOM - CARDS_TOP, 14, 14, 'S');
     }
-    cardShell(leftX, leftW);
+    // Only the booking card gets the bordered/filled card shell — the
+    // "Meet Your Trip Leader" side sits directly on the page background now.
     cardShell(rightX, rightW);
 
     // -- Left: Meet Your Trip Leader (from trip.trip_founder) --
@@ -2441,6 +2461,10 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14.5);
     doc.text('Meet Your Trip Leader', leftX + PAD, CARDS_TOP + PAD + 6);
+    // Short accent underline beneath the section heading
+    setDraw(COLORS.secondary);
+    doc.setLineWidth(2);
+    doc.line(leftX + PAD, CARDS_TOP + PAD + 12, leftX + PAD + 30, CARDS_TOP + PAD + 12);
 
     const founder = trip.trip_founder;
     if (founder && (founder.name || founder.photo)) {
@@ -2484,7 +2508,13 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.text('Founder & Trip Leader', textX, ny);
-      ny += 12;
+      ny += 7;
+      // Short accent underline beneath the designation, matching the one
+      // under the section heading above.
+      setDraw(COLORS.secondary);
+      doc.setLineWidth(1.5);
+      doc.line(textX, ny, textX + 26, ny);
+      ny += 5;
       setDraw(COLORS.grayLineSoft);
       doc.setLineWidth(1);
       doc.line(textX, ny, leftX + leftW - PAD, ny);
@@ -2655,29 +2685,29 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       boxH = 40;
       setFill([232, 247, 237] as RGB);
       doc.roundedRect(innerLeft, boxTop, innerW, boxH, 10, 10, 'F');
-      const iconX = innerLeft + 16;
-      const textX = iconX + 22;
-      icons.check(iconX, boxTop + boxH / 2, 18, COLORS.green);
-      drawMixedLine(
-        textX,
-        boxTop + 16,
-        [
-          { text: 'Reserve today with only ', color: COLORS.dark, bold: true },
-          { text: money(trip.advance_amount), color: COLORS.green, bold: true },
-        ],
-        9.4
-      );
+
+      // Line 1 (check icon + "Reserve today with only <amount>") and line 2
+      // ("Remaining ... payable before the trip.") are both centered as
+      // groups within the box, rather than left-anchored after the icon.
+      const line1Parts: { text: string; color: RGB; bold?: boolean }[] = [
+        { text: 'Reserve today with only ', color: COLORS.dark, bold: true },
+        { text: money(trip.advance_amount), color: COLORS.green, bold: true },
+      ];
+      const line1IconGap = 22;
+      const line1TextW = mixedLineWidth(line1Parts, 9.4);
+      const line1GroupW = line1IconGap + line1TextW;
+      const line1StartX = cardCX - line1GroupW / 2;
+      icons.check(line1StartX - 6, boxTop + boxH / 2, 18, COLORS.green);
+      drawMixedLine(line1StartX + line1IconGap - 6, boxTop + 16, line1Parts, 9.4);
+
       if (remainingAfterAdvance != null) {
-        drawMixedLine(
-          textX,
-          boxTop + 29,
-          [
-            { text: 'Remaining ', color: COLORS.darkMuted },
-            { text: money(remainingAfterAdvance), color: COLORS.dark, bold: true },
-            { text: ' payable before the trip.', color: COLORS.darkMuted },
-          ],
-          7.8
-        );
+        const line2Parts: { text: string; color: RGB; bold?: boolean }[] = [
+          { text: 'Remaining ', color: COLORS.darkMuted },
+          { text: money(remainingAfterAdvance), color: COLORS.dark, bold: true },
+          { text: ' payable before the trip.', color: COLORS.darkMuted },
+        ];
+        const line2W = mixedLineWidth(line2Parts, 7.8);
+        drawMixedLine(cardCX - line2W / 2, boxTop + 29, line2Parts, 7.8);
       }
     } else {
       boxH = 28;
@@ -2702,7 +2732,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       { icon: Users, label: 'Group Size', value: `Max ${trip.total_seats}` },
       { icon: UserCheck, label: 'Age Range', value: formatAgeRange(trip.min_age, trip.max_age) },
     ];
-    const rowH = 15;
+    const rowH = 18;
     for (const item of metaItems) {
       // Real lucide-react icons (same Calendar/Clock/Users/UserCheck the
       // live booking widget uses), not the hand-drawn `icons.*` set — those
@@ -2748,34 +2778,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.link(innerLeft, btnY, innerW, btnH, {
       url: `https://${BRAND.website.replace('www.', '')}/trips/${trip.slug}?book=1`,
     });
-    ry = btnY + btnH + 14;
-
-    // Quick links row, centered: Add to calendar | Share this trip | Download itinerary
-    const linkY = ry;
-    const linkItems = [
-      { icon: icons.calendar, label: 'Add to calendar' },
-      { icon: icons.share, label: 'Share this trip' },
-      { icon: icons.download, label: 'Download itinerary' },
-    ];
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.1);
-    const linkSepW = 16;
-    const linkIconGap = 15;
-    const linkTotalW =
-      linkItems.reduce((sum, item) => sum + linkIconGap + doc.getTextWidth(item.label), 0) + linkSepW * (linkItems.length - 1);
-    let linkX = cardCX - linkTotalW / 2;
-    linkItems.forEach((item, i) => {
-      item.icon(linkX, linkY + 5, 11, COLORS.darkMuted);
-      setText(COLORS.darkMuted);
-      doc.text(item.label, linkX + linkIconGap, linkY + 3);
-      linkX += linkIconGap + doc.getTextWidth(item.label);
-      if (i < linkItems.length - 1) {
-        setDraw(COLORS.grayLineSoft);
-        doc.line(linkX + linkSepW / 2, linkY - 5, linkX + linkSepW / 2, linkY + 7);
-        linkX += linkSepW;
-      }
-    });
-    ry = linkY + 18;
+    ry = btnY + btnH + 16;
 
     // Reassurance note, centered with a small check icon before the first line
     setText(COLORS.darkMuted);
@@ -2789,8 +2792,8 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     });
 
     // ---- Contact bar (from BRAND — the site's existing contact info) ----
-    const CONTACT_TOP = 425;
-    const CONTACT_BOTTOM = 470;
+    const CONTACT_TOP = 460;
+    const CONTACT_BOTTOM = 500;
     setFill(COLORS.cream);
     doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 12, 12, 'F');
     setDraw(COLORS.grayLine);
@@ -2815,7 +2818,10 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
       doc.circle(cx0 + 12, contactMidY, 15, 'F');
       // Real lucide-react icons, not the hand-drawn `icons.*` set — those
       // were coming out visually messy/misaligned inside this circle.
-      await drawLucideIcon(item.icon, cx0 + 2, contactMidY + 10, 20, COLORS.primary);
+      // Icon glyph is slightly smaller than the circle behind it (16 vs the
+      // circle's radius-15 background), centered within it.
+      const contactIconS = 16;
+      await drawLucideIcon(item.icon, cx0 + 12 - contactIconS / 2, contactMidY + contactIconS / 2, contactIconS, COLORS.primary);
 
       const tx = cx0 + 30;
       setText(COLORS.dark);
