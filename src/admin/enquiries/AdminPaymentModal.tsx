@@ -80,7 +80,7 @@ export default function PaymentModal({
   };
 
   return (
-    <Modal isOpen={!!paymentTarget} onClose={requestClose} title="Track Payment" size="sm">
+    <Modal isOpen={!!paymentTarget} onClose={requestClose} title="Payment" size="sm">
       {paymentTarget && (
         <div className="space-y-4">
           <div className="bg-background-warm rounded-md px-4 py-3 flex items-center justify-between gap-2">

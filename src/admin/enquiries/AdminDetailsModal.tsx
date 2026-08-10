@@ -121,7 +121,7 @@ export default function DetailsModal({
                       onClick={() => onMarkCompleted(detailsTarget)}
                       disabled={completingId === detailsTarget.id}
                     >
-                      <CheckCircle2 size={13} /> Mark Trip Completed
+                      <CheckCircle2 size={13} /> Complete Trip
                     </Button>
                   </div>
                 )}
@@ -134,7 +134,7 @@ export default function DetailsModal({
                       <Receipt size={13} className="shrink-0" /> Invoices
                     </p>
                     <Button variant="primary" size="sm" className="self-start" onClick={() => onOpenGenerateInvoice(detailsTarget)}>
-                      <Plus size={13} /> Generate Invoice
+                      <Plus size={13} /> Add Invoice
                     </Button>
                   </div>
                   {detailsInvoicesLoading ? (

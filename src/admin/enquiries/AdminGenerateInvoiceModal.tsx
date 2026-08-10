@@ -89,7 +89,7 @@ export default function GenerateInvoiceModal({
   };
 
   return (
-    <Modal isOpen={!!generateInvoiceTarget} onClose={requestClose} title="Generate Invoice" size="sm">
+    <Modal isOpen={!!generateInvoiceTarget} onClose={requestClose} title="Add Invoice" size="sm">
       {generateInvoiceTarget && (
         <div className="space-y-4">
           <div className="bg-background-warm rounded-md px-4 py-3">
@@ -249,7 +249,7 @@ export default function GenerateInvoiceModal({
               disabled={hasInvoiceErrors}
               title={hasInvoiceErrors ? 'Fix the highlighted fields before saving' : undefined}
             >
-              Generate Invoice
+              Add Invoice
             </Button>
           </div>
         </div>

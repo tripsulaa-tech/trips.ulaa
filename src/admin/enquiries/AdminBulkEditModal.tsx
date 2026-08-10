@@ -141,7 +141,7 @@ export default function BulkEditModal({
           />
           {bulkForm.status === 'contacted' && (
             <p className="text-[11px] text-dark-muted mt-1">
-              The Track Payment popup only appears for single-record updates, so it won't open here.
+              The Payment popup only appears for single-record updates, so it won't open here.
             </p>
           )}
         </div>

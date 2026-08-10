@@ -894,9 +894,9 @@ export default function AdminEnquiryDetail() {
                 </Button>
               )}
               {/* When there's no booking yet, Follow-up + the 3-dot menu stay
-                  here in the header. Once a booking exists, they move down
-                  next to the Booking ID row in the Booking Journey card
-                  below instead. */}
+                  here at the top of the header. Once a booking exists, they
+                  move down next to the Booking ID row directly below the
+                  header instead. */}
               {!enquiry.booking_id && (
                 <>
                   {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
@@ -909,6 +909,27 @@ export default function AdminEnquiryDetail() {
               )}
             </div>
           </div>
+
+          {/* Booking ID, moved up here (right below the name/badges row),
+              with Follow-up + the 3-dot actions menu alongside it — used to
+              live inside the Booking Journey card below, but that pushed it
+              too far from the header for how often it's referenced. */}
+          {enquiry.booking_id && (
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-background-warm">
+              <div className="min-w-0">
+                <p className="text-dark-muted text-xs">Booking ID</p>
+                <p className="text-dark text-sm font-mono truncate">{enquiry.booking_id}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
+                  <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
+                    <CalendarClock size={14} /> Set Follow-up
+                  </Button>
+                )}
+                <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Booking Journey */}
@@ -933,31 +954,13 @@ export default function AdminEnquiryDetail() {
               </div>
             </div>
 
-            {/* Booking ID, moved down here (below Paid/Total/Pending), with
-                Follow-up + the 3-dot actions menu alongside it in the same
-                row — see the header above for the no-booking fallback. */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-dark-muted text-xs">Booking ID</p>
-                <p className="text-dark text-sm font-mono truncate">{enquiry.booking_id}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
-                  <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
-                    <CalendarClock size={14} /> Set Follow-up
-                  </Button>
-                )}
-                <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
-              </div>
-            </div>
-
             <div className="flex justify-end items-center gap-2">
               <Button variant="outline" size="sm" onClick={openPayment}>
-                <IndianRupee size={13} /> Track Payment
+                <IndianRupee size={13} /> Payment
               </Button>
               {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
                 <Button variant="primary" size="sm" onClick={handleMarkCompleted} disabled={busyAction}>
-                  <CheckCircle2 size={13} /> Mark Trip Completed
+                  <CheckCircle2 size={13} /> Complete Trip
                 </Button>
               )}
             </div>
@@ -980,7 +983,7 @@ export default function AdminEnquiryDetail() {
               )}
             </div>
             <Button variant="primary" size="sm" onClick={openPayment}>
-              <IndianRupee size={13} /> Track Payment
+              <IndianRupee size={13} /> Payment
             </Button>
           </div>
         )}
@@ -993,7 +996,7 @@ export default function AdminEnquiryDetail() {
                 Invoices &amp; Payments
               </p>
               <Button variant="primary" size="sm" onClick={() => generateInvoice.open(enquiry)}>
-                <Plus size={13} /> Generate Invoice
+                <Plus size={13} /> Add Invoice
               </Button>
             </div>
             {paymentsLoading ? (
@@ -1138,7 +1141,7 @@ export default function AdminEnquiryDetail() {
       </div>
 
       {/* Track Payment modal */}
-      <Modal isOpen={paymentOpen} onClose={() => setPaymentOpen(false)} title="Track Payment" size="sm">
+      <Modal isOpen={paymentOpen} onClose={() => setPaymentOpen(false)} title="Payment" size="sm">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
@@ -1540,7 +1543,7 @@ export default function AdminEnquiryDetail() {
             />
             {editForm.trip_id !== (enquiry.trip_id || '') && (
               <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1.5 mt-1.5">
-                Changing the trip doesn't update an already-tracked total amount — open Track Payment afterwards to re-check the price for the new trip.
+                Changing the trip doesn't update an already-tracked total amount — open Payment afterwards to re-check the price for the new trip.
               </p>
             )}
           </div>
@@ -1566,7 +1569,7 @@ export default function AdminEnquiryDetail() {
       {/* Cancel Booking modal */}
       <Modal isOpen={cancelOpen} onClose={() => setCancelOpen(false)} title="Cancel Booking" size="sm">
         <div className="space-y-4">
-          <p className="text-sm text-dark-muted">This frees up the seat immediately. Amount paid stays on record — track any refund via Track Payment afterwards.</p>
+          <p className="text-sm text-dark-muted">This frees up the seat immediately. Amount paid stays on record — track any refund via Payment afterwards.</p>
           <div>
             <label className="block text-sm font-medium text-dark mb-1">Cancellation Reason</label>
             <Select

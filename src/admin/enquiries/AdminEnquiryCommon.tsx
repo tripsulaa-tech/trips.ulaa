@@ -575,7 +575,7 @@ export const CONTACT_OUTCOME_CONFIG: Record<ContactOutcome, {
 }> = {
   interested: {
     label: 'Interested',
-    description: "They want to book — this opens Track Payment to move them to Advance Pending.",
+    description: "They want to book — this opens Payment to move them to Advance Pending.",
     effect: 'advance',
   },
   needs_time: {
