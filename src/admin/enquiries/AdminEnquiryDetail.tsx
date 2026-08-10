@@ -89,7 +89,7 @@ export default function AdminEnquiryDetail() {
   // resets itself after 1.5s, no toast/alert needed for something this minor.
   const [bookingIdCopied, setBookingIdCopied] = useState(false);
   const handleCopyBookingId = async () => {
-    if (!enquiry.booking_id) return;
+    if (!enquiry?.booking_id) return;
     try {
       await navigator.clipboard.writeText(enquiry.booking_id);
       setBookingIdCopied(true);

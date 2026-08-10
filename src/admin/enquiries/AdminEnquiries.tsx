@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Plus, CheckCircle2, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, CalendarClock, Search, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Eye, UserX, UserCheck, LogIn, ExternalLink, UserMinus } from 'lucide-react';
+import { RefreshCw, Plus, CheckCircle2, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, CalendarClock, Search, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Eye, UserX, UserCheck, LogIn, ExternalLink, UserMinus, ArrowRight } from 'lucide-react';
 import AdminLayout from '../AdminLayout';
 import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
@@ -2749,7 +2749,6 @@ export default function AdminEnquiries() {
               {paginatedEnquiries.map((e, idx) => {
                 const jb = journeyBadge(e);
                 const nma = nextManualAction(e);
-                const seat = seatStatus(e);
                 const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
                 const isOpen = expandedId === e.id;
                 const isHighlighted = highlightId === e.id;
@@ -3019,86 +3018,43 @@ export default function AdminEnquiries() {
                           </div>
                         )}
 
-                        <div className="flex items-center flex-wrap gap-2 pt-3">
-                          <button
-                            onClick={() => openPayment(e)}
-                            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap bg-background-warm text-dark-muted"
-                          >
-                            <IndianRupee size={14} /> Payment
-                          </button>
-                          <span
-                            title={seat.title}
-                            className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap ${seat.color}`}
-                          >
-                            <seat.icon size={14} />
-                            {seat.label}
-                          </span>
-                        </div>
-
-                        {/* Follow-up reminder — same eligibility/chip logic
-                            as the desktop table's dedicated column, just
-                            laid out as a full-width row here since there's
-                            no spare column on a mobile card. */}
-                        {(followUpStatus(e) || canSetFollowUp(e)) && (
-                          <button
-                            onClick={() => openFollowUpModal(e)}
-                            disabled={updating === e.id}
-                            className={`w-full inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap disabled:opacity-50 ${
-                              followUpStatus(e) ? followUpStatus(e)!.color : 'border border-background-warm text-dark-muted'
-                            }`}
-                          >
-                            <CalendarClock size={14} />
-                            {followUpStatus(e)?.label || 'Set Follow-up Reminder'}
-                          </button>
-                        )}
-
-                        {/* Booking Follow-up — the post-booking counterpart,
-                            same layout, only shown once the Lead Follow-up
-                            window above no longer applies. */}
-                        {!followUpStatus(e) && !canSetFollowUp(e) && (bookingFollowUpStatus(e) || canSetBookingFollowUp(e)) && (
-                          <button
-                            onClick={() => setBookingFollowUpTarget(e)}
-                            disabled={updating === e.id}
-                            className={`w-full inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full whitespace-nowrap disabled:opacity-50 ${
-                              bookingFollowUpStatus(e) ? bookingFollowUpStatus(e)!.color : 'border border-background-warm text-dark-muted'
-                            }`}
-                          >
-                            <CalendarClock size={14} />
-                            {bookingFollowUpStatus(e)?.label || 'Set Booking Follow-up'}
-                          </button>
-                        )}
-
-                        {/* Journey Advance + kebab ActionsMenu — mirrors the
-                            desktop table's "Update" column so mobile isn't
-                            stuck with the old status dropdown / separate
-                            Cancel & Delete buttons. */}
-                        <div className="flex items-center gap-2">
-                          {nma && (
+                        {/* Simplified action row — a single "Set Follow-up"
+                            chip (lead or booking, whichever applies) plus
+                            a primary "View Full CRM" CTA. Payment, seat
+                            status, Journey Advance, Not Interested, and the
+                            rest now live in the kebab so the card footer
+                            stays to these two buttons. */}
+                        <div className="flex items-center gap-2 pt-3">
+                          {(followUpStatus(e) || canSetFollowUp(e) || bookingFollowUpStatus(e) || canSetBookingFollowUp(e)) && (
                             <button
-                              onClick={() => handleAdvance(e)}
+                              onClick={() => (followUpStatus(e) || canSetFollowUp(e) ? openFollowUpModal(e) : setBookingFollowUpTarget(e))}
                               disabled={updating === e.id}
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"
+                              className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2.5 rounded-full whitespace-nowrap border disabled:opacity-50 transition-colors ${
+                                followUpStatus(e)
+                                  ? followUpStatus(e)!.color
+                                  : bookingFollowUpStatus(e)
+                                  ? bookingFollowUpStatus(e)!.color
+                                  : 'border-background-warm text-dark-muted hover:bg-background-warm'
+                              }`}
                             >
-                              <nma.icon size={14} /> {nma.label}
-                            </button>
-                          )}
-                          {canMarkNotInterested(e) && (
-                            <button
-                              onClick={() => handleMarkNotInterested(e)}
-                              disabled={updating === e.id}
-                              title="Not Interested (Close Query)"
-                              className={`inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50 ${nma ? 'shrink-0' : 'flex-1'}`}
-                            >
-                              <UserMinus size={14} /> {nma ? '' : 'Not Interested'}
+                              <CalendarClock size={14} />
+                              {followUpStatus(e)?.label || bookingFollowUpStatus(e)?.label || 'Set Follow-up'}
                             </button>
                           )}
                           <button
                             onClick={() => navigate(`/admin/enquiries/${e.id}`)}
-                            className={`inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2 rounded-full border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap ${nma ? 'shrink-0' : 'flex-1'}`}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold px-3 py-2.5 rounded-full whitespace-nowrap bg-dark text-white hover:bg-dark/90 transition-colors"
                           >
-                            <ExternalLink size={14} /> {nma ? '' : 'Full CRM Page'}
+                            View Full CRM <ArrowRight size={14} />
                           </button>
-                          <ActionsMenu disabled={updating === e.id} items={buildRowActions(e)} />
+                          <ActionsMenu
+                            disabled={updating === e.id}
+                            items={[
+                              { label: 'Record Payment', icon: IndianRupee, onClick: () => openPayment(e) },
+                              ...(nma ? [{ label: nma.label, icon: nma.icon, onClick: () => handleAdvance(e) }] : []),
+                              ...buildRowActions(e),
+                            ]}
+                          />
                         </div>
                       </div>
                     )}
