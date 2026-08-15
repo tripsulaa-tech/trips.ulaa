@@ -174,7 +174,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             </div>
           )}
 
-          {/* Meta row: date + duration stay on one line even on mobile, seats wraps to its own line */}
+          {/* Meta row: date + duration on one line, seats + age range on the
+              next — each pair stays together via whitespace-nowrap, and the
+              row as a whole wraps naturally (flex-wrap) if a narrow card or
+              a long seats message ("Filling up fast — almost full!") needs
+              the extra room, instead of forcing seats onto its own full-width line. */}
           <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5 mb-5 text-xs sm:text-sm">
             <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
               <Calendar size={13} className="text-primary shrink-0" />
@@ -184,7 +188,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               <Clock size={13} className="text-primary shrink-0" />
               <span>{trip.duration}</span>
             </div>
-            <div className="flex items-center gap-1.5 text-dark-muted w-full">
+            <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
               <Users size={13} className="text-primary shrink-0" />
               <span>
                 {isFull
