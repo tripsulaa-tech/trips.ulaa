@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { ArrowRight, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import { getSiteContent } from '../../services/api';
@@ -169,29 +169,6 @@ export default function HeroSection() {
         <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />
       </div>
 
-      {/* Carousel arrows — desktop only, shown once there's more than one
-          active slide to move between. */}
-      {isCarousel && (
-        <>
-          <button
-            type="button"
-            onClick={goPrev}
-            aria-label="Previous slide"
-            className="hidden sm:flex absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white backdrop-blur-sm border border-white/20 hover:bg-white/25 transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <button
-            type="button"
-            onClick={goNext}
-            aria-label="Next slide"
-            className="hidden sm:flex absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white backdrop-blur-sm border border-white/20 hover:bg-white/25 transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </>
-      )}
-
       {/* Content — anchored to the bottom of the hero at every breakpoint,
           so the subheading + buttons land in the lower portion of the image
           (next to the women) with consistent breathing room above the
@@ -202,32 +179,44 @@ export default function HeroSection() {
       >
         <div className="max-w-[1344px] mx-auto pointer-events-none">
         <div className="max-w-3xl pointer-events-none">
-          {/* Headline */}
-          <motion.h1
-            custom={1}
-            initial="hidden"
-            animate="visible"
-            variants={textVariants}
-            className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] mb-6"
-          >
-            Girls-only
-            <br />
-            <span className="text-secondary italic">travel</span> experiences.
-          </motion.h1>
+          {/* Headline + subheading — only on the first slide. Other slides
+              are photo-only with just the two action buttons below. */}
+          <AnimatePresence mode="wait">
+            {index === 0 && (
+              <motion.div
+                key="hero-copy"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+              >
+                <motion.h1
+                  custom={1}
+                  initial="hidden"
+                  animate="visible"
+                  variants={textVariants}
+                  className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] mb-6"
+                >
+                  Girls-only
+                  <br />
+                  <span className="text-secondary italic">travel</span> experiences.
+                </motion.h1>
 
-          {/* Subheading */}
-          <motion.p
-            custom={2}
-            initial="hidden"
-            animate="visible"
-            variants={textVariants}
-            className="text-base sm:text-lg text-white/85 leading-relaxed mb-3 sm:mb-8 max-w-xl"
-          >
-            Discover hidden destinations. Travel safely.
-            Create unforgettable memories with like-minded women.
-          </motion.p>
+                <motion.p
+                  custom={2}
+                  initial="hidden"
+                  animate="visible"
+                  variants={textVariants}
+                  className="text-base sm:text-lg text-white/85 leading-relaxed mb-3 sm:mb-8 max-w-xl"
+                >
+                  Discover hidden destinations. Travel safely.
+                  Create unforgettable memories with like-minded women.
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Buttons */}
+          {/* Buttons — shown on every slide. */}
           <motion.div
             custom={3}
             initial="hidden"
