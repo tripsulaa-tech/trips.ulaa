@@ -145,6 +145,7 @@ export default function HeroSection() {
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={1}
               dragMomentum={false}
+              style={{ touchAction: 'pan-y' }}
               onDragStart={() => setPaused(true)}
               onDragEnd={(e, info) => { handleDragEnd(e, info); setPaused(false); }}
             >
@@ -164,9 +165,19 @@ export default function HeroSection() {
           </AnimatePresence>
         </motion.div>
 
-        {/* Gradient Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-dark/40 to-dark/80" />
-        <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />
+        {/* Gradient overlay — dark fade for text legibility, first slide
+            only (other slides have no text on them, just the buttons, so
+            they stay as clean, undarkened photos). Same on mobile and
+            desktop; pointer-events-none so it never blocks the swipe/drag
+            gesture on the image beneath it. */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          animate={{ opacity: index === 0 ? 1 : 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-dark/40 to-dark/80" />
+          <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />
+        </motion.div>
       </div>
 
       {/* Content — anchored to the bottom of the hero at every breakpoint,
