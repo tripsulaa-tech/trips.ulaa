@@ -72,39 +72,50 @@ export default function HeroSection() {
   // triggers an extra cascading render.
   const index = rawIndex >= slides.length ? 0 : rawIndex;
 
-  const goTo = useCallback((next: number) => {
+  // Direction of travel (1 = forward/next, -1 = backward/prev), driving
+  // which side the incoming slide enters from — this is what makes it read
+  // as a real sliding carousel (Swiper/Embla-style) instead of a fade.
+  const [direction, setDirection] = useState(1);
+
+  const goTo = useCallback((next: number, dir: number = 1) => {
+    setDirection(dir);
     setIndex(((next % slides.length) + slides.length) % slides.length);
   }, [slides.length]);
 
-  const goNext = useCallback(() => goTo(index + 1), [goTo, index]);
-  const goPrev = useCallback(() => goTo(index - 1), [goTo, index]);
+  const goNext = useCallback(() => goTo(index + 1, 1), [goTo, index]);
+  const goPrev = useCallback(() => goTo(index - 1, -1), [goTo, index]);
 
   // Autoplay — pauses while the visitor is actively dragging/hovering so a
   // swipe-in-progress or a deliberate "let me look at this one" hover isn't
   // yanked away mid-interaction, and resets its timer after every manual
   // navigation so the next auto-advance is a full interval away.
+  // Faster default cadence for a snappier, more "alive" hero.
   const [paused, setPaused] = useState(false);
   useEffect(() => {
     if (!isCarousel || !hero.autoplay || paused) return;
-    const ms = Math.max(2, hero.interval_seconds || 6) * 1000;
-    const id = setInterval(() => goTo(index + 1), ms);
+    const ms = Math.max(2, hero.interval_seconds || 4.5) * 1000;
+    const id = setInterval(() => goTo(index + 1, 1), ms);
     return () => clearInterval(id);
   }, [isCarousel, hero.autoplay, hero.interval_seconds, paused, index, goTo]);
 
-  const SWIPE_DISTANCE = 50;
-  const SWIPE_VELOCITY = 400;
+  // Swipe — left/right drag on the slide itself. Lower thresholds than
+  // before so a quick flick registers immediately, matching the feel of
+  // native mobile carousels.
+  const SWIPE_DISTANCE = 40;
+  const SWIPE_VELOCITY = 300;
   const handleDragEnd = (_e: unknown, info: PanInfo) => {
     if (info.offset.x < -SWIPE_DISTANCE || info.velocity.x < -SWIPE_VELOCITY) goNext();
     else if (info.offset.x > SWIPE_DISTANCE || info.velocity.x > SWIPE_VELOCITY) goPrev();
   };
 
-  // Pure crossfade — no slide/scale movement, just a clean fade between
-  // slides so it reads as smooth rather than busy. Direction is no longer
-  // used for the visual (kept for the dot-indicator click direction only).
+  // Directional slide — the incoming slide enters from the side it's
+  // travelling from and the outgoing slide exits the opposite side, the
+  // way modern hero carousels (Swiper, Embla, most agency sites) move,
+  // rather than a plain crossfade.
   const slideVariants = {
-    enter: { opacity: 0 },
-    center: { opacity: 1 },
-    exit: { opacity: 0 },
+    enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%' }),
+    center: { x: '0%' },
+    exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%' }),
   };
 
   const currentSlide = slides[index] ?? slides[0];
@@ -119,19 +130,20 @@ export default function HeroSection() {
       {/* Parallax Background — carousel when the admin has added 2+ active
           photos (AdminHomeHero.tsx), otherwise a single static image. */}
       <div className="absolute inset-0 overflow-hidden">
-        <motion.div className="absolute inset-0" style={{ y }}>
-          <AnimatePresence initial={false} mode="sync">
+        <motion.div className="absolute inset-0 overflow-hidden" style={{ y }}>
+          <AnimatePresence initial={false} custom={direction} mode="sync">
             <motion.div
               key={currentSlide.id}
+              custom={direction}
               variants={slideVariants}
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.45, ease: 'easeInOut' }}
+              transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
               className="absolute inset-0"
               drag={isCarousel ? 'x' : false}
               dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.15}
+              dragElastic={0.2}
               onDragStart={() => setPaused(true)}
               onDragEnd={(e, info) => { handleDragEnd(e, info); setPaused(false); }}
             >
@@ -251,7 +263,7 @@ export default function HeroSection() {
                 <button
                   key={slide.id}
                   type="button"
-                  onClick={() => goTo(i)}
+                  onClick={() => goTo(i, i > index ? 1 : -1)}
                   aria-label={`Go to slide ${i + 1}`}
                   aria-current={i === index}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
