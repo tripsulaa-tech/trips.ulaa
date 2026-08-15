@@ -11,6 +11,7 @@ interface TripHighlightIconPickerProps {
   onChange: (key: string) => void;
   /** Heading or description text used to auto-suggest matching icons (e.g. "Beaches" → palm tree, "24/7 on-ground support" → headset). */
   hintText: string;
+  id?: string;
 }
 
 /**
@@ -20,7 +21,7 @@ interface TripHighlightIconPickerProps {
  * Adventure" surfaces paw-print/compass/binoculars), plus a search box to
  * browse the full app icon library.
  */
-export default function TripHighlightIconPicker({ value, onChange, hintText }: TripHighlightIconPickerProps) {
+export default function TripHighlightIconPicker({ value, onChange, hintText, id }: TripHighlightIconPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,28 +48,32 @@ export default function TripHighlightIconPicker({ value, onChange, hintText }: T
   return (
     <div className="relative" ref={containerRef}>
       <button
+        id={id}
         type="button"
         onClick={() => setOpen(o => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
         className="w-full flex items-center justify-between gap-2 border border-background-warm rounded-md px-2.5 py-1.5 text-sm bg-white hover:border-primary/40 transition-colors"
       >
         <span className="flex items-center gap-2 min-w-0">
-          <span className="w-6 h-6 rounded-full bg-background-warm flex items-center justify-center flex-shrink-0">
+          <span className="w-6 h-6 rounded-full bg-background-warm flex items-center justify-center flex-shrink-0" aria-hidden="true">
             {currentMeta ? <currentMeta.Icon size={13} className="text-primary" /> : <span className="text-sm">{value || '—'}</span>}
           </span>
           <span className="truncate text-dark-muted">{currentMeta ? currentMeta.label : (value ? 'Custom' : 'Choose icon')}</span>
         </span>
-        <ChevronDown size={14} className="text-dark-muted flex-shrink-0" />
+        <ChevronDown size={14} className="text-dark-muted flex-shrink-0" aria-hidden="true" />
       </button>
 
       {open && (
         <div className="absolute z-20 mt-1 w-72 max-w-[90vw] bg-white border border-background-warm rounded-lg shadow-warm-lg p-3">
           <div className="relative mb-2">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-muted" />
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-muted" aria-hidden="true" />
             <input
               autoFocus
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search icons…"
+              aria-label="Search icons"
               className="w-full pl-8 pr-2 py-1.5 text-sm border border-background-warm rounded-md focus:outline-none focus:border-primary/50"
             />
           </div>
@@ -83,11 +88,13 @@ export default function TripHighlightIconPicker({ value, onChange, hintText }: T
                   <button
                     key={meta.key}
                     type="button"
+                    aria-label={meta.label}
+                    aria-pressed={value === meta.key}
                     title={meta.label}
                     onClick={() => pick(meta.key)}
                     className={`w-9 h-9 rounded-md flex items-center justify-center transition-colors ${value === meta.key ? 'bg-primary/10 text-primary' : 'bg-background-warm text-dark-muted hover:bg-primary/10 hover:text-primary'}`}
                   >
-                    <meta.Icon size={16} />
+                    <meta.Icon size={16} aria-hidden="true" />
                   </button>
                 ))}
               </div>
@@ -103,11 +110,13 @@ export default function TripHighlightIconPicker({ value, onChange, hintText }: T
                 <button
                   key={meta.key}
                   type="button"
+                  aria-label={meta.label}
+                  aria-pressed={value === meta.key}
                   title={meta.label}
                   onClick={() => pick(meta.key)}
                   className={`w-9 h-9 rounded-md flex items-center justify-center transition-colors ${value === meta.key ? 'bg-primary/10 text-primary' : 'bg-background-warm text-dark-muted hover:bg-primary/10 hover:text-primary'}`}
                 >
-                  <meta.Icon size={16} />
+                  <meta.Icon size={16} aria-hidden="true" />
                 </button>
               ))}
               {results.length === 0 && (

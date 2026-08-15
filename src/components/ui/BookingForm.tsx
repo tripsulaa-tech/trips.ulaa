@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { CheckCircle, AlertCircle, FileText, User, Users, Utensils, Clock3 } from 'lucide-react';
@@ -39,6 +39,23 @@ interface BookingFormProps {
 }
 
 export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge }: BookingFormProps) {
+  // Shared id prefix so every label/input pair below has a stable,
+  // unique-per-instance id — needed for htmlFor/aria-describedby wiring,
+  // and unique in case this form is ever mounted more than once at a time.
+  const uid = useId();
+  const ids = {
+    bookingType: `${uid}-booking-type`,
+    groupSize: `${uid}-group-size`,
+    fullName: `${uid}-full-name`,
+    age: `${uid}-age`,
+    phone: `${uid}-phone`,
+    email: `${uid}-email`,
+    city: `${uid}-city`,
+    emergencyContact: `${uid}-emergency-contact`,
+    foodPreference: `${uid}-food-preference`,
+    vegCount: `${uid}-veg-count`,
+    message: `${uid}-message`,
+  };
   const effectiveMinAge = minAge ?? DEFAULT_MIN_AGE;
   const effectiveMaxAge = maxAge ?? DEFAULT_MAX_AGE;
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -327,9 +344,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
+        role="status"
+        aria-live="polite"
         className="text-center py-12"
       >
-        <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
+        <CheckCircle size={64} className="text-green-500 mx-auto mb-4" aria-hidden="true" />
         <h3 className="font-display text-2xl font-bold text-dark mb-2">
           {submittedAsWaitlist ? "You're on the list!" : 'Enquiry Received!'}
         </h3>
@@ -373,34 +392,36 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
       {/* Solo vs Group booking */}
       <div>
-        <label className="block text-sm font-medium text-dark mb-1">Booking Type</label>
-        <div className="grid grid-cols-2 gap-2">
+        <label id={ids.bookingType} className="block text-sm font-medium text-dark mb-1">Booking Type</label>
+        <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby={ids.bookingType}>
           <button
             type="button"
             onClick={() => setBookingMode('solo')}
+            aria-pressed={bookingMode === 'solo'}
             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
               bookingMode === 'solo'
                 ? 'border-primary bg-primary/10 text-primary'
                 : 'border-background-warm text-dark-muted hover:border-primary/40'
             }`}
           >
-            <User size={16} /> Solo
+            <User size={16} aria-hidden="true" /> Solo
           </button>
           <button
             type="button"
             onClick={() => setBookingMode('group')}
+            aria-pressed={bookingMode === 'group'}
             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
               bookingMode === 'group'
                 ? 'border-primary bg-primary/10 text-primary'
                 : 'border-background-warm text-dark-muted hover:border-primary/40'
             }`}
           >
-            <Users size={16} /> Group
+            <Users size={16} aria-hidden="true" /> Group
           </button>
         </div>
         {bookingMode === 'solo' && !soloFits && (
           <p className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
-            <Clock3 size={13} className="text-primary shrink-0 mt-0.5" />
+            <Clock3 size={13} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
             This trip is full right now — submitting will add you to the waitlist instead, and
             we'll notify you the moment a seat opens up.
           </p>
@@ -409,12 +430,15 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
       {bookingMode === 'group' && (
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Number of People *</label>
+          <label htmlFor={ids.groupSize} className="block text-sm font-medium text-dark mb-1">Number of People *</label>
           <input
+            id={ids.groupSize}
             type="number"
             inputMode="numeric"
             min={MIN_GROUP_SIZE}
             max={MAX_GROUP_SIZE}
+            aria-invalid={!!groupSizeError}
+            aria-describedby={groupSizeError ? `${ids.groupSize}-error` : `${ids.groupSize}-hint`}
             value={groupSizeInput}
             onChange={e => {
               setGroupSizeError('');
@@ -441,36 +465,40 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             className={inputClass}
           />
           {groupFits ? (
-            <p className="text-xs text-dark-muted mt-1">
+            <p id={`${ids.groupSize}-hint`} className="text-xs text-dark-muted mt-1">
               We'll create one entry per person under this name and contact — {groupSize} {groupSize === 1 ? 'entry' : 'entries'} in total.
             </p>
           ) : (
-            <p className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
-              <Clock3 size={13} className="text-primary shrink-0 mt-0.5" />
+            <p id={`${ids.groupSize}-hint`} className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
+              <Clock3 size={13} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
               Only {remainingSeats} seat{remainingSeats === 1 ? '' : 's'} left right now — not enough for {groupSize}. Submitting will add your group to the waitlist instead, and we'll notify you the moment {groupSize} seats are free together.
             </p>
           )}
-          {groupSizeError && <p className={errorClass}>{groupSizeError}</p>}
+          {groupSizeError && <p id={`${ids.groupSize}-error`} role="alert" className={errorClass}>{groupSizeError}</p>}
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Full Name */}
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
+          <label htmlFor={ids.fullName} className="block text-sm font-medium text-dark mb-1">Full Name *</label>
           <input
+            id={ids.fullName}
             {...register('full_name', { required: 'Full name is required', validate: validateFullName })}
             placeholder="Your full name"
             autoComplete="name"
+            aria-invalid={!!errors.full_name}
+            aria-describedby={errors.full_name ? `${ids.fullName}-error` : undefined}
             className={inputClass}
           />
-          {errors.full_name && <p className={errorClass}>{errors.full_name.message}</p>}
+          {errors.full_name && <p id={`${ids.fullName}-error`} role="alert" className={errorClass}>{errors.full_name.message}</p>}
         </div>
 
         {/* Age */}
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Age *</label>
+          <label htmlFor={ids.age} className="block text-sm font-medium text-dark mb-1">Age *</label>
           <input
+            id={ids.age}
             type="number"
             inputMode="numeric"
             maxLength={3}
@@ -480,34 +508,40 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             })}
             placeholder="Your age"
             autoComplete="off"
+            aria-invalid={!!errors.age}
+            aria-describedby={errors.age ? `${ids.age}-error` : `${ids.age}-hint`}
             className={inputClass}
           />
           {!errors.age && (
-            <p className="text-xs text-dark-muted mt-1">
+            <p id={`${ids.age}-hint`} className="text-xs text-dark-muted mt-1">
               This trip is open to ages {effectiveMinAge}–{effectiveMaxAge}.
             </p>
           )}
-          {errors.age && <p className={errorClass}>{errors.age.message}</p>}
+          {errors.age && <p id={`${ids.age}-error`} role="alert" className={errorClass}>{errors.age.message}</p>}
         </div>
 
         {/* Phone */}
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Phone Number *</label>
+          <label htmlFor={ids.phone} className="block text-sm font-medium text-dark mb-1">Phone Number *</label>
           <input
+            id={ids.phone}
             type="tel"
             inputMode="tel"
             {...register('phone', { required: 'Phone number is required', validate: validatePhone })}
             placeholder="+91 63813 36772"
             autoComplete="tel"
+            aria-invalid={!!errors.phone}
+            aria-describedby={errors.phone ? `${ids.phone}-error` : undefined}
             className={inputClass}
           />
-          {errors.phone && <p className={errorClass}>{errors.phone.message}</p>}
+          {errors.phone && <p id={`${ids.phone}-error`} role="alert" className={errorClass}>{errors.phone.message}</p>}
         </div>
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Email *</label>
+          <label htmlFor={ids.email} className="block text-sm font-medium text-dark mb-1">Email *</label>
           <input
+            id={ids.email}
             type="email"
             {...register('email', {
               required: 'Email is required',
@@ -515,35 +549,43 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             })}
             placeholder="you@example.com"
             autoComplete="email"
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? `${ids.email}-error` : undefined}
             className={inputClass}
           />
-          {errors.email && <p className={errorClass}>{errors.email.message}</p>}
+          {errors.email && <p id={`${ids.email}-error`} role="alert" className={errorClass}>{errors.email.message}</p>}
         </div>
 
         {/* City */}
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">City</label>
+          <label htmlFor={ids.city} className="block text-sm font-medium text-dark mb-1">City</label>
           <input
+            id={ids.city}
             {...register('city', { validate: validateCity })}
             placeholder="Your city"
             autoComplete="address-level2"
+            aria-invalid={!!errors.city}
+            aria-describedby={errors.city ? `${ids.city}-error` : undefined}
             className={inputClass}
           />
-          {errors.city && <p className={errorClass}>{errors.city.message}</p>}
+          {errors.city && <p id={`${ids.city}-error`} role="alert" className={errorClass}>{errors.city.message}</p>}
         </div>
 
         {/* Emergency Contact */}
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Emergency Contact</label>
+          <label htmlFor={ids.emergencyContact} className="block text-sm font-medium text-dark mb-1">Emergency Contact</label>
           <input
+            id={ids.emergencyContact}
             type="tel"
             inputMode="tel"
             {...register('emergency_contact', { validate: validateOptionalPhone })}
             placeholder="Emergency contact number"
             autoComplete="off"
+            aria-invalid={!!errors.emergency_contact}
+            aria-describedby={errors.emergency_contact ? `${ids.emergencyContact}-error` : undefined}
             className={inputClass}
           />
-          {errors.emergency_contact && <p className={errorClass}>{errors.emergency_contact.message}</p>}
+          {errors.emergency_contact && <p id={`${ids.emergencyContact}-error`} role="alert" className={errorClass}>{errors.emergency_contact.message}</p>}
         </div>
       </div>
 
@@ -551,41 +593,50 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       <div>
         {bookingMode === 'solo' ? (
           <>
-            <label className="block text-sm font-medium text-dark mb-1">Food Preference *</label>
-            <div className="grid grid-cols-2 gap-2">
+            <label id={ids.foodPreference} className="block text-sm font-medium text-dark mb-1">Food Preference *</label>
+            <div
+              className="grid grid-cols-2 gap-2"
+              role="group"
+              aria-labelledby={ids.foodPreference}
+              aria-describedby={foodPreferenceError ? `${ids.foodPreference}-error` : undefined}
+            >
               <button
                 type="button"
                 onClick={() => { setFoodPreference('veg'); setFoodPreferenceError(''); }}
+                aria-pressed={foodPreference === 'veg'}
                 className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
                   foodPreference === 'veg'
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-background-warm text-dark-muted hover:border-primary/40'
                 }`}
               >
-                <Utensils size={16} /> Veg
+                <Utensils size={16} aria-hidden="true" /> Veg
               </button>
               <button
                 type="button"
                 onClick={() => { setFoodPreference('non_veg'); setFoodPreferenceError(''); }}
+                aria-pressed={foodPreference === 'non_veg'}
                 className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
                   foodPreference === 'non_veg'
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-background-warm text-dark-muted hover:border-primary/40'
                 }`}
               >
-                <Utensils size={16} /> Non-veg
+                <Utensils size={16} aria-hidden="true" /> Non-veg
               </button>
             </div>
-            {foodPreferenceError && <p className={errorClass}>{foodPreferenceError}</p>}
+            {foodPreferenceError && <p id={`${ids.foodPreference}-error`} role="alert" className={errorClass}>{foodPreferenceError}</p>}
           </>
         ) : (
           <>
-            <label className="block text-sm font-medium text-dark mb-1">Food Preference — how many prefer Veg? *</label>
+            <label htmlFor={ids.vegCount} className="block text-sm font-medium text-dark mb-1">Food Preference — how many prefer Veg? *</label>
             <input
+              id={ids.vegCount}
               type="number"
               inputMode="numeric"
               min={0}
               max={groupSize}
+              aria-describedby={`${ids.vegCount}-hint`}
               value={vegCountInput}
               onChange={e => {
                 const raw = e.target.value;
@@ -607,7 +658,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
               }}
               className={inputClass}
             />
-            <p className="text-xs text-dark-muted mt-1">
+            <p id={`${ids.vegCount}-hint`} className="text-xs text-dark-muted mt-1">
               {Math.min(groupVegCount, groupSize)} Veg · {groupSize - Math.min(groupVegCount, groupSize)} Non-veg out of {groupSize} {groupSize === 1 ? 'person' : 'people'}.
             </p>
           </>
@@ -616,8 +667,9 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
       {/* Message */}
       <div>
-        <label className="block text-sm font-medium text-dark mb-1">Message (Optional)</label>
+        <label htmlFor={ids.message} className="block text-sm font-medium text-dark mb-1">Message (Optional)</label>
         <textarea
+          id={ids.message}
           {...register('message')}
           rows={3}
           placeholder="Any questions or special requirements..."
@@ -631,6 +683,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           <input
             type="checkbox"
             {...register('terms_accepted', { required: 'You must agree to the Terms & Conditions to continue' })}
+            aria-invalid={!!errors.terms_accepted}
+            aria-describedby={errors.terms_accepted ? 'terms-accepted-error' : undefined}
             className="w-4 h-4 mt-0.5 accent-primary shrink-0"
           />
           <span className="text-sm text-dark">
@@ -644,13 +698,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             </button>
           </span>
         </label>
-        {errors.terms_accepted && <p className={errorClass}>{errors.terms_accepted.message}</p>}
+        {errors.terms_accepted && <p id="terms-accepted-error" role="alert" className={errorClass}>{errors.terms_accepted.message}</p>}
       </div>
 
       {/* Error */}
       {status === 'error' && (
-        <div className="flex items-start gap-2 text-red-600 bg-red-50 rounded-lg p-3">
-          <AlertCircle size={18} className="shrink-0 mt-0.5" />
+        <div role="alert" className="flex items-start gap-2 text-red-600 bg-red-50 rounded-lg p-3">
+          <AlertCircle size={18} className="shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-sm">{errorMsg}</p>
         </div>
       )}
@@ -682,12 +736,15 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       </div>
 
       {/* Quick-jump section chips */}
-      <div ref={chipBarRef} className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-3 mb-3 border-b border-background-warm">
+      <div ref={chipBarRef} role="tablist" aria-label="Terms & Conditions sections" className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-3 mb-3 border-b border-background-warm">
         {termsSections.map(section => (
           <button
             key={section.number}
             ref={el => { chipRefs.current[section.number] = el; }}
             type="button"
+            role="tab"
+            aria-selected={displayedActiveNum === section.number}
+            aria-label={section.title}
             onClick={() => handleChipSelect(section.number)}
             title={section.title}
             className={`shrink-0 text-xs font-semibold w-7 h-7 rounded-full transition-colors flex items-center justify-center ${

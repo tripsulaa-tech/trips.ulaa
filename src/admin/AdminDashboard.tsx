@@ -147,15 +147,15 @@ export default function AdminDashboard() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className={`w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 ${color}`}>
-                    <Icon size={20} className="sm:w-7 sm:h-7" />
+                    <Icon size={20} className="sm:w-7 sm:h-7" aria-hidden="true" />
                   </div>
-                  <p className="font-display text-xl sm:text-3xl font-bold text-dark">
+                  <p className="font-display text-xl sm:text-3xl font-bold text-dark" aria-live="polite">
                     {loading ? '—' : value}
                   </p>
                 </div>
                 <p className="text-dark-muted text-xs sm:text-sm mt-1">{label}</p>
               </div>
-              <ChevronRight size={18} className="sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+              <ChevronRight size={18} className="sm:w-6 sm:h-6 text-primary flex-shrink-0" aria-hidden="true" />
             </Link>
           ))}
 
@@ -166,15 +166,15 @@ export default function AdminDashboard() {
             <div className="min-w-0">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 text-primary">
-                  <TrendingUp size={20} className="sm:w-7 sm:h-7" />
+                  <TrendingUp size={20} className="sm:w-7 sm:h-7" aria-hidden="true" />
                 </div>
-                <p className="font-display text-xl sm:text-3xl font-bold text-dark">
+                <p className="font-display text-xl sm:text-3xl font-bold text-dark" aria-live="polite">
                   {loading ? '—' : newToday}
                 </p>
               </div>
               <p className="text-dark-muted text-xs sm:text-sm mt-1">New Enquiries Today</p>
             </div>
-            <ChevronRight size={18} className="sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+            <ChevronRight size={18} className="sm:w-6 sm:h-6 text-primary flex-shrink-0" aria-hidden="true" />
           </Link>
         </div>
 
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
                 className="bg-white rounded-md sm:rounded-lg p-3 sm:p-4 shadow-card hover:shadow-card-hover transition-all flex items-center gap-2 sm:gap-3 group"
               >
                 <div className={`w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 ${color}`}>
-                  <Icon size={20} className="sm:w-7 sm:h-7" />
+                  <Icon size={20} className="sm:w-7 sm:h-7" aria-hidden="true" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-dark text-xs sm:text-base truncate">{label}</p>
@@ -219,6 +219,7 @@ export default function AdminDashboard() {
             ) : (
               <div className="-mx-1">
                 <table className="w-full table-fixed text-xs sm:text-sm">
+                  <caption className="sr-only">Recent enquiries</caption>
                   <thead>
                     <tr className="text-left text-dark-muted border-b border-background-warm">
                       <th className="font-medium py-2 px-1 w-[24%]">Name</th>

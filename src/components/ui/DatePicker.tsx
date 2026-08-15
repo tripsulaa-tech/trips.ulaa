@@ -11,6 +11,7 @@ interface DatePickerProps {
   size?: 'sm' | 'md';
   className?: string;
   disabled?: boolean;
+  id?: string;
 }
 
 function toDateOnly(iso: string): Date | null {
@@ -61,6 +62,7 @@ export default function DatePicker({
   size = 'md',
   className = '',
   disabled = false,
+  id,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0, openUp: false });
@@ -212,27 +214,36 @@ export default function DatePicker({
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        disabled={disabled}
-        onClick={() => setIsOpen(o => !o)}
-        className={`w-full flex items-center justify-between gap-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-left outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'border-primary' : 'hover:border-primary/50'} ${sizeClasses} ${className}`}
+      <span
+        onClick={() => !disabled && setIsOpen(o => !o)}
+        className={`relative w-full flex items-center gap-2 rounded-lg border-2 bg-background text-dark cursor-pointer ${isOpen ? 'border-primary' : 'border-background-warm hover:border-primary/50'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${sizeClasses} ${className}`}
       >
-        <span className={value ? '' : 'text-dark-muted'}>
+        <button
+          ref={triggerRef}
+          id={id}
+          type="button"
+          disabled={disabled}
+          onClick={(e) => { e.stopPropagation(); setIsOpen(o => !o); }}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          className={`flex-1 min-w-0 text-left outline-none disabled:cursor-not-allowed ${value ? '' : 'text-dark-muted'}`}
+        >
           {value ? formatDisplay(value) : placeholder}
-        </span>
+        </button>
         <span className="flex items-center gap-1 shrink-0">
-          {value && (
-            <X
-              size={14}
-              className="text-dark-muted hover:text-dark"
+          {value && !disabled && (
+            <button
+              type="button"
+              aria-label="Clear date"
               onClick={(e) => { e.stopPropagation(); onChange(''); }}
-            />
+              className="rounded-full p-0.5 text-dark-muted hover:text-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
           )}
-          <Calendar size={15} className="text-dark-muted" />
+          <Calendar size={15} className="text-dark-muted" aria-hidden="true" />
         </span>
-      </button>
+      </span>
 
       {isOpen && createPortal(
         <div

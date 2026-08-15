@@ -150,6 +150,29 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
     });
   };
 
+  // Keyboard equivalent of the pointer-drag reordering above — moves
+  // `label` one slot up/down within its own list (top-level or group
+  // children) and announces the result, since a purely visual reorder
+  // wouldn't otherwise be perceivable to a screen reader user driving
+  // this via the keyboard.
+  const [moveAnnouncement, setMoveAnnouncement] = useState('');
+  const moveItem = (label: string, list: 'top' | 'child', direction: -1 | 1) => {
+    const key = list === 'top' ? 'topLevel' : 'groupChildren';
+    updateOrder(prev => {
+      const arr = [...prev[key]];
+      const from = arr.indexOf(label);
+      if (from === -1) return prev;
+      const to = from + direction;
+      if (to < 0 || to >= arr.length) {
+        setMoveAnnouncement(`${label} is already ${direction < 0 ? 'first' : 'last'} in this list.`);
+        return prev;
+      }
+      [arr[from], arr[to]] = [arr[to], arr[from]];
+      setMoveAnnouncement(`${label} moved to position ${to + 1} of ${arr.length}.`);
+      return { ...prev, [key]: arr };
+    });
+  };
+
   // Moves the item currently being dragged (read fresh via draggedLabelRef,
   // not the possibly-stale `draggedLabel` closure) to just before
   // `targetLabel` within `targetList`, or to the end of that list if
@@ -228,16 +251,20 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
   // makes the handle feel completely dead — matching "long pressed and
   // tried to move but nothing happens". touch-action / select-none alone
   // don't stop these, so they're suppressed explicitly below.
-  const GripHandle = ({ label, size = 14 }: { label: string; size?: number }) => (
+  const GripHandle = ({ label, list, size = 14 }: { label: string; list: 'top' | 'child'; size?: number }) => (
     <span
       onPointerDown={startDrag(label)}
       onContextMenu={e => e.preventDefault()}
       draggable={false}
       onDragStart={e => e.preventDefault()}
+      onKeyDown={e => {
+        if (e.key === 'ArrowUp') { e.preventDefault(); moveItem(label, list, -1); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); moveItem(label, list, 1); }
+      }}
       role="button"
-      tabIndex={-1}
-      aria-label={`Drag to reorder ${label}`}
-      className="shrink-0 flex items-center justify-center w-8 h-10 -ml-1 touch-none select-none cursor-grab active:cursor-grabbing text-dark-muted/50 hover:text-dark-muted"
+      tabIndex={0}
+      aria-label={`Reorder ${label}. Use the up and down arrow keys to move it.`}
+      className="shrink-0 flex items-center justify-center w-8 h-10 -ml-1 touch-none select-none cursor-grab active:cursor-grabbing text-dark-muted/50 hover:text-dark-muted rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{
         WebkitTouchCallout: 'none',
         WebkitUserDrag: 'none',
@@ -250,6 +277,9 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
 
   return (
     <div className="flex flex-col h-full">
+      {/* Announces keyboard-driven reorders, which otherwise only show up
+          as a visual position change. */}
+      <div aria-live="polite" className="sr-only">{moveAnnouncement}</div>
       <div className={`relative pt-6 pb-4 flex items-center ${collapsed ? 'flex-col gap-3 px-2' : 'justify-center px-6'}`}>
         <Link to="/" className="inline-block shrink-0" onClick={guardNavigate}>
           {collapsed ? (
@@ -297,7 +327,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
                 ref={el => { if (el) rowsRef.current.set(label, { el, target: { list: 'top', label } }); else rowsRef.current.delete(label); }}
                 className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
               >
-                {!collapsed && <GripHandle label={label} />}
+                {!collapsed && <GripHandle label={label} list="top" />}
                 <NavLink
                   to={to}
                   end={to === '/admin'}
@@ -328,7 +358,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
                 ref={el => { if (el) rowsRef.current.set(label, { el, target: { list: 'top', label } }); else rowsRef.current.delete(label); }}
                 className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
               >
-                {!collapsed && <GripHandle label={label} />}
+                {!collapsed && <GripHandle label={label} list="top" />}
                 <NavLink
                   to={to}
                   end
@@ -369,7 +399,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
                         ref={el => { if (el) rowsRef.current.set(childLabel, { el, target: { list: 'child', label: childLabel } }); else rowsRef.current.delete(childLabel); }}
                         className={`flex items-center gap-1 rounded-md ${draggedLabel === childLabel ? 'opacity-40' : ''}`}
                       >
-                        <GripHandle label={childLabel} size={13} />
+                        <GripHandle label={childLabel} list="child" size={13} />
                         <NavLink
                           to={child.to}
                           onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
@@ -421,6 +451,18 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const mobileCloseBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (sidebarOpen) mobileCloseBtnRef.current?.focus();
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [sidebarOpen]);
   const [profileOpen, setProfileOpen] = useState(false);
   // Desktop sidebar collapse — remembered across visits so the admin's
   // preferred layout sticks around after a refresh or new session.
@@ -505,8 +547,13 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
           <div className="fixed inset-0 bg-dark/50" onClick={() => setSidebarOpen(false)} />
-          <div className="relative w-72 bg-white flex flex-col z-50">
-            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-md text-dark-muted hover:bg-background">
+          <div role="dialog" aria-modal="true" aria-label="Admin navigation menu" className="relative w-72 bg-white flex flex-col z-50">
+            <button
+              ref={mobileCloseBtnRef}
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close navigation menu"
+              className="absolute top-4 right-4 p-2 rounded-md text-dark-muted hover:bg-background"
+            >
               <X size={20} />
             </button>
             <SidebarContent userEmail={user?.email} initial={initial} onNavigate={() => setSidebarOpen(false)} guardNavigate={guardNavigate} />
@@ -521,6 +568,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation menu"
               className="lg:hidden p-2 rounded-md text-dark hover:bg-background flex-shrink-0"
             >
               <Menu size={20} />
@@ -540,25 +588,28 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
             <div className="relative">
               <button
                 onClick={() => setProfileOpen(o => !o)}
+                aria-haspopup="menu"
+                aria-expanded={profileOpen}
                 className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-background-warm transition-colors"
               >
                 <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center text-sm font-display font-semibold flex-shrink-0">
                   {initial}
                 </div>
                 <span className="text-sm font-medium text-dark hidden sm:inline">Admin</span>
-                <ChevronDown size={16} className="text-dark-muted hidden sm:inline" />
+                <ChevronDown size={16} className="text-dark-muted hidden sm:inline" aria-hidden="true" />
               </button>
 
               {profileOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-md shadow-card-hover border border-background-warm py-2 z-20">
+                  <div role="menu" aria-label="Admin account" className="absolute right-0 top-full mt-2 w-56 bg-white rounded-md shadow-card-hover border border-background-warm py-2 z-20">
                     <p className="px-4 py-2 text-xs text-dark-muted truncate border-b border-background-warm mb-1">{user?.email}</p>
                     <button
+                      role="menuitem"
                       onClick={handleSignOut}
                       className="flex items-center gap-2 px-4 py-2 text-sm text-dark hover:bg-primary/5 hover:text-primary w-full transition-colors"
                     >
-                      <LogOut size={16} />
+                      <LogOut size={16} aria-hidden="true" />
                       Sign Out
                     </button>
                   </div>

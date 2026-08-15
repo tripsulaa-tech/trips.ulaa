@@ -926,42 +926,47 @@ export default function AdminTrips() {
           <Tabs>
           <TabPanel label="Basic Info">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
-              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley Winter Expedition" />
+              <label htmlFor="trip-title" className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
+              <input id="trip-title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley Winter Expedition" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Destination *</label>
-              <input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti, Himachal Pradesh" />
+              <label htmlFor="trip-destination" className="block text-sm font-medium text-dark mb-1">Destination *</label>
+              <input id="trip-destination" value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti, Himachal Pradesh" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Duration *</label>
+              <label htmlFor="trip-duration" className="block text-sm font-medium text-dark mb-1">Duration *</label>
               <input
+                id="trip-duration"
                 value={form.duration}
                 readOnly
+                aria-describedby="trip-duration-hint"
                 className={`${inputClass} bg-background-warm/60 cursor-not-allowed`}
                 placeholder="Auto-filled from Start/End Date"
               />
-              <p className="text-xs text-dark-muted mt-1">Calculated automatically from the Start and End Date fields.</p>
+              <p id="trip-duration-hint" className="text-xs text-dark-muted mt-1">Calculated automatically from the Start and End Date fields.</p>
             </div>
             <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Start Date *</label>
+                <label htmlFor="trip-start-date" className="block text-sm font-medium text-dark mb-1">Start Date *</label>
                 <DatePicker
+                  id="trip-start-date"
                   value={form.start_date}
                   onChange={start_date => setForm(f => ({ ...f, start_date, duration: computeDuration(start_date, f.end_date) || f.duration }))}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">End Date *</label>
+                <label htmlFor="trip-end-date" className="block text-sm font-medium text-dark mb-1">End Date *</label>
                 <DatePicker
+                  id="trip-end-date"
                   value={form.end_date}
                   onChange={end_date => setForm(f => ({ ...f, end_date, duration: computeDuration(f.start_date, end_date) || f.duration }))}
                   min={form.start_date || undefined}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Min Age</label>
+                <label htmlFor="trip-min-age" className="block text-sm font-medium text-dark mb-1">Min Age</label>
                 <input
+                  id="trip-min-age"
                   type="number"
                   min={0}
                   value={form.min_age}
@@ -971,8 +976,9 @@ export default function AdminTrips() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Max Age</label>
+                <label htmlFor="trip-max-age" className="block text-sm font-medium text-dark mb-1">Max Age</label>
                 <input
+                  id="trip-max-age"
                   type="number"
                   min={0}
                   value={form.max_age}
@@ -986,35 +992,38 @@ export default function AdminTrips() {
               </p>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Description *</label>
-              <p className="text-xs text-dark-muted mb-1">Short overview only — put the day-by-day plan in Itinerary below, not here.</p>
-              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
+              <label htmlFor="trip-description" className="block text-sm font-medium text-dark mb-1">Description *</label>
+              <p id="trip-description-hint" className="text-xs text-dark-muted mb-1">Short overview only — put the day-by-day plan in Itinerary below, not here.</p>
+              <textarea id="trip-description" aria-describedby="trip-description-hint" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
             </div>
           </TabPanel>
           <TabPanel label="Pricing & Availability">
             <div className="md:col-span-2 grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Total Seats</label>
-                <input type="number" min={0} value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
+                <label htmlFor="trip-total-seats" className="block text-sm font-medium text-dark mb-1">Total Seats</label>
+                <input id="trip-total-seats" type="number" min={0} value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Seats Filled</label>
+                <label htmlFor="trip-seats-filled" className="block text-sm font-medium text-dark mb-1">Seats Filled</label>
                 <input
+                  id="trip-seats-filled"
                   type="number"
                   min={0}
                   max={form.total_seats}
                   value={form.seats_booked}
                   onChange={e => setForm(f => ({ ...f, seats_booked: Math.max(0, Math.min(+e.target.value, f.total_seats)) }))}
+                  aria-describedby="trip-seats-filled-hint"
                   className={inputClass}
                 />
-                <p className="text-xs text-dark-muted mt-1">
+                <p id="trip-seats-filled-hint" className="text-xs text-dark-muted mt-1">
                   {Math.max(0, form.total_seats - form.seats_booked)} of {form.total_seats} seats left
                 </p>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹) *</label>
+              <label htmlFor="trip-price" className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹) *</label>
               <input
+                id="trip-price"
                 type="number"
                 value={form.price}
                 onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : +e.target.value }))}
@@ -1023,8 +1032,9 @@ export default function AdminTrips() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Strikeout Price per person (₹)</label>
+              <label htmlFor="trip-strike-price" className="block text-sm font-medium text-dark mb-1">Strikeout Price per person (₹)</label>
               <input
+                id="trip-strike-price"
                 type="number"
                 value={form.strike_through_price}
                 onChange={e => setForm(f => ({ ...f, strike_through_price: e.target.value === '' ? '' : +e.target.value }))}
@@ -1033,8 +1043,9 @@ export default function AdminTrips() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Early-Bird Price per person (₹)</label>
+              <label htmlFor="trip-early-bird-price" className="block text-sm font-medium text-dark mb-1">Early-Bird Price per person (₹)</label>
               <input
+                id="trip-early-bird-price"
                 type="number"
                 value={form.early_bird_price}
                 onChange={e => setForm(f => ({ ...f, early_bird_price: e.target.value === '' ? '' : +e.target.value }))}
@@ -1043,22 +1054,25 @@ export default function AdminTrips() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Advance/Reservation Amount (₹)</label>
+              <label htmlFor="trip-advance-amount" className="block text-sm font-medium text-dark mb-1">Advance/Reservation Amount (₹)</label>
               <input
+                id="trip-advance-amount"
                 type="number"
                 min={0}
                 value={form.advance_amount}
                 onChange={e => setForm(f => ({ ...f, advance_amount: e.target.value === '' ? '' : +e.target.value }))}
+                aria-describedby="trip-advance-amount-hint"
                 className={inputClass}
                 placeholder="e.g. 8999 (optional)"
               />
-              <p className="text-xs text-dark-muted mt-1">
+              <p id="trip-advance-amount-hint" className="text-xs text-dark-muted mt-1">
                 Shown on the public trip page as "Reserve today with only ₹{form.advance_amount || 'X'}". Leave blank to show the seats-available badge instead.
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Trip Type</label>
+              <label htmlFor="trip-type" className="block text-sm font-medium text-dark mb-1">Trip Type</label>
               <Select
+                inputId="trip-type"
                 value={form.trip_type}
                 onChange={val => setForm(f => ({ ...f, trip_type: val as TripForm['trip_type'] }))}
                 options={[
@@ -1070,8 +1084,9 @@ export default function AdminTrips() {
               <p className="text-xs text-dark-muted mt-1">Used to auto-fill the correct cancellation-window rules on bookings for this trip.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Early-Bird Deadline</label>
+              <label htmlFor="trip-early-bird-deadline" className="block text-sm font-medium text-dark mb-1">Early-Bird Deadline</label>
               <DatePicker
+                id="trip-early-bird-deadline"
                 value={form.early_bird_deadline}
                 onChange={early_bird_deadline => setForm(f => ({ ...f, early_bird_deadline }))}
               />
@@ -1119,11 +1134,12 @@ export default function AdminTrips() {
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-semibold text-dark">Places You'll Definitely Post</label>
-                <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: [...f.gallery_items, { photo: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} /> Add Item</button>
+                <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: [...f.gallery_items, { photo: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} aria-hidden="true" /> Add Item</button>
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Section Description</label>
+                <label htmlFor="trip-gallery-description" className="block text-sm font-medium text-dark mb-1">Section Description</label>
                 <textarea
+                  id="trip-gallery-description"
                   value={form.gallery_description}
                   onChange={e => setForm(f => ({ ...f, gallery_description: e.target.value }))}
                   rows={2}
@@ -1136,7 +1152,7 @@ export default function AdminTrips() {
                   <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Photo {i + 1}</span>
-                      <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: f.gallery_items.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} /></button>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: f.gallery_items.filter((_, idx) => idx !== i) }))} aria-label={`Remove Photo ${i + 1}`} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} aria-hidden="true" /></button>
                     </div>
                     <ImageUploadField
                       label=""
@@ -1149,8 +1165,8 @@ export default function AdminTrips() {
                       allowUrl
                     />
                     <div>
-                      <label className="block text-xs font-medium text-dark mb-1">Caption / Place Name</label>
-                      <input value={item.description} onChange={e => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={inputClass} placeholder="e.g. Chandratal Lake at dawn" />
+                      <label htmlFor={`trip-gallery-caption-${i}`} className="block text-xs font-medium text-dark mb-1">Caption / Place Name</label>
+                      <input id={`trip-gallery-caption-${i}`} value={item.description} onChange={e => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={inputClass} placeholder="e.g. Chandratal Lake at dawn" />
                     </div>
                   </div>
                 ))}
@@ -1169,8 +1185,9 @@ export default function AdminTrips() {
                 hint="Shown uncropped in a masonry grid, so portrait, landscape, or square all work — just keep each photo at least 800px on its shortest side."
                 allowUrl
               >
-                <label className="block text-sm font-medium text-dark mb-1">Section Description</label>
+                <label htmlFor="trip-fashion-description" className="block text-sm font-medium text-dark mb-1">Section Description</label>
                 <textarea
+                  id="trip-fashion-description"
                   value={form.fashion_description}
                   onChange={e => setForm(f => ({ ...f, fashion_description: e.target.value }))}
                   rows={2}
@@ -1190,7 +1207,7 @@ export default function AdminTrips() {
                   onClick={() => setForm(f => ({ ...f, highlight_cards: [...f.highlight_cards, { icon: '', heading: '', description: '' }] }))}
                   className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
                 >
-                  <Plus size={13} /> Add Card
+                  <Plus size={13} aria-hidden="true" /> Add Card
                 </button>
               </div>
               <div className="grid md:grid-cols-2 gap-3">
@@ -1198,25 +1215,26 @@ export default function AdminTrips() {
                   <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Card {i + 1}</span>
-                      <button type="button" onClick={() => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.filter((_, idx) => idx !== i) }))} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} /></button>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.filter((_, idx) => idx !== i) }))} aria-label={`Remove Card ${i + 1}`} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} aria-hidden="true" /></button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs font-medium text-dark mb-1">Icon</label>
+                        <label htmlFor={`trip-highlight-icon-${i}`} className="block text-xs font-medium text-dark mb-1">Icon</label>
                         <TripHighlightIconPicker
+                          id={`trip-highlight-icon-${i}`}
                           value={card.icon}
                           hintText={card.heading}
                           onChange={key => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, icon: key } : c) }))}
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-dark mb-1">Heading</label>
-                        <input value={card.heading} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, heading: e.target.value } : c) }))} className={inputClass} placeholder="e.g. Dreamy Beaches" />
+                        <label htmlFor={`trip-highlight-heading-${i}`} className="block text-xs font-medium text-dark mb-1">Heading</label>
+                        <input id={`trip-highlight-heading-${i}`} value={card.heading} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, heading: e.target.value } : c) }))} className={inputClass} placeholder="e.g. Dreamy Beaches" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-dark mb-1">Description</label>
-                      <textarea value={card.description} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, description: e.target.value } : c) }))} rows={2} className={`${inputClass} resize-none`} />
+                      <label htmlFor={`trip-highlight-desc-${i}`} className="block text-xs font-medium text-dark mb-1">Description</label>
+                      <textarea id={`trip-highlight-desc-${i}`} value={card.description} onChange={e => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.map((c, idx) => idx === i ? { ...c, description: e.target.value } : c) }))} rows={2} className={`${inputClass} resize-none`} />
                     </div>
                   </div>
                 ))}

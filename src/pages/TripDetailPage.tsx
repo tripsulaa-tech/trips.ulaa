@@ -599,11 +599,12 @@ export default function TripDetailPage() {
       {/* Quick jump nav */}
       <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-3 sm:px-6 lg:px-8">
         <div className="max-w-[1344px] mx-auto flex items-center gap-1 sm:gap-2">
-          <nav ref={navBarRef} className="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar py-2.5 sm:py-3">
+          <nav ref={navBarRef} aria-label="Jump to section" className="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar py-2.5 sm:py-3">
             {(trip.highlight_cards?.length ?? 0) > 0 && (
               <a
                 href="#highlights"
                 ref={el => { navLinkRefs.current['highlights'] = el; }}
+                aria-current={activeSection === 'highlights' ? 'true' : undefined}
                 className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'highlights' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Highlights
@@ -613,6 +614,7 @@ export default function TripDetailPage() {
               <a
                 href="#itinerary"
                 ref={el => { navLinkRefs.current['itinerary'] = el; }}
+                aria-current={activeSection === 'itinerary' ? 'true' : undefined}
                 className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'itinerary' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Itinerary
@@ -622,6 +624,7 @@ export default function TripDetailPage() {
               <a
                 href="#accommodation"
                 ref={el => { navLinkRefs.current['accommodation'] = el; }}
+                aria-current={activeSection === 'accommodation' ? 'true' : undefined}
                 className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'accommodation' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Stay
@@ -630,6 +633,7 @@ export default function TripDetailPage() {
             <a
               href="#inclusions"
               ref={el => { navLinkRefs.current['inclusions'] = el; }}
+              aria-current={activeSection === 'inclusions' ? 'true' : undefined}
               className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'inclusions' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
             >
               Inclusions
@@ -638,6 +642,7 @@ export default function TripDetailPage() {
               <a
                 href="#gallery"
                 ref={el => { navLinkRefs.current['gallery'] = el; }}
+                aria-current={activeSection === 'gallery' ? 'true' : undefined}
                 className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'gallery' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Gallery
@@ -647,6 +652,7 @@ export default function TripDetailPage() {
               <a
                 href="#confidence"
                 ref={el => { navLinkRefs.current['confidence'] = el; }}
+                aria-current={activeSection === 'confidence' ? 'true' : undefined}
                 className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'confidence' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Confidence
@@ -656,6 +662,7 @@ export default function TripDetailPage() {
               <a
                 href="#details"
                 ref={el => { navLinkRefs.current['details'] = el; }}
+                aria-current={activeSection === 'details' ? 'true' : undefined}
                 className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'details' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 Details
@@ -665,6 +672,7 @@ export default function TripDetailPage() {
               <a
                 href="#faqs"
                 ref={el => { navLinkRefs.current['faqs'] = el; }}
+                aria-current={activeSection === 'faqs' ? 'true' : undefined}
                 className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'faqs' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
               >
                 FAQs
@@ -673,6 +681,7 @@ export default function TripDetailPage() {
             <a
               href="#cancellation"
               ref={el => { navLinkRefs.current['cancellation'] = el; }}
+              aria-current={activeSection === 'cancellation' ? 'true' : undefined}
               className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === 'cancellation' ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
             >
               Cancellation

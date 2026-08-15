@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -26,6 +26,8 @@ const sizes = {
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   // Tracks whether the mousedown that started this click also happened on
   // the overlay itself. Without this, selecting text inside the modal
   // (mousedown on an input, drag outside, mouseup on the backdrop) fires a
@@ -48,6 +50,14 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
     return () => window.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
 
+  // Moves focus into the dialog the moment it opens, so keyboard and
+  // screen-reader users land inside it (and hear it announced via
+  // role="dialog" below) instead of it appearing behind wherever focus
+  // already was on the page.
+  useEffect(() => {
+    if (isOpen) panelRef.current?.focus();
+  }, [isOpen]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -63,11 +73,16 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
           }}
         >
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            tabIndex={-1}
             initial={{ scale: 0.92, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`relative w-full ${sizes[size]} bg-white rounded-md shadow-warm-lg max-h-[90vh] overflow-hidden flex flex-col`}
+            className={`relative w-full ${sizes[size]} bg-white rounded-md shadow-warm-lg max-h-[90vh] overflow-hidden flex flex-col outline-none`}
           >
             {!title && (
               <button
@@ -82,7 +97,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
             {/* Header */}
             {title && (
               <div className="flex items-center gap-4 p-6 border-b border-background-warm flex-shrink-0">
-                <h3 className="font-display text-2xl font-bold text-dark flex-shrink-0">{title}</h3>
+                <h3 id={titleId} className="font-display text-2xl font-bold text-dark flex-shrink-0">{title}</h3>
                 <div className="flex-1 min-w-0 flex justify-end">{headerContent}</div>
                 <button
                   onClick={onClose}

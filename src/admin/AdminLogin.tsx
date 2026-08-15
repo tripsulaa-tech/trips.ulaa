@@ -42,8 +42,9 @@ export default function AdminLogin() {
         <div className="bg-white rounded-lg shadow-warm-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Email</label>
+              <label htmlFor="admin-email" className="block text-sm font-medium text-dark mb-1">Email</label>
               <input
+                id="admin-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -51,11 +52,13 @@ export default function AdminLogin() {
                 placeholder="admin@ulaa.travel"
                 className={inputClass}
                 autoComplete="email"
+                aria-invalid={!!error}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Password</label>
+              <label htmlFor="admin-password" className="block text-sm font-medium text-dark mb-1">Password</label>
               <input
+                id="admin-password"
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -63,12 +66,14 @@ export default function AdminLogin() {
                 placeholder="••••••••"
                 className={inputClass}
                 autoComplete="current-password"
+                aria-invalid={!!error}
+                aria-describedby={error ? 'admin-login-error' : undefined}
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-md p-3">
-                <AlertCircle size={16} className="shrink-0" />
+              <div id="admin-login-error" role="alert" className="flex items-center gap-2 text-red-600 bg-red-50 rounded-md p-3">
+                <AlertCircle size={16} className="shrink-0" aria-hidden="true" />
                 <p className="text-sm">{error}</p>
               </div>
             )}

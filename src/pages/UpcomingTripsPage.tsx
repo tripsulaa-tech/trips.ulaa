@@ -144,8 +144,10 @@ export default function UpcomingTripsPage() {
           <div className="flex gap-3 sm:gap-4">
             {/* Search */}
             <div className="relative flex-1">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-muted" />
+              <label htmlFor="trip-search" className="sr-only">Search by destination or trip name</label>
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-muted" aria-hidden="true" />
               <input
+                id="trip-search"
                 type="text"
                 placeholder="Search destination or trip..."
                 value={search}
@@ -154,11 +156,12 @@ export default function UpcomingTripsPage() {
               />
             </div>
             {/* Month filter - desktop */}
-            <div className="hidden md:flex gap-2 flex-wrap">
+            <div className="hidden md:flex gap-2 flex-wrap" role="group" aria-label="Filter by month">
               {MONTHS.filter(m => m === 'All' || (monthCounts[m] ?? 0) > 0).map(m => (
                 <button
                   key={m}
                   onClick={() => setMonth(m)}
+                  aria-pressed={month === m}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-button font-medium transition-all whitespace-nowrap ${
                     month === m
                       ? 'bg-primary text-white'
@@ -179,19 +182,22 @@ export default function UpcomingTripsPage() {
             {/* Filter toggle - mobile */}
             <button
               onClick={() => setShowFilters(!showFilters)}
+              aria-expanded={showFilters}
+              aria-controls="mobile-month-filters"
               className="md:hidden flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-background-warm text-dark font-button text-sm shrink-0"
             >
-              <Filter size={16} />
+              <Filter size={16} aria-hidden="true" />
               Filter
             </button>
           </div>
           {/* Mobile filters */}
           {showFilters && (
-            <div className="md:hidden flex gap-2 flex-wrap mt-3">
+            <div id="mobile-month-filters" className="md:hidden flex gap-2 flex-wrap mt-3" role="group" aria-label="Filter by month">
               {MONTHS.filter(m => m === 'All' || (monthCounts[m] ?? 0) > 0).map(m => (
                 <button
                   key={m}
                   onClick={() => setMonth(m)}
+                  aria-pressed={month === m}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-button font-medium transition-all ${
                     month === m ? 'bg-primary text-white' : 'bg-background-warm text-dark'
                   }`}
@@ -216,30 +222,42 @@ export default function UpcomingTripsPage() {
         <div className="max-w-[1344px] mx-auto">
         {loading ? (
           <SkeletonGrid count={6} type="trip" />
-        ) : trips.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="font-display text-2xl text-dark-muted">No upcoming trips yet.</p>
-            <p className="text-sm text-dark-muted mt-2">Check back soon — new adventures are on the way.</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="font-display text-2xl text-dark-muted">No trips found.</p>
-            <p className="text-sm text-dark-muted mt-2">Try adjusting your search or filters.</p>
-          </div>
         ) : (
-          <>
-            <p className="text-dark-muted text-base sm:text-lg mb-6 md:mb-8">
-              <span className="font-semibold text-primary">{navLabel}</span>{' '}
-              <span className="text-sm sm:text-base">
-                Showing <span className="font-semibold text-dark">{filtered.length}</span> trip{filtered.length !== 1 ? 's' : ''}
-              </span>
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {filtered.map((trip, i) => (
-                <TripCard key={trip.id} trip={trip} index={i} />
-              ))}
-            </div>
-          </>
+          <div aria-live="polite">
+            {trips.length === 0 ? (
+              <div className="text-center py-24">
+                <p className="font-display text-2xl text-dark-muted">No upcoming trips yet.</p>
+                <p className="text-sm text-dark-muted mt-2">Check back soon — new adventures are on the way.</p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-24">
+                <p className="font-display text-2xl text-dark-muted">No trips found.</p>
+                <p className="text-sm text-dark-muted mt-2">Try adjusting your search or filters.</p>
+                {(search !== '' || month !== 'All') && (
+                  <button
+                    onClick={() => { setSearch(''); setMonth('All'); }}
+                    className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white font-button text-sm font-semibold hover:bg-primary-dark transition-colors"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <p className="text-dark-muted text-base sm:text-lg mb-6 md:mb-8">
+                  <span className="font-semibold text-primary">{navLabel}</span>{' '}
+                  <span className="text-sm sm:text-base">
+                    Showing <span className="font-semibold text-dark">{filtered.length}</span> trip{filtered.length !== 1 ? 's' : ''}
+                  </span>
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                  {filtered.map((trip, i) => (
+                    <TripCard key={trip.id} trip={trip} index={i} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         )}
         </div>
       </div>
