@@ -143,7 +143,8 @@ export default function HeroSection() {
               className="absolute inset-0"
               drag={isCarousel ? 'x' : false}
               dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.2}
+              dragElastic={1}
+              dragMomentum={false}
               onDragStart={() => setPaused(true)}
               onDragEnd={(e, info) => { handleDragEnd(e, info); setPaused(false); }}
             >
@@ -197,10 +198,10 @@ export default function HeroSection() {
           section's bottom edge, instead of being pinned near the top. */}
       <motion.div
         style={{ opacity }}
-        className="absolute inset-x-0 bottom-0 z-10 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-14 lg:pb-20 text-white"
+        className="absolute inset-x-0 bottom-0 z-10 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-14 lg:pb-20 text-white pointer-events-none"
       >
-        <div className="max-w-[1344px] mx-auto">
-        <div className="max-w-3xl">
+        <div className="max-w-[1344px] mx-auto pointer-events-none">
+        <div className="max-w-3xl pointer-events-none">
           {/* Headline */}
           <motion.h1
             custom={1}
@@ -232,7 +233,7 @@ export default function HeroSection() {
             initial="hidden"
             animate="visible"
             variants={textVariants}
-            className="flex flex-row flex-wrap gap-3 sm:gap-4"
+            className="flex flex-row flex-wrap gap-3 sm:gap-4 pointer-events-auto"
           >
             <Link to="/trips">
               <Button
@@ -258,7 +259,7 @@ export default function HeroSection() {
 
           {/* Dot indicators — only shown once there's a real carousel. */}
           {isCarousel && (
-            <div className="flex items-center gap-2 mt-6 sm:mt-10">
+            <div className="flex items-center gap-2 mt-6 sm:mt-10 pointer-events-auto">
               {slides.map((slide, i) => (
                 <button
                   key={slide.id}
