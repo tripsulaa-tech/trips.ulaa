@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Briefcase, BookOpen, Image, MessageCircle,
   LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles, ListChecks,
-  ChevronsLeft, ChevronsRight, UserCircle, PanelBottom, GripVertical, BarChart3
+  ChevronsLeft, ChevronsRight, UserCircle, PanelBottom, GripVertical, BarChart3, Images
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
@@ -28,6 +28,7 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   'Instagram Moments': { to: '/admin/instagram-moments', icon: Image },
   Testimonials: { to: '/admin/testimonials', icon: Star },
   'About Page': { to: '/admin/about', icon: FileText },
+  'Home Hero': { to: '/admin/home-hero', icon: Images },
   Founder: { to: '/admin/founder', icon: UserCircle },
   'Why ULAA': { to: '/admin/why-us', icon: Sparkles },
   'Bottom Nav Bar': { to: '/admin/bottom-nav', icon: PanelBottom },
@@ -37,7 +38,7 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
 };
 
 const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'About Page', 'Enquiries', 'Waitlist', 'Reports'];
-const DEFAULT_GROUP_CHILDREN_ORDER = ['Instagram Moments', 'Testimonials', 'Bottom Nav Bar', 'Founder', 'Why ULAA'];
+const DEFAULT_GROUP_CHILDREN_ORDER = ['Home Hero', 'Instagram Moments', 'Testimonials', 'Bottom Nav Bar', 'Founder', 'Why ULAA'];
 
 // "Dashboard" is the one item that renders as an expandable group (it's the
 // only item other tabs can be dropped into) — everything else is a plain

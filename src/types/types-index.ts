@@ -635,6 +635,29 @@ export interface AboutFounderSocialLink {
   url: string;
 }
 
+// =============================================
+// Home Page Hero Carousel (editable via its own Admin tab, stored under the
+// 'home_hero' site_content key). Each slide is an admin-uploaded photo;
+// order in the `slides` array is the display/rotation order, controlled by
+// the admin's Move Up/Down buttons in AdminHomeHero.tsx.
+// =============================================
+export interface HomeHeroSlide {
+  /** Stable id (not the array index) so React keys survive reordering. */
+  id: string;
+  image: string;
+  /** Optional tall crop for phone screens; falls back to `image` if empty. */
+  mobile_image: string;
+  /** Inactive slides are kept (not deleted) but skipped on the live site. */
+  active: boolean;
+}
+
+export interface HomeHeroContent {
+  slides: HomeHeroSlide[];
+  autoplay: boolean;
+  /** Seconds between automatic slide changes. */
+  interval_seconds: number;
+}
+
 export interface AboutContent {
   // 1. Hero Banner
   hero: {

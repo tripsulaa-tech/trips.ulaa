@@ -1,0 +1,648 @@
+diff --git a/src/admin/AdminHomeHero.tsx b/src/admin/AdminHomeHero.tsx
+new file mode 100644
+index 0000000..743e8e9
+--- /dev/null
++++ b/src/admin/AdminHomeHero.tsx
+@@ -0,0 +1,307 @@
++import { useState, useEffect, useRef } from 'react';
++import { Plus, Trash2, ImagePlus, Loader2, ChevronUp, ChevronDown, Eye, EyeOff, Images } from 'lucide-react';
++import AdminLayout from './AdminLayout';
++import Button from '../components/ui/Button';
++import ImageUploadField from '../components/ui/ImageUploadField';
++import { getSiteContent, upsertSiteContent, uploadImage, deleteImageByUrl } from '../services/api';
++import { DEFAULT_HOME_HERO, mergeWithDefaults } from '../constants/home-hero';
++import { useConfirm } from '../components/ui/useConfirm';
++import { collectStorageUrls } from '../utils/utils-index';
++import type { HomeHeroContent, HomeHeroSlide } from '../types/types-index';
++
++const STORAGE_BUCKET = 'ulaa';
++
++export default function AdminHomeHero() {
++  const confirm = useConfirm();
++  const [content, setContent] = useState<HomeHeroContent>(DEFAULT_HOME_HERO);
++  const [loading, setLoading] = useState(true);
++  const [saving, setSaving] = useState(false);
++  const [saved, setSaved] = useState(false);
++  const [uploading, setUploading] = useState(false);
++  const fileRef = useRef<HTMLInputElement>(null);
++
++  // Same snapshot-diff approach as AdminAbout/AdminWhyULAA — lets Save
++  // clean up any image the admin removed or replaced, and doubles as the
++  // "hasUnsavedChanges" check for the navigate-away guard.
++  const savedUrlsRef = useRef<Set<string>>(new Set());
++  const savedContentRef = useRef<string>('');
++
++  useEffect(() => {
++    getSiteContent<Partial<HomeHeroContent>>('home_hero')
++      .then(data => {
++        const resolved = mergeWithDefaults(data);
++        setContent(resolved);
++        savedUrlsRef.current = collectStorageUrls(resolved, STORAGE_BUCKET);
++        savedContentRef.current = JSON.stringify(resolved);
++      })
++      .catch(() => {
++        setContent(DEFAULT_HOME_HERO);
++        savedUrlsRef.current = collectStorageUrls(DEFAULT_HOME_HERO, STORAGE_BUCKET);
++        savedContentRef.current = JSON.stringify(DEFAULT_HOME_HERO);
++      })
++      .finally(() => setLoading(false));
++  }, []);
++
++  const hasUnsavedChanges = () => JSON.stringify(content) !== savedContentRef.current;
++
++  const handleAddPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
++    const files = Array.from(e.target.files || []);
++    if (files.length === 0) return;
++    try {
++      setUploading(true);
++      const newSlides: HomeHeroSlide[] = [];
++      for (const file of files) {
++        const path = `home-hero/${Date.now()}-${file.name}`;
++        const url = await uploadImage(STORAGE_BUCKET, file, path);
++        newSlides.push({ id: crypto.randomUUID(), image: url, mobile_image: '', active: true });
++      }
++      setContent(c => ({ ...c, slides: [...c.slides, ...newSlides] }));
++    } catch {
++      alert('Failed to upload one or more photos. Please try again.');
++    } finally {
++      setUploading(false);
++      if (fileRef.current) fileRef.current.value = '';
++    }
++  };
++
++  const updateSlide = (id: string, patch: Partial<HomeHeroSlide>) => {
++    setContent(c => ({ ...c, slides: c.slides.map(s => (s.id === id ? { ...s, ...patch } : s)) }));
++  };
++
++  const removeSlide = async (id: string) => {
++    const slide = content.slides.find(s => s.id === id);
++    setContent(c => ({ ...c, slides: c.slides.filter(s => s.id !== id) }));
++    // Best-effort cleanup of the desktop image now — mirrors
++    // MultiImageUploadField's removeAt. Mobile crops (if any) and anything
++    // else no longer referenced are swept up on Save instead.
++    if (slide?.image.includes(`/${STORAGE_BUCKET}/`)) {
++      deleteImageByUrl(STORAGE_BUCKET, slide.image).catch(() => {});
++    }
++  };
++
++  // Reordering — Move Up/Down rather than free-form drag, so it works the
++  // same way with a mouse, touch, or keyboard (each button is a normal,
++  // focusable control) without needing pointer-capture drag plumbing.
++  const moveSlide = (id: string, direction: -1 | 1) => {
++    setContent(c => {
++      const arr = [...c.slides];
++      const from = arr.findIndex(s => s.id === id);
++      const to = from + direction;
++      if (from === -1 || to < 0 || to >= arr.length) return c;
++      [arr[from], arr[to]] = [arr[to], arr[from]];
++      return { ...c, slides: arr };
++    });
++  };
++
++  const handleSave = async () => {
++    try {
++      setSaving(true);
++      await upsertSiteContent('home_hero', content);
++      const newUrls = collectStorageUrls(content, STORAGE_BUCKET);
++      for (const url of savedUrlsRef.current) {
++        if (!newUrls.has(url)) deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
++      }
++      savedUrlsRef.current = newUrls;
++      savedContentRef.current = JSON.stringify(content);
++      setSaved(true);
++      setTimeout(() => setSaved(false), 2500);
++    } catch {
++      alert('Failed to save. Please try again.');
++    } finally {
++      setSaving(false);
++    }
++  };
++
++  const resetToDefault = async () => {
++    const ok = await confirm({
++      title: 'Remove all slides?',
++      message: 'This clears every photo below (not saved until you click Save) and the homepage will show its original default image instead.',
++      confirmLabel: 'Reset',
++    });
++    if (!ok) return;
++    setContent(DEFAULT_HOME_HERO);
++  };
++
++  if (loading) {
++    return (
++      <AdminLayout title="Home Hero Banner">
++        <div className="text-center py-16 text-dark-muted">Loading...</div>
++      </AdminLayout>
++    );
++  }
++
++  return (
++    <AdminLayout
++      title="Home Hero Banner"
++      subtitle="Manage the rotating photo banner at the top of the home page — add photos, reorder them, and turn autoplay on or off."
++      hasUnsavedChanges={hasUnsavedChanges}
++    >
++      <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
++        <div className="app-scroll overflow-y-auto flex-1 min-h-0">
++          <div className="p-6 space-y-8">
++
++            {/* Carousel settings */}
++            <div className="space-y-4">
++              <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">
++                Carousel Settings
++              </h2>
++              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
++                <label className="flex items-center gap-2 text-sm font-medium text-dark">
++                  <input
++                    type="checkbox"
++                    checked={content.autoplay}
++                    onChange={e => setContent(c => ({ ...c, autoplay: e.target.checked }))}
++                    className="w-4 h-4 accent-primary"
++                  />
++                  Auto-rotate slides
++                </label>
++                <div>
++                  <label className="block text-sm font-medium text-dark mb-1">Seconds between slides</label>
++                  <input
++                    type="number"
++                    min={2}
++                    max={30}
++                    value={content.interval_seconds}
++                    onChange={e => setContent(c => ({ ...c, interval_seconds: Math.max(2, Number(e.target.value) || 6) }))}
++                    disabled={!content.autoplay}
++                    className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors disabled:opacity-50"
++                  />
++                </div>
++              </div>
++              {content.slides.length === 0 && (
++                <p className="text-xs text-dark-muted flex items-center gap-1.5 bg-background-warm/60 rounded-md px-3 py-2">
++                  <Images size={14} className="flex-shrink-0" />
++                  No photos yet — the homepage will keep showing its original default hero image until you add some below.
++                </p>
++              )}
++            </div>
++
++            {/* Slides */}
++            <div className="space-y-4">
++              <div className="flex items-center justify-between gap-2 pb-3 border-b border-background-warm flex-wrap">
++                <h2 className="font-display text-lg font-bold text-dark">
++                  Photos ({content.slides.length})
++                </h2>
++                <button
++                  type="button"
++                  onClick={() => fileRef.current?.click()}
++                  disabled={uploading}
++                  className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
++                >
++                  {uploading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
++                  {uploading ? 'Uploading...' : 'Add Photos'}
++                </button>
++                <input
++                  ref={fileRef}
++                  type="file"
++                  accept="image/*"
++                  multiple
++                  onChange={handleAddPhotos}
++                  className="hidden"
++                />
++              </div>
++              <p className="text-xs text-dark-muted -mt-2">
++                Wide landscape, at least 1920×1080px. Slides play in the order below — use the arrows to reorder, and the eye icon to temporarily hide a photo without deleting it.
++              </p>
++
++              {content.slides.length === 0 ? (
++                <button
++                  type="button"
++                  onClick={() => fileRef.current?.click()}
++                  disabled={uploading}
++                  className="w-full flex flex-col items-center justify-center gap-2 py-12 rounded-lg border-2 border-dashed border-background-warm text-dark-muted hover:border-primary hover:text-primary transition-colors"
++                >
++                  <Plus size={22} />
++                  <span className="text-sm font-medium">Add your first banner photo</span>
++                </button>
++              ) : (
++                <div className="space-y-3">
++                  {content.slides.map((slide, i) => (
++                    <div
++                      key={slide.id}
++                      className={`flex gap-3 p-3 rounded-lg border-2 transition-colors ${
++                        slide.active ? 'border-background-warm bg-white' : 'border-background-warm bg-background-warm/50 opacity-60'
++                      }`}
++                    >
++                      <div className="w-28 h-20 flex-shrink-0 rounded-md overflow-hidden border border-background-warm">
++                        <img src={slide.image} alt="" className="w-full h-full object-cover" />
++                      </div>
++                      <div className="flex-1 min-w-0 space-y-2">
++                        <div className="flex items-center justify-between gap-2">
++                          <span className="text-sm font-semibold text-dark">Slide {i + 1}</span>
++                          <div className="flex items-center gap-1">
++                            <button
++                              type="button"
++                              onClick={() => moveSlide(slide.id, -1)}
++                              disabled={i === 0}
++                              title="Move up"
++                              className="p-1.5 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
++                            >
++                              <ChevronUp size={15} />
++                            </button>
++                            <button
++                              type="button"
++                              onClick={() => moveSlide(slide.id, 1)}
++                              disabled={i === content.slides.length - 1}
++                              title="Move down"
++                              className="p-1.5 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
++                            >
++                              <ChevronDown size={15} />
++                            </button>
++                            <button
++                              type="button"
++                              onClick={() => updateSlide(slide.id, { active: !slide.active })}
++                              title={slide.active ? 'Hide from homepage' : 'Show on homepage'}
++                              className="p-1.5 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
++                            >
++                              {slide.active ? <Eye size={15} /> : <EyeOff size={15} />}
++                            </button>
++                            <button
++                              type="button"
++                              onClick={() => removeSlide(slide.id)}
++                              title="Remove"
++                              className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
++                            >
++                              <Trash2 size={15} />
++                            </button>
++                          </div>
++                        </div>
++                        <details className="text-xs">
++                          <summary className="cursor-pointer text-dark-muted hover:text-dark select-none">
++                            Optional: different photo for phone screens
++                          </summary>
++                          <div className="mt-2">
++                            <ImageUploadField
++                              label="Mobile Image"
++                              value={slide.mobile_image}
++                              onChange={url => updateSlide(slide.id, { mobile_image: url })}
++                              bucket={STORAGE_BUCKET}
++                              pathPrefix="home-hero-mobile"
++                              hint="Tall portrait, at least 1080×1350px. Falls back to the main photo if left empty."
++                            />
++                          </div>
++                        </details>
++                      </div>
++                    </div>
++                  ))}
++                </div>
++              )}
++            </div>
++
++          </div>
++
++          <div className="sticky bottom-0 flex items-center gap-3 bg-white border-t border-background-warm px-6 py-4 rounded-b-md">
++            <Button variant="primary" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
++              <span className="hidden sm:inline">Save Changes</span>
++              <span className="sm:hidden">Save</span>
++            </Button>
++            <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={resetToDefault}>
++              Remove All
++            </Button>
++            {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
++          </div>
++        </div>
++      </div>
++    </AdminLayout>
++  );
++}
+diff --git a/src/admin/AdminLayout.tsx b/src/admin/AdminLayout.tsx
+index 6ce6522..95fd3e7 100644
+--- a/src/admin/AdminLayout.tsx
++++ b/src/admin/AdminLayout.tsx
+@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+ import {
+   Home, Briefcase, BookOpen, Image, MessageCircle,
+   LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles, ListChecks,
+-  ChevronsLeft, ChevronsRight, UserCircle, PanelBottom, GripVertical, BarChart3
++  ChevronsLeft, ChevronsRight, UserCircle, PanelBottom, GripVertical, BarChart3, Images
+ } from 'lucide-react';
+ import type { LucideIcon } from 'lucide-react';
+ import { useState, useEffect, useRef } from 'react';
+@@ -28,6 +28,7 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
+   'Instagram Moments': { to: '/admin/instagram-moments', icon: Image },
+   Testimonials: { to: '/admin/testimonials', icon: Star },
+   'About Page': { to: '/admin/about', icon: FileText },
++  'Home Hero': { to: '/admin/home-hero', icon: Images },
+   Founder: { to: '/admin/founder', icon: UserCircle },
+   'Why ULAA': { to: '/admin/why-us', icon: Sparkles },
+   'Bottom Nav Bar': { to: '/admin/bottom-nav', icon: PanelBottom },
+@@ -37,7 +38,7 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
+ };
+ 
+ const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'About Page', 'Enquiries', 'Waitlist', 'Reports'];
+-const DEFAULT_GROUP_CHILDREN_ORDER = ['Instagram Moments', 'Testimonials', 'Bottom Nav Bar', 'Founder', 'Why ULAA'];
++const DEFAULT_GROUP_CHILDREN_ORDER = ['Home Hero', 'Instagram Moments', 'Testimonials', 'Bottom Nav Bar', 'Founder', 'Why ULAA'];
+ 
+ // "Dashboard" is the one item that renders as an expandable group (it's the
+ // only item other tabs can be dropped into) — everything else is a plain
+@@ -462,7 +463,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
+     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false); };
+     window.addEventListener('keydown', handler);
+     return () => window.removeEventListener('keydown', handler);
+-  }, [sidebarOpen]);
++  }, [sidebarOpen]);
+   const [profileOpen, setProfileOpen] = useState(false);
+   // Desktop sidebar collapse — remembered across visits so the admin's
+   // preferred layout sticks around after a refresh or new session.
+diff --git a/src/constants/home-hero.ts b/src/constants/home-hero.ts
+new file mode 100644
+index 0000000..b13d7e7
+--- /dev/null
++++ b/src/constants/home-hero.ts
+@@ -0,0 +1,24 @@
++import type { HomeHeroContent } from '../types/types-index';
++
++// No slides by default — HeroSection.tsx falls back to the bundled static
++// hero.webp image until the admin adds photos via /admin/home-hero, so the
++// homepage never renders blank.
++export const DEFAULT_HOME_HERO: HomeHeroContent = {
++  slides: [],
++  autoplay: true,
++  interval_seconds: 6,
++};
++
++// Merges data fetched from the DB with DEFAULT_HOME_HERO so a partially
++// saved / legacy record never crashes the admin form or the public
++// HeroSection (e.g. a missing `slides` array). Shared by
++// src/admin/AdminHomeHero.tsx and src/sections/home/HeroSection.tsx so both
++// read the exact same DB row the exact same defensive way.
++export function mergeWithDefaults(data: Partial<HomeHeroContent> | null | undefined): HomeHeroContent {
++  if (!data) return DEFAULT_HOME_HERO;
++  return {
++    ...DEFAULT_HOME_HERO,
++    ...data,
++    slides: Array.isArray(data.slides) ? data.slides : DEFAULT_HOME_HERO.slides,
++  };
++}
+diff --git a/src/routes/AppRouter.tsx b/src/routes/AppRouter.tsx
+index bcdd453..6058994 100644
+--- a/src/routes/AppRouter.tsx
++++ b/src/routes/AppRouter.tsx
+@@ -86,6 +86,7 @@ const AdminEnquiryDetail = lazy(() => import('../admin/enquiries/AdminEnquiryDet
+ const AdminWaitlist = lazy(() => import('../admin/AdminWaitlist'));
+ const AdminReports = lazy(() => import('../admin/AdminReports'));
+ const AdminAbout = lazy(() => import('../admin/AdminAbout'));
++const AdminHomeHero = lazy(() => import('../admin/AdminHomeHero'));
+ const AdminFounder = lazy(() => import('../admin/AdminFounder'));
+ const AdminWhyULAA = lazy(() => import('../admin/AdminWhyULAA'));
+ const AdminTestimonials = lazy(() => import('../admin/AdminTestimonials'));
+@@ -165,6 +166,9 @@ export default function AppRouter() {
+             <Route path="/admin/about" element={
+               <ProtectedRoute><AdminAbout /></ProtectedRoute>
+             } />
++            <Route path="/admin/home-hero" element={
++              <ProtectedRoute><AdminHomeHero /></ProtectedRoute>
++            } />
+             <Route path="/admin/founder" element={
+               <ProtectedRoute><AdminFounder /></ProtectedRoute>
+             } />
+diff --git a/src/sections/home/HeroSection.tsx b/src/sections/home/HeroSection.tsx
+index 95c26df..0f44b57 100644
+--- a/src/sections/home/HeroSection.tsx
++++ b/src/sections/home/HeroSection.tsx
+@@ -1,8 +1,13 @@
+-import { useRef } from 'react';
+-import { motion, useScroll, useTransform } from 'framer-motion';
+-import { ArrowRight, Play } from 'lucide-react';
++import { useRef, useState, useEffect, useCallback } from 'react';
++import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
++import type { PanInfo } from 'framer-motion';
++import { ArrowRight, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+ import { Link } from 'react-router-dom';
+ import Button from '../../components/ui/Button';
++import { getSiteContent } from '../../services/api';
++import { subscribeToTable } from '../../services/realtime';
++import { DEFAULT_HOME_HERO, mergeWithDefaults } from '../../constants/home-hero';
++import type { HomeHeroContent } from '../../types/types-index';
+ import heroImg from '../../assets/hero.webp';
+ 
+ export default function HeroSection() {
+@@ -24,20 +29,126 @@ export default function HeroSection() {
+     }),
+   };
+ 
++  // ── Admin-controlled carousel content ──────────────────────────────────
++  // Loaded from the 'home_hero' site_content row (see AdminHomeHero.tsx),
++  // with live updates pushed the instant an admin saves changes, matching
++  // the pattern used by AboutPage.tsx. Falls back to DEFAULT_HOME_HERO
++  // (zero slides) until it loads, which in turn falls back to the bundled
++  // static hero.webp image below — so the banner is never blank.
++  const [hero, setHero] = useState<HomeHeroContent>(DEFAULT_HOME_HERO);
++
++  useEffect(() => {
++    getSiteContent<Partial<HomeHeroContent>>('home_hero')
++      .then(data => setHero(mergeWithDefaults(data)))
++      .catch(() => {});
++  }, []);
++
++  useEffect(() => {
++    const unsubscribe = subscribeToTable(
++      'site_content',
++      () => {
++        getSiteContent<Partial<HomeHeroContent>>('home_hero')
++          .then(data => setHero(mergeWithDefaults(data)))
++          .catch(() => {});
++      },
++      'key=eq.home_hero'
++    );
++    return unsubscribe;
++  }, []);
++
++  const activeSlides = hero.slides.filter(s => s.active && s.image);
++  // Resolved slide list actually shown — falls back to a single static
++  // slide (the original hard-coded hero.webp image) whenever the admin
++  // hasn't added any photos yet, so nothing about the visual layout
++  // changes for sites that haven't touched the new admin page.
++  const slides = activeSlides.length > 0
++    ? activeSlides
++    : [{ id: '__default', image: heroImg, mobile_image: '', active: true }];
++  const isCarousel = slides.length > 1;
++
++  const [rawIndex, setIndex] = useState(0);
++  const [direction, setDirection] = useState(0);
++  // Clamp in case the admin removes slides while a visitor is mid-session,
++  // computed at render time (not via a setState-in-effect) so it never
++  // triggers an extra cascading render.
++  const index = rawIndex >= slides.length ? 0 : rawIndex;
++
++  const goTo = useCallback((next: number, dir: number) => {
++    setDirection(dir);
++    setIndex(((next % slides.length) + slides.length) % slides.length);
++  }, [slides.length]);
++
++  const goNext = useCallback(() => goTo(index + 1, 1), [goTo, index]);
++  const goPrev = useCallback(() => goTo(index - 1, -1), [goTo, index]);
++
++  // Autoplay — pauses while the visitor is actively dragging/hovering so a
++  // swipe-in-progress or a deliberate "let me look at this one" hover isn't
++  // yanked away mid-interaction, and resets its timer after every manual
++  // navigation so the next auto-advance is a full interval away.
++  const [paused, setPaused] = useState(false);
++  useEffect(() => {
++    if (!isCarousel || !hero.autoplay || paused) return;
++    const ms = Math.max(2, hero.interval_seconds || 6) * 1000;
++    const id = setInterval(() => goTo(index + 1, 1), ms);
++    return () => clearInterval(id);
++  }, [isCarousel, hero.autoplay, hero.interval_seconds, paused, index, goTo]);
++
++  const SWIPE_DISTANCE = 50;
++  const SWIPE_VELOCITY = 400;
++  const handleDragEnd = (_e: unknown, info: PanInfo) => {
++    if (info.offset.x < -SWIPE_DISTANCE || info.velocity.x < -SWIPE_VELOCITY) goNext();
++    else if (info.offset.x > SWIPE_DISTANCE || info.velocity.x > SWIPE_VELOCITY) goPrev();
++  };
++
++  const slideVariants = {
++    enter: (dir: number) => ({ opacity: 0, scale: 1.06, x: dir >= 0 ? 40 : -40 }),
++    center: { opacity: 1, scale: 1, x: 0 },
++    exit: (dir: number) => ({ opacity: 0, scale: 1.02, x: dir >= 0 ? -40 : 40 }),
++  };
++
++  const currentSlide = slides[index] ?? slides[0];
++
+   return (
+     <section
+       ref={containerRef}
+       className="relative min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
++      onMouseEnter={() => setPaused(true)}
++      onMouseLeave={() => setPaused(false)}
+     >
+-      {/* Parallax Background */}
++      {/* Parallax Background — carousel when the admin has added 2+ active
++          photos (AdminHomeHero.tsx), otherwise a single static image. */}
+       <div className="absolute inset-0 overflow-hidden">
+         <motion.div className="absolute inset-0" style={{ y }}>
+-          <img
+-            src={heroImg}
+-            alt="ULAA — Girls-only travel experiences"
+-            className="w-full h-full object-cover"
+-            fetchPriority="high"
+-          />
++          <AnimatePresence initial={false} custom={direction} mode="popLayout">
++            <motion.div
++              key={currentSlide.id}
++              custom={direction}
++              variants={slideVariants}
++              initial="enter"
++              animate="center"
++              exit="exit"
++              transition={{ duration: 0.9, ease: 'easeOut' }}
++              className="absolute inset-0"
++              drag={isCarousel ? 'x' : false}
++              dragConstraints={{ left: 0, right: 0 }}
++              dragElastic={0.15}
++              onDragStart={() => setPaused(true)}
++              onDragEnd={(e, info) => { handleDragEnd(e, info); setPaused(false); }}
++            >
++              <picture>
++                {currentSlide.mobile_image && (
++                  <source media="(max-width: 639px)" srcSet={currentSlide.mobile_image} />
++                )}
++                <img
++                  src={currentSlide.image}
++                  alt="ULAA — Girls-only travel experiences"
++                  className="w-full h-full object-cover"
++                  fetchPriority={index === 0 ? 'high' : 'auto'}
++                  draggable={false}
++                />
++              </picture>
++            </motion.div>
++          </AnimatePresence>
+         </motion.div>
+ 
+         {/* Gradient Overlays */}
+@@ -45,6 +156,29 @@ export default function HeroSection() {
+         <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />
+       </div>
+ 
++      {/* Carousel arrows — desktop only, shown once there's more than one
++          active slide to move between. */}
++      {isCarousel && (
++        <>
++          <button
++            type="button"
++            onClick={goPrev}
++            aria-label="Previous slide"
++            className="hidden sm:flex absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white backdrop-blur-sm border border-white/20 hover:bg-white/25 transition-colors"
++          >
++            <ChevronLeft size={20} />
++          </button>
++          <button
++            type="button"
++            onClick={goNext}
++            aria-label="Next slide"
++            className="hidden sm:flex absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white backdrop-blur-sm border border-white/20 hover:bg-white/25 transition-colors"
++          >
++            <ChevronRight size={20} />
++          </button>
++        </>
++      )}
++
+       {/* Content — anchored to the bottom of the hero at every breakpoint,
+           so the subheading + buttons land in the lower portion of the image
+           (next to the women) with consistent breathing room above the
+@@ -109,6 +243,24 @@ export default function HeroSection() {
+               </Button>
+             </Link>
+           </motion.div>
++
++          {/* Dot indicators — only shown once there's a real carousel. */}
++          {isCarousel && (
++            <div className="flex items-center gap-2 mt-6 sm:mt-10">
++              {slides.map((slide, i) => (
++                <button
++                  key={slide.id}
++                  type="button"
++                  onClick={() => goTo(i, i > index ? 1 : -1)}
++                  aria-label={`Go to slide ${i + 1}`}
++                  aria-current={i === index}
++                  className={`h-1.5 rounded-full transition-all duration-300 ${
++                    i === index ? 'w-7 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'
++                  }`}
++                />
++              ))}
++            </div>
++          )}
+         </div>
+         </div>
+       </motion.div>
+diff --git a/src/types/types-index.ts b/src/types/types-index.ts
+index 5c42589..09d643c 100644
+--- a/src/types/types-index.ts
++++ b/src/types/types-index.ts
+@@ -635,6 +635,29 @@ export interface AboutFounderSocialLink {
+   url: string;
+ }
+ 
++// =============================================
++// Home Page Hero Carousel (editable via its own Admin tab, stored under the
++// 'home_hero' site_content key). Each slide is an admin-uploaded photo;
++// order in the `slides` array is the display/rotation order, controlled by
++// the admin's Move Up/Down buttons in AdminHomeHero.tsx.
++// =============================================
++export interface HomeHeroSlide {
++  /** Stable id (not the array index) so React keys survive reordering. */
++  id: string;
++  image: string;
++  /** Optional tall crop for phone screens; falls back to `image` if empty. */
++  mobile_image: string;
++  /** Inactive slides are kept (not deleted) but skipped on the live site. */
++  active: boolean;
++}
++
++export interface HomeHeroContent {
++  slides: HomeHeroSlide[];
++  autoplay: boolean;
++  /** Seconds between automatic slide changes. */
++  interval_seconds: number;
++}
++
+ export interface AboutContent {
+   // 1. Hero Banner
+   hero: {

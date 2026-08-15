@@ -1,8 +1,13 @@
-import { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowRight, Play } from 'lucide-react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import type { PanInfo } from 'framer-motion';
+import { ArrowRight, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Button from '../../components/ui/Button';
+import { getSiteContent } from '../../services/api';
+import { subscribeToTable } from '../../services/realtime';
+import { DEFAULT_HOME_HERO, mergeWithDefaults } from '../../constants/home-hero';
+import type { HomeHeroContent } from '../../types/types-index';
 import heroImg from '../../assets/hero.webp';
 
 export default function HeroSection() {
@@ -24,26 +29,155 @@ export default function HeroSection() {
     }),
   };
 
+  // ── Admin-controlled carousel content ──────────────────────────────────
+  // Loaded from the 'home_hero' site_content row (see AdminHomeHero.tsx),
+  // with live updates pushed the instant an admin saves changes, matching
+  // the pattern used by AboutPage.tsx. Falls back to DEFAULT_HOME_HERO
+  // (zero slides) until it loads, which in turn falls back to the bundled
+  // static hero.webp image below — so the banner is never blank.
+  const [hero, setHero] = useState<HomeHeroContent>(DEFAULT_HOME_HERO);
+
+  useEffect(() => {
+    getSiteContent<Partial<HomeHeroContent>>('home_hero')
+      .then(data => setHero(mergeWithDefaults(data)))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToTable(
+      'site_content',
+      () => {
+        getSiteContent<Partial<HomeHeroContent>>('home_hero')
+          .then(data => setHero(mergeWithDefaults(data)))
+          .catch(() => {});
+      },
+      'key=eq.home_hero'
+    );
+    return unsubscribe;
+  }, []);
+
+  const activeSlides = hero.slides.filter(s => s.active && s.image);
+  // Resolved slide list actually shown — falls back to a single static
+  // slide (the original hard-coded hero.webp image) whenever the admin
+  // hasn't added any photos yet, so nothing about the visual layout
+  // changes for sites that haven't touched the new admin page.
+  const slides = activeSlides.length > 0
+    ? activeSlides
+    : [{ id: '__default', image: heroImg, mobile_image: '', active: true }];
+  const isCarousel = slides.length > 1;
+
+  const [rawIndex, setIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
+  // Clamp in case the admin removes slides while a visitor is mid-session,
+  // computed at render time (not via a setState-in-effect) so it never
+  // triggers an extra cascading render.
+  const index = rawIndex >= slides.length ? 0 : rawIndex;
+
+  const goTo = useCallback((next: number, dir: number) => {
+    setDirection(dir);
+    setIndex(((next % slides.length) + slides.length) % slides.length);
+  }, [slides.length]);
+
+  const goNext = useCallback(() => goTo(index + 1, 1), [goTo, index]);
+  const goPrev = useCallback(() => goTo(index - 1, -1), [goTo, index]);
+
+  // Autoplay — pauses while the visitor is actively dragging/hovering so a
+  // swipe-in-progress or a deliberate "let me look at this one" hover isn't
+  // yanked away mid-interaction, and resets its timer after every manual
+  // navigation so the next auto-advance is a full interval away.
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (!isCarousel || !hero.autoplay || paused) return;
+    const ms = Math.max(2, hero.interval_seconds || 6) * 1000;
+    const id = setInterval(() => goTo(index + 1, 1), ms);
+    return () => clearInterval(id);
+  }, [isCarousel, hero.autoplay, hero.interval_seconds, paused, index, goTo]);
+
+  const SWIPE_DISTANCE = 50;
+  const SWIPE_VELOCITY = 400;
+  const handleDragEnd = (_e: unknown, info: PanInfo) => {
+    if (info.offset.x < -SWIPE_DISTANCE || info.velocity.x < -SWIPE_VELOCITY) goNext();
+    else if (info.offset.x > SWIPE_DISTANCE || info.velocity.x > SWIPE_VELOCITY) goPrev();
+  };
+
+  const slideVariants = {
+    enter: (dir: number) => ({ opacity: 0, scale: 1.06, x: dir >= 0 ? 40 : -40 }),
+    center: { opacity: 1, scale: 1, x: 0 },
+    exit: (dir: number) => ({ opacity: 0, scale: 1.02, x: dir >= 0 ? -40 : 40 }),
+  };
+
+  const currentSlide = slides[index] ?? slides[0];
+
   return (
     <section
       ref={containerRef}
       className="relative min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
-      {/* Parallax Background */}
+      {/* Parallax Background — carousel when the admin has added 2+ active
+          photos (AdminHomeHero.tsx), otherwise a single static image. */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div className="absolute inset-0" style={{ y }}>
-          <img
-            src={heroImg}
-            alt="ULAA — Girls-only travel experiences"
-            className="w-full h-full object-cover"
-            fetchPriority="high"
-          />
+          <AnimatePresence initial={false} custom={direction} mode="popLayout">
+            <motion.div
+              key={currentSlide.id}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.9, ease: 'easeOut' }}
+              className="absolute inset-0"
+              drag={isCarousel ? 'x' : false}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.15}
+              onDragStart={() => setPaused(true)}
+              onDragEnd={(e, info) => { handleDragEnd(e, info); setPaused(false); }}
+            >
+              <picture>
+                {currentSlide.mobile_image && (
+                  <source media="(max-width: 639px)" srcSet={currentSlide.mobile_image} />
+                )}
+                <img
+                  src={currentSlide.image}
+                  alt="ULAA — Girls-only travel experiences"
+                  className="w-full h-full object-cover"
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
+                  draggable={false}
+                />
+              </picture>
+            </motion.div>
+          </AnimatePresence>
         </motion.div>
 
         {/* Gradient Overlays */}
         <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-dark/40 to-dark/80" />
         <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />
       </div>
+
+      {/* Carousel arrows — desktop only, shown once there's more than one
+          active slide to move between. */}
+      {isCarousel && (
+        <>
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="Previous slide"
+            className="hidden sm:flex absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white backdrop-blur-sm border border-white/20 hover:bg-white/25 transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Next slide"
+            className="hidden sm:flex absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white backdrop-blur-sm border border-white/20 hover:bg-white/25 transition-colors"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </>
+      )}
 
       {/* Content — anchored to the bottom of the hero at every breakpoint,
           so the subheading + buttons land in the lower portion of the image
@@ -109,6 +243,24 @@ export default function HeroSection() {
               </Button>
             </Link>
           </motion.div>
+
+          {/* Dot indicators — only shown once there's a real carousel. */}
+          {isCarousel && (
+            <div className="flex items-center gap-2 mt-6 sm:mt-10">
+              {slides.map((slide, i) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  onClick={() => goTo(i, i > index ? 1 : -1)}
+                  aria-label={`Go to slide ${i + 1}`}
+                  aria-current={i === index}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === index ? 'w-7 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
         </div>
       </motion.div>
