@@ -67,19 +67,17 @@ export default function HeroSection() {
   const isCarousel = slides.length > 1;
 
   const [rawIndex, setIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
   // Clamp in case the admin removes slides while a visitor is mid-session,
   // computed at render time (not via a setState-in-effect) so it never
   // triggers an extra cascading render.
   const index = rawIndex >= slides.length ? 0 : rawIndex;
 
-  const goTo = useCallback((next: number, dir: number) => {
-    setDirection(dir);
+  const goTo = useCallback((next: number) => {
     setIndex(((next % slides.length) + slides.length) % slides.length);
   }, [slides.length]);
 
-  const goNext = useCallback(() => goTo(index + 1, 1), [goTo, index]);
-  const goPrev = useCallback(() => goTo(index - 1, -1), [goTo, index]);
+  const goNext = useCallback(() => goTo(index + 1), [goTo, index]);
+  const goPrev = useCallback(() => goTo(index - 1), [goTo, index]);
 
   // Autoplay — pauses while the visitor is actively dragging/hovering so a
   // swipe-in-progress or a deliberate "let me look at this one" hover isn't
@@ -89,7 +87,7 @@ export default function HeroSection() {
   useEffect(() => {
     if (!isCarousel || !hero.autoplay || paused) return;
     const ms = Math.max(2, hero.interval_seconds || 6) * 1000;
-    const id = setInterval(() => goTo(index + 1, 1), ms);
+    const id = setInterval(() => goTo(index + 1), ms);
     return () => clearInterval(id);
   }, [isCarousel, hero.autoplay, hero.interval_seconds, paused, index, goTo]);
 
@@ -100,10 +98,13 @@ export default function HeroSection() {
     else if (info.offset.x > SWIPE_DISTANCE || info.velocity.x > SWIPE_VELOCITY) goPrev();
   };
 
+  // Pure crossfade — no slide/scale movement, just a clean fade between
+  // slides so it reads as smooth rather than busy. Direction is no longer
+  // used for the visual (kept for the dot-indicator click direction only).
   const slideVariants = {
-    enter: (dir: number) => ({ opacity: 0, scale: 1.06, x: dir >= 0 ? 40 : -40 }),
-    center: { opacity: 1, scale: 1, x: 0 },
-    exit: (dir: number) => ({ opacity: 0, scale: 1.02, x: dir >= 0 ? -40 : 40 }),
+    enter: { opacity: 0 },
+    center: { opacity: 1 },
+    exit: { opacity: 0 },
   };
 
   const currentSlide = slides[index] ?? slides[0];
@@ -119,15 +120,14 @@ export default function HeroSection() {
           photos (AdminHomeHero.tsx), otherwise a single static image. */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div className="absolute inset-0" style={{ y }}>
-          <AnimatePresence initial={false} custom={direction} mode="popLayout">
+          <AnimatePresence initial={false} mode="sync">
             <motion.div
               key={currentSlide.id}
-              custom={direction}
               variants={slideVariants}
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.9, ease: 'easeOut' }}
+              transition={{ duration: 0.45, ease: 'easeInOut' }}
               className="absolute inset-0"
               drag={isCarousel ? 'x' : false}
               dragConstraints={{ left: 0, right: 0 }}
@@ -251,7 +251,7 @@ export default function HeroSection() {
                 <button
                   key={slide.id}
                   type="button"
-                  onClick={() => goTo(i, i > index ? 1 : -1)}
+                  onClick={() => goTo(i)}
                   aria-label={`Go to slide ${i + 1}`}
                   aria-current={i === index}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
