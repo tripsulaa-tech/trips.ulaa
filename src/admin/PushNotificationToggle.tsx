@@ -42,9 +42,10 @@ export default function PushNotificationToggle() {
     return (
       <span
         title="Notifications are blocked in your browser settings"
+        aria-label="Notifications are blocked in your browser settings"
         className="p-2 rounded-md text-dark-muted"
       >
-        <BellOff size={18} />
+        <BellOff size={18} aria-hidden="true" />
       </span>
     );
   }
@@ -54,9 +55,11 @@ export default function PushNotificationToggle() {
       onClick={handleClick}
       disabled={busy}
       title={status === 'subscribed' ? 'Disable push notifications on this device' : 'Enable push notifications on this device'}
+      aria-label={status === 'subscribed' ? 'Disable push notifications on this device' : 'Enable push notifications on this device'}
+      aria-pressed={status === 'subscribed'}
       className="p-2 rounded-md text-dark hover:bg-background-warm transition-colors disabled:opacity-50"
     >
-      {status === 'subscribed' ? <BellRing size={18} className="text-primary" /> : <BellOff size={18} />}
+      {status === 'subscribed' ? <BellRing size={18} className="text-primary" aria-hidden="true" /> : <BellOff size={18} aria-hidden="true" />}
     </button>
   );
 }

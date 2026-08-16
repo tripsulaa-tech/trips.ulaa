@@ -50,7 +50,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
           onClick={addDay}
           className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
         >
-          <Plus size={14} /> Add Day
+          <Plus size={14} aria-hidden="true" /> Add Day
         </button>
       </div>
       <p className="text-xs text-dark-muted mb-3">Each day becomes its own card on the trip page instead of one long paragraph.</p>
@@ -64,14 +64,14 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Day {day.day}</span>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-background-warm disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
-                    <ChevronUp size={14} />
+                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-background-warm disabled:opacity-30 text-dark-muted transition-colors" title="Move up" aria-label={`Move Day ${day.day} up`}>
+                    <ChevronUp size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} className="p-1 rounded-md hover:bg-background-warm disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
-                    <ChevronDown size={14} />
+                  <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} className="p-1 rounded-md hover:bg-background-warm disabled:opacity-30 text-dark-muted transition-colors" title="Move down" aria-label={`Move Day ${day.day} down`}>
+                    <ChevronDown size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => removeDay(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove day">
-                    <X size={14} />
+                  <button type="button" onClick={() => removeDay(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove day" aria-label={`Remove Day ${day.day}${day.title ? `: ${day.title}` : ''}`}>
+                    <X size={14} aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -86,8 +86,9 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                 </div>
                 <div className="flex-1 space-y-2">
                   <div>
-                    <label className="block text-xs font-medium text-dark mb-1">Title</label>
+                    <label htmlFor={`itinerary-day-${index}-title`} className="block text-xs font-medium text-dark mb-1">Title</label>
                     <input
+                      id={`itinerary-day-${index}-title`}
                       value={day.title}
                       onChange={e => updateDay(index, { title: e.target.value })}
                       placeholder="Day title, e.g. Shimla → Kaza"
@@ -95,8 +96,9 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-dark mb-1">Description</label>
+                    <label htmlFor={`itinerary-day-${index}-description`} className="block text-xs font-medium text-dark mb-1">Description</label>
                     <textarea
+                      id={`itinerary-day-${index}-description`}
                       value={day.description}
                       onChange={e => updateDay(index, { description: e.target.value })}
                       onPaste={e => {
@@ -134,8 +136,9 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                           onClick={() => updateDay(index, { bullets: (day.bullets || []).filter((_, i) => i !== bi) })}
                           className="text-dark-muted hover:text-red-600 transition-colors shrink-0"
                           title="Remove"
+                          aria-label={`Remove bullet: ${bullet}`}
                         >
-                          <X size={15} />
+                          <X size={15} aria-hidden="true" />
                         </button>
                       </li>
                     ))}
@@ -154,7 +157,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                 />
                 {(day.images?.length || 0) < MIN_RECOMMENDED_PHOTOS && (
                   <p className="flex items-center gap-1 text-xs text-amber-600 mt-1.5">
-                    <AlertTriangle size={12} />
+                    <AlertTriangle size={12} aria-hidden="true" />
                     Add at least {MIN_RECOMMENDED_PHOTOS} photos so this day looks great on the trip page.
                   </p>
                 )}

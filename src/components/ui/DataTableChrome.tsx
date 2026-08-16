@@ -71,6 +71,7 @@ export function TableHeaderBar({
             onClick={onExport}
             disabled={total === 0}
             title={total === 0 ? 'Nothing to export' : `${exportLabel} — exports exactly what's currently filtered`}
+            aria-label={exportLabel}
             className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border-2 border-background-warm text-dark text-sm font-button font-semibold hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:hover:border-background-warm disabled:hover:text-dark transition-colors"
           >
             <Download size={14} aria-hidden="true" />

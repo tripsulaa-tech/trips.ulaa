@@ -105,7 +105,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
             disabled={uploading}
             className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {uploading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+            {uploading ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <ImagePlus size={13} aria-hidden="true" />}
             {uploading ? 'Uploading...' : 'Add Photos'}
           </button>
           {allowUrl && (
@@ -114,7 +114,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
               onClick={() => setShowUrlInput(true)}
               className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
             >
-              <Link2 size={13} /> Add by URL
+              <Link2 size={13} aria-hidden="true" /> Add by URL
             </button>
           )}
         </div>
@@ -125,8 +125,10 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
       {allowUrl && showUrlInput && (
         <div className="flex items-center gap-1.5 mb-3">
           <div className="relative flex-1">
-            <Link2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-muted" />
+            <label htmlFor={`${pathPrefix}-url-input`} className="sr-only">{label ? `${label} URL` : 'Image URL'}</label>
+            <Link2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-muted" aria-hidden="true" />
             <input
+              id={`${pathPrefix}-url-input`}
               type="text"
               autoFocus
               value={urlDraft}
@@ -175,8 +177,9 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
                 disabled={removingUrl === url}
                 className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-dark/70 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-100 disabled:cursor-wait"
                 title="Remove image"
+                aria-label={`Remove ${label ? `${label} ` : ''}photo ${index + 1}`}
               >
-                {removingUrl === url ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
+                {removingUrl === url ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <X size={14} aria-hidden="true" />}
               </button>
             </div>
           ))}
@@ -184,7 +187,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
       )}
 
       <p className="text-xs text-dark-muted mt-2 flex items-center gap-1">
-        <Upload size={12} />
+        <Upload size={12} aria-hidden="true" />
         {value.length} photo{value.length === 1 ? '' : 's'} · select multiple files at once
       </p>
     </div>

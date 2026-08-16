@@ -125,7 +125,7 @@ export default function AdminHomeHero() {
   if (loading) {
     return (
       <AdminLayout title="Home Hero Banner">
-        <div className="text-center py-16 text-dark-muted">Loading...</div>
+        <div role="status" className="text-center py-16 text-dark-muted">Loading...</div>
       </AdminLayout>
     );
   }
@@ -156,8 +156,9 @@ export default function AdminHomeHero() {
                   Auto-rotate slides
                 </label>
                 <div>
-                  <label className="block text-sm font-medium text-dark mb-1">Seconds between slides</label>
+                  <label htmlFor="home-hero-interval" className="block text-sm font-medium text-dark mb-1">Seconds between slides</label>
                   <input
+                    id="home-hero-interval"
                     type="number"
                     min={2}
                     max={30}
@@ -170,7 +171,7 @@ export default function AdminHomeHero() {
               </div>
               {content.slides.length === 0 && (
                 <p className="text-xs text-dark-muted flex items-center gap-1.5 bg-background-warm/60 rounded-md px-3 py-2">
-                  <Images size={14} className="flex-shrink-0" />
+                  <Images size={14} className="flex-shrink-0" aria-hidden="true" />
                   No photos yet — the homepage will keep showing its original default hero image until you add some below.
                 </p>
               )}
@@ -188,7 +189,7 @@ export default function AdminHomeHero() {
                   disabled={uploading}
                   className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {uploading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+                  {uploading ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <ImagePlus size={13} aria-hidden="true" />}
                   {uploading ? 'Uploading...' : 'Add Photos'}
                 </button>
                 <input
@@ -211,7 +212,7 @@ export default function AdminHomeHero() {
                   disabled={uploading}
                   className="w-full flex flex-col items-center justify-center gap-2 py-12 rounded-lg border-2 border-dashed border-background-warm text-dark-muted hover:border-primary hover:text-primary transition-colors"
                 >
-                  <Plus size={22} />
+                  <Plus size={22} aria-hidden="true" />
                   <span className="text-sm font-medium">Add your first banner photo</span>
                 </button>
               ) : (
@@ -235,34 +236,39 @@ export default function AdminHomeHero() {
                               onClick={() => moveSlide(slide.id, -1)}
                               disabled={i === 0}
                               title="Move up"
+                              aria-label={`Move slide ${i + 1} up`}
                               className="p-1.5 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             >
-                              <ChevronUp size={15} />
+                              <ChevronUp size={15} aria-hidden="true" />
                             </button>
                             <button
                               type="button"
                               onClick={() => moveSlide(slide.id, 1)}
                               disabled={i === content.slides.length - 1}
                               title="Move down"
+                              aria-label={`Move slide ${i + 1} down`}
                               className="p-1.5 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             >
-                              <ChevronDown size={15} />
+                              <ChevronDown size={15} aria-hidden="true" />
                             </button>
                             <button
                               type="button"
                               onClick={() => updateSlide(slide.id, { active: !slide.active })}
                               title={slide.active ? 'Hide from homepage' : 'Show on homepage'}
+                              aria-label={slide.active ? `Hide slide ${i + 1} from homepage` : `Show slide ${i + 1} on homepage`}
+                              aria-pressed={slide.active}
                               className="p-1.5 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
                             >
-                              {slide.active ? <Eye size={15} /> : <EyeOff size={15} />}
+                              {slide.active ? <Eye size={15} aria-hidden="true" /> : <EyeOff size={15} aria-hidden="true" />}
                             </button>
                             <button
                               type="button"
                               onClick={() => removeSlide(slide.id)}
                               title="Remove"
+                              aria-label={`Remove slide ${i + 1}`}
                               className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
                             >
-                              <Trash2 size={15} />
+                              <Trash2 size={15} aria-hidden="true" />
                             </button>
                           </div>
                         </div>
@@ -298,7 +304,7 @@ export default function AdminHomeHero() {
             <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={resetToDefault}>
               Remove All
             </Button>
-            {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+            {saved && <span role="status" className="text-sm text-green-600 font-medium">Saved!</span>}
           </div>
         </div>
       </div>

@@ -272,7 +272,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
         WebkitTapHighlightColor: 'transparent',
       } as React.CSSProperties}
     >
-      <GripVertical size={size} />
+      <GripVertical size={size} aria-hidden="true" />
     </span>
   );
 
@@ -300,7 +300,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
               collapsed ? '' : 'absolute right-4 top-6'
             }`}
           >
-            {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
+            {collapsed ? <ChevronsRight size={16} aria-hidden="true" /> : <ChevronsLeft size={16} aria-hidden="true" />}
           </button>
         )}
       </div>
@@ -334,13 +334,14 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
                   end={to === '/admin'}
                   onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
                   title={collapsed ? label : undefined}
+                  aria-label={collapsed ? label : undefined}
                   className={({ isActive }) => `
                     flex-1 flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all min-w-0
                     ${collapsed ? 'justify-center px-0' : 'px-3'}
                     ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
                   `}
                 >
-                  <Icon size={18} className="shrink-0" />
+                  <Icon size={18} className="shrink-0" aria-hidden="true" />
                   {!collapsed && <span className="truncate">{label}</span>}
                 </NavLink>
               </div>
@@ -365,13 +366,14 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
                   end
                   onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
                   title={collapsed ? label : undefined}
+                  aria-label={collapsed ? label : undefined}
                   className={({ isActive }) => `
                     flex-1 flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all min-w-0
                     ${collapsed ? 'justify-center px-0' : 'px-2'}
                     ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
                   `}
                 >
-                  <Icon size={18} className="shrink-0" />
+                  <Icon size={18} className="shrink-0" aria-hidden="true" />
                   {!collapsed && <span className="truncate">{label}</span>}
                 </NavLink>
                 {!collapsed && (
@@ -382,7 +384,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
                     aria-expanded={isOpen}
                     className="shrink-0 p-2.5 mr-1 rounded-md text-dark-muted hover:bg-background-warm hover:text-primary transition-colors"
                   >
-                    <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -409,7 +411,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
                             ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
                           `}
                         >
-                          <child.icon size={16} className="shrink-0" />
+                          <child.icon size={16} className="shrink-0" aria-hidden="true" />
                           <span className="truncate">{childLabel}</span>
                         </NavLink>
                       </div>
@@ -436,9 +438,10 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
           to="/"
           onClick={guardNavigate}
           title={collapsed ? 'View Site' : undefined}
+          aria-label={collapsed ? 'View Site' : undefined}
           className={`flex items-center justify-center gap-2 py-2.5 rounded-md border border-background-warm text-sm font-medium text-dark hover:bg-background-warm transition-colors ${collapsed ? 'px-0' : 'px-4'}`}
         >
-          <ExternalLink size={16} className="shrink-0" />
+          <ExternalLink size={16} className="shrink-0" aria-hidden="true" />
           {!collapsed && 'View Site'}
         </Link>
       </div>
@@ -555,7 +558,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
               aria-label="Close navigation menu"
               className="absolute top-4 right-4 p-2 rounded-md text-dark-muted hover:bg-background"
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
             <SidebarContent userEmail={user?.email} initial={initial} onNavigate={() => setSidebarOpen(false)} guardNavigate={guardNavigate} />
           </div>
@@ -572,7 +575,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
               aria-label="Open navigation menu"
               className="lg:hidden p-2 rounded-md text-dark hover:bg-background flex-shrink-0"
             >
-              <Menu size={20} />
+              <Menu size={20} aria-hidden="true" />
             </button>
             <div className="min-w-0">
               <h1 className="font-display text-xl sm:text-2xl font-bold text-dark truncate">{title}</h1>

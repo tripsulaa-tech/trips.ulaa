@@ -11,6 +11,7 @@ interface TagListEditorProps {
 
 export default function TagListEditor({ label, value, onChange, placeholder, helperText }: TagListEditorProps) {
   const [draft, setDraft] = useState('');
+  const inputId = `tag-list-${label.replace(/\s+/g, '-').toLowerCase()}`;
 
   const addItem = () => {
     const text = draft.trim();
@@ -50,7 +51,7 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
 
   return (
     <div>
-      <label className="block text-sm font-medium text-dark mb-1">{label}</label>
+      <label htmlFor={inputId} className="block text-sm font-medium text-dark mb-1">{label}</label>
       {helperText && <p className="text-xs text-dark-muted mb-2">{helperText}</p>}
 
       {value.length > 0 && (
@@ -63,8 +64,9 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
                 onClick={() => removeAt(index)}
                 className="text-dark-muted hover:text-red-600 transition-colors shrink-0"
                 title="Remove"
+                aria-label={`Remove ${item}`}
               >
-                <X size={15} />
+                <X size={15} aria-hidden="true" />
               </button>
             </li>
           ))}
@@ -73,6 +75,7 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
 
       <div className="flex gap-2">
         <input
+          id={inputId}
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -86,8 +89,9 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
           onClick={addItem}
           className="shrink-0 px-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center"
           title="Add"
+          aria-label={`Add ${label}`}
         >
-          <Plus size={16} />
+          <Plus size={16} aria-hidden="true" />
         </button>
       </div>
     </div>

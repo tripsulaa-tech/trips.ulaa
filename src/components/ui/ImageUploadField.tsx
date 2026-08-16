@@ -129,8 +129,9 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
             onClick={handleRemove}
             className="absolute top-2 right-2 p-1.5 rounded-md bg-dark/70 text-white hover:bg-red-600 transition-colors"
             title="Remove image"
+            aria-label={label ? `Remove ${label}` : 'Remove image'}
           >
-            <X size={14} />
+            <X size={14} aria-hidden="true" />
           </button>
           <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
             {allowUrl && (
@@ -140,7 +141,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
                 className="px-2.5 py-1.5 rounded-md bg-white/95 text-dark text-xs font-medium cursor-pointer hover:bg-white transition-colors flex items-center gap-1"
                 title="Replace with an image URL"
               >
-                <Link2 size={12} />
+                <Link2 size={12} aria-hidden="true" />
                 URL
               </button>
             )}
@@ -149,7 +150,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
               onClick={(e) => { e.preventDefault(); fileRef.current?.click(); }}
               className="px-2.5 py-1.5 rounded-md bg-white/95 text-dark text-xs font-medium cursor-pointer hover:bg-white transition-colors flex items-center gap-1"
             >
-              <Upload size={12} />
+              <Upload size={12} aria-hidden="true" />
               {uploading ? 'Uploading...' : 'Replace'}
             </label>
           </div>
@@ -165,7 +166,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
             <span className="text-sm font-medium">Uploading...</span>
           ) : (
             <>
-              <ImagePlus size={22} className="text-primary" />
+              <ImagePlus size={22} className="text-primary" aria-hidden="true" />
               <span className="text-sm font-medium text-dark">Tap to upload a photo</span>
               <span className="text-xs">From your gallery, camera, or files</span>
             </>
@@ -178,8 +179,10 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
           {showUrlInput || !value ? (
             <div className="flex items-center gap-1.5">
               <div className="relative flex-1">
-                <Link2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-muted" />
+                <label htmlFor={`${inputId}-url`} className="sr-only">{label ? `${label} URL` : 'Image URL'}</label>
+                <Link2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-muted" aria-hidden="true" />
                 <input
+                  id={`${inputId}-url`}
                   type="text"
                   value={urlDraft}
                   onChange={e => setUrlDraft(e.target.value)}

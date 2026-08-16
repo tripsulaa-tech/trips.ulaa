@@ -49,8 +49,9 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-background-warm rounded-lg p-3 mb-3">
         <div>
-          <label className="block text-xs font-medium text-dark-muted mb-1">Balance due (days before departure)</label>
+          <label htmlFor="cancellation-payment-due-days" className="block text-xs font-medium text-dark-muted mb-1">Balance due (days before departure)</label>
           <input
+            id="cancellation-payment-due-days"
             type="number"
             min={0}
             value={value.payment_due_days}
@@ -59,8 +60,9 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-dark-muted mb-1">Refund timeline — min days</label>
+          <label htmlFor="cancellation-refund-min-days" className="block text-xs font-medium text-dark-muted mb-1">Refund timeline — min days</label>
           <input
+            id="cancellation-refund-min-days"
             type="number"
             min={0}
             value={value.refund_min_days}
@@ -69,8 +71,9 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-dark-muted mb-1">Refund timeline — max days</label>
+          <label htmlFor="cancellation-refund-max-days" className="block text-xs font-medium text-dark-muted mb-1">Refund timeline — max days</label>
           <input
+            id="cancellation-refund-max-days"
             type="number"
             min={0}
             value={value.refund_max_days}
@@ -87,7 +90,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
           onClick={addTier}
           className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
         >
-          <Plus size={14} /> Add Tier
+          <Plus size={14} aria-hidden="true" /> Add Tier
         </button>
       </div>
 
@@ -100,21 +103,22 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
               <div className="flex items-center justify-between">
                 <span className="text-xs font-button font-bold text-primary">{tierLabel(tier)}</span>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => moveTier(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up">
-                    <ChevronUp size={14} />
+                  <button type="button" onClick={() => moveTier(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up" aria-label={`Move tier "${tierLabel(tier)}" up`}>
+                    <ChevronUp size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => moveTier(index, 1)} disabled={index === value.tiers.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
-                    <ChevronDown size={14} />
+                  <button type="button" onClick={() => moveTier(index, 1)} disabled={index === value.tiers.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down" aria-label={`Move tier "${tierLabel(tier)}" down`}>
+                    <ChevronDown size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => removeTier(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove tier">
-                    <X size={14} />
+                  <button type="button" onClick={() => removeTier(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove tier" aria-label={`Remove tier "${tierLabel(tier)}"`}>
+                    <X size={14} aria-hidden="true" />
                   </button>
                 </div>
               </div>
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
-                  <label className="block text-[11px] text-dark-muted mb-0.5">From (min days before departure)</label>
+                  <label htmlFor={`cancellation-tier-${index}-from`} className="block text-[11px] text-dark-muted mb-0.5">From (min days before departure)</label>
                   <input
+                    id={`cancellation-tier-${index}-from`}
                     type="number"
                     min={0}
                     placeholder="No minimum"
@@ -124,8 +128,9 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-[11px] text-dark-muted mb-0.5">To (max days before departure)</label>
+                  <label htmlFor={`cancellation-tier-${index}-to`} className="block text-[11px] text-dark-muted mb-0.5">To (max days before departure)</label>
                   <input
+                    id={`cancellation-tier-${index}-to`}
                     type="number"
                     min={0}
                     placeholder="No maximum"
@@ -135,7 +140,9 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
                   />
                 </div>
               </div>
+              <label htmlFor={`cancellation-tier-${index}-description`} className="sr-only">{`Description for tier "${tierLabel(tier)}"`}</label>
               <textarea
+                id={`cancellation-tier-${index}-description`}
                 value={tier.description}
                 onChange={e => updateTier(index, { description: e.target.value })}
                 placeholder="What happens to the refund in this window"
