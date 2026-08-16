@@ -80,24 +80,25 @@ export default function BookingFollowUpModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Reminder Type</label>
-            <Select value={type} onChange={val => setType(val as BookingFollowUpType)} options={BOOKING_FOLLOW_UP_TYPE_OPTIONS} />
+            <label htmlFor="bfu-type" className="block text-sm font-medium text-dark mb-1">Reminder Type</label>
+            <Select inputId="bfu-type" value={type} onChange={val => setType(val as BookingFollowUpType)} options={BOOKING_FOLLOW_UP_TYPE_OPTIONS} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
-              <DatePicker value={at} onChange={setAt} />
+              <label htmlFor="bfu-date" className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
+              <DatePicker id="bfu-date" value={at} onChange={setAt} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Follow-up Time</label>
-              <input type="time" value={time} onChange={ev => setTime(ev.target.value)} className={inputClass} />
+              <label htmlFor="bfu-time" className="block text-sm font-medium text-dark mb-1">Follow-up Time</label>
+              <input id="bfu-time" type="time" value={time} onChange={ev => setTime(ev.target.value)} className={inputClass} />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Notes</label>
+            <label htmlFor="bfu-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
             <textarea
+              id="bfu-notes"
               value={notes}
               onChange={ev => setNotes(ev.target.value)}
               className={inputClass}

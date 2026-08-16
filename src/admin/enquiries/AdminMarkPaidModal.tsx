@@ -41,8 +41,9 @@ export default function MarkPaidModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Payment Method</label>
+              <label htmlFor="markpaid-method" className="block text-sm font-medium text-dark mb-1">Payment Method</label>
               <Select
+                inputId="markpaid-method"
                 value={form.payment_method}
                 onChange={val => setForm(f => ({ ...f, payment_method: val, utr_number: val === 'Cash' ? '' : f.utr_number }))}
                 options={PAYMENT_METHOD_OPTIONS}
@@ -50,8 +51,9 @@ export default function MarkPaidModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
+              <label htmlFor="markpaid-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
               <input
+                id="markpaid-utr"
                 type="text"
                 value={form.utr_number}
                 disabled={form.payment_method === 'Cash'}

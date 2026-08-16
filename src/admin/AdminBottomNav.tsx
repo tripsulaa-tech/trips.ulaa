@@ -120,25 +120,28 @@ export default function AdminBottomNav() {
                       type="button"
                       onClick={() => moveTab(index, -1)}
                       disabled={index === 0}
+                      aria-label={`Move ${item.label} tab up`}
                       className="p-1 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:pointer-events-none"
                       title="Move up"
                     >
-                      <ArrowUp size={14} />
+                      <ArrowUp size={14} aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       onClick={() => moveTab(index, 1)}
                       disabled={index === items.length - 1}
+                      aria-label={`Move ${item.label} tab down`}
                       className="p-1 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:pointer-events-none"
                       title="Move down"
                     >
-                      <ArrowDown size={14} />
+                      <ArrowDown size={14} aria-hidden="true" />
                     </button>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <label className="block text-xs font-medium text-dark-muted mb-1">Icon</label>
+                    <label htmlFor={`bottomnav-icon-${item.id}`} className="block text-xs font-medium text-dark-muted mb-1">Icon</label>
                     <TripHighlightIconPicker
+                      id={`bottomnav-icon-${item.id}`}
                       value={item.icon}
                       onChange={key => updateItem(index, { icon: key })}
                       hintText={item.label}
@@ -148,17 +151,19 @@ export default function AdminBottomNav() {
                   <button
                     type="button"
                     onClick={() => removeTab(index)}
+                    aria-label={`Remove ${item.label} tab`}
                     className="mt-5 p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
                     title="Remove tab"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={15} aria-hidden="true" />
                   </button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pl-8">
                   <div className="min-w-0">
-                    <label className="block text-xs font-medium text-dark-muted mb-1">Label</label>
+                    <label htmlFor={`bottomnav-label-${item.id}`} className="block text-xs font-medium text-dark-muted mb-1">Label</label>
                     <input
+                      id={`bottomnav-label-${item.id}`}
                       value={item.label}
                       onChange={e => updateItem(index, { label: e.target.value })}
                       className={inputClass}
@@ -167,8 +172,9 @@ export default function AdminBottomNav() {
                   </div>
 
                   <div className="min-w-0">
-                    <label className="block text-xs font-medium text-dark-muted mb-1">Link</label>
+                    <label htmlFor={`bottomnav-link-${item.id}`} className="block text-xs font-medium text-dark-muted mb-1">Link</label>
                     <input
+                      id={`bottomnav-link-${item.id}`}
                       value={item.to}
                       onChange={e => updateItem(index, { to: e.target.value })}
                       className={inputClass}
@@ -184,7 +190,7 @@ export default function AdminBottomNav() {
               onClick={addTab}
               className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
             >
-              <Plus size={13} /> Add Tab
+              <Plus size={13} aria-hidden="true" /> Add Tab
             </button>
           </div>
 
@@ -196,7 +202,7 @@ export default function AdminBottomNav() {
             <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={resetToDefault}>
               Reset to Default
             </Button>
-            {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+            {saved && <span role="status" className="text-sm text-green-600 font-medium">Saved!</span>}
           </div>
         </div>
       </div>

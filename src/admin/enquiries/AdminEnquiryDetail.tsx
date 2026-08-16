@@ -736,7 +736,7 @@ export default function AdminEnquiryDetail() {
         <div className="p-6 space-y-3">
           <p className="text-dark-muted text-sm">This enquiry couldn't be found — it may have been deleted.</p>
           <Button variant="primary" size="sm" onClick={() => navigate('/admin/enquiries')}>
-            <ArrowLeft size={14} /> Back to Enquiries
+            <ArrowLeft size={14} aria-hidden="true" /> Back to Enquiries
           </Button>
         </div>
       </AdminLayout>
@@ -835,7 +835,7 @@ export default function AdminEnquiryDetail() {
           onClick={() => navigate('/admin/enquiries')}
           className="inline-flex items-center gap-1.5 text-sm font-button font-medium text-dark-muted hover:text-primary transition-colors"
         >
-          <ArrowLeft size={15} /> Back to Enquiries
+          <ArrowLeft size={15} aria-hidden="true" /> Back to Enquiries
         </button>
 
         {/* Desktop: main record (header, journey, ledger) on the left ~2/3,
@@ -853,7 +853,7 @@ export default function AdminEnquiryDetail() {
               <h2 className="font-display text-xl font-bold text-dark truncate">{enquiry.full_name}</h2>
               <div className="flex items-center flex-wrap gap-1.5 mt-1.5">
                 <span title={`Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
-                  <jb.icon size={12} className="shrink-0" /> {jb.label}
+                  <jb.icon size={12} className="shrink-0" aria-hidden="true" /> {jb.label}
                 </span>
                 {/* Booking State — independent of Booking Journey above, per
                     CRM spec section 3. Only shown once there's an actual
@@ -863,7 +863,7 @@ export default function AdminEnquiryDetail() {
                     a Journey badge that already implies it. */}
                 {isCancelled(enquiry) && (
                   <span title="Booking State" className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${bookingStateBadge(enquiry).color}`}>
-                    <XCircle size={12} className="shrink-0" /> {bookingStateBadge(enquiry).label}
+                    <XCircle size={12} className="shrink-0" aria-hidden="true" /> {bookingStateBadge(enquiry).label}
                   </span>
                 )}
                 {/* Attendance — independent of Journey/State, per CRM spec
@@ -872,12 +872,12 @@ export default function AdminEnquiryDetail() {
                     by the Journey badge not yet reaching Checked In. */}
                 {(enquiry.checked_in_at || enquiry.is_no_show) && (
                   <span title="Attendance" className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${attendanceBadge(enquiry).color}`}>
-                    <LogIn size={12} className="shrink-0" /> {attendanceBadge(enquiry).label}
+                    <LogIn size={12} className="shrink-0" aria-hidden="true" /> {attendanceBadge(enquiry).label}
                   </span>
                 )}
                 {isNotInterested(enquiry) && (
                   <span title={closedReasonLabel(enquiry) ? `Closed — ${closedReasonLabel(enquiry)}` : 'Closed — this was just a query, no booking followed'} className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-red-50 text-red-600">
-                    <UserMinus size={12} className="shrink-0" /> Not Interested{closedReasonLabel(enquiry) ? ` — ${closedReasonLabel(enquiry)}` : ''}
+                    <UserMinus size={12} className="shrink-0" aria-hidden="true" /> Not Interested{closedReasonLabel(enquiry) ? ` — ${closedReasonLabel(enquiry)}` : ''}
                   </span>
                 )}
                 {followUpStatus(enquiry) && (
@@ -887,16 +887,16 @@ export default function AdminEnquiryDetail() {
                     title="Click to change the follow-up date"
                     className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-50 ${followUpStatus(enquiry)!.color}`}
                   >
-                    <CalendarClock size={12} className="shrink-0" /> {followUpStatus(enquiry)!.label}
+                    <CalendarClock size={12} className="shrink-0" aria-hidden="true" /> {followUpStatus(enquiry)!.label}
                   </button>
                 )}
                 {enquiry.group_size && enquiry.group_size > 1 ? (
                   <span className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
-                    <Users size={10} /> Group of {enquiry.group_size} · seat {enquiry.group_seq}
+                    <Users size={10} aria-hidden="true" /> Group of {enquiry.group_size} · seat {enquiry.group_seq}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
-                    <User size={10} /> Solo
+                    <User size={10} aria-hidden="true" /> Solo
                   </span>
                 )}
                 <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
@@ -907,12 +907,12 @@ export default function AdminEnquiryDetail() {
             <div className="flex items-center gap-2 shrink-0">
               {nma && (
                 <Button variant="primary" size="sm" onClick={handleAdvance} disabled={busyAction}>
-                  <nma.icon size={14} /> {nma.label}
+                  <nma.icon size={14} aria-hidden="true" /> {nma.label}
                 </Button>
               )}
               {canMarkNotInterested(enquiry) && (
                 <Button variant="outline" size="sm" onClick={handleMarkNotInterested} disabled={busyAction || busyStatus}>
-                  <UserMinus size={14} /> Not Interested
+                  <UserMinus size={14} aria-hidden="true" /> Not Interested
                 </Button>
               )}
               {/* When there's no booking yet, Follow-up + the 3-dot menu stay
@@ -923,7 +923,7 @@ export default function AdminEnquiryDetail() {
                 <>
                   {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
                     <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
-                      <CalendarClock size={14} /> Set Follow-up
+                      <CalendarClock size={14} aria-hidden="true" /> Set Follow-up
                     </Button>
                   )}
                   <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
@@ -949,14 +949,14 @@ export default function AdminEnquiryDetail() {
                     title="Copy Booking ID"
                     className="shrink-0 p-1 rounded text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
                   >
-                    {bookingIdCopied ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
+                    {bookingIdCopied ? <Check size={13} className="text-green-600" aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
                   </button>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
                   <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
-                    <CalendarClock size={14} /> Set Follow-up
+                    <CalendarClock size={14} aria-hidden="true" /> Set Follow-up
                   </Button>
                 )}
                 <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
@@ -989,11 +989,11 @@ export default function AdminEnquiryDetail() {
 
             <div className={`grid gap-2 ${enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <Button variant="outline" size="sm" fullWidth onClick={openPayment}>
-                <IndianRupee size={13} /> Payment
+                <IndianRupee size={13} aria-hidden="true" /> Payment
               </Button>
               {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
                 <Button variant="primary" size="sm" fullWidth onClick={handleMarkCompleted} disabled={busyAction}>
-                  <CheckCircle2 size={13} /> Complete Trip
+                  <CheckCircle2 size={13} aria-hidden="true" /> Complete Trip
                 </Button>
               )}
             </div>
@@ -1005,7 +1005,7 @@ export default function AdminEnquiryDetail() {
               <p className="text-dark-muted text-sm">No payment recorded yet — no booking exists on this enquiry.</p>
               {activePricing ? (
                 <p className="text-xs text-dark-muted mt-1 flex items-center gap-1">
-                  {activePricing.isEarlyBird && <Bird size={12} className="shrink-0 text-purple-600" />}
+                  {activePricing.isEarlyBird && <Bird size={12} className="shrink-0 text-purple-600" aria-hidden="true" />}
                   Current price for this trip: <span className="font-semibold text-dark">{formatPrice(activePricing.amount)}</span>
                   {' '}({activePricing.isEarlyBird ? 'Early Bird' : 'Normal'}
                   {activePricing.isEarlyBird && activePricing.deadline ? ` · ends ${formatDate(activePricing.deadline, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''})
@@ -1016,7 +1016,7 @@ export default function AdminEnquiryDetail() {
               )}
             </div>
             <Button variant="primary" size="sm" onClick={openPayment}>
-              <IndianRupee size={13} /> Payment
+              <IndianRupee size={13} aria-hidden="true" /> Payment
             </Button>
           </div>
         )}
@@ -1026,10 +1026,10 @@ export default function AdminEnquiryDetail() {
           <div className="bg-white rounded-lg shadow-card">
             <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-background-warm">
               <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
-                <FileText size={14} className="shrink-0" /> Invoices &amp; Payments
+                <FileText size={14} className="shrink-0" aria-hidden="true" /> Invoices &amp; Payments
               </p>
               <Button variant="primary" size="sm" onClick={() => generateInvoice.open(enquiry)}>
-                <Plus size={13} /> Add Invoice
+                <Plus size={13} aria-hidden="true" /> Add Invoice
               </Button>
             </div>
             {paymentsLoading ? (
@@ -1059,7 +1059,7 @@ export default function AdminEnquiryDetail() {
                           <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
                             isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
                           }`}>
-                            <BadgeCheck size={10} /> {isPending ? 'Pending' : 'Paid'}
+                            <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : 'Paid'}
                           </span>
                           {isPending && (
                             <Button variant="primary" size="sm" onClick={() => handleMarkInvoicePaid(inv)} disabled={invoiceRowBusyId === inv.id}>
@@ -1098,7 +1098,7 @@ export default function AdminEnquiryDetail() {
             forcing the row wider. */}
         <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
           <p className="text-dark text-base font-display font-bold mb-4 flex items-center gap-2">
-            <User size={18} className="shrink-0 text-dark-muted" /> Traveller &amp; Trip
+            <User size={18} className="shrink-0 text-dark-muted" aria-hidden="true" /> Traveller &amp; Trip
           </p>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-4 border-b border-background-warm">
@@ -1138,7 +1138,7 @@ export default function AdminEnquiryDetail() {
             <div className="min-w-0">
               <p className="text-dark-muted text-xs">Source</p>
               <p className="text-dark font-semibold truncate inline-flex items-center gap-1">
-                <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
+                <srcCfg.icon size={12} className="shrink-0" aria-hidden="true" /> {srcCfg.label}
               </p>
             </div>
             <div className="min-w-0">
@@ -1169,7 +1169,7 @@ export default function AdminEnquiryDetail() {
             no longer competing with a wide main column for vertical rhythm. */}
         <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
           <p className="text-dark text-sm font-button font-semibold mb-3 flex items-center gap-1.5">
-            <History size={14} className="shrink-0" /> Activity Timeline
+            <History size={14} className="shrink-0" aria-hidden="true" /> Activity Timeline
           </p>
           {activityLogLoading ? (
             <p className="text-dark-muted text-xs">Loading…</p>
@@ -1199,16 +1199,18 @@ export default function AdminEnquiryDetail() {
       <Modal isOpen={paymentOpen} onClose={() => setPaymentOpen(false)} title="Payment" size="sm">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <label htmlFor="ed-pay-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
             <Select
+              inputId="ed-pay-food"
               value={paymentForm.food_preference}
               onChange={val => setPaymentForm(f => ({ ...f, food_preference: val as PaymentForm['food_preference'] }))}
               options={FOOD_PREFERENCE_OPTIONS}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Package</label>
+            <label htmlFor="ed-pay-package" className="block text-sm font-medium text-dark mb-1">Package</label>
             <Select
+              inputId="ed-pay-package"
               value={paymentForm.package_type}
               onChange={val => {
                 const packageType = val as Enquiry['package_type'];
@@ -1220,8 +1222,9 @@ export default function AdminEnquiryDetail() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
+              <label htmlFor="ed-pay-total" className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
               <input
+                id="ed-pay-total"
                 type="number"
                 min={0}
                 value={paymentForm.payment_type === 'extra_charge' ? '' : paymentForm.total_amount}
@@ -1232,18 +1235,21 @@ export default function AdminEnquiryDetail() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">
+              <label htmlFor="ed-pay-amount-paid" className="block text-sm font-medium text-dark mb-1">
                 {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
               </label>
               <input
+                id="ed-pay-amount-paid"
                 type="number"
                 min={0}
                 value={paymentForm.amount_paid}
                 onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
+                aria-invalid={!!paymentErrors.amount_paid}
+                aria-describedby={paymentErrors.amount_paid ? 'ed-pay-amount-paid-error' : undefined}
                 className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
                 placeholder="e.g. 5000"
               />
-              {paymentErrors.amount_paid && <p className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
+              {paymentErrors.amount_paid && <p id="ed-pay-amount-paid-error" role="alert" className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
             </div>
           </div>
 
@@ -1251,8 +1257,9 @@ export default function AdminEnquiryDetail() {
               shape as Generate Invoice, rather than a running total the
               label gets inferred from. */}
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Payment Type</label>
+            <label htmlFor="ed-pay-type" className="block text-sm font-medium text-dark mb-1">Payment Type</label>
             <Select
+              inputId="ed-pay-type"
               value={paymentForm.payment_type}
               onChange={val => setPaymentForm(f => ({ ...f, payment_type: val as PaymentForm['payment_type'] }))}
               options={availablePaymentTypeOptions(paymentForm, enquiry.amount_paid || 0)}
@@ -1270,8 +1277,9 @@ export default function AdminEnquiryDetail() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Status</label>
+            <label htmlFor="ed-pay-status" className="block text-sm font-medium text-dark mb-1">Status</label>
             <Select
+              inputId="ed-pay-status"
               value={paymentForm.status}
               onChange={val => setPaymentForm(f => ({ ...f, status: val as PaymentForm['status'] }))}
               options={GENERATE_INVOICE_STATUS_OPTIONS}
@@ -1281,18 +1289,20 @@ export default function AdminEnquiryDetail() {
           {paymentForm.status === 'paid' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Payment Method</label>
+                <label htmlFor="ed-pay-method" className="block text-sm font-medium text-dark mb-1">Payment Method</label>
                 <Select
+                  inputId="ed-pay-method"
                   value={paymentForm.payment_method}
                   onChange={val => setPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
                   options={PAYMENT_METHOD_OPTIONS}
                   placeholder="Select method"
                 />
-                {paymentErrors.payment_method && <p className={paymentErrorClass}>{paymentErrors.payment_method}</p>}
+                {paymentErrors.payment_method && <p role="alert" className={paymentErrorClass}>{paymentErrors.payment_method}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
+                <label htmlFor="ed-pay-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
                 <input
+                  id="ed-pay-utr"
                   type="text"
                   value={paymentForm.payment_utr}
                   disabled={paymentForm.payment_method === 'Cash'}
@@ -1300,7 +1310,7 @@ export default function AdminEnquiryDetail() {
                   className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder={paymentForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
                 />
-                {paymentErrors.payment_utr && <p className={paymentErrorClass}>{paymentErrors.payment_utr}</p>}
+                {paymentErrors.payment_utr && <p role="alert" className={paymentErrorClass}>{paymentErrors.payment_utr}</p>}
               </div>
             </div>
           )}
@@ -1374,34 +1384,38 @@ export default function AdminEnquiryDetail() {
               </label>
               {!enquiry.is_no_show && (
                 <div>
-                  <label className="block text-sm font-medium text-dark mb-1">Refund Amount (₹)</label>
+                  <label htmlFor="ed-refund-amount" className="block text-sm font-medium text-dark mb-1">Refund Amount (₹)</label>
                   <input
+                    id="ed-refund-amount"
                     type="number"
                     min={0}
                     value={paymentForm.refund_amount}
                     onChange={e => setPaymentForm(f => ({ ...f, refund_amount: parseNonNegative(e.target.value) }))}
+                    aria-describedby={paymentErrors.refund_amount ? 'ed-refund-amount-error' : undefined}
                     className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
                     placeholder="How much has been refunded so far"
                   />
-                  {paymentErrors.refund_amount && <p className={paymentErrorClass}>{paymentErrors.refund_amount}</p>}
+                  {paymentErrors.refund_amount && <p id="ed-refund-amount-error" role="alert" className={paymentErrorClass}>{paymentErrors.refund_amount}</p>}
                 </div>
               )}
               {!enquiry.is_no_show && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-dark mb-1">Refund Method</label>
+                    <label htmlFor="ed-refund-method" className="block text-sm font-medium text-dark mb-1">Refund Method</label>
                     <Select
+                      inputId="ed-refund-method"
                       value={paymentForm.refund_method}
                       onChange={val => setPaymentForm(f => ({ ...f, refund_method: val, refund_utr: val === 'Cash' ? '' : f.refund_utr }))}
                       options={REFUND_METHOD_OPTIONS}
                       placeholder="Select method"
                       size="sm"
                     />
-                    {paymentErrors.refund_method && <p className={paymentErrorClass}>{paymentErrors.refund_method}</p>}
+                    {paymentErrors.refund_method && <p role="alert" className={paymentErrorClass}>{paymentErrors.refund_method}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-dark mb-1">Refund UTR / Reference</label>
+                    <label htmlFor="ed-refund-utr" className="block text-sm font-medium text-dark mb-1">Refund UTR / Reference</label>
                     <input
+                      id="ed-refund-utr"
                       type="text"
                       value={paymentForm.refund_utr}
                       disabled={paymentForm.refund_method === 'Cash'}
@@ -1409,11 +1423,12 @@ export default function AdminEnquiryDetail() {
                       className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.refund_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
                       placeholder={paymentForm.refund_method === 'Cash' ? 'N/A for cash' : 'e.g. 987654XXXX'}
                     />
-                    {paymentErrors.refund_utr && <p className={paymentErrorClass}>{paymentErrors.refund_utr}</p>}
+                    {paymentErrors.refund_utr && <p role="alert" className={paymentErrorClass}>{paymentErrors.refund_utr}</p>}
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-dark mb-1">Refund Date</label>
+                    <label htmlFor="ed-refund-date" className="block text-sm font-medium text-dark mb-1">Refund Date</label>
                     <input
+                      id="ed-refund-date"
                       type="date"
                       value={paymentForm.refund_date}
                       onChange={e => setPaymentForm(f => ({ ...f, refund_date: e.target.value }))}
@@ -1424,8 +1439,9 @@ export default function AdminEnquiryDetail() {
               )}
               {!enquiry.is_no_show && (
                 <div>
-                  <label className="block text-sm font-medium text-dark mb-1">Refund Notes (optional)</label>
+                  <label htmlFor="ed-refund-notes" className="block text-sm font-medium text-dark mb-1">Refund Notes (optional)</label>
                   <textarea
+                    id="ed-refund-notes"
                     value={paymentForm.refund_notes}
                     onChange={e => setPaymentForm(f => ({ ...f, refund_notes: e.target.value }))}
                     rows={2}
@@ -1489,8 +1505,9 @@ export default function AdminEnquiryDetail() {
             This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.
           </p>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Reason</label>
+            <label htmlFor="ed-not-interested-reason" className="block text-sm font-medium text-dark mb-1">Reason</label>
             <Select
+              inputId="ed-not-interested-reason"
               value={closedReason}
               onChange={val => setClosedReason(val as ClosedReason)}
               options={NOT_INTERESTED_REASON_OPTIONS}
@@ -1512,8 +1529,8 @@ export default function AdminEnquiryDetail() {
               : "This lead is still warm but not ready to close either way — pick a date to check back in. It'll show as due on that day, and clears automatically once this lead moves past Contacted."}
           </p>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
-            <DatePicker value={followUpDate} onChange={setFollowUpDate} />
+            <label htmlFor="ed-followup-date" className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
+            <DatePicker id="ed-followup-date" value={followUpDate} onChange={setFollowUpDate} />
           </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" size="md" onClick={() => setFollowUpOpen(false)}>Cancel</Button>
@@ -1530,33 +1547,38 @@ export default function AdminEnquiryDetail() {
             Fixes who this enquiry is actually about. Doesn't affect payments, status, or booking journey.
           </p>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Full Name</label>
+            <label htmlFor="ed-edit-name" className="block text-sm font-medium text-dark mb-1">Full Name</label>
             <input
+              id="ed-edit-name"
               type="text"
               value={editForm.full_name}
               onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))}
               onBlur={() => setEditTouched(prev => new Set(prev).add('full_name'))}
+              aria-describedby={editTouched.has('full_name') && editErrors.full_name ? 'ed-edit-name-error' : undefined}
               className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
               placeholder="e.g. Priya Sharma"
             />
-            {editTouched.has('full_name') && editErrors.full_name && <p className="text-red-500 text-xs mt-1">{editErrors.full_name}</p>}
+            {editTouched.has('full_name') && editErrors.full_name && <p id="ed-edit-name-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.full_name}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Phone</label>
+              <label htmlFor="ed-edit-phone" className="block text-sm font-medium text-dark mb-1">Phone</label>
               <input
+                id="ed-edit-phone"
                 type="tel"
                 value={editForm.phone}
                 onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
                 onBlur={() => setEditTouched(prev => new Set(prev).add('phone'))}
+                aria-describedby={editTouched.has('phone') && editErrors.phone ? 'ed-edit-phone-error' : undefined}
                 className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
                 placeholder="e.g. 98765 43210"
               />
-              {editTouched.has('phone') && editErrors.phone && <p className="text-red-500 text-xs mt-1">{editErrors.phone}</p>}
+              {editTouched.has('phone') && editErrors.phone && <p id="ed-edit-phone-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.phone}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Email</label>
+              <label htmlFor="ed-edit-email" className="block text-sm font-medium text-dark mb-1">Email</label>
               <input
+                id="ed-edit-email"
                 type="email"
                 value={editForm.email}
                 onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
@@ -1567,8 +1589,9 @@ export default function AdminEnquiryDetail() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">City</label>
+              <label htmlFor="ed-edit-city" className="block text-sm font-medium text-dark mb-1">City</label>
               <input
+                id="ed-edit-city"
                 type="text"
                 value={editForm.city}
                 onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))}
@@ -1577,8 +1600,9 @@ export default function AdminEnquiryDetail() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Age</label>
+              <label htmlFor="ed-edit-age" className="block text-sm font-medium text-dark mb-1">Age</label>
               <input
+                id="ed-edit-age"
                 type="number"
                 min={0}
                 value={editForm.age}
@@ -1589,8 +1613,9 @@ export default function AdminEnquiryDetail() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Trip</label>
+            <label htmlFor="ed-edit-trip" className="block text-sm font-medium text-dark mb-1">Trip</label>
             <Select
+              inputId="ed-edit-trip"
               value={editForm.trip_id}
               onChange={val => setEditForm(f => ({ ...f, trip_id: val }))}
               options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
@@ -1625,8 +1650,9 @@ export default function AdminEnquiryDetail() {
         <div className="space-y-4">
           <p className="text-sm text-dark-muted">This frees up the seat immediately. Amount paid stays on record — track any refund via Payment afterwards.</p>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Cancellation Reason</label>
+            <label htmlFor="ed-cancel-reason" className="block text-sm font-medium text-dark mb-1">Cancellation Reason</label>
             <Select
+              inputId="ed-cancel-reason"
               value={cancelReason}
               onChange={val => setCancelReason(val as CancellationReason | '')}
               options={CANCELLATION_REASON_OPTIONS}
@@ -1634,8 +1660,9 @@ export default function AdminEnquiryDetail() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Third-Party Charges (₹, optional)</label>
+            <label htmlFor="ed-cancel-charges" className="block text-sm font-medium text-dark mb-1">Third-Party Charges (₹, optional)</label>
             <input
+              id="ed-cancel-charges"
               type="number"
               min={0}
               value={cancelCharges}
@@ -1652,8 +1679,9 @@ export default function AdminEnquiryDetail() {
             </span>
           </label>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
+            <label htmlFor="ed-cancel-notes" className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
             <textarea
+              id="ed-cancel-notes"
               value={cancelNotes}
               onChange={e => setCancelNotes(e.target.value)}
               rows={2}

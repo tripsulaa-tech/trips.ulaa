@@ -271,7 +271,7 @@ export default function AdminAbout() {
   if (loading) {
     return (
       <AdminLayout title="About Page">
-        <div className="text-center py-16 text-dark-muted">Loading…</div>
+        <div role="status" className="text-center py-16 text-dark-muted">Loading…</div>
       </AdminLayout>
     );
   }
@@ -400,8 +400,10 @@ export default function AdminAbout() {
       <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
         <div className="p-6 pb-4 border-b border-background-warm flex-shrink-0 space-y-4">
           <div className="relative w-full max-w-xs">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+            <label htmlFor="about-search" className="sr-only">Search fields</label>
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
             <input
+              id="about-search"
               type="text"
               value={pageSearch}
               onChange={e => setPageSearch(e.target.value)}
@@ -413,12 +415,14 @@ export default function AdminAbout() {
               (everything stays in one continuous scroll below), same
               behavior as the Add Trip modal's own tab bar. */}
           <div className="relative">
-            <div ref={tabBarRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
+            <div ref={tabBarRef} role="tablist" aria-label="About page sections" className="flex gap-2 overflow-x-auto scrollbar-hide">
               {SECTION_TITLES.map((title, i) => (
                 <button
                   key={title}
                   ref={el => { tabButtonRefs.current[i] = el; }}
                   type="button"
+                  role="tab"
+                  aria-selected={activeSection === i}
                   onClick={() => handleTabSelect(i)}
                   className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
                     activeSection === i
@@ -441,7 +445,7 @@ export default function AdminAbout() {
 
         <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
           {pageSearchNoMatch && (
-            <p className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
+            <p role="alert" className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
           )}
           <div className="p-6 space-y-8">
 
@@ -466,8 +470,9 @@ export default function AdminAbout() {
             allowUrl
           />
           <div>
-            <label className={labelClass}>Heading</label>
+            <label htmlFor="about-hero-heading" className={labelClass}>Heading</label>
             <textarea
+              id="about-hero-heading"
               value={content.hero.heading}
               onChange={e => setHero('heading', e.target.value)}
               rows={2}
@@ -475,8 +480,9 @@ export default function AdminAbout() {
             />
           </div>
           <div>
-            <label className={labelClass}>Subheading</label>
+            <label htmlFor="about-hero-subheading" className={labelClass}>Subheading</label>
             <textarea
+              id="about-hero-subheading"
               value={content.hero.subheading}
               onChange={e => setHero('subheading', e.target.value)}
               rows={2}
@@ -485,8 +491,9 @@ export default function AdminAbout() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>CTA Button Label (optional)</label>
+              <label htmlFor="about-hero-cta-label" className={labelClass}>CTA Button Label (optional)</label>
               <input
+                id="about-hero-cta-label"
                 value={content.hero.cta_label}
                 onChange={e => setHero('cta_label', e.target.value)}
                 className={inputClass}
@@ -494,8 +501,9 @@ export default function AdminAbout() {
               />
             </div>
             <div>
-              <label className={labelClass}>CTA URL (optional)</label>
+              <label htmlFor="about-hero-cta-url" className={labelClass}>CTA URL (optional)</label>
               <input
+                id="about-hero-cta-url"
                 value={content.hero.cta_url}
                 onChange={e => setHero('cta_url', e.target.value)}
                 className={inputClass}
@@ -507,8 +515,9 @@ export default function AdminAbout() {
         <div ref={el => { sectionRefs.current[1] = el; }} data-section={2} className="scroll-mt-4 space-y-4">
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">2 · Our Story</h2>
           <div>
-            <label className={labelClass}>Section Heading</label>
+            <label htmlFor="about-story-heading" className={labelClass}>Section Heading</label>
             <textarea
+              id="about-story-heading"
               value={content.our_story.heading}
               onChange={e => setStory('heading', e.target.value)}
               rows={2}
@@ -516,8 +525,9 @@ export default function AdminAbout() {
             />
           </div>
           <div>
-            <label className={labelClass}>Description</label>
+            <label htmlFor="about-story-description" className={labelClass}>Description</label>
             <textarea
+              id="about-story-description"
               value={content.our_story.description}
               onChange={e => setStory('description', e.target.value)}
               rows={4}
@@ -538,8 +548,9 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">3 · To Unforgettable Journeys</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Sub Heading</label>
+              <label htmlFor="about-journey-intro-sub-heading" className={labelClass}>Sub Heading</label>
               <input
+                id="about-journey-intro-sub-heading"
                 value={content.journey_intro.sub_heading}
                 onChange={e => setJourneyIntro('sub_heading', e.target.value)}
                 className={inputClass}
@@ -547,8 +558,9 @@ export default function AdminAbout() {
               />
             </div>
             <div>
-              <label className={labelClass}>Heading</label>
+              <label htmlFor="about-journey-intro-heading" className={labelClass}>Heading</label>
               <input
+                id="about-journey-intro-heading"
                 value={content.journey_intro.heading}
                 onChange={e => setJourneyIntro('heading', e.target.value)}
                 className={inputClass}
@@ -557,8 +569,9 @@ export default function AdminAbout() {
             </div>
           </div>
           <div>
-            <label className={labelClass}>Description</label>
+            <label htmlFor="about-journey-intro-description" className={labelClass}>Description</label>
             <textarea
+              id="about-journey-intro-description"
               value={content.journey_intro.description}
               onChange={e => setJourneyIntro('description', e.target.value)}
               rows={2}
@@ -573,8 +586,9 @@ export default function AdminAbout() {
               Have You Ever…
             </h3>
             <div>
-              <label className={labelClass}>Section Heading</label>
+              <label htmlFor="about-hye-heading" className={labelClass}>Section Heading</label>
               <textarea
+                id="about-hye-heading"
                 value={content.journey_intro.have_you_ever.heading}
                 onChange={e => setHYE('heading', e.target.value)}
                 rows={2}
@@ -590,7 +604,7 @@ export default function AdminAbout() {
                     onClick={addHYEItem}
                     className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
                   >
-                    <Plus size={13} /> Add Item
+                    <Plus size={13} aria-hidden="true" /> Add Item
                   </button>
                 )}
               </div>
@@ -599,7 +613,7 @@ export default function AdminAbout() {
               </p>
               {content.journey_intro.have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => (
                 <div key={i} className="flex items-center gap-2">
-                  <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
+                  <GripVertical size={16} className="text-dark-muted flex-shrink-0" aria-hidden="true" />
                   <div className="w-40 flex-shrink-0">
                     <TripHighlightIconPicker
                       value={item.icon ?? ''}
@@ -607,7 +621,9 @@ export default function AdminAbout() {
                       hintText={item.text}
                     />
                   </div>
+                  <label htmlFor={`about-hye-item-${i}`} className="sr-only">Have You Ever item {i + 1}</label>
                   <input
+                    id={`about-hye-item-${i}`}
                     value={item.text}
                     onChange={e => updateHYEItem(i, 'text', e.target.value)}
                     className={`${inputClass} flex-1`}
@@ -617,9 +633,9 @@ export default function AdminAbout() {
                     type="button"
                     onClick={() => removeHYEItem(i)}
                     className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
-                    title="Remove"
+                    aria-label={`Remove ${item.text || `item ${i + 1}`}`}
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={15} aria-hidden="true" />
                   </button>
                 </div>
               ))}
@@ -632,8 +648,9 @@ export default function AdminAbout() {
               Welcome to ULAA
             </h3>
             <div>
-              <label className={labelClass}>Section Heading</label>
+              <label htmlFor="about-wtu-heading" className={labelClass}>Section Heading</label>
               <textarea
+                id="about-wtu-heading"
                 value={content.journey_intro.welcome_to_ulaa.heading}
                 onChange={e => setWTU('heading', e.target.value)}
                 rows={2}
@@ -649,7 +666,7 @@ export default function AdminAbout() {
                     onClick={addWTUItem}
                     className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
                   >
-                    <Plus size={13} /> Add Item
+                    <Plus size={13} aria-hidden="true" /> Add Item
                   </button>
                 )}
               </div>
@@ -658,7 +675,7 @@ export default function AdminAbout() {
               </p>
               {content.journey_intro.welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => (
                 <div key={i} className="flex items-center gap-2">
-                  <GripVertical size={16} className="text-dark-muted flex-shrink-0" />
+                  <GripVertical size={16} className="text-dark-muted flex-shrink-0" aria-hidden="true" />
                   <div className="w-40 flex-shrink-0">
                     <TripHighlightIconPicker
                       value={item.icon ?? ''}
@@ -666,7 +683,9 @@ export default function AdminAbout() {
                       hintText={item.title}
                     />
                   </div>
+                  <label htmlFor={`about-wtu-item-${i}`} className="sr-only">Welcome to ULAA item {i + 1}</label>
                   <input
+                    id={`about-wtu-item-${i}`}
                     value={item.title}
                     onChange={e => updateWTUItem(i, 'title', e.target.value)}
                     className={`${inputClass} flex-1`}
@@ -676,9 +695,9 @@ export default function AdminAbout() {
                     type="button"
                     onClick={() => removeWTUItem(i)}
                     className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
-                    title="Remove"
+                    aria-label={`Remove ${item.title || `item ${i + 1}`}`}
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={15} aria-hidden="true" />
                   </button>
                 </div>
               ))}
@@ -689,8 +708,9 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">4 · Why ULAA is Different</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Sub Heading</label>
+              <label htmlFor="about-why-diff-sub-heading" className={labelClass}>Sub Heading</label>
               <input
+                id="about-why-diff-sub-heading"
                 value={content.why_different.sub_heading}
                 onChange={e => setWHY('sub_heading', e.target.value)}
                 className={inputClass}
@@ -698,8 +718,9 @@ export default function AdminAbout() {
               />
             </div>
             <div>
-              <label className={labelClass}>Section Heading</label>
+              <label htmlFor="about-why-diff-heading" className={labelClass}>Section Heading</label>
               <textarea
+                id="about-why-diff-heading"
                 value={content.why_different.heading}
                 onChange={e => setWHY('heading', e.target.value)}
                 rows={2}
@@ -707,8 +728,9 @@ export default function AdminAbout() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Subheading</label>
+              <label htmlFor="about-why-diff-subheading" className={labelClass}>Subheading</label>
               <textarea
+                id="about-why-diff-subheading"
                 value={content.why_different.subheading}
                 onChange={e => setWHY('subheading', e.target.value)}
                 rows={2}
@@ -727,7 +749,7 @@ export default function AdminAbout() {
                     onClick={addWhyCard}
                     className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
                   >
-                    <Plus size={13} /> Add Card
+                    <Plus size={13} aria-hidden="true" /> Add Card
                   </button>
                 )}
               </div>
@@ -741,14 +763,16 @@ export default function AdminAbout() {
                   <button
                     type="button"
                     onClick={() => removeWhyCard(i)}
+                    aria-label={`Remove ${card.heading || `Card ${i + 1}`}`}
                     className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={14} aria-hidden="true" />
                   </button>
                 </div>
                 <div>
-                  <label className={labelClass}>Heading</label>
+                  <label htmlFor={`about-why-card-heading-${i}`} className={labelClass}>Heading</label>
                   <textarea
+                    id={`about-why-card-heading-${i}`}
                     value={card.heading}
                     onChange={e => updateWhyCard(i, 'heading', e.target.value)}
                     rows={2}
@@ -756,8 +780,9 @@ export default function AdminAbout() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Description</label>
+                  <label htmlFor={`about-why-card-description-${i}`} className={labelClass}>Description</label>
                   <textarea
+                    id={`about-why-card-description-${i}`}
                     value={card.description}
                     onChange={e => updateWhyCard(i, 'description', e.target.value)}
                     rows={2}
@@ -783,8 +808,9 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">5 · Our Community</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Sub Heading</label>
+              <label htmlFor="about-community-sub-heading" className={labelClass}>Sub Heading</label>
               <input
+                id="about-community-sub-heading"
                 value={content.community.sub_heading}
                 onChange={e => setCommunity('sub_heading', e.target.value)}
                 className={inputClass}
@@ -792,8 +818,9 @@ export default function AdminAbout() {
               />
             </div>
             <div>
-              <label className={labelClass}>Section Heading</label>
+              <label htmlFor="about-community-heading" className={labelClass}>Section Heading</label>
               <textarea
+                id="about-community-heading"
                 value={content.community.heading}
                 onChange={e => setCommunity('heading', e.target.value)}
                 rows={2}
@@ -801,8 +828,9 @@ export default function AdminAbout() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Subheading</label>
+              <label htmlFor="about-community-subheading" className={labelClass}>Subheading</label>
               <textarea
+                id="about-community-subheading"
                 value={content.community.subheading}
                 onChange={e => setCommunity('subheading', e.target.value)}
                 rows={2}
@@ -829,8 +857,9 @@ export default function AdminAbout() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className={labelClass}>Girls Travelled Label</label>
+              <label htmlFor="about-stats-girls" className={labelClass}>Girls Travelled Label</label>
               <input
+                id="about-stats-girls"
                 value={content.stats.girls_travelled_label}
                 onChange={e => setStats('girls_travelled_label', e.target.value)}
                 className={inputClass}
@@ -838,8 +867,9 @@ export default function AdminAbout() {
               />
             </div>
             <div>
-              <label className={labelClass}>Trips Completed Label</label>
+              <label htmlFor="about-stats-trips" className={labelClass}>Trips Completed Label</label>
               <input
+                id="about-stats-trips"
                 value={content.stats.trips_completed_label}
                 onChange={e => setStats('trips_completed_label', e.target.value)}
                 className={inputClass}
@@ -847,8 +877,9 @@ export default function AdminAbout() {
               />
             </div>
             <div>
-              <label className={labelClass}>Destinations Label</label>
+              <label htmlFor="about-stats-destinations" className={labelClass}>Destinations Label</label>
               <input
+                id="about-stats-destinations"
                 value={content.stats.destinations_label}
                 onChange={e => setStats('destinations_label', e.target.value)}
                 className={inputClass}
@@ -861,8 +892,9 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">7 · What Our Girls Say</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Sub Heading</label>
+              <label htmlFor="about-testimonials-sub-heading" className={labelClass}>Sub Heading</label>
               <input
+                id="about-testimonials-sub-heading"
                 value={content.testimonials.sub_heading}
                 onChange={e => setTestimonialsContent('sub_heading', e.target.value)}
                 className={inputClass}
@@ -870,8 +902,9 @@ export default function AdminAbout() {
               />
             </div>
             <div>
-              <label className={labelClass}>Section Heading</label>
+              <label htmlFor="about-testimonials-heading" className={labelClass}>Section Heading</label>
               <textarea
+                id="about-testimonials-heading"
                 value={content.testimonials.heading}
                 onChange={e => setTestimonialsContent('heading', e.target.value)}
                 rows={2}
@@ -879,8 +912,9 @@ export default function AdminAbout() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Subheading</label>
+              <label htmlFor="about-testimonials-subheading" className={labelClass}>Subheading</label>
               <textarea
+                id="about-testimonials-subheading"
                 value={content.testimonials.subheading}
                 onChange={e => setTestimonialsContent('subheading', e.target.value)}
                 rows={2}
@@ -897,8 +931,9 @@ export default function AdminAbout() {
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">8 · Your ULAA Journey</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Sub Heading</label>
+              <label htmlFor="about-journey8-sub-heading" className={labelClass}>Sub Heading</label>
               <input
+                id="about-journey8-sub-heading"
                 value={content.journey.sub_heading}
                 onChange={e => setJourney('sub_heading', e.target.value)}
                 className={inputClass}
@@ -906,8 +941,9 @@ export default function AdminAbout() {
               />
             </div>
             <div>
-              <label className={labelClass}>Section Heading</label>
+              <label htmlFor="about-journey8-heading" className={labelClass}>Section Heading</label>
               <textarea
+                id="about-journey8-heading"
                 value={content.journey.heading}
                 onChange={e => setJourney('heading', e.target.value)}
                 rows={2}
@@ -915,8 +951,9 @@ export default function AdminAbout() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Subheading</label>
+              <label htmlFor="about-journey8-subheading" className={labelClass}>Subheading</label>
               <textarea
+                id="about-journey8-subheading"
                 value={content.journey.subheading}
                 onChange={e => setJourney('subheading', e.target.value)}
                 rows={2}
@@ -933,7 +970,7 @@ export default function AdminAbout() {
                   onClick={addStep}
                   className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
                 >
-                  <Plus size={13} /> Add Step
+                  <Plus size={13} aria-hidden="true" /> Add Step
                 </button>
               )}
             </div>
@@ -947,9 +984,10 @@ export default function AdminAbout() {
                     <button
                       type="button"
                       onClick={() => removeStep(i)}
+                      aria-label={`Remove ${step.heading || `Step ${i + 1}`}`}
                       className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
                   </div>
                   <div>
@@ -966,8 +1004,9 @@ export default function AdminAbout() {
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Heading</label>
+                    <label htmlFor={`about-step-heading-${i}`} className={labelClass}>Heading</label>
                     <textarea
+                      id={`about-step-heading-${i}`}
                       value={step.heading}
                       onChange={e => updateStep(i, 'heading', e.target.value)}
                       rows={2}
@@ -975,8 +1014,9 @@ export default function AdminAbout() {
                     />
                   </div>
                   <div>
-                    <label className={labelClass}>Description</label>
+                    <label htmlFor={`about-step-description-${i}`} className={labelClass}>Description</label>
                     <textarea
+                      id={`about-step-description-${i}`}
                       value={step.description}
                       onChange={e => updateStep(i, 'description', e.target.value)}
                       rows={2}
@@ -1001,7 +1041,7 @@ export default function AdminAbout() {
             <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={resetToDefault}>
               Reset to Default
             </Button>
-            {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+            {saved && <span role="status" className="text-sm text-green-600 font-medium">Saved!</span>}
           </div>
         </div>
       </div>

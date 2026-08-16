@@ -54,18 +54,18 @@ export default function DetailsModal({
                   title={`${groupLabel(detailsTarget)} — part of a group booking of ${detailsTarget.group_size}`}
                   className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
                 >
-                  <Users size={10} /> {groupLabel(detailsTarget)} · {detailsTarget.group_seq}/{detailsTarget.group_size}
+                  <Users size={10} aria-hidden="true" /> {groupLabel(detailsTarget)} · {detailsTarget.group_seq}/{detailsTarget.group_size}
                 </span>
               ) : (
                 <span
                   title="Booked individually, not part of a group"
                   className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
                 >
-                  <User size={10} /> Solo
+                  <User size={10} aria-hidden="true" /> Solo
                 </span>
               )}
               <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
-                <FoodMark type={foodPreferenceKey(detailsTarget)} size={10} /> {food.label}
+                <FoodMark type={foodPreferenceKey(detailsTarget)} size={10} aria-hidden="true" /> {food.label}
               </span>
             </div>
             {detailsTarget.booking_id && (
@@ -76,10 +76,10 @@ export default function DetailsModal({
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Button variant="outline" size="sm" onClick={() => onDownloadInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
-                    <FileText size={14} /> Invoice
+                    <FileText size={14} aria-hidden="true" /> Invoice
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => onShareInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
-                    <Share2 size={14} /> Share
+                    <Share2 size={14} aria-hidden="true" /> Share
                   </Button>
                 </div>
               </div>
@@ -121,7 +121,7 @@ export default function DetailsModal({
                       onClick={() => onMarkCompleted(detailsTarget)}
                       disabled={completingId === detailsTarget.id}
                     >
-                      <CheckCircle2 size={13} /> Complete Trip
+                      <CheckCircle2 size={13} aria-hidden="true" /> Complete Trip
                     </Button>
                   </div>
                 )}
@@ -131,10 +131,10 @@ export default function DetailsModal({
                 <div className="bg-white border border-background-warm rounded-md">
                   <div className="flex flex-col gap-2 px-3 py-2 border-b border-background-warm">
                     <p className="text-dark text-xs font-button font-semibold flex items-center gap-1.5">
-                      <Receipt size={13} className="shrink-0" /> Invoices
+                      <Receipt size={13} className="shrink-0" aria-hidden="true" /> Invoices
                     </p>
                     <Button variant="primary" size="sm" className="self-start" onClick={() => onOpenGenerateInvoice(detailsTarget)}>
-                      <Plus size={13} /> Add Invoice
+                      <Plus size={13} aria-hidden="true" /> Add Invoice
                     </Button>
                   </div>
                   {detailsInvoicesLoading ? (
@@ -165,7 +165,7 @@ export default function DetailsModal({
                                   isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
                                 }`}
                               >
-                                <BadgeCheck size={10} /> {isPending ? 'Pending' : 'Paid'}
+                                <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : 'Paid'}
                               </span>
                               {isPending && (
                                 <Button
@@ -223,7 +223,7 @@ export default function DetailsModal({
               <div>
                 <p className="text-dark-muted text-xs">Source</p>
                 <p className="text-dark truncate inline-flex items-center gap-1">
-                  <srcCfg.icon size={12} className="shrink-0" /> {srcCfg.label}
+                  <srcCfg.icon size={12} className="shrink-0" aria-hidden="true" /> {srcCfg.label}
                 </p>
               </div>
               <div>

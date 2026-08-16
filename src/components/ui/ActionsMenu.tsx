@@ -98,7 +98,7 @@ export default function ActionsMenu({ items, disabled, label = 'Actions' }: { it
         aria-expanded={open}
         className="w-7 h-7 flex items-center justify-center rounded border border-background-warm text-dark-muted hover:bg-background-warm/60 disabled:opacity-50 transition-colors shrink-0"
       >
-        <MoreVertical size={14} />
+        <MoreVertical size={14} aria-hidden="true" />
       </button>
       {open && coords && createPortal(
         <div
@@ -119,7 +119,7 @@ export default function ActionsMenu({ items, disabled, label = 'Actions' }: { it
                 item.danger ? 'text-red-600 hover:bg-red-50' : 'text-dark hover:bg-background-warm/60'
               }`}
             >
-              {item.icon && <item.icon size={13} className="shrink-0" />}
+              {item.icon && <item.icon size={13} className="shrink-0" aria-hidden="true" />}
               {item.label}
             </button>
           ))}

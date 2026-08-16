@@ -84,8 +84,9 @@ export default function ContactOutcomeModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Contact Outcome</label>
+            <label htmlFor="co-outcome" className="block text-sm font-medium text-dark mb-1">Contact Outcome</label>
             <Select
+              inputId="co-outcome"
               value={outcome}
               onChange={val => setOutcome(val as ContactOutcome)}
               options={CONTACT_OUTCOME_OPTIONS}
@@ -95,8 +96,9 @@ export default function ContactOutcomeModal({
 
           {needsClosedReason && (
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Closed Reason</label>
+              <label htmlFor="co-closed-reason" className="block text-sm font-medium text-dark mb-1">Closed Reason</label>
               <Select
+                inputId="co-closed-reason"
                 value={closedReason}
                 onChange={val => setClosedReason(val as ClosedReason)}
                 options={NOT_INTERESTED_REASON_OPTIONS}
@@ -105,8 +107,9 @@ export default function ContactOutcomeModal({
           )}
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Notes</label>
+            <label htmlFor="co-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
             <textarea
+              id="co-notes"
               value={notes}
               onChange={ev => setNotes(ev.target.value)}
               className={inputClass}
@@ -118,12 +121,13 @@ export default function ContactOutcomeModal({
           {needsFollowUp && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
-                <DatePicker value={followUpAt} onChange={setFollowUpAt} />
+                <label htmlFor="co-followup-date" className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
+                <DatePicker id="co-followup-date" value={followUpAt} onChange={setFollowUpAt} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Follow-up Time</label>
+                <label htmlFor="co-followup-time" className="block text-sm font-medium text-dark mb-1">Follow-up Time</label>
                 <input
+                  id="co-followup-time"
                   type="time"
                   value={followUpTime}
                   onChange={ev => setFollowUpTime(ev.target.value)}

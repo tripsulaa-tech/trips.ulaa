@@ -187,11 +187,11 @@ export default function AdminAlbums() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <p className="text-dark-muted">{albums.length} albums</p>
-          <Button variant="primary" size="sm" onClick={openCreate}><Plus size={16} /> Add Album</Button>
+          <Button variant="primary" size="sm" onClick={openCreate}><Plus size={16} aria-hidden="true" /> Add Album</Button>
         </div>
 
         {loading ? (
-          <div className="text-center py-16 text-dark-muted">Loading...</div>
+          <div role="status" className="text-center py-16 text-dark-muted">Loading...</div>
         ) : (
           <div className="bg-white rounded-lg shadow-card overflow-hidden">
             <div className="overflow-x-auto scrollbar-hide">
@@ -215,7 +215,7 @@ export default function AdminAlbums() {
                           <button
                             onClick={() => setViewing(album)}
                             className="truncate text-left hover:text-primary hover:underline underline-offset-2"
-                            title="View details"
+                            aria-label={`View details for ${album.title}`}
                           >
                             {album.title}
                           </button>
@@ -238,11 +238,16 @@ export default function AdminAlbums() {
                       </td>
                       <td className="pl-4 pr-3 py-4">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => togglePublish(album)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
-                            {album.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
+                          <button
+                            onClick={() => togglePublish(album)}
+                            aria-pressed={album.is_published}
+                            aria-label={album.is_published ? `Unpublish ${album.title}` : `Publish ${album.title}`}
+                            className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"
+                          >
+                            {album.is_published ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
                           </button>
-                          <button onClick={() => openEdit(album)} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={15} /></button>
-                          <button onClick={() => handleDelete(album)} className="p-1.5 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={15} /></button>
+                          <button onClick={() => openEdit(album)} aria-label={`Edit ${album.title}`} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={15} aria-hidden="true" /></button>
+                          <button onClick={() => handleDelete(album)} aria-label={`Delete ${album.title}`} className="p-1.5 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={15} aria-hidden="true" /></button>
                         </div>
                       </td>
                     </motion.tr>
@@ -257,19 +262,21 @@ export default function AdminAlbums() {
       <Modal isOpen={modalOpen} onClose={closeModal} title={editing ? 'Edit Album' : 'Add Album'} size="lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Album Title *</label>
+            <label htmlFor="album-title" className="block text-sm font-medium text-dark mb-1">Album Title *</label>
             <input
+              id="album-title"
               value={form.title}
               onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setErrors(err => ({ ...err, title: undefined })); }}
               className={`${inputClass} ${errors.title ? '!border-red-400' : ''}`}
               placeholder="e.g. Magical Meghalaya"
             />
-            {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
+            {errors.title && <p role="alert" className="text-xs text-red-500 mt-1">{errors.title}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Destination *</label>
+            <label htmlFor="album-destination" className="block text-sm font-medium text-dark mb-1">Destination *</label>
             <div className="flex gap-2">
               <input
+                id="album-destination"
                 value={form.destination}
                 onChange={e => { setForm(f => ({ ...f, destination: e.target.value })); setErrors(err => ({ ...err, destination: undefined })); }}
                 className={`${inputClass} ${errors.destination ? '!border-red-400' : ''}`}
@@ -285,11 +292,12 @@ export default function AdminAlbums() {
                 Find on Maps ↗
               </a>
             </div>
-            {errors.destination && <p className="text-xs text-red-500 mt-1">{errors.destination}</p>}
+            {errors.destination && <p role="alert" className="text-xs text-red-500 mt-1">{errors.destination}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Destination — Google Maps Link</label>
+            <label htmlFor="album-map-url" className="block text-sm font-medium text-dark mb-1">Destination — Google Maps Link</label>
             <input
+              id="album-map-url"
               value={form.map_url}
               onChange={e => setForm(f => ({ ...f, map_url: e.target.value }))}
               className={inputClass}
@@ -308,26 +316,27 @@ export default function AdminAlbums() {
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Batch (optional)</label>
-            <input value={form.batch} onChange={e => setForm(f => ({ ...f, batch: e.target.value }))} className={`${inputClass} ${duplicateAlbum ? '!border-red-400' : ''}`} placeholder="e.g. 1 (shows as 'Batch 1')" />
+            <label htmlFor="album-batch" className="block text-sm font-medium text-dark mb-1">Batch (optional)</label>
+            <input id="album-batch" value={form.batch} onChange={e => setForm(f => ({ ...f, batch: e.target.value }))} className={`${inputClass} ${duplicateAlbum ? '!border-red-400' : ''}`} placeholder="e.g. 1 (shows as 'Batch 1')" />
             {duplicateAlbum && (
-              <p className="text-xs text-red-500 mt-1">
+              <p role="alert" className="text-xs text-red-500 mt-1">
                 An album with this title already exists{form.batch.trim() ? ' for this batch' : ''}. Use a different batch, or change the title.
               </p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Trip Date *</label>
+            <label htmlFor="album-trip-date" className="block text-sm font-medium text-dark mb-1">Trip Date *</label>
             <DatePicker
+              id="album-trip-date"
               value={form.trip_date}
               onChange={trip_date => { setForm(f => ({ ...f, trip_date })); setErrors(err => ({ ...err, trip_date: undefined })); }}
               className={errors.trip_date ? '!border-red-400' : ''}
             />
-            {errors.trip_date && <p className="text-xs text-red-500 mt-1">{errors.trip_date}</p>}
+            {errors.trip_date && <p role="alert" className="text-xs text-red-500 mt-1">{errors.trip_date}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Participants</label>
-            <input type="number" value={form.participants} onChange={e => setForm(f => ({ ...f, participants: +e.target.value }))} className={inputClass} />
+            <label htmlFor="album-participants" className="block text-sm font-medium text-dark mb-1">Participants</label>
+            <input id="album-participants" type="number" value={form.participants} onChange={e => setForm(f => ({ ...f, participants: +e.target.value }))} className={inputClass} />
           </div>
           <div>
             <ImageUploadField
@@ -358,14 +367,15 @@ export default function AdminAlbums() {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Description *</label>
+            <label htmlFor="album-description" className="block text-sm font-medium text-dark mb-1">Description *</label>
             <textarea
+              id="album-description"
               value={form.description}
               onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setErrors(err => ({ ...err, description: undefined })); }}
               rows={3}
               className={`${inputClass} resize-none ${errors.description ? '!border-red-400' : ''}`}
             />
-            {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
+            {errors.description && <p role="alert" className="text-xs text-red-500 mt-1">{errors.description}</p>}
           </div>
           <div className="md:col-span-2 flex items-center gap-3">
             <input type="checkbox" id="pub" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />

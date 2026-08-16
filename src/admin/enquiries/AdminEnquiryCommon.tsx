@@ -713,7 +713,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
   if (enquiry.booking_status === 'cancelled') {
     return (
       <div className="flex items-center gap-1.5 bg-red-50 text-red-700 rounded-md px-3 py-2 text-xs font-button font-semibold">
-        <XCircle size={14} className="shrink-0" /> Booking Cancelled
+        <XCircle size={14} className="shrink-0" aria-hidden="true" /> Booking Cancelled
       </div>
     );
   }
@@ -728,7 +728,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
     <div className="bg-white border border-background-warm rounded-md px-3 py-3">
       {isCancelled && (
         <div className="flex items-center gap-1.5 mb-2.5 bg-red-50 text-red-700 rounded-md px-2.5 py-1.5 text-[11px] font-button font-semibold">
-          <XCircle size={12} className="shrink-0" /> Cancelled — progress below is where it stood before cancellation
+          <XCircle size={12} className="shrink-0" aria-hidden="true" /> Cancelled — progress below is where it stood before cancellation
         </div>
       )}
       <div className="flex items-center">
@@ -737,10 +737,11 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
           const isActive = i === activeIndex;
           const StepIcon = isDone || isActive ? CheckCircle2 : Circle;
           return (
-            <div key={step.key} className="flex items-center flex-1 last:flex-none">
+            <div key={step.key} aria-current={isActive ? 'step' : undefined} className="flex items-center flex-1 last:flex-none">
               <div className="flex flex-col items-center gap-1 shrink-0">
                 <StepIcon
                   size={18}
+                  aria-hidden="true"
                   className={isDone ? 'text-green-600' : isActive ? 'text-primary' : 'text-background-warm'}
                   fill={isDone ? 'currentColor' : 'none'}
                 />
@@ -757,7 +758,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
       </div>
       {enquiry.booking_status === 'balance_pending' && !isCancelled && (
         <div className="flex items-center gap-1.5 mt-2.5 bg-amber-50 text-amber-700 rounded-md px-2.5 py-1.5 text-[11px] font-button font-semibold">
-          <AlertTriangle size={12} className="shrink-0" />
+          <AlertTriangle size={12} className="shrink-0" aria-hidden="true" />
           Balance overdue{enquiry.balance_due_date ? ` — due ${formatDate(enquiry.balance_due_date, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
         </div>
       )}
@@ -793,7 +794,7 @@ export function JourneyLifecycleLegend() {
           return (
             <div key={key} className="flex items-center gap-1.5 shrink-0">
               <span className={`inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
-                <cfg.icon size={11} className="shrink-0" /> {cfg.label}
+                <cfg.icon size={11} className="shrink-0" aria-hidden="true" /> {cfg.label}
               </span>
               {i < LIFECYCLE_FLOW_STAGES.length - 1 && (
                 <span className="text-dark-muted/50 text-xs" aria-hidden="true">→</span>
@@ -803,10 +804,10 @@ export function JourneyLifecycleLegend() {
         })}
         <span className="text-dark-muted/60 text-[11px] mx-1 shrink-0 whitespace-nowrap">or, at any point —</span>
         <span className={`inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.not_interested.color}`}>
-          <UserMinus size={11} className="shrink-0" /> Not Interested
+          <UserMinus size={11} className="shrink-0" aria-hidden="true" /> Not Interested
         </span>
         <span className={`inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.cancelled.color}`}>
-          <XCircle size={11} className="shrink-0" /> Cancelled
+          <XCircle size={11} className="shrink-0" aria-hidden="true" /> Cancelled
         </span>
       </div>
     </div>

@@ -234,7 +234,7 @@ export default function AdminWhyULAA() {
   if (loading) {
     return (
       <AdminLayout title="Why ULAA">
-        <div className="text-center py-16 text-dark-muted">Loading...</div>
+        <div role="status" className="text-center py-16 text-dark-muted">Loading...</div>
       </AdminLayout>
     );
   }
@@ -247,8 +247,10 @@ export default function AdminWhyULAA() {
       <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
         <div className="p-6 pb-4 border-b border-background-warm flex-shrink-0 space-y-4">
           <div className="relative w-full max-w-xs">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+            <label htmlFor="why-ulaa-search" className="sr-only">Search fields</label>
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
             <input
+              id="why-ulaa-search"
               type="text"
               value={pageSearch}
               onChange={e => setPageSearch(e.target.value)}
@@ -257,12 +259,14 @@ export default function AdminWhyULAA() {
             />
           </div>
           <div className="relative">
-            <div ref={tabBarRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
+            <div ref={tabBarRef} role="tablist" aria-label="Why ULAA sections" className="flex gap-2 overflow-x-auto scrollbar-hide">
               {SECTION_TITLES.map((title, i) => (
                 <button
                   key={title}
                   ref={el => { tabButtonRefs.current[i] = el; }}
                   type="button"
+                  role="tab"
+                  aria-selected={activeSection === i}
                   onClick={() => handleTabSelect(i)}
                   className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
                     activeSection === i
@@ -285,7 +289,7 @@ export default function AdminWhyULAA() {
 
         <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
           {pageSearchNoMatch && (
-            <p className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
+            <p role="alert" className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
           )}
           <div className="p-6 space-y-8">
 
@@ -293,8 +297,9 @@ export default function AdminWhyULAA() {
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">Section Text</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Sub Heading</label>
+              <label htmlFor="why-ulaa-sub-heading" className="block text-sm font-medium text-dark mb-1">Sub Heading</label>
               <input
+                id="why-ulaa-sub-heading"
                 value={content.sub_heading}
                 onChange={e => setField('sub_heading', e.target.value)}
                 className={inputClass}
@@ -302,8 +307,9 @@ export default function AdminWhyULAA() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Section Heading</label>
+              <label htmlFor="why-ulaa-heading" className="block text-sm font-medium text-dark mb-1">Section Heading</label>
               <input
+                id="why-ulaa-heading"
                 value={content.heading}
                 onChange={e => setField('heading', e.target.value)}
                 className={inputClass}
@@ -311,8 +317,9 @@ export default function AdminWhyULAA() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Subheading</label>
+              <label htmlFor="why-ulaa-subheading" className="block text-sm font-medium text-dark mb-1">Subheading</label>
               <textarea
+                id="why-ulaa-subheading"
                 value={content.subheading}
                 onChange={e => setField('subheading', e.target.value)}
                 rows={2}
@@ -340,16 +347,18 @@ export default function AdminWhyULAA() {
               hint="4:3 landscape, at least 800×600px — shown in a cropped card."
             />
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Title</label>
+              <label htmlFor={`why-ulaa-card-title-${index}`} className="block text-sm font-medium text-dark mb-1">Title</label>
               <input
+                id={`why-ulaa-card-title-${index}`}
                 value={feature.title}
                 onChange={e => updateFeature(index, { title: e.target.value })}
                 className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Description</label>
+              <label htmlFor={`why-ulaa-card-description-${index}`} className="block text-sm font-medium text-dark mb-1">Description</label>
               <textarea
+                id={`why-ulaa-card-description-${index}`}
                 value={feature.description}
                 onChange={e => updateFeature(index, { description: e.target.value })}
                 rows={2}
@@ -371,7 +380,7 @@ export default function AdminWhyULAA() {
             <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={resetToDefault}>
               Reset to Default
             </Button>
-            {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+            {saved && <span role="status" className="text-sm text-green-600 font-medium">Saved!</span>}
           </div>
         </div>
       </div>

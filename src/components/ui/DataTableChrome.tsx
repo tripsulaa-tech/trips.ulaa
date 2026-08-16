@@ -46,8 +46,10 @@ export function TableHeaderBar({
       </div>
       <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
         <div className="relative flex-1 sm:w-72">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+          <label htmlFor={`table-search-${title.replace(/\s+/g, '-').toLowerCase()}`} className="sr-only">{searchPlaceholder}</label>
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
           <input
+            id={`table-search-${title.replace(/\s+/g, '-').toLowerCase()}`}
             type="text"
             value={searchValue}
             onChange={ev => onSearchChange(ev.target.value)}
@@ -60,7 +62,7 @@ export function TableHeaderBar({
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark"
               aria-label="Clear search"
             >
-              <X size={14} />
+              <X size={14} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -71,7 +73,7 @@ export function TableHeaderBar({
             title={total === 0 ? 'Nothing to export' : `${exportLabel} — exports exactly what's currently filtered`}
             className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border-2 border-background-warm text-dark text-sm font-button font-semibold hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:hover:border-background-warm disabled:hover:text-dark transition-colors"
           >
-            <Download size={14} />
+            <Download size={14} aria-hidden="true" />
             <span className="hidden sm:inline">{exportLabel}</span>
           </button>
         )}
@@ -107,10 +109,11 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
   if (totalPages <= 1) return null;
   const pages = getPageWindow(currentPage, totalPages);
   return (
-    <div className="flex items-center justify-end flex-wrap gap-1.5 px-4 sm:px-5 py-3.5 border-t border-background-warm">
+    <nav aria-label="Table pagination" className="flex items-center justify-end flex-wrap gap-1.5 px-4 sm:px-5 py-3.5 border-t border-background-warm">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
+        aria-label="Previous page"
         className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 h-9 rounded-md border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
       >
         &lsaquo; Prev
@@ -125,6 +128,7 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
             key={p}
             onClick={() => onPageChange(p)}
             aria-current={p === currentPage ? 'page' : undefined}
+            aria-label={`Page ${p}`}
             className={`min-w-[36px] h-9 px-2 inline-flex items-center justify-center text-xs font-button font-semibold rounded-md border-2 transition-colors ${
               p === currentPage
                 ? 'bg-primary border-primary text-white'
@@ -138,11 +142,12 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
+        aria-label="Next page"
         className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 h-9 rounded-md border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
       >
         Next &rsaquo;
       </button>
-    </div>
+    </nav>
   );
 }
 
@@ -163,15 +168,20 @@ interface SortableThProps<K extends string> {
 
 export function SortableTh<K extends string>({ label, sortKey, activeKey, direction, onSort, className = '' }: SortableThProps<K>) {
   const isActive = activeKey === sortKey;
+  const ariaSort: 'ascending' | 'descending' | 'none' = isActive
+    ? (direction === 'asc' ? 'ascending' : 'descending')
+    : 'none';
+  const nextDirectionLabel = isActive && direction === 'asc' ? 'descending' : 'ascending';
   return (
-    <th className={className}>
+    <th className={className} aria-sort={ariaSort}>
       <button
         type="button"
         onClick={() => onSort(sortKey)}
+        aria-label={`Sort by ${label}, ${nextDirectionLabel}`}
         className="inline-flex items-center gap-1 hover:text-primary transition-colors"
       >
         <span>{label}</span>
-        <span className="flex flex-col justify-center leading-none">
+        <span className="flex flex-col justify-center leading-none" aria-hidden="true">
           <ChevronUp size={10} className={`-mb-0.5 ${isActive && direction === 'asc' ? 'text-primary' : 'text-dark-muted/30'}`} />
           <ChevronDown size={10} className={isActive && direction === 'desc' ? 'text-primary' : 'text-dark-muted/30'} />
         </span>
@@ -229,12 +239,12 @@ export function ContactQuickLinks({ phone, email, name, tripTitle, size = 'sm' }
       )}
       {hasPhone && (
         <a href={`tel:${phone}`} title="Call" aria-label="Call" className={btnClass}>
-          <Phone size={iconSize} />
+          <Phone size={iconSize} aria-hidden="true" />
         </a>
       )}
       {hasEmail && (
         <a href={`mailto:${email}`} title="Email" aria-label="Email" className={btnClass}>
-          <Mail size={iconSize} />
+          <Mail size={iconSize} aria-hidden="true" />
         </a>
       )}
     </span>

@@ -45,8 +45,9 @@ export default function NotInterestedModal({
           This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.
         </p>
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Reason</label>
+          <label htmlFor="not-interested-reason" className="block text-sm font-medium text-dark mb-1">Reason</label>
           <Select
+            inputId="not-interested-reason"
             value={closedReason}
             onChange={val => setClosedReason(val as ClosedReason)}
             options={NOT_INTERESTED_REASON_OPTIONS}

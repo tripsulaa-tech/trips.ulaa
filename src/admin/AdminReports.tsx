@@ -75,7 +75,7 @@ function StatCard({
   return (
     <div className="bg-white rounded-lg p-4 shadow-card min-w-0">
       <div className="flex items-center gap-2">
-        <Icon size={20} className="shrink-0 text-primary" />
+        <Icon size={20} className="shrink-0 text-primary" aria-hidden="true" />
         <p className="font-display text-2xl font-bold text-dark leading-tight truncate">{value}</p>
       </div>
       <p className="text-dark-muted text-xs font-medium truncate mt-1">{label}</p>
@@ -224,6 +224,7 @@ export default function AdminReports() {
                 key={opt.value}
                 type="button"
                 onClick={() => setPeriod(opt.value)}
+                aria-pressed={period === opt.value}
                 className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${
                   period === opt.value ? 'bg-primary text-white' : 'bg-white text-dark-muted shadow-card hover:text-dark'
                 }`}
@@ -235,7 +236,7 @@ export default function AdminReports() {
         </div>
 
         {loading ? (
-          <p className="text-dark-muted text-sm py-12 text-center">Loading reports…</p>
+          <p role="status" className="text-dark-muted text-sm py-12 text-center">Loading reports…</p>
         ) : (
           <>
             {/* ---- Lead Reports ---- */}
@@ -302,7 +303,7 @@ export default function AdminReports() {
                       return (
                         <div key={d.label} className="flex items-center gap-3">
                           <span className="text-xs font-semibold text-dark-muted w-4 shrink-0">{i + 1}</span>
-                          <MapPin size={14} className="text-primary shrink-0" />
+                          <MapPin size={14} className="text-primary shrink-0" aria-hidden="true" />
                           <span className="text-sm text-dark font-medium truncate flex-1 min-w-0">{d.label}</span>
                           <div className="hidden sm:block w-28 h-1.5 rounded-full bg-background-warm overflow-hidden shrink-0">
                             <div className="h-full bg-primary rounded-full" style={{ width: `${Math.max(6, (d.count / max) * 100)}%` }} />

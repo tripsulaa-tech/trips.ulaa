@@ -472,7 +472,7 @@ export default function AdminWaitlist() {
             className="bg-white rounded-lg p-4 shadow-card min-w-0"
           >
             <div className="flex items-center gap-2">
-              <Icon size={20} className="shrink-0 text-primary" />
+              <Icon size={20} className="shrink-0 text-primary" aria-hidden="true" />
               <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
             </div>
             <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
@@ -496,7 +496,7 @@ export default function AdminWaitlist() {
               className="shrink-0 w-[132px] snap-start bg-white rounded-lg p-3 shadow-card"
             >
               <div className="flex items-center gap-2">
-                <Icon size={18} className="shrink-0 text-primary" />
+                <Icon size={18} className="shrink-0 text-primary" aria-hidden="true" />
                 <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
               </div>
               <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
@@ -642,7 +642,7 @@ export default function AdminWaitlist() {
       <div className="space-y-6">
         <div className="flex justify-end">
           <Button variant="primary" size="sm" onClick={openAdd}>
-            <Plus size={16} /> Add to Waitlist
+            <Plus size={16} aria-hidden="true" /> Add to Waitlist
           </Button>
         </div>
 
@@ -653,7 +653,7 @@ export default function AdminWaitlist() {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3"
           >
-            <PartyPopper size={18} className="text-green-600 shrink-0" />
+            <PartyPopper size={18} className="text-green-600 shrink-0" aria-hidden="true" />
             <p className="text-sm text-green-800">
               <span className="font-semibold">
                 {seatOpenCount} {seatOpenCount === 1 ? 'person is' : 'people are'} waiting
@@ -672,8 +672,10 @@ export default function AdminWaitlist() {
             below. Bound to the same searchQuery state the desktop
             TableHeaderBar search uses. */}
         <div className="relative sm:hidden">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+          <label htmlFor="waitlist-mobile-search" className="sr-only">Search name, trip, or contact</label>
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
           <input
+            id="waitlist-mobile-search"
             type="text"
             value={searchQuery}
             onChange={ev => setSearchQuery(ev.target.value)}
@@ -686,7 +688,7 @@ export default function AdminWaitlist() {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark p-1"
               aria-label="Clear search"
             >
-              <X size={16} />
+              <X size={16} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -700,33 +702,38 @@ export default function AdminWaitlist() {
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(o => !o)}
+            aria-expanded={mobileFiltersOpen}
+            aria-controls="waitlist-mobile-filters-panel"
             className="w-full flex items-center gap-2 sm:pointer-events-none sm:cursor-default"
           >
-            <SlidersHorizontal size={16} className="text-dark shrink-0" />
+            <SlidersHorizontal size={16} className="text-dark shrink-0" aria-hidden="true" />
             <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1 text-left">Filters</span>
             {activeFilterCount > 0 && (
               <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-md bg-primary/10 text-primary text-[11px] font-button font-semibold">
                 {activeFilterCount} active
               </span>
             )}
-            <ChevronDown size={18} className={`sm:hidden shrink-0 text-dark-muted transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown size={18} className={`sm:hidden shrink-0 text-dark-muted transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
           </button>
 
-          <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row sm:items-end gap-3 mt-4`}>
+          <div id="waitlist-mobile-filters-panel" className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row sm:items-end gap-3 mt-4`}>
             {/* Filters + Clear All — sit together in one row at the bottom
                 of the panel. */}
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2 flex-1 min-w-0">
               {/* Status */}
               <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Status</label>
+                <label htmlFor="waitlist-filter-status" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Status</label>
                 <button
+                  id="waitlist-filter-status"
+                  aria-haspopup="listbox"
+                  aria-expanded={openFilterPanel === 'status'}
                   onClick={() => setOpenFilterPanel(p => (p === 'status' ? null : 'status'))}
                   className={`w-full flex items-center justify-between gap-2 rounded-md border-2 px-3 py-2 bg-white transition-colors ${
                     openFilterPanel === 'status' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                   }`}
                 >
                   <span className="text-sm font-button font-medium text-primary truncate">{statusFilter === 'all' ? 'All' : STATUS_CONFIG[statusFilter].label}</span>
-                  <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'status' ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'status' ? 'rotate-180' : ''}`} aria-hidden="true" />
                 </button>
                 {openFilterPanel === 'status' && (
                   <FilterDropdown
@@ -742,8 +749,11 @@ export default function AdminWaitlist() {
               {/* Trip */}
               {trips.length > 0 && (
                 <div className="relative w-full sm:w-auto sm:min-w-[160px]">
-                  <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
+                  <label htmlFor="waitlist-filter-trip" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                   <button
+                    id="waitlist-filter-trip"
+                    aria-haspopup="listbox"
+                    aria-expanded={openFilterPanel === 'trip'}
                     onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
                     className={`w-full flex items-center justify-between gap-2 rounded-md border-2 px-3 py-2 bg-white transition-colors ${
                       openFilterPanel === 'trip' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
@@ -752,7 +762,7 @@ export default function AdminWaitlist() {
                     <span className="text-sm font-button font-medium text-primary truncate">
                       {tripFilter === 'all' ? 'All' : trips.find(t => t.value === tripFilter)?.label || 'All'}
                     </span>
-                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} aria-hidden="true" />
                   </button>
                   {openFilterPanel === 'trip' && (
                     <FilterDropdown
@@ -779,7 +789,7 @@ export default function AdminWaitlist() {
                   : 'border-background-warm text-dark hover:border-primary/30'
               }`}
             >
-              <RefreshCw size={13} /> Clear All
+              <RefreshCw size={13} aria-hidden="true" /> Clear All
             </button>
           </div>
         </div>
@@ -849,7 +859,7 @@ export default function AdminWaitlist() {
                                 title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
                                 className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 whitespace-nowrap"
                               >
-                                <CheckCircle2 size={9} /> {convertedCount(e)}/{seatsNeeded(e)} converted
+                                <CheckCircle2 size={9} aria-hidden="true" /> {convertedCount(e)}/{seatsNeeded(e)} converted
                               </span>
                             )}
                           </p>
@@ -859,7 +869,7 @@ export default function AdminWaitlist() {
                           )}
                           {messageWithoutFoodBreakdown(e) && (
                             <p className="text-dark-muted text-xs mt-1 flex items-start gap-1 max-w-xs">
-                              <MessageSquare size={11} className="shrink-0 mt-0.5" />
+                              <MessageSquare size={11} className="shrink-0 mt-0.5" aria-hidden="true" />
                               <span className="line-clamp-2">{messageWithoutFoodBreakdown(e)}</span>
                             </p>
                           )}
@@ -870,14 +880,14 @@ export default function AdminWaitlist() {
                               title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
                               className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
                             >
-                              <Users size={12} className="shrink-0" /> {groupLabel(e)} · {e.group_size}
+                              <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_size}
                             </span>
                           ) : (
                             <span
                               title="Booked individually, not part of a group"
                               className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-slate-100 text-dark-muted whitespace-nowrap"
                             >
-                              <UserPlus size={12} className="shrink-0" /> Solo
+                              <UserPlus size={12} className="shrink-0" aria-hidden="true" /> Solo
                             </span>
                           )}
                         </td>
@@ -902,7 +912,7 @@ export default function AdminWaitlist() {
                           <p className="truncate">{e.trip_title || '—'}</p>
                           {hasSeatOpen(e) && (
                             <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
-                              <PartyPopper size={10} className="shrink-0" />
+                              <PartyPopper size={10} className="shrink-0" aria-hidden="true" />
                               {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
                             </span>
                           )}
@@ -916,8 +926,8 @@ export default function AdminWaitlist() {
                           )}
                         </td>
                         <td className="px-4 py-4 text-dark-muted hidden md:table-cell">
-                          <p className="flex items-center gap-1 text-xs"><Mail size={11} className="shrink-0" /> {e.email}</p>
-                          <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" /> {e.phone}</p>
+                          <p className="flex items-center gap-1 text-xs"><Mail size={11} className="shrink-0" aria-hidden="true" /> {e.email}</p>
+                          <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" aria-hidden="true" /> {e.phone}</p>
                           {e.city && <p className="text-xs mt-0.5">{e.city}</p>}
                           {e.emergency_contact && <p className="text-xs mt-0.5">Emergency: {e.emergency_contact}</p>}
                           <div className="mt-1.5">
@@ -931,7 +941,7 @@ export default function AdminWaitlist() {
                           {e.status === 'converted' ? (
                             <div className="flex flex-col items-end gap-1">
                               <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
-                                <CheckCircle2 size={12} className="shrink-0" />
+                                <CheckCircle2 size={12} className="shrink-0" aria-hidden="true" />
                                 Converted{convertedCount(e) > 1 ? ` (${convertedCount(e)}/${convertedCount(e)})` : ''}
                               </span>
                               {convertedIds(e).some(id => cancelledEnquiryIds.has(id)) && (
@@ -939,7 +949,7 @@ export default function AdminWaitlist() {
                                   title="At least one of this group's bookings was cancelled after converting — that seat is free again."
                                   className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-red-100 text-red-700 whitespace-nowrap"
                                 >
-                                  <XCircle size={12} className="shrink-0" />
+                                  <XCircle size={12} className="shrink-0" aria-hidden="true" />
                                   {convertedIds(e).length > 1
                                     ? `${convertedIds(e).filter(id => cancelledEnquiryIds.has(id)).length}/${convertedIds(e).length} cancelled`
                                     : 'Booking cancelled'}
@@ -959,7 +969,9 @@ export default function AdminWaitlist() {
                             </div>
                           ) : (
                             <div className="flex flex-col items-end gap-1">
+                              <label htmlFor={`waitlist-status-${e.id}`} className="sr-only">Status for {e.full_name}</label>
                               <Select
+                                inputId={`waitlist-status-${e.id}`}
                                 value={e.status}
                                 disabled={updating === e.id}
                                 onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
@@ -972,7 +984,7 @@ export default function AdminWaitlist() {
                                     offerExpiryLabel(e.offer_expiry)!.overdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
                                   }`}
                                 >
-                                  <Clock size={9} className="shrink-0" /> {offerExpiryLabel(e.offer_expiry)!.text}
+                                  <Clock size={9} className="shrink-0" aria-hidden="true" /> {offerExpiryLabel(e.offer_expiry)!.text}
                                 </span>
                               )}
                             </div>
@@ -990,7 +1002,7 @@ export default function AdminWaitlist() {
                                     : 'border-primary/40 text-primary hover:bg-primary/10'
                                 }`}
                               >
-                                <UserPlus size={12} className="shrink-0" />
+                                <UserPlus size={12} className="shrink-0" aria-hidden="true" />
                                 Convert
                               </button>
                             )}
@@ -1001,7 +1013,7 @@ export default function AdminWaitlist() {
                               aria-label="Remove from waitlist"
                               className="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={13} aria-hidden="true" />
                             </button>
                           </div>
                         </td>
@@ -1037,7 +1049,7 @@ export default function AdminWaitlist() {
                               title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
                               className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
                             >
-                              <Users size={9} /> {groupLabel(e)} · {e.group_size}
+                              <Users size={9} aria-hidden="true" /> {groupLabel(e)} · {e.group_size}
                             </span>
                           )}
                           {canConvert(e) && (queueRank.get(e.id)?.total ?? 0) > 1 && (
@@ -1057,14 +1069,14 @@ export default function AdminWaitlist() {
                               title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
                               className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 whitespace-nowrap"
                             >
-                              <CheckCircle2 size={9} /> {convertedCount(e)}/{seatsNeeded(e)} converted
+                              <CheckCircle2 size={9} aria-hidden="true" /> {convertedCount(e)}/{seatsNeeded(e)} converted
                             </span>
                           )}
                         </p>
                         <p className="text-dark-muted text-xs truncate">{e.trip_title || 'Untitled trip'}</p>
                         {hasSeatOpen(e) && (
                           <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
-                            <PartyPopper size={10} className="shrink-0" />
+                            <PartyPopper size={10} className="shrink-0" aria-hidden="true" />
                             {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
                           </span>
                         )}
@@ -1075,7 +1087,7 @@ export default function AdminWaitlist() {
                         )}
                       </div>
                       <span className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
-                        <cfg.icon size={11} className="shrink-0" />
+                        <cfg.icon size={11} className="shrink-0" aria-hidden="true" />
                         {cfg.label}
                       </span>
                     </div>
@@ -1084,7 +1096,7 @@ export default function AdminWaitlist() {
                       <div className="flex items-center justify-between gap-2">
                         <p className="flex items-center gap-1.5 min-w-0">
                           <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                            <Mail size={10} />
+                            <Mail size={10} aria-hidden="true" />
                           </span>
                           <span className="truncate">{e.email}</span>
                         </p>
@@ -1092,7 +1104,7 @@ export default function AdminWaitlist() {
                       </div>
                       <p className="flex items-center gap-1.5">
                         <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                          <Phone size={10} />
+                          <Phone size={10} aria-hidden="true" />
                         </span>
                         {e.phone}
                       </p>
@@ -1103,7 +1115,7 @@ export default function AdminWaitlist() {
                             <>
                               <span className="inline-flex items-center gap-1.5">
                                 <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                  <User size={10} />
+                                  <User size={10} aria-hidden="true" />
                                 </span>
                                 {e.age} yrs
                               </span>
@@ -1130,7 +1142,7 @@ export default function AdminWaitlist() {
                           )}
                           <span className="inline-flex items-center gap-1.5">
                             <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                              <CalendarDays size={10} />
+                              <CalendarDays size={10} aria-hidden="true" />
                             </span>
                             {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
@@ -1140,12 +1152,12 @@ export default function AdminWaitlist() {
                       {e.emergency_contact && <p>Emergency: {e.emergency_contact}</p>}
                       {!(e.age || e.food_preference || foodBreakdown(e)) && (
                         <p className="flex items-center gap-1.5">
-                          <CalendarDays size={11} className="shrink-0" /> {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
+                          <CalendarDays size={11} className="shrink-0" aria-hidden="true" /> {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       )}
                       {messageWithoutFoodBreakdown(e) && (
                         <p className="flex items-start gap-1.5 mt-1.5">
-                          <MessageSquare size={12} className="shrink-0 mt-0.5" />
+                          <MessageSquare size={12} className="shrink-0 mt-0.5" aria-hidden="true" />
                           <span>{messageWithoutFoodBreakdown(e)}</span>
                         </p>
                       )}
@@ -1160,7 +1172,7 @@ export default function AdminWaitlist() {
                             : 'border-primary/40 text-primary hover:bg-primary/10'
                         }`}
                       >
-                        <UserPlus size={14} className="shrink-0" />
+                        <UserPlus size={14} className="shrink-0" aria-hidden="true" />
                         Convert to Enquiry
                       </button>
                     )}
@@ -1170,12 +1182,12 @@ export default function AdminWaitlist() {
                         <div className="flex-1 flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
-                              <CheckCircle2 size={12} className="shrink-0" />
+                              <CheckCircle2 size={12} className="shrink-0" aria-hidden="true" />
                               Converted{convertedCount(e) > 1 ? ` (${convertedCount(e)}/${convertedCount(e)})` : ''}
                             </span>
                             {convertedIds(e).some(id => cancelledEnquiryIds.has(id)) && (
                               <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-red-100 text-red-700 whitespace-nowrap">
-                                <XCircle size={12} className="shrink-0" />
+                                <XCircle size={12} className="shrink-0" aria-hidden="true" />
                                 {convertedIds(e).length > 1
                                   ? `${convertedIds(e).filter(id => cancelledEnquiryIds.has(id)).length}/${convertedIds(e).length} cancelled`
                                   : 'Booking cancelled'}
@@ -1196,7 +1208,9 @@ export default function AdminWaitlist() {
                         </div>
                       ) : (
                         <div className="flex-1 flex flex-col gap-1">
+                          <label htmlFor={`waitlist-status-mobile-${e.id}`} className="sr-only">Status for {e.full_name}</label>
                           <Select
+                            inputId={`waitlist-status-mobile-${e.id}`}
                             value={e.status}
                             disabled={updating === e.id}
                             onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
@@ -1209,7 +1223,7 @@ export default function AdminWaitlist() {
                                 offerExpiryLabel(e.offer_expiry)!.overdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
                               }`}
                             >
-                              <Clock size={9} className="shrink-0" /> {offerExpiryLabel(e.offer_expiry)!.text}
+                              <Clock size={9} className="shrink-0" aria-hidden="true" /> {offerExpiryLabel(e.offer_expiry)!.text}
                             </span>
                           )}
                         </div>
@@ -1220,7 +1234,7 @@ export default function AdminWaitlist() {
                         aria-label="Remove from waitlist"
                         className="shrink-0 w-9 h-9 inline-flex items-center justify-center rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={14} aria-hidden="true" />
                       </button>
                     </div>
                   </motion.div>
@@ -1248,32 +1262,37 @@ export default function AdminWaitlist() {
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add to Waitlist" size="md">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
+            <label htmlFor="wl-add-name" className="block text-sm font-medium text-dark mb-1">Full Name *</label>
             <input
+              id="wl-add-name"
               type="text"
               value={form.full_name}
               onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
               onBlur={() => setFormTouched(prev => new Set(prev).add('full_name'))}
+              aria-describedby={formTouched.has('full_name') && formErrors.full_name ? 'wl-add-name-error' : undefined}
               className={inputClass}
               placeholder="e.g. Priya Sharma"
             />
-            {formTouched.has('full_name') && formErrors.full_name && <p className="text-red-500 text-xs mt-1">{formErrors.full_name}</p>}
+            {formTouched.has('full_name') && formErrors.full_name && <p id="wl-add-name-error" role="alert" className="text-red-500 text-xs mt-1">{formErrors.full_name}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Phone *</label>
+            <label htmlFor="wl-add-phone" className="block text-sm font-medium text-dark mb-1">Phone *</label>
             <input
+              id="wl-add-phone"
               type="tel"
               value={form.phone}
               onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
               onBlur={() => setFormTouched(prev => new Set(prev).add('phone'))}
+              aria-describedby={formTouched.has('phone') && formErrors.phone ? 'wl-add-phone-error' : undefined}
               className={inputClass}
               placeholder="e.g. 98765 43210"
             />
-            {formTouched.has('phone') && formErrors.phone && <p className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
+            {formTouched.has('phone') && formErrors.phone && <p id="wl-add-phone-error" role="alert" className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Email</label>
+            <label htmlFor="wl-add-email" className="block text-sm font-medium text-dark mb-1">Email</label>
             <input
+              id="wl-add-email"
               type="email"
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
@@ -1282,8 +1301,9 @@ export default function AdminWaitlist() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Age</label>
+            <label htmlFor="wl-add-age" className="block text-sm font-medium text-dark mb-1">Age</label>
             <input
+              id="wl-add-age"
               type="number"
               min={0}
               value={form.age}
@@ -1293,8 +1313,9 @@ export default function AdminWaitlist() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">City</label>
+            <label htmlFor="wl-add-city" className="block text-sm font-medium text-dark mb-1">City</label>
             <input
+              id="wl-add-city"
               type="text"
               value={form.city}
               onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
@@ -1303,8 +1324,9 @@ export default function AdminWaitlist() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Emergency Contact</label>
+            <label htmlFor="wl-add-emergency" className="block text-sm font-medium text-dark mb-1">Emergency Contact</label>
             <input
+              id="wl-add-emergency"
               type="text"
               value={form.emergency_contact}
               onChange={e => setForm(f => ({ ...f, emergency_contact: e.target.value }))}
@@ -1313,8 +1335,9 @@ export default function AdminWaitlist() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Trip *</label>
+            <label htmlFor="wl-add-trip" className="block text-sm font-medium text-dark mb-1">Trip *</label>
             <Select
+              inputId="wl-add-trip"
               value={form.trip_id}
               onChange={val => {
                 setForm(f => ({ ...f, trip_id: val }));
@@ -1322,33 +1345,37 @@ export default function AdminWaitlist() {
               }}
               options={[{ value: '', label: '— Select a trip —' }, ...allTrips.map(t => ({ value: t.id, label: t.title }))]}
             />
-            {formTouched.has('trip_id') && formErrors.trip_id && <p className="text-red-500 text-xs mt-1">{formErrors.trip_id}</p>}
+            {formTouched.has('trip_id') && formErrors.trip_id && <p role="alert" className="text-red-500 text-xs mt-1">{formErrors.trip_id}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <label htmlFor="wl-add-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
             <Select
+              inputId="wl-add-food"
               value={form.food_preference}
               onChange={val => setForm(f => ({ ...f, food_preference: val as WaitlistForm['food_preference'] }))}
               options={FOOD_PREFERENCE_OPTIONS}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Group Size</label>
+            <label htmlFor="wl-add-group-size" className="block text-sm font-medium text-dark mb-1">Group Size</label>
             <input
+              id="wl-add-group-size"
               type="number"
               min={1}
               value={form.group_size}
               onChange={e => setForm(f => ({ ...f, group_size: e.target.value === '' ? '' : +e.target.value }))}
+              aria-describedby="wl-add-group-size-hint"
               className={inputClass}
               placeholder="Leave blank for solo"
             />
-            <p className="text-[11px] text-dark-muted mt-1">
+            <p id="wl-add-group-size-hint" className="text-[11px] text-dark-muted mt-1">
               Only how many seats they need together — not the number of separate people they're asking on behalf of.
             </p>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Notes</label>
+            <label htmlFor="wl-add-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
             <textarea
+              id="wl-add-notes"
               value={form.message}
               onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
               className={`${inputClass} min-h-[80px] resize-none`}
@@ -1386,7 +1413,7 @@ export default function AdminWaitlist() {
             exit={{ opacity: 0, y: 12 }}
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-dark text-white text-sm font-medium px-4 py-2.5 rounded-md shadow-warm-lg"
           >
-            <CheckCircle2 size={16} className="text-green-400 shrink-0" />
+            <CheckCircle2 size={16} className="text-green-400 shrink-0" aria-hidden="true" />
             {toast}
           </motion.div>
         )}

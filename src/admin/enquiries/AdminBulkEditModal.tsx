@@ -59,8 +59,9 @@ export default function BulkEditModal({
         </p>
 
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+          <label htmlFor="bulk-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
           <Select
+            inputId="bulk-food"
             value={bulkForm.food_preference}
             onChange={val => setBulkForm(f => ({ ...f, food_preference: val as BulkEditForm['food_preference'] }))}
             options={BULK_FOOD_OPTIONS}
@@ -68,8 +69,9 @@ export default function BulkEditModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Package</label>
+          <label htmlFor="bulk-package" className="block text-sm font-medium text-dark mb-1">Package</label>
           <Select
+            inputId="bulk-package"
             value={bulkForm.package_type}
             onChange={val => {
               const packageType = val as BulkEditForm['package_type'];
@@ -101,8 +103,9 @@ export default function BulkEditModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Enter Money — Total Amount (₹)</label>
+          <label htmlFor="bulk-total-amount" className="block text-sm font-medium text-dark mb-1">Enter Money — Total Amount (₹)</label>
           <input
+            id="bulk-total-amount"
             type="number"
             min={0}
             value={bulkForm.total_amount}
@@ -113,28 +116,32 @@ export default function BulkEditModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
+          <label htmlFor="bulk-amount-paid" className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
           <input
+            id="bulk-amount-paid"
             type="number"
             min={0}
             value={bulkForm.amount_paid}
             onChange={ev => setBulkForm(f => ({ ...f, amount_paid: parseNonNegative(ev.target.value) }))}
+            aria-invalid={!!overpaid}
+            aria-describedby={overpaid ? 'bulk-amount-paid-error' : 'bulk-amount-paid-hint'}
             className={inputClass}
             placeholder="Leave blank to leave unchanged"
           />
-          <p className="text-[11px] text-dark-muted mt-1">
+          <p id="bulk-amount-paid-hint" className="text-[11px] text-dark-muted mt-1">
             Sets what's been collected so far for every selected enquiry, as a new total — not added on top of what's already recorded. Leave blank to leave each one's amount paid as-is.
           </p>
           {overpaid && (
-            <p className={errorClass}>
+            <p id="bulk-amount-paid-error" role="alert" className={errorClass}>
               Amount paid can't exceed the total amount — this would overpay {overpaid.full_name}. Adjust the amount or set a matching total amount for the selection.
             </p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Status</label>
+          <label htmlFor="bulk-status" className="block text-sm font-medium text-dark mb-1">Status</label>
           <Select
+            inputId="bulk-status"
             value={bulkForm.status}
             onChange={val => setBulkForm(f => ({ ...f, status: val as BulkEditForm['status'] }))}
             options={BULK_STATUS_OPTIONS}
@@ -147,7 +154,7 @@ export default function BulkEditModal({
         </div>
 
         {!hasChanges && (
-          <p className={errorClass}>Pick at least one field to change before saving — everything is still set to "No change".</p>
+          <p role="alert" className={errorClass}>Pick at least one field to change before saving — everything is still set to "No change".</p>
         )}
 
         <div className="flex gap-3 pt-2">

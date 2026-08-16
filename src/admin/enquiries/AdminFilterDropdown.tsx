@@ -15,6 +15,7 @@ export default function FilterDropdown<T extends string>({
 }) {
   return (
     <div
+      role="listbox"
       className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-md shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
     >
       {options.map((opt, i) => {
@@ -31,6 +32,8 @@ export default function FilterDropdown<T extends string>({
             )}
             <button
               onClick={() => onSelect(opt.key)}
+              role="option"
+              aria-selected={value === opt.key}
               className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-button text-left transition-colors ${
                 value === opt.key ? 'bg-primary/10 text-primary font-semibold' : 'text-dark-muted hover:bg-background-warm'
               }`}

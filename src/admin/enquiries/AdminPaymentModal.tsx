@@ -89,13 +89,14 @@ export default function PaymentModal({
               <p className="text-dark-muted text-xs truncate">{paymentTarget.trip_title || 'No trip linked'}</p>
             </div>
             <span className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap shrink-0 ${foodBadge(paymentTarget).color}`}>
-              <FoodMark type={foodPreferenceKey(paymentTarget)} size={11} /> {foodBadge(paymentTarget).label}
+              <FoodMark type={foodPreferenceKey(paymentTarget)} size={11} aria-hidden="true" /> {foodBadge(paymentTarget).label}
             </span>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <label htmlFor="pay-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
             <Select
+              inputId="pay-food"
               value={paymentForm.food_preference}
               onChange={val => setPaymentForm(f => ({ ...f, food_preference: val as PaymentForm['food_preference'] }))}
               options={FOOD_PREFERENCE_OPTIONS}
@@ -103,8 +104,9 @@ export default function PaymentModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Package</label>
+            <label htmlFor="pay-package" className="block text-sm font-medium text-dark mb-1">Package</label>
             <Select
+              inputId="pay-package"
               value={paymentForm.package_type}
               onChange={val => {
                 const packageType = val as Enquiry['package_type'];
@@ -153,8 +155,9 @@ export default function PaymentModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
+              <label htmlFor="pay-total-amount" className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
               <input
+                id="pay-total-amount"
                 type="number"
                 min={0}
                 value={paymentForm.payment_type === 'extra_charge' ? '' : paymentForm.total_amount}
@@ -165,18 +168,21 @@ export default function PaymentModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">
+              <label htmlFor="pay-amount-paid" className="block text-sm font-medium text-dark mb-1">
                 {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
               </label>
               <input
+                id="pay-amount-paid"
                 type="number"
                 min={0}
                 value={paymentForm.amount_paid}
                 onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
+                aria-invalid={!!paymentErrors.amount_paid}
+                aria-describedby={paymentErrors.amount_paid ? 'pay-amount-paid-error' : undefined}
                 className={inputClass}
                 placeholder="e.g. 5000"
               />
-              {paymentErrors.amount_paid && <p className={errorClass}>{paymentErrors.amount_paid}</p>}
+              {paymentErrors.amount_paid && <p id="pay-amount-paid-error" role="alert" className={errorClass}>{paymentErrors.amount_paid}</p>}
             </div>
           </div>
 
@@ -184,8 +190,9 @@ export default function PaymentModal({
               shape as Generate Invoice, rather than asking for a new
               running total and inferring the label from it. */}
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Payment Type</label>
+            <label htmlFor="pay-type" className="block text-sm font-medium text-dark mb-1">Payment Type</label>
             <Select
+              inputId="pay-type"
               value={paymentForm.payment_type}
               onChange={val => setPaymentForm(f => ({ ...f, payment_type: val as PaymentForm['payment_type'] }))}
               options={availablePaymentTypeOptions(paymentForm, paymentTarget.amount_paid || 0)}
@@ -203,8 +210,9 @@ export default function PaymentModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Status</label>
+            <label htmlFor="pay-status" className="block text-sm font-medium text-dark mb-1">Status</label>
             <Select
+              inputId="pay-status"
               value={paymentForm.status}
               onChange={val => setPaymentForm(f => ({ ...f, status: val as PaymentForm['status'] }))}
               options={GENERATE_INVOICE_STATUS_OPTIONS}
@@ -240,19 +248,21 @@ export default function PaymentModal({
           {paymentForm.status === 'paid' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Payment Method</label>
+                <label htmlFor="pay-method" className="block text-sm font-medium text-dark mb-1">Payment Method</label>
                 <Select
+                  inputId="pay-method"
                   value={paymentForm.payment_method}
                   onChange={val => setPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
                   options={PAYMENT_METHOD_OPTIONS}
                   placeholder="Select method"
                   size="sm"
                 />
-                {paymentErrors.payment_method && <p className={errorClass}>{paymentErrors.payment_method}</p>}
+                {paymentErrors.payment_method && <p role="alert" className={errorClass}>{paymentErrors.payment_method}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
+                <label htmlFor="pay-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
                 <input
+                  id="pay-utr"
                   type="text"
                   value={paymentForm.payment_utr}
                   disabled={paymentForm.payment_method === 'Cash'}
@@ -260,7 +270,7 @@ export default function PaymentModal({
                   className={`${inputClass} ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder={paymentForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
                 />
-                {paymentErrors.payment_utr && <p className={errorClass}>{paymentErrors.payment_utr}</p>}
+                {paymentErrors.payment_utr && <p role="alert" className={errorClass}>{paymentErrors.payment_utr}</p>}
               </div>
             </div>
           )}
@@ -269,7 +279,7 @@ export default function PaymentModal({
               admin can see exactly what's already been recorded before
               changing the running total above. */}
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Payment History</label>
+            <label id="pay-history-label" className="block text-sm font-medium text-dark mb-1">Payment History</label>
             {paymentHistoryLoading ? (
               <p className="text-xs text-dark-muted">Loading…</p>
             ) : paymentHistory.length === 0 ? (
@@ -325,40 +335,44 @@ export default function PaymentModal({
                 </p>
               )}
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Refund Amount (₹)</label>
+                <label htmlFor="pay-refund-amount" className="block text-sm font-medium text-dark mb-1">Refund Amount (₹)</label>
                 <input
+                  id="pay-refund-amount"
                   type="number"
                   min={0}
                   value={paymentForm.refund_amount}
                   disabled={paymentTarget.is_no_show}
                   onChange={e => setPaymentForm(f => ({ ...f, refund_amount: parseNonNegative(e.target.value) }))}
+                  aria-describedby="pay-refund-amount-hint"
                   className={`${inputClass} ${paymentTarget.is_no_show ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder="How much has been refunded so far"
                 />
-                <p className="text-[11px] text-dark-muted mt-1">
+                <p id="pay-refund-amount-hint" className="text-[11px] text-dark-muted mt-1">
                   {paymentTarget.is_no_show
                     ? 'Locked at ₹0 for no-shows. Uncheck "no-show" above to enter a refund.'
                     : `They paid ${formatPrice(paymentTarget.amount_paid || 0)} in total.`}
                 </p>
-                {paymentErrors.refund_amount && <p className={errorClass}>{paymentErrors.refund_amount}</p>}
+                {paymentErrors.refund_amount && <p role="alert" className={errorClass}>{paymentErrors.refund_amount}</p>}
               </div>
 
               {!paymentTarget.is_no_show && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-dark mb-1">Refund Method</label>
+                    <label htmlFor="pay-refund-method" className="block text-sm font-medium text-dark mb-1">Refund Method</label>
                     <Select
+                      inputId="pay-refund-method"
                       value={paymentForm.refund_method}
                       onChange={val => setPaymentForm(f => ({ ...f, refund_method: val, refund_utr: val === 'Cash' ? '' : f.refund_utr }))}
                       options={REFUND_METHOD_OPTIONS}
                       placeholder="Select method"
                       size="sm"
                     />
-                    {paymentErrors.refund_method && <p className={errorClass}>{paymentErrors.refund_method}</p>}
+                    {paymentErrors.refund_method && <p role="alert" className={errorClass}>{paymentErrors.refund_method}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-dark mb-1">Refund UTR / Reference</label>
+                    <label htmlFor="pay-refund-utr" className="block text-sm font-medium text-dark mb-1">Refund UTR / Reference</label>
                     <input
+                      id="pay-refund-utr"
                       type="text"
                       value={paymentForm.refund_utr}
                       disabled={paymentForm.refund_method === 'Cash'}
@@ -366,11 +380,12 @@ export default function PaymentModal({
                       className={`${inputClass} ${paymentForm.refund_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
                       placeholder={paymentForm.refund_method === 'Cash' ? 'N/A for cash' : 'e.g. 987654XXXX'}
                     />
-                    {paymentErrors.refund_utr && <p className={errorClass}>{paymentErrors.refund_utr}</p>}
+                    {paymentErrors.refund_utr && <p role="alert" className={errorClass}>{paymentErrors.refund_utr}</p>}
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-dark mb-1">Refund Date</label>
+                    <label htmlFor="pay-refund-date" className="block text-sm font-medium text-dark mb-1">Refund Date</label>
                     <input
+                      id="pay-refund-date"
                       type="date"
                       value={paymentForm.refund_date}
                       onChange={e => setPaymentForm(f => ({ ...f, refund_date: e.target.value }))}
@@ -382,8 +397,9 @@ export default function PaymentModal({
 
               {!paymentTarget.is_no_show && (
                 <div>
-                  <label className="block text-sm font-medium text-dark mb-1">Refund Notes (optional)</label>
+                  <label htmlFor="pay-refund-notes" className="block text-sm font-medium text-dark mb-1">Refund Notes (optional)</label>
                   <textarea
+                    id="pay-refund-notes"
                     value={paymentForm.refund_notes}
                     onChange={e => setPaymentForm(f => ({ ...f, refund_notes: e.target.value }))}
                     rows={2}

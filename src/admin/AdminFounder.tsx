@@ -245,7 +245,7 @@ export default function AdminFounder() {
   if (loading) {
     return (
       <AdminLayout title="Founder">
-        <div className="text-center py-16 text-dark-muted">Loading…</div>
+        <div role="status" className="text-center py-16 text-dark-muted">Loading…</div>
       </AdminLayout>
     );
   }
@@ -262,8 +262,10 @@ export default function AdminFounder() {
       <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
         <div className="p-6 pb-4 border-b border-background-warm flex-shrink-0 space-y-4">
           <div className="relative w-full max-w-xs">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+            <label htmlFor="founder-search" className="sr-only">Search fields</label>
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
             <input
+              id="founder-search"
               type="text"
               value={pageSearch}
               onChange={e => setPageSearch(e.target.value)}
@@ -272,12 +274,14 @@ export default function AdminFounder() {
             />
           </div>
           <div className="relative">
-            <div ref={tabBarRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
+            <div ref={tabBarRef} role="tablist" aria-label="Founder sections" className="flex gap-2 overflow-x-auto scrollbar-hide">
               {SECTION_TITLES.map((title, i) => (
                 <button
                   key={title}
                   ref={el => { tabButtonRefs.current[i] = el; }}
                   type="button"
+                  role="tab"
+                  aria-selected={activeSection === i}
                   onClick={() => handleTabSelect(i)}
                   className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
                     activeSection === i
@@ -300,7 +304,7 @@ export default function AdminFounder() {
 
         <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
           {pageSearchNoMatch && (
-            <p className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
+            <p role="alert" className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
           )}
           <div className="p-6">
 
@@ -321,16 +325,18 @@ export default function AdminFounder() {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Name</label>
+              <label htmlFor="founder-name" className={labelClass}>Name</label>
               <input
+                id="founder-name"
                 value={content.name}
                 onChange={e => setFounder('name', e.target.value)}
                 className={inputClass}
               />
             </div>
             <div>
-              <label className={labelClass}>Designation</label>
+              <label htmlFor="founder-designation" className={labelClass}>Designation</label>
               <input
+                id="founder-designation"
                 value={content.designation}
                 onChange={e => setFounder('designation', e.target.value)}
                 className={inputClass}
@@ -339,8 +345,9 @@ export default function AdminFounder() {
             </div>
           </div>
           <div>
-            <label className={labelClass}>About / Description</label>
+            <label htmlFor="founder-description" className={labelClass}>About / Description</label>
             <textarea
+              id="founder-description"
               value={content.description}
               onChange={e => setFounder('description', e.target.value)}
               rows={4}
@@ -355,7 +362,7 @@ export default function AdminFounder() {
                 onClick={addSocial}
                 className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
               >
-                <Plus size={13} /> Add Link
+                <Plus size={13} aria-hidden="true" /> Add Link
               </button>
             </div>
             <p className="text-xs text-dark-muted -mt-1">
@@ -364,7 +371,9 @@ export default function AdminFounder() {
             {content.social_links.map((link: AboutFounderSocialLink, i: number) => (
               <div key={i} className="flex items-center gap-2">
                 <div className="w-36 flex-shrink-0">
+                  <label htmlFor={`founder-social-platform-${i}`} className="sr-only">Social link {i + 1} platform</label>
                   <input
+                    id={`founder-social-platform-${i}`}
                     value={link.platform}
                     onChange={e => updateSocial(i, 'platform', e.target.value)}
                     className={inputClass}
@@ -372,7 +381,9 @@ export default function AdminFounder() {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
+                  <label htmlFor={`founder-social-url-${i}`} className="sr-only">{link.platform || `Social link ${i + 1}`} URL or username</label>
                   <input
+                    id={`founder-social-url-${i}`}
                     value={link.url}
                     onChange={e => updateSocial(i, 'url', e.target.value)}
                     className={inputClass}
@@ -382,9 +393,10 @@ export default function AdminFounder() {
                 <button
                   type="button"
                   onClick={() => removeSocial(i)}
+                  aria-label={`Remove ${link.platform || `social link ${i + 1}`}`}
                   className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={14} aria-hidden="true" />
                 </button>
               </div>
             ))}
@@ -403,7 +415,7 @@ export default function AdminFounder() {
             <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={resetToDefault}>
               Reset to Default
             </Button>
-            {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+            {saved && <span role="status" className="text-sm text-green-600 font-medium">Saved!</span>}
           </div>
         </div>
       </div>

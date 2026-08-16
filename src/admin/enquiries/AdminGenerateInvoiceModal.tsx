@@ -101,8 +101,9 @@ export default function GenerateInvoiceModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Type</label>
+            <label htmlFor="gi-type" className="block text-sm font-medium text-dark mb-1">Type</label>
             <Select
+              inputId="gi-type"
               value={generateInvoiceForm.type}
               onChange={val => setGenerateInvoiceForm(f => ({ ...f, type: val }))}
               options={availableInvoiceTypeOptions(generateInvoiceForm, generateInvoiceTarget.total_amount || 0, generateInvoiceTarget.amount_paid || 0)}
@@ -120,22 +121,26 @@ export default function GenerateInvoiceModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Amount (₹)</label>
+            <label htmlFor="gi-amount" className="block text-sm font-medium text-dark mb-1">Amount (₹)</label>
             <input
+              id="gi-amount"
               type="number"
               min={0}
               value={generateInvoiceForm.amount}
               onChange={ev => setGenerateInvoiceForm(f => ({ ...f, amount: parseNonNegative(ev.target.value) }))}
               onBlur={() => setAmountTouched(true)}
+              aria-invalid={!!invoiceErrors.amount}
+              aria-describedby={invoiceErrors.amount ? 'gi-amount-error' : undefined}
               className={inputClass}
               placeholder="Amount for this invoice"
             />
-            {invoiceErrors.amount && <p className={errorClass}>{invoiceErrors.amount}</p>}
+            {invoiceErrors.amount && <p id="gi-amount-error" role="alert" className={errorClass}>{invoiceErrors.amount}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Status</label>
+            <label htmlFor="gi-status" className="block text-sm font-medium text-dark mb-1">Status</label>
             <Select
+              inputId="gi-status"
               value={generateInvoiceForm.status}
               onChange={val => setGenerateInvoiceForm(f => ({ ...f, status: val }))}
               options={GENERATE_INVOICE_STATUS_OPTIONS}
@@ -169,19 +174,21 @@ export default function GenerateInvoiceModal({
           {generateInvoiceForm.status === 'paid' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Payment Method</label>
+                <label htmlFor="gi-payment-method" className="block text-sm font-medium text-dark mb-1">Payment Method</label>
                 <Select
+                  inputId="gi-payment-method"
                   value={generateInvoiceForm.payment_method}
                   onChange={val => setGenerateInvoiceForm(f => ({ ...f, payment_method: val, utr_number: val === 'Cash' ? '' : f.utr_number }))}
                   options={PAYMENT_METHOD_OPTIONS}
                   placeholder="Select method"
                   size="sm"
                 />
-                {invoiceErrors.payment_method && <p className={errorClass}>{invoiceErrors.payment_method}</p>}
+                {invoiceErrors.payment_method && <p role="alert" className={errorClass}>{invoiceErrors.payment_method}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
+                <label htmlFor="gi-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
                 <input
+                  id="gi-utr"
                   type="text"
                   value={generateInvoiceForm.utr_number}
                   disabled={generateInvoiceForm.payment_method === 'Cash'}
@@ -189,7 +196,7 @@ export default function GenerateInvoiceModal({
                   className={`${inputClass} ${generateInvoiceForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder={generateInvoiceForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
                 />
-                {invoiceErrors.utr_number && <p className={errorClass}>{invoiceErrors.utr_number}</p>}
+                {invoiceErrors.utr_number && <p role="alert" className={errorClass}>{invoiceErrors.utr_number}</p>}
               </div>
             </div>
           )}
@@ -225,8 +232,9 @@ export default function GenerateInvoiceModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
+            <label htmlFor="gi-notes" className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
             <input
+              id="gi-notes"
               type="text"
               value={generateInvoiceForm.notes}
               onChange={ev => setGenerateInvoiceForm(f => ({ ...f, notes: ev.target.value }))}

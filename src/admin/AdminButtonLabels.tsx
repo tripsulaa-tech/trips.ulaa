@@ -83,10 +83,11 @@ export default function AdminButtonLabels() {
         <div className="app-scroll overflow-y-auto flex-1 min-h-0">
           <div className="p-6 space-y-5">
             <div>
-              <label className="block text-xs font-medium text-dark-muted mb-1">
+              <label htmlFor="btn-label-primary" className="block text-xs font-medium text-dark-muted mb-1">
                 Booking button (seats available)
               </label>
               <input
+                id="btn-label-primary"
                 value={labels.primaryCta}
                 onChange={e => setLabels(l => ({ ...l, primaryCta: e.target.value }))}
                 className={inputClass}
@@ -98,10 +99,11 @@ export default function AdminButtonLabels() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-dark-muted mb-1">
+              <label htmlFor="btn-label-waitlist" className="block text-xs font-medium text-dark-muted mb-1">
                 Booking button (trip full)
               </label>
               <input
+                id="btn-label-waitlist"
                 value={labels.waitlistCta}
                 onChange={e => setLabels(l => ({ ...l, waitlistCta: e.target.value }))}
                 className={inputClass}
@@ -121,7 +123,7 @@ export default function AdminButtonLabels() {
             <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={resetToDefault}>
               Reset to Default
             </Button>
-            {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+            {saved && <span role="status" className="text-sm text-green-600 font-medium">Saved!</span>}
           </div>
         </div>
       </div>

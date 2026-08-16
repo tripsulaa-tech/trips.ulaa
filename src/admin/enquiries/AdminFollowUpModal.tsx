@@ -28,8 +28,8 @@ export default function FollowUpModal({
             : "This lead is still warm but not ready to close either way — pick a date to check back in. It'll show as due on that day, and clears automatically once this lead moves past Contacted."}
         </p>
         <div>
-          <label className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
-          <DatePicker value={followUpDate} onChange={setFollowUpDate} />
+          <label htmlFor="followup-date" className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
+          <DatePicker id="followup-date" value={followUpDate} onChange={setFollowUpDate} />
         </div>
         <div className="flex gap-3 pt-2">
           <Button variant="outline" size="md" onClick={onClose}>Cancel</Button>

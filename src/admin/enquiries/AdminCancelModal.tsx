@@ -73,7 +73,7 @@ export default function CancelModal({
 
           {cancelTarget.trip_id && waitlistWaitingCounts[cancelTarget.trip_id]?.entries > 0 && (
             <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-md px-3 py-2.5 text-sm text-orange-800">
-              <Users size={16} className="shrink-0 mt-0.5" />
+              <Users size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
               <p>
                 <span className="font-semibold">
                   {describeWaiting(waitlistWaitingCounts[cancelTarget.trip_id])} {waitlistWaitingCounts[cancelTarget.trip_id].entries === 1 ? 'is' : 'are'} waiting
@@ -85,8 +85,9 @@ export default function CancelModal({
           )}
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Cancellation Reason</label>
+            <label htmlFor="cancel-reason" className="block text-sm font-medium text-dark mb-1">Cancellation Reason</label>
             <Select
+              inputId="cancel-reason"
               value={cancelReason}
               onChange={val => setCancelReason(val as CancellationReason | '')}
               options={CANCELLATION_REASON_OPTIONS}
@@ -95,16 +96,18 @@ export default function CancelModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Third-Party Charges (₹)</label>
+            <label htmlFor="cancel-charges" className="block text-sm font-medium text-dark mb-1">Third-Party Charges (₹)</label>
             <input
+              id="cancel-charges"
               type="number"
               min={0}
               value={cancelCharges}
               onChange={ev => setCancelCharges(parseNonNegative(ev.target.value))}
+              aria-describedby="cancel-charges-hint"
               className={inputClass}
               placeholder="Airline/hotel penalties, if known — optional"
             />
-            <p className="text-[11px] text-dark-muted mt-1">
+            <p id="cancel-charges-hint" className="text-[11px] text-dark-muted mt-1">
               Used to compute the suggested refund estimate. You can leave this blank and add it later.
             </p>
           </div>
@@ -123,8 +126,9 @@ export default function CancelModal({
           </label>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
+            <label htmlFor="cancel-notes" className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
             <textarea
+              id="cancel-notes"
               value={cancelNotes}
               onChange={ev => setCancelNotes(ev.target.value)}
               rows={2}

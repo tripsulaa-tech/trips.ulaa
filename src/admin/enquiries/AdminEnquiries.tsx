@@ -1969,7 +1969,7 @@ export default function AdminEnquiries() {
         <div className="flex justify-between items-center gap-3">
           <p className="text-dark-muted text-sm hidden sm:block">Log a WhatsApp, phone, or walk-in enquiry that didn't come through the website.</p>
           <Button variant="primary" size="sm" onClick={openAdd} className="ml-auto">
-            <Plus size={16} /> Add Enquiry
+            <Plus size={16} aria-hidden="true" /> Add Enquiry
           </Button>
         </div>
 
@@ -1984,8 +1984,10 @@ export default function AdminEnquiries() {
             (collapsed-by-default) filter panel below. Bound to the same
             searchQuery state the desktop TableHeaderBar search uses. */}
         <div className="relative sm:hidden">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" />
+          <label htmlFor="enq-mobile-search" className="sr-only">Search name, phone, email, or trip</label>
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
           <input
+            id="enq-mobile-search"
             type="text"
             value={searchQuery}
             onChange={ev => setSearchQuery(ev.target.value)}
@@ -1998,7 +2000,7 @@ export default function AdminEnquiries() {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark p-1"
               aria-label="Clear search"
             >
-              <X size={16} />
+              <X size={16} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -2027,7 +2029,7 @@ export default function AdminEnquiries() {
                 </p>
                 {activeGroup?.trip?.start_date && activeGroup.trip.end_date && (
                   <p className="text-dark-muted text-xs flex items-center gap-1">
-                    <CalendarDays size={11} className="shrink-0" /> {formatDateRange(activeGroup.trip.start_date, activeGroup.trip.end_date)}
+                    <CalendarDays size={11} className="shrink-0" aria-hidden="true" /> {formatDateRange(activeGroup.trip.start_date, activeGroup.trip.end_date)}
                   </p>
                 )}
                 {(() => {
@@ -2132,6 +2134,8 @@ export default function AdminEnquiries() {
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(o => !o)}
+                aria-expanded={mobileFiltersOpen}
+                aria-controls="enq-mobile-filters-panel"
                 className="w-full flex items-center gap-2 sm:pointer-events-none sm:cursor-default"
               >
                 <SlidersHorizontal size={16} className="text-dark shrink-0" />
@@ -2141,10 +2145,10 @@ export default function AdminEnquiries() {
                     {activeFilterCount} active
                   </span>
                 )}
-                <ChevronDown size={18} className={`sm:hidden shrink-0 text-dark-muted transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={18} className={`sm:hidden shrink-0 text-dark-muted transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
               </button>
 
-              <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row sm:items-end gap-3 mt-4`}>
+              <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row sm:items-end gap-3 mt-4`} id="enq-mobile-filters-panel">
                 {/* Filters + Clear All — sit together in one row at the
                     bottom of the panel. */}
                 <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2 flex-1 min-w-0">
@@ -2154,15 +2158,18 @@ export default function AdminEnquiries() {
                       Trip filter on the Waitlist page. Spans both mobile
                       grid columns since it's the primary/most-used filter. */}
                   <div className="relative col-span-2 sm:col-span-1 w-full sm:w-auto sm:min-w-[150px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
+                    <label htmlFor="enq-filter-trip" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                     <button
+                      id="enq-filter-trip"
+                      aria-haspopup="listbox"
+                      aria-expanded={openFilterPanel === 'trip'}
                       onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'trip' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
                       <span className="text-sm font-button font-medium text-primary truncate">{activeGroup ? activeGroup.title : 'All'}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </button>
                     {openFilterPanel === 'trip' && (
                       <FilterDropdown
@@ -2199,7 +2206,7 @@ export default function AdminEnquiries() {
                           : 'border-background-warm text-dark hover:border-primary/30'
                       }`}
                     >
-                      <MessageCircle size={13} className="shrink-0" />
+                      <MessageCircle size={13} className="shrink-0" aria-hidden="true" />
                       General Enquiries
                       <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-[10px] ${
                         selectedTripKey === UNLINKED_GROUP_KEY ? 'bg-white/20' : 'bg-background-warm'
@@ -2216,15 +2223,18 @@ export default function AdminEnquiries() {
                       state alone; this filter only ever reaches the three
                       lead values (see Enquiry.status). */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Lead Status</label>
+                    <label htmlFor="enq-filter-query" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Lead Status</label>
                     <button
+                      id="enq-filter-query"
+                      aria-haspopup="listbox"
+                      aria-expanded={openFilterPanel === 'query'}
                       onClick={() => setOpenFilterPanel(p => (p === 'query' ? null : 'query'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'query' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
                       <span className="text-sm font-button font-medium text-primary truncate">{filter === 'all' ? 'All' : STATUS_CONFIG[filter].label}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'query' ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'query' ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </button>
                     {openFilterPanel === 'query' && (
                       <FilterDropdown
@@ -2244,15 +2254,18 @@ export default function AdminEnquiries() {
                       In", which neither Lead Status nor the coarser Booking
                       (booked/not booked/cancelled) filter below can reach. */}
                   <div className="relative w-full sm:w-auto sm:min-w-[160px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking Journey</label>
+                    <label htmlFor="enq-filter-journey" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking Journey</label>
                     <button
+                      id="enq-filter-journey"
+                      aria-haspopup="listbox"
+                      aria-expanded={openFilterPanel === 'journey'}
                       onClick={() => setOpenFilterPanel(p => (p === 'journey' ? null : 'journey'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'journey' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
                       <span className="text-sm font-button font-medium text-primary truncate">{journeyFilter === 'all' ? 'All' : JOURNEY_STAGE_CONFIG[journeyFilter].label}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'journey' ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'journey' ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </button>
                     {openFilterPanel === 'journey' && (
                       <FilterDropdown
@@ -2270,15 +2283,18 @@ export default function AdminEnquiries() {
 
                   {/* Payment */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Payment</label>
+                    <label htmlFor="enq-filter-pay" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Payment</label>
                     <button
+                      id="enq-filter-pay"
+                      aria-haspopup="listbox"
+                      aria-expanded={openFilterPanel === 'pay'}
                       onClick={() => setOpenFilterPanel(p => (p === 'pay' ? null : 'pay'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'pay' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
                       <span className="text-sm font-button font-medium text-primary truncate">{PAY_FILTER_LABELS[payFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'pay' ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'pay' ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </button>
                     {openFilterPanel === 'pay' && (
                       <FilterDropdown
@@ -2293,15 +2309,18 @@ export default function AdminEnquiries() {
 
                   {/* Booking */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking</label>
+                    <label htmlFor="enq-filter-booked" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking</label>
                     <button
+                      id="enq-filter-booked"
+                      aria-haspopup="listbox"
+                      aria-expanded={openFilterPanel === 'booked'}
                       onClick={() => setOpenFilterPanel(p => (p === 'booked' ? null : 'booked'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'booked' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
                       <span className="text-sm font-button font-medium text-primary truncate">{BOOKING_FILTER_LABELS[bookedFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'booked' ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'booked' ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </button>
                     {openFilterPanel === 'booked' && (
                       <FilterDropdown
@@ -2330,7 +2349,7 @@ export default function AdminEnquiries() {
                           : 'border-background-warm text-dark hover:border-primary/30'
                       }`}
                     >
-                      <CalendarClock size={13} className="shrink-0" />
+                      <CalendarClock size={13} className="shrink-0" aria-hidden="true" />
                       Follow-ups Due
                       <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-[10px] ${
                         followUpDueOnly ? 'bg-white/20' : 'bg-background-warm'
@@ -2342,15 +2361,18 @@ export default function AdminEnquiries() {
 
                   {/* Group / Solo */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Group / Solo</label>
+                    <label htmlFor="enq-filter-group" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Group / Solo</label>
                     <button
+                      id="enq-filter-group"
+                      aria-haspopup="listbox"
+                      aria-expanded={openFilterPanel === 'group'}
                       onClick={() => setOpenFilterPanel(p => (p === 'group' ? null : 'group'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'group' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
                       <span className="text-sm font-button font-medium text-primary truncate">{GROUP_FILTER_LABELS[groupFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'group' ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'group' ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </button>
                     {openFilterPanel === 'group' && (
                       <FilterDropdown
@@ -2365,15 +2387,18 @@ export default function AdminEnquiries() {
 
                   {/* Food */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Food</label>
+                    <label htmlFor="enq-filter-food" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Food</label>
                     <button
+                      id="enq-filter-food"
+                      aria-haspopup="listbox"
+                      aria-expanded={openFilterPanel === 'food'}
                       onClick={() => setOpenFilterPanel(p => (p === 'food' ? null : 'food'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'food' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
                       <span className="text-sm font-button font-medium text-primary truncate">{FOOD_FILTER_LABELS[foodFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'food' ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'food' ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </button>
                     {openFilterPanel === 'food' && (
                       <FilterDropdown
@@ -2390,15 +2415,18 @@ export default function AdminEnquiries() {
                       alongside auto-pricing; see add_enquiry_auto_pricing.sql
                       and PACKAGE_FILTER_LABELS). */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Package</label>
+                    <label htmlFor="enq-filter-package" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Package</label>
                     <button
+                      id="enq-filter-package"
+                      aria-haspopup="listbox"
+                      aria-expanded={openFilterPanel === 'package'}
                       onClick={() => setOpenFilterPanel(p => (p === 'package' ? null : 'package'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'package' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
                       <span className="text-sm font-button font-medium text-primary truncate">{PACKAGE_FILTER_LABELS[packageFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'package' ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'package' ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </button>
                     {openFilterPanel === 'package' && (
                       <FilterDropdown
@@ -2414,15 +2442,18 @@ export default function AdminEnquiries() {
                   {/* Source — overflow filter, kept in the same
                       label-on-top style as the rest of the row. */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Source</label>
+                    <label htmlFor="enq-filter-more" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Source</label>
                     <button
+                      id="enq-filter-more"
+                      aria-haspopup="listbox"
+                      aria-expanded={openFilterPanel === 'more'}
                       onClick={() => setOpenFilterPanel(p => (p === 'more' ? null : 'more'))}
                       className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
                         openFilterPanel === 'more' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
                       }`}
                     >
                       <span className="text-sm font-button font-medium text-primary truncate">{sourceFilter === 'all' ? 'All' : SOURCE_CONFIG[sourceFilter].label}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'more' ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'more' ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </button>
                     {openFilterPanel === 'more' && (
                       <FilterDropdown
@@ -2451,7 +2482,7 @@ export default function AdminEnquiries() {
                       : 'border-background-warm text-dark hover:border-primary/30'
                   }`}
                 >
-                  <RefreshCw size={13} /> Clear All
+                  <RefreshCw size={13} aria-hidden="true" /> Clear All
                 </button>
               </div>
             </div>
@@ -2467,7 +2498,7 @@ export default function AdminEnquiries() {
             {/* Bulk actions toolbar — appears once at least one enquiry is selected */}
             {selectedIds.size > 0 && (
               <div className="flex flex-wrap items-center gap-3 bg-white rounded-lg shadow-card px-4 py-3">
-                <p className="text-sm font-medium text-dark">
+                <p className="text-sm font-medium text-dark" aria-live="polite">
                   {selectedIds.size} selected
                 </p>
                 <div className="flex items-center gap-2 ml-auto">
@@ -2476,15 +2507,16 @@ export default function AdminEnquiries() {
                       onClick={openBulkEdit}
                       className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-background-warm text-dark hover:border-primary/30 transition-colors"
                     >
-                      <Pencil size={14} /> Bulk Edit
+                      <Pencil size={14} aria-hidden="true" /> Bulk Edit
                     </button>
                   ) : (
                     <span title="Bulk Edit is disabled when the selection spans more than one trip — pricing fields aren't safe to apply across trips with different prices.">
                       <button
                         disabled
+                        aria-label="Bulk Edit — disabled because the selection spans more than one trip"
                         className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-background-warm text-dark-muted/40 cursor-default"
                       >
-                        <Pencil size={14} /> Bulk Edit
+                        <Pencil size={14} aria-hidden="true" /> Bulk Edit
                       </button>
                     </span>
                   )}
@@ -2493,13 +2525,13 @@ export default function AdminEnquiries() {
                     disabled={bulkDeleting}
                     className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-primary/30 text-primary hover:bg-primary/5 transition-colors disabled:opacity-60"
                   >
-                    <Trash2 size={14} /> {bulkDeleting ? 'Deleting…' : 'Delete'}
+                    <Trash2 size={14} aria-hidden="true" /> {bulkDeleting ? 'Deleting…' : 'Delete'}
                   </button>
                   <button
                     onClick={() => setSelectedIds(new Set())}
                     className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-background-warm text-dark-muted hover:bg-background/50 transition-colors"
                   >
-                    <X size={14} /> Clear
+                    <X size={14} aria-hidden="true" /> Clear
                   </button>
                 </div>
               </div>
@@ -2594,7 +2626,7 @@ export default function AdminEnquiries() {
                                     title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
                                     className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
                                   >
-                                    <MessageCircle size={9} className="shrink-0" /> General
+                                    <MessageCircle size={9} className="shrink-0" aria-hidden="true" /> General
                                   </span>
                                 )}
                               </p>
@@ -2607,14 +2639,14 @@ export default function AdminEnquiries() {
                                 title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
                                 className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                               >
-                                <Users size={12} className="shrink-0" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
+                                <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
                               </span>
                             ) : (
                               <span
                                 title="Booked individually, not part of a group"
                                 className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
                               >
-                                <User size={12} className="shrink-0" /> Solo
+                                <User size={12} className="shrink-0" aria-hidden="true" /> Solo
                               </span>
                             )}
                           </td>
@@ -2642,7 +2674,7 @@ export default function AdminEnquiries() {
                             <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
                               e.package_type === 'early_bird' ? 'text-purple-700' : 'text-slate-700'
                             }`}>
-                              {e.package_type === 'early_bird' && <Bird size={12} className="shrink-0" />}
+                              {e.package_type === 'early_bird' && <Bird size={12} className="shrink-0" aria-hidden="true" />}
                               {PACKAGE_CONFIG[e.package_type || 'normal'].label}
                             </span>
                           </td>
@@ -2675,7 +2707,7 @@ export default function AdminEnquiries() {
                           </td>
                           <td className="px-2 py-4 text-center">
                             <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
-                              <jb.icon size={12} className="shrink-0" />
+                              <jb.icon size={12} className="shrink-0" aria-hidden="true" />
                               {jb.label}
                             </span>
                           </td>
@@ -2690,7 +2722,7 @@ export default function AdminEnquiries() {
                                     title="Click to change the follow-up date"
                                     className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-50 ${fu.color}`}
                                   >
-                                    <fu.icon size={12} className="shrink-0" />
+                                    <fu.icon size={12} className="shrink-0" aria-hidden="true" />
                                     {fu.label}
                                   </button>
                                 );
@@ -2703,7 +2735,7 @@ export default function AdminEnquiries() {
                                     title="Set a follow-up reminder"
                                     className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
                                   >
-                                    <CalendarClock size={12} className="shrink-0" /> Set
+                                    <CalendarClock size={12} className="shrink-0" aria-hidden="true" /> Set
                                   </button>
                                 );
                               }
@@ -2720,7 +2752,7 @@ export default function AdminEnquiries() {
                                     title="Click to change the booking follow-up"
                                     className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-50 ${bfu.color}`}
                                   >
-                                    <bfu.icon size={12} className="shrink-0" />
+                                    <bfu.icon size={12} className="shrink-0" aria-hidden="true" />
                                     {bfu.label}
                                   </button>
                                 );
@@ -2733,7 +2765,7 @@ export default function AdminEnquiries() {
                                     title="Set a booking follow-up reminder"
                                     className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
                                   >
-                                    <CalendarClock size={12} className="shrink-0" /> Set
+                                    <CalendarClock size={12} className="shrink-0" aria-hidden="true" /> Set
                                   </button>
                                 );
                               }
@@ -2745,7 +2777,7 @@ export default function AdminEnquiries() {
                               title={seat.title}
                               className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${seat.color}`}
                             >
-                              <seat.icon size={12} className="shrink-0" />
+                              <seat.icon size={12} className="shrink-0" aria-hidden="true" />
                               {seat.label}
                             </span>
                           </td>
@@ -2758,7 +2790,7 @@ export default function AdminEnquiries() {
                                   title={nma.label}
                                   className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"
                                 >
-                                  <nma.icon size={12} className="shrink-0" />
+                                  <nma.icon size={12} className="shrink-0" aria-hidden="true" />
                                   {nma.label}
                                 </button>
                               )}
@@ -2766,10 +2798,11 @@ export default function AdminEnquiries() {
                                 <button
                                   onClick={() => handleMarkNotInterested(e)}
                                   disabled={updating === e.id || completingId === e.id}
+                                  aria-label={`Mark ${e.full_name} as Not Interested (Close Query)`}
                                   title="Not Interested (Close Query)"
                                   className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
                                 >
-                                  <UserMinus size={12} className="shrink-0" />
+                                  <UserMinus size={12} className="shrink-0" aria-hidden="true" />
                                 </button>
                               )}
                               <ActionsMenu disabled={updating === e.id} items={buildRowActions(e)} />
@@ -2819,6 +2852,7 @@ export default function AdminEnquiries() {
                       </label>
                     <button
                       onClick={() => setExpandedId(isOpen ? null : e.id)}
+                      aria-expanded={isOpen}
                       className="flex-1 min-w-0 flex items-start justify-between gap-3 text-left py-2.5 pr-1"
                     >
                       <div className="min-w-0">
@@ -2830,14 +2864,14 @@ export default function AdminEnquiries() {
                               title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
                               className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                             >
-                              <Users size={9} /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
+                              <Users size={9}  aria-hidden="true" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
                             </span>
                           ) : (
                             <span
                               title="Booked individually, not part of a group"
                               className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 bg-slate-100 text-dark-muted"
                             >
-                              <User size={9} /> Solo
+                              <User size={9}  aria-hidden="true" /> Solo
                             </span>
                           )}
                           {e.package_type === 'early_bird' && (
@@ -2845,12 +2879,12 @@ export default function AdminEnquiries() {
                               title="Early Bird"
                               className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 shrink-0"
                             >
-                              <Bird size={11} />
+                              <Bird size={11}  aria-hidden="true" />
                             </span>
                           )}
                           {e.cancelled_at && (
                             <span className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${e.is_no_show ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
-                              <XCircle size={9} /> {e.is_no_show ? 'No Show' : 'Cancelled'}
+                              <XCircle size={9}  aria-hidden="true" /> {e.is_no_show ? 'No Show' : 'Cancelled'}
                             </span>
                           )}
                           {!e.trip_id && !activeGroup && (
@@ -2858,7 +2892,7 @@ export default function AdminEnquiries() {
                               title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
                               className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
                             >
-                              <MessageCircle size={9} /> General
+                              <MessageCircle size={9}  aria-hidden="true" /> General
                             </span>
                           )}
                         </p>
@@ -2882,19 +2916,19 @@ export default function AdminEnquiries() {
                       <div className="flex items-center gap-2 shrink-0">
                         {followUpStatus(e)?.isDue && (
                           <span title={followUpStatus(e)!.label} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${followUpStatus(e)!.color}`}>
-                            <CalendarClock size={12} className="shrink-0" />
+                            <CalendarClock size={12} className="shrink-0" aria-hidden="true" />
                           </span>
                         )}
                         {bookingFollowUpStatus(e)?.isDue && (
                           <span title={bookingFollowUpStatus(e)!.label} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${bookingFollowUpStatus(e)!.color}`}>
-                            <CalendarClock size={12} className="shrink-0" />
+                            <CalendarClock size={12} className="shrink-0" aria-hidden="true" />
                           </span>
                         )}
                         <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
-                          <jb.icon size={12} className="shrink-0" />
+                          <jb.icon size={12} className="shrink-0" aria-hidden="true" />
                           {jb.label}
                         </span>
-                        <ChevronDown size={16} className={`text-dark-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={16} className={`text-dark-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                       </div>
                     </button>
                     </div>
@@ -2920,7 +2954,7 @@ export default function AdminEnquiries() {
                           <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                <Briefcase size={15} />
+                                <Briefcase size={15}  aria-hidden="true" />
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Trip</p>
@@ -2935,7 +2969,7 @@ export default function AdminEnquiries() {
                             </div>
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                <User size={15} />
+                                <User size={15}  aria-hidden="true" />
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Age</p>
@@ -2947,7 +2981,7 @@ export default function AdminEnquiries() {
                           <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                <Building2 size={15} />
+                                <Building2 size={15}  aria-hidden="true" />
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">City</p>
@@ -2956,7 +2990,7 @@ export default function AdminEnquiries() {
                             </div>
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                <Utensils size={15} />
+                                <Utensils size={15}  aria-hidden="true" />
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Food Preference</p>
@@ -2973,7 +3007,7 @@ export default function AdminEnquiries() {
                           <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                <CalendarDays size={15} />
+                                <CalendarDays size={15}  aria-hidden="true" />
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Date &amp; Time</p>
@@ -2983,7 +3017,7 @@ export default function AdminEnquiries() {
                             </div>
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                <Globe size={15} />
+                                <Globe size={15}  aria-hidden="true" />
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Source</p>
@@ -2995,7 +3029,7 @@ export default function AdminEnquiries() {
                           <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3 items-center">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                {e.package_type === 'early_bird' ? <Bird size={15} /> : <Package size={15} />}
+                                {e.package_type === 'early_bird' ? <Bird size={15}  aria-hidden="true" /> : <Package size={15}  aria-hidden="true" />}
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Package</p>
@@ -3004,7 +3038,7 @@ export default function AdminEnquiries() {
                             </div>
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                <MessageCircle size={15} />
+                                <MessageCircle size={15}  aria-hidden="true" />
                               </span>
                               <div className="min-w-0">
                                 <p className="text-dark-muted text-xs">Quick Contact</p>
@@ -3047,7 +3081,7 @@ export default function AdminEnquiries() {
                                 aria-label="Download invoice"
                                 className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
                               >
-                                <FileText size={16} />
+                                <FileText size={16}  aria-hidden="true" />
                               </button>
                               <button
                                 onClick={() => handleShareInvoice(e)}
@@ -3056,7 +3090,7 @@ export default function AdminEnquiries() {
                                 aria-label="Share invoice"
                                 className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
                               >
-                                <Share2 size={16} />
+                                <Share2 size={16}  aria-hidden="true" />
                               </button>
                             </div>
                           </div>
@@ -3088,7 +3122,7 @@ export default function AdminEnquiries() {
                                   : ''
                               }`}
                             >
-                              <CalendarClock size={14} />
+                              <CalendarClock size={14}  aria-hidden="true" />
                               {followUpStatus(e)?.label || bookingFollowUpStatus(e)?.label || 'Set Follow-up'}
                             </Button>
                           )}
@@ -3099,7 +3133,7 @@ export default function AdminEnquiries() {
                             onClick={() => navigate(`/admin/enquiries/${e.id}`)}
                             className="text-xs !gap-1.5 whitespace-nowrap"
                           >
-                            View Full CRM <ArrowRight size={14} />
+                            View Full CRM <ArrowRight size={14}  aria-hidden="true" />
                           </Button>
                           <ActionsMenu
                             disabled={updating === e.id}

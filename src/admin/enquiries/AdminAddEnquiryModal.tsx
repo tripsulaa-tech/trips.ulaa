@@ -93,7 +93,7 @@ export default function AddEnquiryModal({
     <Modal isOpen={isOpen} onClose={requestClose} title={convertingWaitlist ? 'Convert Waitlist Signup' : 'Log an Enquiry'} size="md">
       {convertingWaitlist && (
         <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-md px-3 py-2.5 mb-4 text-sm text-green-800">
-          <PartyPopper size={16} className="shrink-0 mt-0.5" />
+          <PartyPopper size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
           <p>
             {convertingWaitlist.slots > 1 ? (
               <>
@@ -117,8 +117,9 @@ export default function AddEnquiryModal({
           {/* Shared trip/package/pricing — one trip, one price, several people */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Trip</label>
+              <label htmlFor="ge-g-trip" className="block text-sm font-medium text-dark mb-1">Trip</label>
               <Select
+                inputId="ge-g-trip"
                 value={form.trip_id}
                 onChange={val => {
                   setForm(f => ({ ...f, trip_id: val }));
@@ -128,8 +129,9 @@ export default function AddEnquiryModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Package</label>
+              <label htmlFor="ge-g-package" className="block text-sm font-medium text-dark mb-1">Package</label>
               <Select
+                inputId="ge-g-package"
                 value={form.package_type}
                 onChange={val => {
                   const packageType = val as Enquiry['package_type'];
@@ -140,8 +142,9 @@ export default function AddEnquiryModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹) <span className="text-dark-muted font-normal">— per person</span></label>
+              <label htmlFor="ge-g-total" className="block text-sm font-medium text-dark mb-1">Total Amount (₹) <span className="text-dark-muted font-normal">— per person</span></label>
               <input
+                id="ge-g-total"
                 type="number"
                 min={0}
                 value={form.total_amount}
@@ -151,16 +154,18 @@ export default function AddEnquiryModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
+              <label htmlFor="ge-g-source" className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
               <Select
+                inputId="ge-g-source"
                 value={form.source}
                 onChange={val => setForm(f => ({ ...f, source: val as Enquiry['source'] }))}
                 options={SOURCE_OPTIONS}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Payment Method <span className="text-dark-muted font-normal">— for everyone's advance</span></label>
+              <label htmlFor="ge-g-method" className="block text-sm font-medium text-dark mb-1">Payment Method <span className="text-dark-muted font-normal">— for everyone's advance</span></label>
               <Select
+                inputId="ge-g-method"
                 value={form.payment_method}
                 onChange={val => setForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
                 options={PAYMENT_METHOD_OPTIONS}
@@ -168,8 +173,9 @@ export default function AddEnquiryModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
+              <label htmlFor="ge-g-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
               <input
+                id="ge-g-utr"
                 type="text"
                 value={form.payment_utr}
                 disabled={form.payment_method === 'Cash'}
@@ -185,59 +191,66 @@ export default function AddEnquiryModal({
             {waitlistPeople.map((p, i) => (
               <div key={i} className="border-2 border-background-warm rounded-md p-3">
                 <p className="text-xs font-button font-semibold text-dark-muted mb-2 flex items-center gap-1.5">
-                  <Users size={12} /> Seat {convertingWaitlist.groupSeq + i} of {convertingWaitlist.groupSize}
+                  <Users size={12} aria-hidden="true" /> Seat {convertingWaitlist.groupSeq + i} of {convertingWaitlist.groupSize}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-dark mb-1">Full Name *</label>
+                    <label htmlFor={`ge-p-name-${i}`} className="block text-xs font-medium text-dark mb-1">Full Name *</label>
                     <input
+                      id={`ge-p-name-${i}`}
                       value={p.full_name}
                       onChange={e => updateWaitlistPerson(i, { full_name: e.target.value })}
                       onBlur={() => touchPerson(i, 'full_name')}
+                      aria-describedby={touchedPeople.has(`${i}:full_name`) && groupErrors[i].full_name ? `ge-p-name-${i}-error` : undefined}
                       className={inputClass}
                       placeholder="e.g. Priya Sharma"
                     />
-                    {touchedPeople.has(`${i}:full_name`) && groupErrors[i].full_name && <p className={errorClass}>{groupErrors[i].full_name}</p>}
+                    {touchedPeople.has(`${i}:full_name`) && groupErrors[i].full_name && <p id={`ge-p-name-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].full_name}</p>}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-dark mb-1">Phone *</label>
+                    <label htmlFor={`ge-p-phone-${i}`} className="block text-xs font-medium text-dark mb-1">Phone *</label>
                     <input
+                      id={`ge-p-phone-${i}`}
                       value={p.phone}
                       onChange={e => updateWaitlistPerson(i, { phone: e.target.value })}
                       onBlur={() => touchPerson(i, 'phone')}
+                      aria-describedby={touchedPeople.has(`${i}:phone`) && groupErrors[i].phone ? `ge-p-phone-${i}-error` : undefined}
                       className={inputClass}
                       placeholder="e.g. 98765 43210"
                     />
-                    {touchedPeople.has(`${i}:phone`) && groupErrors[i].phone && <p className={errorClass}>{groupErrors[i].phone}</p>}
+                    {touchedPeople.has(`${i}:phone`) && groupErrors[i].phone && <p id={`ge-p-phone-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].phone}</p>}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-dark mb-1">Email</label>
-                    <input value={p.email} onChange={e => updateWaitlistPerson(i, { email: e.target.value })} className={inputClass} placeholder="Optional" />
+                    <label htmlFor={`ge-p-email-${i}`} className="block text-xs font-medium text-dark mb-1">Email</label>
+                    <input id={`ge-p-email-${i}`} value={p.email} onChange={e => updateWaitlistPerson(i, { email: e.target.value })} className={inputClass} placeholder="Optional" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-dark mb-1">Age</label>
-                    <input type="number" min={0} value={p.age} onChange={e => updateWaitlistPerson(i, { age: e.target.value === '' ? '' : +e.target.value })} className={inputClass} placeholder="Optional" />
+                    <label htmlFor={`ge-p-age-${i}`} className="block text-xs font-medium text-dark mb-1">Age</label>
+                    <input id={`ge-p-age-${i}`} type="number" min={0} value={p.age} onChange={e => updateWaitlistPerson(i, { age: e.target.value === '' ? '' : +e.target.value })} className={inputClass} placeholder="Optional" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-dark mb-1">Food Preference</label>
+                    <label htmlFor={`ge-p-food-${i}`} className="block text-xs font-medium text-dark mb-1">Food Preference</label>
                     <Select
+                      inputId={`ge-p-food-${i}`}
                       value={p.food_preference}
                       onChange={val => updateWaitlistPerson(i, { food_preference: val as WaitlistPersonForm['food_preference'] })}
                       options={FOOD_PREFERENCE_OPTIONS}
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-dark mb-1">Amount Paid (₹) *</label>
+                    <label htmlFor={`ge-p-amount-${i}`} className="block text-xs font-medium text-dark mb-1">Amount Paid (₹) *</label>
                     <input
+                      id={`ge-p-amount-${i}`}
                       type="number"
                       min={0}
                       value={p.amount_paid}
                       onChange={e => updateWaitlistPerson(i, { amount_paid: parseNonNegative(e.target.value) })}
                       onBlur={() => touchPerson(i, 'amount_paid')}
+                      aria-describedby={touchedPeople.has(`${i}:amount_paid`) && groupErrors[i].amount_paid ? `ge-p-amount-${i}-error` : undefined}
                       className={inputClass}
                       placeholder="e.g. 5000 (advance)"
                     />
-                    {touchedPeople.has(`${i}:amount_paid`) && groupErrors[i].amount_paid && <p className={errorClass}>{groupErrors[i].amount_paid}</p>}
+                    {touchedPeople.has(`${i}:amount_paid`) && groupErrors[i].amount_paid && <p id={`ge-p-amount-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].amount_paid}</p>}
                   </div>
                 </div>
               </div>
@@ -245,37 +258,41 @@ export default function AddEnquiryModal({
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-dark mb-1">Notes</label>
-            <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this group" />
+            <label htmlFor="ge-g-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
+            <textarea id="ge-g-notes" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this group" />
           </div>
         </>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Full Name *</label>
+            <label htmlFor="ge-name" className="block text-sm font-medium text-dark mb-1">Full Name *</label>
             <input
+              id="ge-name"
               value={form.full_name}
               onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
               onBlur={() => touch('full_name')}
+              aria-describedby={soloErrorsVisible.full_name ? 'ge-name-error' : undefined}
               className={inputClass}
               placeholder="e.g. Priya Sharma"
             />
-            {soloErrorsVisible.full_name && <p className={errorClass}>{soloErrorsVisible.full_name}</p>}
+            {soloErrorsVisible.full_name && <p id="ge-name-error" role="alert" className={errorClass}>{soloErrorsVisible.full_name}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Phone *</label>
+            <label htmlFor="ge-phone" className="block text-sm font-medium text-dark mb-1">Phone *</label>
             <input
+              id="ge-phone"
               value={form.phone}
               onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
               onBlur={() => touch('phone')}
+              aria-describedby={soloErrorsVisible.phone ? 'ge-phone-error' : undefined}
               className={inputClass}
               placeholder="e.g. 98765 43210"
             />
-            {soloErrorsVisible.phone && <p className={errorClass}>{soloErrorsVisible.phone}</p>}
+            {soloErrorsVisible.phone && <p id="ge-phone-error" role="alert" className={errorClass}>{soloErrorsVisible.phone}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Email</label>
-            <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="Optional" />
+            <label htmlFor="ge-email" className="block text-sm font-medium text-dark mb-1">Email</label>
+            <input id="ge-email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="Optional" />
           </div>
 
           {/* Possible-duplicate soft warning (3.5) — fuzzy phone/email
@@ -283,7 +300,7 @@ export default function AddEnquiryModal({
               this trip. Advisory only; doesn't block Save. */}
           {possibleDuplicates.length > 0 && (
             <div className="md:col-span-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2.5 text-amber-800">
-              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+              <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">
                   Possible duplicate{possibleDuplicates.length > 1 ? 's' : ''} — {possibleDuplicates.length === 1 ? 'someone' : `${possibleDuplicates.length} people`} already in the system {possibleDuplicates.length === 1 ? 'shares' : 'share'} this phone or email
@@ -307,32 +324,35 @@ export default function AddEnquiryModal({
           )}
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Age</label>
-            <input type="number" min={0} value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))} className={inputClass} placeholder="Optional" />
+            <label htmlFor="ge-age" className="block text-sm font-medium text-dark mb-1">Age</label>
+            <input id="ge-age" type="number" min={0} value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))} className={inputClass} placeholder="Optional" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">City</label>
-            <input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputClass} placeholder="Optional" />
+            <label htmlFor="ge-city" className="block text-sm font-medium text-dark mb-1">City</label>
+            <input id="ge-city" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputClass} placeholder="Optional" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
+            <label htmlFor="ge-source" className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
             <Select
+              inputId="ge-source"
               value={form.source}
               onChange={val => setForm(f => ({ ...f, source: val as Enquiry['source'] }))}
               options={SOURCE_OPTIONS}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <label htmlFor="ge-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
             <Select
+              inputId="ge-food"
               value={form.food_preference}
               onChange={val => setForm(f => ({ ...f, food_preference: val as EnquiryForm['food_preference'] }))}
               options={FOOD_PREFERENCE_OPTIONS}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Trip</label>
+            <label htmlFor="ge-trip" className="block text-sm font-medium text-dark mb-1">Trip</label>
             <Select
+              inputId="ge-trip"
               value={form.trip_id}
               onChange={val => {
                 setForm(f => ({ ...f, trip_id: val }));
@@ -342,8 +362,9 @@ export default function AddEnquiryModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Package</label>
+            <label htmlFor="ge-package" className="block text-sm font-medium text-dark mb-1">Package</label>
             <Select
+              inputId="ge-package"
               value={form.package_type}
               onChange={val => {
                 const packageType = val as Enquiry['package_type'];
@@ -354,8 +375,9 @@ export default function AddEnquiryModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
+            <label htmlFor="ge-total" className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
             <input
+              id="ge-total"
               type="number"
               min={0}
               value={form.total_amount}
@@ -365,24 +387,27 @@ export default function AddEnquiryModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
+            <label htmlFor="ge-amount-paid" className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>
             <input
+              id="ge-amount-paid"
               type="number"
               min={0}
               value={form.amount_paid}
               onChange={e => setForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
               onBlur={() => touch('amount_paid')}
+              aria-describedby={soloErrorsVisible.amount_paid ? 'ge-amount-paid-error' : 'ge-amount-paid-hint'}
               className={inputClass}
               placeholder="e.g. 5000 (advance) — leave blank if unpaid"
             />
-            <p className="text-[11px] text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
-            {soloErrorsVisible.amount_paid && <p className={errorClass}>{soloErrorsVisible.amount_paid}</p>}
+            <p id="ge-amount-paid-hint" className="text-[11px] text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
+            {soloErrorsVisible.amount_paid && <p id="ge-amount-paid-error" role="alert" className={errorClass}>{soloErrorsVisible.amount_paid}</p>}
           </div>
           {(Number(form.amount_paid) || 0) > 0 && (
             <div className="grid grid-cols-2 gap-4 md:col-span-2">
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">Payment Method</label>
+                <label htmlFor="ge-method" className="block text-sm font-medium text-dark mb-1">Payment Method</label>
                 <Select
+                  inputId="ge-method"
                   value={form.payment_method}
                   onChange={val => setForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
                   options={PAYMENT_METHOD_OPTIONS}
@@ -391,8 +416,9 @@ export default function AddEnquiryModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
+                <label htmlFor="ge-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
                 <input
+                  id="ge-utr"
                   type="text"
                   value={form.payment_utr}
                   disabled={form.payment_method === 'Cash'}
@@ -404,8 +430,8 @@ export default function AddEnquiryModal({
             </div>
           )}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Notes</label>
-            <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this enquiry" />
+            <label htmlFor="ge-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
+            <textarea id="ge-notes" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this enquiry" />
           </div>
         </div>
       )}

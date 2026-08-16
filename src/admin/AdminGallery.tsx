@@ -74,7 +74,7 @@ export default function AdminGallery() {
         {/* Upload */}
         <div className="bg-white rounded-lg shadow-card p-6 border-2 border-dashed border-background-warm hover:border-primary transition-colors">
           <div className="text-center">
-            <Upload size={32} className="mx-auto text-primary mb-3" />
+            <Upload size={32} className="mx-auto text-primary mb-3" aria-hidden="true" />
             <p className="font-display text-lg font-bold text-dark mb-1">Upload Images</p>
             <p className="text-dark-muted text-sm mb-4">PNG, JPG, WEBP up to 10MB each. Select multiple files at once. Square photos work best (e.g. 800×800px) — shown in a cropped grid.</p>
             <input ref={fileRef} type="file" multiple accept="image/*" onChange={handleUpload} className="hidden" id="gallery-upload" />
@@ -86,7 +86,7 @@ export default function AdminGallery() {
               className="cursor-pointer max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
               onClick={() => fileRef.current?.click()}
             >
-              <Upload size={16} />
+              <Upload size={16} aria-hidden="true" />
               {uploading ? 'Uploading...' : 'Choose Files'}
             </Button>
           </div>
@@ -110,37 +110,42 @@ export default function AdminGallery() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="relative group rounded-lg overflow-hidden aspect-square"
                 >
-                  <img src={img.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  <div className="absolute inset-0 bg-dark/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <img src={img.image_url} alt={`Gallery photo ${index + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                  <div className="absolute inset-0 bg-dark/50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button
                       onClick={() => move(index, -1)}
                       disabled={index === 0}
+                      aria-label={`Move photo ${index + 1} earlier`}
                       className="p-2 rounded bg-white/20 text-white hover:bg-white/40 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                       title="Move earlier"
                     >
-                      <ChevronLeft size={16} />
+                      <ChevronLeft size={16} aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => toggleFeatured(img)}
+                      aria-pressed={img.is_featured}
+                      aria-label={img.is_featured ? `Unfeature photo ${index + 1}` : `Feature photo ${index + 1}`}
                       className={`p-2 rounded transition-colors ${img.is_featured ? 'bg-secondary text-white' : 'bg-white/20 text-white hover:bg-secondary'}`}
                       title="Toggle featured"
                     >
-                      <Star size={16} className={img.is_featured ? 'fill-white' : ''} />
+                      <Star size={16} className={img.is_featured ? 'fill-white' : ''} aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => handleDelete(img)}
+                      aria-label={`Delete photo ${index + 1}`}
                       className="p-2 rounded bg-primary text-white hover:bg-primary-dark transition-colors"
                       title="Delete"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={16} aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => move(index, 1)}
                       disabled={index === images.length - 1}
+                      aria-label={`Move photo ${index + 1} later`}
                       className="p-2 rounded bg-white/20 text-white hover:bg-white/40 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                       title="Move later"
                     >
-                      <ChevronRight size={16} />
+                      <ChevronRight size={16} aria-hidden="true" />
                     </button>
                   </div>
                   {img.is_featured && (

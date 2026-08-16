@@ -155,8 +155,9 @@ export default function AdminTestimonials() {
           <h2 className="font-display text-lg font-bold text-dark">Section Text</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Sub Heading</label>
+              <label htmlFor="test-sub-heading" className="block text-sm font-medium text-dark mb-1">Sub Heading</label>
               <input
+                id="test-sub-heading"
                 value={sectionText.sub_heading}
                 onChange={e => setSectionField('sub_heading', e.target.value)}
                 className={inputClass}
@@ -164,8 +165,9 @@ export default function AdminTestimonials() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">Section Heading</label>
+              <label htmlFor="test-heading" className="block text-sm font-medium text-dark mb-1">Section Heading</label>
               <input
+                id="test-heading"
                 value={sectionText.heading}
                 onChange={e => setSectionField('heading', e.target.value)}
                 className={inputClass}
@@ -173,8 +175,9 @@ export default function AdminTestimonials() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-dark mb-1">Subheading</label>
+              <label htmlFor="test-subheading" className="block text-sm font-medium text-dark mb-1">Subheading</label>
               <textarea
+                id="test-subheading"
                 value={sectionText.subheading}
                 onChange={e => setSectionField('subheading', e.target.value)}
                 rows={2}
@@ -184,15 +187,15 @@ export default function AdminTestimonials() {
           </div>
           <div className="flex items-center gap-3">
             <Button variant="primary" size="sm" onClick={handleSectionSave} loading={sectionSaving}>
-              <Save size={14} /> Save Changes
+              <Save size={14} aria-hidden="true" /> Save Changes
             </Button>
-            {sectionSaved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+            {sectionSaved && <span role="status" className="text-sm text-green-600 font-medium">Saved!</span>}
           </div>
         </div>
 
         <div className="flex justify-between items-center">
           <p className="text-dark-muted">{items.length} testimonials</p>
-          <Button variant="primary" size="sm" onClick={openCreate}><Plus size={16} /> Add Testimonial</Button>
+          <Button variant="primary" size="sm" onClick={openCreate}><Plus size={16} aria-hidden="true" /> Add Testimonial</Button>
         </div>
 
         {loading ? (
@@ -219,8 +222,8 @@ export default function AdminTestimonials() {
                       <td className="px-4 py-4 font-medium text-dark">
                         <div className="flex items-center gap-2">
                           <div className="flex flex-col">
-                            <button onClick={() => move(index, -1)} disabled={index === 0} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={12} /></button>
-                            <button onClick={() => move(index, 1)} disabled={index === items.length - 1} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={12} /></button>
+                            <button onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${t.name}'s testimonial up`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={12} aria-hidden="true" /></button>
+                            <button onClick={() => move(index, 1)} disabled={index === items.length - 1} aria-label={`Move ${t.name}'s testimonial down`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={12} aria-hidden="true" /></button>
                           </div>
                           {t.photo && <img src={t.photo} alt={t.name} className="w-8 h-8 rounded-full object-cover" loading="lazy" decoding="async" />}
                           <span className="truncate max-w-[140px]">{t.name}</span>
@@ -228,8 +231,8 @@ export default function AdminTestimonials() {
                       </td>
                       <td className="px-4 py-4 text-dark-muted hidden md:table-cell">{t.destination}</td>
                       <td className="px-4 py-4 text-dark-muted hidden md:table-cell">
-                        <div className="flex items-center gap-0.5">
-                          {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={12} className="fill-secondary text-secondary" />)}
+                        <div className="flex items-center gap-0.5" aria-label={`${t.rating} out of 5 stars`}>
+                          {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={12} className="fill-secondary text-secondary" aria-hidden="true" />)}
                         </div>
                       </td>
                       <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[280px] truncate">{t.review}</td>
@@ -240,11 +243,11 @@ export default function AdminTestimonials() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => togglePublish(t)} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
-                            {t.is_published ? <EyeOff size={16} /> : <Eye size={16} />}
+                          <button onClick={() => togglePublish(t)} aria-label={t.is_published ? `Unpublish ${t.name}'s testimonial` : `Publish ${t.name}'s testimonial`} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                            {t.is_published ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
                           </button>
-                          <button onClick={() => openEdit(t)} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDelete(t.id)} className="p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={16} /></button>
+                          <button onClick={() => openEdit(t)} aria-label={`Edit ${t.name}'s testimonial`} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} aria-hidden="true" /></button>
+                          <button onClick={() => handleDelete(t.id)} aria-label={`Delete ${t.name}'s testimonial`} className="p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={16} aria-hidden="true" /></button>
                         </div>
                       </td>
                     </motion.tr>
@@ -259,16 +262,17 @@ export default function AdminTestimonials() {
       <Modal isOpen={modalOpen} onClose={closeModal} title={editing ? 'Edit Testimonial' : 'Add Testimonial'} size="lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Name *</label>
-            <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} placeholder="e.g. Priya Sharma" />
+            <label htmlFor="test-name" className="block text-sm font-medium text-dark mb-1">Name *</label>
+            <input id="test-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} placeholder="e.g. Priya Sharma" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Destination</label>
-            <input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley" />
+            <label htmlFor="test-destination" className="block text-sm font-medium text-dark mb-1">Destination</label>
+            <input id="test-destination" value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark mb-1">Rating</label>
+            <label htmlFor="test-rating" className="block text-sm font-medium text-dark mb-1">Rating</label>
             <Select
+              inputId="test-rating"
               value={form.rating}
               onChange={val => setForm(f => ({ ...f, rating: val }))}
               options={[5, 4, 3, 2, 1].map(n => ({ value: n, label: `${n} star${n > 1 ? 's' : ''}` }))}
@@ -286,8 +290,8 @@ export default function AdminTestimonials() {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-dark mb-1">Review *</label>
-            <textarea value={form.review} onChange={e => setForm(f => ({ ...f, review: e.target.value }))} rows={4} className={`${inputClass} resize-none`} />
+            <label htmlFor="test-review" className="block text-sm font-medium text-dark mb-1">Review *</label>
+            <textarea id="test-review" value={form.review} onChange={e => setForm(f => ({ ...f, review: e.target.value }))} rows={4} className={`${inputClass} resize-none`} />
           </div>
           <div className="md:col-span-2 flex items-center gap-3">
             <input type="checkbox" id="tpub" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
