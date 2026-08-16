@@ -776,7 +776,7 @@ export default function AdminTrips() {
           </div>
           <div className="flex items-center">
             <p className="flex items-center gap-2 text-dark-muted text-sm">
-              <ClipboardList size={20} className="text-primary flex-shrink-0" />
+              <ClipboardList size={20} className="text-primary flex-shrink-0" aria-hidden="true" />
               <span className="font-semibold text-green-700">{publishedCount}</span> Published
               <span className="text-dark-muted/50">•</span>
               <span className="font-semibold text-amber-700">{comingSoonCount}</span> Coming Soon

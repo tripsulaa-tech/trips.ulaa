@@ -1009,8 +1009,8 @@ export default function AdminWaitlist() {
                             <button
                               onClick={() => handleDelete(e)}
                               disabled={updating === e.id}
-                              title="Remove from waitlist"
-                              aria-label="Remove from waitlist"
+                              title={`Remove ${e.full_name} from waitlist`}
+                              aria-label={`Remove ${e.full_name} from waitlist`}
                               className="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
                             >
                               <Trash2 size={13} aria-hidden="true" />
@@ -1231,7 +1231,7 @@ export default function AdminWaitlist() {
                       <button
                         onClick={() => handleDelete(e)}
                         disabled={updating === e.id}
-                        aria-label="Remove from waitlist"
+                        aria-label={`Remove ${e.full_name} from waitlist`}
                         className="shrink-0 w-9 h-9 inline-flex items-center justify-center rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
                       >
                         <Trash2 size={14} aria-hidden="true" />

@@ -126,6 +126,7 @@ export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
                 ref={el => { buttonRefs.current[i] = el; }}
                 type="button"
                 onClick={() => handleSelect(i)}
+                aria-current={active === i ? 'true' : undefined}
                 className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
                   active === i
                     ? 'bg-primary text-white'

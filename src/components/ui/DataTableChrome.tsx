@@ -222,6 +222,15 @@ export function ContactQuickLinks({ phone, email, name, tripTitle, size = 'sm' }
 
   const btnClass = `shrink-0 inline-flex items-center justify-center ${dim} rounded-full border border-background-warm text-dark-muted hover:border-primary/40 hover:text-primary transition-colors`;
 
+  // Labels include the person's name (falling back to a generic form when
+  // no name was passed in) so that repeated rows of these icon-only links
+  // — one set per person in a table — are distinguishable from one another
+  // to a screen reader user, not just "Call" / "Email" with no indication
+  // of which row it belongs to.
+  const whatsappLabel = name ? `Message ${name} on WhatsApp` : 'Message on WhatsApp';
+  const callLabel = name ? `Call ${name}` : 'Call';
+  const emailLabel = name ? `Email ${name}` : 'Email';
+
   return (
     <span className="inline-flex items-center gap-1" onClick={e => e.stopPropagation()}>
       {hasPhone && (
@@ -229,8 +238,8 @@ export function ContactQuickLinks({ phone, email, name, tripTitle, size = 'sm' }
           href={getWhatsAppLink(phone!, whatsappMessage)}
           target="_blank"
           rel="noopener noreferrer"
-          title="Message on WhatsApp"
-          aria-label="Message on WhatsApp"
+          title={whatsappLabel}
+          aria-label={whatsappLabel}
           className={btnClass}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" width={iconSize} height={iconSize}>
@@ -239,12 +248,12 @@ export function ContactQuickLinks({ phone, email, name, tripTitle, size = 'sm' }
         </a>
       )}
       {hasPhone && (
-        <a href={`tel:${phone}`} title="Call" aria-label="Call" className={btnClass}>
+        <a href={`tel:${phone}`} title={callLabel} aria-label={callLabel} className={btnClass}>
           <Phone size={iconSize} aria-hidden="true" />
         </a>
       )}
       {hasEmail && (
-        <a href={`mailto:${email}`} title="Email" aria-label="Email" className={btnClass}>
+        <a href={`mailto:${email}`} title={emailLabel} aria-label={emailLabel} className={btnClass}>
           <Mail size={iconSize} aria-hidden="true" />
         </a>
       )}
