@@ -3101,6 +3101,71 @@ export async function downloadTripItineraryPdf(trip: UpcomingTrip): Promise<void
 }
 
 // =============================================================================
+// Sharing the PDF directly (not just downloading it)
+// -----------------------------------------------------------------------------
+// `doc.save()` above is a plain browser download — fine on desktop/Android,
+// but on iOS Safari a blob download can't be forced: Safari instead opens
+// the PDF in its own viewer at a `blob:https://...` URL, and if the person
+// taps iOS's native share icon *from that viewer*, iOS shares whatever it
+// has — the ephemeral blob: URL (meaningless outside that browser tab) AND
+// the file, as two separate, ugly attachments in WhatsApp/etc.
+//
+// `shareTripItineraryPdf` avoids all of that by handing the PDF to the
+// native share sheet ourselves as a real `File`, via the Web Share API's
+// file-sharing capability (Level 2) — no blob: URL is ever exposed, and we
+// control exactly what travels with it: the trip title plus a real,
+// clickable link back to this trip's page.
+// =============================================================================
+
+/** True only when the browser can actually hand a file to the native OS
+ *  share sheet (iOS Safari 15+, Chrome/Android, some desktop browsers with
+ *  a registered share target). Most desktop browsers return false here —
+ *  callers should treat that as "just download, no sharing option to offer". */
+export function canShareItineraryPdf(): boolean {
+  if (typeof navigator === 'undefined' || !navigator.canShare) return false;
+  try {
+    const probe = new File([''], 'probe.pdf', { type: 'application/pdf' });
+    return navigator.canShare({ files: [probe] });
+  } catch {
+    return false;
+  }
+}
+
+/** Canonical, clean URL for a trip's public detail page — always what
+ *  travels alongside a shared PDF, never a transient `blob:` URL. */
+function getTripPageUrl(trip: UpcomingTrip): string {
+  return `https://${BRAND.website.replace('www.', '')}/trips/${trip.slug}`;
+}
+
+/**
+ * Builds the itinerary PDF and shares it via the native OS share sheet as a
+ * real file, alongside the trip title and a clickable link back to this
+ * trip's page. Callers should gate this behind `canShareItineraryPdf()` —
+ * on browsers without file-sharing support `navigator.share` either doesn't
+ * exist or rejects the file outright.
+ */
+export async function shareTripItineraryPdf(trip: UpcomingTrip): Promise<'shared' | 'cancelled'> {
+  const doc = await buildTripItineraryPdfDoc(trip);
+  const blob = doc.output('blob');
+  const file = new File([blob], `${trip.slug || 'ulaa-trip'}-itinerary.pdf`, { type: 'application/pdf' });
+
+  try {
+    await navigator.share({
+      title: trip.title,
+      text: trip.title,
+      url: getTripPageUrl(trip),
+      files: [file],
+    });
+    return 'shared';
+  } catch (err) {
+    // AbortError fires when the person just closes the native share sheet —
+    // that's a normal cancel, not a failure worth logging/surfacing.
+    if (err instanceof Error && err.name === 'AbortError') return 'cancelled';
+    throw err;
+  }
+}
+
+// =============================================================================
 // Future compatibility
 // -----------------------------------------------------------------------------
 // This generator reads every field straight off the `UpcomingTrip` object —

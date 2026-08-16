@@ -8,6 +8,7 @@ import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDispla
 import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
+import PdfDownloadMenu from '../components/ui/PdfDownloadMenu';
 import GalleryCarousel from '../components/ui/GalleryCarousel';
 import GalleryViewer from '../components/ui/GalleryViewer';
 import PagedCarousel, { type PagedCarouselHandle } from '../components/ui/PagedCarousel';
@@ -23,7 +24,7 @@ import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import {
   MapPin, Calendar, Clock, Users, UserCheck, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, FileDown, Loader2, ExternalLink, Heart, ArrowRight, Play,
+  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, ExternalLink, Heart, ArrowRight, Play,
   ChevronDown, ChevronUp, BadgeCheck,
   Shirt, Footprints, Glasses, HatGlasses, Headphones, BatteryCharging, Pill, SprayCan, Droplet, GlassWater,
   Cookie, Sparkles, FileText, IdCard, Hand, ShieldCheck, Flame, Stamp, Plane, CreditCard, Camera, PlugZap, type LucideIcon,
@@ -108,7 +109,6 @@ export default function TripDetailPage() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('highlights');
   const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const accommodationCarouselRef = useRef<PagedCarouselHandle>(null);
   const [faqsOpen, setFaqsOpen] = useState(false);
@@ -428,22 +428,6 @@ export default function TripDetailPage() {
     : null;
   const hasConfidenceItems = (trip.confidence_items?.length ?? 0) > 0;
 
-  async function handleDownloadPdf() {
-    if (!trip || pdfLoading) return;
-    setPdfLoading(true);
-    try {
-      // Lazy-loaded so jsPDF (and its html2canvas dependency) only ever
-      // download for someone who actually clicks this, not on every visit
-      // to a trip page.
-      const { downloadTripItineraryPdf } = await import('../utils/tripItineraryPdf');
-      await downloadTripItineraryPdf(trip);
-    } catch (err) {
-      console.error('Failed to generate itinerary PDF', err);
-    } finally {
-      setPdfLoading(false);
-    }
-  }
-
   return (
     <Layout>
       {/* Hero */}
@@ -563,17 +547,7 @@ export default function TripDetailPage() {
                 {!isFull && <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />}
               </Button>
               {!trip.hide_pdf_download && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={handleDownloadPdf}
-                  disabled={pdfLoading}
-                  className="flex-1 sm:flex-none whitespace-nowrap sm:w-auto justify-center text-white border-white/40 hover:border-white hover:bg-white/10 !px-3 !py-2 !text-sm !min-h-[44px] sm:!px-8 sm:!py-4 sm:!text-lg sm:!min-h-[56px] sm:rounded-lg"
-                >
-                  {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
-                  {pdfLoading ? 'Preparing…' : 'Download'}
-                </Button>
+                <PdfDownloadMenu trip={trip} variant="hero" />
               )}
             </div>
             <div className="order-7 sm:order-6 mt-1 sm:mt-0 flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 text-white/70 text-xs sm:text-sm mb-4 sm:mb-0">
@@ -710,16 +684,7 @@ export default function TripDetailPage() {
               <CalendarPlus size={16} />
             </button>
             {!trip.hide_pdf_download && (
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={pdfLoading}
-                aria-label="Download itinerary PDF"
-                title="Download itinerary PDF"
-                className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-full text-dark-muted hover:text-primary hover:bg-background-warm transition-colors disabled:opacity-50"
-              >
-                {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <><FileDown size={15} className="sm:hidden" /><FileDown size={16} className="hidden sm:block" /></>}
-              </button>
+              <PdfDownloadMenu trip={trip} variant="icon" />
             )}
           </div>
         </div>
@@ -1365,15 +1330,7 @@ export default function TripDetailPage() {
                     <>
                       <span className="text-background-warm">|</span>
 
-                      <button
-                        type="button"
-                        onClick={handleDownloadPdf}
-                        disabled={pdfLoading}
-                        className="flex items-center gap-1.5 whitespace-nowrap text-sm text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
-                      >
-                        {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-                        {pdfLoading ? 'Preparing PDF…' : 'Download itinerary'}
-                      </button>
+                      <PdfDownloadMenu trip={trip} variant="text" />
                     </>
                   )}
                 </div>
