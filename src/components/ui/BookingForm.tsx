@@ -10,19 +10,22 @@ import {
   ForkKnife as Utensils,
   Clock as Clock3,
 } from '@phosphor-icons/react';
-import type { BookingFormData, BookingMode } from '../../types/types-index';
+import type { BookingFormData, BookingMode, BookingFormDraft } from '../../types/types-index';
 import { submitEnquiry, submitGroupEnquiry, submitWaitlist, getTripSeatSnapshot } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
-import { validateFullName, validateCity, validatePhone, validateOptionalPhone, validateAge, DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
+import { validateFullName, validateCity, validateEmail, validatePhone, validateOptionalPhone, validateAge, DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
+import { MIN_GROUP_SIZE, MAX_GROUP_SIZE } from '../../utils/bookingDraft';
+import { INDIAN_CITIES } from '../../constants/indianCities';
+import { COMMON_EMAIL_DOMAINS } from '../../constants/emailDomains';
 import Button from './Button';
 import Modal from './Modal';
 import TermsBlocks from './TermsBlocks';
 
-// Group bookings top out at this many seats in one submission — beyond
-// that it's a phone/WhatsApp conversation, not a self-serve form.
-const MIN_GROUP_SIZE = 2;
-const MAX_GROUP_SIZE = 15;
+// How many rows to show at once in the City / Email-domain suggestion
+// dropdowns — enough to be useful without the list itself needing to
+// scroll inside the (already scrollable) modal.
+const MAX_SUGGESTIONS = 6;
 
 interface BookingFormProps {
   tripId?: string;
@@ -44,9 +47,20 @@ interface BookingFormProps {
   // src/utils/formValidation.ts.
   minAge?: number | null;
   maxAge?: number | null;
+  // Restores an in-progress (never submitted) entry — e.g. the user opened
+  // this form, typed some details, then closed the modal without
+  // submitting. Undefined/omitted means start blank, same as before this
+  // existed.
+  initialDraft?: BookingFormDraft | null;
+  // Fired whenever anything in the form changes, so the caller can hold
+  // onto the latest draft (see initialDraft above) for as long as the
+  // modal around this form might get closed and reopened. Called with
+  // null right after a successful submit, once the form has actually been
+  // cleared, so a stale draft doesn't get restored into the next booking.
+  onDraftChange?: (draft: BookingFormDraft | null) => void;
 }
 
-export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge }: BookingFormProps) {
+export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge, initialDraft, onDraftChange }: BookingFormProps) {
   // Shared id prefix so every label/input pair below has a stable,
   // unique-per-instance id — needed for htmlFor/aria-describedby wiring,
   // and unique in case this form is ever mounted more than once at a time.
@@ -69,13 +83,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [termsOpen, setTermsOpen] = useState(false);
-  const [bookingMode, setBookingMode] = useState<BookingMode>('solo');
-  const [groupSize, setGroupSize] = useState(MIN_GROUP_SIZE);
+  const [bookingMode, setBookingMode] = useState<BookingMode>(initialDraft?.bookingMode ?? 'solo');
+  const [groupSize, setGroupSize] = useState(initialDraft?.groupSize ?? MIN_GROUP_SIZE);
   // Raw text the user is typing into the "Number of People" input. Kept
   // separate from the numeric groupSize so the field can be emptied out
   // (e.g. via backspace) while the user is mid-edit, instead of snapping
   // back to a number on every keystroke. Reconciled into groupSize on blur.
-  const [groupSizeInput, setGroupSizeInput] = useState(String(MIN_GROUP_SIZE));
+  const [groupSizeInput, setGroupSizeInput] = useState(String(initialDraft?.groupSize ?? MIN_GROUP_SIZE));
   const [groupSizeError, setGroupSizeError] = useState('');
   const [successCount, setSuccessCount] = useState(1);
   // Which path the most recent successful submission actually took —
@@ -91,17 +105,17 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // Not react-hook-form fields (kept alongside bookingMode/groupSize as
   // separate choices, same pattern as Solo/Group above).
   // Solo: one shared preference, same as full_name/phone/etc.
-  const [foodPreference, setFoodPreference] = useState<'veg' | 'non_veg' | null>(null);
+  const [foodPreference, setFoodPreference] = useState<'veg' | 'non_veg' | null>(initialDraft?.foodPreference ?? null);
   const [foodPreferenceError, setFoodPreferenceError] = useState('');
   // Group: a group can be a mix, so this collects how many of the
   // groupSize seats are veg — the rest are treated as non-veg. Clamped to
   // [0, groupSize] whenever groupSize changes (see the Number of People
   // input below).
-  const [groupVegCount, setGroupVegCount] = useState(MIN_GROUP_SIZE);
+  const [groupVegCount, setGroupVegCount] = useState(initialDraft?.groupVegCount ?? MIN_GROUP_SIZE);
   // Raw text for the veg-count input — same reasoning as groupSizeInput
   // above. Kept in sync with groupVegCount whenever it changes elsewhere
   // (e.g. clamped down when groupSize shrinks) via the effect below.
-  const [vegCountInput, setVegCountInput] = useState(String(MIN_GROUP_SIZE));
+  const [vegCountInput, setVegCountInput] = useState(String(initialDraft?.groupVegCount ?? MIN_GROUP_SIZE));
 
   // Whether what's currently selected/entered actually fits in the seats
   // left. When it doesn't, submitting still succeeds — it just becomes a
@@ -133,6 +147,15 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // Falls back to the first section before the observer below has fired
   // (e.g. right when the modal opens), without needing its own effect.
   const displayedActiveNum = activeSectionNum ?? termsSections[0]?.number ?? null;
+
+  // City / email-domain suggestion dropdown state — declared up here
+  // (rather than next to the handlers that use them, further down) since
+  // this component has an early `return` below for the success screen,
+  // and hooks can't be called conditionally after that.
+  const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [emailSuggestionsOpen, setEmailSuggestionsOpen] = useState(false);
+  const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
 
   // Highlight whichever chip's section is currently at the top of the
   // modal's own scroll box (not the page) — same live-highlight behavior
@@ -180,13 +203,64 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
+    getValues,
+    setValue,
   } = useForm<BookingFormData>({
     // Default is 'onSubmit', which only runs validation (and shows errors)
     // after the first Save attempt. 'onChange' validates on every keystroke
     // instead, so a bad phone/email/name shows its error message live as
     // the user types rather than only surfacing on save.
     mode: 'onChange',
+    defaultValues: {
+      full_name: initialDraft?.full_name ?? '',
+      // BookingFormData types age as a number, but the input itself never
+      // parses it (see the Age field below) — it's really just text at
+      // this layer, same as everywhere else age is handled in this file.
+      age: (initialDraft?.age ?? '') as unknown as number,
+      phone: initialDraft?.phone ?? '',
+      email: initialDraft?.email ?? '',
+      city: initialDraft?.city ?? '',
+      emergency_contact: initialDraft?.emergency_contact ?? '',
+      message: initialDraft?.message ?? '',
+      terms_accepted: initialDraft?.terms_accepted ?? false,
+    },
   });
+
+  // Bundles the RHF-managed text fields with the non-RHF choices tracked
+  // above (bookingMode/groupSize/foodPreference/groupVegCount) and hands
+  // the result to the caller, so it can hold onto it as `initialDraft` the
+  // next time this form is mounted (see the prop docs above).
+  const reportDraft = () => {
+    if (!onDraftChange) return;
+    const values = getValues();
+    onDraftChange({
+      bookingMode,
+      groupSize,
+      groupVegCount,
+      foodPreference,
+      full_name: values.full_name ?? '',
+      age: values.age != null ? String(values.age) : '',
+      phone: values.phone ?? '',
+      email: values.email ?? '',
+      city: values.city ?? '',
+      emergency_contact: values.emergency_contact ?? '',
+      message: values.message ?? '',
+      terms_accepted: !!values.terms_accepted,
+    });
+  };
+
+  // Re-reports the draft whenever a non-RHF choice changes, and (re)opens
+  // a watch subscription — closing over that same fresh state — so a
+  // keystroke in any RHF-registered field reports the draft too. The
+  // subscription is cheap to recreate and only happens when one of these
+  // four values actually changes, not on every keystroke.
+  useEffect(() => {
+    reportDraft();
+    const subscription = watch(() => reportDraft());
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingMode, groupSize, groupVegCount, foodPreference, watch]);
 
   const onSubmit = async (data: BookingFormData) => {
     // Trim all text fields to strip accidental leading/trailing whitespace
@@ -320,12 +394,25 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         setSuccessCount(1);
       }
       setStatus('success');
-      reset();
+      // Reset to genuinely blank values (not the initialDraft this form
+      // may have mounted with) now that the entry's been submitted — an
+      // old draft should never come back after a successful submission.
+      reset({
+        full_name: '',
+        age: '' as unknown as number,
+        phone: '',
+        email: '',
+        city: '',
+        emergency_contact: '',
+        message: '',
+        terms_accepted: false,
+      });
       setBookingMode('solo');
       setGroupSize(MIN_GROUP_SIZE);
       setGroupSizeInput(String(MIN_GROUP_SIZE));
       setGroupVegCount(MIN_GROUP_SIZE);
       setFoodPreference(null);
+      onDraftChange?.(null);
       onSuccess?.();
     } catch (err) {
       setStatus('error');
@@ -386,6 +473,95 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   `;
 
   const errorClass = 'text-red-500 text-xs mt-1';
+
+  // City suggestions — filters INDIAN_CITIES against whatever's typed so
+  // far. validateCity enforces this same list: picking a suggestion (or
+  // typing the exact name out) is required whenever this dropdown has
+  // matches; once nothing matches, free text is accepted instead.
+  const handleCityInput = (value: string) => {
+    const trimmed = value.trim().toLowerCase();
+    if (trimmed.length === 0) {
+      setCitySuggestionsOpen(false);
+      return;
+    }
+    const matches = INDIAN_CITIES
+      .filter(c => c.toLowerCase().startsWith(trimmed))
+      .slice(0, MAX_SUGGESTIONS);
+    setCitySuggestions(matches);
+    setCitySuggestionsOpen(matches.length > 0);
+  };
+
+  const selectCitySuggestion = (city: string) => {
+    setValue('city', city, { shouldValidate: true, shouldDirty: true });
+    setCitySuggestionsOpen(false);
+  };
+
+  // Email domain suggestions — once the user's typed "@", offers the
+  // common domains that match what (if anything) they've typed after it,
+  // so "priya@gm" can become "priya@gmail.com" in one tap instead of
+  // typing the rest out. Purely a convenience for the domain half; the
+  // field still accepts any domain the user finishes typing themselves —
+  // validateEmail only constrains the local part (before the "@").
+  const handleEmailInput = (value: string) => {
+    const atIndex = value.indexOf('@');
+    if (atIndex === -1) {
+      setEmailSuggestionsOpen(false);
+      return;
+    }
+    const localPart = value.slice(0, atIndex);
+    const domainPart = value.slice(atIndex + 1).toLowerCase();
+    if (!localPart) {
+      setEmailSuggestionsOpen(false);
+      return;
+    }
+    // Already a complete, exact match (typed or pasted in full) — nothing
+    // left to suggest.
+    if (COMMON_EMAIL_DOMAINS.includes(domainPart)) {
+      setEmailSuggestionsOpen(false);
+      return;
+    }
+    const matches = (domainPart === ''
+      ? COMMON_EMAIL_DOMAINS
+      : COMMON_EMAIL_DOMAINS.filter(d => d.startsWith(domainPart))
+    ).slice(0, MAX_SUGGESTIONS);
+    setEmailSuggestions(matches.map(d => `${localPart}@${d}`));
+    setEmailSuggestionsOpen(matches.length > 0);
+  };
+
+  const selectEmailSuggestion = (email: string) => {
+    setValue('email', email, { shouldValidate: true, shouldDirty: true });
+    setEmailSuggestionsOpen(false);
+  };
+
+  // Small shared dropdown used by both suggestion lists above. Positioned
+  // relative to the input's own wrapping div (see the `relative` wrapper
+  // around each field below) rather than portalled, since it only ever
+  // needs to sit right under a short, single-line input.
+  const SuggestionDropdown = ({ items, onSelect }: { items: string[]; onSelect: (value: string) => void }) => (
+    <ul
+      role="listbox"
+      className="absolute z-20 left-0 right-0 mt-1 max-h-56 overflow-auto app-scroll rounded-lg border-2 border-background-warm bg-white shadow-warm-lg py-1"
+    >
+      {items.map(item => (
+        <li key={item} role="option">
+          <button
+            type="button"
+            // onMouseDown (not onClick) fires before the input's onBlur,
+            // and preventDefault stops that blur from firing at all — so
+            // picking a suggestion never races with the dropdown closing
+            // itself out from under the click.
+            onMouseDown={e => { e.preventDefault(); onSelect(item); }}
+            className="w-full px-4 py-2 text-sm text-left font-body text-dark hover:bg-background-warm transition-colors"
+          >
+            {item}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const emailReg = register('email', { required: 'Email is required', validate: validateEmail });
+  const cityReg = register('city', { required: 'City is required', validate: validateCity });
 
   return (
     <>
@@ -479,7 +655,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           ) : (
             <p id={`${ids.groupSize}-hint`} className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
               <Clock3 size={13} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
-              Only {remainingSeats} seat{remainingSeats === 1 ? '' : 's'} left right now — not enough for {groupSize}. Submitting will add your group to the waitlist instead, and we'll notify you the moment {groupSize} seats are free together.
+              This trip doesn't have enough seats left for a group this size right now — submitting will add your group to the waitlist instead, and we'll notify you the moment enough seats free up together.
             </p>
           )}
           {groupSizeError && <p id={`${ids.groupSize}-error`} role="alert" className={errorClass}>{groupSizeError}</p>}
@@ -546,15 +722,14 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         </div>
 
         {/* Email */}
-        <div>
+        <div className="relative">
           <label htmlFor={ids.email} className="block text-sm font-medium text-dark mb-1">Email *</label>
           <input
             id={ids.email}
             type="email"
-            {...register('email', {
-              required: 'Email is required',
-              pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email address' },
-            })}
+            {...emailReg}
+            onChange={e => { emailReg.onChange(e); handleEmailInput(e.target.value); }}
+            onBlur={e => { emailReg.onBlur(e); setEmailSuggestionsOpen(false); }}
             placeholder="you@example.com"
             autoComplete="email"
             aria-invalid={!!errors.email}
@@ -562,14 +737,17 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             className={inputClass}
           />
           {errors.email && <p id={`${ids.email}-error`} role="alert" className={errorClass}>{errors.email.message}</p>}
+          {emailSuggestionsOpen && <SuggestionDropdown items={emailSuggestions} onSelect={selectEmailSuggestion} />}
         </div>
 
         {/* City */}
-        <div>
-          <label htmlFor={ids.city} className="block text-sm font-medium text-dark mb-1">City</label>
+        <div className="relative">
+          <label htmlFor={ids.city} className="block text-sm font-medium text-dark mb-1">City *</label>
           <input
             id={ids.city}
-            {...register('city', { validate: validateCity })}
+            {...cityReg}
+            onChange={e => { cityReg.onChange(e); handleCityInput(e.target.value); }}
+            onBlur={e => { cityReg.onBlur(e); setCitySuggestionsOpen(false); }}
             placeholder="Your city"
             autoComplete="address-level2"
             aria-invalid={!!errors.city}
@@ -577,6 +755,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             className={inputClass}
           />
           {errors.city && <p id={`${ids.city}-error`} role="alert" className={errorClass}>{errors.city.message}</p>}
+          {citySuggestionsOpen && <SuggestionDropdown items={citySuggestions} onSelect={selectCitySuggestion} />}
         </div>
 
         {/* Emergency Contact */}

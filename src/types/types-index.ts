@@ -563,6 +563,28 @@ export interface BookingFormData {
 // separate "how many seats" choice the form also collects alongside it.
 export type BookingMode = 'solo' | 'group';
 
+// A snapshot of everything the user has typed/picked into BookingForm so
+// far, whether or not it's been submitted yet. Lets the page that owns the
+// booking modal (TripDetailPage) hold onto an in-progress entry across the
+// modal being closed and reopened — see BookingForm's initialDraft /
+// onDraftChange props. All text fields are plain strings (matching what
+// the inputs actually hold), not the parsed/typed shape BookingFormData
+// expects on submit.
+export interface BookingFormDraft {
+  bookingMode: BookingMode;
+  groupSize: number;
+  groupVegCount: number;
+  foodPreference: 'veg' | 'non_veg' | null;
+  full_name: string;
+  age: string;
+  phone: string;
+  email: string;
+  city: string;
+  emergency_contact: string;
+  message: string;
+  terms_accepted: boolean;
+}
+
 // =============================================
 // Waitlist (sold-out trips)
 // =============================================

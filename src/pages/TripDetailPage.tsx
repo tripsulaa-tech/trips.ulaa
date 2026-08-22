@@ -7,6 +7,8 @@ import FAQAccordion from '../components/ui/FAQAccordion';
 import CancellationPolicyDisplay from '../components/ui/CancellationPolicyDisplay';
 import Modal from '../components/ui/Modal';
 import BookingForm from '../components/ui/BookingForm';
+import { useConfirm } from '../components/ui/useConfirm';
+import { isBookingDraftDirty } from '../utils/bookingDraft';
 import ItineraryDayPhotos from '../components/ui/ItineraryDayPhotos';
 import PdfDownloadMenu from '../components/ui/PdfDownloadMenu';
 import GalleryCarousel from '../components/ui/GalleryCarousel';
@@ -17,7 +19,7 @@ import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay'
 import { getTripHighlightIcon, getTripHighlightPalette, type TripHighlightIconType } from '../constants/tripHighlightIcons';
 import { getUpcomingTripBySlug, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
-import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripConfidenceItem, ButtonLabelsConfig } from '../types/types-index';
+import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripConfidenceItem, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
 import { formatDateRange, formatDate, publicSeatsLeft, PLACEHOLDER_IMAGE, formatPrice, getActivePrice, getStrikeThroughPrice, formatAgeRange, getCoverImageStyle } from '../utils/utils-index';
 import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/calendar';
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
@@ -144,6 +146,12 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true);
   const [buttonLabels, setButtonLabels] = useState<ButtonLabelsConfig>(DEFAULT_BUTTON_LABELS);
   const [bookingOpen, setBookingOpen] = useState(false);
+  // Whatever the user has typed/picked into the booking form so far, kept
+  // here (not inside BookingForm) so it survives the modal being closed
+  // and reopened without a submission — see BookingForm's initialDraft /
+  // onDraftChange props and isBookingDraftDirty.
+  const [bookingDraft, setBookingDraft] = useState<BookingFormDraft | null>(null);
+  const confirm = useConfirm();
   const [activeSection, setActiveSection] = useState('highlights');
   const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
@@ -454,6 +462,25 @@ export default function TripDetailPage() {
   const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
   const isFull = remaining === 0;
   const isAlmostFull = remaining > 0 && remaining <= 5;
+  // Countdown urgency — a *time-based* signal, distinct from the seat-scarcity
+  // one above. Inside the final 48 hours the card switches to a warmer red
+  // palette and starts showing Min/Sec (noisy and pointless at 55 days out,
+  // meaningful the day before departure).
+  const countdownHoursLeft = countdown ? countdown.days * 24 + countdown.hours : null;
+  const isCountdownUrgent = countdownHoursLeft !== null && countdownHoursLeft < 48;
+  const countdownUnits = countdown
+    ? isCountdownUrgent
+      ? [
+          { v: countdown.days, l: 'Days' },
+          { v: countdown.hours, l: 'Hrs' },
+          { v: countdown.minutes, l: 'Min' },
+          { v: countdown.seconds, l: 'Sec' },
+        ]
+      : [
+          { v: countdown.days, l: 'Days' },
+          { v: countdown.hours, l: 'Hrs' },
+        ]
+    : [];
   const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
   // Amount still payable before the trip once the advance/reservation
@@ -738,26 +765,40 @@ export default function TripDetailPage() {
                 not just stretched. */}
             {countdown && (
               <div>
-                <div className="relative rounded-[28px] p-px bg-gradient-to-br from-primary-light/50 via-white/10 to-primary/40 shadow-[0_28px_60px_-20px_rgba(15,9,5,0.55)]">
+                <div
+                  className={`relative rounded-[28px] p-px shadow-[0_28px_60px_-20px_rgba(15,9,5,0.55)] ${
+                    isCountdownUrgent
+                      ? 'bg-gradient-to-br from-red-400/50 via-white/10 to-red-600/40'
+                      : 'bg-gradient-to-br from-primary-light/50 via-white/10 to-primary/40'
+                  }`}
+                >
                   <motion.button
                     type="button"
                     onClick={() => setBookingOpen(true)}
-                    aria-label={`Trip starts soon — tap to ${buttonLabels.primaryCta}`}
+                    aria-label={
+                      isCountdownUrgent
+                        ? `Only hours left — tap to ${buttonLabels.primaryCta}`
+                        : `Trip starts soon — tap to ${buttonLabels.primaryCta}`
+                    }
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.985 }}
                     transition={{ duration: 0.25, ease: 'easeOut' }}
-                    className="countdown-grain group/btn relative overflow-hidden block w-full text-left bg-gradient-to-br from-[#1B120B] via-[#2C1D12] to-[#170F09] countdown-gradient rounded-[27px] px-6 py-7 sm:px-10 sm:py-10 lg:px-14 lg:py-11"
+                    className={`countdown-grain group/btn relative overflow-hidden block w-full text-left countdown-gradient rounded-[27px] px-6 py-7 sm:px-10 sm:py-10 lg:px-14 lg:py-11 ${
+                      isCountdownUrgent
+                        ? 'bg-gradient-to-br from-[#210A07] via-[#3A130C] to-[#1A0705]'
+                        : 'bg-gradient-to-br from-[#1B120B] via-[#2C1D12] to-[#170F09]'
+                    }`}
                   >
                     {/* Soft radial spotlight + ambient glows for depth */}
-                    <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 lg:w-[36rem] rounded-full bg-primary-light/20 blur-[90px]" />
-                    <div className="pointer-events-none absolute -bottom-16 -left-10 w-40 h-40 rounded-full bg-primary/15 blur-3xl" />
-                    <div className="pointer-events-none absolute -bottom-16 -right-10 w-40 h-40 rounded-full bg-primary/15 blur-3xl hidden lg:block" />
+                    <div className={`pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 lg:w-[36rem] rounded-full blur-[90px] ${isCountdownUrgent ? 'bg-red-400/20' : 'bg-primary-light/20'}`} />
+                    <div className={`pointer-events-none absolute -bottom-16 -left-10 w-40 h-40 rounded-full blur-3xl ${isCountdownUrgent ? 'bg-red-500/15' : 'bg-primary/15'}`} />
+                    <div className={`pointer-events-none absolute -bottom-16 -right-10 w-40 h-40 rounded-full blur-3xl hidden lg:block ${isCountdownUrgent ? 'bg-red-500/15' : 'bg-primary/15'}`} />
                     {/* Diagonal shimmer sweep — has more room to read as a
                         deliberate effect now the card spans full width */}
                     <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-white/[0.06] to-transparent countdown-shimmer hidden lg:block" />
                     {/* Floating sparkles */}
-                    <Sparkles size={14} className="countdown-float pointer-events-none absolute top-5 right-9 text-primary-light/40" style={{ animationDelay: '0.4s' }} />
-                    <Sparkles size={10} className="countdown-float pointer-events-none absolute bottom-7 left-7 text-primary-light/30" style={{ animationDelay: '1.6s' }} />
+                    <Sparkles size={14} className={`countdown-float pointer-events-none absolute top-5 right-9 ${isCountdownUrgent ? 'text-red-300/40' : 'text-primary-light/40'}`} style={{ animationDelay: '0.4s' }} />
+                    <Sparkles size={10} className={`countdown-float pointer-events-none absolute bottom-7 left-7 ${isCountdownUrgent ? 'text-red-300/30' : 'text-primary-light/30'}`} style={{ animationDelay: '1.6s' }} />
 
                     {(isAlmostFull || isFull) && (
                       <span className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10 inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-[10px] font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
@@ -768,25 +809,34 @@ export default function TripDetailPage() {
 
                     <div className="relative flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
                       <div className="flex flex-col items-center lg:items-start gap-1.5 lg:w-56 lg:shrink-0">
-                        <p className="flex items-center gap-2 text-[11px] lg:text-xs font-button font-bold uppercase tracking-[0.25em] whitespace-nowrap bg-gradient-to-r from-primary-light to-amber-200 bg-clip-text text-transparent">
+                        <p
+                          className={`flex items-center gap-2 text-[11px] lg:text-xs font-button font-bold uppercase tracking-[0.25em] whitespace-nowrap bg-clip-text text-transparent ${
+                            isCountdownUrgent ? 'bg-gradient-to-r from-red-300 to-amber-200' : 'bg-gradient-to-r from-primary-light to-amber-200'
+                          }`}
+                        >
                           <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-light opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-light" />
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isCountdownUrgent ? 'bg-red-400' : 'bg-primary-light'}`} />
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${isCountdownUrgent ? 'bg-red-400' : 'bg-primary-light'}`} />
                           </span>
-                          Trip starts in
+                          {isCountdownUrgent ? 'Final countdown' : 'Trip starts in'}
                         </p>
                         <p className="hidden lg:block text-white/35 text-xs font-medium">
                           {trip.destination} &middot; {formatDateRange(trip.start_date, trip.end_date)}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
-                        {[
-                          { v: countdown.days, l: 'Days' },
-                          { v: countdown.hours, l: 'Hrs' },
-                          { v: countdown.minutes, l: 'Min' },
-                          { v: countdown.seconds, l: 'Sec' },
-                        ].map(({ v, l }, i) => (
+                      {/* Screen-reader summary — coarse (days/hours, or
+                          days/hrs/min once urgent) so the text only actually
+                          changes once an hour (or once a minute when urgent)
+                          instead of re-announcing on every second-tick of the
+                          decorative digits below. */}
+                      <p className="sr-only" aria-live="polite">
+                        {isCountdownUrgent
+                          ? `${countdown.days} days, ${countdown.hours} hours, ${countdown.minutes} minutes until this trip starts`
+                          : `${countdown.days} days, ${countdown.hours} hours until this trip starts`}
+                      </p>
+                      <div className="flex items-center gap-2 sm:gap-3 lg:gap-4" aria-hidden="true">
+                        {countdownUnits.map(({ v, l }, i) => (
                           <div key={l} className="flex items-center gap-2 sm:gap-3 lg:gap-4">
                             <div className="text-center">
                               <div
@@ -802,7 +852,9 @@ export default function TripDetailPage() {
                                     exit={{ rotateX: -90, opacity: 0 }}
                                     transition={{ duration: 0.7, ease: 'easeInOut' }}
                                     style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', perspective: '400px' }}
-                                    className="absolute inset-0 flex items-center justify-center font-display text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-b from-white to-primary-light/90 bg-clip-text text-transparent tabular-nums"
+                                    className={`absolute inset-0 flex items-center justify-center font-display text-3xl sm:text-4xl lg:text-5xl font-bold bg-clip-text text-transparent tabular-nums ${
+                                      isCountdownUrgent ? 'bg-gradient-to-b from-white to-red-300/90' : 'bg-gradient-to-b from-white to-primary-light/90'
+                                    }`}
                                   >
                                     {String(v).padStart(2, '0')}
                                   </motion.div>
@@ -810,21 +862,27 @@ export default function TripDetailPage() {
                               </div>
                               <div className="text-white/45 text-[10px] lg:text-xs font-medium uppercase tracking-[0.2em] text-center mt-2">{l}</div>
                             </div>
-                            {i < 3 && (
-                              <span className="text-primary-light/40 font-display text-xl sm:text-2xl lg:text-3xl font-bold pb-4 sm:pb-5 lg:pb-6 select-none">:</span>
+                            {i < countdownUnits.length - 1 && (
+                              <span className={`font-display text-xl sm:text-2xl lg:text-3xl font-bold pb-4 sm:pb-5 lg:pb-6 select-none ${isCountdownUrgent ? 'text-red-300/40' : 'text-primary-light/40'}`}>:</span>
                             )}
                           </div>
                         ))}
                       </div>
 
                       <div className="flex flex-col items-center lg:items-end gap-2 lg:w-56 lg:shrink-0">
-                        <span className="hidden lg:inline-flex items-center gap-2 bg-gradient-to-r from-primary-light/20 to-amber-300/10 border border-primary-light/30 text-primary-light font-button font-bold text-sm px-5 py-2.5 rounded-full transition-colors group-hover/btn:from-primary-light/30 group-hover/btn:to-amber-300/20">
+                        <span
+                          className={`hidden lg:inline-flex items-center gap-2 font-button font-bold text-sm px-5 py-2.5 rounded-full transition-colors ${
+                            isCountdownUrgent
+                              ? 'bg-gradient-to-r from-red-400/20 to-amber-300/10 border border-red-300/30 text-red-200 group-hover/btn:from-red-400/30 group-hover/btn:to-amber-300/20'
+                              : 'bg-gradient-to-r from-primary-light/20 to-amber-300/10 border border-primary-light/30 text-primary-light group-hover/btn:from-primary-light/30 group-hover/btn:to-amber-300/20'
+                          }`}
+                        >
                           {buttonLabels.primaryCta}
                           <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
                         </span>
                         <p className="flex items-center gap-1.5 text-white/55 text-[11px] font-medium lg:hidden">
                           Don't miss out — tap to {buttonLabels.primaryCta}
-                          <ArrowRight size={12} className="text-primary-light transition-transform group-hover/btn:translate-x-1" />
+                          <ArrowRight size={12} className={`transition-transform group-hover/btn:translate-x-1 ${isCountdownUrgent ? 'text-red-300' : 'text-primary-light'}`} />
                         </p>
                         <p className="hidden lg:block text-white/35 text-xs">
                           Don't miss out — tap to {buttonLabels.primaryCta}
@@ -1712,7 +1770,27 @@ export default function TripDetailPage() {
           fits in what's left; see BookingForm. */}
       <Modal
         isOpen={bookingOpen}
-        onClose={() => setBookingOpen(false)}
+        onClose={async () => {
+          // Closing (backdrop click, Escape, or the X button all funnel
+          // through this same onClose) with unsaved details entered would
+          // otherwise silently discard them with no warning — most often
+          // an accidental backdrop click. Confirm first when there's
+          // actually something to lose. The draft itself is kept either
+          // way (see bookingDraft/onDraftChange below), so even a
+          // deliberate close doesn't lose what was typed — reopening the
+          // form brings it right back.
+          if (isBookingDraftDirty(bookingDraft)) {
+            const ok = await confirm({
+              title: 'Close without submitting?',
+              message: "You've entered some details for this booking. If you close now they won't be submitted — but we'll keep them ready for you if you come back to this form.",
+              confirmLabel: 'Close',
+              cancelLabel: 'Keep editing',
+              variant: 'default',
+            });
+            if (!ok) return;
+          }
+          setBookingOpen(false);
+        }}
         title={isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta}
         size="lg"
       >
@@ -1723,6 +1801,8 @@ export default function TripDetailPage() {
           remainingSeats={remaining}
           minAge={trip.min_age}
           maxAge={trip.max_age}
+          initialDraft={bookingDraft}
+          onDraftChange={setBookingDraft}
           onSuccess={() => setTimeout(() => setBookingOpen(false), 3000)}
         />
       </Modal>
