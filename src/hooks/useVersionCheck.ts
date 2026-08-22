@@ -6,13 +6,18 @@ import { useEffect, useRef, useState } from 'react';
 // polling this often is cheap.
 const CHECK_INTERVAL_MS = 5_000;
 
-// Pulls the hashed asset entry (e.g. /assets/main-abc123.js) out of an
-// index.html document so it can be compared across fetches. Vite renames
-// this file's hash on every build, so a change here reliably means a new
-// deployment has gone live — without needing a dedicated version endpoint.
+// Pulls a fingerprint out of an index.html document so it can be compared
+// across fetches. index.html can reference more than one <script
+// type="module"> tag — e.g. a small static loader shim (like Rolldown's
+// runtime helper) plus the actual hashed entry chunk — and only some of
+// those filenames change hash on every build. Matching just the first tag
+// risks locking onto the one that stays byte-identical across deploys, so
+// this collects every module script src instead and joins them; if *any*
+// of them changes, the fingerprint changes too.
 function extractBuildId(html: string): string | null {
-  const match = html.match(/<script[^>]+type="module"[^>]+src="([^"]+)"/i);
-  return match ? match[1] : null;
+  const matches = [...html.matchAll(/<script[^>]+type="module"[^>]+src="([^"]+)"/gi)];
+  if (matches.length === 0) return null;
+  return matches.map((m) => m[1]).join('|');
 }
 
 /**
@@ -29,9 +34,14 @@ export function useVersionCheck(): boolean {
   const currentBuildId = useRef<string | null>(null);
 
   useEffect(() => {
-    // Baseline: the module script this tab was actually loaded with.
-    const loadedScript = document.querySelector('script[type="module"]');
-    currentBuildId.current = loadedScript?.getAttribute('src') ?? null;
+    // Baseline: every module script this tab was actually loaded with,
+    // fingerprinted the same way as extractBuildId so the two are
+    // comparing like for like.
+    const loadedScripts = [...document.querySelectorAll('script[type="module"]')];
+    const loadedSrcs = loadedScripts
+      .map((el) => el.getAttribute('src'))
+      .filter((src): src is string => !!src);
+    currentBuildId.current = loadedSrcs.length > 0 ? loadedSrcs.join('|') : null;
 
     let cancelled = false;
 

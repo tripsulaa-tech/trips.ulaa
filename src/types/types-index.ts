@@ -667,6 +667,16 @@ export interface HomeHeroSlide {
   mobile_image: string;
   /** Inactive slides are kept (not deleted) but skipped on the live site. */
   active: boolean;
+  // Headline is split into 3 parts rather than one free-text field so the
+  // middle segment can always render in the accent color + italic (e.g.
+  // "Girls-only" / "travel" / "experiences.") without the admin needing to
+  // hand-write markup. Each slide carries its own copy so the headline can
+  // change alongside the photo as the carousel rotates — see
+  // HeroSection.tsx and AdminHomeHero.tsx.
+  heading_line1: string;
+  heading_highlight: string;
+  heading_line2: string;
+  subheading: string;
 }
 
 export interface HomeHeroContent {
@@ -674,11 +684,11 @@ export interface HomeHeroContent {
   autoplay: boolean;
   /** Seconds between automatic slide changes. */
   interval_seconds: number;
-  // Headline is split into 3 parts rather than one free-text field so the
-  // middle segment can always render in the accent color + italic (e.g.
-  // "Girls-only" / "travel" / "experiences.") without the admin needing to
-  // hand-write markup. Shown on every slide, not just the first — see
-  // HeroSection.tsx.
+  // Fallback headline used only when there are zero active slides (the
+  // hard-coded static hero image case — see heroImg in HeroSection.tsx) and
+  // as the starting text pre-filled onto newly added slides in
+  // AdminHomeHero.tsx. Not directly editable in the admin UI; per-slide
+  // headline text above is what admins actually manage.
   heading_line1: string;
   heading_highlight: string;
   heading_line2: string;

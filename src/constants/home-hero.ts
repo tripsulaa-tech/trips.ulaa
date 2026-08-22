@@ -18,11 +18,28 @@ export const DEFAULT_HOME_HERO: HomeHeroContent = {
 // HeroSection (e.g. a missing `slides` array). Shared by
 // src/admin/AdminHomeHero.tsx and src/sections/home/HeroSection.tsx so both
 // read the exact same DB row the exact same defensive way.
+//
+// Also backfills per-slide headline text (heading_line1/highlight/line2/
+// subheading) from the content-level defaults for any slide saved before
+// per-slide headlines existed, so older saved photos keep showing text
+// instead of going blank the first time this loads.
 export function mergeWithDefaults(data: Partial<HomeHeroContent> | null | undefined): HomeHeroContent {
-  if (!data) return DEFAULT_HOME_HERO;
+  const merged: HomeHeroContent = data
+    ? {
+        ...DEFAULT_HOME_HERO,
+        ...data,
+        slides: Array.isArray(data.slides) ? data.slides : DEFAULT_HOME_HERO.slides,
+      }
+    : DEFAULT_HOME_HERO;
+
   return {
-    ...DEFAULT_HOME_HERO,
-    ...data,
-    slides: Array.isArray(data.slides) ? data.slides : DEFAULT_HOME_HERO.slides,
+    ...merged,
+    slides: merged.slides.map(slide => ({
+      ...slide,
+      heading_line1: slide.heading_line1 || merged.heading_line1,
+      heading_highlight: slide.heading_highlight || merged.heading_highlight,
+      heading_line2: slide.heading_line2 || merged.heading_line2,
+      subheading: slide.subheading || merged.subheading,
+    })),
   };
 }

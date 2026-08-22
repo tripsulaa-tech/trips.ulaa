@@ -66,7 +66,16 @@ export default function HeroSection() {
   // changes for sites that haven't touched the new admin page.
   const slides = activeSlides.length > 0
     ? activeSlides
-    : [{ id: '__default', image: heroImg, mobile_image: '', active: true }];
+    : [{
+        id: '__default',
+        image: heroImg,
+        mobile_image: '',
+        active: true,
+        heading_line1: hero.heading_line1,
+        heading_highlight: hero.heading_highlight,
+        heading_line2: hero.heading_line2,
+        subheading: hero.subheading,
+      }];
   const isCarousel = slides.length > 1;
 
   const [rawIndex, setIndex] = useState(0);
@@ -187,32 +196,36 @@ export default function HeroSection() {
       >
         <div className="max-w-[1344px] mx-auto pointer-events-none">
         <div className="max-w-3xl pointer-events-none">
-          {/* Headline + subheading — shown on every slide (admin-editable
-              via /admin/home-hero, see AdminHomeHero.tsx). Renders once on
-              mount rather than re-animating per slide change, since it's
-              now persistent across the whole carousel instead of only
-              appearing on the first slide. */}
-          <motion.h1
-            custom={1}
-            initial="hidden"
-            animate="visible"
-            variants={textVariants}
-            className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] mb-6"
-          >
-            {hero.heading_line1}
-            <br />
-            <span className="text-secondary italic">{hero.heading_highlight}</span> {hero.heading_line2}
-          </motion.h1>
+          {/* Headline + subheading — each slide carries its own copy
+              (admin-editable per photo via /admin/home-hero, see
+              AdminHomeHero.tsx), so this is keyed to currentSlide.id to
+              re-animate in whenever the slide (and therefore the text)
+              changes, rather than only on first mount. */}
+          <AnimatePresence mode="wait">
+            <motion.div key={currentSlide.id}>
+              <motion.h1
+                custom={1}
+                initial="hidden"
+                animate="visible"
+                variants={textVariants}
+                className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] mb-6"
+              >
+                {currentSlide.heading_line1}
+                <br />
+                <span className="text-secondary italic">{currentSlide.heading_highlight}</span> {currentSlide.heading_line2}
+              </motion.h1>
 
-          <motion.p
-            custom={2}
-            initial="hidden"
-            animate="visible"
-            variants={textVariants}
-            className="text-base sm:text-lg text-white/85 leading-relaxed mb-3 sm:mb-8 max-w-xl"
-          >
-            {hero.subheading}
-          </motion.p>
+              <motion.p
+                custom={2}
+                initial="hidden"
+                animate="visible"
+                variants={textVariants}
+                className="text-base sm:text-lg text-white/85 leading-relaxed mb-3 sm:mb-8 max-w-xl"
+              >
+                {currentSlide.subheading}
+              </motion.p>
+            </motion.div>
+          </AnimatePresence>
 
           {/* Buttons — shown on every slide. */}
           <motion.div

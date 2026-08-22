@@ -59,11 +59,25 @@ export default function AdminHomeHero() {
     if (files.length === 0) return;
     try {
       setUploading(true);
+      // Prefill each new slide's headline with the current last slide's
+      // text (or the global default if this is the very first photo) so
+      // the admin isn't starting from a blank headline every time — they
+      // can then tweak per-slide as needed.
+      const template = content.slides[content.slides.length - 1] ?? DEFAULT_HOME_HERO;
       const newSlides: HomeHeroSlide[] = [];
       for (const file of files) {
         const path = `home-hero/${Date.now()}-${file.name}`;
         const url = await uploadImage(STORAGE_BUCKET, file, path);
-        newSlides.push({ id: crypto.randomUUID(), image: url, mobile_image: '', active: true });
+        newSlides.push({
+          id: crypto.randomUUID(),
+          image: url,
+          mobile_image: '',
+          active: true,
+          heading_line1: template.heading_line1,
+          heading_highlight: template.heading_highlight,
+          heading_line2: template.heading_line2,
+          subheading: template.subheading,
+        });
       }
       setContent(c => ({ ...c, slides: [...c.slides, ...newSlides] }));
     } catch {
@@ -149,70 +163,6 @@ export default function AdminHomeHero() {
       <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
         <div className="app-scroll overflow-y-auto flex-1 min-h-0">
           <div className="p-6 space-y-8">
-
-            {/* Headline text */}
-            <div className="space-y-4">
-              <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">
-                Headline Text
-              </h2>
-              <p className="text-xs text-dark-muted -mt-2">
-                Shown over every photo in the banner, not just the first one. Split into three parts so the middle word always keeps its accent color + italic style.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="home-hero-heading-1" className="block text-sm font-medium text-dark mb-1">Line 1</label>
-                  <input
-                    id="home-hero-heading-1"
-                    type="text"
-                    value={content.heading_line1}
-                    onChange={e => setContent(c => ({ ...c, heading_line1: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="home-hero-heading-highlight" className="block text-sm font-medium text-dark mb-1">Highlighted word</label>
-                  <input
-                    id="home-hero-heading-highlight"
-                    type="text"
-                    value={content.heading_highlight}
-                    onChange={e => setContent(c => ({ ...c, heading_highlight: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="home-hero-heading-2" className="block text-sm font-medium text-dark mb-1">Line 1 continued</label>
-                  <input
-                    id="home-hero-heading-2"
-                    type="text"
-                    value={content.heading_line2}
-                    onChange={e => setContent(c => ({ ...c, heading_line2: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="home-hero-subheading" className="block text-sm font-medium text-dark mb-1">Subheading</label>
-                <textarea
-                  id="home-hero-subheading"
-                  rows={2}
-                  value={content.subheading}
-                  onChange={e => setContent(c => ({ ...c, subheading: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors resize-none"
-                />
-              </div>
-              {/* Live preview — same classes as the actual hero (see
-                  HeroSection.tsx) so what the admin sees here is exactly
-                  what visitors will see, including the accent-colored
-                  italic highlight word. */}
-              <div className="rounded-lg bg-dark px-5 py-6 sm:px-8 sm:py-8">
-                <p className="font-display text-2xl sm:text-3xl font-bold leading-[1.15] text-white mb-2">
-                  {content.heading_line1}
-                  <br />
-                  <span className="text-secondary italic">{content.heading_highlight}</span> {content.heading_line2}
-                </p>
-                <p className="text-sm text-white/85">{content.subheading}</p>
-              </div>
-            </div>
 
             {/* Carousel settings */}
             <div className="space-y-4">
@@ -359,6 +309,73 @@ export default function AdminHomeHero() {
                               pathPrefix="home-hero-mobile"
                               hint="Tall portrait, at least 1080×1350px. Falls back to the main photo if left empty."
                             />
+                          </div>
+                        </details>
+
+                        {/* Headline text — its own copy per slide, shown
+                            only while this photo is on screen. Split into
+                            three parts so the middle word always keeps its
+                            accent color + italic style, same as before. */}
+                        <details className="text-xs" open>
+                          <summary className="cursor-pointer text-dark-muted hover:text-dark select-none font-medium">
+                            Headline text for this slide
+                          </summary>
+                          <div className="mt-2 space-y-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div>
+                                <label htmlFor={`home-hero-heading-1-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Line 1</label>
+                                <input
+                                  id={`home-hero-heading-1-${slide.id}`}
+                                  type="text"
+                                  value={slide.heading_line1}
+                                  onChange={e => updateSlide(slide.id, { heading_line1: e.target.value })}
+                                  className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={`home-hero-heading-highlight-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Highlighted word</label>
+                                <input
+                                  id={`home-hero-heading-highlight-${slide.id}`}
+                                  type="text"
+                                  value={slide.heading_highlight}
+                                  onChange={e => updateSlide(slide.id, { heading_highlight: e.target.value })}
+                                  className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={`home-hero-heading-2-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Line 1 continued</label>
+                                <input
+                                  id={`home-hero-heading-2-${slide.id}`}
+                                  type="text"
+                                  value={slide.heading_line2}
+                                  onChange={e => updateSlide(slide.id, { heading_line2: e.target.value })}
+                                  className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label htmlFor={`home-hero-subheading-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Subheading</label>
+                              <textarea
+                                id={`home-hero-subheading-${slide.id}`}
+                                rows={2}
+                                value={slide.subheading}
+                                onChange={e => updateSlide(slide.id, { subheading: e.target.value })}
+                                className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors resize-none"
+                              />
+                            </div>
+                            {/* Live preview — same classes as the actual
+                                hero (see HeroSection.tsx) so what the admin
+                                sees here is exactly what visitors will see
+                                on this slide, including the accent-colored
+                                italic highlight word. */}
+                            <div className="rounded-lg bg-dark px-4 py-4">
+                              <p className="font-display text-base sm:text-lg font-bold leading-[1.15] text-white mb-1.5">
+                                {slide.heading_line1}
+                                <br />
+                                <span className="text-secondary italic">{slide.heading_highlight}</span> {slide.heading_line2}
+                              </p>
+                              <p className="text-[11px] text-white/85">{slide.subheading}</p>
+                            </div>
                           </div>
                         </details>
                       </div>
