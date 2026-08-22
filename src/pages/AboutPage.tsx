@@ -1,7 +1,25 @@
 import { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { X, ShieldCheck, HelpCircle, Frown, Heart, Users, Sparkles, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, Compass, Ticket, Backpack, Plane, Image as ImageIcon, Play } from 'lucide-react';
+import {
+  X,
+  ShieldCheck,
+  Question as HelpCircle,
+  Heart,
+  Users,
+  Sparkle as Sparkles,
+  ArrowRight,
+  ArrowDown,
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
+  Compass,
+  Ticket,
+  Backpack,
+  Airplane as Plane,
+  Image as ImageIcon,
+  Play,
+} from '@phosphor-icons/react';
+import { Frown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';

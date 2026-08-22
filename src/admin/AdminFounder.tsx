@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Search } from 'lucide-react';
+import {
+  Plus,
+  Trash as Trash2,
+  MagnifyingGlass as Search,
+} from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';

@@ -17,18 +17,18 @@ import {
 } from 'framer-motion';
 import {
   X,
-  ChevronLeft,
-  ChevronRight,
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
   MapPin,
   Heart,
   Info,
-  Maximize2,
-  Minimize2,
+  ArrowsOut as Maximize2,
+  ArrowsIn as Minimize2,
   Play,
   Pause,
-  ZoomIn,
-  RotateCcw,
-} from 'lucide-react';
+  MagnifyingGlassPlus as ZoomIn,
+  ArrowCounterClockwise as RotateCcw,
+} from '@phosphor-icons/react';
 
 // =============================================================================
 // GalleryViewer — ultra-premium fullscreen photo viewer for the whole app.

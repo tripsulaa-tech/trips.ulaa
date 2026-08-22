@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { BellRing, BellOff } from 'lucide-react';
+import {
+  BellRinging as BellRing,
+  BellSlash as BellOff,
+} from '@phosphor-icons/react';
 import {
   getPushSubscriptionStatus,
   subscribeToPush,

@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Star, ChevronUp, ChevronDown, Save } from 'lucide-react';
+import {
+  Plus,
+  PencilSimple as Edit2,
+  Trash as Trash2,
+  Eye,
+  EyeSlash as EyeOff,
+  Star,
+  CaretUp as ChevronUp,
+  CaretDown as ChevronDown,
+  FloppyDisk as Save,
+} from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';

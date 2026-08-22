@@ -16,10 +16,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  Users, Phone, XCircle, TrendingUp, Clock, IndianRupee, Wallet,
-  Undo2, Wallet2, BadgeCheck, PartyPopper, CalendarX2, MapPin,
-  UtensilsCrossed, UserX, PieChart,
-} from 'lucide-react';
+  Users,
+  Phone,
+  XCircle,
+  TrendUp as TrendingUp,
+  Clock,
+  CurrencyInr as IndianRupee,
+  Wallet,
+  ArrowUUpLeft as Undo2,
+  Wallet as Wallet2,
+  SealCheck as BadgeCheck,
+  Confetti as PartyPopper,
+  CalendarX as CalendarX2,
+  MapPin,
+  ForkKnife as UtensilsCrossed,
+  UserMinus as UserX,
+  ChartPie as PieChart,
+} from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin } from '../services/api';
 import type { Enquiry, UpcomingTrip, CompletedTrip } from '../types/types-index';

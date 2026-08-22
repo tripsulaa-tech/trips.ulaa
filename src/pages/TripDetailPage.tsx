@@ -14,7 +14,7 @@ import GalleryViewer from '../components/ui/GalleryViewer';
 import PagedCarousel, { type PagedCarouselHandle } from '../components/ui/PagedCarousel';
 import { useResponsiveItemsPerView } from '../components/ui/useResponsiveItemsPerView';
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
-import { getTripHighlightIcon, getTripHighlightPalette } from '../constants/tripHighlightIcons';
+import { getTripHighlightIcon, getTripHighlightPalette, type TripHighlightIconType } from '../constants/tripHighlightIcons';
 import { getUpcomingTripBySlug, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripConfidenceItem, ButtonLabelsConfig } from '../types/types-index';
@@ -23,12 +23,49 @@ import { getGoogleCalendarUrl, downloadTripIcs, addToCalendar } from '../utils/c
 import { DEFAULT_CANCELLATION_POLICY } from '../constants/cancellationPolicy';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import {
-  MapPin, Calendar, Clock, Users, UserCheck, CheckCircle, XCircle,
-  Backpack, Navigation, ArrowLeft, Share2, CalendarPlus, Download, ExternalLink, Heart, ArrowRight, Play,
-  ChevronDown, ChevronUp, BadgeCheck,
-  Shirt, Footprints, Glasses, HatGlasses, Headphones, BatteryCharging, Pill, SprayCan, Droplet, GlassWater,
-  Cookie, Sparkles, FileText, IdCard, Hand, ShieldCheck, Flame, Stamp, Plane, CreditCard, Camera, PlugZap, type LucideIcon,
-} from 'lucide-react';
+  MapPin,
+  Calendar,
+  Clock,
+  Users,
+  UserCheck,
+  CheckCircle,
+  XCircle,
+  Backpack,
+  NavigationArrow as Navigation,
+  ArrowLeft,
+  ShareNetwork as Share2,
+  CalendarPlus,
+  Download,
+  ArrowSquareOut as ExternalLink,
+  Heart,
+  ArrowRight,
+  Play,
+  CaretDown as ChevronDown,
+  CaretUp as ChevronUp,
+  SealCheck as BadgeCheck,
+  ShirtFolded as Shirt,
+  Footprints,
+  Sunglasses as Glasses,
+  Beanie as HatGlasses,
+  Headphones,
+  BatteryCharging,
+  Pill,
+  Drop as SprayCan,
+  Drop as Droplet,
+  Drop as GlassWater,
+  Cookie,
+  Sparkle as Sparkles,
+  FileText,
+  IdentificationCard as IdCard,
+  Hand,
+  ShieldCheck,
+  Flame,
+  Stamp,
+  Airplane as Plane,
+  CreditCard,
+  Camera,
+  Plug as PlugZap,
+} from '@phosphor-icons/react';
 
 // Tracks whether the viewport is at/above the `sm` breakpoint (640px) so
 // scroll-triggered entrance animations can be skipped on mobile (per design
@@ -69,7 +106,7 @@ function getItineraryGridClass(days: number): string {
 // admin-picked icon. Matches common packing-list keywords to a
 // representative icon, falling back to the Backpack icon for anything
 // unrecognized.
-const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
+const THINGS_TO_CARRY_ICON_RULES: [RegExp, TripHighlightIconType][] = [
   [/jacket|sweater|hoodie|fleece|thermal/i, Shirt],
   [/shoe|boot|sandal|footwear|trek/i, Footprints],
   [/sunglass|goggle/i, Glasses],
@@ -95,7 +132,7 @@ const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
   [/id proof|passport|aadhar|adhar|govern|voter|licen|document/i, IdCard],
 ];
 
-function getThingsToCarryIcon(item: string): LucideIcon {
+function getThingsToCarryIcon(item: string): TripHighlightIconType {
   const rule = THINGS_TO_CARRY_ICON_RULES.find(([pattern]) => pattern.test(item));
   return rule ? rule[1] : Backpack;
 }

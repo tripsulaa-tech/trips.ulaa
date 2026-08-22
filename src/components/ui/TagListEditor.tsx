@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import {
+  Plus,
+  X,
+} from '@phosphor-icons/react';
 
 interface TagListEditorProps {
   label: string;

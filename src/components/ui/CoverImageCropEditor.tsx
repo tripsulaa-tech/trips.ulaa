@@ -1,5 +1,9 @@
 import { useRef, useState } from 'react';
-import { Move, RotateCcw, ZoomIn } from 'lucide-react';
+import {
+  ArrowsOutCardinal as Move,
+  ArrowCounterClockwise as RotateCcw,
+  MagnifyingGlassPlus as ZoomIn,
+} from '@phosphor-icons/react';
 import type { CoverImageCrop } from '../../types/types-index';
 import { getCoverImageStyle } from '../../utils/utils-index';
 

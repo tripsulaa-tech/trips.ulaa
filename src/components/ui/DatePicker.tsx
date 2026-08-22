@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from 'lucide-react';
+import {
+  Calendar,
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
+  CaretDoubleLeft as ChevronsLeft,
+  CaretDoubleRight as ChevronsRight,
+  X,
+} from '@phosphor-icons/react';
 
 interface DatePickerProps {
   value: string; // 'YYYY-MM-DD' or ''

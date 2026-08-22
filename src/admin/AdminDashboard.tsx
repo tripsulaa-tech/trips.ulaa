@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Briefcase, BookOpen, Users, TrendingUp, ChevronRight,
-  PlusCircle, FolderPlus, ImagePlus, ListChecks, Type,
-} from 'lucide-react';
+  Briefcase,
+  BookOpen,
+  Users,
+  TrendUp as TrendingUp,
+  CaretRight as ChevronRight,
+  PlusCircle,
+  FolderPlus,
+  ImageSquare as ImagePlus,
+  ListChecks,
+  TextT as Type,
+} from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import {
   getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getEnquiries, getWaitlistEntries,

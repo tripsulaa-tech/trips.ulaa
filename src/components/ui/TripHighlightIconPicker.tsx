@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, ChevronDown } from 'lucide-react';
+import {
+  MagnifyingGlass as Search,
+  CaretDown as ChevronDown,
+} from '@phosphor-icons/react';
 import {
   TRIP_HIGHLIGHT_ICONS, getTripHighlightIcon,
   suggestTripHighlightIcons, searchTripHighlightIcons,

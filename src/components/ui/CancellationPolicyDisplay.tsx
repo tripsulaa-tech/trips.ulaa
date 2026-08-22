@@ -1,5 +1,14 @@
 import type { ReactNode } from 'react';
-import { CalendarClock, ShieldCheck, UserX, PackageX, Building2, Users, Clock3, CheckCircle2 } from 'lucide-react';
+import {
+  CalendarDot as CalendarClock,
+  ShieldCheck,
+  UserMinus as UserX,
+  Package as PackageX,
+  Buildings as Building2,
+  Users,
+  Clock as Clock3,
+  CheckCircle as CheckCircle2,
+} from '@phosphor-icons/react';
 import type { CancellationPolicy, CancellationTier } from '../../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../../constants/cancellationPolicy';
 

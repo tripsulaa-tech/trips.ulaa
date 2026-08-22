@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
-import { Globe, Mail } from 'lucide-react';
+import {
+  Globe,
+  Envelope as Mail,
+} from '@phosphor-icons/react';
 
 // Founder social links store `platform` as free text (admin types it in),
 // so this matches loosely on keywords rather than an exact enum. Anything

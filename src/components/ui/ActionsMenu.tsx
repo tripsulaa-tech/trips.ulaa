@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical } from 'lucide-react';
+import {
+  DotsThreeVertical as MoreVertical,
+} from '@phosphor-icons/react';
 
 // One row in an ActionsMenu — pass `hidden: true` to omit the item entirely
 // (e.g. "Reactivate" on a booking that isn't cancelled), or `disabled: true`

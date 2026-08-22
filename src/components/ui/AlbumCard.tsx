@@ -1,5 +1,10 @@
 import { motion } from 'framer-motion';
-import { Calendar, Users, Images, ArrowRight } from 'lucide-react';
+import {
+  Calendar,
+  Users,
+  Images,
+  ArrowRight,
+} from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import type { CompletedTrip } from '../../types/types-index';
 import { formatMonthYear, formatBatchLabel, PLACEHOLDER_IMAGE } from '../../utils/utils-index';

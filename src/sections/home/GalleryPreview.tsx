@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ZoomIn } from 'lucide-react';
+import {
+  MagnifyingGlassPlus as ZoomIn,
+} from '@phosphor-icons/react';
 import SectionTitle from '../../components/ui/SectionTitle';
 import GalleryViewer from '../../components/ui/GalleryViewer';
 import { getGalleryImages } from '../../services/api';

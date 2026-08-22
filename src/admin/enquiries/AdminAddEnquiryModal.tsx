@@ -1,5 +1,9 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
-import { AlertTriangle, PartyPopper, Users } from 'lucide-react';
+import {
+  Warning as AlertTriangle,
+  Confetti as PartyPopper,
+  Users,
+} from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';

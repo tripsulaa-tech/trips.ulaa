@@ -8,7 +8,27 @@
 //      table component just to reuse a badge/label helper.
 // Everything here is intentionally stateless — no hooks, no local state —
 // so it's safe to call from anywhere.
-import { Clock, RefreshCw, Hourglass, IndianRupee, CheckCircle2, AlertTriangle, BadgeCheck, LogIn, PartyPopper, XCircle, Circle, Globe, MessageCircle, Phone, Camera, MapPin, HelpCircle, UserMinus, CalendarClock } from 'lucide-react';
+import {
+  Clock,
+  ArrowsClockwise as RefreshCw,
+  Hourglass,
+  CurrencyInr as IndianRupee,
+  CheckCircle as CheckCircle2,
+  Warning as AlertTriangle,
+  SealCheck as BadgeCheck,
+  SignIn as LogIn,
+  Confetti as PartyPopper,
+  XCircle,
+  Circle,
+  Globe,
+  ChatCircle as MessageCircle,
+  Phone,
+  Camera,
+  MapPin,
+  Question as HelpCircle,
+  UserMinus,
+  CalendarDot as CalendarClock,
+} from '@phosphor-icons/react';
 import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { formatDate, getActivePrice } from '../../utils/utils-index';
 

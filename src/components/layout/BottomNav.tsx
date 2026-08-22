@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Home } from 'lucide-react';
+import {
+  House as Home,
+} from '@phosphor-icons/react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { getSiteContent } from '../../services/api';

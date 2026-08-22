@@ -1,6 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Download, Upload, Search, ClipboardList, X, Hourglass, FileDown, FileX } from 'lucide-react';
+import {
+  Plus,
+  PencilSimple as Edit2,
+  Trash as Trash2,
+  Eye,
+  EyeSlash as EyeOff,
+  Download,
+  Upload,
+  MagnifyingGlass as Search,
+  ClipboardText as ClipboardList,
+  X,
+  Hourglass,
+  FileArrowDown as FileDown,
+  FileX,
+} from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';

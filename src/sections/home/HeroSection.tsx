@@ -1,7 +1,10 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { ArrowRight, Play } from 'lucide-react';
+import {
+  ArrowRight,
+  Play,
+} from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import { getSiteContent } from '../../services/api';

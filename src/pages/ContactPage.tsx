@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { Mail, MessageSquare, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  Envelope as Mail,
+  ChatDots as MessageSquare,
+  MapPin,
+  CheckCircle,
+  WarningCircle as AlertCircle,
+} from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import { submitContactEnquiry } from '../services/api';

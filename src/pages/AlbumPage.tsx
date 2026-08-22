@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Users, Images, ArrowLeft, Share2, Heart } from 'lucide-react';
+import {
+  MapPin,
+  Calendar,
+  Users,
+  Images,
+  ArrowLeft,
+  ShareNetwork as Share2,
+  Heart,
+} from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import { GalleryGrid } from '../components/ui/GalleryViewer';
 import { getCompletedTripBySlug, likeCompletedTrip, unlikeCompletedTrip } from '../services/api';

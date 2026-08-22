@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star } from 'lucide-react';
+import {
+  Star,
+} from '@phosphor-icons/react';
 import type { Testimonial } from '../../types/types-index';
 import { PLACEHOLDER_IMAGE } from '../../utils/utils-index';
 

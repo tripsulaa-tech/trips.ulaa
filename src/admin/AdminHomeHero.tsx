@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, ImagePlus, Loader2, ChevronUp, ChevronDown, Eye, EyeOff, Images } from 'lucide-react';
+import {
+  Plus,
+  Trash as Trash2,
+  ImageSquare as ImagePlus,
+  CircleNotch as Loader2,
+  CaretUp as ChevronUp,
+  CaretDown as ChevronDown,
+  Eye,
+  EyeSlash as EyeOff,
+  Images,
+} from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import ImageUploadField from '../components/ui/ImageUploadField';

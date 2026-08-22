@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, MailCheck, Inbox } from 'lucide-react';
+import {
+  Bell,
+  EnvelopeSimpleOpen as MailCheck,
+  Tray as Inbox,
+} from '@phosphor-icons/react';
 import { supabase } from '../services/supabase';
 import { getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../services/api';
 import type { AdminNotification } from '../types/types-index';

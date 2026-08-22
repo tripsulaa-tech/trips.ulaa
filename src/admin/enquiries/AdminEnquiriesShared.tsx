@@ -3,7 +3,14 @@
 // AdminEnquiries.tsx so that file only has to hold state/handlers/render —
 // nothing in here depends on component state, so it's all safe to import
 // from anywhere without prop drilling.
-import { CheckCircle2, Clock, RefreshCw, CheckCircle, XCircle, Circle } from 'lucide-react';
+import {
+  CheckCircle as CheckCircle2,
+  Clock,
+  ArrowsClockwise as RefreshCw,
+  CheckCircle,
+  XCircle,
+  Circle,
+} from '@phosphor-icons/react';
 import type { Enquiry } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
 import { PACKAGE_OPTIONS } from './AdminEnquiryCommon';

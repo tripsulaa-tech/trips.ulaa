@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter } from 'lucide-react';
+import {
+  MagnifyingGlass as Search,
+  Funnel as Filter,
+} from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
 import AlbumCard from '../components/ui/AlbumCard';

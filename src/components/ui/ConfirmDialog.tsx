@@ -1,7 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, HelpCircle } from 'lucide-react';
+import {
+  Warning as AlertTriangle,
+  Question as HelpCircle,
+} from '@phosphor-icons/react';
 import Button from './Button';
 import { ConfirmContext, type ConfirmFn, type ConfirmOptions } from './useConfirm';
 

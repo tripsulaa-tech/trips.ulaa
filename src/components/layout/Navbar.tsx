@@ -1,7 +1,10 @@
 ﻿import { useState, type MouseEvent } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import {
+  List as Menu,
+  X,
+} from '@phosphor-icons/react';
 import Button from '../ui/Button';
 import { useAuth } from '../../context/useAuth';
 

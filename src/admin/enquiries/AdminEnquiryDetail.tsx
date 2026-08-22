@@ -9,10 +9,32 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, FileText, Share2, Phone, MessageCircle, Users, User,
-  BadgeCheck, Plus, CheckCircle2, XCircle, UserX, UserCheck, LogIn, RefreshCw,
-  Trash2, IndianRupee, Pencil, UserMinus, Bird, CalendarClock, X, History, Copy, Check,
-} from 'lucide-react';
+  ArrowLeft,
+  FileText,
+  ShareNetwork as Share2,
+  Phone,
+  ChatCircle as MessageCircle,
+  Users,
+  User,
+  SealCheck as BadgeCheck,
+  Plus,
+  CheckCircle as CheckCircle2,
+  XCircle,
+  UserMinus as UserX,
+  UserCheck,
+  SignIn as LogIn,
+  ArrowsClockwise as RefreshCw,
+  Trash as Trash2,
+  CurrencyInr as IndianRupee,
+  Pencil,
+  UserMinus,
+  Bird,
+  CalendarDot as CalendarClock,
+  X,
+  ClockCounterClockwise as History,
+  Copy,
+  Check,
+} from '@phosphor-icons/react';
 import AdminLayout from '../AdminLayout';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';

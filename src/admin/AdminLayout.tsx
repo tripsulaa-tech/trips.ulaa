@@ -1,20 +1,38 @@
 import type { ReactNode } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, Briefcase, BookOpen, Image, MessageCircle,
-  LogOut, Menu, X, ChevronDown, ExternalLink, FileText, Star, Sparkles, ListChecks,
-  ChevronsLeft, ChevronsRight, UserCircle, PanelBottom, GripVertical, BarChart3, Images
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+  House as Home,
+  Briefcase,
+  BookOpen,
+  Image,
+  ChatCircle as MessageCircle,
+  SignOut as LogOut,
+  List as Menu,
+  X,
+  CaretDown as ChevronDown,
+  ArrowSquareOut as ExternalLink,
+  FileText,
+  Star,
+  Sparkle as Sparkles,
+  ListChecks,
+  CaretDoubleLeft as ChevronsLeft,
+  CaretDoubleRight as ChevronsRight,
+  UserCircle,
+  DotsThreeOutline as PanelBottom,
+  DotsSixVertical as GripVertical,
+  ChartBar as BarChart3,
+  Images,
+} from '@phosphor-icons/react';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/useAuth';
 import NotificationsPanel from './NotificationsPanel';
 import PushNotificationToggle from './PushNotificationToggle';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
+import type { TripHighlightIconType } from '../constants/tripHighlightIcons';
 
 interface AdminNavItemDef {
   to: string;
-  icon: LucideIcon;
+  icon: TripHighlightIconType;
 }
 
 // Single source of truth for what each nav item links to / shows as an

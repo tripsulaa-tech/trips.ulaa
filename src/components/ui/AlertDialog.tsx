@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, Info, CheckCircle2 } from 'lucide-react';
+import {
+  WarningCircle as AlertCircle,
+  Info,
+  CheckCircle as CheckCircle2,
+} from '@phosphor-icons/react';
 import Button from './Button';
 import { AlertContext, type AlertFn, type AlertOptions } from './useAlert';
 

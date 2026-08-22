@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter } from 'lucide-react';
+import {
+  MagnifyingGlass as Search,
+  Funnel as Filter,
+} from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import TripCard from '../components/ui/TripCard';
 import { SkeletonGrid } from '../components/ui/Skeletons';

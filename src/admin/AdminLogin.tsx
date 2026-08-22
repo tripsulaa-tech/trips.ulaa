@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/useAuth';
 import Button from '../components/ui/Button';
-import { AlertCircle } from 'lucide-react';
+import {
+  WarningCircle as AlertCircle,
+} from '@phosphor-icons/react';
 
 export default function AdminLogin() {
   const { signIn } = useAuth();

@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  Plus,
+  X,
+  CaretUp as ChevronUp,
+  CaretDown as ChevronDown,
+} from '@phosphor-icons/react';
 import { parseTerms, type TermsBlock } from '../../utils/parseTerms';
 
 interface TermsEditorProps {

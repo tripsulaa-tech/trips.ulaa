@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import {
+  Plus,
+  Trash as Trash2,
+  ArrowUp,
+  ArrowDown,
+} from '@phosphor-icons/react';
 
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';

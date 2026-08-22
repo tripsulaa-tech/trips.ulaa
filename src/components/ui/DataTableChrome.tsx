@@ -1,4 +1,12 @@
-import { Search, X, ChevronUp, ChevronDown, Phone, Mail, Download } from 'lucide-react';
+import {
+  MagnifyingGlass as Search,
+  X,
+  CaretUp as ChevronUp,
+  CaretDown as ChevronDown,
+  Phone,
+  Envelope as Mail,
+  Download,
+} from '@phosphor-icons/react';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import type { SortDirection } from './dataTableUtils';
 

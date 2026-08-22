@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import {
+  ArrowsClockwise as RefreshCw,
+} from '@phosphor-icons/react';
 import { useVersionCheck } from '../../hooks/useVersionCheck';
 
 // Once a new deployment is detected, the page auto-refreshes after this

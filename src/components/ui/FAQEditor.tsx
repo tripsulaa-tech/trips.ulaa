@@ -1,4 +1,7 @@
-import { Plus, X } from 'lucide-react';
+import {
+  Plus,
+  X,
+} from '@phosphor-icons/react';
 import type { FAQ } from '../../types/types-index';
 
 interface FAQEditorProps {

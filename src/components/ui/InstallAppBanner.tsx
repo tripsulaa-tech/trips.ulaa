@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, Download, Menu, MoreVertical, Share, X } from 'lucide-react';
+import {
+  CaretDown as ChevronDown,
+  CaretUp as ChevronUp,
+  Download,
+  List as Menu,
+  DotsThreeVertical as MoreVertical,
+  Share,
+  X,
+} from '@phosphor-icons/react';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 // iOS Safari (and, since they all relay to Safari's share sheet, Chrome/Edge/

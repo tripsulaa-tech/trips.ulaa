@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp } from 'lucide-react';
+import {
+  ArrowUp,
+} from '@phosphor-icons/react';
 
 const SHOW_AFTER_PX = 400;
 

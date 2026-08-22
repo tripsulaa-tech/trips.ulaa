@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
-import { ZoomIn } from 'lucide-react';
+import {
+  MagnifyingGlassPlus as ZoomIn,
+} from '@phosphor-icons/react';
 import PagedCarousel from './PagedCarousel';
 import { useResponsiveItemsPerView } from './useResponsiveItemsPerView';
 import GalleryViewer from './GalleryViewer';

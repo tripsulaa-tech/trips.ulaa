@@ -1,4 +1,13 @@
-import { CheckCircle2, FileText, Share2, Receipt, BadgeCheck, Plus, Users, User } from 'lucide-react';
+import {
+  CheckCircle as CheckCircle2,
+  FileText,
+  ShareNetwork as Share2,
+  Receipt,
+  SealCheck as BadgeCheck,
+  Plus,
+  Users,
+  User,
+} from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import FoodMark from '../../components/ui/FoodMark';

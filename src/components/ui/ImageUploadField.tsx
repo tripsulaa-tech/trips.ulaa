@@ -1,5 +1,10 @@
 import { useRef, useState } from 'react';
-import { Upload, X, ImagePlus, Link2 } from 'lucide-react';
+import {
+  Upload,
+  X,
+  ImageSquare as ImagePlus,
+  LinkSimple as Link2,
+} from '@phosphor-icons/react';
 import { uploadImage, uploadImageFromUrl, deleteImageByUrl } from '../../services/api';
 
 interface ImageUploadFieldProps {

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
+} from '@phosphor-icons/react';
 import SectionTitle from '../../components/ui/SectionTitle';
 import TestimonialCard from '../../components/ui/TestimonialCard';
 import { getTestimonials, getSiteContent } from '../../services/api';

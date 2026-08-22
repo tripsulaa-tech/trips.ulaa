@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useMotionValue, animate as animateMotionValue, type PanInfo } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
+} from '@phosphor-icons/react';
 import AlbumCard from './AlbumCard';
 import type { CompletedTrip } from '../../types/types-index';
 

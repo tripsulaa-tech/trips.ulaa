@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Heart, Home, ChevronRight } from 'lucide-react';
+import {
+  Envelope as Mail,
+  Phone,
+  MapPin,
+  Heart,
+  House as Home,
+  CaretRight as ChevronRight,
+} from '@phosphor-icons/react';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { getSiteContent } from '../../services/api';
 import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';

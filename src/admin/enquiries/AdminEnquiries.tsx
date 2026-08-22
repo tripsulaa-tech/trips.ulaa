@@ -1,7 +1,42 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Plus, CheckCircle2, XCircle, MessageCircle, Phone, Globe, ChevronDown, IndianRupee, SlidersHorizontal, Trash2, Users, User, Utensils, Pencil, X, Hourglass, CalendarCheck, CalendarClock, Search, Briefcase, Building2, Package, CalendarDays, Bird, FileText, Share2, Eye, UserX, UserCheck, LogIn, ExternalLink, UserMinus, ArrowRight } from 'lucide-react';
+import {
+  ArrowsClockwise as RefreshCw,
+  Plus,
+  CheckCircle as CheckCircle2,
+  XCircle,
+  ChatCircle as MessageCircle,
+  Phone,
+  Globe,
+  CaretDown as ChevronDown,
+  CurrencyInr as IndianRupee,
+  SlidersHorizontal,
+  Trash as Trash2,
+  Users,
+  User,
+  ForkKnife as Utensils,
+  Pencil,
+  X,
+  Hourglass,
+  CalendarCheck,
+  CalendarDot as CalendarClock,
+  MagnifyingGlass as Search,
+  Briefcase,
+  Buildings as Building2,
+  Package,
+  CalendarBlank as CalendarDays,
+  Bird,
+  FileText,
+  ShareNetwork as Share2,
+  Eye,
+  UserMinus as UserX,
+  UserCheck,
+  SignIn as LogIn,
+  ArrowSquareOut as ExternalLink,
+  UserMinus,
+  ArrowRight,
+} from '@phosphor-icons/react';
 import AdminLayout from '../AdminLayout';
 import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';

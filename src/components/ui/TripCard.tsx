@@ -1,5 +1,14 @@
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Clock, ArrowRight, CalendarPlus, Share2, Check, Timer } from 'lucide-react';
+import {
+  MapPin,
+  Calendar,
+  Clock,
+  ArrowRight,
+  CalendarPlus,
+  ShareNetwork as Share2,
+  Check,
+  Timer,
+} from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle } from '../../utils/utils-index';

@@ -1,4 +1,9 @@
-import { Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  Plus,
+  X,
+  CaretUp as ChevronUp,
+  CaretDown as ChevronDown,
+} from '@phosphor-icons/react';
 import type { CancellationPolicy, CancellationTier } from '../../types/types-index';
 
 interface CancellationPolicyEditorProps {

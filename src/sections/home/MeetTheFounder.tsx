@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Play } from 'lucide-react';
+import {
+  Play,
+} from '@phosphor-icons/react';
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../../constants/founder';
 import { getSocialIcon, getSocialBrandClasses, getSocialHref } from '../../utils/socialIcons';

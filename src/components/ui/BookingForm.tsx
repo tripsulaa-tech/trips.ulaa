@@ -1,7 +1,15 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { CheckCircle, AlertCircle, FileText, User, Users, Utensils, Clock3 } from 'lucide-react';
+import {
+  CheckCircle,
+  WarningCircle as AlertCircle,
+  FileText,
+  User,
+  Users,
+  ForkKnife as Utensils,
+  Clock as Clock3,
+} from '@phosphor-icons/react';
 import type { BookingFormData, BookingMode } from '../../types/types-index';
 import { submitEnquiry, submitGroupEnquiry, submitWaitlist, getTripSeatSnapshot } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';

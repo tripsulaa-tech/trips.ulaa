@@ -1,7 +1,28 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Mail, Phone, MessageSquare, Users, Bell, CheckCircle2, XCircle, Circle, PartyPopper, UserPlus, ChevronDown, SlidersHorizontal, RefreshCw, Search, X, Plus, User, CalendarDays, Clock } from 'lucide-react';
+import {
+  Trash as Trash2,
+  Envelope as Mail,
+  Phone,
+  ChatDots as MessageSquare,
+  Users,
+  Bell,
+  CheckCircle as CheckCircle2,
+  XCircle,
+  Circle,
+  Confetti as PartyPopper,
+  UserPlus,
+  CaretDown as ChevronDown,
+  SlidersHorizontal,
+  ArrowsClockwise as RefreshCw,
+  MagnifyingGlass as Search,
+  X,
+  Plus,
+  User,
+  CalendarBlank as CalendarDays,
+  Clock,
+} from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';

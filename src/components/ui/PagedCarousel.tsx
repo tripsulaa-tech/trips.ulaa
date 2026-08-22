@@ -1,6 +1,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import { motion, useMotionValue, animate as animateMotionValue, type PanInfo } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
+} from '@phosphor-icons/react';
 
 export interface PagedCarouselHandle {
   next: () => void;

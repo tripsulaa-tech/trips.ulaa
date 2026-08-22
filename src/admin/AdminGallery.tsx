@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Trash2, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Upload,
+  Trash as Trash2,
+  Star,
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
+} from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import { getGalleryImages, addGalleryImage, deleteGalleryImage, updateGalleryFeatured, updateGalleryOrder, uploadImage, deleteImage, getStoragePathFromUrl } from '../services/api';

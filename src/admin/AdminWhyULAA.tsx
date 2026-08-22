@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search } from 'lucide-react';
+import {
+  MagnifyingGlass as Search,
+} from '@phosphor-icons/react';
 
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';

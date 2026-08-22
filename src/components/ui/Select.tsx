@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Check } from 'lucide-react';
+import {
+  CaretDown as ChevronDown,
+  Check,
+} from '@phosphor-icons/react';
 
 export interface SelectOption<T extends string | number = string> {
   value: T;

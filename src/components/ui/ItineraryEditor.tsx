@@ -1,4 +1,10 @@
-import { Plus, X, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  X,
+  CaretUp as ChevronUp,
+  CaretDown as ChevronDown,
+  Warning as AlertTriangle,
+} from '@phosphor-icons/react';
 import type { ItineraryDay } from '../../types/types-index';
 import MultiImageUploadField from './MultiImageUploadField';
 import TripHighlightIconPicker from './TripHighlightIconPicker';

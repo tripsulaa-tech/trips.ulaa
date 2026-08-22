@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, FileDown, Loader2, Share2 } from 'lucide-react';
+import {
+  Download,
+  FileArrowDown as FileDown,
+  CircleNotch as Loader2,
+  ShareNetwork as Share2,
+} from '@phosphor-icons/react';
 import Button from './Button';
 import type { UpcomingTrip } from '../../types/types-index';
 import { canShareItineraryPdf, downloadTripItineraryPdf, shareTripItineraryPdf } from '../../utils/tripItineraryPdf';
