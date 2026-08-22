@@ -2,12 +2,36 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import fs from 'fs'
+
+// public/sw.js is copied into dist/ byte-for-byte by Vite (files in public/
+// aren't processed/hashed) — so its content is otherwise identical build to
+// build. The browser's native service-worker update check works by
+// byte-diffing the SW script itself, so with a static sw.js there is
+// literally nothing for it to detect on a normal code-only deploy, no
+// matter how the app polls for updates (see useVersionCheck.ts). Stamping a
+// unique build id into the file after each build gives it a real, changing
+// fingerprint without touching its actual logic (push notifications, PWA
+// install, etc. in public/sw.js stay untouched).
+function stampServiceWorker() {
+  return {
+    name: 'stamp-service-worker',
+    closeBundle() {
+      const swPath = path.resolve(import.meta.dirname, 'dist/sw.js')
+      if (!fs.existsSync(swPath)) return
+      const original = fs.readFileSync(swPath, 'utf-8')
+      const stamped = `// build: ${Date.now()}-${Math.random().toString(36).slice(2, 8)}\n${original}`
+      fs.writeFileSync(swPath, stamped)
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    stampServiceWorker(),
   ],
   resolve: {
     alias: {
