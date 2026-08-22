@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Clock, ArrowRight, CalendarPlus, Share2 } from 'lucide-react';
+import { MapPin, Calendar, Clock, ArrowRight, CalendarPlus, Share2, Check, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
-import { getTripHighlightIcon, getTripHighlightPalette } from '../../constants/tripHighlightIcons';
+import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 import Button from './Button';
 
 interface TripCardProps {
@@ -26,9 +26,9 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05, duration: 0.3 }}
-        className="group bg-white rounded-xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
+        className="group bg-white rounded-2xl border border-background-warm shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col"
       >
-        <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden rounded-t-xl block">
+        <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden rounded-t-2xl block">
           <div className="w-full h-full transition-transform duration-700 group-hover:scale-110">
             <img
               src={trip.cover_image || PLACEHOLDER_IMAGE}
@@ -45,7 +45,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             </span>
           </div>
         </Link>
-        <div className="p-6 flex-1 flex flex-col">
+        <div className="p-5 flex-1 flex flex-col">
           <h3 className="font-display text-xl font-bold text-dark mb-3 line-clamp-2 flex-1">
             {trip.title}
           </h3>
@@ -84,10 +84,10 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="group bg-white rounded-xl border border-background-warm shadow-card hover:shadow-card-hover transition-all duration-300 h-full flex flex-col"
+      className="group bg-white rounded-2xl border border-background-warm shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col"
     >
       {/* Image */}
-      <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden rounded-t-xl block">
+      <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden rounded-t-2xl block">
         {/*
           The hover-zoom (group-hover:scale-110) lives on this wrapper div
           rather than the <img> itself, because the saved cover_image_crop
@@ -162,7 +162,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
       </Link>
 
       {/* Content */}
-      <div className="p-6 flex-1 flex flex-col">
+      <div className="p-5 flex-1 flex flex-col">
         <div className="flex-1">
           <h3 className="font-display text-xl font-bold text-dark mb-2 line-clamp-2">
             {trip.title}
@@ -174,6 +174,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               <Calendar size={13} className="text-primary shrink-0" />
               <span>{formatDateRange(trip.start_date, trip.end_date)}</span>
             </div>
+            <span className="text-background-warm">|</span>
             <div className="flex items-center gap-1.5 whitespace-nowrap">
               <Clock size={13} className="text-primary shrink-0" />
               <span>{trip.duration}</span>
@@ -194,13 +195,24 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 )}
               </div>
               {trip.advance_amount != null && (
-                <p className="text-green-700 text-xs font-button font-semibold mt-1">
-                  Reserve for just {formatPrice(trip.advance_amount)}
-                </p>
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2">
+                  <span className="w-[22px] h-[22px] rounded-full bg-green-600 text-white flex items-center justify-center shrink-0">
+                    <Check size={13} strokeWidth={3} />
+                  </span>
+                  <span className="text-green-700 text-xs font-button font-semibold">
+                    Reserve your spot for just {formatPrice(trip.advance_amount)}
+                  </span>
+                </div>
               )}
               {isEarlyBird && trip.early_bird_deadline && (
-                <p className="text-secondary text-xs font-button font-semibold mt-1">
-                  Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
+                <p className="flex items-center gap-1.5 text-dark-muted text-[11.5px] mt-2">
+                  <Timer size={13} className="text-secondary shrink-0" />
+                  <span>
+                    Early bird offer ends{' '}
+                    <span className="text-secondary font-semibold">
+                      {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </span>
                 </p>
               )}
             </div>
@@ -212,15 +224,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           <div className="grid grid-cols-4 gap-1 border-t border-background-warm pt-3 mb-5 text-center">
             {featureTags.map((tag, i) => {
               const iconMeta = getTripHighlightIcon(tag.icon);
-              const palette = getTripHighlightPalette(i);
               const TagIcon = iconMeta?.Icon;
               return (
                 <div key={i} className="flex flex-col items-center gap-1 min-w-0">
-                  <span
-                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: palette.bg }}
-                  >
-                    {TagIcon && <TagIcon size={14} style={{ color: palette.fg }} aria-hidden="true" />}
+                  <span className="w-[34px] h-[34px] rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    {TagIcon && <TagIcon size={14} className="text-primary" aria-hidden="true" />}
                   </span>
                   <span className="text-[11px] font-semibold text-dark leading-tight truncate w-full">{tag.label}</span>
                   <span className="text-[9px] text-dark-muted leading-tight truncate w-full">{tag.sublabel}</span>
