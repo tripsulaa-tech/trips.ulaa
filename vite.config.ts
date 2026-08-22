@@ -40,10 +40,12 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
-    // jspdf/html2canvas (PDF export) and the shared icon set are
-    // legitimately this size for what they do; splitting further would
-    // mean hand-chunking hundreds of individual icon imports for little
-    // real benefit. Raise the warning threshold instead of chasing it.
+    // jspdf/html2canvas (PDF export) are legitimately this size for what
+    // they do — no reason to chase those. Icons and other vendor code are
+    // now split into their own chunks above instead of riding along with
+    // something else, so this limit should rarely trip; kept a little
+    // above the default as headroom rather than as a "these are fine, stop
+    // warning" escape hatch.
     chunkSizeWarningLimit: 700,
     rollupOptions: {
       input: {
@@ -58,17 +60,31 @@ export default defineConfig({
         // etc.) and lets the browser fetch them in parallel.
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
-          if (id.includes('react-dom') || id.includes('/react/') || id.includes('react-router')) {
+          // Anchor on the exact package folder under node_modules rather
+          // than a loose substring match — `id.includes('/react/')` also
+          // matched unrelated packages whose path just happens to contain
+          // "react" (notably @phosphor-icons/react, a large icon library),
+          // silently sweeping them into this chunk and inflating it to
+          // 5MB+. Matching the real package boundary keeps this chunk to
+          // just React itself.
+          const normalized = id.replace(/\\/g, '/');
+          if (/\/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(normalized)) {
             return 'vendor-react';
           }
-          if (id.includes('framer-motion')) {
+          if (normalized.includes('/node_modules/framer-motion/')) {
             return 'vendor-motion';
           }
-          if (id.includes('@supabase')) {
+          if (normalized.includes('/node_modules/@supabase/')) {
             return 'vendor-supabase';
           }
-          if (id.includes('react-hook-form')) {
+          if (normalized.includes('/node_modules/react-hook-form/')) {
             return 'vendor-form';
+          }
+          // Icon set is large and changes far less often than app code —
+          // split out so it caches independently instead of riding along
+          // with (or bloating) another vendor chunk.
+          if (normalized.includes('/node_modules/@phosphor-icons/')) {
+            return 'vendor-icons';
           }
           return undefined;
         },
