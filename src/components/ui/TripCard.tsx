@@ -221,17 +221,17 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           {/* Feature tag row: admin-set marketing tags when configured
               (e.g. "Girls-Only" / "Safe & fun"), else auto-generated from
               real trip data — see featureTags above. */}
-          <div className="grid grid-cols-4 gap-1 divide-x divide-background-warm border-t border-background-warm pt-3 mb-5 text-center">
+          <div className="grid grid-cols-4 gap-1 divide-x divide-background-warm border-t border-background-warm pt-4 mb-5 text-center">
             {featureTags.map((tag, i) => {
               const iconMeta = getTripHighlightIcon(tag.icon);
               const TagIcon = iconMeta?.Icon;
               return (
-                <div key={i} className="flex flex-col items-center gap-1 min-w-0 px-1">
-                  <span className="w-[34px] h-[34px] rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    {TagIcon && <TagIcon size={14} className="text-primary" aria-hidden="true" />}
+                <div key={i} className="flex flex-col items-center gap-2 min-w-0 px-1">
+                  <span className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    {TagIcon && <TagIcon size={22} className="text-primary" aria-hidden="true" strokeWidth={1.75} />}
                   </span>
-                  <span className="text-[11px] font-semibold text-dark leading-tight truncate w-full">{tag.label}</span>
-                  <span className="text-[9px] text-dark-muted leading-tight truncate w-full">{tag.sublabel}</span>
+                  <span className="text-[11px] font-semibold text-dark leading-tight line-clamp-2 w-full break-words">{tag.label}</span>
+                  <span className="text-[9px] text-dark-muted leading-tight line-clamp-2 w-full break-words">{tag.sublabel}</span>
                 </div>
               );
             })}
