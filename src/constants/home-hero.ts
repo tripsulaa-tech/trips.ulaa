@@ -7,6 +7,10 @@ export const DEFAULT_HOME_HERO: HomeHeroContent = {
   slides: [],
   autoplay: true,
   interval_seconds: 6,
+  heading_line1: 'Girls-only',
+  heading_highlight: 'travel',
+  heading_line2: 'experiences.',
+  subheading: 'Discover hidden destinations. Travel safely. Create unforgettable memories with like-minded women.',
 };
 
 // Merges data fetched from the DB with DEFAULT_HOME_HERO so a partially

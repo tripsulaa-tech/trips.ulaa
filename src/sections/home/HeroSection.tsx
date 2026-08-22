@@ -168,19 +168,13 @@ export default function HeroSection() {
           </AnimatePresence>
         </motion.div>
 
-        {/* Gradient overlay — dark fade for text legibility, first slide
-            only (other slides have no text on them, just the buttons, so
-            they stay as clean, undarkened photos). Same on mobile and
-            desktop; pointer-events-none so it never blocks the swipe/drag
-            gesture on the image beneath it. */}
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          animate={{ opacity: index === 0 ? 1 : 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-        >
+        {/* Gradient overlay — dark fade for text legibility. Shown on every
+            slide now that the headline/subheading render on all of them,
+            not just the first. */}
+        <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-dark/40 to-dark/80" />
           <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />
-        </motion.div>
+        </div>
       </div>
 
       {/* Content — anchored to the bottom of the hero at every breakpoint,
@@ -193,42 +187,32 @@ export default function HeroSection() {
       >
         <div className="max-w-[1344px] mx-auto pointer-events-none">
         <div className="max-w-3xl pointer-events-none">
-          {/* Headline + subheading — only on the first slide. Other slides
-              are photo-only with just the two action buttons below. */}
-          <AnimatePresence mode="wait">
-            {index === 0 && (
-              <motion.div
-                key="hero-copy"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.35, ease: 'easeOut' }}
-              >
-                <motion.h1
-                  custom={1}
-                  initial="hidden"
-                  animate="visible"
-                  variants={textVariants}
-                  className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] mb-6"
-                >
-                  Girls-only
-                  <br />
-                  <span className="text-secondary italic">travel</span> experiences.
-                </motion.h1>
+          {/* Headline + subheading — shown on every slide (admin-editable
+              via /admin/home-hero, see AdminHomeHero.tsx). Renders once on
+              mount rather than re-animating per slide change, since it's
+              now persistent across the whole carousel instead of only
+              appearing on the first slide. */}
+          <motion.h1
+            custom={1}
+            initial="hidden"
+            animate="visible"
+            variants={textVariants}
+            className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] mb-6"
+          >
+            {hero.heading_line1}
+            <br />
+            <span className="text-secondary italic">{hero.heading_highlight}</span> {hero.heading_line2}
+          </motion.h1>
 
-                <motion.p
-                  custom={2}
-                  initial="hidden"
-                  animate="visible"
-                  variants={textVariants}
-                  className="text-base sm:text-lg text-white/85 leading-relaxed mb-3 sm:mb-8 max-w-xl"
-                >
-                  Discover hidden destinations. Travel safely.
-                  Create unforgettable memories with like-minded women.
-                </motion.p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.p
+            custom={2}
+            initial="hidden"
+            animate="visible"
+            variants={textVariants}
+            className="text-base sm:text-lg text-white/85 leading-relaxed mb-3 sm:mb-8 max-w-xl"
+          >
+            {hero.subheading}
+          </motion.p>
 
           {/* Buttons — shown on every slide. */}
           <motion.div

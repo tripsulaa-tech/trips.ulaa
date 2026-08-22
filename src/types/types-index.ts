@@ -674,6 +674,15 @@ export interface HomeHeroContent {
   autoplay: boolean;
   /** Seconds between automatic slide changes. */
   interval_seconds: number;
+  // Headline is split into 3 parts rather than one free-text field so the
+  // middle segment can always render in the accent color + italic (e.g.
+  // "Girls-only" / "travel" / "experiences.") without the admin needing to
+  // hand-write markup. Shown on every slide, not just the first — see
+  // HeroSection.tsx.
+  heading_line1: string;
+  heading_highlight: string;
+  heading_line2: string;
+  subheading: string;
 }
 
 export interface AboutContent {
