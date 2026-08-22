@@ -359,15 +359,12 @@ create table public.payments (
   -- yet. Only 'paid' rows count towards enquiries.amount_paid/refund_amount
   -- — see sync_enquiry_amount_paid(). See add_invoice_generation.sql.
   status          text not null default 'paid',
-<<<<<<< HEAD
-=======
   -- Bank/UPI transaction reference the admin manually enters when recording
   -- a real payment or refund — distinct from invoice_number (ULAA's own
   -- auto-assigned identifier above). Null for cash (N/A) and for existing
   -- historical rows recorded before this existed. See
   -- add_payment_utr_reference.sql.
   utr_number      text,
->>>>>>> a5195ca (Implement CRM spec sections 1-80 with full spec compliance)
   constraint payments_pkey primary key (id),
   constraint payments_enquiry_id_fkey foreign key (enquiry_id)
     references public.enquiries (id) on delete cascade,
@@ -1417,6 +1414,32 @@ begin
   return null;
 end;
 $function$;
+
+-- Hard-deletes an enquiry (and, via FK cascade, its payments and activity
+-- log) when an admin explicitly deletes it from the Enquiries screen. Runs
+-- as SECURITY DEFINER because activity_log has no DELETE RLS policy
+-- anywhere else (deliberately — logged rows are otherwise append-only), so
+-- a plain client-side delete's cascade into activity_log would be blocked
+-- by RLS running as the authenticated role. This function is the one
+-- controlled exception; every other path into activity_log stays
+-- unaffected. See add_enquiry_hard_delete_cascade.sql and deleteEnquiry()
+-- in src/services/api.ts.
+create or replace function public.delete_enquiry_cascade(p_enquiry_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+begin
+  if auth.role() is distinct from 'authenticated' then
+    raise exception 'Not authorized';
+  end if;
+
+  delete from public.enquiries where id = p_enquiry_id;
+end;
+$function$;
+
+grant execute on function public.delete_enquiry_cascade(uuid) to authenticated;
 
 -- Generic BEFORE UPDATE trigger function: stamps updated_at = now() on any
 -- table it's attached to.

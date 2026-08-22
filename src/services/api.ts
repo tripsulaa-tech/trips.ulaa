@@ -1949,17 +1949,32 @@ export async function setEnquiryNoShow(enquiry: Enquiry, isNoShow: boolean): Pro
   return data;
 }
 
-// Soft-deletes an enquiry by stamping deleted_at — the row is hidden from
-// all normal queries but preserved in the DB for recovery. Payment history
-// is kept intact (no cascade). If the enquiry held a seat, the
-// on_enquiries_seat_sync trigger frees it automatically because the
-// updated row no longer matches the "paid & not cancelled & not deleted"
-// count condition.
+// Hard-deletes an enquiry and every piece of data tied to it — matches the
+// confirm-dialog copy admins actually see ("permanently removes... cannot
+// be undone"). Routed through the delete_enquiry_cascade RPC (see
+// add_enquiry_hard_delete_cascade.sql) rather than a plain client-side
+// `.delete()`, because that migration's comment explains: activity_log has
+// no DELETE policy anywhere (by design, so logged rows are never removable
+// through the ordinary API), and payments.enquiry_id/activity_log.enquiry_id
+// cascading on the enquiries delete would otherwise get blocked by that
+// RLS gap. The RPC runs as SECURITY DEFINER to get past that for this one
+// controlled path, deleting:
+//  - the enquiry row itself
+//  - its payments (cascade)
+//  - its activity log (cascade)
+//  - unlinking (not deleting) any waitlist entry that had converted into it
+//  - freeing its seat, via on_enquiries_seat_sync firing on DELETE
+// This is a different, deliberately softer path than
+// deleteUpcomingTripCascade/deleteCompletedTripCascade above, which
+// soft-delete (deleted_at) enquiries when a whole trip/album is removed
+// specifically to keep that accounting ledger recoverable. This function is
+// only for an admin explicitly deleting one enquiry (or a bulk selection)
+// from the Enquiries screen, where "permanently removes" is what's promised
+// and hard-delete is what should happen.
 export async function deleteEnquiry(enquiry: Enquiry): Promise<void> {
-  const { error } = await supabase
-    .from('enquiries')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', enquiry.id);
+  const { error } = await supabase.rpc('delete_enquiry_cascade', {
+    p_enquiry_id: enquiry.id,
+  });
   if (error) throw error;
 }
 
