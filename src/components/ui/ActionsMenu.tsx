@@ -98,9 +98,14 @@ export default function ActionsMenu({ items, disabled, label = 'Actions' }: { it
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="w-7 h-7 flex items-center justify-center rounded border border-background-warm text-dark-muted hover:bg-background-warm/60 disabled:opacity-50 transition-colors shrink-0"
+        // Sized/bordered to match the other "sm" Buttons it sits next to
+        // (44px mobile touch target) with a visible border — previously
+        // this was a pale 28px square whose border nearly matched the
+        // card background, so it read as barely there next to the bold
+        // outline/primary buttons beside it.
+        className="w-11 h-11 min-h-[44px] flex items-center justify-center rounded-md border-2 border-dark/15 text-dark-muted hover:bg-background-warm hover:border-dark/25 active:bg-background-warm disabled:opacity-50 transition-colors shrink-0"
       >
-        <MoreVertical size={14} aria-hidden="true" />
+        <MoreVertical size={16} aria-hidden="true" />
       </button>
       {open && coords && createPortal(
         <div

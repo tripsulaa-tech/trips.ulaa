@@ -12,8 +12,6 @@ import {
   ArrowLeft,
   FileText,
   ShareNetwork as Share2,
-  Phone,
-  ChatCircle as MessageCircle,
   Users,
   User,
   SealCheck as BadgeCheck,
@@ -56,7 +54,7 @@ import {
 } from '../../services/api';
 import type { ActivityLogEntry, CancellationReason, ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
-import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../../utils/utils-index';
+import { formatDate, formatTime, formatPrice } from '../../utils/utils-index';
 import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
   GENERATE_INVOICE_STATUS_OPTIONS, availablePaymentTypeOptions, clearsBalance,
@@ -774,16 +772,15 @@ export default function AdminEnquiryDetail() {
   const rowActions: ActionMenuItem[] = [
     { label: 'Edit Details', icon: Pencil, onClick: openEdit },
   ];
-  // "Not Interested" / "Reopen" only make sense before any money's changed
-  // hands — once there's a booking_id or a payment on record, closing the
-  // lead out is a Cancel Booking decision instead (different consequences:
-  // refunds, seat release, etc).
-  if (!enquiry.cancelled_at && !enquiry.booking_id && (enquiry.amount_paid || 0) <= 0) {
-    rowActions.push(
-      isNotInterested(enquiry)
-        ? { label: 'Reopen Enquiry', icon: RefreshCw, onClick: handleReopenEnquiry }
-        : { label: 'Not Interested (Close Query)', icon: UserMinus, onClick: handleMarkNotInterested }
-    );
+  // "Reopen" only makes sense before any money's changed hands — once
+  // there's a booking_id or a payment on record, closing the lead out is a
+  // Cancel Booking decision instead (different consequences: refunds, seat
+  // release, etc). "Not Interested (Close Query)" itself is intentionally
+  // NOT duplicated in here — whenever it'd be eligible (canMarkNotInterested),
+  // it's already shown as its own button next to this menu, so repeating it
+  // here would just be the same action twice.
+  if (!enquiry.cancelled_at && !enquiry.booking_id && (enquiry.amount_paid || 0) <= 0 && isNotInterested(enquiry)) {
+    rowActions.push({ label: 'Reopen Enquiry', icon: RefreshCw, onClick: handleReopenEnquiry });
   }
   if (canSetFollowUp(enquiry)) {
     rowActions.push(
@@ -801,22 +798,9 @@ export default function AdminEnquiryDetail() {
       { label: 'Share Invoice', icon: Share2, onClick: handleShareInvoice, disabled: invoiceBusy },
     );
   }
-  if (enquiry.phone) {
-    const firstName = enquiry.full_name?.trim().split(/\s+/)[0];
-    const greeting = firstName ? `Hi ${firstName}` : 'Hi';
-    rowActions.push(
-      {
-        label: 'WhatsApp',
-        icon: MessageCircle,
-        onClick: () => window.open(
-          getWhatsAppLink(enquiry.phone, `${greeting}, following up on your ${enquiry.trip_title || 'enquiry'} with ULAA — `),
-          '_blank',
-          'noopener,noreferrer'
-        ),
-      },
-      { label: 'Call', icon: Phone, onClick: () => { window.location.href = `tel:${enquiry.phone}`; } },
-    );
-  }
+  // WhatsApp/Call are deliberately NOT in this menu — they're already one
+  // tap away via the round quick-link icons under Email/Phone below, so
+  // listing them again here would just be the same actions twice.
   // Mark/Undo No Show — gated the same way setEnquiryNoShow() is
   // server-side (spec section 18's No Show Rules): only offered on an
   // active, Fully Paid booking whose Attendance hasn't started yet (not

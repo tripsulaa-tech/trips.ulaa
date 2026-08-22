@@ -51,7 +51,7 @@ import { useAlert } from '../../components/ui/useAlert';
 import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
 import type { CancellationReason, ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
-import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv, getWhatsAppLink } from '../../utils/utils-index';
+import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG,
@@ -1041,7 +1041,8 @@ export default function AdminEnquiries() {
   // Consolidates every per-row action that used to be a separate icon
   // button (or, for Cancel/Delete, still is on narrower layouts) into one
   // kebab menu — Cancel/Reactivate, Mark/Undo No Show, invoice
-  // download/share, View Details, WhatsApp, Call, Delete.
+  // download/share, View Details, Delete. (WhatsApp/Call stay out — see
+  // note below.)
   const buildRowActions = (e: Enquiry): ActionMenuItem[] => {
     const items: ActionMenuItem[] = [
       { label: 'View Details', icon: Eye, onClick: () => setDetailsTarget(e) },
@@ -1053,22 +1054,9 @@ export default function AdminEnquiries() {
         { label: 'Share Invoice', icon: Share2, onClick: () => handleShareInvoice(e), disabled: invoiceBusyId === e.id },
       );
     }
-    if (e.phone) {
-      const firstName = e.full_name?.trim().split(/\s+/)[0];
-      const greeting = firstName ? `Hi ${firstName}` : 'Hi';
-      items.push(
-        {
-          label: 'WhatsApp',
-          icon: MessageCircle,
-          onClick: () => window.open(
-            getWhatsAppLink(e.phone, `${greeting}, following up on your ${e.trip_title || 'enquiry'} with ULAA — `),
-            '_blank',
-            'noopener,noreferrer'
-          ),
-        },
-        { label: 'Call', icon: Phone, onClick: () => { window.location.href = `tel:${e.phone}`; } },
-      );
-    }
+    // WhatsApp/Call are deliberately NOT in this menu — they're already
+    // one tap away via the round quick-link icons on the row itself, so
+    // listing them again here would just be the same actions twice.
     // Mark/Undo No Show — gated the same way setEnquiryNoShow() is
     // server-side (spec section 18's No Show Rules): only offered on an
     // active, Fully Paid booking whose Attendance hasn't started yet (not
