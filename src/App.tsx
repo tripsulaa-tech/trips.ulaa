@@ -8,8 +8,9 @@ function App() {
     <ConfirmDialogProvider>
       <AlertDialogProvider>
         <AppRouter />
-        {/* Detects new deployments and auto-refreshes everyone's tab onto
-            the latest version — see useVersionCheck for how it works. */}
+        {/* Detects new deployments and shows a banner the admin/user can
+            refresh from when ready — see UpdateToast for why it never
+            reloads on its own. */}
         <UpdateToast />
       </AlertDialogProvider>
     </ConfirmDialogProvider>
