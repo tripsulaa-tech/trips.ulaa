@@ -910,7 +910,7 @@ export default function AdminEnquiryDetail() {
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
               {nma && (
                 <Button variant="primary" size="sm" onClick={handleAdvance} disabled={busyAction}>
                   <nma.icon size={14} aria-hidden="true" /> {nma.label}
@@ -943,7 +943,7 @@ export default function AdminEnquiryDetail() {
               live inside the Booking Journey card below, but that pushed it
               too far from the header for how often it's referenced. */}
           {enquiry.booking_id && (
-            <div className="flex items-center justify-between gap-2 pt-3 border-t border-background-warm">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-background-warm">
               <div className="min-w-0">
                 <p className="text-dark-muted text-xs">Booking ID</p>
                 <div className="flex items-center gap-1.5">
@@ -959,7 +959,7 @@ export default function AdminEnquiryDetail() {
                   </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
                 {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
                   <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
                     <CalendarClock size={14} aria-hidden="true" /> Set Follow-up

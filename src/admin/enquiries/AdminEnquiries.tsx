@@ -33,7 +33,6 @@ import {
   UserMinus as UserX,
   UserCheck,
   SignIn as LogIn,
-  ArrowSquareOut as ExternalLink,
   UserMinus,
   ArrowRight,
 } from '@phosphor-icons/react';
@@ -48,7 +47,7 @@ import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
+import { getEnquiries, updateEnquiryStatus, updateEnquiryDetails, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
 import type { CancellationReason, ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../../utils/utils-index';
@@ -87,6 +86,7 @@ import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
 import CancelModal from './AdminCancelModal';
 import BulkEditModal from './AdminBulkEditModal';
+import EditDetailsModal, { emptyEditDetailsForm, type EditDetailsForm } from './AdminEditDetailsModal';
 
 export default function AdminEnquiries() {
   const confirm = useConfirm();
@@ -217,6 +217,12 @@ export default function AdminEnquiries() {
   // inline row (mobile keeps the tap-to-expand card behavior via
   // expandedId above).
   const [detailsTarget, setDetailsTarget] = useState<Enquiry | null>(null);
+  // Edit Details modal — same fields/behaviour as the one on the single-
+  // enquiry detail page, reached from this row's kebab menu instead.
+  const [editTarget, setEditTarget] = useState<Enquiry | null>(null);
+  const [editForm, setEditForm] = useState<EditDetailsForm>(emptyEditDetailsForm);
+  const [editTouched, setEditTouched] = useState<Set<string>>(new Set());
+  const [savingEdit, setSavingEdit] = useState(false);
   // Separate from expandedId: expandedId also drives the mobile
   // expand/collapse toggle and should stay set. highlightId is purely a
   // "you arrived here via a link" visual cue for the desktop table (which
@@ -1038,15 +1044,59 @@ export default function AdminEnquiries() {
     }
   };
 
+  const openEdit = (enquiry: Enquiry) => {
+    setEditForm({
+      full_name: enquiry.full_name || '',
+      email: enquiry.email || '',
+      phone: enquiry.phone || '',
+      city: enquiry.city || '',
+      age: enquiry.age ?? '',
+      trip_id: enquiry.trip_id || '',
+    });
+    setEditTouched(new Set());
+    setEditTarget(enquiry);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTarget) return;
+    if (!editForm.full_name.trim() || !editForm.phone.trim()) {
+      alert(!editForm.full_name.trim() ? 'Full name is required.' : 'Phone number is required.');
+      return;
+    }
+    try {
+      setSavingEdit(true);
+      const newTrip = editForm.trip_id ? trips.find(t => t.id === editForm.trip_id) : undefined;
+      await updateEnquiryDetails(editTarget.id, {
+        full_name: editForm.full_name,
+        email: editForm.email,
+        phone: editForm.phone,
+        city: editForm.city || null,
+        age: editForm.age === '' ? null : Number(editForm.age),
+        trip_id: editForm.trip_id || null,
+        trip_title: editForm.trip_id ? (newTrip?.title ?? null) : null,
+      });
+      setEditTarget(null);
+      load();
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to save details.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   // Consolidates every per-row action that used to be a separate icon
   // button (or, for Cancel/Delete, still is on narrower layouts) into one
-  // kebab menu — Cancel/Reactivate, Mark/Undo No Show, invoice
-  // download/share, View Details, Delete. (WhatsApp/Call stay out — see
-  // note below.)
+  // kebab menu — Edit Details, Mark/Undo No Show, invoice download/share,
+  // View Details, Delete. (WhatsApp/Call stay out — see note below. "Open
+  // Full CRM Page" and setting/editing a follow-up date also stay out —
+  // the card already has a dedicated "View Full CRM" button and a
+  // "Set Follow-up" chip that do exactly that; only Clear Follow-up stays
+  // here since there's no other way to reach it.)
   const buildRowActions = (e: Enquiry): ActionMenuItem[] => {
     const items: ActionMenuItem[] = [
+      { label: 'Edit Details', icon: Pencil, onClick: () => openEdit(e) },
       { label: 'View Details', icon: Eye, onClick: () => setDetailsTarget(e) },
-      { label: 'Open Full CRM Page', icon: ExternalLink, onClick: () => navigate(`/admin/enquiries/${e.id}`) },
     ];
     if (e.booking_id) {
       items.push(
@@ -1073,31 +1123,15 @@ export default function AdminEnquiries() {
     if (e.journey_stage === 'checked_in') {
       items.push({ label: 'Undo Check In', icon: LogIn, onClick: () => handleUndoCheckIn(e) });
     }
-    // Follow-up reminder — only offered while still genuinely Contacted
-    // (see canSetFollowUp); also reachable via the inline chip in the
-    // Follow-up column for rows where it's already set.
-    if (canSetFollowUp(e)) {
-      items.push(
-        e.follow_up_at
-          ? { label: 'Edit Follow-up Date', icon: CalendarClock, onClick: () => openFollowUpModal(e) }
-          : { label: 'Set Follow-up Reminder', icon: CalendarClock, onClick: () => openFollowUpModal(e) }
-      );
-      if (e.follow_up_at) {
-        items.push({ label: 'Clear Follow-up', icon: X, onClick: () => handleClearFollowUp(e) });
-      }
+    // Setting/editing the follow-up date is handled by the "Set Follow-up"
+    // chip on the card itself — only Clear stays here, since that's not
+    // reachable any other way.
+    if (canSetFollowUp(e) && e.follow_up_at) {
+      items.push({ label: 'Clear Follow-up', icon: X, onClick: () => handleClearFollowUp(e) });
     }
-    // Booking Follow-up — only offered once the booking has actually
-    // started (see canSetBookingFollowUp); also reachable via the inline
-    // chip in the Follow-up column for rows where it's already set.
-    if (canSetBookingFollowUp(e)) {
-      items.push(
-        e.booking_follow_up_at
-          ? { label: 'Edit Booking Follow-up', icon: CalendarClock, onClick: () => setBookingFollowUpTarget(e) }
-          : { label: 'Set Booking Follow-up', icon: CalendarClock, onClick: () => setBookingFollowUpTarget(e) }
-      );
-      if (e.booking_follow_up_at) {
-        items.push({ label: 'Clear Booking Follow-up', icon: X, onClick: () => handleClearBookingFollowUp(e) });
-      }
+    // Same reasoning for the booking follow-up — the chip covers set/edit.
+    if (canSetBookingFollowUp(e) && e.booking_follow_up_at) {
+      items.push({ label: 'Clear Booking Follow-up', icon: X, onClick: () => handleClearBookingFollowUp(e) });
     }
     // "Not Interested" / "Reopen" only make sense before any money's
     // changed hands — once there's a booking_id or a payment on record,
@@ -3237,6 +3271,18 @@ export default function AdminEnquiries() {
         onOpenGenerateInvoice={generateInvoice.open}
         invoiceRowBusyId={invoiceRowBusyId}
         onMarkInvoicePaid={handleMarkInvoicePaid}
+      />
+
+      <EditDetailsModal
+        editTarget={editTarget}
+        onClose={() => setEditTarget(null)}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        editTouched={editTouched}
+        setEditTouched={setEditTouched}
+        trips={trips}
+        onSave={handleSaveEdit}
+        saving={savingEdit}
       />
 
       <GenerateInvoiceModal
