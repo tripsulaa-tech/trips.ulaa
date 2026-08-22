@@ -813,12 +813,12 @@ export function GalleryGrid({ images, fallbackLocation }: GalleryGridProps) {
               alt={img.alt || `Gallery photo ${i + 1}`}
               layoutId={`gallery-grid-${i}`}
               onClick={() => openAt(i)}
-              className="block w-full cursor-pointer rounded-xl overflow-hidden group relative"
+              className="block w-full cursor-pointer rounded-lg overflow-hidden group relative"
               imgClassName="w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
             />
             <div
               onClick={() => openAt(i)}
-              className="absolute inset-0 bg-dark/0 group-hover:bg-dark/20 rounded-xl transition-all duration-400 flex items-center justify-center cursor-pointer"
+              className="absolute inset-0 bg-dark/0 group-hover:bg-dark/20 rounded-lg transition-all duration-400 flex items-center justify-center cursor-pointer"
               aria-hidden
             >
               <ZoomIn size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-lg" />

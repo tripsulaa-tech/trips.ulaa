@@ -841,7 +841,7 @@ export default function TripDetailPage() {
                         >
                           {meta ? <meta.Icon size={20} color="#fff" strokeWidth={2.25} /> : day.day}
                         </button>
-                        <div className="w-full bg-white border border-background-warm rounded-2xl pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
+                        <div className="w-full bg-white border border-background-warm rounded-lg pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
                           <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
                           <AnimatePresence initial={false}>
                             {isDayOpen && hasDetails && (
@@ -897,7 +897,7 @@ export default function TripDetailPage() {
                         itemsPerView={accommodationPerView}
                         keyExtractor={(_photo, i) => i}
                         renderItem={(photo, i) => (
-                          <div className="aspect-video overflow-hidden rounded-xl">
+                          <div className="aspect-video overflow-hidden rounded-lg">
                             <img src={photo} alt={`Accommodation ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                           </div>
                         )}
@@ -958,13 +958,13 @@ export default function TripDetailPage() {
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {trip.included_items!.map((item: TripInclusionItem, i: number) => (
-                          <div key={i} className="group relative flex flex-col items-center text-center gap-2 bg-background-warm rounded-xl px-4 py-5">
+                          <div key={i} className="group relative flex flex-col items-center text-center gap-2 bg-background-warm rounded-lg px-4 py-5">
                             <button
                               type="button"
                               onClick={() => toggleInSet(setActiveIncludedItems, i)}
                               aria-expanded={activeIncludedItems.has(i)}
                               aria-label={`${item.description} — tap for details`}
-                              className="absolute inset-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                              className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
                             />
                             {item.icon ? (
                               <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" filled={activeIncludedItems.has(i)} hoverFill />
@@ -1103,7 +1103,7 @@ export default function TripDetailPage() {
               </section>
             )}
 
-            <section className={`bg-white rounded-2xl shadow-warm-lg border border-background-warm p-5 py-6 sm:p-8 sm:py-10 sm:pl-10 sm:pr-14 ${hasConfidenceItems ? 'lg:ml-10' : 'max-w-2xl mx-auto w-full'}`}>
+            <section className={`bg-white rounded-lg shadow-warm-lg border border-background-warm p-5 py-6 sm:p-8 sm:py-10 sm:pl-10 sm:pr-14 ${hasConfidenceItems ? 'lg:ml-10' : 'max-w-2xl mx-auto w-full'}`}>
               <div className="max-w-xl mx-auto text-center">
                 {activePrice != null && (
                   <div className="mb-5 pb-5 border-b border-background-warm">
@@ -1154,7 +1154,7 @@ export default function TripDetailPage() {
                       Only {remaining} seats left — almost full!
                     </span>
                   ) : trip.advance_amount != null ? (
-                    <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 justify-center">
+                    <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3 justify-center">
                       <span className="shrink-0 w-9 h-9 rounded-full bg-green-600 flex items-center justify-center">
                         <ShieldCheck size={18} className="text-white" strokeWidth={2.5} />
                       </span>
@@ -1366,7 +1366,7 @@ export default function TripDetailPage() {
 
             {/* Founder */}
             {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
-              <section className="scroll-mt-44 bg-dark rounded-2xl p-5 sm:p-8">
+              <section className="scroll-mt-44 bg-dark rounded-lg p-5 sm:p-8">
                 <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4 sm:mb-6 text-center">Meet Your Trip Leader</h2>
                 <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-center sm:items-start">
                   {trip.trip_founder.photo ? (

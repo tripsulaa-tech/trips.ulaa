@@ -1,6 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Airplane as Plane, Sparkle, ArrowRight, Flame } from '@phosphor-icons/react';
+import { ArrowRight, Flame } from '@phosphor-icons/react';
 
 // Lazy — pulls in three.js (a real chunk of KB) only once someone actually
 // lands on a trip page with an active countdown, and never blocks the
@@ -74,24 +74,33 @@ export default function TripCountdownCard({
   if (!remaining) return null;
 
   // Urgency — inside the final 48 hours the card switches to a warmer
-  // orange/coral palette and the Min/Sec tiles come up to full brightness
-  // (they're always present, just dimmed at long range so they don't read
-  // as noise without leaving an empty gap in the card).
+  // orange/coral palette and the Min/Sec tiles appear (see `units` below).
   const hoursLeft = remaining.days * 24 + remaining.hours;
   const urgent = hoursLeft < 48;
   const progress = Math.min(1, Math.max(0, 1 - hoursLeft / JOURNEY_WINDOW_HOURS));
 
-  const units: { v: number; l: string; dim: boolean }[] = [
-    { v: remaining.days, l: 'Days', dim: false },
-    { v: remaining.hours, l: 'Hrs', dim: false },
-    { v: remaining.minutes, l: 'Min', dim: !urgent },
-    { v: remaining.seconds, l: 'Sec', dim: !urgent },
-  ];
+  // Only show Min/Sec once we're inside the final 48 hours. Outside that
+  // window they have no functional value to the user, and rendering a
+  // ticking-every-second tile at long range was both unnecessary motion
+  // and — once dimmed to compensate — a contrast risk (opacity stacked on
+  // an already-translucent gradient fill). Simpler and more accessible to
+  // just not show them yet.
+  const units: { v: number; l: string }[] = urgent
+    ? [
+        { v: remaining.days, l: 'Days' },
+        { v: remaining.hours, l: 'Hrs' },
+        { v: remaining.minutes, l: 'Min' },
+        { v: remaining.seconds, l: 'Sec' },
+      ]
+    : [
+        { v: remaining.days, l: 'Days' },
+        { v: remaining.hours, l: 'Hrs' },
+      ];
 
   return (
     <div>
       <div
-        className={`relative rounded-[28px] p-px shadow-[0_28px_60px_-20px_rgba(9,7,20,0.55)] ${
+        className={`relative rounded-lg p-px shadow-[0_28px_60px_-20px_rgba(9,7,20,0.55)] ${
           urgent
             ? 'bg-gradient-to-br from-orange-400/50 via-white/10 to-red-600/40'
             : 'bg-gradient-to-br from-gold/50 via-white/10 to-primary-dark/40'
@@ -108,7 +117,7 @@ export default function TripCountdownCard({
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.985 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className={`tc-grain group/btn relative overflow-hidden block w-full text-left tc-gradient rounded-[27px] px-6 py-7 sm:px-10 sm:py-10 lg:px-14 lg:py-11 ${
+          className={`tc-grain group/btn relative overflow-hidden block w-full text-left tc-gradient rounded-lg px-6 py-7 sm:px-10 sm:py-10 lg:px-14 lg:py-11 ${
             urgent
               ? 'bg-gradient-to-br from-[#210A07] via-[#3A130C] to-[#1A0705]'
               : 'bg-gradient-to-br from-[#1A130A] via-[#2E1D10] to-[#140D07]'
@@ -130,27 +139,6 @@ export default function TripCountdownCard({
             <TripOrbitScene progress={progress} urgent={urgent} />
           </Suspense>
 
-          {/* Small plane gliding across the top of the card + a flickering
-              sparkle lower down — decorative motion in the corners so the
-              center stays clear for the digits. */}
-          <Plane
-            size={16}
-            weight="fill"
-            className={`tc-glide pointer-events-none absolute top-6 left-[8%] hidden lg:block ${urgent ? 'text-orange-300/60' : 'text-gold/60'}`}
-          />
-          <Sparkle
-            size={10}
-            weight="fill"
-            className={`tc-flicker pointer-events-none absolute bottom-8 left-8 ${urgent ? 'text-orange-300/40' : 'text-primary-light/40'}`}
-            style={{ animationDelay: '1.1s' }}
-          />
-          <Sparkle
-            size={8}
-            weight="fill"
-            className={`tc-flicker pointer-events-none absolute top-8 right-16 ${urgent ? 'text-orange-300/30' : 'text-primary-light/30'}`}
-            style={{ animationDelay: '2.3s' }}
-          />
-
           {(isAlmostFull || isFull) && (
             <span className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10 inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-[10px] font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
               <Flame size={11} className="text-amber-300" />
@@ -171,7 +159,7 @@ export default function TripCountdownCard({
                 </span>
                 {urgent ? 'Final countdown' : 'Trip starts in'}
               </p>
-              <p className="hidden lg:block text-white/35 text-xs font-medium">
+              <p className="hidden lg:block text-white/65 text-xs font-medium">
                 {destination} &middot; {dateRangeLabel}
               </p>
             </div>
@@ -187,11 +175,11 @@ export default function TripCountdownCard({
             </p>
 
             <div className="flex items-center gap-2 sm:gap-3 lg:gap-4" aria-hidden="true">
-              {units.map(({ v, l, dim }, i) => (
+              {units.map(({ v, l }, i) => (
                 <div key={l} className="flex items-center gap-2 sm:gap-3 lg:gap-4">
-                  <div className={`text-center transition-opacity duration-500 ${dim ? 'opacity-50' : 'opacity-100'}`}>
+                  <div className="text-center">
                     <div
-                      className={`relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] lg:w-24 lg:h-24 overflow-hidden rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_28px_-10px_rgba(0,0,0,0.65)] ${l === 'Sec' && !dim ? 'tc-tick' : ''}`}
+                      className={`relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] lg:w-24 lg:h-24 overflow-hidden rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_28px_-10px_rgba(0,0,0,0.65)] ${l === 'Sec' ? 'tc-tick' : ''}`}
                     >
                       <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent" />
                       <div className="absolute left-0 right-0 top-1/2 h-px bg-white/[0.06] -translate-y-px z-10" />
@@ -203,16 +191,14 @@ export default function TripCountdownCard({
                           exit={{ y: -16, opacity: 0 }}
                           transition={{ duration: 0.4, ease: 'easeOut' }}
                           className={`absolute inset-0 flex items-center justify-center font-display text-3xl sm:text-4xl lg:text-5xl font-bold bg-clip-text text-transparent tabular-nums ${
-                            dim
-                              ? 'bg-gradient-to-b from-white/70 to-white/40'
-                              : urgent ? 'bg-gradient-to-b from-white to-orange-300/90' : 'bg-gradient-to-b from-white to-primary-light/90'
+                            urgent ? 'bg-gradient-to-b from-white to-orange-300/90' : 'bg-gradient-to-b from-white to-primary-light/90'
                           }`}
                         >
                           {String(v).padStart(2, '0')}
                         </motion.div>
                       </AnimatePresence>
                     </div>
-                    <div className="text-white/45 text-[10px] lg:text-xs font-medium uppercase tracking-[0.2em] text-center mt-2">{l}</div>
+                    <div className="text-white/65 text-[10px] lg:text-xs font-medium uppercase tracking-[0.2em] text-center mt-2">{l}</div>
                   </div>
                   {i < units.length - 1 && (
                     <span className={`font-display text-xl sm:text-2xl lg:text-3xl font-bold pb-4 sm:pb-5 lg:pb-6 select-none ${urgent ? 'text-orange-300/40' : 'text-primary-light/40'}`}>:</span>
@@ -232,11 +218,11 @@ export default function TripCountdownCard({
                 {ctaLabel}
                 <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
               </span>
-              <p className="flex items-center gap-1.5 text-white/55 text-[11px] font-medium lg:hidden">
+              <p className="flex items-center gap-1.5 text-white/70 text-[11px] font-medium lg:hidden">
                 Don't miss out — tap to {ctaLabel}
                 <ArrowRight size={12} className={`transition-transform group-hover/btn:translate-x-1 ${urgent ? 'text-orange-300' : 'text-primary-light'}`} />
               </p>
-              <p className="hidden lg:block text-white/35 text-xs">
+              <p className="hidden lg:block text-white/65 text-xs">
                 Don't miss out — tap to {ctaLabel}
               </p>
             </div>

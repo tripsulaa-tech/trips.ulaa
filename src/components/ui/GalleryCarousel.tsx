@@ -37,7 +37,7 @@ export default function GalleryCarousel({ items, fallbackLocation }: GalleryCaro
         keyExtractor={(_item, i) => i}
         renderItem={(item, i) => (
           <div
-            className="group overflow-hidden rounded-xl shadow-card border border-background-warm bg-white cursor-pointer relative"
+            className="group overflow-hidden rounded-lg shadow-card border border-background-warm bg-white cursor-pointer relative"
             onClick={() => { setViewerIndex(i); setViewerOpen(true); }}
           >
             <div className="aspect-[4/3] overflow-hidden relative">

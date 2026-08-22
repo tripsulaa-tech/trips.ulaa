@@ -146,6 +146,19 @@ export default function TripOrbitScene({ progress, urgent }: TripOrbitSceneProps
     };
     updateMarker(progressRef.current);
 
+    // Path elements only mean something once the trip has actually entered
+    // the journey window — before that, `progress` is a flat 0 and the
+    // track/marker would just sit there motionless for however many weeks
+    // out the page is being viewed. Hide the whole path system rather than
+    // render a permanently static line; the drifting embers alone carry
+    // "this card is alive" until there's real progress to show.
+    const setPathVisible = (visible: boolean) => {
+      track.visible = visible;
+      filledTrack.visible = visible;
+      marker.visible = visible;
+    };
+    setPathVisible(progressRef.current > 0);
+
     let frameId = 0;
     let lastRenderedProgress = progressRef.current;
     const clock = new THREE.Clock();
@@ -204,6 +217,7 @@ export default function TripOrbitScene({ progress, urgent }: TripOrbitSceneProps
         filledTrack.geometry.dispose();
         filledTrack.geometry = new THREE.BufferGeometry().setFromPoints(buildPathPoints(lastRenderedProgress));
         updateMarker(lastRenderedProgress);
+        setPathVisible(lastRenderedProgress > 0);
       }
       marker.scale.setScalar(1 + Math.sin(elapsed * 3) * 0.15);
 
@@ -242,7 +256,7 @@ export default function TripOrbitScene({ progress, urgent }: TripOrbitSceneProps
   return (
     <div
       ref={containerRef}
-      className="pointer-events-none absolute inset-0 overflow-hidden rounded-[27px]"
+      className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg"
       aria-hidden="true"
     />
   );
