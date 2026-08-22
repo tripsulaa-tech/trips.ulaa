@@ -40,6 +40,18 @@ export interface TripConfidenceItem {
   description: string;
 }
 
+// Fixed marketing tag shown in the 4-icon row on the public Trip Card
+// (e.g. "Girls-Only" / "Safe & fun", "Luxury Stays" / "Handpicked").
+// Admin-managed per trip via Add/Edit Trip → Overview & Itinerary tab; see
+// add_trip_card_feature_tags.sql. When a trip has none set, TripCard falls
+// back to auto-generated tags built from real trip data (traveler count,
+// age range, duration, destination count) instead.
+export interface TripCardFeatureTag {
+  icon: string;      // icon-library key, see constants/tripHighlightIcons.ts
+  label: string;      // bold top line, e.g. "Girls-Only"
+  sublabel: string;   // muted second line, e.g. "Safe & fun"
+}
+
 export interface TripEndBanner {
   image: string;
   heading: string;
@@ -103,6 +115,12 @@ export interface UpcomingTrip {
   // falls back to the old seats-availability badge. See
   // add_trip_advance_amount.sql.
   advance_amount?: number | null;
+  // Optional fixed marketing tags (up to 4) shown in the icon row on the
+  // public Trip Card, e.g. "Girls-Only" / "Safe & fun". Left unset, the
+  // card falls back to auto-generated tags from real trip data (travelers,
+  // age range, duration, destination count). See TripCardFeatureTag above
+  // and add_trip_card_feature_tags.sql.
+  card_feature_tags?: TripCardFeatureTag[] | null;
   // Domestic vs. international, used by the DB's set_enquiry_trip_type()
   // trigger to auto-fill enquiries.trip_type on new bookings, which in turn
   // drives calculate_suggested_refund()'s domestic/international-specific

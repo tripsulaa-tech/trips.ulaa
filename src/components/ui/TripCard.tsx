@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Clock, Users, UserCheck, ArrowRight, CalendarPlus, Share2 } from 'lucide-react';
+import { MapPin, Calendar, Clock, ArrowRight, CalendarPlus, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { UpcomingTrip } from '../../types/types-index';
+import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
+import { getTripHighlightIcon, getTripHighlightPalette } from '../../constants/tripHighlightIcons';
 import Button from './Button';
 
 interface TripCardProps {
@@ -63,6 +64,20 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   const isFull = remaining === 0;
   const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
+
+  // Admin-set marketing tags (Admin → Add/Edit Trip → Overview & Itinerary)
+  // take priority; falling back to tags built from real trip data keeps
+  // every trip's card useful even before an admin fills in custom copy.
+  const destinationCount = trip.destination.split(',').map(s => s.trim()).filter(Boolean).length;
+  const fallbackFeatureTags: TripCardFeatureTag[] = [
+    { icon: 'users', label: isFull ? 'Full' : isAlmostFull ? `${remaining} left` : `${trip.total_seats}`, sublabel: 'Travelers' },
+    { icon: 'user-check', label: formatAgeRange(trip.min_age, trip.max_age), sublabel: 'Age range' },
+    { icon: 'clock', label: trip.duration, sublabel: 'Duration' },
+    { icon: 'map-pin', label: String(destinationCount), sublabel: destinationCount === 1 ? 'Place' : 'Places' },
+  ];
+  const featureTags = trip.card_feature_tags && trip.card_feature_tags.length > 0
+    ? trip.card_feature_tags.slice(0, 4)
+    : fallbackFeatureTags;
 
   return (
     <motion.div
@@ -149,9 +164,21 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
       {/* Content */}
       <div className="p-6 flex-1 flex flex-col">
         <div className="flex-1">
-          <h3 className="font-display text-xl font-bold text-dark mb-3 line-clamp-2">
+          <h3 className="font-display text-xl font-bold text-dark mb-2 line-clamp-2">
             {trip.title}
           </h3>
+          <div className="w-9 h-[3px] bg-primary rounded-full mb-3" />
+
+          <div className="flex items-center gap-3 mb-3 text-xs sm:text-sm text-dark-muted">
+            <div className="flex items-center gap-1.5 whitespace-nowrap">
+              <Calendar size={13} className="text-primary shrink-0" />
+              <span>{formatDateRange(trip.start_date, trip.end_date)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 whitespace-nowrap">
+              <Clock size={13} className="text-primary shrink-0" />
+              <span>{trip.duration}</span>
+            </div>
+          </div>
 
           {activePrice != null && (
             <div className="mb-3">
@@ -166,6 +193,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                   </>
                 )}
               </div>
+              {trip.advance_amount != null && (
+                <p className="text-green-700 text-xs font-button font-semibold mt-1">
+                  Reserve for just {formatPrice(trip.advance_amount)}
+                </p>
+              )}
               {isEarlyBird && trip.early_bird_deadline && (
                 <p className="text-secondary text-xs font-button font-semibold mt-1">
                   Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -174,34 +206,27 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             </div>
           )}
 
-          {/* Meta row: date + duration on one line, seats + age range on the
-              next — each pair stays together via whitespace-nowrap, and the
-              row as a whole wraps naturally (flex-wrap) if a narrow card or
-              a long seats message ("Filling up fast — almost full!") needs
-              the extra room, instead of forcing seats onto its own full-width line. */}
-          <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5 mb-5 text-xs sm:text-sm">
-            <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
-              <Calendar size={13} className="text-primary shrink-0" />
-              <span>{formatDateRange(trip.start_date, trip.end_date)}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
-              <Clock size={13} className="text-primary shrink-0" />
-              <span>{trip.duration}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
-              <Users size={13} className="text-primary shrink-0" />
-              <span>
-                {isFull
-                  ? 'No seats available'
-                  : isAlmostFull
-                    ? 'Filling up fast — almost full!'
-                    : `${trip.total_seats} Travelers`}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-dark-muted whitespace-nowrap">
-              <UserCheck size={13} className="text-primary shrink-0" />
-              <span>{formatAgeRange(trip.min_age, trip.max_age)}</span>
-            </div>
+          {/* Feature tag row: admin-set marketing tags when configured
+              (e.g. "Girls-Only" / "Safe & fun"), else auto-generated from
+              real trip data — see featureTags above. */}
+          <div className="grid grid-cols-4 gap-1 border-t border-background-warm pt-3 mb-5 text-center">
+            {featureTags.map((tag, i) => {
+              const iconMeta = getTripHighlightIcon(tag.icon);
+              const palette = getTripHighlightPalette(i);
+              const TagIcon = iconMeta?.Icon;
+              return (
+                <div key={i} className="flex flex-col items-center gap-1 min-w-0">
+                  <span
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: palette.bg }}
+                  >
+                    {TagIcon && <TagIcon size={14} style={{ color: palette.fg }} aria-hidden="true" />}
+                  </span>
+                  <span className="text-[11px] font-semibold text-dark leading-tight truncate w-full">{tag.label}</span>
+                  <span className="text-[9px] text-dark-muted leading-tight truncate w-full">{tag.sublabel}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -26,7 +26,7 @@ import { useAlert } from '../components/ui/useAlert';
 import type {
   UpcomingTrip, ItineraryDay, FAQ, CancellationPolicy,
   TripHighlightCard, TripInclusionItem, TripIncludedGroup, TripGalleryItem,
-  TripFounder, TripConfidenceItem, TripEndBanner, CoverImageCrop,
+  TripFounder, TripConfidenceItem, TripCardFeatureTag, TripEndBanner, CoverImageCrop,
   FounderContent,
 } from '../types/types-index';
 import { formatDate, slugify, formatAgeRange } from '../utils/utils-index';
@@ -78,6 +78,10 @@ interface TripForm {
   // booking panel instead of the "Seats available" badge. '' means "not
   // set" (stored as null) — see add_trip_advance_amount.sql.
   advance_amount: number | '';
+  // Up to 4 fixed marketing tags shown in the icon row on the public Trip
+  // Card, e.g. "Girls-Only" / "Safe & fun". Empty array falls back to
+  // TripCard's auto-generated tags — see add_trip_card_feature_tags.sql.
+  card_feature_tags: TripCardFeatureTag[];
   // '' means "not set" (stored as null) — see UpcomingTrip.trip_type in
   // types-index.ts for why this matters to the DB's refund logic.
   trip_type: 'domestic' | 'international' | '';
@@ -120,7 +124,7 @@ const emptyForm: TripForm = {
   meeting_point: '', meeting_point_map_url: '',
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
-  early_bird_price: '', early_bird_deadline: '', strike_through_price: '', advance_amount: '', trip_type: '',
+  early_bird_price: '', early_bird_deadline: '', strike_through_price: '', advance_amount: '', card_feature_tags: [], trip_type: '',
   cover_image: '', cover_image_crop: null, hero_mobile_image: '', terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, status: 'draft',
   // Extended
@@ -310,6 +314,9 @@ export default function AdminTrips() {
       early_bird_deadline: '<Early bird deadline, format YYYY-MM-DD, or "">',
       strike_through_price: '<Optional "was ₹X" marketing price as a number, or "">',
       advance_amount: '<Optional advance/reservation amount in INR as a number, or "">',
+      card_feature_tags: [
+        { icon: '<Icon-library key, NOT an emoji — e.g. "venus", "crown", "map-pinned". See src/constants/tripHighlightIcons.ts.>', label: '<Short bold label, e.g. "Girls-Only">', sublabel: '<Short muted sublabel, e.g. "Safe & fun">' },
+      ],
       trip_type: '<"domestic" or "international", or "" if not set>',
       cover_image: '(leave blank — uploaded manually)',
       hero_mobile_image: '(leave blank — uploaded manually)',
@@ -519,6 +526,9 @@ export default function AdminTrips() {
         highlight_cards: Array.isArray(raw.highlight_cards)
           ? raw.highlight_cards.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), heading: asStr(c?.heading), description: asStr(c?.description) }))
           : [],
+        card_feature_tags: Array.isArray(raw.card_feature_tags)
+          ? raw.card_feature_tags.slice(0, 4).map((t: Record<string, unknown>) => ({ icon: asIconKey(t?.icon), label: asStr(t?.label), sublabel: asStr(t?.sublabel) }))
+          : [],
         accommodation_description: asStr(raw.accommodation_description),
         accommodation_photos: asStrArray(raw.accommodation_photos),
         included_groups: Array.isArray(raw.included_groups)
@@ -591,6 +601,7 @@ export default function AdminTrips() {
       early_bird_deadline: trip.early_bird_deadline || '',
       strike_through_price: trip.strike_through_price ?? '',
       advance_amount: trip.advance_amount ?? '',
+      card_feature_tags: trip.card_feature_tags || [],
       trip_type: trip.trip_type || '',
       cover_image: trip.cover_image || '',
       cover_image_crop: trip.cover_image_crop || null,
@@ -1073,6 +1084,42 @@ export default function AdminTrips() {
               <p id="trip-advance-amount-hint" className="text-xs text-dark-muted mt-1">
                 Shown on the public trip page as "Reserve today with only ₹{form.advance_amount || 'X'}". Leave blank to show the seats-available badge instead.
               </p>
+            </div>
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-dark">Trip Card Feature Tags</label>
+                {form.card_feature_tags.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, card_feature_tags: [...f.card_feature_tags, { icon: '', label: '', sublabel: '' }] }))}
+                    className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
+                  >
+                    <Plus size={13} aria-hidden="true" /> Add Tag
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-dark-muted -mt-1">
+                Up to 4 fixed tags shown in the icon row on the public Trip Card, e.g. "Girls-Only" / "Safe &amp; fun". Leave empty to auto-show travelers, age range, duration, and destination count instead.
+              </p>
+              {form.card_feature_tags.map((tag, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="w-32 flex-shrink-0">
+                    <label htmlFor={`trip-card-tag-icon-${i}`} className="sr-only">Icon for tag {i + 1}</label>
+                    <TripHighlightIconPicker
+                      id={`trip-card-tag-icon-${i}`}
+                      value={tag.icon}
+                      hintText={tag.label}
+                      onChange={key => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.map((t, idx) => idx === i ? { ...t, icon: key } : t) }))}
+                    />
+                  </div>
+                  <label htmlFor={`trip-card-tag-label-${i}`} className="sr-only">Tag {i + 1} label</label>
+                  <input id={`trip-card-tag-label-${i}`} value={tag.label} onChange={e => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.map((t, idx) => idx === i ? { ...t, label: e.target.value } : t) }))} className={`${inputClass} flex-1`} placeholder="e.g. Girls-Only" />
+                  <label htmlFor={`trip-card-tag-sublabel-${i}`} className="sr-only">Tag {i + 1} sublabel</label>
+                  <input id={`trip-card-tag-sublabel-${i}`} value={tag.sublabel} onChange={e => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.map((t, idx) => idx === i ? { ...t, sublabel: e.target.value } : t) }))} className={`${inputClass} flex-1`} placeholder="e.g. Safe & fun" />
+                  <button type="button" onClick={() => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.filter((_, idx) => idx !== i) }))} aria-label={`Remove tag ${i + 1}`} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
+                </div>
+              ))}
+              {form.card_feature_tags.length === 0 && <p className="text-xs text-dark-muted">No custom tags — card will auto-show travelers, age range, duration, and destination count.</p>}
             </div>
             <div>
               <label htmlFor="trip-type" className="block text-sm font-medium text-dark mb-1">Trip Type</label>

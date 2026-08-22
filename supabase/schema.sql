@@ -116,6 +116,11 @@ create table public.upcoming_trips (
   -- Left null falls back to the old seats-availability badge. See
   -- add_trip_advance_amount.sql.
   advance_amount          numeric(10, 2),
+  -- Optional fixed marketing tags (up to 4) shown in the icon row on the
+  -- public Trip Card, e.g. "Girls-Only" / "Safe & fun". Empty/unset falls
+  -- back to auto-generated tags built from real trip data (travelers, age
+  -- range, duration, destination count). See add_trip_card_feature_tags.sql.
+  card_feature_tags       jsonb default '[]'::jsonb,
   -- Optional per-trip age eligibility range shown/enforced on the public
   -- Book Your Seat / Join Waitlist forms. Either side left null means that
   -- side is unrestricted; both null falls back to the app's default 18-65
