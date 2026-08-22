@@ -6,7 +6,6 @@ import {
   ArrowRight,
   CalendarPlus,
   ShareNetwork as Share2,
-  ShieldCheck,
   Timer,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
@@ -19,6 +18,28 @@ import Button from './Button';
 interface TripCardProps {
   trip: UpcomingTrip;
   index?: number;
+}
+
+// Plump rounded shield with a solid white checkmark — matches the "Reserve
+// your spot" badge reference design more closely than the angular Phosphor
+// ShieldCheck glyph. The checkmark is a real white stroke (not a knockout),
+// so it stays crisp regardless of the badge's background color.
+function ReserveShieldIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path
+        d="M11.484 2.17a.75.75 0 0 1 1.032 0 11.209 11.209 0 0 0 7.877 3.08.75.75 0 0 1 .722.515 12.74 12.74 0 0 1 .635 3.985c0 5.942-4.064 10.933-9.563 12.348a.749.749 0 0 1-.374 0C6.314 20.683 2.25 15.692 2.25 9.75c0-1.39.223-2.73.635-3.985a.75.75 0 0 1 .722-.516l.143.001c2.996 0 5.718-1.17 7.734-3.08Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.75 12.6l2.15 2.15 4.35-4.85"
+        stroke="white"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export default function TripCard({ trip, index = 0 }: TripCardProps) {
@@ -205,7 +226,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               </div>
               {trip.advance_amount != null && (
                 <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2">
-                  <ShieldCheck size={22} weight="fill" className="text-green-600 shrink-0" />
+                  <ReserveShieldIcon className="w-[26px] h-[26px] text-green-700 shrink-0" />
                   <span className="text-green-700 text-xs font-button font-semibold">
                     Reserve your spot for just {formatPrice(trip.advance_amount)}
                   </span>

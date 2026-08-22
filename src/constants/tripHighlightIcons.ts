@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 // Phosphor (see Ph.* references).
 import * as Ph from '@phosphor-icons/react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+import LinkedHeartsIcon from '../components/icons/LinkedHeartsIcon';
 
 // =============================================
 // ULAA — Trip Highlight Icon Library
@@ -1528,6 +1529,7 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'image', label: 'Image', Icon: Ph.Image as TripHighlightIconType, keywords: ['image', 'photo', 'photos', 'gallery', 'album', 'albums', 'completed trips', 'journey', 'memories', 'picture', 'pictures'] },
   // Girls-only / social vibes
   { key: 'heart', label: 'Heart', Icon: Ph.Heart as TripHighlightIconType, keywords: ['love', 'vibes', 'girls-only vibes', 'bonding', 'girl gang', 'safe space'] },
+  { key: 'linked-hearts', label: 'Linked Hearts', Icon: LinkedHeartsIcon as unknown as TripHighlightIconType, keywords: ['friendship', 'bonding', 'connection', 'sisterhood', 'girls only', 'relationship', 'love', 'real connections'] },
   { key: 'users', label: 'Group', Icon: Ph.Users as TripHighlightIconType, keywords: ['group', 'squad', 'friends', 'girl gang', 'community'] },
   { key: 'handshake', label: 'Handshake', Icon: Ph.Handshake as TripHighlightIconType, keywords: ['community', 'bonding', 'trust'] },
   { key: 'sparkles', label: 'Sparkles', Icon: Ph.Sparkle as TripHighlightIconType, keywords: ['magic', 'memories', 'fun', 'special'] },
