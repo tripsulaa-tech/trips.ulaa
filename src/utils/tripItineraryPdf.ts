@@ -5,7 +5,6 @@ import { jsPDF } from 'jspdf';
 import 'svg2pdf.js';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { LucideIcon } from 'lucide-react';
 import {
   Star, CheckCircle, XCircle, Backpack,
   Shirt, Footprints, Glasses, HatGlasses, Hand, Headphones, BatteryCharging,
@@ -16,7 +15,14 @@ import {
 } from 'lucide-react';
 import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, TripInclusionItem, ItineraryDay, ButtonLabelsConfig } from '../types/types-index';
 import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../constants/cancellationPolicy';
-import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
+import { getTripHighlightIcon, type TripHighlightIconType } from '../constants/tripHighlightIcons';
+// Icons drawn into the PDF can come from either the lucide-react imports
+// directly above (chrome/fallback glyphs) or from the trip highlight icon
+// store, which now renders via @phosphor-icons/react — see
+// src/constants/tripHighlightIcons.ts. `drawLucideIcon` below (name kept
+// for history) accepts either, since both render to plain SVG markup via
+// `renderToStaticMarkup` the same way.
+type AnyIcon = TripHighlightIconType;
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import { getSiteContent } from '../services/api';
 import { formatDateRange, formatAgeRange, formatPrice, formatDate, getActivePrice, getStrikeThroughPrice, publicSeatsLeft } from './utils-index';
@@ -55,7 +61,7 @@ function rgbToHex([r, g, b]: RGB): string {
 
 /** Resolves an admin-picked icon-library key (e.g. "shield-check") to its
  *  actual lucide-react component, falling back for empty/legacy values. */
-function resolveIcon(key: string | undefined | null, fallback: LucideIcon): LucideIcon {
+function resolveIcon(key: string | undefined | null, fallback: AnyIcon): AnyIcon {
   const meta = key ? getTripHighlightIcon(key) : undefined;
   return meta ? meta.Icon : fallback;
 }
@@ -64,7 +70,7 @@ function resolveIcon(key: string | undefined | null, fallback: LucideIcon): Luci
 // src/pages/TripDetailPage.tsx exactly, so an admin-typed "Things to Carry"
 // item with no explicit icon still resolves to the same glyph in the PDF as
 // it does on the live site.
-const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
+const THINGS_TO_CARRY_ICON_RULES: [RegExp, AnyIcon][] = [
   [/jacket|sweater|hoodie|fleece|thermal/i, Shirt],
   [/shoe|boot|sandal|footwear|trek/i, Footprints],
   [/sunglass|goggle/i, Glasses],
@@ -90,7 +96,7 @@ const THINGS_TO_CARRY_ICON_RULES: [RegExp, LucideIcon][] = [
   [/id proof|passport|aadhar|adhar|govern|voter|licen|document/i, IdCard],
 ];
 
-function getThingsToCarryFallbackIcon(item: string): LucideIcon {
+function getThingsToCarryFallbackIcon(item: string): AnyIcon {
   const rule = THINGS_TO_CARRY_ICON_RULES.find(([pattern]) => pattern.test(item));
   return rule ? rule[1] : Backpack;
 }
@@ -1011,7 +1017,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
    *  an unsupported SVG feature) is swallowed rather than breaking the
    *  whole PDF, matching the same defensive pattern used for image loads
    *  elsewhere in this file. */
-  async function drawLucideIcon(Icon: LucideIcon, x: number, y: number, s = 20, color: RGB = COLORS.primary) {
+  async function drawLucideIcon(Icon: AnyIcon, x: number, y: number, s = 20, color: RGB = COLORS.primary) {
     try {
       const markup = renderToStaticMarkup(
         createElement(Icon, { size: s, color: rgbToHex(color), strokeWidth: 2 })
@@ -2456,7 +2462,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     const policy = trip.cancellation_policy;
     if (!policy) return;
 
-    type Clause = { title: string; body: string[]; icon: LucideIcon };
+    type Clause = { title: string; body: string[]; icon: AnyIcon };
     const clauses: Clause[] = [
       { title: 'Booking Confirmation', body: STATIC.bookingConfirmation, icon: ShieldCheck },
       {
@@ -2925,7 +2931,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     // Trip-facts list: label+icon on the left, value right-aligned
     ry += 15;
 
-    const metaItems: { icon: LucideIcon; label: string; value: string }[] = [
+    const metaItems: { icon: AnyIcon; label: string; value: string }[] = [
       { icon: Calendar, label: 'Dates', value: formatDateRange(trip.start_date, trip.end_date) },
       { icon: Clock, label: 'Duration', value: trip.duration },
       { icon: Users, label: 'Group Size', value: `Max ${trip.total_seats}` },
@@ -3001,7 +3007,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     doc.roundedRect(MARGIN, CONTACT_TOP, CONTENT_W, CONTACT_BOTTOM - CONTACT_TOP, 6, 6, 'S');
 
     const siteDomain = BRAND.website.replace('www.', '');
-    const contactItems: { icon: LucideIcon; title: string; value: string; url?: string }[] = [
+    const contactItems: { icon: AnyIcon; title: string; value: string; url?: string }[] = [
       { icon: Headphones, title: 'Need Help?', value: "We're just a message away!", url: `https://${siteDomain}/contact` },
       { icon: Phone, title: 'Call / WhatsApp', value: BRAND.phone, url: `https://wa.me/${BRAND.phone.replace(/\D/g, '')}` },
       { icon: Mail, title: 'Email Us', value: BRAND.email, url: `mailto:${BRAND.email}` },
