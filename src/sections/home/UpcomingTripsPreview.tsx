@@ -8,6 +8,7 @@ import TripCard from '../../components/ui/TripCard';
 import { SkeletonGrid } from '../../components/ui/Skeletons';
 import Button from '../../components/ui/Button';
 import { getUpcomingTrips } from '../../services/api';
+import { subscribeToTable } from '../../services/realtime';
 import type { UpcomingTrip } from '../../types/types-index';
 
 export default function UpcomingTripsPreview() {
@@ -19,6 +20,19 @@ export default function UpcomingTripsPreview() {
       .then(data => setTrips(data.slice(0, 3)))
       .catch(() => setTrips([]))
       .finally(() => setLoading(false));
+  }, []);
+
+  // Live updates — the instant an admin edits, publishes, or reorders an
+  // upcoming trip (including card details like feature-tag icons), re-pull
+  // this preview so anyone already on the homepage sees the change without
+  // needing to refresh.
+  useEffect(() => {
+    const unsubscribe = subscribeToTable('upcoming_trips', () => {
+      getUpcomingTrips()
+        .then(data => setTrips(data.slice(0, 3)))
+        .catch(() => {});
+    });
+    return unsubscribe;
   }, []);
 
   return (
