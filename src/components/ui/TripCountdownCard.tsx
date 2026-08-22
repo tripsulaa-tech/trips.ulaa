@@ -74,28 +74,17 @@ export default function TripCountdownCard({
   if (!remaining) return null;
 
   // Urgency — inside the final 48 hours the card switches to a warmer
-  // orange/coral palette and the Min/Sec tiles appear (see `units` below).
+  // orange/coral palette.
   const hoursLeft = remaining.days * 24 + remaining.hours;
   const urgent = hoursLeft < 48;
   const progress = Math.min(1, Math.max(0, 1 - hoursLeft / JOURNEY_WINDOW_HOURS));
 
-  // Only show Min/Sec once we're inside the final 48 hours. Outside that
-  // window they have no functional value to the user, and rendering a
-  // ticking-every-second tile at long range was both unnecessary motion
-  // and — once dimmed to compensate — a contrast risk (opacity stacked on
-  // an already-translucent gradient fill). Simpler and more accessible to
-  // just not show them yet.
-  const units: { v: number; l: string }[] = urgent
-    ? [
-        { v: remaining.days, l: 'Days' },
-        { v: remaining.hours, l: 'Hrs' },
-        { v: remaining.minutes, l: 'Min' },
-        { v: remaining.seconds, l: 'Sec' },
-      ]
-    : [
-        { v: remaining.days, l: 'Days' },
-        { v: remaining.hours, l: 'Hrs' },
-      ];
+  const units: { v: number; l: string }[] = [
+    { v: remaining.days, l: 'Days' },
+    { v: remaining.hours, l: 'Hrs' },
+    { v: remaining.minutes, l: 'Min' },
+    { v: remaining.seconds, l: 'Sec' },
+  ];
 
   return (
     <div>

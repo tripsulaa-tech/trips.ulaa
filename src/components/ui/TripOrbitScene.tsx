@@ -2,15 +2,17 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
 // Ambient three.js background for the countdown card: a sparse field of
-// slow-drifting embers kept to the outer margins, plus a slim "flight
-// path" hugging the bottom edge — dim track, bright fill up to
-// `progress`, small marker riding the leading edge. Deliberately stays
-// clear of the horizontal band across the middle of the card, since
-// that's where the digit tiles sit — nothing here renders behind them.
-// Purely decorative: every number the visitor actually needs is in the
-// HTML overlay on top, so if WebGL is unavailable or the visitor prefers
-// reduced motion this simply renders nothing rather than degrading the
-// page.
+// slow-drifting embers kept to the outer margins, plus a dotted "flight
+// path" arcing across the bottom of the card — climbing away from the
+// left edge, peaking mid-card, descending back down toward the right —
+// with a small plane shape riding the leading edge of the filled
+// (traveled) portion, banking to match the curve's slope as it climbs
+// and descends. Deliberately stays clear of the horizontal band across
+// the middle of the card, since that's where the digit tiles sit —
+// nothing here renders behind them. Purely decorative: every number the
+// visitor actually needs is in the HTML overlay on top, so if WebGL is
+// unavailable or the visitor prefers reduced motion this simply renders
+// nothing rather than degrading the page.
 
 // Brand palette (see src/styles/globals.css @theme) expressed as three.js
 // colors — kept in sync by hand since three.js can't read CSS custom
@@ -24,7 +26,11 @@ const PATH_COLOR_URGENT = new THREE.Color('#ef4444');
 
 const PARTICLE_COUNT = 70;
 const PATH_SEGMENTS = 48;
-const PATH_Y = -0.86; // near the bottom edge, clear of the digit row
+const PATH_Y_BASE = -0.86; // near the bottom edge, clear of the digit row
+const ARC_HEIGHT = 0.22; // how high the flight path climbs at its mid-card peak
+const DASH_SIZE = 0.035;
+const DASH_GAP = 0.03;
+const PLANE_SIZE = 0.05;
 
 interface TripOrbitSceneProps {
   // 0–1: how far through the "final stretch" toward departure this trip is
@@ -59,9 +65,9 @@ export default function TripOrbitScene({ progress, urgent }: TripOrbitSceneProps
     }
 
     const scene = new THREE.Scene();
-    // Orthographic, aspect-corrected so the flight path stays a straight
-    // horizontal line and doesn't stretch into an ellipse on the wide
-    // desktop banner.
+    // Orthographic, aspect-corrected so the flight path's arc keeps a
+    // consistent shape and doesn't stretch/flatten unevenly on the wide
+    // desktop banner vs. the taller mobile card.
     let aspect = 1;
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
     camera.position.z = 5;
@@ -98,40 +104,71 @@ export default function TripOrbitScene({ progress, urgent }: TripOrbitSceneProps
     const particles = new THREE.Points(particleGeometry, particleMaterial);
     scene.add(particles);
 
-    // ── Bottom flight path — a slim dim track plus a brighter fill riding
-    // up to `progress`, sitting just above the card's bottom edge so it
-    // never crosses paths with the digit tiles above it. ──
+    // ── Bottom flight path — a dim dotted track plus a brighter dotted
+    // fill riding up to `progress`, arcing up from the left edge, peaking
+    // mid-card, and back down toward the right — like a short takeoff/
+    // landing arc rather than a flat line. Sits low enough that even its
+    // peak stays clear of the digit tiles above it. ──
+    const curvePoint = (t: number, half: number) =>
+      new THREE.Vector3(-half + t * half * 2, PATH_Y_BASE + ARC_HEIGHT * Math.sin(t * Math.PI), 0);
+
     const buildPathPoints = (p: number) => {
       const count = Math.max(2, Math.round(PATH_SEGMENTS * p) + 1);
       const pts: THREE.Vector3[] = [];
       const half = 0.9 * aspect;
       for (let i = 0; i < count; i++) {
         const t = i / PATH_SEGMENTS;
-        pts.push(new THREE.Vector3(-half + t * half * 2, PATH_Y, 0));
+        pts.push(curvePoint(t, half));
       }
       return pts;
     };
 
-    const trackPoints: THREE.Vector3[] = [];
-    for (let i = 0; i <= PATH_SEGMENTS; i++) {
-      const t = i / PATH_SEGMENTS;
-      trackPoints.push(new THREE.Vector3(-0.9 + t * 1.8, PATH_Y, 0));
-    }
-    const trackGeometry = new THREE.BufferGeometry().setFromPoints(trackPoints);
-    const trackMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08 });
+    const buildTrackPoints = (half: number) => {
+      const pts: THREE.Vector3[] = [];
+      for (let i = 0; i <= PATH_SEGMENTS; i++) {
+        pts.push(curvePoint(i / PATH_SEGMENTS, half));
+      }
+      return pts;
+    };
+
+    const trackGeometry = new THREE.BufferGeometry().setFromPoints(buildTrackPoints(0.9 * aspect));
+    const trackMaterial = new THREE.LineDashedMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.15,
+      dashSize: DASH_SIZE,
+      gapSize: DASH_GAP,
+    });
     const track = new THREE.Line(trackGeometry, trackMaterial);
+    track.computeLineDistances();
     scene.add(track);
 
     let filledGeometry = new THREE.BufferGeometry().setFromPoints(buildPathPoints(progressRef.current));
-    const filledMaterial = new THREE.LineBasicMaterial({
+    const filledMaterial = new THREE.LineDashedMaterial({
       color: urgent ? PATH_COLOR_URGENT : PATH_COLOR,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.9,
+      dashSize: DASH_SIZE,
+      gapSize: DASH_GAP,
     });
     const filledTrack = new THREE.Line(filledGeometry, filledMaterial);
+    filledTrack.computeLineDistances();
     scene.add(filledTrack);
 
-    const markerGeometry = new THREE.CircleGeometry(0.016, 20);
+    // Small paper-plane silhouette (nose pointing along +x by default) that
+    // rides the leading edge of the filled arc and banks to match the
+    // curve's slope — climbing nose-up on the way up, leveling at the
+    // peak, nose-down on the way down.
+    const buildPlaneShape = () => {
+      const shape = new THREE.Shape();
+      shape.moveTo(PLANE_SIZE, 0);
+      shape.lineTo(-PLANE_SIZE * 0.7, PLANE_SIZE * 0.5);
+      shape.lineTo(-PLANE_SIZE * 0.35, 0);
+      shape.lineTo(-PLANE_SIZE * 0.7, -PLANE_SIZE * 0.5);
+      shape.closePath();
+      return shape;
+    };
+    const markerGeometry = new THREE.ShapeGeometry(buildPlaneShape());
     const markerMaterial = new THREE.MeshBasicMaterial({
       color: urgent ? PATH_COLOR_URGENT : PATH_COLOR,
       transparent: true,
@@ -142,22 +179,15 @@ export default function TripOrbitScene({ progress, urgent }: TripOrbitSceneProps
 
     const updateMarker = (p: number) => {
       const half = 0.9 * aspect;
-      marker.position.set(-half + p * half * 2, PATH_Y, 0);
+      const { x, y } = curvePoint(p, half);
+      marker.position.set(x, y, 0);
+      // Tangent of the arc at t=p — banks the plane's nose to follow the
+      // climb/descent instead of always pointing flat along the x-axis.
+      const dydt = ARC_HEIGHT * Math.PI * Math.cos(p * Math.PI);
+      const dxdt = half * 2;
+      marker.rotation.z = Math.atan2(dydt, dxdt);
     };
     updateMarker(progressRef.current);
-
-    // Path elements only mean something once the trip has actually entered
-    // the journey window — before that, `progress` is a flat 0 and the
-    // track/marker would just sit there motionless for however many weeks
-    // out the page is being viewed. Hide the whole path system rather than
-    // render a permanently static line; the drifting embers alone carry
-    // "this card is alive" until there's real progress to show.
-    const setPathVisible = (visible: boolean) => {
-      track.visible = visible;
-      filledTrack.visible = visible;
-      marker.visible = visible;
-    };
-    setPathVisible(progressRef.current > 0);
 
     let frameId = 0;
     let lastRenderedProgress = progressRef.current;
@@ -174,14 +204,11 @@ export default function TripOrbitScene({ progress, urgent }: TripOrbitSceneProps
       // Rebuild the path geometry against the new aspect so it still spans
       // the card edge-to-edge after a resize.
       const half = 0.9 * aspect;
-      const newTrackPoints: THREE.Vector3[] = [];
-      for (let i = 0; i <= PATH_SEGMENTS; i++) {
-        const t = i / PATH_SEGMENTS;
-        newTrackPoints.push(new THREE.Vector3(-half + t * half * 2, PATH_Y, 0));
-      }
-      trackGeometry.setFromPoints(newTrackPoints);
+      trackGeometry.setFromPoints(buildTrackPoints(half));
+      track.computeLineDistances();
       filledTrack.geometry.dispose();
       filledTrack.geometry = new THREE.BufferGeometry().setFromPoints(buildPathPoints(lastRenderedProgress));
+      filledTrack.computeLineDistances();
       updateMarker(lastRenderedProgress);
     };
     resize();
@@ -216,10 +243,11 @@ export default function TripOrbitScene({ progress, urgent }: TripOrbitSceneProps
         lastRenderedProgress = progressRef.current;
         filledTrack.geometry.dispose();
         filledTrack.geometry = new THREE.BufferGeometry().setFromPoints(buildPathPoints(lastRenderedProgress));
+        filledTrack.computeLineDistances();
         updateMarker(lastRenderedProgress);
-        setPathVisible(lastRenderedProgress > 0);
       }
-      marker.scale.setScalar(1 + Math.sin(elapsed * 3) * 0.15);
+      const pulse = 1 + Math.sin(elapsed * 3) * 0.12;
+      marker.scale.set(pulse, pulse, 1);
 
       renderer.render(scene, camera);
       if (!prefersReducedMotion) frameId = requestAnimationFrame(render);
