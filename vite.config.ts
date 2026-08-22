@@ -36,6 +36,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
+      // jsPDF's optional doc.html() API dynamically imports html2canvas +
+      // dompurify internally, but this app never calls .html() (PDFs are
+      // drawn directly with jsPDF primitives — see src/utils/invoicePdf.ts).
+      // Without these aliases, both libraries (~227KB combined) still got
+      // bundled as their own never-fetched chunks. See src/stubs/*.ts.
+      'html2canvas': path.resolve(import.meta.dirname, './src/stubs/html2canvas-stub.ts'),
+      'dompurify': path.resolve(import.meta.dirname, './src/stubs/dompurify-stub.ts'),
     },
   },
   build: {
@@ -80,10 +87,25 @@ export default defineConfig({
           if (normalized.includes('/node_modules/react-hook-form/')) {
             return 'vendor-form';
           }
-          // Icon set is large and changes far less often than app code —
-          // split out so it caches independently instead of riding along
-          // with (or bloating) another vendor chunk.
-          if (normalized.includes('/node_modules/@phosphor-icons/')) {
+          // Phosphor's small shared runtime (IconBase/context/the index
+          // barrel) is used by every icon, static or lazy, so it's cheap
+          // and worth caching on its own instead of riding along with
+          // something else.
+          //
+          // Individual icon implementations (dist/csr/*, dist/defs/*) are
+          // deliberately NOT matched here. Most of the ~1500-icon library is
+          // now loaded via one literal `import()` per icon (see
+          // src/components/icons/phosphorIconLoaders.generated.ts) so each
+          // icon only downloads the first time it's actually rendered —
+          // forcing all of them into a single manualChunks bucket would
+          // undo that split and reassemble the old ~4.7MB eager chunk.
+          // Rollup's default splitting already gives each dynamically
+          // imported icon its own small chunk, and folds the couple dozen
+          // icons that are still statically imported (toolbar/menu icons
+          // etc.) into whichever chunk already needs them.
+          if (normalized.includes('/node_modules/@phosphor-icons/react/dist/lib/')
+            || /\/node_modules\/@phosphor-icons\/react\/dist\/index\./.test(normalized)
+            || normalized.includes('/node_modules/@phosphor-icons/react/dist/ssr/')) {
             return 'vendor-icons';
           }
           // three.js only loads on trip-detail pages with an active

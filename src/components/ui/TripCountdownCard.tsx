@@ -25,11 +25,6 @@ interface RemainingTime {
   seconds: number;
 }
 
-// How many hours out the "final stretch" window starts — feeds the bottom
-// flight-path line so it visibly fills in as departure nears rather than
-// sitting static the whole time.
-const JOURNEY_WINDOW_HOURS = 30 * 24;
-
 /**
  * Premium "trip starts in" countdown card shown near the top of a trip
  * detail page. Owns its own live tick, so callers just hand it a start
@@ -48,12 +43,12 @@ export default function TripCountdownCard({
   const [remaining, setRemaining] = useState<RemainingTime | null>(null);
 
   useEffect(() => {
-    if (!startDate) {
-      setRemaining(null);
-      return;
-    }
-    const target = new Date(`${startDate}T00:00:00`).getTime();
+    const target = startDate ? new Date(`${startDate}T00:00:00`).getTime() : null;
     const tick = () => {
+      if (!target) {
+        setRemaining(null);
+        return;
+      }
       const diff = target - Date.now();
       if (diff <= 0) {
         setRemaining(null);
@@ -77,7 +72,6 @@ export default function TripCountdownCard({
   // orange/coral palette.
   const hoursLeft = remaining.days * 24 + remaining.hours;
   const urgent = hoursLeft < 48;
-  const progress = Math.min(1, Math.max(0, 1 - hoursLeft / JOURNEY_WINDOW_HOURS));
 
   const units: { v: number; l: string }[] = [
     { v: remaining.days, l: 'Days' },
@@ -125,7 +119,7 @@ export default function TripCountdownCard({
               tappable immediately regardless of whether/when this finishes
               loading. */}
           <Suspense fallback={null}>
-            <TripOrbitScene progress={progress} urgent={urgent} />
+            <TripOrbitScene urgent={urgent} />
           </Suspense>
 
           {(isAlmostFull || isFull) && (

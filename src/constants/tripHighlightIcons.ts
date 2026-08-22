@@ -2,16 +2,31 @@ import {
   Sunset, Sunrise, Cherry, Grape, Drum, Landmark, MapPinned as MapAlert, Frown,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-// Namespace import used for both the hand-curated icons above and the full
-// auto-generated icon library below — every icon @phosphor-icons/react
-// ships, so the picker isn't limited to a hand-picked subset. A small
+// Every icon reference below (Ph.X) resolves to a lazily-loaded component —
+// see createLazyPhosphorIcon. This file lists (by name) every icon
+// @phosphor-icons/react ships, so the admin picker isn't limited to a
+// hand-picked subset, but none of their ~1500 icons' SVG data is bundled
+// eagerly: each is fetched via its own dynamic import only the first time it
+// actually renders (previously `import * as Ph from '@phosphor-icons/react'`
+// plus this same enumeration forced Rollup to bundle the whole library —
+// every weight variant of every icon — into one ~4.7MB eager chunk). A small
 // handful of curated icons (Sunset, Sunrise, Cherry, Grape, Drum, Landmark,
 // MapAlert, Frown) have no reasonable Phosphor equivalent and keep their
 // original lucide-react glyph instead — everything else below renders via
-// Phosphor (see Ph.* references).
-import * as Ph from '@phosphor-icons/react';
+// Phosphor (see Ph.* references, and Ph itself below).
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+import { resolvePhosphorIcon } from '../components/icons/LazyPhosphorIcon';
 import LinkedHeartsIcon from '../components/icons/LinkedHeartsIcon';
+
+// Thin shim so every existing `Ph.IconName` reference below keeps working
+// unchanged. resolvePhosphorIcon returns the already-bundled static binding
+// for the small set of icons a public-facing file also uses (see
+// phosphorIconsStatic.generated.ts), or a lazily-loaded one otherwise — see
+// LazyPhosphorIcon.tsx. Backed by a Proxy rather than a generated object
+// literal so this file didn't need every one of its ~1500 lines rewritten.
+const Ph = new Proxy({} as Record<string, PhosphorIcon>, {
+  get: (_target, name: string) => resolvePhosphorIcon(name),
+});
 
 // =============================================
 // ULAA — Trip Highlight Icon Library
