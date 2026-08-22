@@ -6,7 +6,7 @@ import {
   ArrowRight,
   CalendarPlus,
   ShareNetwork as Share2,
-  Check,
+  ShieldCheck,
   Timer,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
@@ -193,10 +193,10 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           {activePrice != null && (
             <div className="mb-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-display text-lg font-bold text-primary">{formatPrice(activePrice)}</span>
+                <span className="font-display text-2xl font-bold text-primary">{formatPrice(activePrice)}</span>
                 {strikeThroughPrice != null && (
                   <>
-                    <span className="text-dark-muted line-through text-sm">{formatPrice(strikeThroughPrice)}</span>
+                    <span className="text-gray-400 line-through text-sm">{formatPrice(strikeThroughPrice)}</span>
                     <span className="bg-green-50 border border-green-200 text-green-700 text-[11px] font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
                       Save {formatPrice(strikeThroughPrice - activePrice)}
                     </span>
@@ -205,9 +205,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               </div>
               {trip.advance_amount != null && (
                 <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2">
-                  <span className="w-[22px] h-[22px] rounded-full bg-green-600 text-white flex items-center justify-center shrink-0">
-                    <Check size={13} strokeWidth={3} />
-                  </span>
+                  <ShieldCheck size={22} weight="fill" className="text-green-600 shrink-0" />
                   <span className="text-green-700 text-xs font-button font-semibold">
                     Reserve your spot for just {formatPrice(trip.advance_amount)}
                   </span>
@@ -236,8 +234,8 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               const TagIcon = iconMeta?.Icon;
               return (
                 <div key={i} className="flex flex-col items-center gap-2 min-w-0 px-1">
-                  <span className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    {TagIcon && <TagIcon size={22} className="text-primary" aria-hidden="true" strokeWidth={1.75} />}
+                  <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    {TagIcon && <TagIcon size={16} className="text-primary" aria-hidden="true" strokeWidth={1.75} />}
                   </span>
                   <span className="text-[11px] font-semibold text-dark leading-tight line-clamp-2 w-full break-words">{tag.label}</span>
                   <span className="text-[9px] text-dark-muted leading-tight line-clamp-2 w-full break-words">{tag.sublabel}</span>

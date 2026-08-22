@@ -1541,6 +1541,10 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'car', label: 'Road Trip', Icon: Ph.Car as TripHighlightIconType, keywords: ['road trip', 'drive', 'jeep safari'] },
   { key: 'train-front', label: 'Train', Icon: Ph.Train as TripHighlightIconType, keywords: ['train journey', 'railway'] },
   { key: 'cable-car', label: 'Cable Car', Icon: Ph.CableCar as TripHighlightIconType, keywords: ['cable car', 'ropeway', 'mountains'] },
+  // Trip card feature tags (Travelers / Curated / Location style icons)
+  { key: 'travelers-group', label: 'Travelers', Icon: Ph.UsersThree as TripHighlightIconType, keywords: ['travelers', 'group', 'people', 'squad', 'members', 'small group'] },
+  { key: 'award-badge', label: 'Award Badge', Icon: Ph.Medal as TripHighlightIconType, keywords: ['badge', 'award', 'curated', 'handpicked', 'certified', 'quality', 'top experiences'] },
+  { key: 'location-map', label: 'Location Pin', Icon: Ph.MapTrifold as TripHighlightIconType, keywords: ['location', 'map', 'destination', 'curated', 'place', 'pin'] },
   // Navigation (mainly for the mobile bottom nav bar)
   { key: 'home', label: 'Home', Icon: Ph.House as TripHighlightIconType, keywords: ['home', 'house', 'start', 'main'] },
   { key: 'calendar', label: 'Calendar', Icon: Ph.Calendar as TripHighlightIconType, keywords: ['calendar', 'upcoming', 'schedule', 'dates', 'trips'] },

@@ -22,7 +22,7 @@ export default function UpcomingTripsPreview() {
   }, []);
 
   return (
-    <section className="pt-12 pb-0 sm:pt-24 sm:pb-12 px-4 sm:px-6 lg:px-8 bg-background">
+    <section className="pt-12 pb-6 sm:pt-24 sm:pb-12 px-4 sm:px-6 lg:px-8 bg-background">
       <div className="max-w-[1344px] mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 mb-8 sm:mb-12">
           <SectionTitle
