@@ -7,7 +7,7 @@ import { useResponsiveItemsPerView } from './useResponsiveItemsPerView';
 import GalleryViewer from './GalleryViewer';
 import { PLACEHOLDER_IMAGE } from '../../utils/utils-index';
 
-export interface GalleryCarouselItem {
+interface GalleryCarouselItem {
   photo: string;
   description?: string;
 }

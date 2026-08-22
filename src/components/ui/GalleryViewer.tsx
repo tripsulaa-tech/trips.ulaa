@@ -41,7 +41,7 @@ import {
 // slideshow, and full keyboard/screen-reader accessibility.
 // =============================================================================
 
-export interface GalleryImageItem {
+interface GalleryImageItem {
   src: string;
   alt?: string;
   caption?: string;
@@ -50,9 +50,9 @@ export interface GalleryImageItem {
   photographer?: string;
 }
 
-export type GalleryImageInput = string | GalleryImageItem;
+type GalleryImageInput = string | GalleryImageItem;
 
-export interface GalleryViewerProps {
+interface GalleryViewerProps {
   images: GalleryImageInput[];
   initialIndex?: number;
   isOpen: boolean;
@@ -765,7 +765,7 @@ interface GalleryThumbProps {
   imgClassName?: string;
 }
 
-export function GalleryThumb({ src, alt, layoutId, onClick, className, imgClassName }: GalleryThumbProps) {
+function GalleryThumb({ src, alt, layoutId, onClick, className, imgClassName }: GalleryThumbProps) {
   return (
     <button type="button" onClick={onClick} className={className} aria-label={alt || 'View photo'}>
       <motion.img layoutId={layoutId} src={src} alt={alt || ''} loading="lazy" className={imgClassName} />

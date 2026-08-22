@@ -17,6 +17,7 @@ import {
   getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getEnquiries, getWaitlistEntries,
   syncStartedTripAlbums,
 } from '../services/api';
+import { formatDate as formatDateBase } from '../utils/utils-index';
 import type { UpcomingTrip, Enquiry } from '../types/types-index';
 import bannerImg from '../assets/hero.webp';
 
@@ -36,7 +37,7 @@ function formatDate(dateStr?: string) {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return formatDateBase(dateStr, { day: 'numeric', month: 'short', year: 'numeric' }, 'en-GB');
 }
 
 function formatDateRange(start?: string, end?: string) {
@@ -45,9 +46,9 @@ function formatDateRange(start?: string, end?: string) {
   if (Number.isNaN(s.getTime())) return '—';
   const e = end ? new Date(end) : null;
   const sameMonth = e && s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
-  const monthYear = s.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  const monthYear = formatDateBase(start, { month: 'short', year: 'numeric' }, 'en-GB');
   if (!e || Number.isNaN(e.getTime())) {
-    return s.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatDate(start);
   }
   if (sameMonth) {
     return `${s.getDate()} - ${e.getDate()} ${monthYear}`;

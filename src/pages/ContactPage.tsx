@@ -13,6 +13,7 @@ import Button from '../components/ui/Button';
 import { submitContactEnquiry } from '../services/api';
 import { getWhatsAppLink } from '../utils/utils-index';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { validateEmail } from '../utils/formValidation';
 
 interface ContactForm {
   name: string;
@@ -170,7 +171,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-dark mb-1">Email *</label>
-                  <input type="email" {...register('email', { required: 'Email is required', pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email' } })} placeholder="you@example.com" className={inputClass} />
+                  <input type="email" {...register('email', { required: 'Email is required', validate: validateEmail })} placeholder="you@example.com" className={inputClass} />
                   {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                 </div>
                 <div>

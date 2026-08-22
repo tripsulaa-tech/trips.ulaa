@@ -3,11 +3,12 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, availableInvoiceTypeOptions, clearsBalanceForInvoice, validateGenerateInvoiceForm, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS, INVOICE_TYPE_LABEL, refPlaceholder } from './AdminEnquiryCommon';
+import { parseNonNegative, availableInvoiceTypeOptions, clearsBalanceForInvoice, validateGenerateInvoiceForm, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS, refPlaceholder } from './AdminEnquiryCommon';
 import type { GenerateInvoiceForm } from './AdminEnquiryCommon';
 import type { Enquiry, Payment } from '../../types/types-index';
-import { formatDate, formatPrice } from '../../utils/utils-index';
+import { formatPrice } from '../../utils/utils-index';
 import { inputClass } from './AdminEnquiriesShared';
+import PaymentHistoryList from './PaymentHistoryList';
 
 // Raises one invoice line (Full Payment / Advance / Balance / Installment /
 // Extra Charge) against whichever booking it was opened from. "Paid now"
@@ -202,35 +203,7 @@ export default function GenerateInvoiceModal({
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Payment History</label>
-            {paymentHistoryLoading ? (
-              <p className="text-xs text-dark-muted">Loading…</p>
-            ) : paymentHistory.length === 0 ? (
-              <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">No payments recorded yet.</p>
-            ) : (
-              <div className="border border-background-warm rounded-md divide-y divide-background-warm max-h-40 overflow-y-auto">
-                {paymentHistory.map(p => (
-                  <div key={p.id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
-                    <div className="min-w-0">
-                      <p className="text-dark font-medium truncate">
-                        {INVOICE_TYPE_LABEL[p.payment_type] || p.payment_type}
-                        {p.status === 'pending' && <span className="text-amber-600 font-normal"> · pending</span>}
-                      </p>
-                      <p className="text-dark-muted">
-                        {p.paid_at ? formatDate(p.paid_at, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not yet paid'}
-                        {p.payment_method ? ` · ${p.payment_method}` : ''}
-                        {p.utr_number ? ` · UTR ${p.utr_number}` : ''}
-                      </p>
-                    </div>
-                    <p className={`shrink-0 font-semibold ${p.payment_type === 'refund' ? 'text-red-600' : 'text-green-700'}`}>
-                      {p.payment_type === 'refund' ? '−' : ''}{formatPrice(p.amount)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <PaymentHistoryList payments={paymentHistory} loading={paymentHistoryLoading} />
 
           <div>
             <label htmlFor="gi-notes" className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>

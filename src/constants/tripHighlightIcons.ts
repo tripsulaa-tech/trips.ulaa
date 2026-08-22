@@ -53,7 +53,7 @@ const Ph = new Proxy({} as Record<string, PhosphorIcon>, {
 // `strokeWidth`), so entries are typed loosely enough to accept either.
 export type TripHighlightIconType = PhosphorIcon | LucideIcon;
 
-export interface TripHighlightIconMeta {
+interface TripHighlightIconMeta {
   key: string;
   label: string;
   Icon: TripHighlightIconType;
@@ -1674,7 +1674,7 @@ export function searchTripHighlightIcons(query: string): TripHighlightIconMeta[]
  * each card in the row a distinct look, matching the "Why You'll Love This
  * Trip" reference design.
  */
-export const TRIP_HIGHLIGHT_ICON_PALETTE: { bg: string; fg: string }[] = [
+const TRIP_HIGHLIGHT_ICON_PALETTE: { bg: string; fg: string }[] = [
   { bg: '#FBEAD9', fg: '#C4703A' }, // warm peach / primary-light
   { bg: '#F3E7DC', fg: '#8B4820' }, // soft tan / primary-dark
   { bg: '#E9F0E4', fg: '#5B7A4A' }, // sage green

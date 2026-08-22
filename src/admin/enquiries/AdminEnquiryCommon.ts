@@ -84,9 +84,9 @@ export const INVOICE_TYPE_LABEL: Record<Payment['payment_type'], string> = {
 // offered here — it already has its own dedicated flow in the Cancel
 // Booking / Track Payment modal (recordRefund), which accounts for
 // cancellation/no-show rules that this generic modal doesn't know about.
-export type GenerateInvoiceType = 'full_payment' | 'advance' | 'balance' | 'installment' | 'extra_charge';
+type GenerateInvoiceType = 'full_payment' | 'advance' | 'balance' | 'installment' | 'extra_charge';
 
-export const GENERATE_INVOICE_TYPE_OPTIONS: { value: GenerateInvoiceType; label: string }[] = [
+const GENERATE_INVOICE_TYPE_OPTIONS: { value: GenerateInvoiceType; label: string }[] = [
   { value: 'full_payment', label: 'Full Payment' },
   { value: 'advance', label: 'Advance' },
   { value: 'balance', label: 'Balance' },
@@ -172,7 +172,7 @@ export type PaymentForm = {
 // section). Literally the same array as GENERATE_INVOICE_TYPE_OPTIONS now —
 // aliased under this name so Track Payment's imports/intent stay readable —
 // so wording can never drift between the two dropdowns.
-export const PAYMENT_TYPE_OPTIONS: { value: PaymentForm['payment_type']; label: string }[] = GENERATE_INVOICE_TYPE_OPTIONS;
+const PAYMENT_TYPE_OPTIONS: { value: PaymentForm['payment_type']; label: string }[] = GENERATE_INVOICE_TYPE_OPTIONS;
 
 // 'Balance' is meant for the payment that clears whatever's left owing —
 // unlike 'Installment', which is any partial payment with more expected
@@ -216,7 +216,7 @@ export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPai
 // (AdminEnquiries.tsx list view + AdminEnquiryDetail.tsx detail view) as
 // the final save-time gate — one source of truth so the two screens can
 // never drift on what counts as a valid payment.
-export type PaymentFormErrors = Partial<Record<
+type PaymentFormErrors = Partial<Record<
   'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr',
   string
 >>;
@@ -296,7 +296,7 @@ export function availableInvoiceTypeOptions(form: GenerateInvoiceForm, totalAmou
 // (amount starts at ''), before the admin has even looked at the field —
 // so callers pass amountTouched (true once the Amount field has been
 // blurred, or the save button has actually been clicked) to gate it.
-export type GenerateInvoiceFormErrors = Partial<Record<'amount' | 'payment_method' | 'utr_number', string>>;
+type GenerateInvoiceFormErrors = Partial<Record<'amount' | 'payment_method' | 'utr_number', string>>;
 
 export function validateGenerateInvoiceForm(form: GenerateInvoiceForm, amountTouched: boolean): GenerateInvoiceFormErrors {
   const errors: GenerateInvoiceFormErrors = {};
@@ -437,6 +437,28 @@ export function canSetFollowUp(e: Enquiry): boolean {
   return e.journey_stage === 'contacted' || e.journey_stage === 'advance_pending' || e.journey_stage === 'advance_paid';
 }
 
+// Shared escalating-urgency computation behind both followUpStatus() and
+// bookingFollowUpStatus() below: parses a `YYYY-MM-DD` date-only string
+// (no time component) as a local date, compares it to today at midnight,
+// and returns the overdue/due-today/upcoming color + isDue/isOverdue flags
+// both chips render with. Callers layer their own label text (a bare date
+// vs. a Booking Follow-up type + date) on top via `labels`. Pulled out so
+// the two call sites can't drift on the color thresholds or day-diff math.
+function computeDueStatus(
+  dateStr: string,
+  labels: { overdue: (dateLabel: string) => string; today: string; upcoming: (dateLabel: string) => string }
+): { label: string; color: string; isDue: boolean; isOverdue: boolean } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const target = new Date(y, (m || 1) - 1, d || 1);
+  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const dateLabel = formatDate(dateStr, { day: 'numeric', month: 'short', year: undefined });
+  if (diffDays < 0) return { label: labels.overdue(dateLabel), color: 'bg-red-100 text-red-700', isDue: true, isOverdue: true };
+  if (diffDays === 0) return { label: labels.today, color: 'bg-amber-100 text-amber-700', isDue: true, isOverdue: false };
+  return { label: labels.upcoming(dateLabel), color: 'bg-blue-50 text-blue-700', isDue: false, isOverdue: false };
+}
+
 // Follow-up reminder chip shown next to a Contacted lead — auto-escalates
 // color/label as the date approaches so a due reminder actually reads as
 // urgent instead of blending into the row like a plain date would. Compares
@@ -445,15 +467,12 @@ export function canSetFollowUp(e: Enquiry): boolean {
 // no reminder set, so callers can skip rendering the chip entirely.
 export function followUpStatus(e: Enquiry): { label: string; color: string; icon: typeof CalendarClock; isDue: boolean; isOverdue: boolean } | null {
   if (!e.follow_up_at) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const [y, m, d] = e.follow_up_at.split('-').map(Number);
-  const target = new Date(y, (m || 1) - 1, d || 1);
-  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
-  const dateLabel = formatDate(e.follow_up_at, { day: 'numeric', month: 'short', year: undefined });
-  if (diffDays < 0) return { label: `Overdue · ${dateLabel}`, color: 'bg-red-100 text-red-700', icon: CalendarClock, isDue: true, isOverdue: true };
-  if (diffDays === 0) return { label: 'Follow up today', color: 'bg-amber-100 text-amber-700', icon: CalendarClock, isDue: true, isOverdue: false };
-  return { label: `Follow up ${dateLabel}`, color: 'bg-blue-50 text-blue-700', icon: CalendarClock, isDue: false, isOverdue: false };
+  const status = computeDueStatus(e.follow_up_at, {
+    overdue: (dateLabel) => `Overdue · ${dateLabel}`,
+    today: 'Follow up today',
+    upcoming: (dateLabel) => `Follow up ${dateLabel}`,
+  });
+  return { ...status, icon: CalendarClock };
 }
 
 // Whether a Booking Follow-up reminder can be set on this enquiry right
@@ -504,16 +523,13 @@ export const BOOKING_FOLLOW_UP_TYPE_CONFIG: Record<BookingFollowUpType, { label:
 // Returns null when no Booking Follow-up is set.
 export function bookingFollowUpStatus(e: Enquiry): { label: string; color: string; icon: typeof CalendarClock; isDue: boolean; isOverdue: boolean } | null {
   if (!e.booking_follow_up_at) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const [y, m, d] = e.booking_follow_up_at.split('-').map(Number);
-  const target = new Date(y, (m || 1) - 1, d || 1);
-  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
-  const dateLabel = formatDate(e.booking_follow_up_at, { day: 'numeric', month: 'short', year: undefined });
   const typeLabel = e.booking_follow_up_type ? BOOKING_FOLLOW_UP_TYPE_CONFIG[e.booking_follow_up_type].label : 'Booking Follow-up';
-  if (diffDays < 0) return { label: `${typeLabel} · Overdue · ${dateLabel}`, color: 'bg-red-100 text-red-700', icon: CalendarClock, isDue: true, isOverdue: true };
-  if (diffDays === 0) return { label: `${typeLabel} · Today`, color: 'bg-amber-100 text-amber-700', icon: CalendarClock, isDue: true, isOverdue: false };
-  return { label: `${typeLabel} · ${dateLabel}`, color: 'bg-blue-50 text-blue-700', icon: CalendarClock, isDue: false, isOverdue: false };
+  const status = computeDueStatus(e.booking_follow_up_at, {
+    overdue: (dateLabel) => `${typeLabel} · Overdue · ${dateLabel}`,
+    today: `${typeLabel} · Today`,
+    upcoming: (dateLabel) => `${typeLabel} · ${dateLabel}`,
+  });
+  return { ...status, icon: CalendarClock };
 }
 
 // Every reason an admin can pick when closing an enquiry out — see
@@ -524,7 +540,7 @@ export function bookingFollowUpStatus(e: Enquiry): { label: string; color: strin
 // catch-all instead. Order here is the order shown in the picker (most
 // common first) and the order used for the reporting breakdown in
 // AdminEnquiries.tsx.
-export const CLOSED_REASON_CONFIG: Record<ClosedReason, { label: string }> = {
+const CLOSED_REASON_CONFIG: Record<ClosedReason, { label: string }> = {
   no_response: { label: 'No Response' },
   price_too_high: { label: 'Price Too High' },
   date_conflict: { label: "Date Doesn't Work" },
@@ -541,7 +557,7 @@ export const CLOSED_REASON_CONFIG: Record<ClosedReason, { label: string }> = {
   other: { label: 'Other' },
 };
 
-export const CLOSED_REASON_OPTIONS: { value: ClosedReason; label: string }[] =
+const CLOSED_REASON_OPTIONS: { value: ClosedReason; label: string }[] =
   (Object.keys(CLOSED_REASON_CONFIG) as ClosedReason[]).map(value => ({
     value,
     label: CLOSED_REASON_CONFIG[value].label,
@@ -559,7 +575,7 @@ export const NOT_INTERESTED_REASON_OPTIONS = CLOSED_REASON_OPTIONS.filter(
 // No 'no_show' entry: that's captured separately by the no-show checkbox in
 // the same popup (attendance is independent of why a booking was
 // cancelled — CRM spec section 4).
-export const CANCELLATION_REASON_CONFIG: Record<CancellationReason, { label: string }> = {
+const CANCELLATION_REASON_CONFIG: Record<CancellationReason, { label: string }> = {
   medical: { label: 'Medical' },
   personal: { label: 'Personal' },
   emergency: { label: 'Emergency' },

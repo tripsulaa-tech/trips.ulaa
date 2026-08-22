@@ -26,7 +26,9 @@ type AnyIcon = TripHighlightIconType;
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import { getSiteContent } from '../services/api';
 import { formatDateRange, formatAgeRange, formatPrice, formatDate, getActivePrice, getStrikeThroughPrice, publicSeatsLeft } from './utils-index';
+import { sanitizeForPdf } from './pdfText';
 import { PARISIENNE_FONT_BASE64 } from './parisienneFont';
+import { fetchAsDataUrl, loadImageEl, loadContainImage } from './pdfImageLoading';
 import { RUPEE_SANS_REGULAR_BASE64, RUPEE_SANS_BOLD_BASE64 } from './rupeeFont';
 
 // =============================================================================
@@ -178,8 +180,9 @@ const CONTENT_W = PAGE_W - MARGIN * 2;
 const CONTENT_BOTTOM = PAGE_H - 40; // leaves room for the page-number badge
 
 /** Every piece of trip-authored text (description, FAQs, itinerary copy...)
- *  passes through here before it's measured or drawn. Two real problems
- *  this fixes:
+ *  passes through here before it's measured or drawn (see pdfText.ts's
+ *  sanitizeForPdf, shared with invoicePdf.ts). Two real problems this
+ *  fixes:
  *   1. Emoji/pictographs aren't in the core PDF font's character set. Left
  *      in, they don't just look wrong — jsPDF's width measurement for that
  *      glyph is unreliable, which throws off line-wrapping for the *whole*
@@ -188,18 +191,6 @@ const CONTENT_BOTTOM = PAGE_H - 40; // leaves room for the page-number badge
  *      use, so it renders as a stray unrelated character.
  *  Common "smart" punctuation (curly quotes, em/en dash, ellipsis, bullet)
  *  is deliberately left alone — jsPDF has built-in support for those. */
-function sanitizeForPdf(text: string): string {
-  if (!text) return text;
-  return text
-    .replace(/\u20B9/g, 'Rs. ')
-    .replace(/\p{Extended_Pictographic}/gu, '')
-    .replace(/[\u{1F3FB}-\u{1F3FF}]/gu, '')
-    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')
-    .replace(/\u{FE0F}/gu, '')
-    .replace(/\u200D/g, '')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
-}
 
 /** `formatPrice()` returns the ₹ glyph, which isn't in the core PDF font's
  *  charset — used directly it renders as a mis-measured stray glyph, which
@@ -316,37 +307,6 @@ function tierLabel(tier: CancellationTier): string {
   return 'Cancellation window';
 }
 
-// -----------------------------------------------------------------------
-// Image loading helpers — both are best-effort and never throw. A slow
-// network, a CORS-restricted host, or a missing image should never break
-// PDF generation; the layout just quietly skips that photo/logo.
-// -----------------------------------------------------------------------
-
-async function fetchAsDataUrl(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('read failed'));
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
-
-function loadImageEl(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = () => reject(new Error('decode failed'));
-    el.src = src;
-  });
-}
-
 /** Fetches a photo and returns it pre-cropped to exactly targetWpt ×
  *  targetHpt using "object-fit: cover" math (scale to fill, crop the
  *  overflow, keep it centered) so it never gets stretched — plus soft
@@ -418,24 +378,11 @@ async function loadCoverCroppedImage(
   }
 }
 
-/** Loads a logo/icon image and returns it plus its natural aspect ratio, so
- *  callers can fit it into a bounding box without distortion. */
-async function loadContainImage(url: string): Promise<{ dataUrl: string; ratio: number } | null> {
-  try {
-    const dataUrl = await fetchAsDataUrl(url);
-    if (!dataUrl) return null;
-    const img = await loadImageEl(dataUrl);
-    return { dataUrl, ratio: img.naturalWidth / img.naturalHeight };
-  } catch {
-    return null;
-  }
-}
-
 // =============================================================================
 // Builder
 // =============================================================================
 
-export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<jsPDF> {
+async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<jsPDF> {
   const trip = sanitizeTrip(rawTrip);
   const doc = new jsPDF({ unit: 'pt', format: [PAGE_W, PAGE_H], orientation: 'landscape' });
 

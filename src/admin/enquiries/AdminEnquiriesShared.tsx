@@ -55,7 +55,7 @@ export const GROUP_COLOR_PALETTE = [
   { row: 'bg-rose-50/60 hover:bg-rose-50', accent: 'border-rose-400', badge: 'bg-rose-100 text-rose-700' },
 ] as const;
 
-export const STATUS_OPTIONS = [
+const STATUS_OPTIONS = [
   { value: 'new', label: 'New' },
   { value: 'contacted', label: 'Contacted' },
   { value: 'closed', label: 'Closed' },
@@ -329,7 +329,7 @@ export const emptyWaitlistPerson: WaitlistPersonForm = {
 // waitlist entry) an advance is required to actually seat the booking.
 // Shared by the modal (live, as the admin types) and handleSave as the
 // final save-time gate, so the two can never drift.
-export type EnquiryFormErrors = Partial<Record<'full_name' | 'phone' | 'amount_paid', string>>;
+type EnquiryFormErrors = Partial<Record<'full_name' | 'phone' | 'amount_paid', string>>;
 
 export function validateEnquiryForm(form: EnquiryForm, isConvertingWaitlist: boolean): EnquiryFormErrors {
   const errors: EnquiryFormErrors = {};
@@ -351,7 +351,7 @@ export function validateEnquiryForm(form: EnquiryForm, isConvertingWaitlist: boo
 // conversion form — every seat in the group needs its own name/phone and
 // its own qualifying advance (the shared per-person total_amount is passed
 // in separately since it lives on the parent `form`, not each person).
-export type WaitlistPersonFormErrors = Partial<Record<'full_name' | 'phone' | 'amount_paid', string>>;
+type WaitlistPersonFormErrors = Partial<Record<'full_name' | 'phone' | 'amount_paid', string>>;
 
 export function validateWaitlistPersonForm(p: WaitlistPersonForm, totalAmount: number | ''): WaitlistPersonFormErrors {
   const errors: WaitlistPersonFormErrors = {};

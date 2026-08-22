@@ -8,6 +8,8 @@ import {
   CaretDoubleRight as ChevronsRight,
   X,
 } from '@phosphor-icons/react';
+import { useCloseOnOutsideClick } from '../../hooks/useCloseOnOutsideClick';
+import { useDropdownPosition } from '../../hooks/useDropdownPosition';
 
 interface DatePickerProps {
   value: string; // 'YYYY-MM-DD' or ''
@@ -72,7 +74,6 @@ export default function DatePicker({
   id,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0, openUp: false });
   const [viewMode, setViewMode] = useState<ViewMode>('days');
   const [yearRangeStart, setYearRangeStart] = useState(() => Math.floor(new Date().getFullYear() / 12) * 12);
   const selectedDate = toDateOnly(value);
@@ -87,59 +88,21 @@ export default function DatePicker({
 
   const sizeClasses = size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-3 py-2 text-sm';
 
-  const updatePosition = () => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-    const rect = trigger.getBoundingClientRect();
-    const panelHeight = 380;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    const openUp = spaceBelow < panelHeight && spaceAbove > spaceBelow;
-    setCoords({ top: openUp ? rect.top : rect.bottom, left: rect.left, openUp });
-  };
+  const coords = useDropdownPosition(triggerRef, isOpen, 380);
 
   useLayoutEffect(() => {
     if (isOpen) {
       const base = selectedDate || new Date();
-      // This effect isn't just resetting state on a prop change — it also
-      // calls updatePosition(), which reads the trigger's post-render
-      // bounding rect via getBoundingClientRect(). That measurement doesn't
-      // exist during the render phase, so a useLayoutEffect (not a
-      // render-time adjustment) is the correct primitive here, and the
-      // accompanying setState calls are justified alongside it.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewDate(base);
       setFocusedDate(base);
       setViewMode('days');
       setYearRangeStart(Math.floor(base.getFullYear() / 12) * 12);
-      updatePosition();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleScrollResize = () => updatePosition();
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (triggerRef.current?.contains(target)) return;
-      if (panelRef.current?.contains(target)) return;
-      setIsOpen(false);
-    };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
-    };
-    window.addEventListener('scroll', handleScrollResize, true);
-    window.addEventListener('resize', handleScrollResize);
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      window.removeEventListener('scroll', handleScrollResize, true);
-      window.removeEventListener('resize', handleScrollResize);
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [isOpen]);
+  useCloseOnOutsideClick(isOpen, [triggerRef, panelRef], () => setIsOpen(false), { escape: true });
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();

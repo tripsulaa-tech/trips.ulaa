@@ -34,9 +34,9 @@ export function getActivePrice(
 }
 
 /** Format a date string to a readable format */
-export function formatDate(dateStr: string, options?: Intl.DateTimeFormatOptions): string {
+export function formatDate(dateStr: string, options?: Intl.DateTimeFormatOptions, locale = 'en-IN'): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-IN', {
+  return date.toLocaleDateString(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -131,12 +131,6 @@ export function seatsLeft(total: number, booked: number): number {
  */
 export function publicSeatsLeft(total: number, booked: number, waitlistReserved: number): number {
   return Math.max(0, seatsLeft(total, booked) - waitlistReserved);
-}
-
-/** Truncate text */
-export function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength).trimEnd() + '…';
 }
 
 /** Generate a slug from a string */
@@ -242,7 +236,7 @@ export function getWhatsAppLink(phone: string, message?: string): string {
  * Turns a 0-based index into a spreadsheet-style letter label: 0 -> "A",
  * 1 -> "B", ... 25 -> "Z", 26 -> "AA", 27 -> "AB", etc.
  */
-export function letterLabel(index: number): string {
+function letterLabel(index: number): string {
   let n = index;
   let label = '';
   do {

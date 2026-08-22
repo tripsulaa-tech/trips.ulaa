@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import {
   WarningCircle as AlertCircle,
   Info,
   CheckCircle as CheckCircle2,
 } from '@phosphor-icons/react';
 import Button from './Button';
+import DialogShell from './DialogShell';
 import { AlertContext, type AlertFn, type AlertOptions } from './useAlert';
 
 const VARIANT_CONFIG = {
@@ -41,45 +42,20 @@ export function AlertDialogProvider({ children }: { children: ReactNode }) {
       {children}
       <AnimatePresence>
         {isOpen && options && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-dark/60 backdrop-blur-sm"
-            onClick={(e) => { if (e.target === e.currentTarget) dismiss(); }}
+          <DialogShell
+            icon={Icon}
+            iconClass={iconClass}
+            title={options.title}
+            message={options.message}
+            messageId="alert-dialog-message"
+            onBackdropClick={dismiss}
           >
-            <motion.div
-              initial={{ scale: 0.92, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.92, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-sm bg-white rounded-lg shadow-warm-lg overflow-hidden"
-              role="alertdialog"
-              aria-modal="true"
-              aria-labelledby="alert-dialog-message"
-            >
-              <div className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className={`flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center ${iconClass}`}>
-                    <Icon size={22} />
-                  </div>
-                  <div className="flex-1 pt-1 min-w-0">
-                    {options.title && (
-                      <h3 className="font-display text-lg font-bold text-dark mb-1">{options.title}</h3>
-                    )}
-                    <p id="alert-dialog-message" className="text-dark-muted text-sm leading-relaxed">
-                      {options.message}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-6">
-                  <Button size="sm" onClick={dismiss} autoFocus>
-                    {options.okLabel ?? 'OK'}
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
+            <div className="flex justify-end mt-6">
+              <Button size="sm" onClick={dismiss} autoFocus>
+                {options.okLabel ?? 'OK'}
+              </Button>
+            </div>
+          </DialogShell>
         )}
       </AnimatePresence>
     </AlertContext.Provider>

@@ -11,6 +11,7 @@ import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getCompletedTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { useMonthFilteredTrips, MONTHS } from '../hooks/useMonthFilteredTrips';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import type { CompletedTrip, AboutContent, BottomNavItemConfig } from '../types/types-index';
@@ -24,7 +25,9 @@ const HERO_IMAGE = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=
 const NAV_ROUTE = '/completed-trips';
 const DEFAULT_NAV_LABEL = DEFAULT_BOTTOM_NAV_ITEMS.find(i => i.to === NAV_ROUTE)?.label ?? 'Journey';
 
-const MONTHS = ['All', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// Module-level (not inline) so useMonthFilteredTrips' memoization gets a
+// stable function reference across renders.
+const getTripDate = (trip: CompletedTrip) => trip.trip_date;
 
 const DEMO_COMPLETED: CompletedTrip[] = [
   {
@@ -167,34 +170,7 @@ export default function CompletedTripsPage() {
     return unsubscribe;
   }, []);
 
-  const filtered = useMemo(() => {
-    return trips.filter(trip => {
-      const matchSearch = search === '' ||
-        trip.destination.toLowerCase().includes(search.toLowerCase()) ||
-        trip.title.toLowerCase().includes(search.toLowerCase());
-      const matchMonth = month === 'All' ||
-        new Date(trip.trip_date).toLocaleString('en', { month: 'long' }) === month;
-      return matchSearch && matchMonth;
-    });
-  }, [trips, search, month]);
-
-  // How many trips fall in each month pill — respects the current search
-  // text but not the currently-selected month (so switching months doesn't
-  // change every other pill's count out from under you). "All" reflects the
-  // same search-filtered total shown in "Showing N albums" below.
-  const monthCounts = useMemo(() => {
-    const bySearch = trips.filter(trip =>
-      search === '' ||
-      trip.destination.toLowerCase().includes(search.toLowerCase()) ||
-      trip.title.toLowerCase().includes(search.toLowerCase())
-    );
-    const counts: Record<string, number> = { All: bySearch.length };
-    for (const trip of bySearch) {
-      const m = new Date(trip.trip_date).toLocaleString('en', { month: 'long' });
-      counts[m] = (counts[m] || 0) + 1;
-    }
-    return counts;
-  }, [trips, search]);
+  const { filtered, monthCounts } = useMonthFilteredTrips(trips, search, month, getTripDate);
 
   // Derived live from the fetched trips — no more hardcoded numbers.
   const stats = useMemo(() => {

@@ -76,6 +76,7 @@ import {
 import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquiriesShared';
+import PaymentHistoryList from './PaymentHistoryList';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
 import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
@@ -1432,34 +1433,7 @@ export default function AdminEnquiryDetail() {
             );
           })()}
 
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Payment History</label>
-            {paymentsLoading ? (
-              <p className="text-xs text-dark-muted">Loading…</p>
-            ) : payments.length === 0 ? (
-              <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">No payments recorded yet.</p>
-            ) : (
-              <div className="border border-background-warm rounded-md divide-y divide-background-warm max-h-40 overflow-y-auto">
-                {payments.map(p => (
-                  <div key={p.id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
-                    <div className="min-w-0">
-                      <p className="text-dark font-medium truncate">
-                        {INVOICE_TYPE_LABEL[p.payment_type] || p.payment_type}
-                        {p.status === 'pending' && <span className="text-amber-600 font-normal"> · pending</span>}
-                      </p>
-                      <p className="text-dark-muted">
-                        {p.paid_at ? formatDate(p.paid_at, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not yet paid'}
-                        {p.payment_method ? ` · ${p.payment_method}` : ''}
-                      </p>
-                    </div>
-                    <p className={`shrink-0 font-semibold ${p.payment_type === 'refund' ? 'text-red-600' : 'text-green-700'}`}>
-                      {p.payment_type === 'refund' ? '−' : ''}{formatPrice(p.amount)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <PaymentHistoryList payments={payments} loading={paymentsLoading} showUtrNumber={false} />
 
           {enquiry.cancelled_at && (
             <div className="bg-red-50 rounded-md p-3 space-y-2">

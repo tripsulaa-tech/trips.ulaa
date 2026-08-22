@@ -46,7 +46,7 @@ export function resolvePhosphorIcon(name: string): PhosphorIconType {
  * AboutPage, TripDetailPage, TripHighlightIconPicker) keeps working with no
  * changes at all.
  */
-export function createLazyPhosphorIcon(name: string): PhosphorIconType {
+function createLazyPhosphorIcon(name: string): PhosphorIconType {
   const cached = lazyIconCache.get(name);
   if (cached) return cached;
 

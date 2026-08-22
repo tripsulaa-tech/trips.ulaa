@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   MagnifyingGlass as Search,
   CaretDown as ChevronDown,
@@ -7,6 +7,7 @@ import {
   TRIP_HIGHLIGHT_ICONS, getTripHighlightIcon,
   suggestTripHighlightIcons, searchTripHighlightIcons,
 } from '../../constants/tripHighlightIcons';
+import { useCloseOnOutsideClick } from '../../hooks/useCloseOnOutsideClick';
 
 interface TripHighlightIconPickerProps {
   /** Current icon value (library key, or legacy emoji). */
@@ -29,14 +30,7 @@ export default function TripHighlightIconPicker({ value, onChange, hintText, id 
   const [query, setQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  useCloseOnOutsideClick(open, [containerRef], () => setOpen(false));
 
   const suggested = useMemo(() => suggestTripHighlightIcons(hintText, 8), [hintText]);
   const results = useMemo(() => (query ? searchTripHighlightIcons(query) : TRIP_HIGHLIGHT_ICONS), [query]);

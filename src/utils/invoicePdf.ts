@@ -2,6 +2,8 @@ import { jsPDF } from 'jspdf';
 import { svg2pdf } from 'svg2pdf.js';
 import type { Enquiry, Payment } from '../types/types-index';
 import { formatPrice, formatDate } from './utils-index';
+import { sanitizeForPdf } from './pdfText';
+import { loadContainImage } from './pdfImageLoading';
 
 // =============================================================================
 // Invoice generation — drawn as a real, native vector PDF (jsPDF text/shape
@@ -124,29 +126,17 @@ const CONTENT_W = PAGE_W - MARGIN * 2;
 const FOOTER_RESERVE = 34; // room left at the bottom of every page for the page-number badge
 
 /** Filename used for both downloaded and shared files. */
-export function invoiceFileName(enquiry: Enquiry): string {
+function invoiceFileName(enquiry: Enquiry): string {
   const ref = (enquiry.booking_id || enquiry.id).replace(/[^a-zA-Z0-9-]/g, '');
   return `ULAA-Invoice-${ref}.pdf`;
 }
 
-/** Same rationale as tripItineraryPdf.ts's sanitizeForPdf: the ₹ glyph
- *  isn't in the core PDF font's charset (renders as a stray mis-measured
- *  character, which throws off layout math based on its width), and
- *  emoji/pictographs aren't either. Every piece of enquiry-authored text
- *  passes through this before being measured or drawn. */
-function sanitizeForPdf(text: string | null | undefined): string {
-  if (!text) return '';
-  return String(text)
-    .replace(/\u20B9/g, 'Rs. ')
-    .replace(/\p{Extended_Pictographic}/gu, '')
-    .replace(/[\u{1F3FB}-\u{1F3FF}]/gu, '')
-    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')
-    .replace(/\u{FE0F}/gu, '')
-    .replace(/\u200D/g, '')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
-}
-
+/** Same rationale as tripItineraryPdf.ts's sanitizeForPdf (now shared —
+ *  see pdfText.ts): the ₹ glyph isn't in the core PDF font's charset
+ *  (renders as a stray mis-measured character, which throws off layout
+ *  math based on its width), and emoji/pictographs aren't either. Every
+ *  piece of enquiry-authored text passes through this before being
+ *  measured or drawn. */
 function val(text: string | null | undefined): string {
   const s = sanitizeForPdf(text);
   return s || '\u2014'; // em dash for empty fields, matching the old template
@@ -162,58 +152,20 @@ function fdate(iso: string | null | undefined): string {
 }
 
 // -----------------------------------------------------------------------
-// Logo loading — best-effort, never throws. A slow network or a missing
-// file should never break invoice generation; the layout just falls back
-// to the wordmark text.
+// Logo/banner loading — best-effort, never throws (see loadContainImage in
+// pdfImageLoading.ts). A slow network or a missing file should never break
+// invoice generation; the layout just falls back to the wordmark text.
 // -----------------------------------------------------------------------
-async function loadLogo(): Promise<{ dataUrl: string; ratio: number } | null> {
-  try {
-    const res = await fetch('/ULAA-logo.jpg');
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('read failed'));
-      reader.readAsDataURL(blob);
-    });
-    const ratio = await new Promise<number>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img.naturalWidth / img.naturalHeight);
-      img.onerror = () => reject(new Error('decode failed'));
-      img.src = dataUrl;
-    });
-    return { dataUrl, ratio };
-  } catch {
-    return null;
-  }
+function loadLogo(): Promise<{ dataUrl: string; ratio: number } | null> {
+  return loadContainImage('/ULAA-logo.jpg');
 }
 
 // Same best-effort/never-throws contract as loadLogo() above, for the
 // bottom brand banner (palm trees / sailboat artwork with the "Follow us"
 // row baked into the image). Ratio is width/height, used to size the
 // image to the content width while keeping it undistorted.
-async function loadFooterBanner(): Promise<{ dataUrl: string; ratio: number } | null> {
-  try {
-    const res = await fetch('/ulaa-invoice-footer-banner.png');
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('read failed'));
-      reader.readAsDataURL(blob);
-    });
-    const ratio = await new Promise<number>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img.naturalWidth / img.naturalHeight);
-      img.onerror = () => reject(new Error('decode failed'));
-      img.src = dataUrl;
-    });
-    return { dataUrl, ratio };
-  } catch {
-    return null;
-  }
+function loadFooterBanner(): Promise<{ dataUrl: string; ratio: number } | null> {
+  return loadContainImage('/ulaa-invoice-footer-banner.png');
 }
 
 // Clickable hotspots baked into the footer banner artwork, as fractions of
@@ -232,7 +184,7 @@ const FOOTER_BANNER_LINKS: { x1: number; y1: number; x2: number; y2: number; url
  * on record. Returns the assembled doc; downloadInvoicePdf() and
  * invoiceAsFile() both just call this and then export it differently.
  */
-export async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]): Promise<jsPDF> {
+async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]): Promise<jsPDF> {
   const logo = await loadLogo();
   const footerBanner = await loadFooterBanner();
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   MagnifyingGlass as Search,
@@ -10,13 +10,20 @@ import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getUpcomingTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { useMonthFilteredTrips, MONTHS } from '../hooks/useMonthFilteredTrips';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import type { UpcomingTrip, BottomNavItemConfig } from '../types/types-index';
 
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1600&q=80';
 
-const MONTHS = ['All', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// Module-level (not inline) so useMonthFilteredTrips' memoization gets a
+// stable function reference across renders.
+const getStartDate = (trip: UpcomingTrip) => trip.start_date;
+// Coming Soon trips don't have a confirmed date yet, so they only ever show
+// up under "All" — picking a specific month pill hides them, matching that
+// month's pill count.
+const isComingSoon = (trip: UpcomingTrip) => trip.status === 'coming_soon';
 
 // This page is the "Upcoming" tab in the bottom nav bar (see
 // constants/bottomNav.ts) — its route below is used to pull that tab's
@@ -87,42 +94,7 @@ export default function UpcomingTripsPage() {
     return unsubscribe;
   }, []);
 
-  const filtered = useMemo(() => {
-    return trips.filter(trip => {
-      const matchSearch = search === '' ||
-        trip.destination.toLowerCase().includes(search.toLowerCase()) ||
-        trip.title.toLowerCase().includes(search.toLowerCase());
-      // Coming Soon trips don't have a confirmed date yet, so they only
-      // ever show up under "All" — picking a specific month pill hides
-      // them, matching that month's pill count (see monthCounts below).
-      const matchMonth = month === 'All' ||
-        (trip.status !== 'coming_soon' && new Date(trip.start_date).toLocaleString('en', { month: 'long' }) === month);
-      return matchSearch && matchMonth;
-    });
-  }, [trips, search, month]);
-
-  // How many upcoming (active) trips fall in each month pill — respects the
-  // current search text but not the currently-selected month (so switching
-  // months doesn't change every other pill's count out from under you).
-  // "All" reflects the same search-filtered total shown in "Showing N trips" below.
-  const monthCounts = useMemo(() => {
-    const bySearch = trips.filter(trip =>
-      search === '' ||
-      trip.destination.toLowerCase().includes(search.toLowerCase()) ||
-      trip.title.toLowerCase().includes(search.toLowerCase())
-    );
-    const counts: Record<string, number> = { All: bySearch.length };
-    for (const trip of bySearch) {
-      // Coming Soon trips carry a placeholder/target start_date, not a
-      // confirmed one — counting them into a specific month's pill would
-      // promise a date that isn't real yet. They still count toward "All"
-      // above, just not toward any individual month.
-      if (trip.status === 'coming_soon') continue;
-      const m = new Date(trip.start_date).toLocaleString('en', { month: 'long' });
-      counts[m] = (counts[m] || 0) + 1;
-    }
-    return counts;
-  }, [trips, search]);
+  const { filtered, monthCounts } = useMonthFilteredTrips(trips, search, month, getStartDate, isComingSoon);
 
   return (
     <Layout>

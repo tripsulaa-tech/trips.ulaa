@@ -807,7 +807,7 @@ export interface FounderContent {
 // =============================================
 // Why ULAA / "Why Choose Us" cards (editable via Admin)
 // =============================================
-export interface WhyUlaaFeature {
+interface WhyUlaaFeature {
   image: string;
   title: string;
   description: string;

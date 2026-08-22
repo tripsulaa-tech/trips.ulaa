@@ -1,11 +1,13 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CaretDown as ChevronDown,
   Check,
 } from '@phosphor-icons/react';
+import { useCloseOnOutsideClick } from '../../hooks/useCloseOnOutsideClick';
+import { useDropdownPosition } from '../../hooks/useDropdownPosition';
 
-export interface SelectOption<T extends string | number = string> {
+interface SelectOption<T extends string | number = string> {
   value: T;
   label: string;
 }
@@ -32,9 +34,9 @@ export default function Select<T extends string | number = string>({
   inputId,
 }: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, openUp: false });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const coords = useDropdownPosition(triggerRef, isOpen, 240);
 
   const selected = options.find(o => o.value === value);
 
@@ -42,49 +44,7 @@ export default function Select<T extends string | number = string>({
     ? 'px-3 py-1.5 text-xs'
     : 'px-3 py-2 text-sm';
 
-  const updatePosition = () => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-    const rect = trigger.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    const maxListHeight = 240;
-    const openUp = spaceBelow < maxListHeight && spaceAbove > spaceBelow;
-    setCoords({
-      top: openUp ? rect.top : rect.bottom,
-      left: rect.left,
-      width: rect.width,
-      openUp,
-    });
-  };
-
-  useLayoutEffect(() => {
-    if (isOpen) updatePosition();
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleScrollResize = () => updatePosition();
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (triggerRef.current?.contains(target)) return;
-      if (listRef.current?.contains(target)) return;
-      setIsOpen(false);
-    };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
-    };
-    window.addEventListener('scroll', handleScrollResize, true);
-    window.addEventListener('resize', handleScrollResize);
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      window.removeEventListener('scroll', handleScrollResize, true);
-      window.removeEventListener('resize', handleScrollResize);
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [isOpen]);
+  useCloseOnOutsideClick(isOpen, [triggerRef, listRef], () => setIsOpen(false), { escape: true });
 
   return (
     <>

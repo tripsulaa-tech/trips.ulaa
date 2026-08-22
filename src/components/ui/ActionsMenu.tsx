@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   DotsThreeVertical as MoreVertical,
 } from '@phosphor-icons/react';
+import { useCloseOnOutsideClick } from '../../hooks/useCloseOnOutsideClick';
 
 // One row in an ActionsMenu — pass `hidden: true` to omit the item entirely
 // (e.g. "Reactivate" on a booking that isn't cancelled), or `disabled: true`
@@ -69,23 +70,17 @@ export default function ActionsMenu({ items, disabled, label = 'Actions' }: { it
 
   useEffect(() => {
     if (!open) return;
-    const onClick = (ev: MouseEvent) => {
-      const target = ev.target as Node;
-      if (buttonRef.current?.contains(target)) return;
-      if (menuRef.current?.contains(target)) return;
-      setOpen(false);
-    };
     const onScrollOrResize = () => updatePosition();
-    document.addEventListener('mousedown', onClick);
     window.addEventListener('scroll', onScrollOrResize, true);
     window.addEventListener('resize', onScrollOrResize);
     return () => {
-      document.removeEventListener('mousedown', onClick);
       window.removeEventListener('scroll', onScrollOrResize, true);
       window.removeEventListener('resize', onScrollOrResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useCloseOnOutsideClick(open, [buttonRef, menuRef], () => setOpen(false));
 
   return (
     <>

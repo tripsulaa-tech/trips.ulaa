@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Download,
   FileArrowDown as FileDown,
@@ -8,6 +8,7 @@ import {
 import Button from './Button';
 import type { UpcomingTrip } from '../../types/types-index';
 import { canShareItineraryPdf, downloadTripItineraryPdf, shareTripItineraryPdf } from '../../utils/tripItineraryPdf';
+import { useCloseOnOutsideClick } from '../../hooks/useCloseOnOutsideClick';
 
 interface PdfDownloadMenuProps {
   trip: UpcomingTrip;
@@ -55,21 +56,7 @@ export default function PdfDownloadMenu({ trip, variant, className = '' }: PdfDo
   const [busy, setBusy] = useState<'download' | 'share' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (!menuRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [open]);
+  useCloseOnOutsideClick(open, [menuRef], () => setOpen(false), { escape: true });
 
   async function handleDownload() {
     setOpen(false);

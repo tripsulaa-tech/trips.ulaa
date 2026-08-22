@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 // Skeleton shimmer base
 const shimmer = `relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.5s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent`;
 
-export function TripCardSkeleton() {
+function TripCardSkeleton() {
   return (
     <div className="bg-white rounded-xl shadow-card">
       <div className={`h-64 bg-background-warm rounded-t-xl ${shimmer}`} />
@@ -18,7 +18,7 @@ export function TripCardSkeleton() {
   );
 }
 
-export function AlbumCardSkeleton() {
+function AlbumCardSkeleton() {
   return (
     <div className="bg-white rounded-xl shadow-card">
       <div className={`h-56 md:h-64 bg-background-warm rounded-t-xl ${shimmer}`} />

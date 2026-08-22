@@ -18,6 +18,7 @@ import { useResponsiveItemsPerView } from '../components/ui/useResponsiveItemsPe
 import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import TripCountdownCard from '../components/ui/TripCountdownCard';
 import { getTripHighlightIcon, getTripHighlightPalette, type TripHighlightIconType } from '../constants/tripHighlightIcons';
+import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { getUpcomingTripBySlug, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, TripHighlightCard, TripInclusionItem, TripConfidenceItem, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
@@ -321,21 +322,7 @@ export default function TripDetailPage() {
     bar.scrollTo({ left: target, behavior: 'smooth' });
   }, [activeSection]);
 
-  useEffect(() => {
-    if (!calendarMenuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (!calendarMenuRef.current?.contains(e.target as Node)) setCalendarMenuOpen(false);
-    };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setCalendarMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [calendarMenuOpen]);
+  useCloseOnOutsideClick(calendarMenuOpen, [calendarMenuRef], () => setCalendarMenuOpen(false), { escape: true });
 
   if (loading) {
     return (

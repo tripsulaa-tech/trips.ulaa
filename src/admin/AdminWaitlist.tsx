@@ -28,6 +28,7 @@ import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import FoodMark from '../components/ui/FoodMark';
+import FilterDropdown from './enquiries/AdminFilterDropdown';
 import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
 import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
 import type { SortDirection } from '../components/ui/dataTableUtils';
@@ -103,50 +104,6 @@ const emptyWaitlistForm: WaitlistForm = {
   full_name: '', phone: '', email: '', age: '', city: '', emergency_contact: '',
   trip_id: '', food_preference: '', group_size: '', message: '',
 };
-
-// Shared dropdown menu used by every filter box in the filter bar — a
-// vertical list of options with counts, the selected one highlighted.
-// Mirrors the one on the Enquiries page so both filter bars look and
-// behave the same way.
-function FilterDropdown<T extends string>({
-  options,
-  value,
-  onSelect,
-  align = 'left',
-}: {
-  options: { key: T; label: string; count: number; section?: string }[];
-  value: T;
-  onSelect: (key: T) => void;
-  align?: 'left' | 'right';
-}) {
-  return (
-    <div
-      className={`absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-full sm:w-52 bg-white rounded-md shadow-warm-lg border border-background-warm py-1.5 z-30 max-h-72 overflow-y-auto`}
-    >
-      {options.map((opt, i) => {
-        const showSectionHeader = !!opt.section && opt.section !== options[i - 1]?.section;
-        return (
-          <div key={opt.key}>
-            {showSectionHeader && (
-              <div className="px-3 pt-2.5 pb-1 text-[10px] font-button font-bold text-dark-muted/60 uppercase tracking-wide">
-                {opt.section}
-              </div>
-            )}
-            <button
-              onClick={() => onSelect(opt.key)}
-              className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-button text-left transition-colors ${
-                value === opt.key ? 'bg-primary/10 text-primary font-semibold' : 'text-dark-muted hover:bg-background-warm'
-              }`}
-            >
-              <span className="truncate">{opt.label}</span>
-              <span className="opacity-60 shrink-0">{opt.count}</span>
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export default function AdminWaitlist() {
   const confirm = useConfirm();

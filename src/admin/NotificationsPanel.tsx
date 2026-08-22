@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import { supabase } from '../services/supabase';
 import { getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../services/api';
+import { formatDate } from '../utils/utils-index';
 import type { AdminNotification } from '../types/types-index';
 
 function timeAgo(dateStr: string): string {
@@ -18,7 +19,7 @@ function timeAgo(dateStr: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return formatDate(dateStr, { month: 'short', year: undefined });
 }
 
 export default function NotificationsPanel() {

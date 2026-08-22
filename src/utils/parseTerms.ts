@@ -3,7 +3,7 @@ export type TermsBlock =
   | { type: 'subheading'; text: string }
   | { type: 'bullets'; items: string[] };
 
-export interface TermsSection {
+interface TermsSection {
   number: string;
   title: string;
   blocks: TermsBlock[];
