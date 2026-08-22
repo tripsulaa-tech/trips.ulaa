@@ -230,17 +230,6 @@ export interface CompletedTrip {
   original_not_included?: string[];
 }
 
-export interface TripImage {
-  id: string;
-  trip_id: string;
-  trip_type: 'upcoming' | 'completed' | 'gallery';
-  image_url: string;
-  alt_text?: string;
-  sort_order: number;
-  is_cover: boolean;
-  created_at: string;
-}
-
 export interface GalleryImage {
   id: string;
   image_url: string;
@@ -864,9 +853,4 @@ export interface ButtonLabelsConfig {
   primaryCta: string;
   /** Shown on the same CTA once the trip is full, e.g. "Join Waitlist". */
   waitlistCta: string;
-}
-
-export interface AdminUser {
-  id: string;
-  email: string;
 }

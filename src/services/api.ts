@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { formatPrice } from '../utils/utils-index';
 import type { UpcomingTrip, CompletedTrip, Enquiry, GalleryImage, Testimonial, BookingFormData, AdminNotification, WaitlistEntry, WaitlistFormData, Payment, JourneyStage, ContactOutcome, CancellationReason, ActivityLogEntry, BookingFollowUpType } from '../types/types-index';
 
 // =============================================
@@ -1621,7 +1622,7 @@ export async function recordPayment(
     await logActivity(
       current.id,
       delta > 0 ? `${PAYMENT_TYPE_LOG_LABEL[invoiceType] || invoiceType} received` : 'Payment adjusted',
-      `₹${Math.abs(delta).toLocaleString('en-IN')}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
+      `${formatPrice(Math.abs(delta))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
     );
   }
   return updated;
@@ -1707,7 +1708,7 @@ export async function recordTypedPayment(
   await logActivity(
     current.id,
     `${PAYMENT_TYPE_LOG_LABEL[payment.type] || payment.type} received`,
-    `₹${payment.amount.toLocaleString('en-IN')}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
+    `${formatPrice(payment.amount)}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
   );
   return updated;
 }
@@ -1732,7 +1733,7 @@ export async function generatePendingInvoice(
     .select()
     .single();
   if (error) throw error;
-  await logActivity(enquiryId, `Invoice generated · ${PAYMENT_TYPE_LOG_LABEL[type] || type}`, `₹${amount.toLocaleString('en-IN')} · pending`);
+  await logActivity(enquiryId, `Invoice generated · ${PAYMENT_TYPE_LOG_LABEL[type] || type}`, `${formatPrice(amount)} · pending`);
   return data;
 }
 
@@ -1772,7 +1773,7 @@ export async function addExtraCharge(
   const { data, error } = await supabase.from('enquiries').select('*').eq('id', current.id).single();
   if (error) throw error;
   const updated = await refreshJourneyStage(data.id);
-  await logActivity(current.id, 'Extra charge added', `₹${amount.toLocaleString('en-IN')}${options?.collectedNow ? ' · collected' : ' · pending'}`);
+  await logActivity(current.id, 'Extra charge added', `${formatPrice(amount)}${options?.collectedNow ? ' · collected' : ' · pending'}`);
   return updated;
 }
 
@@ -1806,7 +1807,7 @@ export async function markInvoicePaid(
     .single();
   if (error) throw error;
   await refreshJourneyStage(data.enquiry_id);
-  await logActivity(data.enquiry_id, 'Invoice marked paid', `${data.payment_type} · ₹${data.amount.toLocaleString('en-IN')}${data.invoice_number ? ` · ${data.invoice_number}` : ''}`);
+  await logActivity(data.enquiry_id, 'Invoice marked paid', `${data.payment_type} · ${formatPrice(data.amount)}${data.invoice_number ? ` · ${data.invoice_number}` : ''}`);
   return data;
 }
 
@@ -2075,7 +2076,7 @@ export async function recordRefund(
     await logActivity(
       current.id,
       'Refund processed',
-      `₹${Math.abs(delta).toLocaleString('en-IN')}${options?.payment_method ? ` · ${options.payment_method}` : ''}`
+      `${formatPrice(Math.abs(delta))}${options?.payment_method ? ` · ${options.payment_method}` : ''}`
     );
   }
   return data;

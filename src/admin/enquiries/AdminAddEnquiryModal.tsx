@@ -8,7 +8,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS } from './AdminEnquiryCommon';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, refPlaceholder } from './AdminEnquiryCommon';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { inputClass, validateEnquiryForm, validateWaitlistPersonForm, type EnquiryForm, type WaitlistPersonForm } from './AdminEnquiriesShared';
 import { SOURCE_OPTIONS } from './AdminEnquiriesShared';
@@ -186,7 +186,7 @@ export default function AddEnquiryModal({
                 disabled={form.payment_method === 'Cash'}
                 onChange={e => setForm(f => ({ ...f, payment_utr: e.target.value }))}
                 className={`${inputClass} ${form.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                placeholder={form.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
+                placeholder={refPlaceholder(form.payment_method, 'e.g. 426817XXXXXX')}
               />
             </div>
           </div>
@@ -429,7 +429,7 @@ export default function AddEnquiryModal({
                   disabled={form.payment_method === 'Cash'}
                   onChange={e => setForm(f => ({ ...f, payment_utr: e.target.value }))}
                   className={`${inputClass} ${form.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  placeholder={form.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
+                  placeholder={refPlaceholder(form.payment_method, 'e.g. 426817XXXXXX')}
                 />
               </div>
             </div>

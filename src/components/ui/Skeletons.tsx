@@ -31,12 +31,6 @@ export function AlbumCardSkeleton() {
   );
 }
 
-export function PageHeroSkeleton() {
-  return (
-    <div className={`h-[50vh] bg-background-warm ${shimmer}`} />
-  );
-}
-
 interface SkeletonGridProps {
   count?: number;
   type?: 'trip' | 'album';

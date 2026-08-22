@@ -3,7 +3,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, availableInvoiceTypeOptions, clearsBalanceForInvoice, validateGenerateInvoiceForm, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS, INVOICE_TYPE_LABEL } from './AdminEnquiryCommon';
+import { parseNonNegative, availableInvoiceTypeOptions, clearsBalanceForInvoice, validateGenerateInvoiceForm, GENERATE_INVOICE_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS, INVOICE_TYPE_LABEL, refPlaceholder } from './AdminEnquiryCommon';
 import type { GenerateInvoiceForm } from './AdminEnquiryCommon';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
@@ -195,7 +195,7 @@ export default function GenerateInvoiceModal({
                   disabled={generateInvoiceForm.payment_method === 'Cash'}
                   onChange={ev => setGenerateInvoiceForm(f => ({ ...f, utr_number: ev.target.value }))}
                   className={`${inputClass} ${generateInvoiceForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  placeholder={generateInvoiceForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
+                  placeholder={refPlaceholder(generateInvoiceForm.payment_method, 'e.g. 426817XXXXXX')}
                 />
                 {invoiceErrors.utr_number && <p role="alert" className={errorClass}>{invoiceErrors.utr_number}</p>}
               </div>

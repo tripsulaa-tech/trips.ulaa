@@ -161,11 +161,6 @@ export function formatBatchShortLabel(batch: string): string {
   return /^\d+$/.test(trimmed) ? trimmed : trimmed.slice(0, 3);
 }
 
-/** Delay utility */
-export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 /** Format month and year */
 export function formatMonthYear(dateStr: string): string {
   const date = new Date(dateStr);
@@ -173,13 +168,9 @@ export function formatMonthYear(dateStr: string): string {
 }
 
 /** Split a comma-separated destination string into a dot-separated display
- *  string, e.g. "Mirissa, Galle, Tangalle" -> "Mirissa • Galle • Tangalle" */
-export function formatDestinationDots(destination: string): string {
-  return destination.split(',').map(s => s.trim()).filter(Boolean).join(' • ');
-}
-
-/** Same as formatDestinationDots, but keeps the result to roughly one line
- *  by cutting the list off once it would exceed maxChars, folding whatever
+ *  string, e.g. "Mirissa, Galle, Tangalle" -> "Mirissa • Galle • Tangalle",
+ *  keeping the result to roughly one line by cutting the list off once it
+ *  would exceed maxChars, folding whatever
  *  is left into a trailing "+N" instead of wrapping to a second line, e.g.
  *  "Mirissa • Galle • Tangalle • Yala • Ella • Haputale +1". Always shows
  *  at least the first destination, even if it alone exceeds maxChars. */

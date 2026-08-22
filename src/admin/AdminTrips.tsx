@@ -43,7 +43,7 @@ import type {
   TripFounder, TripConfidenceItem, TripCardFeatureTag, TripEndBanner, CoverImageCrop,
   FounderContent,
 } from '../types/types-index';
-import { formatDate, slugify, formatAgeRange } from '../utils/utils-index';
+import { formatDate, slugify, formatAgeRange, formatPrice } from '../utils/utils-index';
 
 // Computes a "X Days / Y Nights" string from two yyyy-mm-dd date strings.
 // Falls back to '' if either date is missing/invalid, and never returns a negative duration.
@@ -1807,9 +1807,9 @@ export default function AdminTrips() {
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-0.5">Price</p>
                 <p className="text-dark">
-                  {viewingTrip.price ? `₹${viewingTrip.price.toLocaleString('en-IN')}` : '—'}
-                  {viewingTrip.early_bird_price ? ` (Early-bird ₹${viewingTrip.early_bird_price.toLocaleString('en-IN')})` : ''}
-                  {viewingTrip.strike_through_price ? ` — strikeout ₹${viewingTrip.strike_through_price.toLocaleString('en-IN')}` : ''}
+                  {viewingTrip.price ? formatPrice(viewingTrip.price) : '—'}
+                  {viewingTrip.early_bird_price ? ` (Early-bird ${formatPrice(viewingTrip.early_bird_price)})` : ''}
+                  {viewingTrip.strike_through_price ? ` — strikeout ${formatPrice(viewingTrip.strike_through_price)}` : ''}
                 </p>
               </div>
               {viewingTrip.meeting_point && (

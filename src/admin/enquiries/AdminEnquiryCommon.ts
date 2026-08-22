@@ -47,6 +47,15 @@ export function parseNonNegative(raw: string): number | '' {
   return Math.max(0, n);
 }
 
+// Placeholder for a payment/refund reference-number field: disabled with
+// "N/A for cash" when the method is Cash, otherwise an example reference
+// format. Shared so the Cash-check stays in one place across every
+// payment/refund UTR field (Add Enquiry, Payment, Refund, Generate
+// Invoice, Mark Paid modals).
+export function refPlaceholder(method: string | undefined, example: string): string {
+  return method === 'Cash' ? 'N/A for cash' : example;
+}
+
 export const PACKAGE_CONFIG = {
   early_bird: { label: 'Early Bird', color: 'bg-purple-100 text-purple-700' },
   normal: { label: 'Normal', color: 'bg-slate-100 text-slate-700' },

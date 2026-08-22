@@ -214,25 +214,6 @@ button, .btn {
   animation: tc-gradient 6s ease-in-out infinite;
 }
 
-/* Small plane icon gliding across the top of the countdown card */
-@keyframes tc-glide {
-  0% { transform: translate(0, 0); opacity: 0; }
-  10% { opacity: 0.6; }
-  90% { opacity: 0.6; }
-  100% { transform: translate(220px, 14px); opacity: 0; }
-}
-.tc-glide {
-  animation: tc-glide 7s ease-in-out infinite;
-}
-
-@keyframes tc-flicker {
-  0%, 100% { transform: scale(1); opacity: 0.3; }
-  50% { transform: scale(1.35); opacity: 0.85; }
-}
-.tc-flicker {
-  animation: tc-flicker 3.4s ease-in-out infinite;
-}
-
 /* Loading placeholder sweep shown behind a gallery photo while it loads. */
 @keyframes gallery-shimmer {
   0% { transform: translateX(-100%); }
@@ -268,25 +249,6 @@ button, .btn {
 
 /* Filmstrip scale token — Tailwind 4 doesn't include .scale-108 by default */
 .scale-108 { transform: scale(1.08); }
-
-/* Info panel slide — hardware-accelerated */
-@media (prefers-reduced-motion: no-preference) {
-  .gallery-info-enter {
-    animation: gallery-info-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-  .gallery-info-exit {
-    animation: gallery-info-slide-out 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-}
-
-@keyframes gallery-info-slide-in {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
-}
-@keyframes gallery-info-slide-out {
-  from { transform: translateX(0);    opacity: 1; }
-  to   { transform: translateX(100%); opacity: 0; }
-}
 
 /* Favorite heart burst */
 @keyframes heart-burst {

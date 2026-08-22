@@ -71,7 +71,7 @@ import {
   journeyBadge, nextManualAction, getTripActivePricing, isNotInterested, canMarkNotInterested,
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus, canCancelBooking,
   CANCELLATION_REASON_OPTIONS, REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
-  validatePaymentForm,
+  validatePaymentForm, refPlaceholder,
 } from './AdminEnquiryCommon';
 import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
 import type { PaymentForm } from './AdminEnquiryCommon';
@@ -1403,7 +1403,7 @@ export default function AdminEnquiryDetail() {
                   disabled={paymentForm.payment_method === 'Cash'}
                   onChange={e => setPaymentForm(f => ({ ...f, payment_utr: e.target.value }))}
                   className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  placeholder={paymentForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
+                  placeholder={refPlaceholder(paymentForm.payment_method, 'e.g. 426817XXXXXX')}
                 />
                 {paymentErrors.payment_utr && <p role="alert" className={paymentErrorClass}>{paymentErrors.payment_utr}</p>}
               </div>
@@ -1516,7 +1516,7 @@ export default function AdminEnquiryDetail() {
                       disabled={paymentForm.refund_method === 'Cash'}
                       onChange={e => setPaymentForm(f => ({ ...f, refund_utr: e.target.value }))}
                       className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.refund_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      placeholder={paymentForm.refund_method === 'Cash' ? 'N/A for cash' : 'e.g. 987654XXXX'}
+                      placeholder={refPlaceholder(paymentForm.refund_method, 'e.g. 987654XXXX')}
                     />
                     {paymentErrors.refund_utr && <p role="alert" className={paymentErrorClass}>{paymentErrors.refund_utr}</p>}
                   </div>

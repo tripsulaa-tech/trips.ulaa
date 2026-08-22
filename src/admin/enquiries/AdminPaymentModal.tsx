@@ -5,7 +5,7 @@ import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, validatePaymentForm, GENERATE_INVOICE_STATUS_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey } from './AdminEnquiryCommon';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, validatePaymentForm, GENERATE_INVOICE_STATUS_OPTIONS, INVOICE_TYPE_LABEL, foodBadge, foodPreferenceKey, refPlaceholder } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
@@ -268,7 +268,7 @@ export default function PaymentModal({
                   disabled={paymentForm.payment_method === 'Cash'}
                   onChange={e => setPaymentForm(f => ({ ...f, payment_utr: e.target.value }))}
                   className={`${inputClass} ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  placeholder={paymentForm.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
+                  placeholder={refPlaceholder(paymentForm.payment_method, 'e.g. 426817XXXXXX')}
                 />
                 {paymentErrors.payment_utr && <p role="alert" className={errorClass}>{paymentErrors.payment_utr}</p>}
               </div>
@@ -378,7 +378,7 @@ export default function PaymentModal({
                       disabled={paymentForm.refund_method === 'Cash'}
                       onChange={e => setPaymentForm(f => ({ ...f, refund_utr: e.target.value }))}
                       className={`${inputClass} ${paymentForm.refund_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      placeholder={paymentForm.refund_method === 'Cash' ? 'N/A for cash' : 'e.g. 987654XXXX'}
+                      placeholder={refPlaceholder(paymentForm.refund_method, 'e.g. 987654XXXX')}
                     />
                     {paymentErrors.refund_utr && <p role="alert" className={errorClass}>{paymentErrors.refund_utr}</p>}
                   </div>

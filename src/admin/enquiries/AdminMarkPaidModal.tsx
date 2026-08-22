@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
-import { PAYMENT_METHOD_OPTIONS } from './AdminEnquiryCommon';
+import { PAYMENT_METHOD_OPTIONS, refPlaceholder } from './AdminEnquiryCommon';
 import type { Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
 import { inputClass } from './AdminEnquiriesShared';
@@ -60,7 +60,7 @@ export default function MarkPaidModal({
                 disabled={form.payment_method === 'Cash'}
                 onChange={e => setForm(f => ({ ...f, utr_number: e.target.value }))}
                 className={`${inputClass} ${form.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                placeholder={form.payment_method === 'Cash' ? 'N/A for cash' : 'e.g. 426817XXXXXX'}
+                placeholder={refPlaceholder(form.payment_method, 'e.g. 426817XXXXXX')}
               />
             </div>
           </div>
