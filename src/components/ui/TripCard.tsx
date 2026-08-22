@@ -7,12 +7,15 @@ import {
   CalendarPlus,
   ShareNetwork as Share2,
   Timer,
+  Bird,
+  CaretRight,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
-import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
+import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
+import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
 
 interface TripCardProps {
@@ -40,6 +43,46 @@ function ReserveShieldIcon({ className }: { className?: string }) {
       />
     </svg>
   );
+}
+
+// Common trip-card tag labels (Travelers, Girls-Only, Luxury Stays, etc.)
+// get a specific, correct icon here first — the generic keyword search in
+// suggestTripHighlightIcons is tuned for free-text highlight-card headings
+// and can pick a loosely-related icon (e.g. "heart" for "Girls-Only")
+// instead of the more literal one (the venus/female symbol). Falls through
+// to the generic suggestion, then to nothing, so a tag never renders a
+// broken icon. Returns the "fill" weight (solid) plus a per-icon color —
+// the venus symbol renders in rose/pink like the reference design, while
+// everything else stays in the brand primary color.
+function resolveFeatureTagIcon(label: string, iconKey: string): { Icon: TripHighlightIconType; colorClass: string; weight: 'fill' | 'regular' } | undefined {
+  const stored = getTripHighlightIcon(iconKey);
+  if (stored) {
+    // The venus/female symbol always gets its rose outline treatment,
+    // even when it comes from an admin-set icon key rather than the
+    // label-based fallback below.
+    if (stored.key === 'venus') return { Icon: stored.Icon, colorClass: 'text-rose-400', weight: 'regular' };
+    return { Icon: stored.Icon, colorClass: 'text-primary', weight: 'fill' };
+  }
+
+  const l = label.toLowerCase();
+  if (/girl|women|ladies|female/.test(l)) {
+    const venus = getTripHighlightIcon('venus');
+    // Kept as an outline (not "fill") — the venus glyph reads as a hollow
+    // circle-and-cross in the reference design, not a solid disc.
+    if (venus) return { Icon: venus.Icon, colorClass: 'text-rose-400', weight: 'regular' };
+  }
+  const explicitKey =
+    /luxury|premium|5-star|five-star|deluxe/.test(l) ? 'crown' :
+    /travel|traveler|traveller|people|group|squad|guest/.test(l) ? 'users' :
+    /age/.test(l) ? 'user-check' :
+    /duration|day|night/.test(l) ? 'clock' :
+    /place|destination|stop/.test(l) ? 'map-pin' :
+    null;
+  const explicit = explicitKey ? getTripHighlightIcon(explicitKey) : undefined;
+  if (explicit) return { Icon: explicit.Icon, colorClass: 'text-primary', weight: 'fill' };
+
+  const suggestion = suggestTripHighlightIcons(label, 1)[0];
+  return suggestion ? { Icon: suggestion.Icon, colorClass: 'text-primary', weight: 'fill' } : undefined;
 }
 
 export default function TripCard({ trip, index = 0 }: TripCardProps) {
@@ -149,7 +192,8 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             </span>
           ) : null}
           {isEarlyBird && (
-            <span className="bg-secondary text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
+            <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-secondary to-primary text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
+              <Bird size={14} weight="fill" />
               Early Bird
             </span>
           )}
@@ -167,7 +211,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             }}
             aria-label="Share this trip"
             title="Share this trip"
-            className="h-9 w-9 flex items-center justify-center rounded-full bg-primary text-white border-2 border-primary shadow-warm hover:bg-primary-dark hover:shadow-warm-lg transition-all"
+            className="h-9 w-9 flex items-center justify-center rounded-full bg-white text-dark shadow-warm hover:bg-primary hover:text-white transition-all"
           >
             <Share2 size={16} />
           </button>
@@ -176,17 +220,18 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCalendar(trip); }}
             aria-label="Add to calendar"
             title="Add to calendar"
-            className="h-9 w-9 flex items-center justify-center rounded-full bg-primary text-white border-2 border-primary shadow-warm hover:bg-primary-dark hover:shadow-warm-lg transition-all"
+            className="h-9 w-9 flex items-center justify-center rounded-full bg-white text-dark shadow-warm hover:bg-primary hover:text-white transition-all"
           >
             <CalendarPlus size={16} />
           </button>
         </div>
 
-        {/* Destination overlay */}
+        {/* Destination overlay — kept to a single line; formatDestinationDotsCompact
+            folds anything past the fitted destinations into a trailing "+N". */}
         <div className="absolute bottom-4 left-4 right-4">
-          <div className="inline-flex items-start gap-1.5 bg-white text-dark text-xs font-button font-semibold px-3 py-1.5 rounded-md shadow-warm max-w-full">
-            <MapPin size={13} className="text-primary shrink-0 mt-0.5" />
-            <span>{trip.destination}</span>
+          <div className="inline-flex items-center gap-1.5 bg-white text-dark text-xs font-button font-semibold px-3 py-1.5 rounded-md shadow-warm max-w-full">
+            <MapPin size={13} className="text-primary shrink-0" />
+            <span className="truncate">{formatDestinationDotsCompact(trip.destination)}</span>
           </div>
         </div>
       </Link>
@@ -227,43 +272,59 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               {trip.advance_amount != null && (
                 <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2">
                   <ReserveShieldIcon className="w-[26px] h-[26px] text-green-700 shrink-0" />
-                  <span className="text-green-700 text-xs font-button font-semibold">
-                    Reserve your spot for just {formatPrice(trip.advance_amount)}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-green-700 text-xs font-button font-semibold leading-tight">
+                      Reserve your spot from {formatPrice(trip.advance_amount)}
+                    </p>
+                    <p className="text-dark text-[10.5px] leading-tight mt-0.5">
+                      Secure your trip with a small advance
+                    </p>
+                  </div>
+                  <CaretRight size={16} className="text-green-700 shrink-0" />
                 </div>
-              )}
-              {isEarlyBird && trip.early_bird_deadline && (
-                <p className="flex items-center gap-1.5 text-dark-muted text-[11.5px] mt-2">
-                  <Timer size={13} className="text-secondary shrink-0" />
-                  <span>
-                    Early bird offer ends{' '}
-                    <span className="text-secondary font-semibold">
-                      {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
-                  </span>
-                </p>
               )}
             </div>
           )}
 
           {/* Feature tag row: admin-set marketing tags when configured
-              (e.g. "Girls-Only" / "Safe & fun"), else auto-generated from
-              real trip data — see featureTags above. */}
-          <div className="grid grid-cols-4 gap-1 divide-x divide-background-warm border-t border-background-warm pt-4 mb-5 text-center">
-            {featureTags.map((tag, i) => {
-              const iconMeta = getTripHighlightIcon(tag.icon);
-              const TagIcon = iconMeta?.Icon;
+              (e.g. "Girls-Only"), else auto-generated from real trip data —
+              see featureTags above. When a tag has no valid stored icon key
+              (or one no longer in the library), suggestTripHighlightIcons
+              infers a sensible icon from the label text itself so the row
+              never renders without icons. Divided into evenly-spaced
+              columns with vertical separators between tags. */}
+          <div className="grid grid-cols-3 divide-x divide-background-warm mb-3">
+            {featureTags.slice(0, 3).map((tag, i) => {
+              const resolved = resolveFeatureTagIcon(tag.label, tag.icon);
+              const TagIcon = resolved?.Icon;
               return (
-                <div key={i} className="flex flex-col items-center gap-2 min-w-0 px-1">
-                  <span className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    {TagIcon && <TagIcon size={16} className="text-primary" aria-hidden="true" strokeWidth={1.75} />}
-                  </span>
-                  <span className="text-[11px] font-semibold text-dark leading-tight line-clamp-2 w-full break-words">{tag.label}</span>
-                  <span className="text-[9px] text-dark-muted leading-tight line-clamp-2 w-full break-words">{tag.sublabel}</span>
+                <div key={i} className="flex items-center justify-center gap-1.5 min-w-0 px-2 first:pl-0 last:pr-0">
+                  {TagIcon && (
+                    <TagIcon
+                      size={20}
+                      weight={resolved.weight}
+                      className={`${resolved.colorClass} shrink-0`}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="text-xs font-semibold text-dark whitespace-nowrap truncate">{tag.label}</span>
                 </div>
               );
             })}
           </div>
+
+          {isEarlyBird && trip.early_bird_deadline && (
+            <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-5">
+              <Timer size={14} className="text-secondary shrink-0" />
+              <p className="text-dark text-[11.5px] leading-tight">
+                Early bird ends in{' '}
+                <span className="text-secondary font-bold">
+                  {daysUntil(trip.early_bird_deadline)} {daysUntil(trip.early_bird_deadline) === 1 ? 'day' : 'days'}
+                </span>{' '}
+                ({formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })})
+              </p>
+            </div>
+          )}
         </div>
 
         <Link to={`/trips/${trip.slug}`}>
@@ -273,7 +334,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             fullWidth
             className="group/btn"
           >
-            {isFull ? 'Join Waitlist' : 'View Details'}
+            {isFull ? 'Join Waitlist' : 'Explore Trip'}
             <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
           </Button>
         </Link>

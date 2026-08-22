@@ -329,7 +329,7 @@ export default function AdminTrips() {
       strike_through_price: '<Optional "was ₹X" marketing price as a number, or "">',
       advance_amount: '<Optional advance/reservation amount in INR as a number, or "">',
       card_feature_tags: [
-        { icon: '<Icon-library key, NOT an emoji — e.g. "venus", "crown", "map-pinned". See src/constants/tripHighlightIcons.ts.>', label: '<Short bold label, e.g. "Girls-Only">', sublabel: '<Short muted sublabel, e.g. "Safe & fun">' },
+        { icon: '<Icon-library key, NOT an emoji — e.g. "venus", "crown", "map-pinned". See src/constants/tripHighlightIcons.ts.>', label: '<Short bold label, e.g. "Girls-Only">' },
       ],
       trip_type: '<"domestic" or "international", or "" if not set>',
       cover_image: '(leave blank — uploaded manually)',
@@ -1105,7 +1105,7 @@ export default function AdminTrips() {
                 {form.card_feature_tags.length < 4 && (
                   <button
                     type="button"
-                    onClick={() => setForm(f => ({ ...f, card_feature_tags: [...f.card_feature_tags, { icon: '', label: '', sublabel: '' }] }))}
+                    onClick={() => setForm(f => ({ ...f, card_feature_tags: [...f.card_feature_tags, { icon: '', label: '' }] }))}
                     className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
                   >
                     <Plus size={13} aria-hidden="true" /> Add Tag
@@ -1113,7 +1113,7 @@ export default function AdminTrips() {
                 )}
               </div>
               <p className="text-xs text-dark-muted -mt-1">
-                Up to 4 fixed tags shown in the icon row on the public Trip Card, e.g. "Girls-Only" / "Safe &amp; fun". Leave empty to auto-show travelers, age range, duration, and destination count instead.
+                Up to 4 fixed tags shown in the icon row on the public Trip Card, e.g. "Girls-Only". Leave empty to auto-show travelers, age range, duration, and destination count instead.
               </p>
               {form.card_feature_tags.map((tag, i) => (
                 <div key={i} className="flex items-start gap-2">
@@ -1128,8 +1128,6 @@ export default function AdminTrips() {
                   </div>
                   <label htmlFor={`trip-card-tag-label-${i}`} className="sr-only">Tag {i + 1} label</label>
                   <input id={`trip-card-tag-label-${i}`} value={tag.label} onChange={e => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.map((t, idx) => idx === i ? { ...t, label: e.target.value } : t) }))} className={`${inputClass} flex-1`} placeholder="e.g. Girls-Only" />
-                  <label htmlFor={`trip-card-tag-sublabel-${i}`} className="sr-only">Tag {i + 1} sublabel</label>
-                  <input id={`trip-card-tag-sublabel-${i}`} value={tag.sublabel} onChange={e => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.map((t, idx) => idx === i ? { ...t, sublabel: e.target.value } : t) }))} className={`${inputClass} flex-1`} placeholder="e.g. Safe & fun" />
                   <button type="button" onClick={() => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.filter((_, idx) => idx !== i) }))} aria-label={`Remove tag ${i + 1}`} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
                 </div>
               ))}

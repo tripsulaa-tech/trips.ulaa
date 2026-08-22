@@ -48,8 +48,8 @@ export interface TripConfidenceItem {
 // age range, duration, destination count) instead.
 export interface TripCardFeatureTag {
   icon: string;      // icon-library key, see constants/tripHighlightIcons.ts
-  label: string;      // bold top line, e.g. "Girls-Only"
-  sublabel: string;   // muted second line, e.g. "Safe & fun"
+  label: string;      // bold label shown in the icon row, e.g. "Girls-Only"
+  sublabel?: string;   // unused by the current card display; kept optional for older saved data
 }
 
 export interface TripEndBanner {

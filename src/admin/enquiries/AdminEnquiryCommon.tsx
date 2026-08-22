@@ -432,17 +432,17 @@ export function canSetFollowUp(e: Enquiry): boolean {
 // on calendar day only (follow_up_at has no time component), so "today" is
 // today regardless of what time the admin looks. Returns null when there's
 // no reminder set, so callers can skip rendering the chip entirely.
-export function followUpStatus(e: Enquiry): { label: string; color: string; icon: typeof CalendarClock; isDue: boolean } | null {
+export function followUpStatus(e: Enquiry): { label: string; color: string; icon: typeof CalendarClock; isDue: boolean; isOverdue: boolean } | null {
   if (!e.follow_up_at) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [y, m, d] = e.follow_up_at.split('-').map(Number);
   const target = new Date(y, (m || 1) - 1, d || 1);
   const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
-  const dateLabel = formatDate(e.follow_up_at, { day: 'numeric', month: 'short' });
-  if (diffDays < 0) return { label: `Overdue · ${dateLabel}`, color: 'bg-red-100 text-red-700', icon: CalendarClock, isDue: true };
-  if (diffDays === 0) return { label: 'Follow up today', color: 'bg-amber-100 text-amber-700', icon: CalendarClock, isDue: true };
-  return { label: `Follow up ${dateLabel}`, color: 'bg-blue-50 text-blue-700', icon: CalendarClock, isDue: false };
+  const dateLabel = formatDate(e.follow_up_at, { day: 'numeric', month: 'short', year: undefined });
+  if (diffDays < 0) return { label: `Overdue · ${dateLabel}`, color: 'bg-red-100 text-red-700', icon: CalendarClock, isDue: true, isOverdue: true };
+  if (diffDays === 0) return { label: 'Follow up today', color: 'bg-amber-100 text-amber-700', icon: CalendarClock, isDue: true, isOverdue: false };
+  return { label: `Follow up ${dateLabel}`, color: 'bg-blue-50 text-blue-700', icon: CalendarClock, isDue: false, isOverdue: false };
 }
 
 // Whether a Booking Follow-up reminder can be set on this enquiry right
@@ -491,18 +491,18 @@ export const BOOKING_FOLLOW_UP_TYPE_CONFIG: Record<BookingFollowUpType, { label:
 // the reminder is actually about (e.g. "Balance Payment Reminder") instead
 // of a bare date, since that's the whole point of carrying a type here.
 // Returns null when no Booking Follow-up is set.
-export function bookingFollowUpStatus(e: Enquiry): { label: string; color: string; icon: typeof CalendarClock; isDue: boolean } | null {
+export function bookingFollowUpStatus(e: Enquiry): { label: string; color: string; icon: typeof CalendarClock; isDue: boolean; isOverdue: boolean } | null {
   if (!e.booking_follow_up_at) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [y, m, d] = e.booking_follow_up_at.split('-').map(Number);
   const target = new Date(y, (m || 1) - 1, d || 1);
   const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
-  const dateLabel = formatDate(e.booking_follow_up_at, { day: 'numeric', month: 'short' });
+  const dateLabel = formatDate(e.booking_follow_up_at, { day: 'numeric', month: 'short', year: undefined });
   const typeLabel = e.booking_follow_up_type ? BOOKING_FOLLOW_UP_TYPE_CONFIG[e.booking_follow_up_type].label : 'Booking Follow-up';
-  if (diffDays < 0) return { label: `${typeLabel} · Overdue · ${dateLabel}`, color: 'bg-red-100 text-red-700', icon: CalendarClock, isDue: true };
-  if (diffDays === 0) return { label: `${typeLabel} · Today`, color: 'bg-amber-100 text-amber-700', icon: CalendarClock, isDue: true };
-  return { label: `${typeLabel} · ${dateLabel}`, color: 'bg-blue-50 text-blue-700', icon: CalendarClock, isDue: false };
+  if (diffDays < 0) return { label: `${typeLabel} · Overdue · ${dateLabel}`, color: 'bg-red-100 text-red-700', icon: CalendarClock, isDue: true, isOverdue: true };
+  if (diffDays === 0) return { label: `${typeLabel} · Today`, color: 'bg-amber-100 text-amber-700', icon: CalendarClock, isDue: true, isOverdue: false };
+  return { label: `${typeLabel} · ${dateLabel}`, color: 'bg-blue-50 text-blue-700', icon: CalendarClock, isDue: false, isOverdue: false };
 }
 
 // Every reason an admin can pick when closing an enquiry out — see

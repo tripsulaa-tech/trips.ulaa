@@ -172,6 +172,43 @@ export function formatMonthYear(dateStr: string): string {
   return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 }
 
+/** Split a comma-separated destination string into a dot-separated display
+ *  string, e.g. "Mirissa, Galle, Tangalle" -> "Mirissa • Galle • Tangalle" */
+export function formatDestinationDots(destination: string): string {
+  return destination.split(',').map(s => s.trim()).filter(Boolean).join(' • ');
+}
+
+/** Same as formatDestinationDots, but keeps the result to roughly one line
+ *  by cutting the list off once it would exceed maxChars, folding whatever
+ *  is left into a trailing "+N" instead of wrapping to a second line, e.g.
+ *  "Mirissa • Galle • Tangalle • Yala • Ella • Haputale +1". Always shows
+ *  at least the first destination, even if it alone exceeds maxChars. */
+export function formatDestinationDotsCompact(destination: string, maxChars = 42): string {
+  const places = destination.split(',').map(s => s.trim()).filter(Boolean);
+  if (places.length === 0) return '';
+
+  const shown: string[] = [];
+  for (const place of places) {
+    const candidate = shown.length === 0 ? place : `${shown.join(' • ')} • ${place}`;
+    if (shown.length > 0 && candidate.length > maxChars) break;
+    shown.push(place);
+  }
+
+  const remaining = places.length - shown.length;
+  const text = shown.join(' • ');
+  return remaining > 0 ? `${text} +${remaining}` : text;
+}
+
+/** Whole days remaining until (and including) a deadline date, floored at 0.
+ *  Used for early-bird countdown copy like "Early bird ends in 2 days". */
+export function daysUntil(dateStr: string): number {
+  const deadline = new Date(dateStr);
+  deadline.setHours(23, 59, 59, 999);
+  const now = new Date();
+  const diffMs = deadline.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+}
+
 /** Image placeholder */
 export const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80';
 

@@ -2910,10 +2910,10 @@ export default function AdminEnquiries() {
                     <button
                       onClick={() => setExpandedId(isOpen ? null : e.id)}
                       aria-expanded={isOpen}
-                      className="flex-1 min-w-0 flex items-start justify-between gap-3 text-left py-2.5 pr-1"
+                      className="flex-1 min-w-0 flex flex-col text-left py-2.5 pr-1"
                     >
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm text-dark truncate flex items-center gap-1.5">
+                      <div className="w-full flex items-start justify-between gap-3">
+                        <p className="font-medium text-sm text-dark truncate flex items-center gap-1.5 min-w-0">
                           <span className="text-dark-muted text-xs font-normal shrink-0">#{idx + 1}</span>
                           {e.full_name}
                           {e.package_type === 'early_bird' && (
@@ -2938,55 +2938,51 @@ export default function AdminEnquiries() {
                             </span>
                           )}
                         </p>
-                        <p className="text-dark-muted text-xs truncate mt-0.5">{e.phone}</p>
-                        <div className="flex items-center flex-wrap gap-1 mt-1.5">
-                          {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                            <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-green-100 text-green-700">
-                              Due {formatPrice(paymentBalance(e)!)}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {followUpStatus(e)?.isDue && (
+                            <span title={followUpStatus(e)!.label} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${followUpStatus(e)!.color}`}>
+                              <CalendarClock size={12} className="shrink-0" aria-hidden="true" />
                             </span>
                           )}
-                          {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                            <span className="text-dark-muted/40 text-xs select-none" aria-hidden="true">|</span>
+                          {bookingFollowUpStatus(e)?.isDue && (
+                            <span title={bookingFollowUpStatus(e)!.label} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${bookingFollowUpStatus(e)!.color}`}>
+                              <CalendarClock size={12} className="shrink-0" aria-hidden="true" />
+                            </span>
                           )}
-                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold whitespace-nowrap ${
-                            e.food_preference === 'veg' ? 'text-green-700' : e.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark-muted'
-                          }`}>
-                            <FoodMark type={foodPreferenceKey(e)} size={9} /> {foodBadge(e).label}
+                          <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
+                            <jb.icon size={12} className="shrink-0" aria-hidden="true" />
+                            {jb.label}
                           </span>
-                          <span className="text-dark-muted/40 text-xs select-none" aria-hidden="true">|</span>
-                          {e.group_size && e.group_size > 1 ? (
-                            <span
-                              title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
-                              className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
-                            >
-                              <Users size={9}  aria-hidden="true" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
-                            </span>
-                          ) : (
-                            <span
-                              title="Booked individually, not part of a group"
-                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 bg-slate-100 text-dark-muted"
-                            >
-                              <User size={9}  aria-hidden="true" /> Solo
-                            </span>
-                          )}
+                          <ChevronDown size={16} className={`text-dark-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {followUpStatus(e)?.isDue && (
-                          <span title={followUpStatus(e)!.label} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${followUpStatus(e)!.color}`}>
-                            <CalendarClock size={12} className="shrink-0" aria-hidden="true" />
+                      <p className="text-dark-muted text-xs truncate mt-0.5">{e.phone}</p>
+                      <div className="w-full flex items-center flex-nowrap gap-1.5 mt-1.5 overflow-x-auto no-scrollbar">
+                        {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
+                          <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-green-100 text-green-700 shrink-0">
+                            Due {formatPrice(paymentBalance(e)!)}
                           </span>
                         )}
-                        {bookingFollowUpStatus(e)?.isDue && (
-                          <span title={bookingFollowUpStatus(e)!.label} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${bookingFollowUpStatus(e)!.color}`}>
-                            <CalendarClock size={12} className="shrink-0" aria-hidden="true" />
-                          </span>
-                        )}
-                        <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
-                          <jb.icon size={12} className="shrink-0" aria-hidden="true" />
-                          {jb.label}
+                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold whitespace-nowrap shrink-0 ${
+                          e.food_preference === 'veg' ? 'text-green-700' : e.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark-muted'
+                        }`}>
+                          <FoodMark type={foodPreferenceKey(e)} size={9} /> {foodBadge(e).label}
                         </span>
-                        <ChevronDown size={16} className={`text-dark-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                        {e.group_size && e.group_size > 1 ? (
+                          <span
+                            title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
+                            className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                          >
+                            <Users size={9}  aria-hidden="true" /> {groupLabel(e).replace(/^Group /, '')} · {e.group_seq}/{e.group_size}
+                          </span>
+                        ) : (
+                          <span
+                            title="Booked individually, not part of a group"
+                            className="inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
+                          >
+                            <User size={9}  aria-hidden="true" /> Solo
+                          </span>
+                        )}
                       </div>
                     </button>
                     </div>
@@ -3164,21 +3160,23 @@ export default function AdminEnquiries() {
                             buttons on the enquiry detail page — same Button
                             component, same size, same variants — so the
                             list and detail views feel consistent. */}
+                        {/* All three controls fit one row: the two buttons
+                            share the row via flex-1 (not fullWidth — two
+                            buttons each claiming 100% width was pushing the
+                            "more" kebab menu off screen) while the kebab
+                            stays a fixed, always-visible width. */}
                         <div className="flex items-center gap-2 pt-3">
                           {(followUpStatus(e) || canSetFollowUp(e) || bookingFollowUpStatus(e) || canSetBookingFollowUp(e)) && (
                             <Button
-                              variant="outline"
+                              variant={
+                                followUpStatus(e)?.isOverdue || bookingFollowUpStatus(e)?.isOverdue ? 'outlineDanger'
+                                : followUpStatus(e) || bookingFollowUpStatus(e) ? 'secondary'
+                                : 'outline'
+                              }
                               size="sm"
-                              fullWidth
                               onClick={() => (followUpStatus(e) || canSetFollowUp(e) ? openFollowUpModal(e) : setBookingFollowUpTarget(e))}
                               disabled={updating === e.id}
-                              className={`text-xs !gap-1.5 whitespace-nowrap ${
-                                followUpStatus(e)
-                                  ? `!border-transparent ${followUpStatus(e)!.color}`
-                                  : bookingFollowUpStatus(e)
-                                  ? `!border-transparent ${bookingFollowUpStatus(e)!.color}`
-                                  : ''
-                              }`}
+                              className="flex-1 min-w-0 text-xs !gap-1.5 whitespace-nowrap"
                             >
                               <CalendarClock size={14}  aria-hidden="true" />
                               {followUpStatus(e)?.label || bookingFollowUpStatus(e)?.label || 'Set Follow-up'}
@@ -3187,20 +3185,21 @@ export default function AdminEnquiries() {
                           <Button
                             variant="primary"
                             size="sm"
-                            fullWidth
                             onClick={() => navigate(`/admin/enquiries/${e.id}`)}
-                            className="text-xs !gap-1.5 whitespace-nowrap"
+                            className="flex-1 min-w-0 text-xs !gap-1.5 whitespace-nowrap"
                           >
                             View Full CRM <ArrowRight size={14}  aria-hidden="true" />
                           </Button>
-                          <ActionsMenu
-                            disabled={updating === e.id}
-                            items={[
-                              { label: 'Record Payment', icon: IndianRupee, onClick: () => openPayment(e) },
-                              ...(nma ? [{ label: nma.label, icon: nma.icon, onClick: () => handleAdvance(e) }] : []),
-                              ...buildRowActions(e),
-                            ]}
-                          />
+                          <div className="shrink-0">
+                            <ActionsMenu
+                              disabled={updating === e.id}
+                              items={[
+                                { label: 'Record Payment', icon: IndianRupee, onClick: () => openPayment(e) },
+                                ...(nma ? [{ label: nma.label, icon: nma.icon, onClick: () => handleAdvance(e) }] : []),
+                                ...buildRowActions(e),
+                              ]}
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
