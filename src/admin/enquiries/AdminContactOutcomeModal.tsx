@@ -43,14 +43,18 @@ export default function ContactOutcomeModal({
   const [closedReason, setClosedReason] = useState<ClosedReason>('no_response');
 
   // Reset to a blank slate each time a different lead is opened — never
-  // carry over a previous target's half-filled form.
+  // carry over a previous target's half-filled form. Only target?.id is
+  // read here (the reset values themselves are fixed constants), so that's
+  // the only real dependency.
   useEffect(() => {
     if (!target) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local form state to match a newly-opened target, not syncing an external system
     setOutcome('interested');
     setNotes('');
     setFollowUpAt('');
     setFollowUpTime('');
     setClosedReason('no_response');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only target?.id is read; reset values below are fixed constants, not derived from target
   }, [target?.id]);
 
   const config = CONTACT_OUTCOME_CONFIG[outcome];

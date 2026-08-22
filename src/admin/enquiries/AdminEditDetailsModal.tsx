@@ -17,6 +17,7 @@ export type EditDetailsForm = {
   trip_id: string;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- tiny form-shape constant only ever imported alongside this modal's default export; not worth a dedicated file
 export const emptyEditDetailsForm: EditDetailsForm = {
   full_name: '', email: '', phone: '', city: '', age: '', trip_id: '',
 };

@@ -204,22 +204,33 @@ button, .btn {
   animation: heart-glow 1.8s ease-in-out infinite;
 }
 
-/* Enhanced "Trip starts in" countdown card (mobile) — see TripDetailPage.tsx */
-@keyframes countdown-gradient {
+/* "Trip starts in" countdown card — see TripCountdownCard.tsx */
+@keyframes tc-gradient {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
 }
-.countdown-gradient {
+.tc-gradient {
   background-size: 200% 200%;
-  animation: countdown-gradient 6s ease-in-out infinite;
+  animation: tc-gradient 6s ease-in-out infinite;
 }
 
-@keyframes countdown-shimmer {
-  0% { transform: translateX(-120%) skewX(-15deg); }
-  100% { transform: translateX(220%) skewX(-15deg); }
+/* Small plane icon gliding across the top of the countdown card */
+@keyframes tc-glide {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translate(220px, 14px); opacity: 0; }
 }
-.countdown-shimmer {
-  animation: countdown-shimmer 3.2s ease-in-out infinite;
+.tc-glide {
+  animation: tc-glide 7s ease-in-out infinite;
+}
+
+@keyframes tc-flicker {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.35); opacity: 0.85; }
+}
+.tc-flicker {
+  animation: tc-flicker 3.4s ease-in-out infinite;
 }
 
 /* Loading placeholder sweep shown behind a gallery photo while it loads. */
@@ -231,35 +242,19 @@ button, .btn {
   animation: gallery-shimmer 1.4s ease-in-out infinite;
 }
 
-@keyframes countdown-float {
-  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
-  50% { transform: translateY(-8px) rotate(8deg); opacity: 1; }
-}
-.countdown-float {
-  animation: countdown-float 3.6s ease-in-out infinite;
-}
-
 /* Subtle heartbeat pulse on the Seconds tile so the card visibly feels
    "live" without needing to resync with the actual JS timer tick. */
-@keyframes countdown-tick {
+@keyframes tc-tick {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.06); }
 }
-.countdown-tick {
-  animation: countdown-tick 1s ease-in-out infinite;
-}
-
-@keyframes countdown-border-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 112, 58, 0.35), 0 12px 40px -10px rgba(0, 0, 0, 0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(196, 112, 58, 0), 0 12px 40px -10px rgba(0, 0, 0, 0.5); }
-}
-.countdown-border-glow {
-  animation: countdown-border-glow 2.4s ease-in-out infinite;
+.tc-tick {
+  animation: tc-tick 1s ease-in-out infinite;
 }
 
 /* Faint noise texture layered over the premium countdown card so the dark
    gradient reads as brushed/matte rather than a flat digital fill. */
-.countdown-grain::before {
+.tc-grain::before {
   content: '';
   position: absolute;
   inset: 0;

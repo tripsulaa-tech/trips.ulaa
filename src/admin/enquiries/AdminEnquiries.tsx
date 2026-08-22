@@ -55,12 +55,13 @@ import type { GroupUnit } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG,
   foodBadge, foodPreferenceKey, SOURCE_CONFIG,
-  journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JourneyLifecycleLegend, JOURNEY_STAGE_CONFIG,
+  journeyBadge, nextManualAction, isNotInterested, canMarkNotInterested, JOURNEY_STAGE_CONFIG,
   closedReasonLabel, closedReasonBreakdown, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus, canCancelBooking,
   validatePaymentForm,
 } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
+import { JourneyLifecycleLegend } from './AdminEnquiryLifecycle';
 import { useGenerateInvoice } from './useGenerateInvoice';
 
 import {
@@ -309,6 +310,7 @@ export default function AdminEnquiries() {
   // render without an extra click.
   useEffect(() => {
     if (!detailsTarget) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing stale invoices immediately on modal close, ahead of the async fetch below
       setDetailsInvoices([]);
       return;
     }
@@ -319,11 +321,13 @@ export default function AdminEnquiries() {
       .catch(err => console.error(err))
       .finally(() => { if (!cancelled) setDetailsInvoicesLoading(false); });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only detailsTarget.id is read; re-fetching on every detailsTarget reference change would refetch unnecessarily
   }, [detailsTarget?.id]);
 
   // Same lazy-load pattern, for the Track Payment modal's inline history.
   useEffect(() => {
     if (!paymentTarget) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing stale payment history immediately on modal close, ahead of the async fetch below
       setPaymentHistory([]);
       return;
     }
@@ -334,6 +338,7 @@ export default function AdminEnquiries() {
       .catch(err => console.error(err))
       .finally(() => { if (!cancelled) setPaymentHistoryLoading(false); });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only paymentTarget.id is read; re-fetching on every paymentTarget reference change would refetch unnecessarily
   }, [paymentTarget?.id]);
 
   const load = () => {

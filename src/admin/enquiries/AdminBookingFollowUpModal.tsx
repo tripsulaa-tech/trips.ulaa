@@ -45,11 +45,12 @@ export default function BookingFollowUpModal({
   // slate otherwise — never carry over a previous target's half-filled form.
   useEffect(() => {
     if (!target) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local form state to match a newly-opened target, not syncing an external system
     setType(target.booking_follow_up_type || 'balance_payment');
     setAt(target.booking_follow_up_at || '');
     setTime(target.booking_follow_up_time || '');
     setNotes(target.booking_follow_up_notes || '');
-  }, [target?.id]);
+  }, [target?.id, target?.booking_follow_up_type, target?.booking_follow_up_at, target?.booking_follow_up_time, target?.booking_follow_up_notes]); // eslint-disable-line react-hooks/exhaustive-deps -- target's identity changes every render (parent re-derives it); depending on the fields actually read avoids refiring on unrelated re-renders
 
   const isDirty = at !== (target?.booking_follow_up_at || '')
     || time !== (target?.booking_follow_up_time || '')

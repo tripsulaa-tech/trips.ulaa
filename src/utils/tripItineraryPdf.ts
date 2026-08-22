@@ -2717,7 +2717,7 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
           const inColumn = dy < rightColBottom;
           const lineX = inColumn ? textX : fullX;
           const lineW = inColumn ? textW : fullW;
-          let lineWords: string[] = [];
+          const lineWords: string[] = [];
           let lineText = '';
           while (wi < words.length) {
             const candidate = lineWords.length ? `${lineText} ${words[wi]}` : words[wi];
@@ -2865,7 +2865,8 @@ export async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<j
     // Reserve / status box — full width, matching the live site's green
     // "Reserve today" panel (or the sold-out / almost-full variants)
     const boxTop = ry;
-    let boxH = 30;
+    // Every branch below sets its own boxH — no default needed up front.
+    let boxH: number;
     if (isFull) {
       boxH = 36;
       setFill([253, 235, 234] as RGB);

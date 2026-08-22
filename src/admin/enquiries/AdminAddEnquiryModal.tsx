@@ -56,6 +56,7 @@ export default function AddEnquiryModal({
   const [touchedPeople, setTouchedPeople] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local "touched" tracking to match a newly-opened modal, not syncing an external system
       setTouched(new Set());
       setTouchedPeople(new Set());
     }

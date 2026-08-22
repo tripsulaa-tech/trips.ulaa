@@ -8,6 +8,7 @@ import { formatPrice } from '../../utils/utils-index';
 import { inputClass } from './AdminEnquiriesShared';
 
 export type MarkPaidForm = { payment_method: string; utr_number: string };
+// eslint-disable-next-line react-refresh/only-export-components -- tiny form-shape constant only ever imported alongside this modal's default export; not worth a dedicated file
 export const emptyMarkPaidForm: MarkPaidForm = { payment_method: '', utr_number: '' };
 
 // Settling a pending invoice (Mark Paid) is a real money-collection event

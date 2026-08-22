@@ -18,5 +18,15 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // Allow deliberately-unused `_`-prefixed vars/args (e.g. props a
+      // component accepts-and-ignores for API-compat, destructured only to
+      // exclude them from a `...rest` spread).
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      }],
+    },
   },
 ])

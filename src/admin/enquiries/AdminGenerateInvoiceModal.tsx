@@ -42,6 +42,7 @@ export default function GenerateInvoiceModal({
   // new target is opened.
   const [amountTouched, setAmountTouched] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local "touched" tracking to match a newly-opened target, not syncing an external system
     setAmountTouched(false);
   }, [generateInvoiceTarget?.id]);
 

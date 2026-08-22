@@ -14,8 +14,8 @@ import FoodMark from '../../components/ui/FoodMark';
 import { ContactQuickLinks } from '../../components/ui/DataTableChrome';
 import {
   PACKAGE_CONFIG, INVOICE_TYPE_LABEL, SOURCE_CONFIG, foodBadge, foodPreferenceKey,
-  BookingLifecycleStepper,
 } from './AdminEnquiryCommon';
+import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatDate, formatPrice, formatTime } from '../../utils/utils-index';
 

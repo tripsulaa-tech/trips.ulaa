@@ -86,6 +86,13 @@ export default defineConfig({
           if (normalized.includes('/node_modules/@phosphor-icons/')) {
             return 'vendor-icons';
           }
+          // three.js only loads on trip-detail pages with an active
+          // countdown (see the lazy import in TripDetailPage.tsx) — keeping
+          // it in its own chunk means visitors who never hit that path
+          // never fetch it at all.
+          if (normalized.includes('/node_modules/three/')) {
+            return 'vendor-three';
+          }
           return undefined;
         },
       },

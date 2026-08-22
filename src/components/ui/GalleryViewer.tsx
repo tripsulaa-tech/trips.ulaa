@@ -411,6 +411,7 @@ export default function GalleryViewer({
   // Reset per-open state
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting viewer state to match a newly-opened gallery, not syncing an external system
       setIndex(initialIndex);
       setDirection(0);
       setInfoOpen(false);
@@ -421,12 +422,12 @@ export default function GalleryViewer({
       return () => cancelAnimationFrame(raf);
     }
     triggerRef.current?.focus?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialIndex]);
 
   // Reset zoom flag whenever the visible photo changes (filmstrip/keys can
   // navigate away while zoomed, since zoom only blocks the swipe gesture).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting a derived UI flag when the active photo changes, not syncing an external system
     setIsZoomed(false);
   }, [index]);
 
@@ -489,6 +490,7 @@ export default function GalleryViewer({
 
   // Auto-hide controls on open + whenever they're shown
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicking off the auto-hide timer for newly-shown controls, not syncing an external system
     if (isOpen) resetHideTimer();
     return () => { if (hideTimerRef.current) globalThis.clearTimeout(hideTimerRef.current); };
   }, [isOpen, resetHideTimer]);
@@ -520,6 +522,7 @@ export default function GalleryViewer({
 
   // Reset progressive-load tracking when the gallery itself changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting per-photo load tracking when the gallery's item set changes, not syncing an external system
     setLoadedMap({});
   }, [items]);
 

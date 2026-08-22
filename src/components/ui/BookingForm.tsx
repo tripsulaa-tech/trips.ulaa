@@ -257,6 +257,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // four values actually changes, not on every keystroke.
   useEffect(() => {
     reportDraft();
+    // eslint-disable-next-line react-hooks/incompatible-library -- react-hook-form's watch() is inherently unmemoizable; only used locally here, never passed to a memoized child
     const subscription = watch(() => reportDraft());
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps

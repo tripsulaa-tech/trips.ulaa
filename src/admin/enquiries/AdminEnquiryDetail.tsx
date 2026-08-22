@@ -68,11 +68,12 @@ import {
   parseNonNegative, PACKAGE_CONFIG, PACKAGE_OPTIONS, INVOICE_TYPE_LABEL,
   GENERATE_INVOICE_STATUS_OPTIONS, availablePaymentTypeOptions, clearsBalance,
   foodBadge, foodPreferenceKey, FOOD_PREFERENCE_OPTIONS, SOURCE_CONFIG,
-  journeyBadge, nextManualAction, BookingLifecycleStepper, getTripActivePricing, isNotInterested, canMarkNotInterested,
+  journeyBadge, nextManualAction, getTripActivePricing, isNotInterested, canMarkNotInterested,
   NOT_INTERESTED_REASON_OPTIONS, closedReasonLabel, canSetFollowUp, followUpStatus, canCancelBooking,
   CANCELLATION_REASON_OPTIONS, REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
   validatePaymentForm,
 } from './AdminEnquiryCommon';
+import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquiriesShared';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
@@ -153,6 +154,7 @@ export default function AdminEnquiryDetail() {
 
   useEffect(() => {
     if (!enquiry) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing stale payments immediately on enquiry change, ahead of the async fetch below
       setPayments([]);
       return;
     }
@@ -163,7 +165,7 @@ export default function AdminEnquiryDetail() {
       .catch(err => console.error(err))
       .finally(() => { if (!cancelled) setPaymentsLoading(false); });
     return () => { cancelled = true; };
-  }, [enquiry?.id]);
+  }, [enquiry?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- only enquiry.id is read; re-fetching on every enquiry reference change (e.g. every load() call) would refetch unnecessarily
 
   // Activity Timeline (CRM spec section 14) — re-fetched every time `load()`
   // sets a fresh `enquiry` object, same trigger as the payments effect
@@ -172,6 +174,7 @@ export default function AdminEnquiryDetail() {
   // refresh.
   useEffect(() => {
     if (!enquiry) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing stale activity log immediately on enquiry change, ahead of the async fetch below
       setActivityLog([]);
       return;
     }
@@ -182,7 +185,7 @@ export default function AdminEnquiryDetail() {
       .catch(err => console.error(err))
       .finally(() => { if (!cancelled) setActivityLogLoading(false); });
     return () => { cancelled = true; };
-  }, [enquiry?.id, enquiry?.updated_at]);
+  }, [enquiry?.id, enquiry?.updated_at]); // eslint-disable-line react-hooks/exhaustive-deps -- only enquiry.id/updated_at are read; re-fetching on every enquiry reference change would refetch unnecessarily
 
   // Fixed lookup for a specific package (used once the admin has picked
   // Early Bird / Normal explicitly in the Track Payment modal).
@@ -221,6 +224,7 @@ export default function AdminEnquiryDetail() {
   useEffect(() => {
     if (!enquiry) return;
     if (paymentForm.payment_type === 'balance' && !clearsBalance(paymentForm, enquiry.amount_paid || 0)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- self-correcting a form field once it stops satisfying an invariant, guarded so it only fires on the actual violating transition
       setPaymentForm(f => ({ ...f, payment_type: 'installment' }));
     }
   }, [enquiry, paymentForm]);
