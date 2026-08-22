@@ -5,7 +5,13 @@ import { useEffect, useState } from 'react';
 // for updates on navigation by default, which is easy to miss in an SPA
 // where a tab (especially the admin panel) stays open for a long session
 // without a full reload — so this checks explicitly on an interval instead.
-const CHECK_INTERVAL_MS = 15_000;
+//
+// Kept short (rather than the 15s this used to be) because a longer gap
+// between reg.update() calls is exactly what made the "refresh available"
+// toast feel like it took forever to show up after a Vercel deploy — the
+// tab was simply waiting out the rest of its interval before it even asked
+// the browser to look for a new /sw.js.
+const CHECK_INTERVAL_MS = 4_000;
 
 /**
  * Detects when a newer build of the site has been deployed while the user

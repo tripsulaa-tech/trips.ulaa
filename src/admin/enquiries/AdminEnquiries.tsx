@@ -2913,24 +2913,9 @@ export default function AdminEnquiries() {
                       className="flex-1 min-w-0 flex items-start justify-between gap-3 text-left py-2.5 pr-1"
                     >
                       <div className="min-w-0">
-                        <p className="font-medium text-dark truncate flex items-center gap-1.5">
+                        <p className="font-medium text-sm text-dark truncate flex items-center gap-1.5">
                           <span className="text-dark-muted text-xs font-normal shrink-0">#{idx + 1}</span>
                           {e.full_name}
-                          {e.group_size && e.group_size > 1 ? (
-                            <span
-                              title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
-                              className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
-                            >
-                              <Users size={9}  aria-hidden="true" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
-                            </span>
-                          ) : (
-                            <span
-                              title="Booked individually, not part of a group"
-                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 bg-slate-100 text-dark-muted"
-                            >
-                              <User size={9}  aria-hidden="true" /> Solo
-                            </span>
-                          )}
                           {e.package_type === 'early_bird' && (
                             <span
                               title="Early Bird"
@@ -2968,6 +2953,22 @@ export default function AdminEnquiries() {
                           }`}>
                             <FoodMark type={foodPreferenceKey(e)} size={9} /> {foodBadge(e).label}
                           </span>
+                          <span className="text-dark-muted/40 text-xs select-none" aria-hidden="true">|</span>
+                          {e.group_size && e.group_size > 1 ? (
+                            <span
+                              title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
+                              className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                            >
+                              <Users size={9}  aria-hidden="true" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
+                            </span>
+                          ) : (
+                            <span
+                              title="Booked individually, not part of a group"
+                              className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 bg-slate-100 text-dark-muted"
+                            >
+                              <User size={9}  aria-hidden="true" /> Solo
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">

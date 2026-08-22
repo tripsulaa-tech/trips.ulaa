@@ -32,6 +32,13 @@ import {
   ClockCounterClockwise as History,
   Copy,
   Check,
+  Briefcase,
+  Buildings as Building2,
+  ForkKnife as Utensils,
+  CalendarBlank as CalendarDays,
+  Globe,
+  Package,
+  ChatCircle as MessageCircle,
 } from '@phosphor-icons/react';
 import AdminLayout from '../AdminLayout';
 import Button from '../../components/ui/Button';
@@ -910,14 +917,14 @@ export default function AdminEnquiryDetail() {
                 </span>
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
+            <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0">
               {nma && (
-                <Button variant="primary" size="sm" onClick={handleAdvance} disabled={busyAction}>
+                <Button variant="primary" size="sm" onClick={handleAdvance} disabled={busyAction} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
                   <nma.icon size={14} aria-hidden="true" /> {nma.label}
                 </Button>
               )}
               {canMarkNotInterested(enquiry) && (
-                <Button variant="outline" size="sm" onClick={handleMarkNotInterested} disabled={busyAction || busyStatus}>
+                <Button variant="outline" size="sm" onClick={handleMarkNotInterested} disabled={busyAction || busyStatus} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
                   <UserMinus size={14} aria-hidden="true" /> Not Interested
                 </Button>
               )}
@@ -928,7 +935,7 @@ export default function AdminEnquiryDetail() {
               {!enquiry.booking_id && (
                 <>
                   {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
-                    <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
+                    <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
                       <CalendarClock size={14} aria-hidden="true" /> Set Follow-up
                     </Button>
                   )}
@@ -959,9 +966,9 @@ export default function AdminEnquiryDetail() {
                   </button>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
+              <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0">
                 {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
-                  <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp}>
+                  <Button variant="outline" size="sm" onClick={handleOpenFollowUp} disabled={busyAction || busyFollowUp} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
                     <CalendarClock size={14} aria-hidden="true" /> Set Follow-up
                   </Button>
                 )}
@@ -1107,60 +1114,111 @@ export default function AdminEnquiryDetail() {
             <User size={18} className="shrink-0 text-dark-muted" aria-hidden="true" /> Traveller &amp; Trip
           </p>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-4 border-b border-background-warm">
-            <div className="min-w-0">
-              <p className="text-dark-muted text-xs">Email</p>
-              <p className="text-dark text-sm font-semibold truncate">{enquiry.email}</p>
-            </div>
+          <div className="grid grid-cols-2 gap-x-3 pb-4 border-b border-background-warm">
             <div className="min-w-0">
               <p className="text-dark-muted text-xs">Phone</p>
               <p className="text-dark text-sm font-semibold truncate">{enquiry.phone}</p>
             </div>
-            <ContactQuickLinks phone={enquiry.phone} email={enquiry.email} name={enquiry.full_name} tripTitle={enquiry.trip_title} size="md" />
-          </div>
-
-          <div className="grid grid-cols-3 gap-x-4 gap-y-3 py-4 border-b border-background-warm text-sm">
             <div className="min-w-0">
-              <p className="text-dark-muted text-xs">Trip</p>
-              <p className="text-dark font-semibold">
-                {enquiry.trip_id ? enquiry.trip_title : (
-                  <span className="text-dark-muted italic font-normal">
-                    {isGeneralContactMessage ? 'None — Contact Us message' : 'None — logged without a trip'}
-                  </span>
-                )}
-              </p>
+              <p className="text-dark-muted text-xs">Email</p>
+              <p className="text-dark text-sm font-semibold truncate">{enquiry.email}</p>
             </div>
-            <div className="min-w-0">
-              <p className="text-dark-muted text-xs">City</p>
-              <p className="text-dark font-semibold truncate">{enquiry.city || '—'}</p>
-            </div>
-            <div className="min-w-0">
-              <p className="text-dark-muted text-xs">Age</p>
-              <p className="text-dark font-semibold truncate">{enquiry.age ?? '—'}</p>
+            <div className="col-span-2 mt-3">
+              <ContactQuickLinks phone={enquiry.phone} email={enquiry.email} name={enquiry.full_name} tripTitle={enquiry.trip_title} size="md" />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 pt-4 text-sm">
-            <div className="min-w-0">
-              <p className="text-dark-muted text-xs">Source</p>
-              <p className="text-dark font-semibold truncate inline-flex items-center gap-1">
-                <srcCfg.icon size={12} className="shrink-0" aria-hidden="true" /> {srcCfg.label}
-              </p>
+          <div className="divide-y divide-background-warm">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                  <Briefcase size={15} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-xs">Trip</p>
+                  <p className="text-dark text-sm font-semibold truncate">
+                    {enquiry.trip_id ? enquiry.trip_title : (
+                      <span className="text-dark-muted italic font-normal">
+                        {isGeneralContactMessage ? 'None — Contact Us message' : 'None — logged without a trip'}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                  <User size={15} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-xs">Age</p>
+                  <p className="text-dark text-sm font-semibold truncate">{enquiry.age ?? '—'}</p>
+                </div>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-dark-muted text-xs">Package</p>
-              <p className="text-dark font-semibold truncate">{PACKAGE_CONFIG[enquiry.package_type || 'normal'].label}</p>
+
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                  <Building2 size={15} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-xs">City</p>
+                  <p className="text-dark text-sm font-semibold truncate">{enquiry.city || '—'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                  <Utensils size={15} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-xs">Food Preference</p>
+                  <p className={`text-sm font-semibold truncate flex items-center gap-1 ${
+                    enquiry.food_preference === 'veg' ? 'text-green-700' : enquiry.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark'
+                  }`}>
+                    {(enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg') && <FoodMark type={enquiry.food_preference} size={11} />}
+                    {enquiry.food_preference === 'veg' ? 'Veg' : enquiry.food_preference === 'non_veg' ? 'Non-veg' : '—'}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="min-w-0 col-span-2 sm:col-span-1">
-              <p className="text-dark-muted text-xs">Date &amp; Time</p>
-              <p className="text-dark font-semibold">
-                {formatDate(enquiry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(enquiry.created_at)}
-              </p>
+
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                  <CalendarDays size={15} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-xs">Date &amp; Time</p>
+                  <p className="text-dark text-sm font-semibold truncate">{formatDate(enquiry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  <p className="text-dark-muted text-xs truncate">{formatTime(enquiry.created_at)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                  <Globe size={15} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-xs">Source</p>
+                  <p className="text-dark text-sm font-semibold truncate">{srcCfg.label}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4 items-center">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                  {enquiry.package_type === 'early_bird' ? <Bird size={15} aria-hidden="true" /> : <Package size={15} aria-hidden="true" />}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-xs">Package</p>
+                  <p className="text-dark text-sm font-semibold truncate">{PACKAGE_CONFIG[enquiry.package_type || 'normal'].label}</p>
+                </div>
+              </div>
             </div>
           </div>
 
           {enquiry.message && (
-            <div className="mt-4 pt-4 border-t border-background-warm">
+            <div className="mt-1 pt-4 border-t border-background-warm">
               <p className="text-dark-muted text-xs mb-1">Message</p>
               <p className="text-dark text-sm whitespace-pre-wrap">{enquiry.message}</p>
             </div>
