@@ -136,14 +136,24 @@ export default function AdminHomeHero() {
     }
   };
 
-  const resetToDefault = async () => {
+  const handleCancel = async () => {
+    if (!hasUnsavedChanges()) return;
     const ok = await confirm({
-      title: 'Remove all slides?',
-      message: 'This clears every photo below (not saved until you click Save) and the homepage will show its original default image instead.',
-      confirmLabel: 'Reset',
+      title: 'Discard changes?',
+      message: 'This discards every unsaved edit below and reverts to the last saved version.',
+      confirmLabel: 'Discard',
     });
     if (!ok) return;
-    setContent(DEFAULT_HOME_HERO);
+
+    // Best-effort cleanup of anything uploaded since the last save (new
+    // photos added, or a desktop/mobile image replaced) that's about to be
+    // discarded, so it doesn't sit around as an orphan in storage.
+    const unsavedUrls = collectStorageUrls(content, STORAGE_BUCKET);
+    for (const url of unsavedUrls) {
+      if (!savedUrlsRef.current.has(url)) deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
+    }
+
+    setContent(JSON.parse(savedContentRef.current) as HomeHeroContent);
   };
 
   if (loading) {
@@ -248,8 +258,15 @@ export default function AdminHomeHero() {
                         slide.active ? 'border-background-warm bg-white' : 'border-background-warm bg-background-warm/50 opacity-60'
                       }`}
                     >
-                      <div className="w-28 h-20 flex-shrink-0 rounded-md overflow-hidden border border-background-warm">
-                        <img src={slide.image} alt="" className="w-full h-full object-cover" />
+                      <div className="w-36 flex-shrink-0">
+                        <ImageUploadField
+                          label=""
+                          value={slide.image}
+                          onChange={url => updateSlide(slide.id, { image: url })}
+                          bucket={STORAGE_BUCKET}
+                          pathPrefix="home-hero"
+                          aspectRatio="3/2"
+                        />
                       </div>
                       <div className="flex-1 min-w-0 space-y-2">
                         <div className="flex items-center justify-between gap-2">
@@ -392,8 +409,8 @@ export default function AdminHomeHero() {
               <span className="hidden sm:inline">Save Changes</span>
               <span className="sm:hidden">Save</span>
             </Button>
-            <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={resetToDefault}>
-              Remove All
+            <Button variant="outline" size="md" className="sm:flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleCancel}>
+              Cancel
             </Button>
             {saved && <span role="status" className="text-sm text-green-600 font-medium">Saved!</span>}
           </div>
