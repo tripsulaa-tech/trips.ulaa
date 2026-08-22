@@ -26,9 +26,9 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05, duration: 0.3 }}
-        className="group bg-white rounded-2xl border border-background-warm shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col"
+        className="group bg-white rounded-2xl border border-background-warm shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col overflow-hidden"
       >
-        <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden rounded-t-2xl block">
+        <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden block">
           <div className="w-full h-full transition-transform duration-700 group-hover:scale-110">
             <img
               src={trip.cover_image || PLACEHOLDER_IMAGE}
@@ -84,10 +84,10 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="group bg-white rounded-2xl border border-background-warm shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col"
+      className="group bg-white rounded-2xl border border-background-warm shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col overflow-hidden"
     >
       {/* Image */}
-      <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden rounded-t-2xl block">
+      <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden block">
         {/*
           The hover-zoom (group-hover:scale-110) lives on this wrapper div
           rather than the <img> itself, because the saved cover_image_crop
@@ -153,9 +153,9 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         </div>
 
         {/* Destination overlay */}
-        <div className="absolute bottom-4 left-4">
-          <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/30 text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md">
-            <MapPin size={13} />
+        <div className="absolute bottom-4 left-4 right-4">
+          <div className="inline-flex items-start gap-1.5 bg-white text-dark text-xs font-button font-semibold px-3 py-1.5 rounded-md shadow-warm max-w-full">
+            <MapPin size={13} className="text-primary shrink-0 mt-0.5" />
             <span>{trip.destination}</span>
           </div>
         </div>
@@ -221,12 +221,12 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           {/* Feature tag row: admin-set marketing tags when configured
               (e.g. "Girls-Only" / "Safe & fun"), else auto-generated from
               real trip data — see featureTags above. */}
-          <div className="grid grid-cols-4 gap-1 border-t border-background-warm pt-3 mb-5 text-center">
+          <div className="grid grid-cols-4 gap-1 divide-x divide-background-warm border-t border-background-warm pt-3 mb-5 text-center">
             {featureTags.map((tag, i) => {
               const iconMeta = getTripHighlightIcon(tag.icon);
               const TagIcon = iconMeta?.Icon;
               return (
-                <div key={i} className="flex flex-col items-center gap-1 min-w-0">
+                <div key={i} className="flex flex-col items-center gap-1 min-w-0 px-1">
                   <span className="w-[34px] h-[34px] rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     {TagIcon && <TagIcon size={14} className="text-primary" aria-hidden="true" />}
                   </span>
