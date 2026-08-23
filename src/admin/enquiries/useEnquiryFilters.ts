@@ -6,7 +6,7 @@ import { paymentStatus, isGroupEntry } from './AdminEnquiriesShared';
 import { formatDate, downloadCsv } from '../../utils/utils-index';
 
 export type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status' | 'follow_up';
-export type FilterPanelKey = 'trip' | 'query' | 'journey' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null;
+type FilterPanelKey = 'trip' | 'query' | 'journey' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null;
 
 // Table pagination — 50 rows per page, matching the reference table design.
 export const ENQUIRIES_PAGE_SIZE = 10;

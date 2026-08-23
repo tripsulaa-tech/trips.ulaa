@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from 'react';
 import type { RefObject } from 'react';
 
-export interface DropdownCoords {
+interface DropdownCoords {
   top: number;
   left: number;
   width: number;

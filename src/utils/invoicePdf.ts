@@ -4,6 +4,7 @@ import type { Enquiry, Payment } from '../types/types-index';
 import { formatPrice, formatDate } from './utils-index';
 import { sanitizeForPdf } from './pdfText';
 import { loadContainImage } from './pdfImageLoading';
+import { BRAND_BASE, COLORS_BASE, type RGB } from './pdf/shared';
 
 // =============================================================================
 // Invoice generation — drawn as a real, native vector PDF (jsPDF text/shape
@@ -37,38 +38,21 @@ import { loadContainImage } from './pdfImageLoading';
 //                            Share API
 // =============================================================================
 
-type RGB = readonly [number, number, number];
+
 
 // Kept in sync with the @theme block in src/styles/globals.css and the same
 // palette src/utils/tripItineraryPdf.ts uses, so the invoice and the
 // itinerary PDF read as the same document family.
 const COLORS = {
-  primary: [168, 90, 42] as RGB,
-  primaryDark: [139, 72, 32] as RGB,
-  secondary: [217, 138, 58] as RGB,
-  dark: [45, 33, 24] as RGB,
-  darkMuted: [74, 55, 40] as RGB,
-  background: [248, 244, 236] as RGB,
-  backgroundWarm: [242, 235, 224] as RGB,
-  cream: [250, 247, 242] as RGB,
-  gold: [200, 150, 42] as RGB,
-  white: [255, 255, 255] as RGB,
-  green: [45, 140, 90] as RGB,
+  ...COLORS_BASE,
   greenBg: [227, 240, 231] as RGB,
-  red: [190, 70, 65] as RGB,
   redBg: [247, 227, 224] as RGB,
   amberBg: [251, 238, 216] as RGB,
-  grayLine: [222, 211, 199] as RGB,
-  grayLineSoft: [232, 224, 213] as RGB,
 } as const;
 
 const BRAND = {
-  name: 'ULAA',
+  ...BRAND_BASE,
   tagline: 'GIRLS-ONLY TRAVEL COMMUNITY',
-  website: 'www.ulaatrips.com',
-  instagram: '@ulaa.trips',
-  email: 'trips.ulaa@gmail.com',
-  phone: '+91 63813 36772',
   bottomTagline: 'Empowering women to explore, together.',
 };
 

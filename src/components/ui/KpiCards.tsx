@@ -1,6 +1,6 @@
 import type { Icon } from '@phosphor-icons/react';
 
-export interface KpiCardData {
+interface KpiCardData {
   label: string;
   value: number;
   sub: string;

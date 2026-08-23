@@ -13,14 +13,13 @@ import { useConfirm } from '../components/ui/useConfirm';
 import { collectStorageUrls } from '../utils/utils-index';
 import type { FounderContent, AboutFounderSocialLink } from '../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
+import { labelClass } from './about-sections/shared';
 
 // This used to be a section inside the About admin page. It's now its own
 // tab because the same founder data is shared across three public pages —
 // About, Home, and Upcoming Trips (all render the same MeetTheFounder
 // component, see src/sections/home/MeetTheFounder.tsx) — rather than being
 // About-specific content. Editing it here updates it everywhere at once.
-
-const labelClass = 'block text-sm font-medium text-dark mb-1';
 
 // Only one section today, but kept as a list (like AdminAbout/AdminWhyULAA)
 // so the tab bar / scroll-spy code is identical across all three pages —

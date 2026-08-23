@@ -9,7 +9,7 @@ import { foodBadge, hasSeatOpen, messageWithoutFoodBreakdown, seatsNeeded, conve
 export type WaitlistSortKey = 'name' | 'group' | 'food' | 'trip' | 'joined' | 'status';
 
 // Table pagination — 10 rows per page.
-export const WAITLIST_PAGE_SIZE = 10;
+const WAITLIST_PAGE_SIZE = 10;
 
 /** Owns every filter/search/sort/pagination knob for the waitlist list —
  *  Status, Trip, search text, column sort, and current page — plus the

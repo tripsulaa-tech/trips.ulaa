@@ -12,6 +12,9 @@ import {
   Clock,
 } from '@phosphor-icons/react';
 import type { WaitlistEntry } from '../../types/types-index';
+import { FOOD_PREFERENCE_OPTIONS } from '../../constants/foodPreference';
+
+export { FOOD_PREFERENCE_OPTIONS };
 
 export const STATUS_CONFIG = {
   waiting: { label: 'Waiting', color: 'bg-amber-100 text-amber-700', icon: Circle },
@@ -38,12 +41,6 @@ export const EDITABLE_STATUS_OPTIONS = (['waiting', 'notified', 'declined', 'exp
   value: key,
   label: key === 'notified' ? 'Offer Seat' : STATUS_CONFIG[key].label,
 }));
-
-export const FOOD_PREFERENCE_OPTIONS = [
-  { value: '', label: 'Not asked / unknown' },
-  { value: 'veg', label: 'Veg' },
-  { value: 'non_veg', label: 'Non-veg' },
-];
 
 export type WaitlistForm = {
   full_name: string;

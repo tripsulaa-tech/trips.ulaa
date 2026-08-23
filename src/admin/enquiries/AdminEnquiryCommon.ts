@@ -33,6 +33,9 @@ import {
 } from '@phosphor-icons/react';
 import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { formatDate, getActivePrice } from '../../utils/utils-index';
+import { FOOD_PREFERENCE_OPTIONS } from '../../constants/foodPreference';
+
+export { FOOD_PREFERENCE_OPTIONS };
 
 // Parses a money-field <input type="number"> value into a non-negative
 // number, or '' if the field is empty. The HTML `min={0}` attribute on
@@ -319,12 +322,6 @@ export function validateGenerateInvoiceForm(form: GenerateInvoiceForm, amountTou
 
   return errors;
 }
-
-export const FOOD_PREFERENCE_OPTIONS = [
-  { value: '', label: 'Not asked / unknown' },
-  { value: 'veg', label: 'Veg' },
-  { value: 'non_veg', label: 'Non-veg' },
-];
 
 // Works out which price currently applies to a trip an enquiry is linked
 // to — early-bird if that price/deadline are set and today is still on or

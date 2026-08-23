@@ -18,6 +18,7 @@ import { DEFAULT_HOME_HERO, mergeWithDefaults } from '../constants/home-hero';
 import { useConfirm } from '../components/ui/useConfirm';
 import { collectStorageUrls } from '../utils/utils-index';
 import type { HomeHeroContent, HomeHeroSlide } from '../types/types-index';
+import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 
 const STORAGE_BUCKET = 'ulaa';
 
@@ -199,7 +200,7 @@ export default function AdminHomeHero() {
                     value={content.interval_seconds}
                     onChange={e => setContent(c => ({ ...c, interval_seconds: Math.max(2, Number(e.target.value) || 6) }))}
                     disabled={!content.autoplay}
-                    className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors disabled:opacity-50"
+                    className={`${inputClass} disabled:opacity-50`}
                   />
                 </div>
               </div>

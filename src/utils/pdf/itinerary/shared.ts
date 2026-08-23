@@ -8,6 +8,9 @@ import {
 import { formatPrice } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
 import { fetchAsDataUrl, loadImageEl } from '../../pdfImageLoading';
+import { BRAND_BASE, COLORS_BASE, type RGB } from '../shared';
+
+export type { RGB } from '../shared';
 
 // Icons drawn into the PDF can come from either the lucide-react imports
 // above (chrome/fallback glyphs) or from the trip highlight icon store,
@@ -16,8 +19,6 @@ import { fetchAsDataUrl, loadImageEl } from '../../pdfImageLoading';
 // accepts either, since both render to plain SVG markup via
 // `renderToStaticMarkup` the same way.
 export type AnyIcon = TripHighlightIconType;
-
-export type RGB = readonly [number, number, number];
 
 export function rgbToHex([r, g, b]: RGB): string {
   return `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`;
@@ -68,12 +69,8 @@ export function getThingsToCarryFallbackIcon(item: string): AnyIcon {
 // Static, site-wide brand info (not trip data) shown on the cover strip and
 // the closing slide — the same constants used in the site footer/contact page.
 export const BRAND = {
-  name: 'ULAA',
+  ...BRAND_BASE,
   tagline: 'Girls-Only Travel Community',
-  website: 'www.ulaatrips.com',
-  instagram: '@ulaa.trips',
-  email: 'trips.ulaa@gmail.com',
-  phone: '+91 63813 36772',
 };
 
 // PowerPoint's default 16:9 widescreen slide size (13.333in × 7.5in),
@@ -85,21 +82,8 @@ export const CONTENT_W = PAGE_W - MARGIN * 2;
 export const CONTENT_BOTTOM = PAGE_H - 40; // leaves room for the page-number badge
 
 export const COLORS = {
-  primary: [168, 90, 42] as RGB,
-  primaryDark: [139, 72, 32] as RGB,
-  secondary: [217, 138, 58] as RGB,
-  dark: [45, 33, 24] as RGB,
-  darkMuted: [74, 55, 40] as RGB,
-  background: [248, 244, 236] as RGB,
-  backgroundWarm: [242, 235, 224] as RGB,
-  cream: [250, 247, 242] as RGB,
-  gold: [200, 150, 42] as RGB,
-  white: [255, 255, 255] as RGB,
+  ...COLORS_BASE,
   whiteMuted: [230, 220, 209] as RGB,
-  green: [45, 140, 90] as RGB,
-  red: [190, 70, 65] as RGB,
-  grayLine: [222, 211, 199] as RGB,
-  grayLineSoft: [232, 224, 213] as RGB,
 } as const;
 
 // Mirrors TRIP_HIGHLIGHT_ICON_PALETTE in src/constants/tripHighlightIcons.ts —
