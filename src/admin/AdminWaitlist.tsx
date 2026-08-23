@@ -1,579 +1,80 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Trash as Trash2,
-  Envelope as Mail,
-  Phone,
-  ChatDots as MessageSquare,
   Users,
   Bell,
   CheckCircle as CheckCircle2,
   XCircle,
   Circle,
   Confetti as PartyPopper,
-  UserPlus,
-  CaretDown as ChevronDown,
-  SlidersHorizontal,
-  ArrowsClockwise as RefreshCw,
-  MagnifyingGlass as Search,
-  X,
-  Plus,
-  User,
-  CalendarBlank as CalendarDays,
   Clock,
+  Plus,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
-import Select from '../components/ui/Select';
-import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
-import FoodMark from '../components/ui/FoodMark';
-import FilterDropdown from './enquiries/AdminFilterDropdown';
 import { KpiCards, KpiCarousel } from '../components/ui/KpiCards';
-import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
-import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
-import type { SortDirection } from '../components/ui/dataTableUtils';
-import { useConfirm } from '../components/ui/useConfirm';
-import { useAlert } from '../components/ui/useAlert';
-import { getWaitlistEntries, updateWaitlistStatus, deleteWaitlistEntry, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getEnquiries, submitWaitlist } from '../services/api';
-import { formatDate, seatsLeft, buildGroupLetterMap, downloadCsv } from '../utils/utils-index';
-import type { GroupUnit } from '../utils/utils-index';
-import type { WaitlistEntry, UpcomingTrip, CompletedTrip, Enquiry } from '../types/types-index';
+import { useDragScroll } from '../components/ui/dataTableUtils';
+import { useWaitlistData } from './waitlist/useWaitlistData';
+import { useWaitlistGroups } from './waitlist/useWaitlistGroups';
+import { useWaitlistFilters } from './waitlist/useWaitlistFilters';
+import { useWaitlistActions } from './waitlist/useWaitlistActions';
+import { useAddWaitlistModal } from './waitlist/useAddWaitlistModal';
+import AdminAddWaitlistModal from './waitlist/AdminAddWaitlistModal';
+import AdminWaitlistFilterBar from './waitlist/AdminWaitlistFilterBar';
+import AdminWaitlistDesktopTable from './waitlist/AdminWaitlistDesktopTable';
+import AdminWaitlistMobileCards from './waitlist/AdminWaitlistMobileCards';
+import { hasSeatOpen } from './waitlist/waitlistShared';
 
-const STATUS_CONFIG = {
-  waiting: { label: 'Waiting', color: 'bg-amber-100 text-amber-700', icon: Circle },
-  // Displayed label is deliberately "Offer Sent" rather than "Notified" —
-  // the underlying DB value/status key stays 'notified' (no migration
-  // needed), only the admin-facing copy changed.
-  notified: { label: 'Offer Sent', color: 'bg-blue-100 text-blue-700', icon: Bell },
-  converted: { label: 'Converted', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
-  declined: { label: 'Declined', color: 'bg-red-100 text-red-700', icon: XCircle },
-  // A waiting entry that sat too long without being offered a seat or
-  // converting — manually set by the admin, same as declined.
-  expired: { label: 'Expired', color: 'bg-slate-200 text-dark-muted', icon: Clock },
-} as const;
-
-// 'converted' is deliberately excluded here — it's never manually
-// selectable. It's only ever set by the app itself once a linked enquiry
-// with an actual advance payment exists (see AdminEnquiries.handleSave /
-// markWaitlistConverted). The DB trigger enforces this too, but the point
-// is to not even offer the option that led to the bug in the first place.
-// The 'notified' option is labeled "Offer Seat" here (the action an admin
-// takes), distinct from the "Offer Sent" label STATUS_CONFIG shows once
-// that status is already active.
-const EDITABLE_STATUS_OPTIONS = (['waiting', 'notified', 'declined', 'expired'] as const).map(key => ({
-  value: key,
-  label: key === 'notified' ? 'Offer Seat' : STATUS_CONFIG[key].label,
-}));
-
-// Renders the "Offer expires in Xh" / "Offer expired Xh ago" line under a
-// 'notified' entry's status control (CRM spec section 9's Offer Expiry
-// field). Purely a read display — nothing here auto-changes status; an
-// admin still has to convert/decline or explicitly pick "Expired" from the
-// dropdown, same as every other waitlist transition on this page.
-function offerExpiryLabel(offerExpiry: string | null | undefined): { text: string; overdue: boolean } | null {
-  if (!offerExpiry) return null;
-  const diffMs = new Date(offerExpiry).getTime() - Date.now();
-  if (diffMs <= 0) {
-    const hoursAgo = Math.round(Math.abs(diffMs) / (60 * 60 * 1000));
-    return { text: hoursAgo < 1 ? 'Offer expired' : `Offer expired ${hoursAgo}h ago`, overdue: true };
-  }
-  const hoursLeft = Math.round(diffMs / (60 * 60 * 1000));
-  return { text: hoursLeft < 1 ? 'Offer expires soon' : `Offer expires in ${hoursLeft}h`, overdue: false };
-}
-
-const FOOD_PREFERENCE_OPTIONS = [
-  { value: '', label: 'Not asked / unknown' },
-  { value: 'veg', label: 'Veg' },
-  { value: 'non_veg', label: 'Non-veg' },
-];
-
-type WaitlistForm = {
-  full_name: string;
-  phone: string;
-  email: string;
-  age: number | '';
-  city: string;
-  emergency_contact: string;
-  trip_id: string;
-  food_preference: 'veg' | 'non_veg' | '';
-  group_size: number | '';
-  message: string;
-};
-
-const emptyWaitlistForm: WaitlistForm = {
-  full_name: '', phone: '', email: '', age: '', city: '', emergency_contact: '',
-  trip_id: '', food_preference: '', group_size: '', message: '',
-};
-
+/** The Waitlist admin page — everyone who signed up to be notified when a
+ *  sold-out trip frees a seat.
+ *
+ *  This component is deliberately just an orchestrator: data loading lives
+ *  in useWaitlistData, group-lettering in useWaitlistGroups, filter/sort/
+ *  pagination/export in useWaitlistFilters, row actions (status change,
+ *  delete, convert, queue rank) in useWaitlistActions, and the manual "Add
+ *  to Waitlist" modal's state in useAddWaitlistModal — see ./waitlist/ for
+ *  those, plus the desktop table, mobile cards, filter bar, and modal
+ *  components this file composes. Split out of a single ~1350-line
+ *  AdminWaitlist.tsx for maintainability; see that file's git history for
+ *  the original single-component version. */
 export default function AdminWaitlist() {
-  const confirm = useConfirm();
-  const alert = useAlert();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [entries, setEntries] = useState<WaitlistEntry[]>([]);
-  const [seatsAvailable, setSeatsAvailable] = useState<Record<string, number>>({});
-  // Full upcoming-trips list (not just trips that already have waitlist
-  // entries, unlike the `trips` filter options below) — needed so the Add
-  // to Waitlist modal can offer every sold-out-or-not trip, including ones
-  // with zero signups so far.
-  const [allTrips, setAllTrips] = useState<UpcomingTrip[]>([]);
-  // Completed-trip lookup only — same reasoning as AdminEnquiries: a
-  // waitlist entry's trip_id can point at a trip that already finished and
-  // graduated into an album (same id, see sync_started_trip_albums in
-  // schema.sql). That's expected, not a data problem, but it looks
-  // identical to a still-upcoming trip in the Trip filter unless labeled.
-  const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
-  // Maps a converted entry's linked enquiry id -> whether that booking was
-  // later cancelled. A waitlist entry is only ever marked 'converted' once
-  // and never automatically flipped back, so without this a person whose
-  // booking got cancelled after converting would still just show
-  // "Converted" here with no sign the seat is free again.
-  const [cancelledEnquiryIds, setCancelledEnquiryIds] = useState<Set<string>>(new Set());
-  // Raw enquiries — kept only so group bookings (enquiries.group_id) can be
-  // folded into the same trip-scoped Group A/B/C sequence as group waitlist
-  // signups below (see groupLetterMap), matching what the Enquiries page shows.
-  const [enquiriesForGroups, setEnquiriesForGroups] = useState<Enquiry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | WaitlistEntry['status']>('all');
-  const [tripFilter, setTripFilter] = useState<string>(searchParams.get('trip') || 'all');
-  const [searchQuery, setSearchQuery] = useState('');
-  // Which single filter's dropdown is open — only one at a time, same
-  // pattern as the Enquiries page's filter bar.
-  const [openFilterPanel, setOpenFilterPanel] = useState<'status' | 'trip' | null>(null);
-  // Mobile only: filter panel collapsed by default, opened via the toggle
-  // in the Filters header — same pattern as the Enquiries page.
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  // Table pagination — 50 rows per page, same as the Enquiries page.
-  const [currentPage, setCurrentPage] = useState(1);
-  const WAITLIST_PAGE_SIZE = 10;
-  const { ref: tableScrollRef, isDragging, handlers: dragHandlers } = useDragScroll<HTMLDivElement>();
-  type WaitlistSortKey = 'name' | 'group' | 'food' | 'trip' | 'joined' | 'status';
-  const [sortKey, setSortKey] = useState<WaitlistSortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDirection>('asc');
-  const handleSort = (key: WaitlistSortKey) => {
-    if (sortKey === key) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-  };
+  const { entries, setEntries, seatsAvailable, allTrips, completedTrips, cancelledEnquiryIds, enquiriesForGroups, loading, load } = useWaitlistData();
+  const { groupLabel } = useWaitlistGroups(entries, enquiriesForGroups);
+  const filters = useWaitlistFilters(entries, completedTrips, seatsAvailable, groupLabel);
+  const { updating, queueRank, handleStatusChange, handleDelete, handleConvert } = useWaitlistActions(entries, setEntries, seatsAvailable, load);
 
-  // Manual "Add to Waitlist" — logs a signup an admin took over the
-  // phone/WhatsApp directly, the same way Enquiries lets an admin log a
-  // manual enquiry.
-  const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState<WaitlistForm>(emptyWaitlistForm);
-  const [saving, setSaving] = useState(false);
+  const { ref: tableScrollRef, isDragging, handlers: dragHandlers } = useDragScroll<HTMLDivElement>();
+
   const [toast, setToast] = useState<string | null>(null);
   const showToast = (message: string) => setToast(message);
-  // Which fields have been blurred yet — same reasoning as the Enquiries
-  // page's Add Enquiry modal: name/phone/trip are required, but showing
-  // that the instant the modal opens (before the admin has looked at the
-  // field) would be premature since they all start blank.
-  const [formTouched, setFormTouched] = useState<Set<string>>(new Set());
-  const formErrors: { full_name?: string; phone?: string; trip_id?: string } = {};
-  if (!form.full_name.trim()) formErrors.full_name = 'Full name is required.';
-  if (!form.phone.trim()) formErrors.phone = 'Phone number is required.';
-  if (!form.trip_id) formErrors.trip_id = "Pick which trip they're waiting for.";
-  const hasFormErrors = !!(formErrors.full_name || formErrors.phone || formErrors.trip_id);
-
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
 
-  const openAdd = () => {
-    setForm(emptyWaitlistForm);
-    setFormTouched(new Set());
-    setModalOpen(true);
-  };
+  const addModal = useAddWaitlistModal(allTrips, load, showToast);
 
-  const handleSave = async () => {
-    // Live in the modal already, plus this defense-in-depth gate in case
-    // Save is reached some other way — same formErrors computed above, so
-    // the two can never drift.
-    if (formErrors.full_name || formErrors.phone) {
-      alert('Name and phone are required.');
-      return;
-    }
-    if (formErrors.trip_id) {
-      alert(formErrors.trip_id);
-      return;
-    }
-    const trip = allTrips.find(t => t.id === form.trip_id);
-    try {
-      setSaving(true);
-      await submitWaitlist({
-        full_name: form.full_name.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim() || 'not-provided@ulaa.local',
-        age: form.age === '' ? undefined : form.age,
-        city: form.city.trim() || undefined,
-        emergency_contact: form.emergency_contact.trim() || undefined,
-        food_preference: form.food_preference || undefined,
-        message: form.message.trim() || undefined,
-        trip_id: form.trip_id,
-        trip_title: trip?.title,
-        group_size: form.group_size === '' ? undefined : form.group_size,
-      });
-      setModalOpen(false);
-      load();
-      showToast(`Added ${form.full_name.trim()} to the waitlist.`);
-    } catch (err) {
-      console.error(err);
-      const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
-      if (message === 'DUPLICATE_WAITLIST_ENTRY') {
-        alert('This person is already on the waitlist for this trip.');
-      } else if (message === 'AGE_NOT_ELIGIBLE') {
-        alert('The age entered falls outside this trip\'s age range (set in Admin → Trips → Basic Info). Adjust the age or the trip\'s age range and try again.');
-      } else {
-        alert(message || 'Failed to add to the waitlist.');
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const load = () => {
-    Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries(), getAllCompletedTripsAdmin()])
-      .then(([waitlistData, tripsData, enquiries, completedTripsData]) => {
-        setEntries(waitlistData);
-        setAllTrips(tripsData);
-        setCompletedTrips(completedTripsData);
-        const map: Record<string, number> = {};
-        tripsData.forEach(t => { map[t.id] = seatsLeft(t.total_seats, t.seats_booked); });
-        setSeatsAvailable(map);
-        setCancelledEnquiryIds(new Set(enquiries.filter(en => !!en.cancelled_at).map(en => en.id)));
-        setEnquiriesForGroups(enquiries);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
-
-  // Clear the ?trip= param from the URL once we've picked it up, so it
-  // doesn't stick around after the admin changes the filter manually.
-  useEffect(() => {
-    if (searchParams.get('trip')) {
-      setSearchParams(params => { params.delete('trip'); return params; }, { replace: true });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const trips = useMemo(() => {
-    const completedIds = new Set(completedTrips.map(t => t.id));
-    const map = new Map<string, string>();
-    entries.forEach(e => { if (!map.has(e.trip_id)) map.set(e.trip_id, e.trip_title || 'Untitled trip'); });
-    return Array.from(map.entries())
-      .map(([id, title]) => ({ value: id, label: title, isCompleted: completedIds.has(id) }))
-      .sort((a, b) => Number(a.isCompleted) - Number(b.isCompleted));
-  }, [entries, completedTrips]);
-
-  // A solo entry (group_size null/1) is ready the moment any seat is free.
-  // A group entry needs at least group_size seats free together before
-  // it's actually convertible — e.g. a group of 3 isn't "ready" just
-  // because 1 seat opened up from a single cancellation.
-  const seatsNeeded = (e: WaitlistEntry) => e.group_size && e.group_size > 1 ? e.group_size : 1;
-  // Small inline badge shown in the Food column — mirrors the one on the
-  // Enquiries page so both tables read the same way. For a group booking,
-  // there's no single `food_preference`; an admin instead jots the split
-  // straight into the notes (e.g. "2 veg / 2 non-veg."), so pull that out
-  // and show it as the food info instead of "Food not set".
-  const foodBreakdown = (e: WaitlistEntry) => e.message?.match(/\b(\d+)\s*veg\s*\/\s*(\d+)\s*non[- ]?veg\.?/i) || null;
-  const messageWithoutFoodBreakdown = (e: WaitlistEntry) => {
-    const match = foodBreakdown(e);
-    return match ? (e.message || '').replace(match[0], '').trim() : (e.message || '');
-  };
-  const foodBadge = (e: WaitlistEntry): { label: string; color: string; key: 'veg' | 'non_veg' | 'not_set' | 'mixed' } => {
-    const breakdown = foodBreakdown(e);
-    if (breakdown) return { label: `${breakdown[1]} veg / ${breakdown[2]} non-veg`, color: 'bg-purple-100 text-purple-700', key: 'mixed' };
-    if (e.food_preference === 'veg') return { label: 'Veg', color: 'bg-green-100 text-green-700', key: 'veg' };
-    if (e.food_preference === 'non_veg') return { label: 'Non-veg', color: 'bg-red-100 text-red-700', key: 'non_veg' };
-    return { label: 'Food not set', color: 'bg-slate-100 text-dark-muted', key: 'not_set' };
-  };
-  // Every enquiry converted from this entry so far (falls back to the
-  // legacy single-id column for any row a migration hasn't backfilled).
-  const convertedIds = (e: WaitlistEntry): string[] =>
-    e.converted_enquiry_ids ?? (e.converted_enquiry_id ? [e.converted_enquiry_id] : []);
-  const convertedCount = (e: WaitlistEntry) => convertedIds(e).length;
-  // What's still needed isn't the original group size once some of the
-  // group has already converted — a group of 3 with 2 already converted
-  // only needs 1 more seat, not 3.
-  const seatsRemaining = (e: WaitlistEntry) => Math.max(seatsNeeded(e) - convertedCount(e), 0);
-  const hasSeatOpen = (e: WaitlistEntry) =>
-    e.status === 'waiting' && seatsRemaining(e) > 0 && (seatsAvailable[e.trip_id] ?? 0) >= seatsRemaining(e);
-
-  // Names every group on a trip "Group A", "Group B", "Group C"... in the
-  // order it was first created — shared with the Enquiries page (via the
-  // same buildGroupLetterMap helper) so a group booking and a group
-  // waitlist signup for the same trip sit in one continuous sequence. A
-  // brand-new group waitlist entry always picks up the next letter after
-  // whatever groups (bookings or waitlist) already exist for that trip.
-  const groupUnits: GroupUnit[] = [];
-  {
-    const seenGroupIds = new Set<string>();
-    enquiriesForGroups.forEach(en => {
-      if (!en.group_id || seenGroupIds.has(en.group_id)) return;
-      seenGroupIds.add(en.group_id);
-      groupUnits.push({ key: en.group_id, tripId: en.trip_id || 'unlinked', createdAt: en.created_at });
-    });
-    entries.forEach(w => {
-      if (!w.group_size || w.group_size <= 1) return;
-      groupUnits.push({ key: `wl:${w.id}`, tripId: w.trip_id || 'unlinked', createdAt: w.created_at });
-    });
-  }
-  const groupLetterMap = buildGroupLetterMap(groupUnits);
-  const groupLabel = (e: WaitlistEntry) =>
-    e.group_size && e.group_size > 1 && groupLetterMap.has(`wl:${e.id}`)
-      ? `Group ${groupLetterMap.get(`wl:${e.id}`)}`
-      : 'Group';
-
-  const trimmedSearch = searchQuery.trim().toLowerCase();
-  const filtered = entries
-    .filter(e => statusFilter === 'all' || e.status === statusFilter)
-    .filter(e => tripFilter === 'all' || e.trip_id === tripFilter)
-    .filter(e => !trimmedSearch
-      || e.full_name?.toLowerCase().includes(trimmedSearch)
-      || e.phone?.toLowerCase().includes(trimmedSearch)
-      || e.email?.toLowerCase().includes(trimmedSearch)
-      || e.trip_title?.toLowerCase().includes(trimmedSearch))
-    // Waiting entries whose trip now has an open seat bubble to the top —
-    // these are the ones that need action right now.
-    .sort((a, b) => Number(hasSeatOpen(b)) - Number(hasSeatOpen(a)));
-
-  const sortedFiltered = sortKey ? [...filtered].sort((a, b) => {
-    const dir = sortDir === 'asc' ? 1 : -1;
-    switch (sortKey) {
-      case 'name': return dir * (a.full_name || '').localeCompare(b.full_name || '');
-      case 'group': return dir * ((a.group_size || 1) - (b.group_size || 1));
-      case 'food': return dir * foodBadge(a).key.localeCompare(foodBadge(b).key);
-      case 'trip': return dir * (a.trip_title || '').localeCompare(b.trip_title || '');
-      case 'joined': return dir * (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0);
-      case 'status': return dir * (a.status || '').localeCompare(b.status || '');
-      default: return 0;
-    }
-  }) : filtered;
-
-  const {
-    pageItems: paginatedEntries,
-    totalPages: waitlistTotalPages,
-    safePage: waitlistSafePage,
-    rangeStart: waitlistRangeStart,
-    rangeEnd: waitlistRangeEnd,
-  } = paginate(sortedFiltered, currentPage, WAITLIST_PAGE_SIZE);
-
-  // Land back on page 1 whenever the filters or search term change, so the
-  // admin never gets stuck on a page that no longer has any rows. Done
-  // during render (comparing against the previous filter signature) rather
-  // than in an effect — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const filterSignature = `${statusFilter}|${tripFilter}|${trimmedSearch}`;
-  const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
-  if (filterSignature !== prevFilterSignature) {
-    setPrevFilterSignature(filterSignature);
-    setCurrentPage(1);
-  }
-
-  const seatOpenCount = entries.filter(hasSeatOpen).length;
-
-  const counts = {
-    all: entries.length,
-    waiting: entries.filter(e => e.status === 'waiting').length,
-    notified: entries.filter(e => e.status === 'notified').length,
-    converted: entries.filter(e => e.status === 'converted').length,
-    declined: entries.filter(e => e.status === 'declined').length,
-    expired: entries.filter(e => e.status === 'expired').length,
-  };
-
-  const tripCounts: Record<string, number> = { all: entries.length };
-  trips.forEach(t => { tripCounts[t.value] = entries.filter(e => e.trip_id === t.value).length; });
-
-  const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (tripFilter !== 'all' ? 1 : 0) + (trimmedSearch ? 1 : 0);
-  const clearAllFilters = () => {
-    setStatusFilter('all');
-    setTripFilter('all');
-    setSearchQuery('');
-    setOpenFilterPanel(null);
-  };
-
-  // Exports exactly what's currently filtered/sorted — scoping to one trip
-  // via the Trip filter before exporting gives a per-trip waitlist export
-  // for free. All client-side, no backend round-trip.
-  const handleExportCsv = () => {
-    const headers = [
-      'Name', 'Phone', 'Email', 'Age', 'City', 'Trip', 'Group',
-      'Seats Needed', 'Seats Converted', 'Food / Notes', 'Status', 'Joined At',
-    ];
-    const rows = sortedFiltered.map(e => [
-      e.full_name,
-      e.phone,
-      e.email,
-      e.age ?? '',
-      e.city ?? '',
-      e.trip_title ?? '',
-      e.group_size && e.group_size > 1 ? groupLabel(e) : '',
-      seatsNeeded(e),
-      convertedCount(e),
-      foodBadge(e).key === 'not_set' ? (messageWithoutFoodBreakdown(e) || 'Not set') : foodBadge(e).label,
-      e.status,
-      formatDate(e.created_at),
-    ]);
-    const tripName = tripFilter !== 'all' ? trips.find(t => t.value === tripFilter)?.label : undefined;
-    const scopeSuffix = tripName ? `-${tripName.replace(/\s+/g, '_')}` : '';
-    downloadCsv(`waitlist${scopeSuffix}-${new Date().toISOString().slice(0, 10)}`, headers, rows);
-  };
+  const seatOpenCount = entries.filter(e => hasSeatOpen(e, seatsAvailable)).length;
 
   // KPI summary cards — same visual style as the Enquiries page, adapted
   // to waitlist statuses: Total signups, Waiting, Offer Sent, Converted,
   // Declined, Expired.
-  const kpiPct = (n: number) => (counts.all ? Math.round((n / counts.all) * 100) : 0);
+  const kpiPct = (n: number) => (filters.counts.all ? Math.round((n / filters.counts.all) * 100) : 0);
   const KPI_CARDS = [
-    { label: 'Total Signups', value: counts.all, sub: 'All time', icon: Users },
-    { label: 'Waiting', value: counts.waiting, sub: `${kpiPct(counts.waiting)}% of total`, icon: Circle },
-    { label: 'Offer Sent', value: counts.notified, sub: `${kpiPct(counts.notified)}% of total`, icon: Bell },
-    { label: 'Converted', value: counts.converted, sub: `${kpiPct(counts.converted)}% of total`, icon: CheckCircle2 },
-    { label: 'Declined', value: counts.declined, sub: `${kpiPct(counts.declined)}% of total`, icon: XCircle },
-    { label: 'Expired', value: counts.expired, sub: `${kpiPct(counts.expired)}% of total`, icon: Clock },
+    { label: 'Total Signups', value: filters.counts.all, sub: 'All time', icon: Users },
+    { label: 'Waiting', value: filters.counts.waiting, sub: `${kpiPct(filters.counts.waiting)}% of total`, icon: Circle },
+    { label: 'Offer Sent', value: filters.counts.notified, sub: `${kpiPct(filters.counts.notified)}% of total`, icon: Bell },
+    { label: 'Converted', value: filters.counts.converted, sub: `${kpiPct(filters.counts.converted)}% of total`, icon: CheckCircle2 },
+    { label: 'Declined', value: filters.counts.declined, sub: `${kpiPct(filters.counts.declined)}% of total`, icon: XCircle },
+    { label: 'Expired', value: filters.counts.expired, sub: `${kpiPct(filters.counts.expired)}% of total`, icon: Clock },
   ] as const;
-
-  const handleStatusChange = async (id: string, status: WaitlistEntry['status']) => {
-    setUpdating(id);
-    setEntries(prev => prev.map(e => (e.id === id ? { ...e, status } : e)));
-    await updateWaitlistStatus(id, status).catch(console.error);
-    setUpdating(null);
-    // The optimistic update above only touches this entry's status — it
-    // doesn't refresh seatsAvailable, so a stale "N seats open" badge could
-    // linger if another booking landed elsewhere while this page was open.
-    // Reload trip/seat data (not a full-page loading state) to keep it honest.
-    load();
-  };
-
-  const handleDelete = async (entry: WaitlistEntry) => {
-    if (!(await confirm({ message: `Remove ${entry.full_name} from the waitlist?`, confirmLabel: 'Remove' }))) return;
-    setUpdating(entry.id);
-    await deleteWaitlistEntry(entry.id).catch(console.error);
-    setEntries(prev => prev.filter(e => e.id !== entry.id));
-    setUpdating(null);
-  };
-
-  // A seat freed up (e.g. someone else cancelled) — hand this person off to
-  // Enquiries pre-filled, the same way a phone/WhatsApp lead would be
-  // logged, so the admin can take payment and book the seat. The waitlist
-  // entry itself is only marked "converted" once that enquiry is actually
-  // saved (see AdminEnquiries), not the moment we navigate away.
-  const canConvert = (e: WaitlistEntry) => e.status === 'waiting' || e.status === 'notified';
-
-  // Per-trip FIFO queue rank (3.3) — ranks every still-convertible
-  // (waiting/notified) entry by how long it's been sitting relative to
-  // others waiting on the *same trip*, oldest first. Declined/converted
-  // entries don't hold a queue spot. This is purely a visibility +
-  // soft-warning aid: nothing in the DB enforces conversion order, an
-  // admin can still convert out of turn (e.g. a group that only just now
-  // fits), but they get a clear "#2 of 5" indicator and a confirmation
-  // prompt before doing so instead of no signal at all beyond eyeballing
-  // the Joined column.
-  const queueRank = useMemo(() => {
-    const map = new Map<string, { rank: number; total: number }>();
-    const byTrip = new Map<string, WaitlistEntry[]>();
-    entries.forEach(e => {
-      if (!canConvert(e)) return;
-      if (!byTrip.has(e.trip_id)) byTrip.set(e.trip_id, []);
-      byTrip.get(e.trip_id)!.push(e);
-    });
-    byTrip.forEach(list => {
-      const sorted = [...list].sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));
-      sorted.forEach((e, i) => map.set(e.id, { rank: i + 1, total: sorted.length }));
-    });
-    return map;
-  }, [entries]);
-
-  const handleConvert = async (entry: WaitlistEntry) => {
-    // canConvert() above only checks the entry's own status, not whether a
-    // seat is actually free — so this can be reached even when the trip
-    // has since filled up (e.g. someone else was converted first) or
-    // doesn't have enough room for the whole group. Rather than let the
-    // admin fill in the whole form and only find out from a failed save,
-    // tell them up front how many seats are actually available.
-    const needed = seatsRemaining(entry);
-    const available = seatsAvailable[entry.trip_id] ?? 0;
-
-    // Soft FIFO warning (3.3): nothing stops converting a newer signup
-    // ahead of an older one for the same trip, so ask for a deliberate
-    // confirmation rather than letting it happen silently. Doesn't block —
-    // there are legitimate reasons to skip the line (the person ahead
-    // isn't reachable, only a partial group fits, etc.) — it just makes
-    // sure it's a choice, not an accident.
-    const rankInfo = queueRank.get(entry.id);
-    if (rankInfo && rankInfo.rank > 1) {
-      const aheadCount = rankInfo.rank - 1;
-      const proceed = await confirm({
-        title: 'Not first in line',
-        message: `${aheadCount} ${aheadCount === 1 ? 'person has' : 'people have'} been waiting longer than ${entry.full_name} for this trip (they're #${rankInfo.rank} of ${rankInfo.total}). Convert them ahead of the others anyway?`,
-        confirmLabel: 'Convert anyway',
-        variant: 'default',
-      });
-      if (!proceed) return;
-    }
-
-    if (available <= 0) {
-      await confirm({
-        title: 'No slots available',
-        message: 'All slots are filled. Unable to complete the conversion.',
-        confirmLabel: 'OK',
-        hideCancel: true,
-        variant: 'default',
-      });
-      return;
-    }
-
-    if (available < needed) {
-      const slotWord = available === 1 ? 'slot' : 'slots';
-      const proceed = await confirm({
-        title: 'Not enough slots for the full group',
-        message: available === 1
-          ? 'Only 1 slot is available. Only 1 person can be converted.'
-          : `Only ${available} ${slotWord} available. You can convert up to ${available} people.`,
-        confirmLabel: 'Continue',
-        variant: 'default',
-      });
-      if (!proceed) return;
-    }
-
-    // How many people we can actually seat right now — never more than what's
-    // still needed for the group, never more than what's physically free.
-    const slots = Math.max(Math.min(needed, available), 1);
-
-    navigate('/admin/enquiries', {
-      state: {
-        convertWaitlist: {
-          id: entry.id,
-          full_name: entry.full_name,
-          phone: entry.phone,
-          email: entry.email,
-          age: entry.age,
-          city: entry.city,
-          food_preference: entry.food_preference,
-          trip_id: entry.trip_id,
-          trip_title: entry.trip_title,
-          message: entry.message,
-          group_size: entry.group_size,
-          already_converted: convertedCount(entry),
-          slots,
-        },
-      },
-    });
-  };
-
-  const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   return (
     <AdminLayout title="Waitlist" subtitle="Everyone who signed up to be notified when a sold-out trip frees a seat.">
       <div className="space-y-6">
         <div className="flex justify-end">
-          <Button variant="primary" size="sm" onClick={openAdd}>
+          <Button variant="primary" size="sm" onClick={addModal.openAdd}>
             <Plus size={16} aria-hidden="true" /> Add to Waitlist
           </Button>
         </div>
@@ -599,742 +100,95 @@ export default function AdminWaitlist() {
         <KpiCards cards={KPI_CARDS} />
         <KpiCarousel cards={KPI_CARDS} />
 
-        {/* Mobile-only search bar — reachable with a thumb without
-            hunting through the (collapsed-by-default) filter panel
-            below. Bound to the same searchQuery state the desktop
-            TableHeaderBar search uses. */}
-        <div className="relative sm:hidden">
-          <label htmlFor="waitlist-mobile-search" className="sr-only">Search name, trip, or contact</label>
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
-          <input
-            id="waitlist-mobile-search"
-            type="text"
-            value={searchQuery}
-            onChange={ev => setSearchQuery(ev.target.value)}
-            placeholder="Search name, trip, contact..."
-            className="w-full pl-10 pr-10 py-3 rounded-lg border-2 border-background-warm bg-white font-body text-dark text-sm focus:border-primary outline-none transition-colors shadow-card"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark p-1"
-              aria-label="Clear search"
-            >
-              <X size={16} aria-hidden="true" />
-            </button>
-          )}
-        </div>
-
-        {/* Filters — one single row: Search | Filters | Clear All, same
-            layout as the Enquiries page's filter bar. */}
-        {openFilterPanel && (
-          <div className="fixed inset-0 z-20" onClick={() => setOpenFilterPanel(null)} />
-        )}
-        <div className="bg-white rounded-lg shadow-card p-4">
-          <button
-            type="button"
-            onClick={() => setMobileFiltersOpen(o => !o)}
-            aria-expanded={mobileFiltersOpen}
-            aria-controls="waitlist-mobile-filters-panel"
-            className="w-full flex items-center gap-2 sm:pointer-events-none sm:cursor-default"
-          >
-            <SlidersHorizontal size={16} className="text-dark shrink-0" aria-hidden="true" />
-            <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1 text-left">Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-md bg-primary/10 text-primary text-[11px] font-button font-semibold">
-                {activeFilterCount} active
-              </span>
-            )}
-            <ChevronDown size={18} className={`sm:hidden shrink-0 text-dark-muted transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-          </button>
-
-          <div id="waitlist-mobile-filters-panel" className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row sm:items-end gap-3 mt-4`}>
-            {/* Filters + Clear All — sit together in one row at the bottom
-                of the panel. */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2 flex-1 min-w-0">
-              {/* Status */}
-              <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                <label htmlFor="waitlist-filter-status" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Status</label>
-                <button
-                  id="waitlist-filter-status"
-                  aria-haspopup="listbox"
-                  aria-expanded={openFilterPanel === 'status'}
-                  onClick={() => setOpenFilterPanel(p => (p === 'status' ? null : 'status'))}
-                  className={`w-full flex items-center justify-between gap-2 rounded-md border-2 px-3 py-2 bg-white transition-colors ${
-                    openFilterPanel === 'status' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                  }`}
-                >
-                  <span className="text-sm font-button font-medium text-primary truncate">{statusFilter === 'all' ? 'All' : STATUS_CONFIG[statusFilter].label}</span>
-                  <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'status' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                </button>
-                {openFilterPanel === 'status' && (
-                  <FilterDropdown
-                    value={statusFilter}
-                    onSelect={key => { setStatusFilter(key); setOpenFilterPanel(null); }}
-                    options={(['all', 'waiting', 'notified', 'converted', 'declined', 'expired'] as const).map(key => ({
-                      key, label: key === 'all' ? 'All' : STATUS_CONFIG[key].label, count: counts[key],
-                    }))}
-                  />
-                )}
-              </div>
-
-              {/* Trip */}
-              {trips.length > 0 && (
-                <div className="relative w-full sm:w-auto sm:min-w-[160px]">
-                  <label htmlFor="waitlist-filter-trip" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
-                  <button
-                    id="waitlist-filter-trip"
-                    aria-haspopup="listbox"
-                    aria-expanded={openFilterPanel === 'trip'}
-                    onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
-                    className={`w-full flex items-center justify-between gap-2 rounded-md border-2 px-3 py-2 bg-white transition-colors ${
-                      openFilterPanel === 'trip' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                    }`}
-                  >
-                    <span className="text-sm font-button font-medium text-primary truncate">
-                      {tripFilter === 'all' ? 'All' : trips.find(t => t.value === tripFilter)?.label || 'All'}
-                    </span>
-                    <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                  </button>
-                  {openFilterPanel === 'trip' && (
-                    <FilterDropdown
-                      value={tripFilter}
-                      onSelect={key => { setTripFilter(key); setOpenFilterPanel(null); }}
-                      options={[
-                        { key: 'all', label: 'All trips', count: tripCounts.all },
-                        ...trips.map(t => ({ key: t.value, label: t.label, count: tripCounts[t.value] || 0, section: t.isCompleted ? 'Completed' : undefined })),
-                      ]}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Clear All — sits at the end of the row; disabled (and
-                dimmed) whenever no filter or search term is active. */}
-            <button
-              onClick={clearAllFilters}
-              disabled={activeFilterCount === 0}
-              className={`w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold rounded-md border-2 px-3 py-2 transition-colors whitespace-nowrap ${
-                activeFilterCount === 0
-                  ? 'border-background-warm text-dark-muted/40 cursor-default'
-                  : 'border-background-warm text-dark hover:border-primary/30'
-              }`}
-            >
-              <RefreshCw size={13} aria-hidden="true" /> Clear All
-            </button>
-          </div>
-        </div>
+        <AdminWaitlistFilterBar
+          trips={filters.trips}
+          statusFilter={filters.statusFilter}
+          setStatusFilter={filters.setStatusFilter}
+          tripFilter={filters.tripFilter}
+          setTripFilter={filters.setTripFilter}
+          searchQuery={filters.searchQuery}
+          setSearchQuery={filters.setSearchQuery}
+          openFilterPanel={filters.openFilterPanel}
+          setOpenFilterPanel={filters.setOpenFilterPanel}
+          mobileFiltersOpen={filters.mobileFiltersOpen}
+          setMobileFiltersOpen={filters.setMobileFiltersOpen}
+          counts={filters.counts}
+          tripCounts={filters.tripCounts}
+          activeFilterCount={filters.activeFilterCount}
+          clearAllFilters={filters.clearAllFilters}
+        />
 
         {loading ? (
           <div className="text-center py-16">
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
-        ) : filtered.length === 0 ? (
+        ) : filters.filtered.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-lg shadow-card">
             <p className="font-display text-xl text-dark-muted">No waitlist signups found.</p>
           </div>
         ) : (
           <>
-            {/* Desktop / tablet table */}
-            <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
-              <TableHeaderBar
-                title="Waitlist details"
-                rangeStart={waitlistRangeStart}
-                rangeEnd={waitlistRangeEnd}
-                total={filtered.length}
-                itemLabel="signups"
-                searchValue={searchQuery}
-                onSearchChange={setSearchQuery}
-                searchPlaceholder="Search name, trip, contact..."
-                onExport={handleExportCsv}
-                exportLabel="Export CSV"
-              />
-              <div
-                ref={tableScrollRef}
-                {...dragHandlers}
-                className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-md border border-background-warm ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
-              >
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
-                    <tr>
-                      <SortableTh label="Name" sortKey="name" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left" />
-                      <SortableTh label="Group" sortKey="group" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
-                      <SortableTh label="Food" sortKey="food" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
-                      <SortableTh label="Trip" sortKey="trip" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left hidden lg:table-cell" />
-                      <th className="px-4 py-4 text-left hidden md:table-cell">Contact</th>
-                      <SortableTh label="Joined" sortKey="joined" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left hidden lg:table-cell" />
-                      <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-right whitespace-nowrap" />
-                      <th className="px-2 py-4 text-right whitespace-nowrap"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-background-warm">
-                    {paginatedEntries.map(e => (
-                      <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                        <td className="px-4 py-4 max-w-[160px] sm:max-w-none">
-                          <p className="font-medium text-dark truncate flex items-center gap-1.5">
-                            {e.full_name}
-                            {canConvert(e) && (queueRank.get(e.id)?.total ?? 0) > 1 && (
-                              <span
-                                title={queueRank.get(e.id)!.rank === 1
-                                  ? `First in line for this trip — ${queueRank.get(e.id)!.total} waiting in total`
-                                  : `#${queueRank.get(e.id)!.rank} of ${queueRank.get(e.id)!.total} waiting for this trip — ${queueRank.get(e.id)!.rank - 1} waited longer`}
-                                className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${
-                                  queueRank.get(e.id)!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                }`}
-                              >
-                                #{queueRank.get(e.id)!.rank} of {queueRank.get(e.id)!.total} waiting
-                              </span>
-                            )}
-                            {e.status !== 'converted' && convertedCount(e) > 0 && (
-                              <span
-                                title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
-                                className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 whitespace-nowrap"
-                              >
-                                <CheckCircle2 size={9} aria-hidden="true" /> {convertedCount(e)}/{seatsNeeded(e)} converted
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-dark-muted text-xs truncate md:hidden">{e.email}</p>
-                          {e.age && (
-                            <p className="text-dark-muted text-xs mt-0.5">{e.age} yrs</p>
-                          )}
-                          {messageWithoutFoodBreakdown(e) && (
-                            <p className="text-dark-muted text-xs mt-1 flex items-start gap-1 max-w-xs">
-                              <MessageSquare size={11} className="shrink-0 mt-0.5" aria-hidden="true" />
-                              <span className="line-clamp-2">{messageWithoutFoodBreakdown(e)}</span>
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-2 py-4 whitespace-nowrap">
-                          {e.group_size && e.group_size > 1 ? (
-                            <span
-                              title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
-                              className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
-                            >
-                              <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_size}
-                            </span>
-                          ) : (
-                            <span
-                              title="Booked individually, not part of a group"
-                              className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-slate-100 text-dark-muted whitespace-nowrap"
-                            >
-                              <UserPlus size={12} className="shrink-0" aria-hidden="true" /> Solo
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-4 whitespace-nowrap">
-                          {foodBreakdown(e) ? (
-                            <span className="inline-flex items-center gap-2 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-background-warm">
-                              <span className="inline-flex items-center gap-1 text-green-700">
-                                <FoodMark type="veg" size={12} /> {foodBreakdown(e)![1]} veg
-                              </span>
-                              <span className="text-dark-muted/40">/</span>
-                              <span className="inline-flex items-center gap-1 text-red-700">
-                                <FoodMark type="non_veg" size={12} /> {foodBreakdown(e)![2]} non-veg
-                              </span>
-                            </span>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${foodBadge(e).color}`}>
-                              <FoodMark type={foodBadge(e).key} size={12} /> {foodBadge(e).label}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[180px]">
-                          <p className="truncate">{e.trip_title || '—'}</p>
-                          {hasSeatOpen(e) && (
-                            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
-                              <PartyPopper size={10} className="shrink-0" aria-hidden="true" />
-                              {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
-                            </span>
-                          )}
-                          {!hasSeatOpen(e) && e.status === 'waiting' && seatsRemaining(e) > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
-                            <span
-                              title={`Needs ${seatsRemaining(e)} more seats free together — only ${seatsAvailable[e.trip_id]} open so far`}
-                              className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 whitespace-nowrap"
-                            >
-                              {seatsAvailable[e.trip_id]}/{seatsRemaining(e)} seats open
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-dark-muted hidden md:table-cell">
-                          <p className="flex items-center gap-1 text-xs"><Mail size={11} className="shrink-0" aria-hidden="true" /> {e.email}</p>
-                          <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" aria-hidden="true" /> {e.phone}</p>
-                          {e.city && <p className="text-xs mt-0.5">{e.city}</p>}
-                          {e.emergency_contact && <p className="text-xs mt-0.5">Emergency: {e.emergency_contact}</p>}
-                          <div className="mt-1.5">
-                            <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-dark-muted hidden lg:table-cell whitespace-nowrap">
-                          {formatDate(e.created_at, { day: 'numeric', month: 'short' })}
-                        </td>
-                        <td className="px-2 py-4 text-right">
-                          {e.status === 'converted' ? (
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
-                                <CheckCircle2 size={12} className="shrink-0" aria-hidden="true" />
-                                Converted{convertedCount(e) > 1 ? ` (${convertedCount(e)}/${convertedCount(e)})` : ''}
-                              </span>
-                              {convertedIds(e).some(id => cancelledEnquiryIds.has(id)) && (
-                                <span
-                                  title="At least one of this group's bookings was cancelled after converting — that seat is free again."
-                                  className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-red-100 text-red-700 whitespace-nowrap"
-                                >
-                                  <XCircle size={12} className="shrink-0" aria-hidden="true" />
-                                  {convertedIds(e).length > 1
-                                    ? `${convertedIds(e).filter(id => cancelledEnquiryIds.has(id)).length}/${convertedIds(e).length} cancelled`
-                                    : 'Booking cancelled'}
-                                </span>
-                              )}
-                              <div className="flex flex-col items-end gap-0.5">
-                                {convertedIds(e).map((id, i) => (
-                                  <button
-                                    key={id}
-                                    onClick={() => navigate(`/admin/enquiries?enquiry=${id}`)}
-                                    className="text-xs font-button font-semibold text-primary underline underline-offset-2 whitespace-nowrap"
-                                  >
-                                    View booking{convertedIds(e).length > 1 ? ` ${i + 1}` : ''}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col items-end gap-1">
-                              <label htmlFor={`waitlist-status-${e.id}`} className="sr-only">Status for {e.full_name}</label>
-                              <Select
-                                inputId={`waitlist-status-${e.id}`}
-                                value={e.status}
-                                disabled={updating === e.id}
-                                onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
-                                options={EDITABLE_STATUS_OPTIONS}
-                                size="sm"
-                              />
-                              {e.status === 'notified' && offerExpiryLabel(e.offer_expiry) && (
-                                <span
-                                  className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                                    offerExpiryLabel(e.offer_expiry)!.overdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                                  }`}
-                                >
-                                  <Clock size={9} className="shrink-0" aria-hidden="true" /> {offerExpiryLabel(e.offer_expiry)!.text}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-2 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {canConvert(e) && (
-                              <button
-                                onClick={() => handleConvert(e)}
-                                title="Convert to enquiry"
-                                className={`shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 h-7 rounded border transition-colors whitespace-nowrap ${
-                                  hasSeatOpen(e)
-                                    ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
-                                    : 'border-primary/40 text-primary hover:bg-primary/10'
-                                }`}
-                              >
-                                <UserPlus size={12} className="shrink-0" aria-hidden="true" />
-                                Convert
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDelete(e)}
-                              disabled={updating === e.id}
-                              title={`Remove ${e.full_name} from waitlist`}
-                              aria-label={`Remove ${e.full_name} from waitlist`}
-                              className="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
-                            >
-                              <Trash2 size={13} aria-hidden="true" />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <TablePagination
-                currentPage={waitlistSafePage}
-                totalPages={waitlistTotalPages}
-                onPageChange={setCurrentPage}
-              />
-            </div>
+            <AdminWaitlistDesktopTable
+              paginatedEntries={filters.paginatedEntries}
+              waitlistSafePage={filters.waitlistSafePage}
+              waitlistTotalPages={filters.waitlistTotalPages}
+              waitlistRangeStart={filters.waitlistRangeStart}
+              waitlistRangeEnd={filters.waitlistRangeEnd}
+              totalFiltered={filters.filtered.length}
+              sortKey={filters.sortKey}
+              sortDir={filters.sortDir}
+              onSort={filters.handleSort}
+              searchQuery={filters.searchQuery}
+              setSearchQuery={filters.setSearchQuery}
+              onExport={filters.handleExportCsv}
+              onPageChange={filters.setCurrentPage}
+              tableScrollRef={tableScrollRef}
+              isDragging={isDragging}
+              dragHandlers={dragHandlers}
+              seatsAvailable={seatsAvailable}
+              cancelledEnquiryIds={cancelledEnquiryIds}
+              groupLabel={groupLabel}
+              queueRank={queueRank}
+              updating={updating}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
+              onConvert={handleConvert}
+            />
 
-            {/* Mobile cards */}
-            <div className="sm:hidden space-y-3">
-              {paginatedEntries.map(e => {
-                const cfg = STATUS_CONFIG[e.status];
-                return (
-                  <motion.div
-                    key={e.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="bg-white rounded-lg shadow-card p-4 space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-dark truncate flex items-center gap-1.5">
-                          {e.full_name}
-                          {e.group_size && e.group_size > 1 && (
-                            <span
-                              title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
-                              className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
-                            >
-                              <Users size={9} aria-hidden="true" /> {groupLabel(e)} · {e.group_size}
-                            </span>
-                          )}
-                          {canConvert(e) && (queueRank.get(e.id)?.total ?? 0) > 1 && (
-                            <span
-                              title={queueRank.get(e.id)!.rank === 1
-                                ? `First in line for this trip — ${queueRank.get(e.id)!.total} waiting in total`
-                                : `#${queueRank.get(e.id)!.rank} of ${queueRank.get(e.id)!.total} waiting for this trip — ${queueRank.get(e.id)!.rank - 1} waited longer`}
-                              className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${
-                                queueRank.get(e.id)!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                              }`}
-                            >
-                              #{queueRank.get(e.id)!.rank} of {queueRank.get(e.id)!.total} waiting
-                            </span>
-                          )}
-                          {e.status !== 'converted' && convertedCount(e) > 0 && (
-                            <span
-                              title={`${convertedCount(e)} of ${seatsNeeded(e)} in this group converted so far — ${seatsRemaining(e)} left to go`}
-                              className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 whitespace-nowrap"
-                            >
-                              <CheckCircle2 size={9} aria-hidden="true" /> {convertedCount(e)}/{seatsNeeded(e)} converted
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-dark-muted text-xs truncate">{e.trip_title || 'Untitled trip'}</p>
-                        {hasSeatOpen(e) && (
-                          <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
-                            <PartyPopper size={10} className="shrink-0" aria-hidden="true" />
-                            {seatsAvailable[e.trip_id]} seat{seatsAvailable[e.trip_id] === 1 ? '' : 's'} open
-                          </span>
-                        )}
-                        {!hasSeatOpen(e) && e.status === 'waiting' && seatsRemaining(e) > 1 && (seatsAvailable[e.trip_id] ?? 0) > 0 && (
-                          <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 whitespace-nowrap">
-                            {seatsAvailable[e.trip_id]}/{seatsRemaining(e)} seats open
-                          </span>
-                        )}
-                      </div>
-                      <span className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
-                        <cfg.icon size={11} className="shrink-0" aria-hidden="true" />
-                        {cfg.label}
-                      </span>
-                    </div>
-
-                    <div className="text-xs text-dark-muted space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="flex items-center gap-1.5 min-w-0">
-                          <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                            <Mail size={10} aria-hidden="true" />
-                          </span>
-                          <span className="truncate">{e.email}</span>
-                        </p>
-                        <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
-                      </div>
-                      <p className="flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                          <Phone size={10} aria-hidden="true" />
-                        </span>
-                        {e.phone}
-                      </p>
-                      <div className="border-b border-background-warm !mt-2.5 !mb-2.5" />
-                      {(e.age || e.food_preference || foodBreakdown(e)) && (
-                        <p className="flex items-center flex-wrap gap-x-2 gap-y-1.5">
-                          {e.age && (
-                            <>
-                              <span className="inline-flex items-center gap-1.5">
-                                <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                                  <User size={10} aria-hidden="true" />
-                                </span>
-                                {e.age} yrs
-                              </span>
-                              <span className="w-px h-3.5 bg-background-warm shrink-0" />
-                            </>
-                          )}
-                          {foodBreakdown(e) ? (
-                            <span className="inline-flex items-center gap-1.5">
-                              <span className="inline-flex items-center gap-1 text-green-700">
-                                <FoodMark type="veg" size={11} /> {foodBreakdown(e)![1]} veg
-                              </span>
-                              <span className="text-dark-muted/40">/</span>
-                              <span className="inline-flex items-center gap-1 text-red-700">
-                                <FoodMark type="non_veg" size={11} /> {foodBreakdown(e)![2]} non-veg
-                              </span>
-                            </span>
-                          ) : e.food_preference && (
-                            <span className={`inline-flex items-center gap-1 ${e.food_preference === 'veg' ? 'text-green-700' : 'text-red-700'}`}>
-                              <FoodMark type={e.food_preference} size={11} /> {e.food_preference === 'veg' ? 'Veg' : 'Non-veg'}
-                            </span>
-                          )}
-                          {(foodBreakdown(e) || e.food_preference) && (
-                            <span className="w-px h-3.5 bg-background-warm shrink-0" />
-                          )}
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-                              <CalendarDays size={10} aria-hidden="true" />
-                            </span>
-                            {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </span>
-                        </p>
-                      )}
-                      {e.city && <p>{e.city}</p>}
-                      {e.emergency_contact && <p>Emergency: {e.emergency_contact}</p>}
-                      {!(e.age || e.food_preference || foodBreakdown(e)) && (
-                        <p className="flex items-center gap-1.5">
-                          <CalendarDays size={11} className="shrink-0" aria-hidden="true" /> {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
-                      )}
-                      {messageWithoutFoodBreakdown(e) && (
-                        <p className="flex items-start gap-1.5 mt-1.5">
-                          <MessageSquare size={12} className="shrink-0 mt-0.5" aria-hidden="true" />
-                          <span>{messageWithoutFoodBreakdown(e)}</span>
-                        </p>
-                      )}
-                    </div>
-
-                    {canConvert(e) && (
-                      <button
-                        onClick={() => handleConvert(e)}
-                        className={`w-full inline-flex items-center justify-center gap-1.5 text-sm font-button font-semibold py-2 rounded border transition-colors ${
-                          hasSeatOpen(e)
-                            ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
-                            : 'border-primary/40 text-primary hover:bg-primary/10'
-                        }`}
-                      >
-                        <UserPlus size={14} className="shrink-0" aria-hidden="true" />
-                        Convert to Enquiry
-                      </button>
-                    )}
-
-                    <div className="flex items-center gap-2 pt-1">
-                      {e.status === 'converted' ? (
-                        <div className="flex-1 flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
-                              <CheckCircle2 size={12} className="shrink-0" aria-hidden="true" />
-                              Converted{convertedCount(e) > 1 ? ` (${convertedCount(e)}/${convertedCount(e)})` : ''}
-                            </span>
-                            {convertedIds(e).some(id => cancelledEnquiryIds.has(id)) && (
-                              <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-red-100 text-red-700 whitespace-nowrap">
-                                <XCircle size={12} className="shrink-0" aria-hidden="true" />
-                                {convertedIds(e).length > 1
-                                  ? `${convertedIds(e).filter(id => cancelledEnquiryIds.has(id)).length}/${convertedIds(e).length} cancelled`
-                                  : 'Booking cancelled'}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            {convertedIds(e).map((id, i) => (
-                              <button
-                                key={id}
-                                onClick={() => navigate(`/admin/enquiries?enquiry=${id}`)}
-                                className="text-xs font-button font-semibold text-primary underline underline-offset-2 whitespace-nowrap"
-                              >
-                                View booking{convertedIds(e).length > 1 ? ` ${i + 1}` : ''}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex-1 flex flex-col gap-1">
-                          <label htmlFor={`waitlist-status-mobile-${e.id}`} className="sr-only">Status for {e.full_name}</label>
-                          <Select
-                            inputId={`waitlist-status-mobile-${e.id}`}
-                            value={e.status}
-                            disabled={updating === e.id}
-                            onChange={val => handleStatusChange(e.id, val as WaitlistEntry['status'])}
-                            options={EDITABLE_STATUS_OPTIONS}
-                            size="sm"
-                          />
-                          {e.status === 'notified' && offerExpiryLabel(e.offer_expiry) && (
-                            <span
-                              className={`inline-flex items-center gap-1 self-start text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                                offerExpiryLabel(e.offer_expiry)!.overdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                              }`}
-                            >
-                              <Clock size={9} className="shrink-0" aria-hidden="true" /> {offerExpiryLabel(e.offer_expiry)!.text}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      <button
-                        onClick={() => handleDelete(e)}
-                        disabled={updating === e.id}
-                        aria-label={`Remove ${e.full_name} from waitlist`}
-                        className="shrink-0 w-9 h-9 inline-flex items-center justify-center rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
-                      >
-                        <Trash2 size={14} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Mobile: same "Showing X–Y of N" + Prev/Next pagination the
-                desktop table gets. */}
-            <div className="sm:hidden bg-white rounded-lg shadow-card overflow-hidden">
-              <p className="text-dark-muted text-xs text-center px-4 pt-3">
-                {filtered.length === 0 ? 'No signups found' : `Showing ${waitlistRangeStart}\u2013${waitlistRangeEnd} of ${filtered.length} signups`}
-              </p>
-              <TablePagination
-                currentPage={waitlistSafePage}
-                totalPages={waitlistTotalPages}
-                onPageChange={setCurrentPage}
-              />
-            </div>
+            <AdminWaitlistMobileCards
+              paginatedEntries={filters.paginatedEntries}
+              waitlistSafePage={filters.waitlistSafePage}
+              waitlistTotalPages={filters.waitlistTotalPages}
+              waitlistRangeStart={filters.waitlistRangeStart}
+              waitlistRangeEnd={filters.waitlistRangeEnd}
+              totalFiltered={filters.filtered.length}
+              onPageChange={filters.setCurrentPage}
+              seatsAvailable={seatsAvailable}
+              cancelledEnquiryIds={cancelledEnquiryIds}
+              groupLabel={groupLabel}
+              queueRank={queueRank}
+              updating={updating}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
+              onConvert={handleConvert}
+            />
           </>
         )}
       </div>
 
-      {/* Manual Add to Waitlist Modal */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add to Waitlist" size="md">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="wl-add-name" className="block text-sm font-medium text-dark mb-1">Full Name *</label>
-            <input
-              id="wl-add-name"
-              type="text"
-              value={form.full_name}
-              onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-              onBlur={() => setFormTouched(prev => new Set(prev).add('full_name'))}
-              aria-describedby={formTouched.has('full_name') && formErrors.full_name ? 'wl-add-name-error' : undefined}
-              className={inputClass}
-              placeholder="e.g. Priya Sharma"
-            />
-            {formTouched.has('full_name') && formErrors.full_name && <p id="wl-add-name-error" role="alert" className="text-red-500 text-xs mt-1">{formErrors.full_name}</p>}
-          </div>
-          <div>
-            <label htmlFor="wl-add-phone" className="block text-sm font-medium text-dark mb-1">Phone *</label>
-            <input
-              id="wl-add-phone"
-              type="tel"
-              value={form.phone}
-              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-              onBlur={() => setFormTouched(prev => new Set(prev).add('phone'))}
-              aria-describedby={formTouched.has('phone') && formErrors.phone ? 'wl-add-phone-error' : undefined}
-              className={inputClass}
-              placeholder="e.g. 98765 43210"
-            />
-            {formTouched.has('phone') && formErrors.phone && <p id="wl-add-phone-error" role="alert" className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
-          </div>
-          <div>
-            <label htmlFor="wl-add-email" className="block text-sm font-medium text-dark mb-1">Email</label>
-            <input
-              id="wl-add-email"
-              type="email"
-              value={form.email}
-              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              className={inputClass}
-              placeholder="Leave blank if unknown"
-            />
-          </div>
-          <div>
-            <label htmlFor="wl-add-age" className="block text-sm font-medium text-dark mb-1">Age</label>
-            <input
-              id="wl-add-age"
-              type="number"
-              min={0}
-              value={form.age}
-              onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))}
-              className={inputClass}
-              placeholder="e.g. 28"
-            />
-          </div>
-          <div>
-            <label htmlFor="wl-add-city" className="block text-sm font-medium text-dark mb-1">City</label>
-            <input
-              id="wl-add-city"
-              type="text"
-              value={form.city}
-              onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
-              className={inputClass}
-              placeholder="e.g. Mumbai"
-            />
-          </div>
-          <div>
-            <label htmlFor="wl-add-emergency" className="block text-sm font-medium text-dark mb-1">Emergency Contact</label>
-            <input
-              id="wl-add-emergency"
-              type="text"
-              value={form.emergency_contact}
-              onChange={e => setForm(f => ({ ...f, emergency_contact: e.target.value }))}
-              className={inputClass}
-              placeholder="Optional"
-            />
-          </div>
-          <div>
-            <label htmlFor="wl-add-trip" className="block text-sm font-medium text-dark mb-1">Trip *</label>
-            <Select
-              inputId="wl-add-trip"
-              value={form.trip_id}
-              onChange={val => {
-                setForm(f => ({ ...f, trip_id: val }));
-                setFormTouched(prev => new Set(prev).add('trip_id'));
-              }}
-              options={[{ value: '', label: '— Select a trip —' }, ...allTrips.map(t => ({ value: t.id, label: t.title }))]}
-            />
-            {formTouched.has('trip_id') && formErrors.trip_id && <p role="alert" className="text-red-500 text-xs mt-1">{formErrors.trip_id}</p>}
-          </div>
-          <div>
-            <label htmlFor="wl-add-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
-            <Select
-              inputId="wl-add-food"
-              value={form.food_preference}
-              onChange={val => setForm(f => ({ ...f, food_preference: val as WaitlistForm['food_preference'] }))}
-              options={FOOD_PREFERENCE_OPTIONS}
-            />
-          </div>
-          <div>
-            <label htmlFor="wl-add-group-size" className="block text-sm font-medium text-dark mb-1">Group Size</label>
-            <input
-              id="wl-add-group-size"
-              type="number"
-              min={1}
-              value={form.group_size}
-              onChange={e => setForm(f => ({ ...f, group_size: e.target.value === '' ? '' : +e.target.value }))}
-              aria-describedby="wl-add-group-size-hint"
-              className={inputClass}
-              placeholder="Leave blank for solo"
-            />
-            <p id="wl-add-group-size-hint" className="text-[11px] text-dark-muted mt-1">
-              Only how many seats they need together — not the number of separate people they're asking on behalf of.
-            </p>
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="wl-add-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
-            <textarea
-              id="wl-add-notes"
-              value={form.message}
-              onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
-              className={`${inputClass} min-h-[80px] resize-none`}
-              placeholder="Anything else worth noting"
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-3 pt-5">
-          <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setModalOpen(false)}>Cancel</Button>
-          <Button
-            variant="primary"
-            size="md"
-            className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
-            onClick={() => {
-              setFormTouched(new Set(['full_name', 'phone', 'trip_id']));
-              handleSave();
-            }}
-            loading={saving}
-            disabled={hasFormErrors}
-            title={hasFormErrors ? 'Fix the highlighted fields before saving' : undefined}
-          >
-            <span className="hidden sm:inline">Save Changes</span>
-            <span className="sm:hidden">Save</span>
-          </Button>
-        </div>
-      </Modal>
+      <AdminAddWaitlistModal
+        isOpen={addModal.modalOpen}
+        onClose={() => addModal.setModalOpen(false)}
+        form={addModal.form}
+        setForm={addModal.setForm}
+        formTouched={addModal.formTouched}
+        setFormTouched={addModal.setFormTouched}
+        formErrors={addModal.formErrors}
+        hasFormErrors={addModal.hasFormErrors}
+        saving={addModal.saving}
+        allTrips={allTrips}
+        onSave={addModal.handleSave}
+      />
 
       {/* Lightweight success toast */}
       <AnimatePresence>
