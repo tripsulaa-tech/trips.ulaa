@@ -33,7 +33,7 @@ import {
 } from '@phosphor-icons/react';
 import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { formatDate, getActivePrice } from '../../utils/utils-index';
-import { FOOD_PREFERENCE_OPTIONS } from '../../constants/foodPreference';
+import { FOOD_PREFERENCE_OPTIONS, foodPreferenceBadge } from '../../constants/foodPreference';
 
 export { FOOD_PREFERENCE_OPTIONS };
 
@@ -346,9 +346,7 @@ export function getTripActivePricing(
 // Small inline badge shown next to each enquiry's name — lets an admin spot
 // missing food preferences directly in the list, without opening the row.
 export function foodBadge(e: Enquiry): { label: string; color: string } {
-  if (e.food_preference === 'veg') return { label: 'Veg', color: 'bg-green-100 text-green-700' };
-  if (e.food_preference === 'non_veg') return { label: 'Non-veg', color: 'bg-red-100 text-red-700' };
-  return { label: 'Food not set', color: 'bg-slate-100 text-dark-muted' };
+  return foodPreferenceBadge(e.food_preference);
 }
 
 export function foodPreferenceKey(e: Enquiry): 'veg' | 'non_veg' | 'not_set' {

@@ -12,7 +12,7 @@ import {
   Clock,
 } from '@phosphor-icons/react';
 import type { WaitlistEntry } from '../../types/types-index';
-import { FOOD_PREFERENCE_OPTIONS } from '../../constants/foodPreference';
+import { FOOD_PREFERENCE_OPTIONS, foodPreferenceBadge } from '../../constants/foodPreference';
 
 export { FOOD_PREFERENCE_OPTIONS };
 
@@ -118,7 +118,6 @@ export const messageWithoutFoodBreakdown = (e: WaitlistEntry) => {
 export const foodBadge = (e: WaitlistEntry): { label: string; color: string; key: 'veg' | 'non_veg' | 'not_set' | 'mixed' } => {
   const breakdown = foodBreakdown(e);
   if (breakdown) return { label: `${breakdown[1]} veg / ${breakdown[2]} non-veg`, color: 'bg-purple-100 text-purple-700', key: 'mixed' };
-  if (e.food_preference === 'veg') return { label: 'Veg', color: 'bg-green-100 text-green-700', key: 'veg' };
-  if (e.food_preference === 'non_veg') return { label: 'Non-veg', color: 'bg-red-100 text-red-700', key: 'non_veg' };
-  return { label: 'Food not set', color: 'bg-slate-100 text-dark-muted', key: 'not_set' };
+  const key = e.food_preference === 'veg' || e.food_preference === 'non_veg' ? e.food_preference : 'not_set';
+  return { ...foodPreferenceBadge(e.food_preference), key };
 };
