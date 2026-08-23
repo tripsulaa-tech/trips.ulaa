@@ -1,84 +1,90 @@
 import { useState } from 'react';
 import AdminLayout from './AdminLayout';
 import { useTripsData } from './trips/useTripsData';
-import { useTripForm } from './trips/useTripForm';
-import { useTripImportExport } from './trips/useTripImportExport';
-import { useTripModalSearch } from './trips/useTripModalSearch';
+import { useTripActions } from './trips/useTripActions';
+import { useTripFormModal } from './trips/useTripFormModal';
 import AdminTripsTable from './trips/AdminTripsTable';
 import AdminTripFormModal from './trips/AdminTripFormModal';
-import AdminTripDetailModal from './trips/AdminTripDetailModal';
+import AdminTripViewModal from './trips/AdminTripViewModal';
 import type { UpcomingTrip } from '../types/types-index';
 
-/** The Upcoming Trips admin page — deliberately just an orchestrator: the
- *  trips list/quick-actions live in useTripsData, the Add/Edit form's state
- *  in useTripForm, the Export/Import Template JSON round-trip in
- *  useTripImportExport, and the modal's field-search box in
- *  useTripModalSearch — see ./trips/ for those, plus the table, form modal,
- *  and detail modal components this file composes. Split out of a single
- *  ~2100-line AdminTrips.tsx for maintainability; see that file's git
- *  history for the original single-component version. */
+/** The Upcoming Trips admin page — everyone who's booking, or might book, a
+ *  trip starts here.
+ *
+ *  This component is deliberately just an orchestrator: trip-list loading
+ *  lives in useTripsData, per-row quick actions (publish, coming-soon,
+ *  hide-PDF, download-PDF, delete) in useTripActions, and the Add/Edit
+ *  modal's form state, save, field search, and Import/Export Template flow
+ *  in useTripFormModal — see ./trips/ for those, plus the toolbar+table,
+ *  create/edit modal, and read-only view modal components this file
+ *  composes. Split out of a single ~2100-line AdminTrips.tsx for
+ *  maintainability; see that file's git history for the original
+ *  single-component version. */
 export default function AdminTrips() {
-  const { trips, loading, load, publishedCount, comingSoonCount, draftCount, pdfDownloadingId, handleDelete, togglePublish, toggleComingSoon, toggleHidePdfDownload, handleDownloadTripPdf } = useTripsData();
-
+  const { trips, loading, load } = useTripsData();
   const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
 
   const {
-    modalOpen, setModalOpen, editingTrip, setEditingTrip, saving, form, setForm, initialModalUrlsRef,
-    closeModal, openCreate: openCreateForm, openEdit: openEditForm, handleSave, commitGroupBulletDraft,
-  } = useTripForm(load);
+    pdfDownloadingId,
+    handleDelete,
+    togglePublish,
+    toggleComingSoon,
+    toggleHidePdfDownload,
+    handleDownloadTripPdf,
+  } = useTripActions(load);
 
-  const { modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef, resetModalSearch } = useTripModalSearch(modalOpen);
+  const {
+    modalOpen, closeModal, openCreate, openEdit,
+    modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef,
+    editingTrip, form, setForm, saving, handleSave,
+    commitGroupBulletDraft,
+    importInputRef, handleImportInputChange,
+    handleExportTemplate,
+  } = useTripFormModal(load);
 
-  const { importInputRef, handleExportTemplate, handleImportInputChange } = useTripImportExport(
-    setEditingTrip, setForm, initialModalUrlsRef, setModalOpen,
-  );
-
-  // Wraps the form hook's open handlers so the field-search box also resets
-  // whenever the modal is (re)opened for a fresh trip.
-  const openCreate = async () => { await openCreateForm(); resetModalSearch(); };
-  const openEdit = (trip: UpcomingTrip) => { openEditForm(trip); resetModalSearch(); };
+  const openEditFromView = (trip: UpcomingTrip) => {
+    setViewingTrip(null);
+    openEdit(trip);
+  };
 
   return (
     <AdminLayout title="Upcoming Trips">
       <AdminTripsTable
         trips={trips}
         loading={loading}
-        publishedCount={publishedCount}
-        comingSoonCount={comingSoonCount}
-        draftCount={draftCount}
         pdfDownloadingId={pdfDownloadingId}
         importInputRef={importInputRef}
-        onImportChange={handleImportInputChange}
+        onImportInputChange={handleImportInputChange}
         onExportTemplate={handleExportTemplate}
-        onCreate={openCreate}
+        onAddTrip={openCreate}
         onView={setViewingTrip}
         onEdit={openEdit}
         onDelete={handleDelete}
         onTogglePublish={togglePublish}
         onToggleComingSoon={toggleComingSoon}
-        onToggleHidePdfDownload={toggleHidePdfDownload}
+        onToggleHidePdf={toggleHidePdfDownload}
         onDownloadPdf={handleDownloadTripPdf}
       />
 
       <AdminTripFormModal
-        isOpen={modalOpen}
-        onClose={closeModal}
+        modalOpen={modalOpen}
+        closeModal={closeModal}
         editingTrip={editingTrip}
         form={form}
         setForm={setForm}
-        saving={saving}
-        onSave={handleSave}
         modalSearch={modalSearch}
         setModalSearch={setModalSearch}
         modalSearchNoMatch={modalSearchNoMatch}
         modalBodyRef={modalBodyRef}
+        saving={saving}
+        handleSave={handleSave}
         commitGroupBulletDraft={commitGroupBulletDraft}
       />
 
-      <AdminTripDetailModal
-        viewingTrip={viewingTrip}
+      <AdminTripViewModal
+        trip={viewingTrip}
         onClose={() => setViewingTrip(null)}
-        onEdit={trip => { setViewingTrip(null); openEdit(trip); }}
+        onEdit={openEditFromView}
       />
     </AdminLayout>
   );

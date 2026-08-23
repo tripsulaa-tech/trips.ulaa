@@ -19,38 +19,39 @@ import { formatDate } from '../../utils/utils-index';
 interface AdminTripsTableProps {
   trips: UpcomingTrip[];
   loading: boolean;
-  publishedCount: number;
-  comingSoonCount: number;
-  draftCount: number;
   pdfDownloadingId: string | null;
   importInputRef: React.RefObject<HTMLInputElement | null>;
-  onImportChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onImportInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onExportTemplate: () => void;
-  onCreate: () => void;
+  onAddTrip: () => void;
   onView: (trip: UpcomingTrip) => void;
   onEdit: (trip: UpcomingTrip) => void;
   onDelete: (trip: UpcomingTrip) => void;
   onTogglePublish: (trip: UpcomingTrip) => void;
   onToggleComingSoon: (trip: UpcomingTrip) => void;
-  onToggleHidePdfDownload: (trip: UpcomingTrip) => void;
+  onToggleHidePdf: (trip: UpcomingTrip) => void;
   onDownloadPdf: (trip: UpcomingTrip) => void;
 }
 
-/** The Upcoming Trips list — the summary counts/import/export/Add-Trip
- *  header plus the trips table with its per-row quick actions.
- *
- *  Extracted from AdminTrips.tsx (see that file's git history for the
- *  original single-component version). */
+/** The Trips admin page's toolbar (Add Trip, status counts, Import/Export
+ *  Template) plus the trips table itself with its per-row quick actions.
+ *  Split out of the original single-file AdminTrips.tsx — see that
+ *  component's own comment for the rest of the split. */
 export default function AdminTripsTable({
-  trips, loading, publishedCount, comingSoonCount, draftCount, pdfDownloadingId,
-  importInputRef, onImportChange, onExportTemplate,
-  onCreate, onView, onEdit, onDelete, onTogglePublish, onToggleComingSoon, onToggleHidePdfDownload, onDownloadPdf,
+  trips, loading, pdfDownloadingId,
+  importInputRef, onImportInputChange, onExportTemplate,
+  onAddTrip, onView, onEdit, onDelete,
+  onTogglePublish, onToggleComingSoon, onToggleHidePdf, onDownloadPdf,
 }: AdminTripsTableProps) {
+  const publishedCount = trips.filter(t => t.status === 'published').length;
+  const comingSoonCount = trips.filter(t => t.status === 'coming_soon').length;
+  const draftCount = trips.filter(t => t.status === 'draft').length;
+
   return (
     <div className="space-y-6">
       <div className="space-y-3">
         <div className="flex justify-end">
-          <Button variant="primary" size="sm" onClick={onCreate}>
+          <Button variant="primary" size="sm" onClick={onAddTrip}>
             <Plus size={16} aria-hidden="true" /> Add Trip
           </Button>
         </div>
@@ -70,7 +71,7 @@ export default function AdminTripsTable({
             type="file"
             accept="application/json,.json"
             className="hidden"
-            onChange={onImportChange}
+            onChange={onImportInputChange}
           />
           <button onClick={() => importInputRef.current?.click()} aria-label="Import Template" className="p-2 rounded-md border-2 border-primary/30 text-primary hover:bg-primary/5 transition-colors" title="Import Template">
             <Upload size={16} aria-hidden="true" />
@@ -86,7 +87,7 @@ export default function AdminTripsTable({
       ) : trips.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-lg shadow-card">
           <p className="font-display text-xl text-dark-muted mb-4">No trips yet.</p>
-          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onCreate}><Plus size={16} aria-hidden="true" /> Add Your First Trip</Button>
+          <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onAddTrip}><Plus size={16} aria-hidden="true" /> Add Your First Trip</Button>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-card overflow-hidden">
@@ -150,7 +151,7 @@ export default function AdminTripsTable({
                           <FileDown size={15} className={pdfDownloadingId === trip.id ? 'animate-pulse' : ''} aria-hidden="true" />
                         </button>
                         <button
-                          onClick={() => onToggleHidePdfDownload(trip)}
+                          onClick={() => onToggleHidePdf(trip)}
                           aria-label={trip.hide_pdf_download ? `Show PDF download for ${trip.title}` : `Hide PDF download for ${trip.title}`}
                           className={`flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background transition-colors ${trip.hide_pdf_download ? 'text-red-600' : 'text-dark-muted hover:text-primary'}`}
                           title={trip.hide_pdf_download ? 'PDF download hidden from users on the trip page — click to show it again' : 'Hide the PDF download option from users on the trip page'}
