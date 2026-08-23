@@ -1,15 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  Plus,
-  Trash as Trash2,
-  DotsSixVertical as GripVertical,
-  MagnifyingGlass as Search,
-} from '@phosphor-icons/react';
+import { MagnifyingGlass as Search } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import AdminEditorFooter from './AdminEditorFooter';
-import ImageUploadField from '../components/ui/ImageUploadField';
-import MultiImageUploadField from '../components/ui/MultiImageUploadField';
-import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
 import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { useConfirm } from '../components/ui/useConfirm';
@@ -21,16 +13,20 @@ import type {
   AboutWhyDifferentCard,
   AboutJourneyStep,
 } from '../types/types-index';
+import HeroSection from './about-sections/HeroSection';
+import OurStorySection from './about-sections/OurStorySection';
+import JourneyIntroSection from './about-sections/JourneyIntroSection';
+import WhyDifferentSection from './about-sections/WhyDifferentSection';
+import CommunitySection from './about-sections/CommunitySection';
+import StatsSection from './about-sections/StatsSection';
+import TestimonialsSection from './about-sections/TestimonialsSection';
+import JourneySection from './about-sections/JourneySection';
 
 // Data fetched from the DB is merged with DEFAULT_ABOUT (see
 // mergeWithDefaults in constants/about.ts) so that any section or field
 // missing from a partially-saved record (e.g. an older row that predates a
 // newly added section) safely falls back to its default instead of being
 // `undefined` and crashing the form (e.g. `content.our_story.heading`).
-
-const inputClass =
-  'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
-const labelClass = 'block text-sm font-medium text-dark mb-1';
 
 // The 8 sections, in order — drives both the tab bar pills and the
 // scroll-spy (IntersectionObserver) that keeps the active pill in sync as
@@ -454,585 +450,44 @@ export default function AdminAbout() {
           )}
           <div className="p-6 space-y-8">
 
-        <div ref={el => { sectionRefs.current[0] = el; }} data-section={1} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">1 · Hero Banner</h2>
-          <ImageUploadField
-            label="Banner Image (Desktop)"
-            value={content.hero.image}
-            onChange={url => setHero('image', url)}
-            bucket="ulaa"
-            pathPrefix="about/hero"
-            hint="Wide landscape, at least 1920×1080px — shown full-bleed as the page's top banner on tablet & desktop screens."
-            allowUrl
-          />
-          <ImageUploadField
-            label="Banner Image (Mobile)"
-            value={content.hero.mobile_image}
-            onChange={url => setHero('mobile_image', url)}
-            bucket="ulaa"
-            pathPrefix="about/hero-mobile"
-            hint="Tall portrait, at least 1080×1350px — shown on phone screens instead of the desktop banner. Falls back to the desktop banner if left empty."
-            allowUrl
-          />
-          <div>
-            <label htmlFor="about-hero-heading" className={labelClass}>Heading</label>
-            <textarea
-              id="about-hero-heading"
-              value={content.hero.heading}
-              onChange={e => setHero('heading', e.target.value)}
-              rows={2}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-          <div>
-            <label htmlFor="about-hero-subheading" className={labelClass}>Subheading</label>
-            <textarea
-              id="about-hero-subheading"
-              value={content.hero.subheading}
-              onChange={e => setHero('subheading', e.target.value)}
-              rows={2}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="about-hero-cta-label" className={labelClass}>CTA Button Label (optional)</label>
-              <input
-                id="about-hero-cta-label"
-                value={content.hero.cta_label}
-                onChange={e => setHero('cta_label', e.target.value)}
-                className={inputClass}
-                placeholder="Explore Trips"
-              />
-            </div>
-            <div>
-              <label htmlFor="about-hero-cta-url" className={labelClass}>CTA URL (optional)</label>
-              <input
-                id="about-hero-cta-url"
-                value={content.hero.cta_url}
-                onChange={e => setHero('cta_url', e.target.value)}
-                className={inputClass}
-                placeholder="/trips"
-              />
-            </div>
-          </div>
-        </div>
-        <div ref={el => { sectionRefs.current[1] = el; }} data-section={2} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">2 · Our Story</h2>
-          <div>
-            <label htmlFor="about-story-heading" className={labelClass}>Section Heading</label>
-            <textarea
-              id="about-story-heading"
-              value={content.our_story.heading}
-              onChange={e => setStory('heading', e.target.value)}
-              rows={2}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-          <div>
-            <label htmlFor="about-story-description" className={labelClass}>Description</label>
-            <textarea
-              id="about-story-description"
-              value={content.our_story.description}
-              onChange={e => setStory('description', e.target.value)}
-              rows={4}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-          <ImageUploadField
-            label="Story Image"
-            value={content.our_story.image}
-            onChange={url => setStory('image', url)}
-            bucket="ulaa"
-            pathPrefix="about/story"
-            hint="Landscape, at least 1000×880px — shown in a cropped rounded panel."
-            allowUrl
-          />
-        </div>
-        <div ref={el => { sectionRefs.current[2] = el; }} data-section={3} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">3 · To Unforgettable Journeys</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="about-journey-intro-sub-heading" className={labelClass}>Sub Heading</label>
-              <input
-                id="about-journey-intro-sub-heading"
-                value={content.journey_intro.sub_heading}
-                onChange={e => setJourneyIntro('sub_heading', e.target.value)}
-                className={inputClass}
-                placeholder="From Worries"
-              />
-            </div>
-            <div>
-              <label htmlFor="about-journey-intro-heading" className={labelClass}>Heading</label>
-              <input
-                id="about-journey-intro-heading"
-                value={content.journey_intro.heading}
-                onChange={e => setJourneyIntro('heading', e.target.value)}
-                className={inputClass}
-                placeholder="To Unforgettable Journeys"
-              />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="about-journey-intro-description" className={labelClass}>Description</label>
-            <textarea
-              id="about-journey-intro-description"
-              value={content.journey_intro.description}
-              onChange={e => setJourneyIntro('description', e.target.value)}
-              rows={2}
-              className={`${inputClass} resize-none`}
-              placeholder="We turn your travel worries into beautiful experiences."
-            />
-          </div>
-
-          {/* Have You Ever... (nested) */}
-          <div className="border-t border-background-warm pt-4 space-y-3">
-            <h3 className="font-display text-sm font-bold text-dark uppercase tracking-wide">
-              Have You Ever…
-            </h3>
-            <div>
-              <label htmlFor="about-hye-heading" className={labelClass}>Section Heading</label>
-              <textarea
-                id="about-hye-heading"
-                value={content.journey_intro.have_you_ever.heading}
-                onChange={e => setHYE('heading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className={`${labelClass} mb-0`}>Items</label>
-                {content.journey_intro.have_you_ever.items.length < 8 && (
-                  <button
-                    type="button"
-                    onClick={addHYEItem}
-                    className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
-                  >
-                    <Plus size={13} aria-hidden="true" /> Add Item
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-dark-muted -mt-1">
-                Pick an icon for each item, or leave it unset to use the default rotation.
-              </p>
-              {content.journey_intro.have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => (
-                <div key={i} className="flex items-center gap-2">
-                  <GripVertical size={16} className="text-dark-muted flex-shrink-0" aria-hidden="true" />
-                  <div className="w-40 flex-shrink-0">
-                    <TripHighlightIconPicker
-                      value={item.icon ?? ''}
-                      onChange={key => updateHYEItem(i, 'icon', key)}
-                      hintText={item.text}
-                    />
-                  </div>
-                  <label htmlFor={`about-hye-item-${i}`} className="sr-only">Have You Ever item {i + 1}</label>
-                  <input
-                    id={`about-hye-item-${i}`}
-                    value={item.text}
-                    onChange={e => updateHYEItem(i, 'text', e.target.value)}
-                    className={`${inputClass} flex-1`}
-                    placeholder={`Item ${i + 1}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeHYEItem(i)}
-                    className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
-                    aria-label={`Remove ${item.text || `item ${i + 1}`}`}
-                  >
-                    <Trash2 size={15} aria-hidden="true" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Welcome to ULAA (nested) */}
-          <div className="border-t border-background-warm pt-4 space-y-3">
-            <h3 className="font-display text-sm font-bold text-dark uppercase tracking-wide">
-              Welcome to ULAA
-            </h3>
-            <div>
-              <label htmlFor="about-wtu-heading" className={labelClass}>Section Heading</label>
-              <textarea
-                id="about-wtu-heading"
-                value={content.journey_intro.welcome_to_ulaa.heading}
-                onChange={e => setWTU('heading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className={`${labelClass} mb-0`}>Feature Items</label>
-                {content.journey_intro.welcome_to_ulaa.items.length < 8 && (
-                  <button
-                    type="button"
-                    onClick={addWTUItem}
-                    className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
-                  >
-                    <Plus size={13} aria-hidden="true" /> Add Item
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-dark-muted -mt-1">
-                Pick an icon for each item, or leave it unset to use the default rotation.
-              </p>
-              {content.journey_intro.welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => (
-                <div key={i} className="flex items-center gap-2">
-                  <GripVertical size={16} className="text-dark-muted flex-shrink-0" aria-hidden="true" />
-                  <div className="w-40 flex-shrink-0">
-                    <TripHighlightIconPicker
-                      value={item.icon ?? ''}
-                      onChange={key => updateWTUItem(i, 'icon', key)}
-                      hintText={item.title}
-                    />
-                  </div>
-                  <label htmlFor={`about-wtu-item-${i}`} className="sr-only">Welcome to ULAA item {i + 1}</label>
-                  <input
-                    id={`about-wtu-item-${i}`}
-                    value={item.title}
-                    onChange={e => updateWTUItem(i, 'title', e.target.value)}
-                    className={`${inputClass} flex-1`}
-                    placeholder={`Item ${i + 1}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeWTUItem(i)}
-                    className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
-                    aria-label={`Remove ${item.title || `item ${i + 1}`}`}
-                  >
-                    <Trash2 size={15} aria-hidden="true" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div ref={el => { sectionRefs.current[3] = el; }} data-section={4} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">4 · Why ULAA is Different</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="about-why-diff-sub-heading" className={labelClass}>Sub Heading</label>
-              <input
-                id="about-why-diff-sub-heading"
-                value={content.why_different.sub_heading}
-                onChange={e => setWHY('sub_heading', e.target.value)}
-                className={inputClass}
-                placeholder="Beyond the Ordinary"
-              />
-            </div>
-            <div>
-              <label htmlFor="about-why-diff-heading" className={labelClass}>Section Heading</label>
-              <textarea
-                id="about-why-diff-heading"
-                value={content.why_different.heading}
-                onChange={e => setWHY('heading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="about-why-diff-subheading" className={labelClass}>Subheading</label>
-              <textarea
-                id="about-why-diff-subheading"
-                value={content.why_different.subheading}
-                onChange={e => setWHY('subheading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className={`${labelClass} mb-0`}>Cards (max 6)</label>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-dark-muted">{content.why_different.cards.length} / 6</span>
-                {content.why_different.cards.length < 6 && (
-                  <button
-                    type="button"
-                    onClick={addWhyCard}
-                    className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
-                  >
-                    <Plus size={13} aria-hidden="true" /> Add Card
-                  </button>
-                )}
-              </div>
-            </div>
-            {content.why_different.cards.map((card: AboutWhyDifferentCard, i: number) => (
-              <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">
-                    Card {i + 1}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeWhyCard(i)}
-                    aria-label={`Remove ${card.heading || `Card ${i + 1}`}`}
-                    className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </button>
-                </div>
-                <div>
-                  <label htmlFor={`about-why-card-heading-${i}`} className={labelClass}>Heading</label>
-                  <textarea
-                    id={`about-why-card-heading-${i}`}
-                    value={card.heading}
-                    onChange={e => updateWhyCard(i, 'heading', e.target.value)}
-                    rows={2}
-                    className={`${inputClass} resize-none`}
-                  />
-                </div>
-                <div>
-                  <label htmlFor={`about-why-card-description-${i}`} className={labelClass}>Description</label>
-                  <textarea
-                    id={`about-why-card-description-${i}`}
-                    value={card.description}
-                    onChange={e => updateWhyCard(i, 'description', e.target.value)}
-                    rows={2}
-                    className={`${inputClass} resize-none`}
-                  />
-                </div>
-                <ImageUploadField
-                  label="Card Image (optional)"
-                  value={card.image ?? ''}
-                  onChange={url => updateWhyCard(i, 'image', url)}
-                  bucket="ulaa"
-                  pathPrefix="about/why-different"
-                  fileNamePrefix={`card-${i + 1}`}
-                  hint="Upload a photo, or paste an image URL (e.g. from Unsplash) — it'll show on this card as-is."
-                  aspectRatio="16/9"
-                  allowUrl
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div ref={el => { sectionRefs.current[4] = el; }} data-section={5} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">5 · Our Community</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="about-community-sub-heading" className={labelClass}>Sub Heading</label>
-              <input
-                id="about-community-sub-heading"
-                value={content.community.sub_heading}
-                onChange={e => setCommunity('sub_heading', e.target.value)}
-                className={inputClass}
-                placeholder="Together We Thrive"
-              />
-            </div>
-            <div>
-              <label htmlFor="about-community-heading" className={labelClass}>Section Heading</label>
-              <textarea
-                id="about-community-heading"
-                value={content.community.heading}
-                onChange={e => setCommunity('heading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="about-community-subheading" className={labelClass}>Subheading</label>
-              <textarea
-                id="about-community-subheading"
-                value={content.community.subheading}
-                onChange={e => setCommunity('subheading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-          </div>
-          <MultiImageUploadField
-            label="Community Photos"
-            value={content.community.photos}
-            onChange={photos => setCommunity('photos', photos)}
-            bucket="ulaa"
-            pathPrefix="about/community"
-            hint="Square, at least 600×600px — shown in a cropped grid."
-            allowUrl
-          />
-        </div>
-        <div ref={el => { sectionRefs.current[5] = el; }} data-section={6} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">6 · Statistics</h2>
-          <p className="text-xs text-dark-muted -mt-1">
-            The numbers themselves are calculated live from completed trips, so they're always accurate.
-            Only the labels below are editable here — and they're shared by both this page and the
-            Completed Trips page, so changing a name updates it in both places.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="about-stats-girls" className={labelClass}>Girls Travelled Label</label>
-              <input
-                id="about-stats-girls"
-                value={content.stats.girls_travelled_label}
-                onChange={e => setStats('girls_travelled_label', e.target.value)}
-                className={inputClass}
-                placeholder="Girls travelled"
-              />
-            </div>
-            <div>
-              <label htmlFor="about-stats-trips" className={labelClass}>Trips Completed Label</label>
-              <input
-                id="about-stats-trips"
-                value={content.stats.trips_completed_label}
-                onChange={e => setStats('trips_completed_label', e.target.value)}
-                className={inputClass}
-                placeholder="Trips completed"
-              />
-            </div>
-            <div>
-              <label htmlFor="about-stats-destinations" className={labelClass}>Destinations Label</label>
-              <input
-                id="about-stats-destinations"
-                value={content.stats.destinations_label}
-                onChange={e => setStats('destinations_label', e.target.value)}
-                className={inputClass}
-                placeholder="Destinations"
-              />
-            </div>
-          </div>
-        </div>
-        <div ref={el => { sectionRefs.current[6] = el; }} data-section={7} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">7 · What Our Girls Say</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="about-testimonials-sub-heading" className={labelClass}>Sub Heading</label>
-              <input
-                id="about-testimonials-sub-heading"
-                value={content.testimonials.sub_heading}
-                onChange={e => setTestimonialsContent('sub_heading', e.target.value)}
-                className={inputClass}
-                placeholder="Stories That Inspire"
-              />
-            </div>
-            <div>
-              <label htmlFor="about-testimonials-heading" className={labelClass}>Section Heading</label>
-              <textarea
-                id="about-testimonials-heading"
-                value={content.testimonials.heading}
-                onChange={e => setTestimonialsContent('heading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="about-testimonials-subheading" className={labelClass}>Subheading</label>
-              <textarea
-                id="about-testimonials-subheading"
-                value={content.testimonials.subheading}
-                onChange={e => setTestimonialsContent('subheading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-                placeholder="Real stories. Real experiences."
-              />
-            </div>
-          </div>
-          <p className="text-xs text-dark-muted">
-            The testimonial cards themselves come from the Testimonials section of the admin panel.
-          </p>
-        </div>
-        <div ref={el => { sectionRefs.current[7] = el; }} data-section={8} className="scroll-mt-4 space-y-4">
-          <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">8 · Your ULAA Journey</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="about-journey8-sub-heading" className={labelClass}>Sub Heading</label>
-              <input
-                id="about-journey8-sub-heading"
-                value={content.journey.sub_heading}
-                onChange={e => setJourney('sub_heading', e.target.value)}
-                className={inputClass}
-                placeholder="One Step Closer"
-              />
-            </div>
-            <div>
-              <label htmlFor="about-journey8-heading" className={labelClass}>Section Heading</label>
-              <textarea
-                id="about-journey8-heading"
-                value={content.journey.heading}
-                onChange={e => setJourney('heading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="about-journey8-subheading" className={labelClass}>Subheading</label>
-              <textarea
-                id="about-journey8-subheading"
-                value={content.journey.subheading}
-                onChange={e => setJourney('subheading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className={`${labelClass} mb-0`}>Journey Steps</label>
-              {content.journey.steps.length < 10 && (
-                <button
-                  type="button"
-                  onClick={addStep}
-                  className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
-                >
-                  <Plus size={13} aria-hidden="true" /> Add Step
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {content.journey.steps.map((step: AboutJourneyStep, i: number) => (
-                <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">
-                      Step {i + 1}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeStep(i)}
-                      aria-label={`Remove ${step.heading || `Step ${i + 1}`}`}
-                      className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
-                    >
-                      <Trash2 size={14} aria-hidden="true" />
-                    </button>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Icon</label>
-                    <p className="text-xs text-dark-muted -mt-0.5 mb-1.5">
-                      Pick an icon for this step, or leave it unset to use the default rotation.
-                    </p>
-                    <div className="w-40">
-                      <TripHighlightIconPicker
-                        value={step.icon ?? ''}
-                        onChange={key => updateStep(i, 'icon', key)}
-                        hintText={step.heading}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor={`about-step-heading-${i}`} className={labelClass}>Heading</label>
-                    <textarea
-                      id={`about-step-heading-${i}`}
-                      value={step.heading}
-                      onChange={e => updateStep(i, 'heading', e.target.value)}
-                      rows={2}
-                      className={`${inputClass} resize-none`}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor={`about-step-description-${i}`} className={labelClass}>Description</label>
-                    <textarea
-                      id={`about-step-description-${i}`}
-                      value={step.description}
-                      onChange={e => updateStep(i, 'description', e.target.value)}
-                      rows={2}
-                      className={`${inputClass} resize-none`}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <HeroSection content={content.hero} setHero={setHero} sectionRef={el => { sectionRefs.current[0] = el; }} />
+        <OurStorySection content={content.our_story} setStory={setStory} sectionRef={el => { sectionRefs.current[1] = el; }} />
+        <JourneyIntroSection
+          content={content.journey_intro}
+          setJourneyIntro={setJourneyIntro}
+          setHYE={setHYE}
+          updateHYEItem={updateHYEItem}
+          addHYEItem={addHYEItem}
+          removeHYEItem={removeHYEItem}
+          setWTU={setWTU}
+          updateWTUItem={updateWTUItem}
+          addWTUItem={addWTUItem}
+          removeWTUItem={removeWTUItem}
+          sectionRef={el => { sectionRefs.current[2] = el; }}
+        />
+        <WhyDifferentSection
+          content={content.why_different}
+          setWHY={setWHY}
+          updateWhyCard={updateWhyCard}
+          addWhyCard={addWhyCard}
+          removeWhyCard={removeWhyCard}
+          sectionRef={el => { sectionRefs.current[3] = el; }}
+        />
+        <CommunitySection content={content.community} setCommunity={setCommunity} sectionRef={el => { sectionRefs.current[4] = el; }} />
+        <StatsSection content={content.stats} setStats={setStats} sectionRef={el => { sectionRefs.current[5] = el; }} />
+        <TestimonialsSection
+          content={content.testimonials}
+          setTestimonialsContent={setTestimonialsContent}
+          sectionRef={el => { sectionRefs.current[6] = el; }}
+        />
+        <JourneySection
+          content={content.journey}
+          setJourney={setJourney}
+          updateStep={updateStep}
+          addStep={addStep}
+          removeStep={removeStep}
+          sectionRef={el => { sectionRefs.current[7] = el; }}
+        />
           </div>
 
           {/* ── Sticky footer — blended into and pinned to the bottom of the
