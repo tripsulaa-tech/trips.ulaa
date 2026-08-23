@@ -32,7 +32,7 @@ import {
   recordPayment, generatePendingInvoice, addExtraCharge,
   markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
-  recordRefund, deleteEnquiry, updateEnquiryDetails, setEnquiryFollowUp,
+  recordRefund, deleteEnquiry, setEnquiryFollowUp,
   recordContactOutcome,
 } from '../../services/api';
 import type { ActivityLogEntry, CancellationReason, ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
@@ -52,8 +52,8 @@ import AdminEnquiryInvoicesCard from './AdminEnquiryInvoicesCard';
 import AdminEnquiryTravellerCard from './AdminEnquiryTravellerCard';
 import AdminEnquiryActivityTimeline from './AdminEnquiryActivityTimeline';
 import AdminEnquiryPaymentModal from './AdminEnquiryPaymentModal';
-import AdminEnquiryEditDetailsModal from './AdminEnquiryEditDetailsModal';
-import type { EditDetailsForm } from './AdminEnquiryEditDetailsModal';
+import EditDetailsModal from './AdminEditDetailsModal';
+import { useEditEnquiry } from './useEditEnquiry';
 import AdminEnquiryCancelModal from './AdminEnquiryCancelModal';
 import AdminEnquiryNotInterestedModal from './AdminEnquiryNotInterestedModal';
 import AdminEnquiryFollowUpModal from './AdminEnquiryFollowUpModal';
@@ -226,64 +226,14 @@ export default function AdminEnquiryDetail() {
   };
 
   // ---- Edit Details modal (fixing wrong name/contact/trip) --------------
-  const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState<EditDetailsForm>({ full_name: '', email: '', phone: '', city: '', age: '', trip_id: '' });
-  const [savingEdit, setSavingEdit] = useState(false);
-  // Which fields have been blurred yet — same reasoning as the Track
-  // Payment / Generate Invoice modals: full_name/phone are required, but
-  // showing that the instant the modal opens (before the admin has even
-  // looked at the field) would be premature, especially since this modal
-  // usually opens pre-filled from the existing enquiry.
-  const [editTouched, setEditTouched] = useState<Set<string>>(new Set());
-  const editErrors: { full_name?: string; phone?: string } = {};
-  if (!editForm.full_name.trim()) editErrors.full_name = 'Full name is required.';
-  if (!editForm.phone.trim()) editErrors.phone = 'Phone number is required.';
-  const hasEditErrors = !!(editErrors.full_name || editErrors.phone);
-
-  const openEdit = () => {
-    if (!enquiry) return;
-    setEditForm({
-      full_name: enquiry.full_name || '',
-      email: enquiry.email || '',
-      phone: enquiry.phone || '',
-      city: enquiry.city || '',
-      age: enquiry.age ?? '',
-      trip_id: enquiry.trip_id || '',
-    });
-    setEditTouched(new Set());
-    setEditOpen(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!enquiry) return;
-    // Live in the modal already, plus this defense-in-depth gate in case
-    // Save is reached some other way — same editErrors computed above, so
-    // the two can never drift.
-    if (editErrors.full_name || editErrors.phone) {
-      alert(editErrors.full_name || editErrors.phone || 'Please fix the highlighted fields.');
-      return;
-    }
-    try {
-      setSavingEdit(true);
-      const newTrip = editForm.trip_id ? trips.find(t => t.id === editForm.trip_id) : undefined;
-      const updated = await updateEnquiryDetails(enquiry.id, {
-        full_name: editForm.full_name,
-        email: editForm.email,
-        phone: editForm.phone,
-        city: editForm.city || null,
-        age: editForm.age === '' ? null : Number(editForm.age),
-        trip_id: editForm.trip_id || null,
-        trip_title: editForm.trip_id ? (newTrip?.title ?? null) : null,
-      });
-      setEnquiry(updated);
-      setEditOpen(false);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to save details.');
-    } finally {
-      setSavingEdit(false);
-    }
-  };
+  // Shared with the Enquiries list page — see useEditEnquiry for why the
+  // state/save logic lives there instead of being duplicated here. `load()`
+  // (below) refetches by id and calls setEnquiry, so it doubles as this
+  // hook's post-save refresh.
+  const {
+    editTarget, setEditTarget, editForm, setEditForm, editTouched, setEditTouched,
+    savingEdit, openEdit, handleSaveEdit,
+  } = useEditEnquiry({ trips, load });
 
   // ---- Not Interested / Reopen (this is just a query, not a booking) ----
   // Distinct from Cancel Booking, which is for a booking that had money on
@@ -722,7 +672,7 @@ export default function AdminEnquiryDetail() {
   const isGeneralContactMessage = !enquiry.trip_id && enquiry.source === 'website';
 
   const rowActions: ActionMenuItem[] = [
-    { label: 'Edit Details', icon: Pencil, onClick: openEdit },
+    { label: 'Edit Details', icon: Pencil, onClick: () => openEdit(enquiry) },
   ];
   // "Reopen" only makes sense before any money's changed hands — once
   // there's a booking_id or a payment on record, closing the lead out is a
@@ -913,19 +863,16 @@ export default function AdminEnquiryDetail() {
         onSave={handleSaveFollowUp}
       />
 
-      <AdminEnquiryEditDetailsModal
-        isOpen={editOpen}
-        onClose={() => setEditOpen(false)}
-        enquiry={enquiry}
-        trips={trips}
+      <EditDetailsModal
+        editTarget={editTarget}
+        onClose={() => setEditTarget(null)}
         editForm={editForm}
         setEditForm={setEditForm}
         editTouched={editTouched}
         setEditTouched={setEditTouched}
-        editErrors={editErrors}
-        hasEditErrors={hasEditErrors}
-        savingEdit={savingEdit}
+        trips={trips}
         onSave={handleSaveEdit}
+        saving={savingEdit}
       />
 
       <AdminEnquiryCancelModal
