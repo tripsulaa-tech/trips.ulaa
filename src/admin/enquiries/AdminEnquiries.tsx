@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -44,13 +44,12 @@ import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, updateEnquiryDetails, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
-import type { CancellationReason, ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
+import { updateEnquiryStatus, updateEnquiryDetails, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
+import type { ClosedReason, Enquiry, UpcomingTrip, WaitlistEntry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
-import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../../utils/utils-index';
+import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG,
@@ -64,6 +63,10 @@ import type { PaymentForm } from './AdminEnquiryCommon';
 import { JourneyLifecycleLegend } from './AdminEnquiryLifecycle';
 import { useGenerateInvoice } from './useGenerateInvoice';
 import { useMarkInvoicePaid } from './useMarkInvoicePaid';
+import { useEnquiryData } from './useEnquiryData';
+import { useEnquiryFilters, ENQUIRIES_PAGE_SIZE } from './useEnquiryFilters';
+import { useEnquirySelection } from './useEnquirySelection';
+import { useEnquiryLifecycle } from './useEnquiryLifecycle';
 
 import {
   phoneSignature, emailSignature, GROUP_COLOR_PALETTE,
@@ -97,68 +100,32 @@ export default function AdminEnquiries() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
-  const [trips, setTrips] = useState<UpcomingTrip[]>([]);
-  // Only used to resolve trip titles / tell a genuinely-deleted trip apart
-  // from one that simply graduated into a completed album (see
-  // sync_started_trip_albums in schema.sql — the album keeps the same id,
-  // but the upcoming_trips row itself gets removed once the album is
-  // published). Not refreshed after every mutation like `trips` is, since
-  // it's only needed for this lookup, not for editing/booking flows.
-  const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { enquiries, trips, completedTrips, loading, load, setTrips } = useEnquiryData();
   // Restores scroll position when the admin comes back to this list — e.g.
   // expand a card, tap "View Full CRM", then go back — instead of always
   // landing back at the top. Waits for `!loading` so it restores against
   // the page's real height, not the loading skeleton's.
   useScrollRestoration('/admin/enquiries', !loading);
-  const [filter, setFilter] = useState<'all' | Enquiry['status']>('all');
-  // Booking Journey filter — a separate, finer-grained dimension from
-  // `filter` above (Lead Status: new/contacted/closed only). Lets an admin
-  // isolate a specific stage of the pipeline the Status column already
-  // shows per row (e.g. just "Fully Paid" or "Checked In"), which the
-  // existing Lead Status/Booking filters couldn't reach on their own.
-  // Excludes 'cancelled' — that's Booking State, already covered by the
-  // Booking filter's Cancelled option (isCancelled()), not a journey stage
-  // going forward (see JOURNEY_STAGE_CONFIG's comment on that legacy value).
-  const [journeyFilter, setJourneyFilter] = useState<'all' | Exclude<Enquiry['journey_stage'], 'cancelled'>>('all');
-  const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
-  const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked' | 'cancelled'>('all');
-  const [groupFilter, setGroupFilter] = useState<'all' | 'group' | 'solo'>('all');
-  const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
-  const [packageFilter, setPackageFilter] = useState<'all' | 'early_bird' | 'normal'>('all');
-  const [sourceFilter, setSourceFilter] = useState<'all' | Enquiry['source']>('all');
-  // Quick toggle for "follow-ups due" — deliberately just a boolean chip
-  // (not a full FilterDropdown like Payment/Booking above) since there's
-  // only ever one meaningful thing to isolate here: reminders that are due
-  // today or overdue. See followUpStatus() in AdminEnquiryCommon.tsx for what
-  // counts as "due".
-  const [followUpDueOnly, setFollowUpDueOnly] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  // Table pagination — 50 rows per page, matching the reference table
-  // design. Reset to page 1 whenever a filter or search term changes (see
-  // effect below), so the admin never lands on a now-empty page.
-  const [currentPage, setCurrentPage] = useState(1);
-  const ENQUIRIES_PAGE_SIZE = 10;
+  const {
+    filter, setFilter,
+    journeyFilter, setJourneyFilter,
+    payFilter, setPayFilter,
+    bookedFilter, setBookedFilter,
+    groupFilter, setGroupFilter,
+    foodFilter, setFoodFilter,
+    packageFilter, setPackageFilter,
+    sourceFilter, setSourceFilter,
+    followUpDueOnly, setFollowUpDueOnly,
+    searchQuery, setSearchQuery, trimmedSearch,
+    selectedTripKey, setSelectedTripKey,
+    openFilterPanel, setOpenFilterPanel,
+    currentPage, setCurrentPage,
+    sortKey, sortDir, handleSort,
+    activeFilterCount,
+    clearAllFilters,
+    handleExportCsv,
+  } = useEnquiryFilters();
   const { ref: tableScrollRef, isDragging, handlers: dragHandlers } = useDragScroll<HTMLDivElement>();
-  // Column sorting — clicking a sortable header sorts the filtered list by
-  // that column; clicking the same header again flips the direction.
-  type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status' | 'follow_up';
-  const [sortKey, setSortKey] = useState<EnquirySortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDirection>('asc');
-  const handleSort = (key: EnquirySortKey) => {
-    if (sortKey === key) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-  };
-  // Which single filter's dropdown is open — only one at a time. 'more'
-  // is the overflow menu for less-frequently-used filters (currently just
-  // Source), keeping the main bar to five compact boxes.
-  const [openFilterPanel, setOpenFilterPanel] = useState<'trip' | 'query' | 'journey' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null>(null);
-  const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   // Enquiry id currently generating/sharing its invoice PDF — disables the
   // invoice buttons on that one row only while the payments ledger fetch +
@@ -170,7 +137,6 @@ export default function AdminEnquiries() {
   // for the cumulative PDF.
   const [detailsInvoices, setDetailsInvoices] = useState<Payment[]>([]);
   const [detailsInvoicesLoading, setDetailsInvoicesLoading] = useState(false);
-  const [completingId, setCompletingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -236,13 +202,17 @@ export default function AdminEnquiries() {
   // paymentTarget instead of detailsTarget.
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
   const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
-  const [cancelTarget, setCancelTarget] = useState<Enquiry | null>(null);
-  const [cancelCharges, setCancelCharges] = useState<number | ''>('');
-  const [cancelIsNoShow, setCancelIsNoShow] = useState(false);
-  const [cancelReason, setCancelReason] = useState<CancellationReason | ''>('');
-  const [cancelNotes, setCancelNotes] = useState('');
-  const [togglingNoShow, setTogglingNoShow] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
+  const {
+    cancelTarget, setCancelTarget,
+    cancelCharges, setCancelCharges,
+    cancelIsNoShow, setCancelIsNoShow,
+    cancelReason, setCancelReason,
+    cancelNotes, setCancelNotes,
+    togglingNoShow, cancelling, completingId,
+    handleCancelToggle, handleConfirmCancel,
+    handleToggleNoShow, handleDelete, handleMarkCompleted,
+    handleCheckIn, handleUndoCheckIn,
+  } = useEnquiryLifecycle({ load, setTrips, setUpdating, setPaymentTarget, setPaymentForm, setDetailsTarget });
   // How many waitlist signups — and how many actual people, since a group
   // signup (group_size > 1) is one signup but several people — are
   // waiting (status 'waiting') for each trip. Used to warn admins before
@@ -255,31 +225,12 @@ export default function AdminEnquiries() {
   const [waitlistEntriesForGroups, setWaitlistEntriesForGroups] = useState<WaitlistEntry[]>([]);
 
   // Bulk operations: select, edit, save, delete across multiple enquiries
-  // at once. Selection is keyed by enquiry id and is intentionally cleared
-  // whenever the admin drills into a different trip group, since the
-  // checkboxes only ever reflect what's currently on screen.
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  // Bulk Edit writes pricing fields (total_amount/amount_paid) as one flat
-  // value across every selected row — safe only when they all belong to
-  // the same trip (different trips have different prices). Group members
-  // share trip_id by construction, so this is really just guarding against
-  // a mixed selection made while the Trip filter is "All". Null trip_id
-  // (general enquiries) still counts as its own bucket so a mix of
-  // trip-linked and general enquiries is caught too.
-  const selectedTripIds = useMemo(
-    () => new Set(enquiries.filter(e => selectedIds.has(e.id)).map(e => e.trip_id ?? 'none')),
-    [enquiries, selectedIds]
-  );
-  const bulkEditAllowed = selectedTripIds.size <= 1;
-  // trip_title is snapshotted directly on each enquiry row at submit time
-  // (see submitEnquiry/createManualEnquiry in api.ts), so it's available
-  // here without needing to cross-reference the trips list — which only
-  // covers upcoming trips anyway, not completed ones.
-  const selectedTripName = useMemo(() => {
-    if (selectedTripIds.size !== 1) return null;
-    const selected = enquiries.find(e => selectedIds.has(e.id));
-    return selected?.trip_id ? selected.trip_title || 'Untitled trip' : 'General enquiry (no trip)';
-  }, [enquiries, selectedIds, selectedTripIds]);
+  // at once.
+  const {
+    selectedIds, setSelectedIds,
+    bulkEditAllowed, selectedTripName,
+    toggleSelectOne, toggleSelectAllFiltered,
+  } = useEnquirySelection(enquiries, selectedTripKey);
   // Mobile only: filter panel is collapsed by default (it's 7 stacked
   // fields — always showing it pushes the actual list off-screen on a
   // phone) and is opened via the toggle in the Filters header. Desktop
@@ -339,10 +290,6 @@ export default function AdminEnquiries() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only paymentTarget.id is read; re-fetching on every paymentTarget reference change would refetch unnecessarily
   }, [paymentTarget?.id]);
 
-  const load = () => {
-    getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
-  };
-
   const generateInvoice = useGenerateInvoice(async (updatedEnquiry, target) => {
     const freshInvoices = await getPaymentsForEnquiry(target.id);
     setDetailsInvoices(freshInvoices);
@@ -387,9 +334,6 @@ export default function AdminEnquiries() {
   };
 
   useEffect(() => {
-    load();
-    getAllUpcomingTripsAdmin().then(setTrips).catch(console.error);
-    getAllCompletedTripsAdmin().then(setCompletedTrips).catch(console.error);
     loadWaitlistCounts();
   }, []);
 
@@ -402,9 +346,9 @@ export default function AdminEnquiries() {
     if (enquiries.length === 0) return;
     const tripParam = searchParams.get('trip');
     const enquiryParam = searchParams.get('enquiry');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tripParam) setSelectedTripKey(tripParam);
     if (enquiryParam) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing local state from the ?enquiry= URL param (external system), same rationale as setSelectedTripKey above
       setExpandedId(enquiryParam);
       setHighlightId(enquiryParam);
       // "View booking" links (e.g. from the Waitlist page) only pass
@@ -417,7 +361,7 @@ export default function AdminEnquiries() {
       }
     }
     if (tripParam || enquiryParam) setSearchParams({}, { replace: true });
-  }, [enquiries, searchParams, setSearchParams]);
+  }, [enquiries, searchParams, setSearchParams, setSelectedTripKey]);
 
   // Someone hit "Convert to Enquiry" on the Waitlist page — a seat opened up
   // (usually from a cancellation) and this person is next in line. Prefill
@@ -589,12 +533,6 @@ export default function AdminEnquiries() {
     return () => clearTimeout(t);
   }, [highlightId]);
 
-  const [prevSelectedTripKey, setPrevSelectedTripKey] = useState(selectedTripKey);
-  if (selectedTripKey !== prevSelectedTripKey) {
-    setPrevSelectedTripKey(selectedTripKey);
-    setSelectedIds(new Set());
-  }
-
   // ---- Record Contact Outcome (New -> Contacted, and re-logging the next
   // call while still Contacted) --------------------------------------------
   // Replaces the old direct "Mark Contacted" status flip: status only ever
@@ -677,110 +615,6 @@ export default function AdminEnquiries() {
     });
   };
 
-  // Reactivates a previously cancelled enquiry. Re-books the seat if
-  // something had been paid, and resets booking_status via uncancelEnquiry.
-  const handleReactivate = async (e: Enquiry) => {
-    setUpdating(e.id);
-    try {
-      await uncancelEnquiry(e);
-      const freshTrips = await getAllUpcomingTripsAdmin();
-      setTrips(freshTrips);
-      load();
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to reactivate booking.');
-    } finally {
-      setUpdating(null);
-    }
-  };
-
-  // Cancel/reactivate entry point for the row-level button. Reactivating
-  // happens immediately; cancelling opens a modal first so third-party
-  // charges (airline/hotel penalties) can be recorded up front — cancelEnquiry
-  // uses them to compute suggested_refund_amount.
-  const handleCancelToggle = (e: Enquiry) => {
-    if (e.cancelled_at) {
-      handleReactivate(e);
-    } else {
-      setCancelTarget(e);
-      setCancelCharges('');
-      setCancelIsNoShow(false);
-      setCancelReason('');
-      setCancelNotes('');
-    }
-  };
-
-  // Cancels an enquiry. Frees the trip seat immediately but never touches
-  // amount_paid — that stays as the record of what was actually collected,
-  // separate from whatever gets refunded. isNoShow forces the suggested
-  // refund to 0 server-side (see cancelEnquiry).
-  const handleConfirmCancel = async () => {
-    if (!cancelTarget) return;
-    setCancelling(true);
-    try {
-      const charges = cancelCharges === '' ? undefined : Number(cancelCharges);
-      await cancelEnquiry(cancelTarget, charges, cancelIsNoShow, cancelReason || undefined, cancelNotes);
-      setCancelTarget(null);
-      const freshTrips = await getAllUpcomingTripsAdmin();
-      setTrips(freshTrips);
-      load();
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to cancel booking.');
-    } finally {
-      setCancelling(false);
-    }
-  };
-
-  // Toggles is_no_show independent of cancellation — e.g. an admin
-  // realizing after the trip departed that a still-"confirmed" booking was
-  // actually a no-show. The DB trigger recomputes suggested_refund_amount
-  // in response, so refresh paymentTarget from the returned row.
-  const handleToggleNoShow = async (e: Enquiry, isNoShow: boolean) => {
-    setTogglingNoShow(true);
-    try {
-      const updated = await setEnquiryNoShow(e, isNoShow);
-      setPaymentTarget(updated);
-      // No refund for no-shows — clear whatever was in the field so it
-      // can't be saved through by accident.
-      if (isNoShow) {
-        setPaymentForm(f => ({ ...f, refund_amount: 0 }));
-      }
-      load();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to update no-show status.');
-    } finally {
-      setTogglingNoShow(false);
-    }
-  };
-
-  // Permanently removes an enquiry. If it currently holds a seat, that seat
-  // is released first (handled inside deleteEnquiry) so trip counts stay
-  // accurate.
-  const handleDelete = async (e: Enquiry) => {
-    const ok = await confirm({
-      title: 'Delete this enquiry?',
-      message: 'This permanently removes the enquiry and its payment history. This cannot be undone.',
-      confirmLabel: 'Delete',
-    });
-    if (!ok) return;
-    setUpdating(e.id);
-    try {
-      await deleteEnquiry(e);
-      if (e.trip_id) {
-        const freshTrips = await getAllUpcomingTripsAdmin();
-        setTrips(freshTrips);
-      }
-      load();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to delete enquiry.');
-    } finally {
-      setUpdating(null);
-    }
-  };
-
   // Downloads (or, on devices that support the Web Share API with files,
   // shares to WhatsApp/etc.) the invoice PDF for a booked enquiry. Only
   // meaningful once a booking_id exists — that's assigned server-side the
@@ -846,51 +680,6 @@ export default function AdminEnquiries() {
   // the update straight away; see useMarkInvoicePaid for the shared
   // state/save logic (mirrors useGenerateInvoice's split with
   // AdminEnquiryDetail.tsx).
-
-  // Marks the trip as done — the one transition in booking_status's
-  // lifecycle that a payment event can never infer on its own (see
-  // markEnquiryCompleted's comment in services/api.ts).
-  const handleMarkCompleted = async (enquiry: Enquiry) => {
-    try {
-      setCompletingId(enquiry.id);
-      const updated = await markEnquiryCompleted(enquiry.id);
-      setDetailsTarget(updated);
-      load();
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to mark booking as completed.');
-    } finally {
-      setCompletingId(null);
-    }
-  };
-
-  // Stamps/clears checked_in_at — the one journey stage with no
-  // payment/status signal to derive it from.
-  const handleCheckIn = async (enquiry: Enquiry) => {
-    setUpdating(enquiry.id);
-    try {
-      await checkInEnquiry(enquiry);
-      load();
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to check in.');
-    } finally {
-      setUpdating(null);
-    }
-  };
-
-  const handleUndoCheckIn = async (enquiry: Enquiry) => {
-    setUpdating(enquiry.id);
-    try {
-      await undoCheckInEnquiry(enquiry.id);
-      load();
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to undo check-in.');
-    } finally {
-      setUpdating(null);
-    }
-  };
 
   // Single entry point for the table's "Advance" button — dispatches to
   // whichever manual action nextManualAction() says is next for this row.
@@ -1244,27 +1033,6 @@ export default function AdminEnquiries() {
     } finally {
       setSavingPayment(false);
     }
-  };
-
-  const toggleSelectOne = (id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAllFiltered = () => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      const allSelected = paginatedEnquiries.length > 0 && paginatedEnquiries.every(e => next.has(e.id));
-      if (allSelected) {
-        paginatedEnquiries.forEach(e => next.delete(e.id));
-      } else {
-        paginatedEnquiries.forEach(e => next.add(e.id));
-      }
-      return next;
-    });
   };
 
   const openBulkEdit = () => {
@@ -1718,7 +1486,6 @@ export default function AdminEnquiries() {
   });
   const groupColor = (e: Enquiry) => (e.group_id ? GROUP_COLOR_PALETTE[groupColorMap.get(e.group_id)!] : null);
 
-  const trimmedSearch = searchQuery.trim().toLowerCase();
   const filtered = sortedScoped
     .filter(e => filter === 'all' || e.status === filter)
     .filter(e => journeyFilter === 'all' || e.journey_stage === journeyFilter)
@@ -1770,18 +1537,6 @@ export default function AdminEnquiries() {
     rangeStart: enquiriesRangeStart,
     rangeEnd: enquiriesRangeEnd,
   } = paginate(sortedFiltered, currentPage, ENQUIRIES_PAGE_SIZE);
-
-  // Any change to what's being filtered/searched can shrink the result set
-  // out from under the current page, so land back on page 1 whenever the
-  // filters, trip scope, or search term change. Done during render
-  // (comparing against the previous filter signature) rather than in an
-  // effect — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const filterSignature = `${filter}|${journeyFilter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${packageFilter}|${sourceFilter}|${followUpDueOnly}|${selectedTripKey}|${trimmedSearch}`;
-  const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
-  if (filterSignature !== prevFilterSignature) {
-    setPrevFilterSignature(filterSignature);
-    setCurrentPage(1);
-  }
 
   const counts = {
     all: scopedEnquiries.length,
@@ -1836,59 +1591,6 @@ export default function AdminEnquiries() {
     return acc;
   }, { all: scopedEnquiries.length } as Record<string, number>);
   const followUpDueCount = scopedEnquiries.filter(e => !!followUpStatus(e)?.isDue).length;
-  const activeFilterCount = (selectedTripKey !== null ? 1 : 0) + (filter !== 'all' ? 1 : 0) + (journeyFilter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (packageFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (followUpDueOnly ? 1 : 0) + (trimmedSearch ? 1 : 0);
-
-  // Drives the "Clear all" action in the filter bar below.
-  const clearAllFilters = () => {
-    setSelectedTripKey(null);
-    setFilter('all');
-    setJourneyFilter('all');
-    setPayFilter('all');
-    setBookedFilter('all');
-    setGroupFilter('all');
-    setFoodFilter('all');
-    setPackageFilter('all');
-    setSourceFilter('all');
-    setFollowUpDueOnly(false);
-    setSearchQuery('');
-    setOpenFilterPanel(null);
-  };
-
-  // Exports exactly what's on screen: the current search/filter/sort, and —
-  // since "Trip" is itself one of the filters (selectedTripKey) — scoping to
-  // one trip before exporting gives a per-trip passenger list for free, no
-  // separate "export this trip" button needed. All client-side: serializes
-  // sortedFiltered straight to a download, no backend round-trip.
-  const handleExportCsv = () => {
-    const headers = [
-      'Name', 'Phone', 'Email', 'Age', 'City', 'Trip', 'Group',
-      'Package', 'Food Preference', 'Total Amount', 'Amount Paid',
-      'Payment Status', 'Booking Status', 'Refund Amount', 'Lead Status',
-      'Source', 'Cancelled', 'Created At',
-    ];
-    const rows = sortedFiltered.map(e => [
-      e.full_name,
-      e.phone,
-      e.email,
-      e.age ?? '',
-      e.city ?? '',
-      e.trip_id ? (e.trip_title ?? '') : 'General (No Trip)',
-      isGroupEntry(e) ? groupLabel(e) : '',
-      PACKAGE_CONFIG[e.package_type]?.label ?? e.package_type,
-      e.food_preference ?? 'Not set',
-      e.total_amount ?? '',
-      e.amount_paid,
-      paymentStatus(e).label,
-      e.booking_status ?? '',
-      e.refund_amount,
-      e.status,
-      e.source,
-      e.cancelled_at ? 'Yes' : 'No',
-      formatDate(e.created_at),
-    ]);
-    const scopeSuffix = activeGroup ? `-${activeGroup.title.replace(/\s+/g, '_')}` : '';
-    downloadCsv(`enquiries${scopeSuffix}-${new Date().toISOString().slice(0, 10)}`, headers, rows);
-  };
 
   const paymentTotals = (list: Enquiry[]) => ({
     collected: list.reduce((sum, e) => sum + (e.amount_paid || 0), 0),
@@ -2533,7 +2235,7 @@ export default function AdminEnquiries() {
                 searchValue={searchQuery}
                 onSearchChange={setSearchQuery}
                 searchPlaceholder="Search case #, title, owner..."
-                onExport={handleExportCsv}
+                onExport={() => handleExportCsv(sortedFiltered, activeGroup?.title ?? null, groupLabel)}
                 exportLabel="Export CSV"
               />
               <div
@@ -2548,7 +2250,7 @@ export default function AdminEnquiries() {
                         <input
                           type="checkbox"
                           checked={paginatedEnquiries.length > 0 && paginatedEnquiries.every(e => selectedIds.has(e.id))}
-                          onChange={toggleSelectAllFiltered}
+                          onChange={() => toggleSelectAllFiltered(paginatedEnquiries)}
                           aria-label="Select all"
                           className="w-4 h-4 rounded border-background-warm accent-primary cursor-pointer"
                         />
