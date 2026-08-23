@@ -21,7 +21,6 @@ import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import { useAlert } from '../../components/ui/useAlert';
 import { getPaymentsForEnquiry } from '../../services/api';
 import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
 import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap } from '../../utils/utils-index';
@@ -72,7 +71,6 @@ import AdminEnquiriesDesktopTable from './AdminEnquiriesDesktopTable';
 import AdminEnquiriesMobileCards from './AdminEnquiriesMobileCards';
 
 export default function AdminEnquiries() {
-  const alert = useAlert();
   const [searchParams, setSearchParams] = useSearchParams();
   const { enquiries, trips, completedTrips, loading, load, setTrips } = useEnquiryData();
   // Restores scroll position when the admin comes back to this list — e.g.
@@ -201,8 +199,9 @@ export default function AdminEnquiries() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   // Lightweight, self-dismissing confirmation for things that succeeded but
   // don't need to block the admin with an "OK" click — unlike the shared
-  // AlertDialog (via `alert` below), which is reserved for errors/validation
-  // that the admin actually needs to acknowledge.
+  // AlertDialog (used inside the hooks above, e.g. useAddEnquiry/
+  // useBulkEdit), which is reserved for errors/validation that the admin
+  // actually needs to acknowledge.
   const [toast, setToast] = useState<string | null>(null);
   const showToast = (message: string) => setToast(message);
 

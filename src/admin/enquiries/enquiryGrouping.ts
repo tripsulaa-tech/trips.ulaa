@@ -50,7 +50,7 @@ export const buildGroupColorMap = (sortedScoped: Enquiry[]): Map<string, number>
   });
   return groupColorMap;
 };
-export const groupColorFor = (e: Enquiry, groupColorMap: Map<string, number>): string | null =>
+export const groupColorFor = (e: Enquiry, groupColorMap: Map<string, number>): typeof GROUP_COLOR_PALETTE[number] | null =>
   e.group_id ? GROUP_COLOR_PALETTE[groupColorMap.get(e.group_id)!] : null;
 
 export const paymentTotals = (list: Enquiry[]) => ({
