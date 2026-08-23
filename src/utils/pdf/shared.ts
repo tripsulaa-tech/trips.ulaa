@@ -4,6 +4,9 @@
 // locally (exact tagline wording, extra brand-page-only colors, etc.) —
 // see BRAND/COLORS in invoicePdf.ts and pdf/itinerary/shared.ts.
 
+import { formatPrice } from '../utils-index';
+import { sanitizeForPdf } from '../pdfText';
+
 export type RGB = readonly [number, number, number];
 
 export const BRAND_BASE = {
@@ -30,3 +33,15 @@ export const COLORS_BASE = {
   grayLine: [222, 211, 199] as RGB,
   grayLineSoft: [232, 224, 213] as RGB,
 } as const;
+
+/** `formatPrice()` returns the ₹ glyph, which isn't in the core PDF font's
+ *  charset — used directly it renders as a mis-measured stray glyph, which
+ *  throws off any layout math based on its width (e.g. positioning a
+ *  strike-through price right after it). Every price shown in either PDF
+ *  (invoice or itinerary) goes through this instead, so it's always the
+ *  sanitized "Rs. 39,999" form. `amount || 0` covers callers passing a
+ *  possibly-missing amount (e.g. invoice line items) as well as a known
+ *  numeric one — same result either way once it's 0. */
+export function money(amount: number): string {
+  return sanitizeForPdf(formatPrice(amount || 0));
+}

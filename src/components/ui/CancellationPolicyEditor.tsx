@@ -6,6 +6,7 @@ import {
 } from '@phosphor-icons/react';
 import type { CancellationPolicy, CancellationTier } from '../../types/types-index';
 import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
+import { tierLabel } from '../../constants/cancellationPolicy';
 
 interface CancellationPolicyEditorProps {
   value: CancellationPolicy;
@@ -13,13 +14,6 @@ interface CancellationPolicyEditorProps {
 }
 
 const numberClass = `${inputClass} sm:w-28`;
-
-function tierLabel(tier: CancellationTier): string {
-  if (tier.max_days === null && tier.min_days !== null) return `More than ${tier.min_days} days before departure`;
-  if (tier.min_days !== null && tier.max_days !== null) return `${tier.min_days}–${tier.max_days} days before departure`;
-  if (tier.min_days === null && tier.max_days !== null) return `Within ${tier.max_days} days of departure`;
-  return 'Set the day range below';
-}
 
 export default function CancellationPolicyEditor({ value, onChange }: CancellationPolicyEditorProps) {
   const updateTier = (index: number, patch: Partial<CancellationTier>) => {
@@ -106,15 +100,15 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
           {value.tiers.map((tier, index) => (
             <div key={index} className="bg-background-warm rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-button font-bold text-primary">{tierLabel(tier)}</span>
+                <span className="text-xs font-button font-bold text-primary">{tierLabel(tier, 'Set the day range below')}</span>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => moveTier(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up" aria-label={`Move tier "${tierLabel(tier)}" up`}>
+                  <button type="button" onClick={() => moveTier(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up" aria-label={`Move tier "${tierLabel(tier, 'Set the day range below')}" up`}>
                     <ChevronUp size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => moveTier(index, 1)} disabled={index === value.tiers.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down" aria-label={`Move tier "${tierLabel(tier)}" down`}>
+                  <button type="button" onClick={() => moveTier(index, 1)} disabled={index === value.tiers.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down" aria-label={`Move tier "${tierLabel(tier, 'Set the day range below')}" down`}>
                     <ChevronDown size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => removeTier(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove tier" aria-label={`Remove tier "${tierLabel(tier)}"`}>
+                  <button type="button" onClick={() => removeTier(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove tier" aria-label={`Remove tier "${tierLabel(tier, 'Set the day range below')}"`}>
                     <X size={14} aria-hidden="true" />
                   </button>
                 </div>
@@ -145,7 +139,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
                   />
                 </div>
               </div>
-              <label htmlFor={`cancellation-tier-${index}-description`} className="sr-only">{`Description for tier "${tierLabel(tier)}"`}</label>
+              <label htmlFor={`cancellation-tier-${index}-description`} className="sr-only">{`Description for tier "${tierLabel(tier, 'Set the day range below')}"`}</label>
               <textarea
                 id={`cancellation-tier-${index}-description`}
                 value={tier.description}

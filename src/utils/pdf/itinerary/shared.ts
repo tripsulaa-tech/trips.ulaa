@@ -1,4 +1,4 @@
-import type { UpcomingTrip, CancellationTier, TripHighlightCard, TripIncludedGroup, TripInclusionItem } from '../../../types/types-index';
+import type { UpcomingTrip, TripHighlightCard, TripIncludedGroup, TripInclusionItem } from '../../../types/types-index';
 import { getTripHighlightIcon, type TripHighlightIconType } from '../../../constants/tripHighlightIcons';
 import {
   Shirt, Footprints, Glasses, HatGlasses, Hand, Headphones, BatteryCharging,
@@ -9,6 +9,7 @@ import { formatPrice } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
 import { fetchAsDataUrl, loadImageEl } from '../../pdfImageLoading';
 import { BRAND_BASE, COLORS_BASE, type RGB } from '../shared';
+export { tierLabel } from '../../../constants/cancellationPolicy';
 
 export type { RGB } from '../shared';
 
@@ -104,9 +105,7 @@ export const CONFIDENCE_PALETTE: { bg: RGB; fg: RGB }[] = [
  *  throws off any layout math based on its width (e.g. positioning a
  *  strike-through price right after it). Every price shown in the PDF goes
  *  through this instead, so it's always the sanitized "Rs. 39,999" form. */
-export function money(amount: number): string {
-  return sanitizeForPdf(formatPrice(amount));
-}
+export { money } from '../shared';
 
 /** Same figure as `money()` would have produced, but with the real ₹
  *  glyph instead of the "RS" text fallback — for use only where the
@@ -199,13 +198,6 @@ export function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
         }
       : trip.cancellation_policy,
   };
-}
-
-export function tierLabel(tier: CancellationTier): string {
-  if (tier.max_days === null && tier.min_days !== null) return `More than ${tier.min_days} days before departure`;
-  if (tier.min_days !== null && tier.max_days !== null) return `${tier.min_days}\u2013${tier.max_days} days before departure`;
-  if (tier.min_days === null && tier.max_days !== null) return `Within ${tier.max_days} days of departure`;
-  return 'Cancellation window';
 }
 
 /** Fetches a photo and returns it pre-cropped to exactly targetWpt ×

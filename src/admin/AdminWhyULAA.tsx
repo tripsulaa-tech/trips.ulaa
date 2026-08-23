@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from 'react';
 import {
   MagnifyingGlass as Search,
 } from '@phosphor-icons/react';
@@ -6,191 +5,45 @@ import {
 import AdminLayout from './AdminLayout';
 import AdminEditorFooter from './AdminEditorFooter';
 import ImageUploadField from '../components/ui/ImageUploadField';
-import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
+import { useContentEditorPage } from './useContentEditorPage';
 import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
 import { useConfirm } from '../components/ui/useConfirm';
-import { collectStorageUrls } from '../utils/utils-index';
 import type { WhyUlaaContent } from '../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 
 export default function AdminWhyULAA() {
   const confirm = useConfirm();
-  const [content, setContent] = useState<WhyUlaaContent>(DEFAULT_WHY_ULAA);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const {
+    content,
+    setContent,
+    loading,
+    saving,
+    saved,
+    activeSection,
+    setSectionRef,
+    tabBarRef,
+    tabButtonRefs,
+    showLeftFade,
+    showRightFade,
+    handleTabSelect,
+    pageSearch,
+    setPageSearch,
+    pageSearchNoMatch,
+    scrollBodyRef,
+    hasUnsavedChanges,
+    handleSave,
+  } = useContentEditorPage<WhyUlaaContent>({
+    contentKey: 'why_ulaa',
+    defaultContent: DEFAULT_WHY_ULAA,
+    mergeWithDefaults: data => (data as WhyUlaaContent | null) || DEFAULT_WHY_ULAA,
+    // "Section Text" plus one entry per feature card — grows/shrinks as
+    // cards are added/removed, so the tab-fade/scroll-spy effects re-run
+    // to match (same as the old inline [content.features.length] deps).
+    sectionCount: c => 1 + c.features.length,
+  });
 
-  // Tab bar (pills) + scroll-spy — identical approach to AdminAbout.tsx.
-  // Section list is dynamic: "Section Text" plus one entry per feature card.
+  // Tab bar labels: "Section Text" plus one entry per feature card.
   const SECTION_TITLES = ['Section Text', ...content.features.map((_, i) => `Card ${i + 1}`)];
-  const [activeSection, setActiveSection] = useState(0);
-  const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const tabBarRef = useRef<HTMLDivElement>(null);
-  const tabButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const lastActiveRef = useRef(0);
-  // Edge fades on the tab bar (matches the Add Trip modal's Tabs.tsx) so
-  // it's obvious there are more tabs to scroll to in either direction.
-  const [showLeftFade, setShowLeftFade] = useState(false);
-  const [showRightFade, setShowRightFade] = useState(false);
-  const suppressObserverRef = useRef(false);
-  const suppressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const suppressScrollListenerRef = useRef<(() => void) | null>(null);
-
-  // Page-wide field search (mirrors the Add Trip modal's search field).
-  const [pageSearch, setPageSearch] = useState('');
-  const [pageSearchNoMatch, setPageSearchNoMatch] = useState(false);
-  const scrollBodyRef = useRef<HTMLDivElement>(null);
-
-  const STORAGE_BUCKET = 'ulaa';
-  // Same snapshot-diff approach as AdminAbout — see the comment there for
-  // why this exists (page-level Save with no modal-close hook to catch
-  // orphaned uploads, so this doubles as the navigate-away guard too).
-  const savedUrlsRef = useRef<Set<string>>(new Set());
-  const savedContentRef = useRef<string>('');
-
-  useEffect(() => {
-    getSiteContent<WhyUlaaContent>('why_ulaa')
-      .then(data => {
-        const resolved = data || DEFAULT_WHY_ULAA;
-        setContent(resolved);
-        savedUrlsRef.current = collectStorageUrls(resolved, STORAGE_BUCKET);
-        savedContentRef.current = JSON.stringify(resolved);
-      })
-      .catch(() => {
-        setContent(DEFAULT_WHY_ULAA);
-        savedUrlsRef.current = collectStorageUrls(DEFAULT_WHY_ULAA, STORAGE_BUCKET);
-        savedContentRef.current = JSON.stringify(DEFAULT_WHY_ULAA);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  const handlePageSearch = () => {
-    const query = pageSearch.trim().toLowerCase();
-    const container = scrollBodyRef.current;
-    if (!query || !container) {
-      setPageSearchNoMatch(false);
-      return;
-    }
-    const candidates = Array.from(container.querySelectorAll<HTMLElement>('label, h2'));
-    const match = candidates.find(el => el.textContent?.toLowerCase().includes(query));
-    if (!match) {
-      setPageSearchNoMatch(true);
-      return;
-    }
-    setPageSearchNoMatch(false);
-    const sectionEl = match.closest<HTMLElement>('[data-section]');
-    if (sectionEl) setActiveSection(Number(sectionEl.dataset.section) - 1);
-    match.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    const previousBackground = match.style.backgroundColor;
-    const previousTransition = match.style.transition;
-    match.style.transition = 'background-color 0.3s ease';
-    match.style.backgroundColor = '#FDE9D9';
-    setTimeout(() => {
-      match.style.backgroundColor = previousBackground;
-      match.style.transition = previousTransition;
-    }, 1500);
-  };
-
-  useEffect(() => {
-    const timeout = setTimeout(() => handlePageSearch(), pageSearch.trim() ? 350 : 0);
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageSearch]);
-
-  // Scrolls the tab bar's own scrollLeft directly (centering the button)
-  // instead of the button's native scrollIntoView — scrollIntoView's block
-  // dimension considers this page's outer vertical scroll containers too
-  // (it can't be scoped to just the tab bar's horizontal axis), which
-  // meant a tab scrolled would sometimes settle only partially into view
-  // instead of fully. Computing the scrollLeft ourselves touches only the
-  // tab bar. Same approach as Tabs.tsx.
-  const scrollTabIntoView = (i: number) => {
-    const bar = tabBarRef.current;
-    const btn = tabButtonRefs.current[i];
-    if (!bar || !btn) return;
-    const target = btn.offsetLeft - bar.clientWidth / 2 + btn.clientWidth / 2;
-    bar.scrollTo({ left: target, behavior: 'smooth' });
-  };
-
-  // Keeps the edge fades in sync with the tab bar's scroll position — same
-  // approach as Tabs.tsx. Depends on the feature count since SECTION_TITLES
-  // (and so the tab bar's scrollWidth) grows/shrinks as cards are added.
-  const updateTabFades = () => {
-    const el = tabBarRef.current;
-    if (!el) return;
-    setShowLeftFade(el.scrollLeft > 4);
-    setShowRightFade(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  };
-
-  useEffect(() => {
-    updateTabFades();
-    const el = tabBarRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', updateTabFades);
-    const resizeObserver = new ResizeObserver(updateTabFades);
-    resizeObserver.observe(el);
-    return () => {
-      el.removeEventListener('scroll', updateTabFades);
-      resizeObserver.disconnect();
-    };
-  }, [content.features.length]);
-
-  useEffect(() => {
-    const container = scrollBodyRef.current;
-    if (!container) return;
-    const observer = new IntersectionObserver(
-      entries => {
-        if (suppressObserverRef.current) return;
-        const visible = entries.filter(e => e.isIntersecting);
-        if (visible.length === 0) return;
-        const topMost = visible.reduce((a, b) => (a.boundingClientRect.top <= b.boundingClientRect.top ? a : b));
-        const idx = sectionRefs.current.indexOf(topMost.target as HTMLDivElement);
-        if (idx !== -1 && idx !== lastActiveRef.current) {
-          lastActiveRef.current = idx;
-          setActiveSection(idx);
-          scrollTabIntoView(idx);
-        }
-      },
-      { root: container, rootMargin: '0px 0px -65% 0px', threshold: 0 }
-    );
-    sectionRefs.current.forEach(el => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, [loading]);
-
-  useEffect(() => () => {
-    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
-    if (suppressScrollListenerRef.current) scrollBodyRef.current?.removeEventListener('scroll', suppressScrollListenerRef.current);
-  }, []);
-
-  const handleTabSelect = (i: number) => {
-    lastActiveRef.current = i;
-    setActiveSection(i);
-    suppressObserverRef.current = true;
-    const container = scrollBodyRef.current;
-    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
-    if (suppressScrollListenerRef.current) {
-      container?.removeEventListener('scroll', suppressScrollListenerRef.current);
-      suppressScrollListenerRef.current = null;
-    }
-    sectionRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    scrollTabIntoView(i);
-    const clearSuppression = () => {
-      suppressObserverRef.current = false;
-      if (suppressScrollListenerRef.current) {
-        container?.removeEventListener('scroll', suppressScrollListenerRef.current);
-        suppressScrollListenerRef.current = null;
-      }
-    };
-    const onScroll = () => {
-      if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
-      suppressTimeoutRef.current = setTimeout(clearSuppression, 150);
-    };
-    suppressScrollListenerRef.current = onScroll;
-    container?.addEventListener('scroll', onScroll);
-    suppressTimeoutRef.current = setTimeout(clearSuppression, 150);
-  };
-
-  const hasUnsavedChanges = () => JSON.stringify(content) !== savedContentRef.current;
 
   const updateFeature = (index: number, patch: Partial<WhyUlaaContent['features'][number]>) => {
     setContent(c => ({
@@ -201,25 +54,6 @@ export default function AdminWhyULAA() {
 
   const setField = (key: 'sub_heading' | 'heading' | 'subheading', value: string) => {
     setContent(c => ({ ...c, [key]: value }));
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      await upsertSiteContent('why_ulaa', content);
-      const newUrls = collectStorageUrls(content, STORAGE_BUCKET);
-      for (const url of savedUrlsRef.current) {
-        if (!newUrls.has(url)) deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
-      }
-      savedUrlsRef.current = newUrls;
-      savedContentRef.current = JSON.stringify(content);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch {
-      alert('Failed to save. Please try again.');
-    } finally {
-      setSaving(false);
-    }
   };
 
   const resetToDefault = async () => {
@@ -294,7 +128,7 @@ export default function AdminWhyULAA() {
           )}
           <div className="p-6 space-y-8">
 
-        <div ref={el => { sectionRefs.current[0] = el; }} data-section={1} className="scroll-mt-4 space-y-4">
+        <div ref={el => { setSectionRef(0, el); }} data-section={1} className="scroll-mt-4 space-y-4">
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">Section Text</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -333,7 +167,7 @@ export default function AdminWhyULAA() {
         {content.features.map((feature, index) => (
           <div
             key={index}
-            ref={el => { sectionRefs.current[index + 1] = el; }}
+            ref={el => { setSectionRef(index + 1, el); }}
             data-section={index + 2}
             className="scroll-mt-4 space-y-4"
           >

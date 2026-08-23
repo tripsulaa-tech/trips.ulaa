@@ -29,6 +29,7 @@ import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
+import { fadeUp } from '../utils/animation';
 import type {
   AboutContent,
   AboutHaveYouEverItem,
@@ -40,15 +41,6 @@ import type {
 } from '../types/types-index';
 
 const MeetTheFounder = lazy(() => import('../sections/home/MeetTheFounder'));
-
-// ─── animation helpers ────────────────────────────────────────────────────────
-
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 30 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
-  transition: { duration: 0.6, delay },
-});
 
 // "have_you_ever" items store an icon-library key chosen in the admin
 // (AboutHaveYouEverItem.icon, see constants/tripHighlightIcons.ts). This

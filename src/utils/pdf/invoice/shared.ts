@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { svg2pdf } from 'svg2pdf.js';
 import type { Enquiry, Payment } from '../../../types/types-index';
-import { formatPrice, formatDate } from '../../utils-index';
+import { formatDate } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
 import { loadContainImage } from '../../pdfImageLoading';
 import { BRAND_BASE, COLORS_BASE, type RGB } from '../shared';
@@ -99,9 +99,7 @@ export function val(text: string | null | undefined): string {
   return s || '\u2014'; // em dash for empty fields, matching the old template
 }
 
-export function money(amount: number): string {
-  return sanitizeForPdf(formatPrice(amount || 0));
-}
+export { money } from '../shared';
 
 export function fdate(iso: string | null | undefined): string {
   if (!iso) return '\u2014';

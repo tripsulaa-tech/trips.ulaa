@@ -1,4 +1,4 @@
-import type { CancellationPolicy } from '../types/types-index';
+import type { CancellationPolicy, CancellationTier } from '../types/types-index';
 
 // =============================================
 // Default Cancellation Policy
@@ -59,3 +59,16 @@ export const CANCELLATION_POLICY_STATIC_SECTIONS = {
   acceptance:
     'By paying the advance amount, participants acknowledge that they have read, understood, and agreed to this Cancellation Policy.',
 };
+
+// Renders one tier's day range as display text, e.g. "31–45 days before
+// departure". Shared by the admin editor, the public policy display, and
+// the itinerary PDF, so the wording can't drift between the three. `fallback`
+// covers the (min_days === null && max_days === null) case, which each
+// caller phrases differently depending on context — an editor still being
+// filled in vs. an already-saved policy being read back.
+export function tierLabel(tier: CancellationTier, fallback = 'Cancellation window'): string {
+  if (tier.max_days === null && tier.min_days !== null) return `More than ${tier.min_days} days before departure`;
+  if (tier.min_days !== null && tier.max_days !== null) return `${tier.min_days}–${tier.max_days} days before departure`;
+  if (tier.min_days === null && tier.max_days !== null) return `Within ${tier.max_days} days of departure`;
+  return fallback;
+}

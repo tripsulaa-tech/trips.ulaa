@@ -7,14 +7,8 @@ import {
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../../constants/founder';
 import { getSocialIcon, getSocialBrandClasses, getSocialHref } from '../../utils/socialIcons';
+import { fadeUp } from '../../utils/animation';
 import type { FounderContent } from '../../types/types-index';
-
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 30 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
-  transition: { duration: 0.6, delay },
-});
 
 interface MeetTheFounderProps {
   // Hides the "About" CTA (which links to the About page) when this

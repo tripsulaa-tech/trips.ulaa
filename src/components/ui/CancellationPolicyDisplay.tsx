@@ -9,18 +9,11 @@ import {
   Clock as Clock3,
   CheckCircle as CheckCircle2,
 } from '@phosphor-icons/react';
-import type { CancellationPolicy, CancellationTier } from '../../types/types-index';
-import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../../constants/cancellationPolicy';
+import type { CancellationPolicy } from '../../types/types-index';
+import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC, tierLabel } from '../../constants/cancellationPolicy';
 
 interface CancellationPolicyDisplayProps {
   policy: CancellationPolicy;
-}
-
-function tierLabel(tier: CancellationTier): string {
-  if (tier.max_days === null && tier.min_days !== null) return `More than ${tier.min_days} days before departure`;
-  if (tier.min_days !== null && tier.max_days !== null) return `${tier.min_days}–${tier.max_days} days before departure`;
-  if (tier.min_days === null && tier.max_days !== null) return `Within ${tier.max_days} days of departure`;
-  return 'Cancellation window';
 }
 
 function SectionCard({
