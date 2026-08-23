@@ -8,6 +8,7 @@ import {
 import type { ItineraryDay } from '../../types/types-index';
 import MultiImageUploadField from './MultiImageUploadField';
 import TripHighlightIconPicker from './TripHighlightIconPicker';
+import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
 interface ItineraryEditorProps {
   value: ItineraryDay[];
@@ -17,8 +18,6 @@ interface ItineraryEditorProps {
   // Falls back to 'new-trip' for trips that haven't been saved/titled yet.
   tripSlug?: string;
 }
-
-const inputClass = 'w-full px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 
 // Minimum number of photos we ask admins to add per day. Not hard-enforced
 // (a day can still be saved with fewer/no photos), just nudges the UI.

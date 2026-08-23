@@ -11,8 +11,7 @@ import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
 import { useConfirm } from '../components/ui/useConfirm';
 import { collectStorageUrls } from '../utils/utils-index';
 import type { WhyUlaaContent } from '../types/types-index';
-
-const inputClass = 'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 
 export default function AdminWhyULAA() {
   const confirm = useConfirm();

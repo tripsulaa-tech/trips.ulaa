@@ -24,6 +24,7 @@ import { useConfirm } from '../components/ui/useConfirm';
 import type { Testimonial, TestimonialsSectionContent } from '../types/types-index';
 import { slugify } from '../utils/utils-index';
 import { DEFAULT_TESTIMONIALS_SECTION } from '../constants/testimonials-section';
+import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 
 interface TestimonialForm {
   name: string;
@@ -155,8 +156,6 @@ export default function AdminTestimonials() {
     ]);
     load();
   };
-
-  const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   return (
     <AdminLayout title="Testimonials" subtitle="Manage the 'Real Stories' shown on the homepage.">

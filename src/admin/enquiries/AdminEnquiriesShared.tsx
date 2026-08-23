@@ -403,4 +403,4 @@ export function validateBulkEditForm(bulkForm: BulkEditForm, targets: Enquiry[])
 
 // Shared input styling used by every plain text/number field across the
 // Admin Enquiries page and its modals.
-export const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+export { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';

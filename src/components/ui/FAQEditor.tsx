@@ -3,13 +3,12 @@ import {
   X,
 } from '@phosphor-icons/react';
 import type { FAQ } from '../../types/types-index';
+import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
 interface FAQEditorProps {
   value: FAQ[];
   onChange: (faqs: FAQ[]) => void;
 }
-
-const inputClass = 'w-full px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 
 export default function FAQEditor({ value, onChange }: FAQEditorProps) {
   const addFAQ = () => onChange([...value, { question: '', answer: '' }]);

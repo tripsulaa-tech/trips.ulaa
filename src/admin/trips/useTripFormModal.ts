@@ -10,7 +10,7 @@ import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy'
 import { emptyFounder, emptyEndBanner, emptyForm, computeDuration, type TripForm } from './tripFormTypes';
 import { handleExportTemplate, parseImportedTripForm } from './tripTemplateIO';
 
-export const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+export { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
 /** Owns the Add/Edit Trip modal end-to-end: the TripForm state itself,
  *  opening it (blank or pre-filled from a trip), the in-modal field

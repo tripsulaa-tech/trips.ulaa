@@ -3,8 +3,7 @@ import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import type { UpcomingTrip } from '../../types/types-index';
 import { FOOD_PREFERENCE_OPTIONS, type WaitlistForm } from './waitlistShared';
-
-const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
+import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
 interface AdminAddWaitlistModalProps {
   isOpen: boolean;

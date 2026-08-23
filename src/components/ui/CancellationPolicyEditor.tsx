@@ -5,13 +5,13 @@ import {
   CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
 import type { CancellationPolicy, CancellationTier } from '../../types/types-index';
+import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
 interface CancellationPolicyEditorProps {
   value: CancellationPolicy;
   onChange: (policy: CancellationPolicy) => void;
 }
 
-const inputClass = 'w-full px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 const numberClass = `${inputClass} sm:w-28`;
 
 function tierLabel(tier: CancellationTier): string {

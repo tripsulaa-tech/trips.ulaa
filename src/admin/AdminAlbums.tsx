@@ -18,6 +18,7 @@ import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, de
 import { useConfirm } from '../components/ui/useConfirm';
 import type { CompletedTrip } from '../types/types-index';
 import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils/utils-index';
+import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 
 interface AlbumForm {
   title: string;
@@ -180,8 +181,6 @@ export default function AdminAlbums() {
     initialModalUrlsRef.current = new Set();
     setModalOpen(false);
   };
-
-  const inputClass = `w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors`;
 
   // Live, as the admin types — recomputed on every render so a
   // title+batch clash shows up immediately instead of only behind an

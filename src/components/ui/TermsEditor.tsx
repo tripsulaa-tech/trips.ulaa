@@ -6,6 +6,7 @@ import {
   CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
 import { parseTerms, type TermsBlock } from '../../utils/parseTerms';
+import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
 interface TermsEditorProps {
   // Same raw "1. Title\nbody..." string that's stored on the trip and
@@ -22,8 +23,6 @@ interface EditableSection {
   title: string;
   body: string;
 }
-
-const inputClass = 'w-full px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 
 // Reconstructs a section's body text from its parsed blocks. Blocks are
 // joined with a blank line, except a subheading is kept glued to the block

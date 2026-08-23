@@ -12,6 +12,7 @@ import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../constants/founder'
 import { useConfirm } from '../components/ui/useConfirm';
 import { collectStorageUrls } from '../utils/utils-index';
 import type { FounderContent, AboutFounderSocialLink } from '../types/types-index';
+import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 
 // This used to be a section inside the About admin page. It's now its own
 // tab because the same founder data is shared across three public pages —
@@ -19,8 +20,6 @@ import type { FounderContent, AboutFounderSocialLink } from '../types/types-inde
 // component, see src/sections/home/MeetTheFounder.tsx) — rather than being
 // About-specific content. Editing it here updates it everywhere at once.
 
-const inputClass =
-  'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
 const labelClass = 'block text-sm font-medium text-dark mb-1';
 
 // Only one section today, but kept as a list (like AdminAbout/AdminWhyULAA)

@@ -6,8 +6,7 @@ import { getSiteContent, upsertSiteContent } from '../services/api';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import { useConfirm } from '../components/ui/useConfirm';
 import type { ButtonLabelsConfig } from '../types/types-index';
-
-const inputClass = 'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 
 // Editable copies of the trip-page CTA buttons. Saved to site_content under
 // the "button_labels" key — read by TripDetailPage.tsx (the live buttons)
