@@ -603,7 +603,9 @@ export const PAYMENT_METHOD_OPTIONS: { value: string; label: string }[] = [
 
 // Refunds settle through the exact same methods as payments — reuse the
 // same canonical list rather than a second, potentially-diverging one.
-export const REFUND_METHOD_OPTIONS = PAYMENT_METHOD_OPTIONS;
+// (Copied rather than re-exported by reference so this is its own export
+// binding, not a duplicate alias of PAYMENT_METHOD_OPTIONS.)
+export const REFUND_METHOD_OPTIONS: { value: string; label: string }[] = [...PAYMENT_METHOD_OPTIONS];
 
 // Outcomes offered in the "Record Contact Outcome" popup (see
 // ContactOutcomeModal.tsx) — the single entry point for moving a lead from

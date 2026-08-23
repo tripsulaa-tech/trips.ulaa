@@ -424,4 +424,3 @@ export function createIcons({ doc, setDraw, setFill, setText, drawCheck, drawCro
   };
 }
 
-export type PdfIcons = ReturnType<typeof createIcons>;

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "scripts/*.mjs"
+  ],
+  "ignore": [
+    "public/sw.js",
+    "src/stubs/dompurify-stub.ts",
+    "src/stubs/html2canvas-stub.ts",
+    "supabase/functions/**"
+  ]
+}

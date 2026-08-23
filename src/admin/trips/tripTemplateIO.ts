@@ -137,10 +137,10 @@ export const handleExportTemplate = () => {
 // handleExportTemplate's output) and populates the Add Trip form so the
 // admin only has to review/adjust and upload photos before saving —
 // instead of retyping everything by hand.
-export const isPlaceholder = (v: unknown): boolean =>
+const isPlaceholder = (v: unknown): boolean =>
   typeof v !== 'string' || v.trim() === '' || v.trim().startsWith('<') || v.trim().startsWith('(');
 
-export const asStr = (v: unknown, fallback = ''): string => (isPlaceholder(v) ? fallback : String(v));
+const asStr = (v: unknown, fallback = ''): string => (isPlaceholder(v) ? fallback : String(v));
 
 // Real numbers (e.g. price: 18999 filled in directly as JSON, not as a
 // string) are valid, filled-in values — only strings need the
@@ -148,14 +148,14 @@ export const asStr = (v: unknown, fallback = ''): string => (isPlaceholder(v) ? 
 // placeholders ("<...>") ever take. Without this, any correctly-filled
 // numeric field was wrongly treated as an unfilled placeholder and wiped
 // to '' on import.
-export const asNum = (v: unknown): number | '' => {
+const asNum = (v: unknown): number | '' => {
   if (typeof v === 'number') return isNaN(v) ? '' : v;
   if (isPlaceholder(v)) return '';
   const n = Number(v);
   return isNaN(n) ? '' : n;
 };
 
-export const asNumOrNull = (v: unknown): number | null => {
+const asNumOrNull = (v: unknown): number | null => {
   if (v === null) return null;
   if (typeof v === 'number') return isNaN(v) ? null : v;
   if (isPlaceholder(v)) return null;
@@ -163,7 +163,7 @@ export const asNumOrNull = (v: unknown): number | null => {
   return isNaN(n) ? null : n;
 };
 
-export const asStrArray = (v: unknown): string[] =>
+const asStrArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter(item => !isPlaceholder(item)).map(item => String(item)) : [];
 
 // Imported JSON is a common source of `icon` values that bypass the
@@ -175,7 +175,7 @@ export const asStrArray = (v: unknown): string[] =>
 // trip renders correctly without the admin having to notice and fix it
 // by hand afterwards. Anything already a valid key, or not in this map,
 // passes through unchanged (preserving today's fallback behavior).
-export const LEGACY_EMOJI_TO_ICON_KEY: Record<string, string> = {
+const LEGACY_EMOJI_TO_ICON_KEY: Record<string, string> = {
   '🏔️': 'mountain-snow', '🏔': 'mountain-snow', '⛰️': 'mountain', '⛰': 'mountain',
   '🚐': 'car', '🚌': 'car', '🚗': 'car', '🚕': 'car', '✈️': 'plane', '✈': 'plane',
   '🚂': 'train-front', '🚡': 'cable-car', '📸': 'camera', '📷': 'camera',
@@ -194,7 +194,7 @@ export const LEGACY_EMOJI_TO_ICON_KEY: Record<string, string> = {
   '💧': 'glass-water', '🥤': 'glass-water', '🎒': 'backpack',
 };
 
-export const asIconKey = (v: unknown): string => {
+const asIconKey = (v: unknown): string => {
   const s = asStr(v);
   if (!s) return s;
   if (getTripHighlightIcon(s)) return s; // already a valid key
