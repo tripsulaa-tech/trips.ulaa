@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import {
-  MagnifyingGlass as Search,
-  Funnel as Filter,
-} from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import TripCard from '../components/ui/TripCard';
+import { TripSearchFilterBar } from '../components/ui/TripSearchFilterBar';
 import { SkeletonGrid } from '../components/ui/Skeletons';
 import { getUpcomingTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
-import { useMonthFilteredTrips, MONTHS } from '../hooks/useMonthFilteredTrips';
+import { useMonthFilteredTrips } from '../hooks/useMonthFilteredTrips';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import type { UpcomingTrip, BottomNavItemConfig } from '../types/types-index';
 
@@ -116,79 +113,15 @@ export default function UpcomingTripsPage() {
       {/* Search & Filters */}
       <div className="bg-white border-b border-background-warm sticky top-[72px] z-30 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1344px] mx-auto py-4">
-          <div className="flex gap-3 sm:gap-4">
-            {/* Search */}
-            <div className="relative flex-1">
-              <label htmlFor="trip-search" className="sr-only">Search by destination or trip name</label>
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-muted" aria-hidden="true" />
-              <input
-                id="trip-search"
-                type="text"
-                placeholder="Search destination or trip..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-2 rounded-lg border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
-              />
-            </div>
-            {/* Month filter - desktop */}
-            <div className="hidden md:flex gap-2 flex-wrap" role="group" aria-label="Filter by month">
-              {MONTHS.filter(m => m === 'All' || (monthCounts[m] ?? 0) > 0).map(m => (
-                <button
-                  key={m}
-                  onClick={() => setMonth(m)}
-                  aria-pressed={month === m}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-button font-medium transition-all whitespace-nowrap ${
-                    month === m
-                      ? 'bg-primary text-white'
-                      : 'bg-background-warm text-dark hover:bg-primary/10 hover:text-primary'
-                  }`}
-                >
-                  {m}
-                  <span
-                    className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-xs font-semibold ${
-                      month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
-                    }`}
-                  >
-                    {monthCounts[m] ?? 0}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {/* Filter toggle - mobile */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              aria-expanded={showFilters}
-              aria-controls="mobile-month-filters"
-              className="md:hidden flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-background-warm text-dark font-button text-sm shrink-0"
-            >
-              <Filter size={16} aria-hidden="true" />
-              Filter
-            </button>
-          </div>
-          {/* Mobile filters */}
-          {showFilters && (
-            <div id="mobile-month-filters" className="md:hidden flex gap-2 flex-wrap mt-3" role="group" aria-label="Filter by month">
-              {MONTHS.filter(m => m === 'All' || (monthCounts[m] ?? 0) > 0).map(m => (
-                <button
-                  key={m}
-                  onClick={() => setMonth(m)}
-                  aria-pressed={month === m}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-button font-medium transition-all ${
-                    month === m ? 'bg-primary text-white' : 'bg-background-warm text-dark'
-                  }`}
-                >
-                  {m}
-                  <span
-                    className={`inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-semibold ${
-                      month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
-                    }`}
-                  >
-                    {monthCounts[m] ?? 0}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+          <TripSearchFilterBar
+            search={search}
+            onSearchChange={setSearch}
+            month={month}
+            onMonthChange={setMonth}
+            monthCounts={monthCounts}
+            showFilters={showFilters}
+            onToggleFilters={() => setShowFilters(!showFilters)}
+          />
         </div>
       </div>
 

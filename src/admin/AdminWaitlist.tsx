@@ -29,6 +29,7 @@ import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import FoodMark from '../components/ui/FoodMark';
 import FilterDropdown from './enquiries/AdminFilterDropdown';
+import { KpiCards, KpiCarousel } from '../components/ui/KpiCards';
 import { TableHeaderBar, TablePagination, SortableTh, ContactQuickLinks } from '../components/ui/DataTableChrome';
 import { paginate, useDragScroll } from '../components/ui/dataTableUtils';
 import type { SortDirection } from '../components/ui/dataTableUtils';
@@ -438,53 +439,6 @@ export default function AdminWaitlist() {
     { label: 'Expired', value: counts.expired, sub: `${kpiPct(counts.expired)}% of total`, icon: Clock },
   ] as const;
 
-  // Icon style matches the Dashboard's KPI cards: no background circle,
-  // every icon in the same brand color.
-  const renderKpiCards = (cards: typeof KPI_CARDS) => (
-    <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-      {cards.map(card => {
-        const Icon = card.icon;
-        return (
-          <div
-            key={card.label}
-            className="bg-white rounded-lg p-4 shadow-card min-w-0"
-          >
-            <div className="flex items-center gap-2">
-              <Icon size={20} className="shrink-0 text-primary" aria-hidden="true" />
-              <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
-            </div>
-            <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  // Mobile-only: same KPI data as renderKpiCards, but laid out as a
-  // horizontally-scrolling carousel of compact cards, rather than a
-  // cramped 2-col grid.
-  const renderKpiCarousel = (cards: typeof KPI_CARDS) => (
-    <div className="sm:hidden">
-      <div className="flex gap-2.5 overflow-x-auto pb-1 snap-x snap-mandatory scrollbar-hide">
-        {cards.map(card => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.label}
-              className="shrink-0 w-[132px] snap-start bg-white rounded-lg p-3 shadow-card"
-            >
-              <div className="flex items-center gap-2">
-                <Icon size={18} className="shrink-0 text-primary" aria-hidden="true" />
-                <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
-              </div>
-              <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   const handleStatusChange = async (id: string, status: WaitlistEntry['status']) => {
     setUpdating(id);
     setEntries(prev => prev.map(e => (e.id === id ? { ...e, status } : e)));
@@ -642,8 +596,8 @@ export default function AdminWaitlist() {
         )}
 
         {/* KPI summary — desktop grid + mobile carousel, same style as the Enquiries page */}
-        {renderKpiCards(KPI_CARDS)}
-        {renderKpiCarousel(KPI_CARDS)}
+        <KpiCards cards={KPI_CARDS} />
+        <KpiCarousel cards={KPI_CARDS} />
 
         {/* Mobile-only search bar — reachable with a thumb without
             hunting through the (collapsed-by-default) filter panel

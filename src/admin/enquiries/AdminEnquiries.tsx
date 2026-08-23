@@ -47,7 +47,7 @@ import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
-import { getEnquiries, updateEnquiryStatus, updateEnquiryDetails, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge, markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
+import { getEnquiries, updateEnquiryStatus, updateEnquiryDetails, createManualEnquiry, recordPayment, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, cancelEnquiry, uncancelEnquiry, recordRefund, deleteEnquiry, markWaitlistConverted, getWaitlistEntries, setEnquiryNoShow, getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
 import type { CancellationReason, ClosedReason, Enquiry, UpcomingTrip, CompletedTrip, WaitlistEntry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatDate, formatDateRange, formatTime, formatPrice, seatsLeft, buildGroupLetterMap, downloadCsv } from '../../utils/utils-index';
@@ -63,6 +63,7 @@ import {
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { JourneyLifecycleLegend } from './AdminEnquiryLifecycle';
 import { useGenerateInvoice } from './useGenerateInvoice';
+import { useMarkInvoicePaid } from './useMarkInvoicePaid';
 
 import {
   phoneSignature, emailSignature, GROUP_COLOR_PALETTE,
@@ -75,11 +76,12 @@ import {
 } from './AdminEnquiriesShared';
 import type { BulkEditForm, EnquiryForm, WaitlistPersonForm } from './AdminEnquiriesShared';
 import FilterDropdown from './AdminFilterDropdown';
+import { KpiCards, KpiCarousel } from '../../components/ui/KpiCards';
 import AddEnquiryModal from './AdminAddEnquiryModal';
 import PaymentModal from './AdminPaymentModal';
 import DetailsModal from './AdminDetailsModal';
 import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
-import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
+import MarkPaidModal from './AdminMarkPaidModal';
 import NotInterestedModal from './AdminNotInterestedModal';
 import FollowUpModal from './AdminFollowUpModal';
 import BookingFollowUpModal, { type BookingFollowUpResult } from './AdminBookingFollowUpModal';
@@ -168,10 +170,6 @@ export default function AdminEnquiries() {
   // for the cumulative PDF.
   const [detailsInvoices, setDetailsInvoices] = useState<Payment[]>([]);
   const [detailsInvoicesLoading, setDetailsInvoicesLoading] = useState(false);
-  const [invoiceRowBusyId, setInvoiceRowBusyId] = useState<string | null>(null);
-  const [markPaidTarget, setMarkPaidTarget] = useState<Payment | null>(null);
-  const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm>(emptyMarkPaidForm);
-  const [savingMarkPaid, setSavingMarkPaid] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EnquiryForm>(emptyForm);
@@ -349,6 +347,16 @@ export default function AdminEnquiries() {
     const freshInvoices = await getPaymentsForEnquiry(target.id);
     setDetailsInvoices(freshInvoices);
     setDetailsTarget(updatedEnquiry);
+    load();
+  });
+
+  const markPaid = useMarkInvoicePaid(updatedPayment => {
+    setDetailsInvoices(prev => prev.map(p => (p.id === updatedPayment.id ? updatedPayment : p)));
+    setDetailsTarget(prev => {
+      if (!prev) return prev;
+      const isRefund = updatedPayment.payment_type === 'refund';
+      return { ...prev, amount_paid: (prev.amount_paid || 0) + (isRefund ? 0 : updatedPayment.amount) };
+    });
     load();
   });
 
@@ -832,44 +840,12 @@ export default function AdminEnquiries() {
     }
   };
 
-  // Settles a pending invoice once the money's actually in hand. Updates
-  // the invoice row and the booking's running total in place, then
-  // refreshes the enquiries list in the background so the table (and any
-  // seat/status side effects the DB trigger produced) stay in sync.
-  // Opens the Mark Paid confirmation modal so the admin can capture payment
-  // method + UTR/reference for this settlement (spec §6/9/46-48) instead of
-  // firing the update straight away.
-  const handleMarkInvoicePaid = (payment: Payment) => {
-    setMarkPaidForm(emptyMarkPaidForm);
-    setMarkPaidTarget(payment);
-  };
-
-  const handleConfirmMarkPaid = async () => {
-    if (!markPaidTarget) return;
-    const payment = markPaidTarget;
-    try {
-      setSavingMarkPaid(true);
-      setInvoiceRowBusyId(payment.id);
-      const updatedPayment = await markInvoicePaid(payment.id, {
-        payment_method: markPaidForm.payment_method || undefined,
-        utr_number: markPaidForm.utr_number || undefined,
-      });
-      setDetailsInvoices(prev => prev.map(p => (p.id === updatedPayment.id ? updatedPayment : p)));
-      setDetailsTarget(prev => {
-        if (!prev) return prev;
-        const isRefund = updatedPayment.payment_type === 'refund';
-        return { ...prev, amount_paid: (prev.amount_paid || 0) + (isRefund ? 0 : updatedPayment.amount) };
-      });
-      setMarkPaidTarget(null);
-      load();
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to mark invoice as paid.');
-    } finally {
-      setInvoiceRowBusyId(null);
-      setSavingMarkPaid(false);
-    }
-  };
+  // Settles a pending invoice once the money's actually in hand. Opens the
+  // Mark Paid confirmation modal so the admin can capture payment method +
+  // UTR/reference for this settlement (spec §6/9/46-48) instead of firing
+  // the update straight away; see useMarkInvoicePaid for the shared
+  // state/save logic (mirrors useGenerateInvoice's split with
+  // AdminEnquiryDetail.tsx).
 
   // Marks the trip as done — the one transition in booking_status's
   // lifecycle that a payment event can never infer on its own (see
@@ -1952,59 +1928,6 @@ export default function AdminEnquiries() {
     ] as const;
   };
 
-  // Small presentational helper so the exact same card markup renders both
-  // the business-wide row up top and the per-trip row inside a drilled-into
-  // trip view below. Plain function returning JSX (not a component defined
-  // during render) to avoid remounting/resetting state on every render.
-  // Icon style matches the Dashboard's KPI cards: no background circle,
-  // every icon in the same brand color.
-  const renderKpiCards = (cards: ReturnType<typeof buildKpiCards>) => (
-    <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-      {cards.map(card => {
-        const Icon = card.icon;
-        return (
-          <div
-            key={card.label}
-            className="bg-white rounded-lg p-4 shadow-card min-w-0"
-          >
-            <div className="flex items-center gap-2">
-              <Icon size={20} className="shrink-0 text-primary" />
-              <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
-            </div>
-            <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  // Mobile-only: same KPI data as renderKpiCards, but laid out as a
-  // horizontally-scrolling carousel of compact cards, rather than a
-  // cramped 2-col grid.
-  const renderKpiCarousel = (cards: ReturnType<typeof buildKpiCards>) => (
-    <div className="sm:hidden">
-      <div
-        className="flex gap-2.5 overflow-x-auto pb-1 snap-x snap-mandatory scrollbar-hide"
-      >
-        {cards.map(card => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.label}
-              className="shrink-0 w-[132px] snap-start bg-white rounded-lg p-3 shadow-card"
-            >
-              <div className="flex items-center gap-2">
-                <Icon size={18} className="shrink-0 text-primary" />
-                <p className="font-display text-2xl font-bold text-dark leading-tight">{card.value}</p>
-              </div>
-              <p className="text-dark-muted text-xs font-medium truncate mt-1">{card.label}</p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   return (
     <AdminLayout title="Enquiries">
       <div className="space-y-4 sm:space-y-6">
@@ -2038,8 +1961,8 @@ export default function AdminEnquiries() {
         {/* KPI summary — desktop grid + mobile carousel, both scoped to
             whichever trip is selected in the Trip filter below (or
             business-wide when "All trips" is selected). */}
-        {renderKpiCards(buildKpiCards(scopedEnquiries))}
-        {renderKpiCarousel(buildKpiCards(scopedEnquiries))}
+        <KpiCards cards={buildKpiCards(scopedEnquiries)} />
+        <KpiCarousel cards={buildKpiCards(scopedEnquiries)} />
 
         {/* Mobile-only search bar — sits right under the KPI carousel so
             it's reachable with a thumb without hunting through the
@@ -3274,8 +3197,8 @@ export default function AdminEnquiries() {
         detailsInvoices={detailsInvoices}
         detailsInvoicesLoading={detailsInvoicesLoading}
         onOpenGenerateInvoice={generateInvoice.open}
-        invoiceRowBusyId={invoiceRowBusyId}
-        onMarkInvoicePaid={handleMarkInvoicePaid}
+        invoiceRowBusyId={markPaid.busyId}
+        onMarkInvoicePaid={markPaid.open}
       />
 
       <EditDetailsModal
@@ -3302,12 +3225,12 @@ export default function AdminEnquiries() {
       />
 
       <MarkPaidModal
-        target={markPaidTarget}
-        onClose={() => setMarkPaidTarget(null)}
-        form={markPaidForm}
-        setForm={setMarkPaidForm}
-        onConfirm={handleConfirmMarkPaid}
-        saving={savingMarkPaid}
+        target={markPaid.target}
+        onClose={markPaid.close}
+        form={markPaid.form}
+        setForm={markPaid.setForm}
+        onConfirm={markPaid.confirm}
+        saving={markPaid.saving}
       />
 
       <ContactOutcomeModal

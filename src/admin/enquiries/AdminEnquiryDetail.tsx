@@ -56,7 +56,7 @@ import { useAlert } from '../../components/ui/useAlert';
 import {
   getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin, getActivityLog,
   recordPayment, generatePendingInvoice, addExtraCharge,
-  markInvoicePaid, markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
+  markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
   recordRefund, deleteEnquiry, updateEnquiryDetails, setEnquiryFollowUp,
   recordContactOutcome,
@@ -79,9 +79,10 @@ import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquirie
 import PaymentHistoryList from './PaymentHistoryList';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
-import MarkPaidModal, { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
+import MarkPaidModal from './AdminMarkPaidModal';
 import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
 import { useGenerateInvoice } from './useGenerateInvoice';
+import { useMarkInvoicePaid } from './useMarkInvoicePaid';
 
 const emptyPaymentForm: PaymentForm = {
   package_type: 'normal', total_amount: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '',
@@ -513,42 +514,19 @@ export default function AdminEnquiryDetail() {
     setEnquiry(updated);
     getPaymentsForEnquiry(updated.id).then(setPayments).catch(console.error);
   });
-  const [invoiceRowBusyId, setInvoiceRowBusyId] = useState<string | null>(null);
-  const [markPaidTarget, setMarkPaidTarget] = useState<Payment | null>(null);
-  const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm>(emptyMarkPaidForm);
-  const [savingMarkPaid, setSavingMarkPaid] = useState(false);
 
-  const handleMarkInvoicePaid = (payment: Payment) => {
-    setMarkPaidForm(emptyMarkPaidForm);
-    setMarkPaidTarget(payment);
-  };
-
-  const handleConfirmMarkPaid = async () => {
-    if (!markPaidTarget) return;
-    const payment = markPaidTarget;
-    try {
-      setSavingMarkPaid(true);
-      setInvoiceRowBusyId(payment.id);
-      const updatedPayment = await markInvoicePaid(payment.id, {
-        payment_method: markPaidForm.payment_method || undefined,
-        utr_number: markPaidForm.utr_number || undefined,
-      });
-      setPayments(prev => prev.map(p => (p.id === updatedPayment.id ? updatedPayment : p)));
-      setEnquiry(prev => {
-        if (!prev) return prev;
-        const isRefund = updatedPayment.payment_type === 'refund';
-        return { ...prev, amount_paid: (prev.amount_paid || 0) + (isRefund ? 0 : updatedPayment.amount) };
-      });
-      setMarkPaidTarget(null);
-      load();
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to mark invoice as paid.');
-    } finally {
-      setInvoiceRowBusyId(null);
-      setSavingMarkPaid(false);
-    }
-  };
+  // ---- Mark Invoice Paid -------------------------------------------------
+  // Shared with the Enquiries list page — see useMarkInvoicePaid for why
+  // the state/save logic lives there instead of being duplicated here.
+  const markPaid = useMarkInvoicePaid(updatedPayment => {
+    setPayments(prev => prev.map(p => (p.id === updatedPayment.id ? updatedPayment : p)));
+    setEnquiry(prev => {
+      if (!prev) return prev;
+      const isRefund = updatedPayment.payment_type === 'refund';
+      return { ...prev, amount_paid: (prev.amount_paid || 0) + (isRefund ? 0 : updatedPayment.amount) };
+    });
+    load();
+  });
 
   // ---- Cancel / reactivate modal ----------------------------------------
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -1097,7 +1075,7 @@ export default function AdminEnquiryDetail() {
                             <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : 'Paid'}
                           </span>
                           {isPending && (
-                            <Button variant="primary" size="sm" onClick={() => handleMarkInvoicePaid(inv)} disabled={invoiceRowBusyId === inv.id}>
+                            <Button variant="primary" size="sm" onClick={() => markPaid.open(inv)} disabled={markPaid.busyId === inv.id}>
                               Mark Paid
                             </Button>
                           )}
@@ -1559,12 +1537,12 @@ export default function AdminEnquiryDetail() {
       />
 
       <MarkPaidModal
-        target={markPaidTarget}
-        onClose={() => setMarkPaidTarget(null)}
-        form={markPaidForm}
-        setForm={setMarkPaidForm}
-        onConfirm={handleConfirmMarkPaid}
-        saving={savingMarkPaid}
+        target={markPaid.target}
+        onClose={markPaid.close}
+        form={markPaid.form}
+        setForm={markPaid.setForm}
+        onConfirm={markPaid.confirm}
+        saving={markPaid.saving}
       />
 
       {/* Not Interested reason picker — see handleMarkNotInterested above. */}
