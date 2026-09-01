@@ -61,3 +61,13 @@ export {
   uncancelEnquiry,
   recordRefund,
 } from './enquiries/cancellation';
+
+export {
+  getKidsForEnquiry,
+  createKidsForEnquiry,
+  updateKid,
+  updateKidStatus,
+  bulkUpdateKidsStatus,
+  setKidFollowUp,
+  deleteKid,
+} from './enquiries/kids';

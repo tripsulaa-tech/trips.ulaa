@@ -78,6 +78,13 @@ export {
   deleteEnquiry,
   uncancelEnquiry,
   recordRefund,
+  getKidsForEnquiry,
+  createKidsForEnquiry,
+  updateKid,
+  updateKidStatus,
+  bulkUpdateKidsStatus,
+  setKidFollowUp,
+  deleteKid,
 } from './api/enquiries';
 
 export {

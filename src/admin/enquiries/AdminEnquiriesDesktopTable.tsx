@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type { MutableRefObject, RefObject } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -23,7 +24,7 @@ import {
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
 } from './AdminEnquiryCommon';
-import { isGeneralContactMessage, groupColorFor } from './enquiryGrouping';
+import { isGeneralContactMessage, groupColorFor, kidDisplayRows } from './enquiryGrouping';
 import {
   paymentStatus, paymentBalance, paymentFilterKey, refundStatus, seatStatus,
 } from './AdminEnquiriesShared';
@@ -155,9 +156,10 @@ export default function AdminEnquiriesDesktopTable({
               const isHighlighted = highlightId === e.id;
               const clr = groupColor(e);
               const food = foodBadge(e);
+              const kidRows = kidDisplayRows(e);
               return (
+                <Fragment key={e.id}>
                 <motion.tr
-                  key={e.id}
                   ref={(el) => { cardRefs.current[e.id] = el; }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -383,6 +385,103 @@ export default function AdminEnquiriesDesktopTable({
                     </div>
                   </td>
                 </motion.tr>
+                {kidRows.map(kid => (
+                  <motion.tr
+                    key={kid.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={`opacity-80 ${clr ? clr.row : 'bg-slate-50/40'}`}
+                  >
+                    <td className="px-3 py-4" />
+                    <td className="px-3 py-4 hidden md:table-cell" />
+                    <td className="px-4 py-4">
+                      <p className="pl-4 font-medium text-dark-muted flex items-center gap-1.5">
+                        <Baby size={13} className="shrink-0" aria-hidden="true" />
+                        Kid {kid.index}
+                        <span className="text-dark-muted/60 font-normal text-xs">of {e.full_name}</span>
+                      </p>
+                    </td>
+                    <td className="px-2 py-4 whitespace-nowrap">
+                      <span
+                        title={`${groupLabel(e)} — travelling with ${e.full_name}, no seat needed`}
+                        className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                      >
+                        {e.group_size && e.group_size > 1 ? (
+                          <>
+                            <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)}
+                          </>
+                        ) : (
+                          <>
+                            <User size={12} className="shrink-0" aria-hidden="true" /> Solo
+                          </>
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-2 py-4 whitespace-nowrap">
+                      <span
+                        title="Kids share the booking's food preference — not tracked individually"
+                        className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
+                          e.food_preference === 'veg' ? 'text-green-700' : e.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark-muted'
+                        }`}
+                      >
+                        <FoodMark type={foodPreferenceKey(e)} size={12} /> {food.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-dark-muted hidden sm:table-cell" title="Same contact as the booking">
+                      <p className="text-xs truncate">{e.email}</p>
+                      <p className="text-xs mt-0.5">{e.phone}</p>
+                    </td>
+                    <td className="px-4 py-4 text-dark-muted hidden lg:table-cell truncate">
+                      <span className="text-xs">{srcCfg.label}</span>
+                    </td>
+                    <td className="px-4 py-4 text-dark-muted hidden lg:table-cell whitespace-nowrap">
+                      <p>{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</p>
+                      <p className="text-[11px] text-dark-muted/80">{formatTime(e.created_at)}</p>
+                    </td>
+                    <td className="px-2 py-4 text-center">
+                      <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
+                        e.package_type === 'early_bird' ? 'text-purple-700' : 'text-slate-700'
+                      }`}>
+                        {e.package_type === 'early_bird' && <Bird size={12} className="shrink-0" aria-hidden="true" />}
+                        {PACKAGE_CONFIG[e.package_type || 'normal'].label}
+                      </span>
+                    </td>
+                    <td className="px-2 py-4 text-left whitespace-nowrap" title="Kids are billed as part of the booking's kids fee — no separate payment record">
+                      <p className="text-dark text-xs">
+                        <span className="font-medium">Included</span>
+                        <span className="text-dark-muted"> · </span>
+                        <span className="text-dark-muted">
+                          {e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'No kids fee set'}
+                        </span>
+                      </p>
+                    </td>
+                    <td className="px-2 py-4 text-center">
+                      <span title={`Booking Journey: ${jb.label} (same as ${e.full_name})`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap opacity-80 ${jb.color}`}>
+                        <jb.icon size={12} className="shrink-0" aria-hidden="true" />
+                        {jb.label}
+                      </span>
+                    </td>
+                    <td className="px-2 py-4 hidden md:table-cell">
+                      {(() => {
+                        const fu = followUpStatus(e);
+                        if (!fu) return <span className="text-dark-muted/50 text-xs">—</span>;
+                        return (
+                          <span title={`Follow-up: ${fu.label} (set on ${e.full_name}'s booking)`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap opacity-80 ${fu.color}`}>
+                            <fu.icon size={12} className="shrink-0" aria-hidden="true" />
+                            {fu.label}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-2 py-4 text-center">
+                      <span title="Kids never occupy a seat or count towards capacity" className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
+                        <Baby size={12} className="shrink-0" aria-hidden="true" /> No seat
+                      </span>
+                    </td>
+                    <td className="px-2 py-4" />
+                  </motion.tr>
+                ))}
+                </Fragment>
               );
             })}
           </tbody>

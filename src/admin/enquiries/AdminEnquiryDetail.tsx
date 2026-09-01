@@ -48,6 +48,7 @@ import { useGenerateInvoice } from './useGenerateInvoice';
 import { useMarkInvoicePaid } from './useMarkInvoicePaid';
 import AdminEnquiryHeaderCard from './AdminEnquiryHeaderCard';
 import AdminEnquiryJourneyCard from './AdminEnquiryJourneyCard';
+import AdminEnquiryKidsCard from './AdminEnquiryKidsCard';
 import AdminEnquiryInvoicesCard from './AdminEnquiryInvoicesCard';
 import AdminEnquiryTravellerCard from './AdminEnquiryTravellerCard';
 import AdminEnquiryActivityTimeline from './AdminEnquiryActivityTimeline';
@@ -802,6 +803,8 @@ export default function AdminEnquiryDetail() {
           onOpenPayment={openPayment}
           onMarkCompleted={handleMarkCompleted}
         />
+
+        <AdminEnquiryKidsCard enquiry={enquiry} />
 
         <AdminEnquiryInvoicesCard
           enquiry={enquiry}

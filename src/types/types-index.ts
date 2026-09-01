@@ -478,6 +478,38 @@ export interface Enquiry {
   booking_follow_up_notes?: string | null;
 }
 
+// =============================================
+// Kids (CRM tracking — see add_kids_table.sql)
+// =============================================
+// This kid's own trackable state, independent of the parent enquiry's
+// status/journey_stage. See add_kids_table.sql for what each value means.
+export type KidStatus = 'pending' | 'confirmed' | 'checked_in' | 'cancelled';
+
+// One row per individual kid travelling on a booking — its own genuine
+// record (name, status, follow-up), not just a unit counted in the parent
+// enquiry's kids_count. Only ever attached to a group's lead row
+// (enquiry.group_seq === 1), same convention kids_count/kids_amount
+// already follow. See add_kids_table.sql.
+export interface Kid {
+  id: string;
+  enquiry_id: string;
+  // Optional — the public booking form may submit a bare headcount with no
+  // names typed in. Falls back to "Kid N" (by created_at order) in the UI
+  // when blank, never stored as a literal placeholder string.
+  name?: string | null;
+  // Optional, admin-entered only — never collected on the public booking
+  // form (kids remain age-free for pricing/eligibility purposes).
+  age?: number | null;
+  status: KidStatus;
+  // Reminder for this one kid's record — same idea as
+  // Enquiry.follow_up_at but scoped to the kid, only meaningful while
+  // status === 'pending'.
+  follow_up_at?: string | null;
+  follow_up_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // One row per individual payment, refund, or raised-but-uncollected invoice
 // against an enquiry. This is the source of truth for enquiries.amount_paid
 // / refund_amount, which are kept in sync via a DB trigger (only rows with
@@ -623,6 +655,13 @@ export interface BookingFormData {
   // whole booking (solo or group), not per-seat. See
   // Enquiry.kids_count/kids_amount above.
   kids_count: number;
+  // Optional per-kid names typed into the booking form, one per kid
+  // (index-aligned, length up to kids_count — a kid left blank just has
+  // no name yet). NOT a column on `enquiries` — submitEnquiry/
+  // submitGroupEnquiry strip this out before inserting the enquiry row
+  // and use it to seed that kid's own record in the separate `kids`
+  // table instead. See Kid below and add_kids_table.sql.
+  kid_names?: string[];
 }
 
 // Not part of BookingFormData itself (that's the react-hook-form-managed
@@ -653,6 +692,10 @@ export interface BookingFormDraft {
   // Plain string, matching age/groupSize above — parsed to a number on
   // submit. '' displays as blank rather than a literal 0.
   kidsCount: string;
+  // One entry per kid currently on the form (length tracks kidsCount,
+  // reconciled the same way groupVegCount tracks groupSize) — see
+  // BookingFormData.kid_names above.
+  kidNames: string[];
 }
 
 // =============================================

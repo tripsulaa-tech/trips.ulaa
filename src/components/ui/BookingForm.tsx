@@ -129,6 +129,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // collected. Kept as raw text (same reasoning as groupSizeInput) so the
   // field can be emptied out mid-edit instead of snapping back to 0.
   const [kidsCountInput, setKidsCountInput] = useState(initialDraft?.kidsCount ?? '');
+  // One name per kid currently on the form — index-aligned with kidsCount,
+  // same "shared across the whole booking, not per-seat" scope as
+  // kidsCountInput above. Purely optional (a kid can be left nameless),
+  // this is what turns the bare headcount into real per-kid records (see
+  // Kid in types-index.ts and add_kids_table.sql) instead of every kid on
+  // a booking being an indistinguishable unit of one number.
+  const [kidNames, setKidNames] = useState<string[]>(initialDraft?.kidNames ?? []);
 
   // Whether what's currently selected/entered actually fits in the seats
   // left. When it doesn't, submitting still succeeds — it just becomes a
@@ -143,6 +150,25 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // never factor this in) and have no age collected, just a number.
   const kidsCountParsed = Math.round(Number(kidsCountInput));
   const kidsCount = kidsCountInput.trim() === '' || Number.isNaN(kidsCountParsed) || kidsCountParsed < 0 ? 0 : kidsCountParsed;
+
+  // Keeps kidNames' length in sync with kidsCount whenever the headcount
+  // changes elsewhere (typed, blurred/clamped, reset after submit) —
+  // same render-time-adjustment pattern as prevVegSyncKey/vegSyncKey
+  // above, so growing the count adds blank name slots and shrinking it
+  // drops the extra ones without losing what's already been typed.
+  const [prevKidsSyncCount, setPrevKidsSyncCount] = useState(kidsCount);
+  if (kidsCount !== prevKidsSyncCount) {
+    setPrevKidsSyncCount(kidsCount);
+    setKidNames(prev => {
+      if (prev.length === kidsCount) return prev;
+      if (prev.length > kidsCount) return prev.slice(0, kidsCount);
+      return [...prev, ...Array.from({ length: kidsCount - prev.length }, () => '')];
+    });
+  }
+
+  const updateKidName = (index: number, value: string) => {
+    setKidNames(prev => prev.map((n, i) => (i === index ? value : n)));
+  };
 
   // Keeps the veg-count text field's displayed value in sync whenever
   // groupVegCount is changed programmatically elsewhere (clamped down when
@@ -267,6 +293,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       message: values.message ?? '',
       terms_accepted: !!values.terms_accepted,
       kidsCount: kidsCountInput,
+      kidNames,
     });
   };
 
@@ -281,7 +308,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     const subscription = watch(() => reportDraft());
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookingMode, groupSize, groupVegCount, foodPreference, kidsCountInput, watch]);
+  }, [bookingMode, groupSize, groupVegCount, foodPreference, kidsCountInput, kidNames, watch]);
 
   const onSubmit = async (data: BookingFormData) => {
     // Trim all text fields to strip accidental leading/trailing whitespace
@@ -299,6 +326,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       emergency_contact: (data.emergency_contact ?? '').trim(),
       message: data.message?.trim(),
       kids_count: kidsCount,
+      kid_names: kidNames.slice(0, kidsCount),
     };
     if (bookingMode === 'group') {
       if (!Number.isInteger(groupSize) || groupSize < MIN_GROUP_SIZE || groupSize > MAX_GROUP_SIZE) {
@@ -437,6 +465,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       setGroupVegCount(MIN_GROUP_SIZE);
       setFoodPreference(null);
       setKidsCountInput('');
+      setKidNames([]);
       onDraftChange?.(null);
       onSuccess?.();
     } catch (err) {
@@ -903,6 +932,26 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             ? ` ${formatPrice(childPrice)} per kid.`
             : ' No extra charge for kids on this trip.'}
         </p>
+        {/* One optional name field per kid — turns the headcount above
+            into each kid's own trackable record instead of an anonymous
+            number (see Kid in types-index.ts / add_kids_table.sql). Left
+            blank is fine; a nameless kid still gets its own row, just
+            shown as "Kid N" in Admin until a name's added. */}
+        {kidsCount > 0 && (
+          <div className="mt-2 space-y-2">
+            {kidNames.map((name, i) => (
+              <input
+                key={i}
+                type="text"
+                value={name}
+                onChange={e => updateKidName(i, e.target.value)}
+                placeholder={`Kid ${i + 1}'s name (optional)`}
+                aria-label={`Kid ${i + 1}'s name (optional)`}
+                className={inputClass}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Message */}

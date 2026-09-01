@@ -27,6 +27,7 @@ export function isBookingDraftDirty(draft?: BookingFormDraft | null): boolean {
     draft.foodPreference !== null ||
     draft.bookingMode !== 'solo' ||
     draft.groupSize !== MIN_GROUP_SIZE ||
-    draft.kidsCount.trim() !== ''
+    draft.kidsCount.trim() !== '' ||
+    draft.kidNames.some(n => n.trim() !== '')
   );
 }

@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type { MutableRefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -35,7 +36,7 @@ import {
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
 } from './AdminEnquiryCommon';
-import { isGeneralContactMessage, groupColorFor } from './enquiryGrouping';
+import { isGeneralContactMessage, groupColorFor, kidDisplayRows } from './enquiryGrouping';
 import { paymentBalance, paymentFilterKey, refundStatus } from './AdminEnquiriesShared';
 
 interface AdminEnquiriesMobileCardsProps {
@@ -103,9 +104,10 @@ export default function AdminEnquiriesMobileCards({
           const isOpen = expandedId === e.id;
           const isHighlighted = highlightId === e.id;
           const clr = groupColor(e);
+          const kidRows = kidDisplayRows(e);
           return (
+            <Fragment key={e.id}>
             <motion.div
-              key={e.id}
               ref={(el) => { cardRefs.current[e.id] = el; }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -432,6 +434,212 @@ export default function AdminEnquiriesMobileCards({
                 </div>
               )}
             </motion.div>
+            {kidRows.map(kid => {
+              const isKidOpen = expandedId === kid.id;
+              return (
+              <motion.div
+                key={kid.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="bg-white rounded-lg shadow-card overflow-hidden"
+              >
+                <div className="w-full flex items-center gap-1.5 px-3 py-2.5">
+                  <span
+                    title="Kids don't have their own record — travelling with this booking, so there's nothing separate to select"
+                    className="shrink-0 flex items-center justify-center w-11 h-11 text-dark-muted/30"
+                  >
+                    <Baby size={18} aria-hidden="true" />
+                  </span>
+                  <button
+                    onClick={() => setExpandedId(isKidOpen ? null : kid.id)}
+                    aria-expanded={isKidOpen}
+                    className="flex-1 min-w-0 flex flex-col text-left py-2.5 pr-1"
+                  >
+                    <div className="w-full flex items-start justify-between gap-3">
+                      <p className="font-medium text-sm text-dark truncate flex items-center gap-1.5 min-w-0">
+                        <span className="text-dark-muted text-xs font-normal shrink-0">Kid {kid.index}</span>
+                        <span className="text-dark-muted text-xs font-normal truncate">of {e.full_name}</span>
+                      </p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span title={`Booking Journey: ${jb.label} (same as ${e.full_name})`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
+                          <jb.icon size={12} className="shrink-0" aria-hidden="true" />
+                          {jb.label}
+                        </span>
+                        <ChevronDown size={16} className={`text-dark-muted transition-transform ${isKidOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                      </div>
+                    </div>
+                    <p className="text-dark-muted text-xs truncate mt-0.5">{e.phone}</p>
+                    <div className="w-full flex items-center flex-nowrap gap-1.5 mt-1.5 overflow-x-auto no-scrollbar">
+                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold whitespace-nowrap shrink-0 ${
+                        e.food_preference === 'veg' ? 'text-green-700' : e.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark-muted'
+                      }`}>
+                        <FoodMark type={foodPreferenceKey(e)} size={9} /> {foodBadge(e).label}
+                      </span>
+                      <span
+                        title={`${groupLabel(e)} — travelling with ${e.full_name}, no seat needed`}
+                        className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                      >
+                        {e.group_size && e.group_size > 1 ? (
+                          <>
+                            <Users size={9} aria-hidden="true" /> {groupLabel(e).replace(/^Group /, '')}
+                          </>
+                        ) : (
+                          <>
+                            <User size={9} aria-hidden="true" /> Solo
+                          </>
+                        )}
+                      </span>
+                      <span title="Kids never occupy a seat or count towards capacity" className="inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted">
+                        <Baby size={9} aria-hidden="true" /> No seat
+                      </span>
+                    </div>
+                  </button>
+                </div>
+
+                {isKidOpen && (
+                  <div className="px-4 pb-4 pt-1 border-t border-background-warm space-y-3">
+                    <div className="grid grid-cols-2 gap-x-3 pt-3 pb-3 border-b border-background-warm">
+                      <div>
+                        <p className="text-dark-muted text-xs">Phone</p>
+                        <p className="text-dark text-sm truncate">{e.phone}</p>
+                      </div>
+                      <div>
+                        <p className="text-dark-muted text-xs">Email</p>
+                        <p className="text-dark text-sm truncate">{e.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="divide-y divide-background-warm">
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                            <Briefcase size={15} aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-dark-muted text-xs">Trip</p>
+                            <p className="text-dark text-sm truncate">
+                              {e.trip_id ? e.trip_title : (
+                                <span className="text-dark-muted italic">
+                                  {isGeneralContactMessage(e) ? 'None — Contact Us message' : 'None — logged without a trip'}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2.5 min-w-0" title="Kids have no separate age/name record — see Enquiry.kids_count">
+                          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                            <User size={15} aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-dark-muted text-xs">Age</p>
+                            <p className="text-dark text-sm truncate text-dark-muted italic">Not tracked</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                            <Building2 size={15} aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-dark-muted text-xs">City</p>
+                            <p className="text-dark text-sm truncate">{e.city || '—'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2.5 min-w-0" title="Kids share the booking's food preference — not tracked individually">
+                          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                            <Utensils size={15} aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-dark-muted text-xs">Food Preference</p>
+                            <p className={`text-sm truncate flex items-center gap-1 ${
+                              e.food_preference === 'veg' ? 'text-green-700 font-medium' : e.food_preference === 'non_veg' ? 'text-red-700 font-medium' : 'text-dark'
+                            }`}>
+                              {(e.food_preference === 'veg' || e.food_preference === 'non_veg') && <FoodMark type={e.food_preference} size={11} />}
+                              {e.food_preference === 'veg' ? 'Veg' : e.food_preference === 'non_veg' ? 'Non-veg' : '—'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                            <CalendarDays size={15} aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-dark-muted text-xs">Date &amp; Time</p>
+                            <p className="text-dark text-sm truncate">{formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            <p className="text-dark-muted text-xs truncate">{formatTime(e.created_at)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                            <Globe size={15} aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-dark-muted text-xs">Source</p>
+                            <p className="text-dark text-sm truncate">{srcCfg.label}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3 items-center">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                            {e.package_type === 'early_bird' ? <Bird size={15} aria-hidden="true" /> : <Package size={15} aria-hidden="true" />}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-dark-muted text-xs">Package</p>
+                            <p className="text-dark text-sm truncate">{PACKAGE_CONFIG[e.package_type || 'normal'].label}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                            <MessageCircle size={15} aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-dark-muted text-xs">Quick Contact</p>
+                            <ContactQuickLinks phone={e.phone} email={e.email} name={`${e.full_name} (Kid ${kid.index})`} tripTitle={e.trip_title} size="md" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      className="bg-background-warm rounded-md px-3 py-2 flex items-center gap-2.5"
+                      title="Kids are billed as part of the booking's kids fee — no separate payment record"
+                    >
+                      <IndianRupee size={14} className="text-dark-muted shrink-0" aria-hidden="true" />
+                      <div className="min-w-0">
+                        <p className="text-dark-muted text-[10px]">Kids Fee (whole booking)</p>
+                        <p className="text-dark text-xs truncate">
+                          {e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'Not set'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {followUpStatus(e) && (() => {
+                      const fu = followUpStatus(e)!;
+                      return (
+                        <div className={`rounded-md px-3 py-2 ${fu.color}`} title={`Follow-up set on ${e.full_name}'s booking`}>
+                          <p className="text-xs font-medium flex items-center gap-1">
+                            <fu.icon size={12} className="shrink-0" aria-hidden="true" /> {fu.label}
+                          </p>
+                        </div>
+                      );
+                    })()}
+
+                    <p className="text-dark-muted/70 text-[11px] text-center pt-1" title="Kids have no separate record — everything above lives on this booking">
+                      Part of {e.full_name}'s booking · no separate record to open
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+              );
+            })}
+            </Fragment>
           );
         })}
       </div>

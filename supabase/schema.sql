@@ -407,6 +407,56 @@ create unique index payments_invoice_number_unique
   where (invoice_number is not null);
 
 -- ----------------------------------------------------------------------------
+-- kids
+-- ----------------------------------------------------------------------------
+-- One row per kid travelling on a booking — an independently-trackable
+-- record (own name/status/follow-up) layered on top of the parent
+-- enquiry's kids_count/kids_amount headcount above, which stays the
+-- source of truth for pricing. Only ever attached to a group's lead row
+-- (group_seq = 1), same convention kids_count/kids_amount already follow.
+-- See add_kids_table.sql for full field-by-field rationale.
+create table public.kids (
+  id                uuid not null default uuid_generate_v4(),
+  enquiry_id        uuid not null,
+  name              text,
+  -- Optional, admin-entered only — the public booking form still collects
+  -- no age for kids (see child_price/kids_count above).
+  age               integer,
+  status            text not null default 'pending',
+  follow_up_at      date,
+  follow_up_notes   text,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now(),
+  constraint kids_pkey primary key (id),
+  constraint kids_enquiry_id_fkey foreign key (enquiry_id)
+    references public.enquiries (id) on delete cascade,
+  constraint kids_age_check check (age is null or (age >= 0 and age <= 17)),
+  constraint kids_status_check
+    check (status = any (array['pending'::text, 'confirmed'::text, 'checked_in'::text, 'cancelled'::text])),
+  constraint kids_follow_up_requires_pending_status
+    check (follow_up_at is null or status = 'pending')
+);
+
+create index kids_enquiry_id_idx on public.kids using btree (enquiry_id);
+create index kids_follow_up_at_idx
+  on public.kids using btree (follow_up_at)
+  where follow_up_at is not null;
+
+create or replace function public.set_kids_updated_at()
+returns trigger
+language plpgsql
+as $function$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$function$;
+
+create trigger kids_set_updated_at
+  before update on public.kids
+  for each row execute function public.set_kids_updated_at();
+
+-- ----------------------------------------------------------------------------
 -- invoice_number_sequences
 -- ----------------------------------------------------------------------------
 -- One row per calendar year, tracking the last invoice number sequence
@@ -1645,6 +1695,17 @@ create policy "Admin delete enquiries" on public.enquiries
 -- written by the admin portal, never directly by the public form).
 create policy "Admin all payments" on public.payments
   for all using (auth.role() = 'authenticated');
+
+-- kids — same shape as enquiries: public can only insert (submitted
+-- alongside the booking form), everything else needs an admin session.
+create policy "Public insert kids" on public.kids
+  for insert with check (true);
+create policy "Admin read kids" on public.kids
+  for select using (auth.role() = 'authenticated');
+create policy "Admin update kids" on public.kids
+  for update using (auth.role() = 'authenticated');
+create policy "Admin delete kids" on public.kids
+  for delete using (auth.role() = 'authenticated');
 
 -- activity_log — admin can read and insert; deliberately no update/delete
 -- policy at all (for anyone, admin included) so a logged row can never be
