@@ -142,3 +142,18 @@ export async function getPaymentsForEnquiry(enquiryId: string): Promise<Payment[
   if (error) throw error;
   return data || [];
 }
+
+// Business-wide payment ledger — every row across every enquiry, newest
+// first. Used by the Reports page for breakdowns the enquiries.amount_paid
+// running total alone can't answer (payment method mix, per-transaction
+// trend over time), since those live only in this ledger, not on the
+// enquiry row itself. Read-only, same table as getPaymentsForEnquiry above,
+// just without the per-enquiry filter.
+export async function getAllPayments(): Promise<Payment[]> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .order('paid_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}

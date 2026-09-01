@@ -1,6 +1,4 @@
-import { MagnifyingGlass as Search } from '@phosphor-icons/react';
-import AdminLayout from './AdminLayout';
-import AdminEditorFooter from './AdminEditorFooter';
+import ContentEditorShell from './ContentEditorShell';
 import { useContentEditorPage } from './useContentEditorPage';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { useConfirm } from '../components/ui/useConfirm';
@@ -79,14 +77,6 @@ export default function AdminAbout() {
     if (!ok) return;
     setContent(DEFAULT_ABOUT);
   };
-
-  if (loading) {
-    return (
-      <AdminLayout title="About Page">
-        <div role="status" className="text-center py-16 text-dark-muted">Loading…</div>
-      </AdminLayout>
-    );
-  }
 
   // ── section field setters ──────────────────────────────────────────────────
 
@@ -203,64 +193,30 @@ export default function AdminAbout() {
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <AdminLayout title="About Page" subtitle="Manage every section of the public About Us page." hasUnsavedChanges={hasUnsavedChanges}>
-      {/* Modal-style card: bordered white card with its own scroll area (the
-          thicker "app-scroll" scrollbar), a pinned search bar + tab bar up
-          top, and a footer that blends into and sticks to the bottom of the
-          card while the sections scroll — same skeleton as the Add Trip
-          popup, just without the overlay since this is a full page. */}
-      <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
-        <div className="p-6 pb-4 border-b border-background-warm flex-shrink-0 space-y-4">
-          <div className="relative w-full max-w-xs">
-            <label htmlFor="about-search" className="sr-only">Search fields</label>
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
-            <input
-              id="about-search"
-              type="text"
-              value={pageSearch}
-              onChange={e => setPageSearch(e.target.value)}
-              placeholder="Search fields (e.g. hero heading, journey steps)..."
-              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-            />
-          </div>
-          {/* Tab bar — jumps to a section rather than hiding the others
-              (everything stays in one continuous scroll below), same
-              behavior as the Add Trip modal's own tab bar. */}
-          <div className="relative">
-            <div ref={tabBarRef} role="tablist" aria-label="About page sections" className="flex gap-2 overflow-x-auto scrollbar-hide">
-              {SECTION_TITLES.map((title, i) => (
-                <button
-                  key={title}
-                  ref={el => { tabButtonRefs.current[i] = el; }}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeSection === i}
-                  onClick={() => handleTabSelect(i)}
-                  className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
-                    activeSection === i
-                      ? 'bg-primary text-white'
-                      : 'bg-background text-dark-muted hover:text-dark'
-                  }`}
-                >
-                  {title.replace(/^\d+ · /, '')}
-                </button>
-              ))}
-            </div>
-            {showLeftFade && (
-              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent" />
-            )}
-            {showRightFade && (
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent" />
-            )}
-          </div>
-        </div>
-
-        <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
-          {pageSearchNoMatch && (
-            <p role="alert" className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
-          )}
-          <div className="p-6 space-y-8">
-
+    <ContentEditorShell
+      title="About Page"
+      subtitle="Manage every section of the public About Us page."
+      hasUnsavedChanges={hasUnsavedChanges}
+      loading={loading}
+      searchId="about-search"
+      searchPlaceholder="Search fields (e.g. hero heading, journey steps)..."
+      pageSearch={pageSearch}
+      setPageSearch={setPageSearch}
+      pageSearchNoMatch={pageSearchNoMatch}
+      tabBarRef={tabBarRef}
+      tabButtonRefs={tabButtonRefs}
+      tabBarAriaLabel="About page sections"
+      sectionTitles={SECTION_TITLES}
+      activeSection={activeSection}
+      handleTabSelect={handleTabSelect}
+      showLeftFade={showLeftFade}
+      showRightFade={showRightFade}
+      scrollBodyRef={scrollBodyRef}
+      onSave={handleSave}
+      saving={saving}
+      saved={saved}
+      onSecondaryAction={resetToDefault}
+    >
         <HeroSection content={content.hero} setHero={setHero} sectionRef={el => { setSectionRef(0, el); }} />
         <OurStorySection content={content.our_story} setStory={setStory} sectionRef={el => { setSectionRef(1, el); }} />
         <JourneyIntroSection
@@ -299,15 +255,7 @@ export default function AdminAbout() {
           removeStep={removeStep}
           sectionRef={el => { setSectionRef(7, el); }}
         />
-          </div>
-
-          {/* ── Sticky footer — blended into and pinned to the bottom of the
-              card's own scroll area (not the viewport), same pattern as the
-              Add Trip modal's footer. ───────────────────────────────────── */}
-          <AdminEditorFooter onSave={handleSave} saving={saving} saved={saved} onSecondaryAction={resetToDefault} />
-        </div>
-      </div>
-    </AdminLayout>
+    </ContentEditorShell>
   );
 }
 

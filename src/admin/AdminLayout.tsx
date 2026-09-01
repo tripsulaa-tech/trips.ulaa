@@ -294,6 +294,44 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
     </span>
   );
 
+  // Shared row shell for a top-level nav item — used both for a plain link
+  // and for the header row of the expandable "Dashboard" group, which is
+  // otherwise identical apart from its `end` matching, active-state padding,
+  // and an optional trailing chevron button.
+  const TopNavRow = ({
+    label, to, end, Icon, activePadding, trailing,
+  }: {
+    label: string;
+    to: string;
+    end?: boolean;
+    Icon: TripHighlightIconType;
+    activePadding: string;
+    trailing?: React.ReactNode;
+  }) => (
+    <div
+      ref={el => { if (el) rowsRef.current.set(label, { el, target: { list: 'top', label } }); else rowsRef.current.delete(label); }}
+      className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
+    >
+      {!collapsed && <GripHandle label={label} list="top" />}
+      <NavLink
+        to={to}
+        end={end}
+        onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
+        title={collapsed ? label : undefined}
+        aria-label={collapsed ? label : undefined}
+        className={({ isActive }) => `
+          flex-1 flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all min-w-0
+          ${collapsed ? 'justify-center px-0' : activePadding}
+          ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
+        `}
+      >
+        <Icon size={18} className="shrink-0" aria-hidden="true" />
+        {!collapsed && <span className="truncate">{label}</span>}
+      </NavLink>
+      {trailing}
+    </div>
+  );
+
   return (
     <div className="flex flex-col h-full">
       {/* Announces keyboard-driven reorders, which otherwise only show up
@@ -341,28 +379,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
 
           if (label !== GROUP_LABEL) {
             return (
-              <div
-                key={to}
-                ref={el => { if (el) rowsRef.current.set(label, { el, target: { list: 'top', label } }); else rowsRef.current.delete(label); }}
-                className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
-              >
-                {!collapsed && <GripHandle label={label} list="top" />}
-                <NavLink
-                  to={to}
-                  end={to === '/admin'}
-                  onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
-                  title={collapsed ? label : undefined}
-                  aria-label={collapsed ? label : undefined}
-                  className={({ isActive }) => `
-                    flex-1 flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all min-w-0
-                    ${collapsed ? 'justify-center px-0' : 'px-3'}
-                    ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
-                  `}
-                >
-                  <Icon size={18} className="shrink-0" aria-hidden="true" />
-                  {!collapsed && <span className="truncate">{label}</span>}
-                </NavLink>
-              </div>
+              <TopNavRow key={to} label={label} to={to} end={to === '/admin'} Icon={Icon} activePadding="px-3" />
             );
           }
 
@@ -374,27 +391,13 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
 
           return (
             <div key={to}>
-              <div
-                ref={el => { if (el) rowsRef.current.set(label, { el, target: { list: 'top', label } }); else rowsRef.current.delete(label); }}
-                className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
-              >
-                {!collapsed && <GripHandle label={label} list="top" />}
-                <NavLink
-                  to={to}
-                  end
-                  onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
-                  title={collapsed ? label : undefined}
-                  aria-label={collapsed ? label : undefined}
-                  className={({ isActive }) => `
-                    flex-1 flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all min-w-0
-                    ${collapsed ? 'justify-center px-0' : 'px-2'}
-                    ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
-                  `}
-                >
-                  <Icon size={18} className="shrink-0" aria-hidden="true" />
-                  {!collapsed && <span className="truncate">{label}</span>}
-                </NavLink>
-                {!collapsed && (
+              <TopNavRow
+                label={label}
+                to={to}
+                end
+                Icon={Icon}
+                activePadding="px-2"
+                trailing={!collapsed && (
                   <button
                     type="button"
                     onClick={() => toggleGroup(GROUP_LABEL)}
@@ -405,7 +408,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
                     <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                   </button>
                 )}
-              </div>
+              />
 
               {isOpen && (
                 <div

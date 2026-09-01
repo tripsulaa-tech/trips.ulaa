@@ -24,6 +24,7 @@ import {
   Plug as PlugZap,
 } from '@phosphor-icons/react';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
+import { matchThingsToCarryIconKey, type ThingsToCarryIconKey } from '../../constants/thingsToCarryIconRules';
 
 // Tracks whether the viewport is at/above the `sm` breakpoint (640px) so
 // scroll-triggered entrance animations can be skipped on mobile (per design
@@ -61,36 +62,35 @@ export function getItineraryGridClass(days: number): string {
 }
 
 // Fallback icon matching for Things to Carry items that don't have an
-// admin-picked icon. Matches common packing-list keywords to a
-// representative icon, falling back to the Backpack icon for anything
-// unrecognized.
-const THINGS_TO_CARRY_ICON_RULES: [RegExp, TripHighlightIconType][] = [
-  [/jacket|sweater|hoodie|fleece|thermal/i, Shirt],
-  [/shoe|boot|sandal|footwear|trek/i, Footprints],
-  [/sunglass|goggle/i, Glasses],
-  [/cap|hat/i, HatGlasses],
-  [/glove|mitten/i, Hand],
-  [/earphone|headphone|earbud/i, Headphones],
-  [/adapter|\bplug\b|converter/i, PlugZap],
-  [/power ?bank|charger|battery/i, BatteryCharging],
-  [/medicine|medication|pill|first aid/i, Pill],
-  [/sunscreen|spf/i, SprayCan],
-  [/moistur|lotion|cream/i, Droplet],
-  [/water ?bottle|bottle/i, GlassWater],
-  [/snack|food/i, Cookie],
-  [/wipe|sanitiz|towel/i, Sparkles],
-  [/tissue|paper/i, FileText],
-  // Photo/photograph checked before the passport/id-proof rule below, since
-  // "Passport-size photographs" would otherwise match on "passport".
-  [/passport.{0,10}photo|photograph/i, Camera],
-  [/\beta\b|visa|travel authoriz|entry permit/i, Stamp],
-  [/flight|air ticket|boarding pass|\bticket/i, Plane],
-  [/insurance/i, ShieldCheck],
-  [/debit card|credit card|currency|rupee|\bcash\b/i, CreditCard],
-  [/id proof|passport|aadhar|adhar|govern|voter|licen|document/i, IdCard],
-];
+// admin-picked icon. The keyword→key matching rules are shared with the PDF
+// export (see constants/thingsToCarryIconRules.ts) so both resolve to the
+// same *kind* of glyph; only the icon components themselves differ here
+// (this app uses @phosphor-icons/react, the PDF uses lucide-react).
+const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', TripHighlightIconType> = {
+  jacket: Shirt,
+  shoe: Footprints,
+  sunglasses: Glasses,
+  cap: HatGlasses,
+  glove: Hand,
+  earphone: Headphones,
+  adapter: PlugZap,
+  powerBank: BatteryCharging,
+  medicine: Pill,
+  sunscreen: SprayCan,
+  moisturizer: Droplet,
+  waterBottle: GlassWater,
+  snack: Cookie,
+  wipe: Sparkles,
+  tissue: FileText,
+  photo: Camera,
+  visa: Stamp,
+  flight: Plane,
+  insurance: ShieldCheck,
+  card: CreditCard,
+  idProof: IdCard,
+  default: Backpack,
+};
 
 export function getThingsToCarryIcon(item: string): TripHighlightIconType {
-  const rule = THINGS_TO_CARRY_ICON_RULES.find(([pattern]) => pattern.test(item));
-  return rule ? rule[1] : Backpack;
+  return THINGS_TO_CARRY_ICONS[matchThingsToCarryIconKey(item)];
 }

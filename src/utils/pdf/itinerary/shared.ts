@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { formatPrice } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
+import { matchThingsToCarryIconKey, type ThingsToCarryIconKey } from '../../../constants/thingsToCarryIconRules';
 import { fetchAsDataUrl, loadImageEl } from '../../pdfImageLoading';
 import { BRAND_BASE, COLORS_BASE, type RGB } from '../shared';
 export { tierLabel } from '../../../constants/cancellationPolicy';
@@ -32,39 +33,38 @@ export function resolveIcon(key: string | undefined | null, fallback: AnyIcon): 
   return meta ? meta.Icon : fallback;
 }
 
-// Mirrors THINGS_TO_CARRY_ICON_RULES / getThingsToCarryIcon in
-// src/pages/TripDetailPage.tsx exactly, so an admin-typed "Things to Carry"
-// item with no explicit icon still resolves to the same glyph in the PDF as
-// it does on the live site.
-const THINGS_TO_CARRY_ICON_RULES: [RegExp, AnyIcon][] = [
-  [/jacket|sweater|hoodie|fleece|thermal/i, Shirt],
-  [/shoe|boot|sandal|footwear|trek/i, Footprints],
-  [/sunglass|goggle/i, Glasses],
-  [/cap|hat/i, HatGlasses],
-  [/glove|mitten/i, Hand],
-  [/earphone|headphone|earbud/i, Headphones],
-  [/adapter|\bplug\b|converter/i, PlugZap],
-  [/power ?bank|charger|battery/i, BatteryCharging],
-  [/medicine|medication|pill|first aid/i, Pill],
-  [/sunscreen|spf/i, SprayCan],
-  [/moistur|lotion|cream/i, Droplet],
-  [/water ?bottle|bottle/i, GlassWater],
-  [/snack|food/i, Cookie],
-  [/wipe|sanitiz|towel/i, Sparkles],
-  [/tissue|paper/i, FileText],
-  // Photo/photograph checked before the passport/id-proof rule below, since
-  // "Passport-size photographs" would otherwise match on "passport".
-  [/passport.{0,10}photo|photograph/i, Camera],
-  [/\beta\b|visa|travel authoriz|entry permit/i, Stamp],
-  [/flight|air ticket|boarding pass|\bticket/i, Plane],
-  [/insurance/i, ShieldCheck],
-  [/debit card|credit card|currency|rupee|\bcash\b/i, CreditCard],
-  [/id proof|passport|aadhar|adhar|govern|voter|licen|document/i, IdCard],
-];
+// Keyword→key matching rules are shared with the live site (see
+// constants/thingsToCarryIconRules.ts) so an admin-typed "Things to Carry"
+// item with no explicit icon still resolves to the same *kind* of glyph in
+// the PDF as it does on the live site; only the icon components differ
+// (this file uses lucide-react, the site uses @phosphor-icons/react).
+const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', AnyIcon> = {
+  jacket: Shirt,
+  shoe: Footprints,
+  sunglasses: Glasses,
+  cap: HatGlasses,
+  glove: Hand,
+  earphone: Headphones,
+  adapter: PlugZap,
+  powerBank: BatteryCharging,
+  medicine: Pill,
+  sunscreen: SprayCan,
+  moisturizer: Droplet,
+  waterBottle: GlassWater,
+  snack: Cookie,
+  wipe: Sparkles,
+  tissue: FileText,
+  photo: Camera,
+  visa: Stamp,
+  flight: Plane,
+  insurance: ShieldCheck,
+  card: CreditCard,
+  idProof: IdCard,
+  default: Backpack,
+};
 
 export function getThingsToCarryFallbackIcon(item: string): AnyIcon {
-  const rule = THINGS_TO_CARRY_ICON_RULES.find(([pattern]) => pattern.test(item));
-  return rule ? rule[1] : Backpack;
+  return THINGS_TO_CARRY_ICONS[matchThingsToCarryIconKey(item)];
 }
 
 // Static, site-wide brand info (not trip data) shown on the cover strip and

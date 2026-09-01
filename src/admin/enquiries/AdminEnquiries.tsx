@@ -748,11 +748,11 @@ export default function AdminEnquiries() {
                 <div className="flex items-center gap-6">
                   <div>
                     <p className="text-dark-muted text-xs">Collected</p>
-                    <p className="text-green-700 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries).collected)}</p>
+                    <p className="text-green-700 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries.filter(isBooked)).collected)}</p>
                   </div>
                   <div>
                     <p className="text-dark-muted text-xs">Pending</p>
-                    <p className="text-amber-600 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries).pending)}</p>
+                    <p className="text-amber-600 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries.filter(isBooked)).pending)}</p>
                   </div>
                 </div>
               </div>

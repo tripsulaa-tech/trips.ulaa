@@ -8,7 +8,8 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, refPlaceholder } from './AdminEnquiryCommon';
+import MethodReferenceFields from './MethodReferenceFields';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS } from './AdminEnquiryCommon';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { inputClass, validateEnquiryForm, validateWaitlistPersonForm, type EnquiryForm, type WaitlistPersonForm } from './AdminEnquiriesShared';
 import { SOURCE_OPTIONS } from './AdminEnquiriesShared';
@@ -167,28 +168,17 @@ export default function AddEnquiryModal({
                 options={SOURCE_OPTIONS}
               />
             </div>
-            <div>
-              <label htmlFor="ge-g-method" className="block text-sm font-medium text-dark mb-1">Payment Method <span className="text-dark-muted font-normal">— for everyone's advance</span></label>
-              <Select
-                inputId="ge-g-method"
-                value={form.payment_method}
-                onChange={val => setForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
-                options={PAYMENT_METHOD_OPTIONS}
-                placeholder="Select method"
-              />
-            </div>
-            <div>
-              <label htmlFor="ge-g-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
-              <input
-                id="ge-g-utr"
-                type="text"
-                value={form.payment_utr}
-                disabled={form.payment_method === 'Cash'}
-                onChange={e => setForm(f => ({ ...f, payment_utr: e.target.value }))}
-                className={`${inputClass} ${form.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                placeholder={refPlaceholder(form.payment_method, 'e.g. 426817XXXXXX')}
-              />
-            </div>
+            <MethodReferenceFields
+              idPrefix="ge-g"
+              methodLabel={<>Payment Method <span className="text-dark-muted font-normal">— for everyone's advance</span></>}
+              value={form.payment_method}
+              onChange={val => setForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
+              utrValue={form.payment_utr}
+              onUtrChange={val => setForm(f => ({ ...f, payment_utr: val }))}
+              options={PAYMENT_METHOD_OPTIONS}
+              utrPlaceholderExample="e.g. 426817XXXXXX"
+              inputClassName={inputClass}
+            />
           </div>
 
           {/* One card per seat being filled this pass */}
@@ -409,29 +399,18 @@ export default function AddEnquiryModal({
           </div>
           {(Number(form.amount_paid) || 0) > 0 && (
             <div className="grid grid-cols-2 gap-4 md:col-span-2">
-              <div>
-                <label htmlFor="ge-method" className="block text-sm font-medium text-dark mb-1">Payment Method</label>
-                <Select
-                  inputId="ge-method"
-                  value={form.payment_method}
-                  onChange={val => setForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
-                  options={PAYMENT_METHOD_OPTIONS}
-                  placeholder="Select method"
-                  size="sm"
-                />
-              </div>
-              <div>
-                <label htmlFor="ge-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
-                <input
-                  id="ge-utr"
-                  type="text"
-                  value={form.payment_utr}
-                  disabled={form.payment_method === 'Cash'}
-                  onChange={e => setForm(f => ({ ...f, payment_utr: e.target.value }))}
-                  className={`${inputClass} ${form.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  placeholder={refPlaceholder(form.payment_method, 'e.g. 426817XXXXXX')}
-                />
-              </div>
+              <MethodReferenceFields
+                idPrefix="ge"
+                methodLabel="Payment Method"
+                value={form.payment_method}
+                onChange={val => setForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
+                utrValue={form.payment_utr}
+                onUtrChange={val => setForm(f => ({ ...f, payment_utr: val }))}
+                options={PAYMENT_METHOD_OPTIONS}
+                utrPlaceholderExample="e.g. 426817XXXXXX"
+                inputClassName={inputClass}
+                selectSize="sm"
+              />
             </div>
           )}
           <div className="md:col-span-2">

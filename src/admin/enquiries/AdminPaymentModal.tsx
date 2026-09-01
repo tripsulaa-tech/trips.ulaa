@@ -5,7 +5,8 @@ import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, validatePaymentForm, GENERATE_INVOICE_STATUS_OPTIONS, foodBadge, foodPreferenceKey, refPlaceholder } from './AdminEnquiryCommon';
+import MethodReferenceFields from './MethodReferenceFields';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, validatePaymentForm, GENERATE_INVOICE_STATUS_OPTIONS, foodBadge, foodPreferenceKey } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -248,31 +249,21 @@ export default function PaymentModal({
 
           {paymentForm.status === 'paid' && (
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="pay-method" className="block text-sm font-medium text-dark mb-1">Payment Method</label>
-                <Select
-                  inputId="pay-method"
-                  value={paymentForm.payment_method}
-                  onChange={val => setPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
-                  options={PAYMENT_METHOD_OPTIONS}
-                  placeholder="Select method"
-                  size="sm"
-                />
-                {paymentErrors.payment_method && <p role="alert" className={errorClass}>{paymentErrors.payment_method}</p>}
-              </div>
-              <div>
-                <label htmlFor="pay-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
-                <input
-                  id="pay-utr"
-                  type="text"
-                  value={paymentForm.payment_utr}
-                  disabled={paymentForm.payment_method === 'Cash'}
-                  onChange={e => setPaymentForm(f => ({ ...f, payment_utr: e.target.value }))}
-                  className={`${inputClass} ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  placeholder={refPlaceholder(paymentForm.payment_method, 'e.g. 426817XXXXXX')}
-                />
-                {paymentErrors.payment_utr && <p role="alert" className={errorClass}>{paymentErrors.payment_utr}</p>}
-              </div>
+              <MethodReferenceFields
+                idPrefix="pay"
+                methodLabel="Payment Method"
+                value={paymentForm.payment_method}
+                onChange={val => setPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
+                utrValue={paymentForm.payment_utr}
+                onUtrChange={val => setPaymentForm(f => ({ ...f, payment_utr: val }))}
+                options={PAYMENT_METHOD_OPTIONS}
+                utrPlaceholderExample="e.g. 426817XXXXXX"
+                inputClassName={inputClass}
+                selectSize="sm"
+                methodError={paymentErrors.payment_method}
+                utrError={paymentErrors.payment_utr}
+                errorClassName={errorClass}
+              />
             </div>
           )}
 
@@ -330,31 +321,22 @@ export default function PaymentModal({
 
               {!paymentTarget.is_no_show && (
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="pay-refund-method" className="block text-sm font-medium text-dark mb-1">Refund Method</label>
-                    <Select
-                      inputId="pay-refund-method"
-                      value={paymentForm.refund_method}
-                      onChange={val => setPaymentForm(f => ({ ...f, refund_method: val, refund_utr: val === 'Cash' ? '' : f.refund_utr }))}
-                      options={REFUND_METHOD_OPTIONS}
-                      placeholder="Select method"
-                      size="sm"
-                    />
-                    {paymentErrors.refund_method && <p role="alert" className={errorClass}>{paymentErrors.refund_method}</p>}
-                  </div>
-                  <div>
-                    <label htmlFor="pay-refund-utr" className="block text-sm font-medium text-dark mb-1">Refund UTR / Reference</label>
-                    <input
-                      id="pay-refund-utr"
-                      type="text"
-                      value={paymentForm.refund_utr}
-                      disabled={paymentForm.refund_method === 'Cash'}
-                      onChange={e => setPaymentForm(f => ({ ...f, refund_utr: e.target.value }))}
-                      className={`${inputClass} ${paymentForm.refund_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      placeholder={refPlaceholder(paymentForm.refund_method, 'e.g. 987654XXXX')}
-                    />
-                    {paymentErrors.refund_utr && <p role="alert" className={errorClass}>{paymentErrors.refund_utr}</p>}
-                  </div>
+                  <MethodReferenceFields
+                    idPrefix="pay-refund"
+                    methodLabel="Refund Method"
+                    value={paymentForm.refund_method}
+                    onChange={val => setPaymentForm(f => ({ ...f, refund_method: val, refund_utr: val === 'Cash' ? '' : f.refund_utr }))}
+                    utrValue={paymentForm.refund_utr}
+                    onUtrChange={val => setPaymentForm(f => ({ ...f, refund_utr: val }))}
+                    options={REFUND_METHOD_OPTIONS}
+                    utrLabel="Refund UTR / Reference"
+                    utrPlaceholderExample="e.g. 987654XXXX"
+                    inputClassName={inputClass}
+                    selectSize="sm"
+                    methodError={paymentErrors.refund_method}
+                    utrError={paymentErrors.refund_utr}
+                    errorClassName={errorClass}
+                  />
                   <div className="col-span-2">
                     <label htmlFor="pay-refund-date" className="block text-sm font-medium text-dark mb-1">Refund Date</label>
                     <input

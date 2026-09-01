@@ -32,13 +32,32 @@ import {
   ForkKnife as UtensilsCrossed,
   UserMinus as UserX,
   ChartPie as PieChart,
+  DownloadSimple as Download,
+  ChartBar as BarChart3,
+  CreditCard,
+  Compass,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
-import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin } from '../services/api';
-import type { Enquiry, UpcomingTrip, CompletedTrip } from '../types/types-index';
+import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getAllPayments } from '../services/api';
+import type { Enquiry, UpcomingTrip, CompletedTrip, Payment } from '../types/types-index';
 import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
+
+// Real, human-readable label for every value enquiries.source can actually
+// hold. Deliberately not reusing enquiries/AdminEnquiriesShared's
+// SOURCE_OPTIONS here — that list is scoped to the manual-entry form's
+// dropdown and excludes 'website' on purpose (see enquiryGrouping.ts), but
+// real enquiry rows very much do carry source: 'website', and a lead-source
+// report that silently dropped the public booking form would be useless.
+const SOURCE_LABELS: Record<Enquiry['source'], string> = {
+  website: 'Website',
+  whatsapp: 'WhatsApp',
+  phone: 'Phone Call',
+  instagram: 'Instagram',
+  walk_in: 'Walk-in',
+  other: 'Other',
+};
 
 type Period = 'all' | 'month' | '30d';
 
@@ -62,6 +81,66 @@ function withinPeriod(dateStr: string, period: Period): boolean {
 
 function pct(n: number, total: number): number {
   return total ? Math.round((n / total) * 100) : 0;
+}
+
+// Buckets paid ledger rows into a revenue-over-time series. Granularity
+// follows the period toggle: daily buckets for the two short windows (30
+// days / a month is few enough days to read as a bar each), monthly
+// buckets for "All Time" (could span years — daily bars would be unreadable
+// and mostly empty). Always returns buckets in chronological order, oldest
+// first, including zero-revenue days/months in between so gaps in the
+// timeline are visible rather than silently compressed out.
+function buildRevenueTrend(paidRows: Payment[], period: Period): { label: string; amount: number }[] {
+  if (paidRows.length === 0) return [];
+  const daily = period !== 'all';
+  const keyOf = (d: Date) => daily
+    ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+    : `${d.getFullYear()}-${d.getMonth()}`;
+  const labelOf = (d: Date) => daily
+    ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+    : d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+
+  const sums = new Map<string, number>();
+  paidRows.forEach(p => {
+    const d = new Date(p.paid_at);
+    const key = keyOf(d);
+    sums.set(key, (sums.get(key) || 0) + p.amount);
+  });
+
+  // Walk every day/month between the earliest and latest payment so gaps
+  // show as zero bars instead of disappearing.
+  const dates = paidRows.map(p => new Date(p.paid_at));
+  const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
+  const latest = new Date(Math.max(...dates.map(d => d.getTime())));
+  const buckets: { key: string; date: Date }[] = [];
+  const cursor = new Date(earliest);
+  if (daily) cursor.setHours(0, 0, 0, 0); else cursor.setDate(1);
+  while (cursor <= latest) {
+    buckets.push({ key: keyOf(cursor), date: new Date(cursor) });
+    if (daily) cursor.setDate(cursor.getDate() + 1); else cursor.setMonth(cursor.getMonth() + 1);
+  }
+  // Cap at 31 bars even for "All Time" spanning many years — collapse to
+  // the most recent 31 buckets rather than rendering an unreadable strip.
+  const capped = buckets.slice(-31);
+  return capped.map(b => ({ label: labelOf(b.date), amount: sums.get(b.key) || 0 }));
+}
+
+// Minimal dependency-free CSV export — quotes every field and escapes
+// embedded quotes/commas so labels containing them (e.g. a destination
+// name with a comma) don't corrupt column alignment when opened in Excel.
+function toCsvRow(fields: (string | number)[]): string {
+  return fields.map(f => `"${String(f).replace(/"/g, '""')}"`).join(',');
+}
+function downloadCsv(filename: string, rows: string[]): void {
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // Average time between an enquiry landing and an admin actually recording a
@@ -111,19 +190,54 @@ function ReportSection({
   );
 }
 
+// Lightweight bar chart, no charting dependency — the app doesn't already
+// pull one in, and this is the only place that needs one so far. Renders
+// as plain divs (not SVG/canvas) so bar heights, hover tooltips, and text
+// stay simple, accessible, and easy to restyle alongside the rest of the
+// admin's Tailwind-based UI.
+function RevenueTrendChart({ data }: { data: { label: string; amount: number }[] }) {
+  if (data.length === 0) {
+    return <p className="text-dark-muted text-sm text-center py-8">No collected payments in this range yet.</p>;
+  }
+  const max = Math.max(...data.map(d => d.amount), 1);
+  // Skip every other label once there are enough bars that every label
+  // would overlap its neighbors.
+  const labelEvery = data.length > 15 ? Math.ceil(data.length / 15) : 1;
+  return (
+    <div className="flex items-end gap-1 h-40 pt-2">
+      {data.map((d, i) => (
+        <div key={`${d.label}-${i}`} className="flex-1 min-w-0 h-full flex flex-col items-center justify-end gap-1 group relative">
+          <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-dark text-white text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+            {formatPrice(d.amount)}
+          </div>
+          <div
+            className="w-full bg-primary/80 hover:bg-primary rounded-t-sm transition-colors min-h-[2px]"
+            style={{ height: `${Math.max(2, (d.amount / max) * 100)}%` }}
+          />
+          <span className="text-[9px] text-dark-muted truncate w-full text-center">
+            {i % labelEvery === 0 ? d.label : ''}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminReports() {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [upcomingTrips, setUpcomingTrips] = useState<UpcomingTrip[]>([]);
   const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('all');
 
   useEffect(() => {
-    Promise.all([getEnquiries(), getAllUpcomingTripsAdmin(), getAllCompletedTripsAdmin()])
-      .then(([allEnquiries, upcoming, completed]) => {
+    Promise.all([getEnquiries(), getAllUpcomingTripsAdmin(), getAllCompletedTripsAdmin(), getAllPayments()])
+      .then(([allEnquiries, upcoming, completed, allPayments]) => {
         setEnquiries(allEnquiries);
         setUpcomingTrips(upcoming);
         setCompletedTrips(completed);
+        setPayments(allPayments);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -171,7 +285,7 @@ export default function AdminReports() {
     const revenue = scoped.reduce((sum, e) => sum + (e.amount_paid || 0) - (e.refund_amount || 0), 0);
     const refundAmount = scoped.reduce((sum, e) => sum + (e.refund_amount || 0), 0);
     const outstandingBalance = scoped
-      .filter(e => !isCancelled(e) && e.total_amount)
+      .filter(e => isBooked(e) && e.total_amount)
       .reduce((sum, e) => sum + Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)), 0);
     const bookedWithPrice = scoped.filter(e => isBooked(e) && e.total_amount);
     const avgBookingValue = bookedWithPrice.length
@@ -199,8 +313,20 @@ export default function AdminReports() {
     const attendanceRecorded = scoped.filter(e => e.is_no_show || e.checked_in_at);
     const noShowCount = scoped.filter(e => e.is_no_show).length;
 
+    // Occupancy is deliberately NOT read from trip.seats_booked — that
+    // field is meant to stay DB-trigger-synced from real bookings, but
+    // AdminTripFormModal also exposes it as a plain editable number an
+    // admin can retype by hand, so it can drift from what was actually
+    // paid and booked. Recomputing straight from isBooked enquiries (the
+    // same real amount_paid/cancelled_at fields already trusted everywhere
+    // else on this page) means Occupancy can't silently disagree with
+    // Cancellation Rate or Revenue just because someone edited a trip.
+    // Deliberately NOT scoped to `scoped`/period — like the trip's real
+    // seat count, this is "how full are trips right now", not "how many
+    // people booked in the selected window".
+    const upcomingTripIds = new Set(upcomingTrips.map(t => t.id));
     const totalSeats = upcomingTrips.reduce((sum, t) => sum + (t.total_seats || 0), 0);
-    const seatsBooked = upcomingTrips.reduce((sum, t) => sum + (t.seats_booked || 0), 0);
+    const seatsBooked = enquiries.filter(e => isBooked(e) && e.trip_id && upcomingTripIds.has(e.trip_id)).length;
 
     const destCounts = new Map<string, number>();
     bookedList.forEach(e => {
@@ -222,7 +348,145 @@ export default function AdminReports() {
       totalSeats, seatsBooked,
       topDestinations,
     };
-  }, [scoped, upcomingTrips, destinationById]);
+  }, [scoped, enquiries, upcomingTrips, destinationById]);
+
+  // Paid ledger rows within the selected period — the source for both the
+  // trend chart and the payment-method breakdown below. Filtered on
+  // paid_at (when money actually moved), not the enquiry's created_at, and
+  // restricted to status === 'paid' so pending/uncollected invoice rows
+  // (see the Payment interface's status field) don't get counted as
+  // revenue before they've actually been collected.
+  const paidInPeriod = useMemo(
+    () => payments.filter(p => p.status === 'paid' && withinPeriod(p.paid_at, period)),
+    [payments, period]
+  );
+
+  const revenueTrend = useMemo(() => buildRevenueTrend(paidInPeriod, period), [paidInPeriod, period]);
+
+  const sourceBreakdown = useMemo(() => {
+    const map = new Map<string, { total: number; booked: number }>();
+    scoped.forEach(e => {
+      const entry = map.get(e.source) || { total: 0, booked: 0 };
+      entry.total += 1;
+      if (isBooked(e)) entry.booked += 1;
+      map.set(e.source, entry);
+    });
+    return Array.from(map.entries())
+      .map(([source, v]) => ({
+        source,
+        label: SOURCE_LABELS[source as Enquiry['source']] || source,
+        total: v.total,
+        booked: v.booked,
+        conversionPct: pct(v.booked, v.total),
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [scoped]);
+
+  const paymentMethodBreakdown = useMemo(() => {
+    const map = new Map<string, { amount: number; count: number }>();
+    paidInPeriod.forEach(p => {
+      const key = p.payment_method || 'Not specified';
+      const entry = map.get(key) || { amount: 0, count: 0 };
+      entry.amount += p.amount;
+      entry.count += 1;
+      map.set(key, entry);
+    });
+    const totalAmount = paidInPeriod.reduce((sum, p) => sum + p.amount, 0);
+    return Array.from(map.entries())
+      .map(([method, v]) => ({ method, amount: v.amount, count: v.count, sharePct: pct(v.amount, totalAmount) }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [paidInPeriod]);
+
+  // Per-trip rollup — same real-booking derivation as Occupancy above
+  // (isBooked, not trip.seats_booked), so this table and the top-level
+  // Occupancy card can never disagree about how full a given trip is.
+  // Deliberately business-wide (all enquiries), not `scoped` — a trip's
+  // collected/pending/occupancy is its current standing regardless of when
+  // each individual booking came in, same reasoning as Occupancy itself.
+  const tripBreakdown = useMemo(() => {
+    return upcomingTrips
+      .map(t => {
+        const tripEnquiries = enquiries.filter(e => e.trip_id === t.id && isBooked(e));
+        const collected = tripEnquiries.reduce((sum, e) => sum + (e.amount_paid || 0), 0);
+        const pendingAmt = tripEnquiries
+          .filter(e => e.total_amount)
+          .reduce((sum, e) => sum + Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)), 0);
+        return {
+          id: t.id,
+          title: t.title || t.destination,
+          startDate: t.start_date,
+          seatsBooked: tripEnquiries.length,
+          totalSeats: t.total_seats || 0,
+          occupancyPct: pct(tripEnquiries.length, t.total_seats || 0),
+          collected,
+          pending: pendingAmt,
+        };
+      })
+      .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+  }, [upcomingTrips, enquiries]);
+
+  // Same isBooked + total_amount scoping as the Outstanding Balance card
+  // itself, so the two can never disagree — this is that number broken out
+  // person-by-person instead of just the business-wide total.
+  const outstandingByPerson = useMemo(() => {
+    return scoped
+      .filter(e => isBooked(e) && e.total_amount && (e.total_amount - (e.amount_paid || 0)) > 0)
+      .map(e => ({
+        name: e.full_name,
+        trip: (e.trip_id && destinationById.get(e.trip_id)) || e.trip_title || 'Unknown',
+        total: e.total_amount || 0,
+        paid: e.amount_paid || 0,
+        balance: Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)),
+      }))
+      .sort((a, b) => b.balance - a.balance);
+  }, [scoped, destinationById]);
+
+  const handleExportCsv = () => {
+    const rows: string[] = [];
+    rows.push(toCsvRow(['ULAA Reports', PERIOD_OPTIONS.find(p => p.value === period)?.label || period]));
+    rows.push('');
+    rows.push(toCsvRow(['Lead Reports']));
+    rows.push(toCsvRow(['Total Leads', lead.total]));
+    rows.push(toCsvRow(['Conversion Rate %', lead.conversionPct]));
+    rows.push(toCsvRow(['New', lead.newCount]));
+    rows.push(toCsvRow(['Contacted', lead.contactedCount]));
+    rows.push(toCsvRow(['Avg Response Time', lead.avgResponseTime]));
+    rows.push('');
+    rows.push(toCsvRow(['Booking Reports']));
+    rows.push(toCsvRow(['Confirmed', booking.confirmed]));
+    rows.push(toCsvRow(['Completed', booking.completed]));
+    rows.push(toCsvRow(['Cancelled', booking.cancelled]));
+    rows.push('');
+    rows.push(toCsvRow(['Financial Reports (net of refunds)']));
+    rows.push(toCsvRow(['Revenue', financial.revenue]));
+    rows.push(toCsvRow(['Refund Amount', financial.refundAmount]));
+    rows.push(toCsvRow(['Outstanding Balance', financial.outstandingBalance]));
+    rows.push(toCsvRow(['Avg Booking Value', Math.round(financial.avgBookingValue)]));
+    rows.push('');
+    rows.push(toCsvRow(['Operational Reports']));
+    rows.push(toCsvRow(['Occupancy %', operational.occupancyPct]));
+    rows.push(toCsvRow(['Seats Booked', operational.seatsBooked]));
+    rows.push(toCsvRow(['Total Seats', operational.totalSeats]));
+    rows.push(toCsvRow(['Cancellation Rate %', operational.cancellationPct]));
+    rows.push(toCsvRow(['No-Show Rate %', operational.noShowPct]));
+    rows.push('');
+    rows.push(toCsvRow(['Lead Source Breakdown']));
+    rows.push(toCsvRow(['Source', 'Total Leads', 'Booked', 'Conversion %']));
+    sourceBreakdown.forEach(s => rows.push(toCsvRow([s.label, s.total, s.booked, s.conversionPct])));
+    rows.push('');
+    rows.push(toCsvRow(['Payment Method Breakdown']));
+    rows.push(toCsvRow(['Method', 'Amount', 'Transactions', 'Share %']));
+    paymentMethodBreakdown.forEach(m => rows.push(toCsvRow([m.method, m.amount, m.count, m.sharePct])));
+    rows.push('');
+    rows.push(toCsvRow(['Per-Trip Breakdown']));
+    rows.push(toCsvRow(['Trip', 'Start Date', 'Seats Booked', 'Total Seats', 'Occupancy %', 'Collected', 'Pending']));
+    tripBreakdown.forEach(t => rows.push(toCsvRow([t.title, t.startDate, t.seatsBooked, t.totalSeats, t.occupancyPct, t.collected, t.pending])));
+    rows.push('');
+    rows.push(toCsvRow(['Outstanding Balances by Person']));
+    rows.push(toCsvRow(['Name', 'Trip', 'Total Amount', 'Paid So Far', 'Balance']));
+    outstandingByPerson.forEach(p => rows.push(toCsvRow([p.name, p.trip, p.total, p.paid, p.balance])));
+    downloadCsv(`ulaa-report-${period}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  };
 
   return (
     <AdminLayout title="Reports">
@@ -231,7 +495,7 @@ export default function AdminReports() {
           <p className="text-dark-muted text-sm">
             Business-wide rollups across Lead, Booking, Financial and Operational activity.
           </p>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 items-center">
             {PERIOD_OPTIONS.map(opt => (
               <button
                 key={opt.value}
@@ -245,6 +509,15 @@ export default function AdminReports() {
                 {opt.label}
               </button>
             ))}
+            {!loading && (
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark transition-colors"
+              >
+                <Download size={14} aria-hidden="true" /> Export CSV
+              </button>
+            )}
           </div>
         </div>
 
@@ -275,6 +548,29 @@ export default function AdminReports() {
                   </div>
                 </div>
               )}
+
+              {sourceBreakdown.length > 0 && (
+                <div className="bg-white rounded-lg shadow-card p-4 mt-3">
+                  <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-3">
+                    Lead Source Breakdown
+                  </p>
+                  <div className="space-y-2.5">
+                    {sourceBreakdown.map(s => {
+                      const max = sourceBreakdown[0].total || 1;
+                      return (
+                        <div key={s.source} className="flex items-center gap-3">
+                          <span className="text-sm text-dark font-medium truncate flex-1 min-w-0">{s.label}</span>
+                          <div className="hidden sm:block w-28 h-1.5 rounded-full bg-background-warm overflow-hidden shrink-0">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${Math.max(6, (s.total / max) * 100)}%` }} />
+                          </div>
+                          <span className="text-sm font-semibold text-dark w-6 text-right shrink-0">{s.total}</span>
+                          <span className="text-xs text-dark-muted w-28 text-right shrink-0">{s.booked} booked ({s.conversionPct}%)</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </ReportSection>
 
             {/* ---- Booking Reports ---- */}
@@ -294,6 +590,37 @@ export default function AdminReports() {
                 <StatCard label="Outstanding Balance" value={formatPrice(financial.outstandingBalance)} sub="Active bookings only" icon={Wallet} />
                 <StatCard label="Avg. Booking Value" value={formatPrice(Math.round(financial.avgBookingValue))} icon={Wallet2} />
               </div>
+
+              <div className="bg-white rounded-lg shadow-card p-4 mt-3">
+                <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                  <BarChart3 size={13} aria-hidden="true" /> Collected Over Time
+                </p>
+                <RevenueTrendChart data={revenueTrend} />
+              </div>
+
+              {paymentMethodBreakdown.length > 0 && (
+                <div className="bg-white rounded-lg shadow-card p-4 mt-3">
+                  <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                    <CreditCard size={13} aria-hidden="true" /> Collection by Payment Method
+                  </p>
+                  <div className="space-y-2.5">
+                    {paymentMethodBreakdown.map(m => {
+                      const max = paymentMethodBreakdown[0].amount || 1;
+                      return (
+                        <div key={m.method} className="flex items-center gap-3">
+                          <span className="text-sm text-dark font-medium truncate flex-1 min-w-0 capitalize">{m.method}</span>
+                          <div className="hidden sm:block w-28 h-1.5 rounded-full bg-background-warm overflow-hidden shrink-0">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${Math.max(6, (m.amount / max) * 100)}%` }} />
+                          </div>
+                          <span className="text-xs text-dark-muted w-10 text-right shrink-0">{m.count}×</span>
+                          <span className="text-sm font-semibold text-dark w-24 text-right shrink-0">{formatPrice(m.amount)}</span>
+                          <span className="text-xs text-dark-muted w-10 text-right shrink-0">{m.sharePct}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </ReportSection>
 
             {/* ---- Operational Reports ---- */}
@@ -329,6 +656,38 @@ export default function AdminReports() {
                 </div>
               )}
             </ReportSection>
+
+            {/* ---- Per-Trip Breakdown ---- */}
+            {tripBreakdown.length > 0 && (
+              <ReportSection title="Per-Trip Breakdown" subtitle="Upcoming trips · current standing">
+                <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto">
+                  <table className="w-full text-sm min-w-[560px]">
+                    <thead>
+                      <tr className="border-b border-background-warm text-left">
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide">
+                          <span className="inline-flex items-center gap-1.5"><Compass size={13} aria-hidden="true" /> Trip</span>
+                        </th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Seats</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Occupancy</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Collected</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Pending</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tripBreakdown.map(t => (
+                        <tr key={t.id} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
+                          <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[220px]">{t.title}</td>
+                          <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{t.seatsBooked}/{t.totalSeats}</td>
+                          <td className="px-4 py-2.5 text-dark font-semibold text-right">{t.occupancyPct}%</td>
+                          <td className="px-4 py-2.5 text-green-700 font-semibold text-right whitespace-nowrap">{formatPrice(t.collected)}</td>
+                          <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(t.pending)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </ReportSection>
+            )}
           </>
         )}
       </div>

@@ -8,10 +8,11 @@ import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
+import MethodReferenceFields from './MethodReferenceFields';
 import {
   parseNonNegative, PACKAGE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS,
   availablePaymentTypeOptions, clearsBalance, FOOD_PREFERENCE_OPTIONS,
-  REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS, refPlaceholder,
+  REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
 } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import PaymentHistoryList from './PaymentHistoryList';
@@ -137,30 +138,20 @@ export default function AdminEnquiryPaymentModal({
 
         {paymentForm.status === 'paid' && (
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="ed-pay-method" className="block text-sm font-medium text-dark mb-1">Payment Method</label>
-              <Select
-                inputId="ed-pay-method"
-                value={paymentForm.payment_method}
-                onChange={val => setPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
-                options={PAYMENT_METHOD_OPTIONS}
-                placeholder="Select method"
-              />
-              {paymentErrors.payment_method && <p role="alert" className={paymentErrorClass}>{paymentErrors.payment_method}</p>}
-            </div>
-            <div>
-              <label htmlFor="ed-pay-utr" className="block text-sm font-medium text-dark mb-1">UTR / Reference</label>
-              <input
-                id="ed-pay-utr"
-                type="text"
-                value={paymentForm.payment_utr}
-                disabled={paymentForm.payment_method === 'Cash'}
-                onChange={e => setPaymentForm(f => ({ ...f, payment_utr: e.target.value }))}
-                className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.payment_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                placeholder={refPlaceholder(paymentForm.payment_method, 'e.g. 426817XXXXXX')}
-              />
-              {paymentErrors.payment_utr && <p role="alert" className={paymentErrorClass}>{paymentErrors.payment_utr}</p>}
-            </div>
+            <MethodReferenceFields
+              idPrefix="ed-pay"
+              methodLabel="Payment Method"
+              value={paymentForm.payment_method}
+              onChange={val => setPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
+              utrValue={paymentForm.payment_utr}
+              onUtrChange={val => setPaymentForm(f => ({ ...f, payment_utr: val }))}
+              options={PAYMENT_METHOD_OPTIONS}
+              utrPlaceholderExample="e.g. 426817XXXXXX"
+              inputClassName="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
+              methodError={paymentErrors.payment_method}
+              utrError={paymentErrors.payment_utr}
+              errorClassName={paymentErrorClass}
+            />
           </div>
         )}
 
@@ -222,31 +213,22 @@ export default function AdminEnquiryPaymentModal({
             )}
             {!enquiry.is_no_show && (
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="ed-refund-method" className="block text-sm font-medium text-dark mb-1">Refund Method</label>
-                  <Select
-                    inputId="ed-refund-method"
-                    value={paymentForm.refund_method}
-                    onChange={val => setPaymentForm(f => ({ ...f, refund_method: val, refund_utr: val === 'Cash' ? '' : f.refund_utr }))}
-                    options={REFUND_METHOD_OPTIONS}
-                    placeholder="Select method"
-                    size="sm"
-                  />
-                  {paymentErrors.refund_method && <p role="alert" className={paymentErrorClass}>{paymentErrors.refund_method}</p>}
-                </div>
-                <div>
-                  <label htmlFor="ed-refund-utr" className="block text-sm font-medium text-dark mb-1">Refund UTR / Reference</label>
-                  <input
-                    id="ed-refund-utr"
-                    type="text"
-                    value={paymentForm.refund_utr}
-                    disabled={paymentForm.refund_method === 'Cash'}
-                    onChange={e => setPaymentForm(f => ({ ...f, refund_utr: e.target.value }))}
-                    className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.refund_method === 'Cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    placeholder={refPlaceholder(paymentForm.refund_method, 'e.g. 987654XXXX')}
-                  />
-                  {paymentErrors.refund_utr && <p role="alert" className={paymentErrorClass}>{paymentErrors.refund_utr}</p>}
-                </div>
+                <MethodReferenceFields
+                  idPrefix="ed-refund"
+                  methodLabel="Refund Method"
+                  value={paymentForm.refund_method}
+                  onChange={val => setPaymentForm(f => ({ ...f, refund_method: val, refund_utr: val === 'Cash' ? '' : f.refund_utr }))}
+                  utrValue={paymentForm.refund_utr}
+                  onUtrChange={val => setPaymentForm(f => ({ ...f, refund_utr: val }))}
+                  options={REFUND_METHOD_OPTIONS}
+                  utrLabel="Refund UTR / Reference"
+                  utrPlaceholderExample="e.g. 987654XXXX"
+                  inputClassName="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
+                  selectSize="sm"
+                  methodError={paymentErrors.refund_method}
+                  utrError={paymentErrors.refund_utr}
+                  errorClassName={paymentErrorClass}
+                />
                 <div className="col-span-2">
                   <label htmlFor="ed-refund-date" className="block text-sm font-medium text-dark mb-1">Refund Date</label>
                   <input

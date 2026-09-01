@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from 'react';
 import {
   Plus,
   Trash as Trash2,
@@ -9,9 +8,9 @@ import {
 import AdminLayout from './AdminLayout';
 import AdminEditorFooter from './AdminEditorFooter';
 import TripHighlightIconPicker from '../components/ui/TripHighlightIconPicker';
-import { getSiteContent, upsertSiteContent } from '../services/api';
-import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
+import { useSiteContentEditor } from './useSiteContentEditor';
 import { useConfirm } from '../components/ui/useConfirm';
+import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import type { BottomNavItemConfig } from '../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 
@@ -21,27 +20,14 @@ const makeId = () => `tab-${Date.now().toString(36)}-${Math.random().toString(36
 
 export default function AdminBottomNav() {
   const confirm = useConfirm();
-  const [items, setItems] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const savedContentRef = useRef<string>('');
-
-  useEffect(() => {
-    getSiteContent<BottomNavItemConfig[]>('bottom_nav')
-      .then(data => {
-        const resolved = data && data.length > 0 ? data : DEFAULT_BOTTOM_NAV_ITEMS;
-        setItems(resolved);
-        savedContentRef.current = JSON.stringify(resolved);
-      })
-      .catch(() => {
-        setItems(DEFAULT_BOTTOM_NAV_ITEMS);
-        savedContentRef.current = JSON.stringify(DEFAULT_BOTTOM_NAV_ITEMS);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  const hasUnsavedChanges = () => !loading && JSON.stringify(items) !== savedContentRef.current;
+  const {
+    content: items, setContent: setItems, loading, saving, saved,
+    hasUnsavedChanges, handleSave, resetToDefault,
+  } = useSiteContentEditor<BottomNavItemConfig[]>({
+    contentKey: 'bottom_nav',
+    defaultContent: DEFAULT_BOTTOM_NAV_ITEMS,
+    resolveLoaded: data => (data && data.length > 0 ? data : DEFAULT_BOTTOM_NAV_ITEMS),
+  });
 
   const updateItem = (index: number, patch: Partial<BottomNavItemConfig>) => {
     setItems(list => list.map((item, i) => (i === index ? { ...item, ...patch } : item)));
@@ -73,30 +59,6 @@ export default function AdminBottomNav() {
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      await upsertSiteContent('bottom_nav', items);
-      savedContentRef.current = JSON.stringify(items);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch {
-      alert('Failed to save. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const resetToDefault = async () => {
-    const ok = await confirm({
-      title: 'Reset to defaults?',
-      message: 'This will overwrite your edits below (not saved until you click Save).',
-      confirmLabel: 'Reset',
-    });
-    if (!ok) return;
-    setItems(DEFAULT_BOTTOM_NAV_ITEMS);
   };
 
   if (loading) {

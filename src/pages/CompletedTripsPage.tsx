@@ -9,9 +9,10 @@ import { getCompletedTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { useMonthFilteredTrips } from '../hooks/useMonthFilteredTrips';
+import { useLiveNavLabel } from '../hooks/useLiveNavLabel';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
-import type { CompletedTrip, AboutContent, BottomNavItemConfig } from '../types/types-index';
+import type { CompletedTrip, AboutContent } from '../types/types-index';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1600&q=80';
 
@@ -89,7 +90,7 @@ export default function CompletedTripsPage() {
   const [statLabels, setStatLabels] = useState<AboutContent['stats']>(DEFAULT_ABOUT.stats);
   // This tab's label in the bottom nav bar (e.g. "Journey") — admin-editable
   // in AdminBottomNav, shown in front of "Showing N albums" below.
-  const [navLabel, setNavLabel] = useState<string>(DEFAULT_NAV_LABEL);
+  const navLabel = useLiveNavLabel(NAV_ROUTE, DEFAULT_NAV_LABEL);
 
   useEffect(() => {
     getCompletedTrips()
@@ -102,33 +103,6 @@ export default function CompletedTripsPage() {
     getSiteContent<Partial<AboutContent>>('about')
       .then(data => setStatLabels(mergeWithDefaults(data).stats))
       .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    getSiteContent<BottomNavItemConfig[]>('bottom_nav')
-      .then(data => {
-        const match = data?.find(i => i.to === NAV_ROUTE);
-        if (match?.label) setNavLabel(match.label);
-      })
-      .catch(() => {});
-  }, []);
-
-  // Live nav label — the instant an admin renames this tab in
-  // AdminBottomNav, re-pull it so the text below updates without a refresh.
-  useEffect(() => {
-    const unsubscribe = subscribeToTable(
-      'site_content',
-      () => {
-        getSiteContent<BottomNavItemConfig[]>('bottom_nav')
-          .then(data => {
-            const match = data?.find(i => i.to === NAV_ROUTE);
-            setNavLabel(match?.label || DEFAULT_NAV_LABEL);
-          })
-          .catch(() => {});
-      },
-      'key=eq.bottom_nav'
-    );
-    return unsubscribe;
   }, []);
 
   // Live stat labels — the instant an admin renames a stat in AdminAbout's

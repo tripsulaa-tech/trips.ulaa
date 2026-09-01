@@ -1,10 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-
 import AdminLayout from './AdminLayout';
 import AdminEditorFooter from './AdminEditorFooter';
-import { getSiteContent, upsertSiteContent } from '../services/api';
+import { useSiteContentEditor } from './useSiteContentEditor';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
-import { useConfirm } from '../components/ui/useConfirm';
 import type { ButtonLabelsConfig } from '../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 
@@ -13,56 +10,17 @@ import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 // and by tripItineraryPdf.ts (the matching CTA button drawn on the
 // generated PDF), so a change here shows up in both places.
 export default function AdminButtonLabels() {
-  const confirm = useConfirm();
-  const [labels, setLabels] = useState<ButtonLabelsConfig>(DEFAULT_BUTTON_LABELS);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const savedContentRef = useRef<string>('');
-
-  useEffect(() => {
-    getSiteContent<ButtonLabelsConfig>('button_labels')
-      .then(data => {
-        const resolved = data && data.primaryCta ? data : DEFAULT_BUTTON_LABELS;
-        setLabels(resolved);
-        savedContentRef.current = JSON.stringify(resolved);
-      })
-      .catch(() => {
-        setLabels(DEFAULT_BUTTON_LABELS);
-        savedContentRef.current = JSON.stringify(DEFAULT_BUTTON_LABELS);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  const hasUnsavedChanges = () => !loading && JSON.stringify(labels) !== savedContentRef.current;
-
-  const handleSave = async () => {
-    if (!labels.primaryCta.trim() || !labels.waitlistCta.trim()) {
-      alert('Both button names are required.');
-      return;
-    }
-    try {
-      setSaving(true);
-      await upsertSiteContent('button_labels', labels);
-      savedContentRef.current = JSON.stringify(labels);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch {
-      alert('Failed to save. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const resetToDefault = async () => {
-    const ok = await confirm({
-      title: 'Reset to defaults?',
-      message: 'This will overwrite your edits below (not saved until you click Save).',
-      confirmLabel: 'Reset',
-    });
-    if (!ok) return;
-    setLabels(DEFAULT_BUTTON_LABELS);
-  };
+  const {
+    content: labels, setContent: setLabels, loading, saving, saved,
+    hasUnsavedChanges, handleSave, resetToDefault,
+  } = useSiteContentEditor<ButtonLabelsConfig>({
+    contentKey: 'button_labels',
+    defaultContent: DEFAULT_BUTTON_LABELS,
+    resolveLoaded: data => (data && data.primaryCta ? data : DEFAULT_BUTTON_LABELS),
+    validate: content => (!content.primaryCta.trim() || !content.waitlistCta.trim())
+      ? 'Both button names are required.'
+      : null,
+  });
 
   if (loading) {
     return (

@@ -44,6 +44,7 @@ export {
 export {
   recordPayment,
   getPaymentsForEnquiry,
+  getAllPayments,
 } from './enquiries/payments';
 
 export {

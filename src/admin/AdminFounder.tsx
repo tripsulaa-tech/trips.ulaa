@@ -1,10 +1,8 @@
 import {
   Plus,
   Trash as Trash2,
-  MagnifyingGlass as Search,
 } from '@phosphor-icons/react';
-import AdminLayout from './AdminLayout';
-import AdminEditorFooter from './AdminEditorFooter';
+import ContentEditorShell from './ContentEditorShell';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import { COVER_IMAGE_TARGET_SIZE_BYTES } from '../services/api';
 import { useContentEditorPage } from './useContentEditorPage';
@@ -77,72 +75,32 @@ export default function AdminFounder() {
     setContent(DEFAULT_FOUNDER);
   };
 
-  if (loading) {
-    return (
-      <AdminLayout title="Founder">
-        <div role="status" className="text-center py-16 text-dark-muted">Loading…</div>
-      </AdminLayout>
-    );
-  }
-
   return (
-    <AdminLayout
+    <ContentEditorShell
       title="Founder"
       subtitle="Manage the Meet the Founder content shown on the About, Home, and Upcoming Trips pages."
       hasUnsavedChanges={hasUnsavedChanges}
+      loading={loading}
+      searchId="founder-search"
+      searchPlaceholder="Search fields (e.g. name, social links)..."
+      pageSearch={pageSearch}
+      setPageSearch={setPageSearch}
+      pageSearchNoMatch={pageSearchNoMatch}
+      tabBarRef={tabBarRef}
+      tabButtonRefs={tabButtonRefs}
+      tabBarAriaLabel="Founder sections"
+      sectionTitles={SECTION_TITLES}
+      activeSection={activeSection}
+      handleTabSelect={handleTabSelect}
+      showLeftFade={showLeftFade}
+      showRightFade={showRightFade}
+      scrollBodyRef={scrollBodyRef}
+      bodyClassName="p-6"
+      onSave={handleSave}
+      saving={saving}
+      saved={saved}
+      onSecondaryAction={resetToDefault}
     >
-      {/* Same modal-style skeleton as the About Page: bordered card, its own
-          scroll area (app-scroll), a pinned search + tab bar up top, and a
-          footer that blends into and sticks to the bottom of the card. */}
-      <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
-        <div className="p-6 pb-4 border-b border-background-warm flex-shrink-0 space-y-4">
-          <div className="relative w-full max-w-xs">
-            <label htmlFor="founder-search" className="sr-only">Search fields</label>
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
-            <input
-              id="founder-search"
-              type="text"
-              value={pageSearch}
-              onChange={e => setPageSearch(e.target.value)}
-              placeholder="Search fields (e.g. name, social links)..."
-              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-            />
-          </div>
-          <div className="relative">
-            <div ref={tabBarRef} role="tablist" aria-label="Founder sections" className="flex gap-2 overflow-x-auto scrollbar-hide">
-              {SECTION_TITLES.map((title, i) => (
-                <button
-                  key={title}
-                  ref={el => { tabButtonRefs.current[i] = el; }}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeSection === i}
-                  onClick={() => handleTabSelect(i)}
-                  className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
-                    activeSection === i
-                      ? 'bg-primary text-white'
-                      : 'bg-background text-dark-muted hover:text-dark'
-                  }`}
-                >
-                  {title}
-                </button>
-              ))}
-            </div>
-            {showLeftFade && (
-              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent" />
-            )}
-            {showRightFade && (
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent" />
-            )}
-          </div>
-        </div>
-
-        <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
-          {pageSearchNoMatch && (
-            <p role="alert" className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
-          )}
-          <div className="p-6">
-
         <div ref={el => { setSectionRef(0, el); }} data-section={1} className="scroll-mt-4 space-y-4">
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">Meet the Founder</h2>
           <p className="text-xs text-dark-muted -mt-2">
@@ -237,14 +195,6 @@ export default function AdminFounder() {
             ))}
           </div>
         </div>
-
-          </div>
-
-          {/* Sticky footer — blended into and pinned to the bottom of the
-              card's own scroll area, same pattern as the Add Trip modal. */}
-          <AdminEditorFooter onSave={handleSave} saving={saving} saved={saved} onSecondaryAction={resetToDefault} />
-        </div>
-      </div>
-    </AdminLayout>
+    </ContentEditorShell>
   );
 }
