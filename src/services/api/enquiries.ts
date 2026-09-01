@@ -70,4 +70,5 @@ export {
   bulkUpdateKidsStatus,
   setKidFollowUp,
   deleteKid,
+  getAllKidsFoodPreferences,
 } from './enquiries/kids';

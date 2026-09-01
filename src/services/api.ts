@@ -85,6 +85,7 @@ export {
   bulkUpdateKidsStatus,
   setKidFollowUp,
   deleteKid,
+  getAllKidsFoodPreferences,
 } from './api/enquiries';
 
 export {

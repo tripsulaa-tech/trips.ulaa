@@ -500,6 +500,10 @@ export interface Kid {
   // Optional, admin-entered only — never collected on the public booking
   // form (kids remain age-free for pricing/eligibility purposes).
   age?: number | null;
+  // Optional, admin-entered only — same rule as age above. Independent of
+  // the adults' single Enquiry.food_preference, so a group of kids can
+  // split veg/non-veg. See add_kids_food_preference.sql.
+  food_preference?: 'veg' | 'non_veg' | null;
   status: KidStatus;
   // Reminder for this one kid's record — same idea as
   // Enquiry.follow_up_at but scoped to the kid, only meaningful while

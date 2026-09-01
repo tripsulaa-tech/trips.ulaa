@@ -92,7 +92,7 @@ export function useKidsForEnquiry(enquiryId: string) {
     }
   };
 
-  const handleEdit = async (kid: Kid, patch: Partial<Pick<Kid, 'name' | 'age'>>) => {
+  const handleEdit = async (kid: Kid, patch: Partial<Pick<Kid, 'name' | 'age' | 'food_preference'>>) => {
     setBusy(true);
     try {
       await updateKid(kid.id, patch);

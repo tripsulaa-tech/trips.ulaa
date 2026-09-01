@@ -49,11 +49,11 @@ export async function createKidsForEnquiry(enquiryId: string, count: number, nam
   }
 }
 
-// General-purpose edit for one kid's own record — name/age correction,
-// notes, etc. Status and follow-up have their own dedicated helpers below
-// since they carry extra bookkeeping (the pending-only follow-up rule,
-// activity logging).
-export async function updateKid(id: string, patch: Partial<Pick<Kid, 'name' | 'age'>>): Promise<void> {
+// General-purpose edit for one kid's own record — name/age/food
+// preference correction, etc. Status and follow-up have their own
+// dedicated helpers below since they carry extra bookkeeping (the
+// pending-only follow-up rule, activity logging).
+export async function updateKid(id: string, patch: Partial<Pick<Kid, 'name' | 'age' | 'food_preference'>>): Promise<void> {
   const { error } = await supabase.from('kids').update(patch).eq('id', id);
   if (error) throw error;
 }
@@ -99,6 +99,22 @@ export async function setKidFollowUp(id: string, followUpAt: string | null, note
 export async function deleteKid(id: string): Promise<void> {
   const { error } = await supabase.from('kids').delete().eq('id', id);
   if (error) throw error;
+}
+
+// Every kid's food_preference across every enquiry, business-wide — for
+// reporting (AdminReports' veg/non-veg breakdown), which needs to fold
+// kids into the same tally as enquiries.food_preference rather than
+// leaving them out of "how many veg/non-veg meals do we need" entirely.
+// Deliberately a lean projection (just enough to bucket by preference and
+// match a row back to its parent enquiry) rather than the full row shape
+// getKidsForEnquiry returns, since this can span every kid on every
+// booking rather than one enquiry's handful.
+export async function getAllKidsFoodPreferences(): Promise<Pick<Kid, 'enquiry_id' | 'food_preference'>[]> {
+  const { data, error } = await supabase
+    .from('kids')
+    .select('enquiry_id, food_preference');
+  if (error) throw error;
+  return data || [];
 }
 
 // Logs a kid-scoped action onto the parent enquiry's Activity Timeline, so

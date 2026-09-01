@@ -287,6 +287,12 @@ create table public.enquiries (
   -- set_enquiry_active_price() the same way total_amount is -- never
   -- trusted from the client. See add_trip_kids_option.sql.
   kids_amount               numeric(10, 2) not null default 0,
+  -- Running total of `paid` kids-fee ledger rows (payments.for_kids =
+  -- true) for this booking -- tracked independently of amount_paid, kept
+  -- in sync by the same trigger (sync_enquiry_amount_paid()). Only ever
+  -- meaningful on the group_seq = 1 row, same convention as kids_count/
+  -- kids_amount. See add_kids_payment_tracking.sql.
+  kids_amount_paid          numeric(10, 2) not null default 0,
   constraint enquiries_pkey primary key (id),
   constraint enquiries_status_check
     check (status = any (array['new'::text, 'contacted'::text, 'closed'::text])),
@@ -316,7 +322,9 @@ create table public.enquiries (
   constraint enquiries_booking_state_check
     check (booking_state = any (array['active'::text, 'cancelled'::text])),
   constraint enquiries_kids_count_check check (kids_count >= 0),
-  constraint enquiries_kids_amount_check check (kids_amount >= 0)
+  constraint enquiries_kids_amount_check check (kids_amount >= 0),
+  constraint enquiries_kids_amount_paid_check check (kids_amount_paid >= 0),
+  constraint enquiries_kids_amount_paid_bound_check check (kids_amount_paid <= kids_amount)
 );
 
 create index enquiries_is_paid_idx on public.enquiries using btree (is_paid);
@@ -388,6 +396,13 @@ create table public.payments (
   -- historical rows recorded before this existed. See
   -- add_payment_utr_reference.sql.
   utr_number      text,
+  -- Marks this ledger row as money moving against the booking's kids fee
+  -- (enquiries.kids_amount) rather than the adult booking -- kept as its
+  -- own independent Paid/Pending line instead of inflating amount_paid.
+  -- Defaults to false so every pre-existing payment keeps counting towards
+  -- the adult total exactly as it always has. See
+  -- add_kids_payment_tracking.sql.
+  for_kids        boolean not null default false,
   constraint payments_pkey primary key (id),
   constraint payments_enquiry_id_fkey foreign key (enquiry_id)
     references public.enquiries (id) on delete cascade,
@@ -422,6 +437,10 @@ create table public.kids (
   -- Optional, admin-entered only — the public booking form still collects
   -- no age for kids (see child_price/kids_count above).
   age               integer,
+  -- Optional, admin-entered only, same rule as age above — 'veg'/'non_veg'
+  -- per kid, independent of the adults' single enquiries.food_preference.
+  -- See add_kids_food_preference.sql.
+  food_preference   text,
   status            text not null default 'pending',
   follow_up_at      date,
   follow_up_notes   text,
@@ -431,6 +450,8 @@ create table public.kids (
   constraint kids_enquiry_id_fkey foreign key (enquiry_id)
     references public.enquiries (id) on delete cascade,
   constraint kids_age_check check (age is null or (age >= 0 and age <= 17)),
+  constraint kids_food_preference_check
+    check (food_preference is null or food_preference = any (array['veg'::text, 'non_veg'::text])),
   constraint kids_status_check
     check (status = any (array['pending'::text, 'confirmed'::text, 'checked_in'::text, 'cancelled'::text])),
   constraint kids_follow_up_requires_pending_status
@@ -1403,9 +1424,12 @@ $function$;
 -- Keeps enquiries.amount_paid and enquiries.refund_amount in sync with the
 -- sum of their payments rows, any time a payment is inserted, updated, or
 -- deleted. refund_amount sums 'paid' rows where payment_type = 'refund';
--- amount_paid sums every other 'paid' row. Rows with status = 'pending'
--- (an invoice raised but not yet collected — see add_invoice_generation.sql)
--- are excluded from both sums until they're marked paid.
+-- amount_paid sums every other 'paid' row -- both scoped to for_kids =
+-- false so a kids-fee payment doesn't inflate the adult totals. Rows with
+-- status = 'pending' (an invoice raised but not yet collected -- see
+-- add_invoice_generation.sql) are excluded from every sum until they're
+-- marked paid. kids_amount_paid mirrors amount_paid's own-bucket sum,
+-- scoped to for_kids = true instead. See add_kids_payment_tracking.sql.
 create or replace function public.sync_enquiry_amount_paid()
 returns trigger
 language plpgsql
@@ -1414,18 +1438,21 @@ declare
   target_enquiry_id uuid;
   new_amount_paid numeric;
   new_refund_amount numeric;
+  new_kids_amount_paid numeric;
 begin
   target_enquiry_id := coalesce(new.enquiry_id, old.enquiry_id);
 
-  select coalesce(sum(amount) filter (where payment_type != 'refund' and status = 'paid'), 0),
-         coalesce(sum(amount) filter (where payment_type = 'refund' and status = 'paid'), 0)
-    into new_amount_paid, new_refund_amount
+  select coalesce(sum(amount) filter (where payment_type != 'refund' and status = 'paid' and not for_kids), 0),
+         coalesce(sum(amount) filter (where payment_type = 'refund' and status = 'paid' and not for_kids), 0),
+         coalesce(sum(amount) filter (where payment_type != 'refund' and status = 'paid' and for_kids), 0)
+    into new_amount_paid, new_refund_amount, new_kids_amount_paid
     from public.payments
    where enquiry_id = target_enquiry_id;
 
   update public.enquiries
      set amount_paid = new_amount_paid,
-         refund_amount = new_refund_amount
+         refund_amount = new_refund_amount,
+         kids_amount_paid = new_kids_amount_paid
    where id = target_enquiry_id;
 
   return null;

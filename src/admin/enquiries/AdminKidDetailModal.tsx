@@ -13,6 +13,7 @@ import Select from '../../components/ui/Select';
 import DatePicker from '../../components/ui/DatePicker';
 import { useConfirm } from '../../components/ui/useConfirm';
 import type { Kid, KidStatus } from '../../types/types-index';
+import { FOOD_PREFERENCE_OPTIONS } from '../../constants/foodPreference';
 
 const STATUS_OPTIONS: { value: KidStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
@@ -27,7 +28,7 @@ interface AdminKidDetailModalProps {
   kid: Kid | null;
   fallbackLabel: string;
   busy: boolean;
-  onSave: (patch: Partial<Pick<Kid, 'name' | 'age'>>) => Promise<void>;
+  onSave: (patch: Partial<Pick<Kid, 'name' | 'age' | 'food_preference'>>) => Promise<void>;
   onStatusChange: (status: KidStatus) => Promise<void>;
   onFollowUpChange: (followUpAt: string | null, notes?: string | null) => Promise<void>;
   onDelete: () => Promise<void>;
@@ -39,6 +40,7 @@ export default function AdminKidDetailModal({
   const confirm = useConfirm();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
+  const [foodPreference, setFoodPreference] = useState<'' | 'veg' | 'non_veg'>('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [followUpNotes, setFollowUpNotes] = useState('');
 
@@ -50,6 +52,7 @@ export default function AdminKidDetailModal({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local editable fields to match a newly-opened (possibly different) kid, not syncing an external system
     setName(kid.name ?? '');
     setAge(kid.age != null ? String(kid.age) : '');
+    setFoodPreference(kid.food_preference === 'veg' || kid.food_preference === 'non_veg' ? kid.food_preference : '');
     setFollowUpDate(kid.follow_up_at ?? '');
     setFollowUpNotes(kid.follow_up_notes ?? '');
   }, [isOpen, kid]);
@@ -59,7 +62,11 @@ export default function AdminKidDetailModal({
   const handleSaveDetails = async () => {
     const trimmedName = name.trim();
     const parsedAge = age.trim() === '' ? null : Math.max(0, Math.min(17, Math.round(Number(age))));
-    await onSave({ name: trimmedName || null, age: parsedAge != null && Number.isNaN(parsedAge) ? null : parsedAge });
+    await onSave({
+      name: trimmedName || null,
+      age: parsedAge != null && Number.isNaN(parsedAge) ? null : parsedAge,
+      food_preference: foodPreference || null,
+    });
   };
 
   const handleSaveFollowUp = async () => {
@@ -85,34 +92,46 @@ export default function AdminKidDetailModal({
           <Baby size={14} aria-hidden="true" /> Kid record — independent of the parent enquiry's own status/follow-up.
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="kid-name" className="block text-sm font-medium text-dark mb-1">Name</label>
-            <input
-              id="kid-name"
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Optional"
-              className="w-full px-3 py-2 rounded-md border border-background-warm focus:border-primary focus:outline-none text-sm"
-            />
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="kid-name" className="block text-sm font-medium text-dark mb-1">Name</label>
+              <input
+                id="kid-name"
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Optional"
+                className="w-full px-3 py-2 rounded-md border border-background-warm focus:border-primary focus:outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="kid-age" className="block text-sm font-medium text-dark mb-1">Age</label>
+              <input
+                id="kid-age"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={17}
+                value={age}
+                onChange={e => setAge(e.target.value)}
+                placeholder="Optional"
+                className="w-full px-3 py-2 rounded-md border border-background-warm focus:border-primary focus:outline-none text-sm"
+              />
+            </div>
           </div>
           <div>
-            <label htmlFor="kid-age" className="block text-sm font-medium text-dark mb-1">Age</label>
-            <input
-              id="kid-age"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={17}
-              value={age}
-              onChange={e => setAge(e.target.value)}
-              placeholder="Optional"
-              className="w-full px-3 py-2 rounded-md border border-background-warm focus:border-primary focus:outline-none text-sm"
+            <label htmlFor="kid-food-preference" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <Select
+              inputId="kid-food-preference"
+              value={foodPreference}
+              onChange={v => setFoodPreference(v as '' | 'veg' | 'non_veg')}
+              options={FOOD_PREFERENCE_OPTIONS}
+              size="md"
             />
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={handleSaveDetails} loading={busy}>Save Name &amp; Age</Button>
+        <Button variant="outline" size="sm" onClick={handleSaveDetails} loading={busy}>Save Details</Button>
 
         <div className="pt-3 border-t border-background-warm">
           <label className="block text-sm font-medium text-dark mb-1">Status</label>

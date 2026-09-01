@@ -12,6 +12,7 @@ import type { Enquiry, Kid, KidStatus } from '../../types/types-index';
 import { formatDate } from '../../utils/utils-index';
 import { useKidsForEnquiry } from './useKidsForEnquiry';
 import AdminKidDetailModal from './AdminKidDetailModal';
+import FoodMark from '../../components/ui/FoodMark';
 
 const STATUS_BADGE: Record<KidStatus, string> = {
   pending: 'bg-amber-50 text-amber-700',
@@ -99,7 +100,16 @@ export default function AdminEnquiryKidsCard({ enquiry }: AdminEnquiryKidsCardPr
                   onClick={() => setOpenKidId(kid.id)}
                   className="min-w-0 flex-1 text-left"
                 >
-                  <p className="text-dark text-sm font-medium truncate">{kidLabel(kid, i)}</p>
+                  <p className="text-dark text-sm font-medium truncate flex items-center gap-1.5">
+                    {kidLabel(kid, i)}
+                    {(kid.food_preference === 'veg' || kid.food_preference === 'non_veg') && (
+                      <FoodMark
+                        type={kid.food_preference}
+                        size={11}
+                        className={kid.food_preference === 'veg' ? 'text-green-700 shrink-0' : 'text-red-700 shrink-0'}
+                      />
+                    )}
+                  </p>
                   {kid.follow_up_at && kid.status === 'pending' && (
                     <p className="text-amber-700 text-[11px] flex items-center gap-1 mt-0.5">
                       <CalendarClock size={11} aria-hidden="true" /> Follow up {formatDate(kid.follow_up_at, { day: 'numeric', month: 'short' })}
