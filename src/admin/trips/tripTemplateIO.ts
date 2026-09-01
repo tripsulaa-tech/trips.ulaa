@@ -1,5 +1,6 @@
 import type { TripForm } from './tripFormTypes';
 import { emptyFounder, emptyEndBanner, emptyForm, computeDuration } from './tripFormTypes';
+import { emptyTripFinance } from '../../utils/tripFinance';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
 import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
@@ -311,6 +312,11 @@ export function parseImportedTripForm(raw: any): TripForm {
             cta_url: asStr(raw.end_banner.cta_url),
           }
         : emptyEndBanner,
+      // Deliberately never part of the export/import template — this is
+      // internal cost/profit data, not shareable trip content. A freshly
+      // imported trip always starts with a blank finance record; the admin
+      // fills it in separately in the "Finances & Profit" tab.
+      trip_finance: emptyTripFinance,
     };
   return imported;
 }

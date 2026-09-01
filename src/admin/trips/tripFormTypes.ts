@@ -2,9 +2,11 @@ import type {
   ItineraryDay, FAQ, CancellationPolicy,
   TripHighlightCard, TripInclusionItem, TripIncludedGroup, TripGalleryItem,
   TripFounder, TripConfidenceItem, TripCardFeatureTag, TripEndBanner, CoverImageCrop,
+  TripFinance,
 } from '../../types/types-index';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
+import { emptyTripFinance } from '../../utils/tripFinance';
 
 export interface TripForm {
   title: string;
@@ -70,6 +72,9 @@ export interface TripForm {
   confidence_description: string;
   meeting_address: string;
   end_banner: TripEndBanner;
+  // Internal-only cost/profit record — see TripFinance and the "Finances &
+  // Profit" tab. Never rendered on the public site.
+  trip_finance: TripFinance;
 }
 
 export const emptyFounder: TripFounder = { photo: '', name: '', designation: '', description: '' };
@@ -90,6 +95,7 @@ export const emptyForm: TripForm = {
   fashion_photos: [], fashion_description: 'Styles that speaks, moments that stay.', things_to_carry_items: [],
   trip_founder: emptyFounder, confidence_items: [], confidence_description: 'We take care of Everything, so you can Enjoy Every Moment!',
   meeting_address: '', end_banner: emptyEndBanner,
+  trip_finance: emptyTripFinance,
 };
 
 // Computes a "X Days / Y Nights" string from two yyyy-mm-dd date strings.

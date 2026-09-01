@@ -169,6 +169,11 @@ create table public.upcoming_trips (
   -- When true, hides the "Download itinerary PDF" option from the public
   -- Trip Detail page for this trip. See add_trip_hide_pdf_download.sql.
   hide_pdf_download       boolean not null default false,
+  -- Internal (admin-only) cost/profit record — ad spend, per-traveler
+  -- entry-ticket/kit cost, agency payment, trip organiser expenses. Never
+  -- surfaced on the public site. See add_trip_finance.sql and TripFinance
+  -- in src/types/types-index.ts.
+  trip_finance             jsonb,
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
   constraint upcoming_trips_status_check

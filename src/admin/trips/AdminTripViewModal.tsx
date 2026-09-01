@@ -6,6 +6,7 @@ import TermsBlocks from '../../components/ui/TermsBlocks';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
 import { parseTerms } from '../../utils/parseTerms';
 import { formatDate, formatAgeRange, formatPrice } from '../../utils/utils-index';
+import { computeTripFinanceSummary } from '../../utils/tripFinance';
 import type { UpcomingTrip } from '../../types/types-index';
 
 interface AdminTripViewModalProps {
@@ -336,6 +337,36 @@ export default function AdminTripViewModal({ trip, onClose, onEdit }: AdminTripV
                   </div>
                 </div>
               </div>
+            )}
+
+            {trip.trip_finance && (
+              <details className="group">
+                <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
+                  <span className="transition-transform group-open:rotate-90">▶</span> Finances & Profit <span className="text-dark-muted/70">(internal only)</span>
+                </summary>
+                <div className="mt-2 bg-background rounded-md p-3 space-y-1.5 text-sm">
+                  {(() => {
+                    const s = computeTripFinanceSummary(trip.trip_finance, trip.seats_booked, trip.price || 0);
+                    return (
+                      <>
+                        <div className="flex justify-between"><span className="text-dark-muted">Total Revenue ({s.travelerCount} booked)</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
+                        <div className="flex justify-between"><span className="text-dark-muted">ULAA's Total Costs</span><span className="text-dark">{formatPrice(s.ulaaCosts)}</span></div>
+                        <div className="flex justify-between"><span className="text-dark-muted">Trip Organiser's Expenses</span><span className="text-dark">{formatPrice(s.organiserCosts)}</span></div>
+                        <div className="flex justify-between border-t border-background-warm pt-1.5 text-base"><span className="font-semibold text-dark">Net Profit</span><span className={`font-bold ${s.netProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{formatPrice(s.netProfit)}</span></div>
+                        {trip.trip_finance.agency_name && (
+                          <p className="text-xs text-dark-muted pt-1">Agency: {trip.trip_finance.agency_name}</p>
+                        )}
+                        {trip.trip_finance.organiser_name && (
+                          <p className="text-xs text-dark-muted">Trip Organiser: {trip.trip_finance.organiser_name}</p>
+                        )}
+                        {trip.trip_finance.notes && (
+                          <p className="text-xs text-dark-muted pt-1 whitespace-pre-wrap">{trip.trip_finance.notes}</p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </details>
             )}
 
             {(trip.terms_and_conditions || '').trim() && (

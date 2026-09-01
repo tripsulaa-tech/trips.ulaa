@@ -7,6 +7,7 @@ import type { UpcomingTrip, TripFounder, FounderContent } from '../../types/type
 import { slugify } from '../../utils/utils-index';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
+import { emptyTripFinance } from '../../utils/tripFinance';
 import { emptyFounder, emptyEndBanner, emptyForm, computeDuration, type TripForm } from './tripFormTypes';
 import { handleExportTemplate, parseImportedTripForm } from './tripTemplateIO';
 
@@ -176,6 +177,7 @@ export function useTripFormModal(load: () => void) {
       confidence_description: trip.confidence_description || '',
       meeting_address: trip.meeting_address || '',
       end_banner: trip.end_banner || emptyEndBanner,
+      trip_finance: trip.trip_finance || emptyTripFinance,
     };
     setForm(editForm);
     initialModalUrlsRef.current = collectTripFormUrls(editForm);

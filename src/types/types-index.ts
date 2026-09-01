@@ -60,6 +60,36 @@ export interface TripEndBanner {
   cta_url: string;
 }
 
+// Internal (admin-only) cost/profit record for a trip — never shown on the
+// public site. Kept as a single JSONB blob (see add_trip_finance.sql)
+// rather than a pile of individual columns, matching trip_founder/
+// end_banner/cancellation_policy above. All amounts are in ₹.
+//
+// Shape mirrors how the business actually thinks about a trip's money:
+//   - ULAA's own costs: promotion, and the two per-traveler costs (entry
+//     tickets + welcome kits) that scale with headcount.
+//   - The on-ground agency ULAA pays, either as one fixed lump sum or as a
+//     per-traveler rate (agency_amount_type controls which).
+//   - The trip organiser's own expenses, which are their spend to run the
+//     trip on the ground and are NOT necessarily proportional to traveler
+//     count (e.g. the organiser might pay the agency a flat amount
+//     regardless of how many people showed up) — so these are always
+//     entered as-is, never auto-multiplied.
+// See src/utils/tripFinance.ts for how these roll up into a profit summary.
+export interface TripFinance {
+  ad_spend: number | null;                    // total promotion/ad spend for this trip
+  entry_ticket_cost_per_person: number | null; // per-traveler entry/activity ticket cost
+  kit_cost_per_person: number | null;          // per-traveler welcome-kit cost (given by ULAA)
+  agency_name: string;                         // on-ground agency ULAA pays
+  agency_amount_type: 'fixed' | 'per_traveler';
+  agency_amount: number | null;                // interpreted per agency_amount_type
+  organiser_name: string;                      // person running the trip on-ground
+  organiser_travel_cost: number | null;        // organiser's own flight/train/bus tickets
+  organiser_agency_payment: number | null;      // amount the organiser separately pays the agency (varies, entered manually)
+  organiser_misc_expense: number | null;        // organiser's miscellaneous on-ground spend
+  notes: string;                                // free-text notes (payment terms, receipts, etc.)
+}
+
 // Saved position/zoom for a trip's cover_image, set via the Cover Image
 // Editor (Admin → Add/Edit Trip → Media → CoverImageCropEditor). A single
 // focal point + zoom is stored — not a separate crop per layout — and gets
@@ -151,6 +181,10 @@ export interface UpcomingTrip {
   // cover_image on mobile when left empty, so existing trips with no
   // separate mobile image keep working unchanged.
   hero_mobile_image?: string;
+  // Internal-only cost/profit record — see TripFinance above. Never read by
+  // any public-facing page/component; admin-only (Add/Edit Trip → Finances
+  // & Profit tab, and the read-only summary on the Trip Details view).
+  trip_finance?: TripFinance | null;
   gallery_images: string[];
   terms_and_conditions?: string;
   cancellation_policy?: CancellationPolicy;
