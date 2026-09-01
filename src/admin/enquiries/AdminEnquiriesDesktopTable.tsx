@@ -43,7 +43,7 @@ interface AdminEnquiriesDesktopTableProps {
   // Header bar
   searchQuery: string;
   setSearchQuery: (value: string) => void;
-  onExportCsv: (rows: Enquiry[], tripTitle: string | null, groupLabel: (e: Enquiry) => string) => void;
+  onExportCsv: (rows: Enquiry[], tripTitle: string | null, groupLabel: (e: Enquiry) => string, trip?: UpcomingTrip) => void;
   activeGroupTitle: string | null;
 
   // Sorting
@@ -109,7 +109,7 @@ export default function AdminEnquiriesDesktopTable({
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         searchPlaceholder="Search case #, title, owner..."
-        onExport={() => onExportCsv(sortedFiltered, activeGroupTitle, groupLabel)}
+        onExport={() => onExportCsv(sortedFiltered, activeGroupTitle, groupLabel, activeGroup?.trip)}
         exportLabel="Export CSV"
       />
       <div

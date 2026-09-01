@@ -1221,7 +1221,7 @@ export default function AdminEnquiries() {
               setCurrentPage={setCurrentPage}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              onExportCsv={handleExportCsv}
+              onExportCsv={(rows, tripTitle, gl, trip) => handleExportCsv(rows, tripTitle, gl, trip, trips, enquiries)}
               activeGroupTitle={activeGroup?.title ?? null}
               sortKey={sortKey}
               sortDir={sortDir}

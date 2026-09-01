@@ -35,22 +35,29 @@ export interface TripFinanceSummary {
 }
 
 // Rolls a TripFinance record up into a profit summary. `travelerCount`
-// should be the confirmed/booked seat count (seats_booked), not
-// total_seats, since ad spend etc. is already fixed regardless of fill
-// rate but per-traveler costs and revenue only apply to people who
-// actually booked. `revenuePerPerson` is the price actually charged
-// (usually the regular price — pass the early-bird price instead if that's
-// what most bookings came in under).
+// should be the confirmed/booked count, not total_seats, since ad spend
+// etc. is already fixed regardless of fill rate but per-traveler costs
+// only apply to people who actually booked.
+//
+// `totalRevenue` is the actual money the trip is worth — the caller
+// decides how to arrive at it. Callers with real booking data (Reports,
+// enquiry CSV exports) should sum each booked enquiry's real total_amount,
+// since real bookings routinely differ from the trip's listed price
+// (early-bird pricing, group/manual discounts, one-off deals) — travelers
+// x price silently overstates or understates revenue the moment any
+// booking didn't come in at the plain regular price. Callers with no
+// per-enquiry data to sum (the Add/Edit Trip form's live preview, and the
+// read-only Trip Details view) fall back to travelers x price as their
+// best available estimate.
 export function computeTripFinanceSummary(
   finance: TripFinance | null | undefined,
   travelerCount: number,
-  revenuePerPerson: number,
+  totalRevenue: number,
 ): TripFinanceSummary {
   const f = finance || emptyTripFinance;
   const travelers = Math.max(0, travelerCount || 0);
-  const price = Math.max(0, revenuePerPerson || 0);
+  const revenue = Math.max(0, totalRevenue || 0);
 
-  const totalRevenue = price * travelers;
   const perTravelerCosts = ((f.entry_ticket_cost_per_person || 0) + (f.kit_cost_per_person || 0)) * travelers;
   const agencyCost = f.agency_amount_type === 'per_traveler'
     ? (f.agency_amount || 0) * travelers
@@ -58,12 +65,12 @@ export function computeTripFinanceSummary(
   const ulaaCosts = (f.ad_spend || 0) + perTravelerCosts + agencyCost;
   const organiserCosts = (f.organiser_travel_cost || 0) + (f.organiser_agency_payment || 0) + (f.organiser_misc_expense || 0);
   const totalCosts = ulaaCosts + organiserCosts;
-  const netProfit = totalRevenue - totalCosts;
+  const netProfit = revenue - totalCosts;
 
   return {
     travelerCount: travelers,
-    revenuePerPerson: price,
-    totalRevenue,
+    revenuePerPerson: travelers > 0 ? revenue / travelers : 0,
+    totalRevenue: revenue,
     perTravelerCosts,
     agencyCost,
     ulaaCosts,

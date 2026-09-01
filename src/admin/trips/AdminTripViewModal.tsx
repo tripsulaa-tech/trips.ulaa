@@ -7,18 +7,24 @@ import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy'
 import { parseTerms } from '../../utils/parseTerms';
 import { formatDate, formatAgeRange, formatPrice } from '../../utils/utils-index';
 import { computeTripFinanceSummary } from '../../utils/tripFinance';
+import type { TripRevenue } from './useTripFinanceData';
 import type { UpcomingTrip } from '../../types/types-index';
 
 interface AdminTripViewModalProps {
   trip: UpcomingTrip | null;
   onClose: () => void;
   onEdit: (trip: UpcomingTrip) => void;
+  // Real revenue for `trip`, summed from actual bookings' total_amount —
+  // see useTripFinanceData. Null while that fetch is still loading; the
+  // Finances & Profit summary below falls back to the old
+  // seats_booked x price estimate in that case.
+  actualRevenue?: TripRevenue | null;
 }
 
 /** Read-only "Trip Details" modal opened from the Trips table title link.
  *  Split out of the original single-file AdminTrips.tsx — see that
  *  component's own comment for the rest of the split. */
-export default function AdminTripViewModal({ trip, onClose, onEdit }: AdminTripViewModalProps) {
+export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenue }: AdminTripViewModalProps) {
   return (
       <Modal isOpen={!!trip} onClose={onClose} title={trip?.title || 'Trip Details'} size="lg">
         {trip && (
@@ -346,10 +352,17 @@ export default function AdminTripViewModal({ trip, onClose, onEdit }: AdminTripV
                 </summary>
                 <div className="mt-2 bg-background rounded-md p-3 space-y-1.5 text-sm">
                   {(() => {
-                    const s = computeTripFinanceSummary(trip.trip_finance, trip.seats_booked, trip.price || 0);
+                    // Prefer real revenue (sum of actual bookings'
+                    // total_amount) whenever we have it. Falls back to
+                    // travelers x listed price only while that fetch is
+                    // loading — see useTripFinanceData.
+                    const usingReal = !!actualRevenue;
+                    const s = actualRevenue
+                      ? computeTripFinanceSummary(trip.trip_finance, actualRevenue.bookedCount, actualRevenue.totalRevenue)
+                      : computeTripFinanceSummary(trip.trip_finance, trip.seats_booked, (trip.price || 0) * trip.seats_booked);
                     return (
                       <>
-                        <div className="flex justify-between"><span className="text-dark-muted">Total Revenue ({s.travelerCount} booked)</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
+                        <div className="flex justify-between"><span className="text-dark-muted">Total Revenue ({s.travelerCount} booked{usingReal ? '' : ', est.'})</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
                         <div className="flex justify-between"><span className="text-dark-muted">ULAA's Total Costs</span><span className="text-dark">{formatPrice(s.ulaaCosts)}</span></div>
                         <div className="flex justify-between"><span className="text-dark-muted">Trip Organiser's Expenses</span><span className="text-dark">{formatPrice(s.organiserCosts)}</span></div>
                         <div className="flex justify-between border-t border-background-warm pt-1.5 text-base"><span className="font-semibold text-dark">Net Profit</span><span className={`font-bold ${s.netProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{formatPrice(s.netProfit)}</span></div>

@@ -3,6 +3,7 @@ import AdminLayout from './AdminLayout';
 import { useTripsData } from './trips/useTripsData';
 import { useTripActions } from './trips/useTripActions';
 import { useTripFormModal } from './trips/useTripFormModal';
+import { useTripFinanceData } from './trips/useTripFinanceData';
 import AdminTripsTable from './trips/AdminTripsTable';
 import AdminTripFormModal from './trips/AdminTripFormModal';
 import AdminTripViewModal from './trips/AdminTripViewModal';
@@ -23,6 +24,7 @@ import type { UpcomingTrip } from '../types/types-index';
 export default function AdminTrips() {
   const { trips, loading, load } = useTripsData();
   const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
+  const { revenueByTripId } = useTripFinanceData();
 
   const {
     pdfDownloadingId,
@@ -79,12 +81,14 @@ export default function AdminTrips() {
         saving={saving}
         handleSave={handleSave}
         commitGroupBulletDraft={commitGroupBulletDraft}
+        actualRevenue={revenueByTripId(editingTrip?.id)}
       />
 
       <AdminTripViewModal
         trip={viewingTrip}
         onClose={() => setViewingTrip(null)}
         onEdit={openEditFromView}
+        actualRevenue={revenueByTripId(viewingTrip?.id)}
       />
     </AdminLayout>
   );

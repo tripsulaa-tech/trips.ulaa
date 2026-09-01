@@ -43,6 +43,7 @@ import type { Enquiry, UpcomingTrip, CompletedTrip, Payment } from '../types/typ
 import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
+import { computeTripFinanceSummary } from '../utils/tripFinance';
 
 // Real, human-readable label for every value enquiries.source can actually
 // hold. Deliberately not reusing enquiries/AdminEnquiriesShared's
@@ -425,6 +426,55 @@ export default function AdminReports() {
       .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
   }, [upcomingTrips, enquiries]);
 
+  // Internal cost/profit rollup — pulls the "Finances & Profit" tab data
+  // entered on each trip (Add/Edit Trip, see utils/tripFinance.ts) and
+  // rolls it up against real bookings, the same way AdminTripViewModal's
+  // read-only summary does for a single trip. Business-wide (all
+  // enquiries, not `scoped`) for the same reason tripBreakdown/Occupancy
+  // are: a trip's cost structure and current fill are its current
+  // standing, not something that resets with the period toggle. Only
+  // trips where an admin has actually filled in the Finances tab are
+  // included — a trip with no finance data entered has nothing real to
+  // roll up (emptyTripFinance would just report 100% margin, which is
+  // wrong, not "no data").
+  const financeByTrip = useMemo(() => {
+    return upcomingTrips
+      .filter(t => !!t.trip_finance)
+      .map(t => {
+        // Real revenue for this trip: sum of what each booked enquiry was
+        // actually invoiced for (total_amount), not bookedCount x listed
+        // price — bookings routinely differ from the regular price
+        // (early-bird, group/manual discounts, one-off deals), so a flat
+        // per-head multiply would silently misstate revenue. Enquiries
+        // that are booked but have no total_amount set yet (price not
+        // finalized) contribute 0 to revenue, same as everywhere else on
+        // this page treats an unset total_amount.
+        const tripBookings = enquiries.filter(e => e.trip_id === t.id && isBooked(e));
+        const totalRevenue = tripBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0);
+        const summary = computeTripFinanceSummary(t.trip_finance, tripBookings.length, totalRevenue);
+        return {
+          id: t.id,
+          title: t.title || t.destination,
+          startDate: t.start_date,
+          ...summary,
+        };
+      })
+      .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+  }, [upcomingTrips, enquiries]);
+
+  const financeTotals = useMemo(() => {
+    return financeByTrip.reduce(
+      (acc, t) => ({
+        totalRevenue: acc.totalRevenue + t.totalRevenue,
+        totalCosts: acc.totalCosts + t.totalCosts,
+        netProfit: acc.netProfit + t.netProfit,
+      }),
+      { totalRevenue: 0, totalCosts: 0, netProfit: 0 }
+    );
+  }, [financeByTrip]);
+
+  const financeMarginPct = pct(Math.max(0, financeTotals.netProfit), financeTotals.totalRevenue);
+
   // Same isBooked + total_amount scoping as the Outstanding Balance card
   // itself, so the two can never disagree — this is that number broken out
   // person-by-person instead of just the business-wide total.
@@ -462,6 +512,17 @@ export default function AdminReports() {
     rows.push(toCsvRow(['Refund Amount', financial.refundAmount]));
     rows.push(toCsvRow(['Outstanding Balance', financial.outstandingBalance]));
     rows.push(toCsvRow(['Avg Booking Value', Math.round(financial.avgBookingValue)]));
+    rows.push('');
+    rows.push(toCsvRow(['Trip Finance & Profitability (all trips with Finances tab filled in, all-time)']));
+    rows.push(toCsvRow(['Total Revenue', financeTotals.totalRevenue]));
+    rows.push(toCsvRow(['Total Costs', financeTotals.totalCosts]));
+    rows.push(toCsvRow(['Net Profit', financeTotals.netProfit]));
+    rows.push(toCsvRow(['Profit Margin %', financeMarginPct]));
+    rows.push('');
+    rows.push(toCsvRow(['Trip', 'Travelers', 'Revenue', 'ULAA Costs', 'Organiser Costs', 'Total Costs', 'Net Profit', 'Profit/Person']));
+    financeByTrip.forEach(t => rows.push(toCsvRow([
+      t.title, t.travelerCount, t.totalRevenue, t.ulaaCosts, t.organiserCosts, t.totalCosts, t.netProfit, Math.round(t.profitPerPerson),
+    ])));
     rows.push('');
     rows.push(toCsvRow(['Operational Reports']));
     rows.push(toCsvRow(['Occupancy %', operational.occupancyPct]));
@@ -622,6 +683,57 @@ export default function AdminReports() {
                 </div>
               )}
             </ReportSection>
+
+            {/* ---- Trip Finance & Profitability ---- */}
+            {financeByTrip.length > 0 && (
+              <ReportSection
+                title="Trip Finance & Profitability"
+                subtitle="Trips with the Finances tab filled in · all-time"
+              >
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <StatCard label="Total Revenue" value={formatPrice(financeTotals.totalRevenue)} icon={IndianRupee} />
+                  <StatCard label="Total Costs" value={formatPrice(financeTotals.totalCosts)} icon={Wallet} />
+                  <StatCard
+                    label="Net Profit"
+                    value={formatPrice(financeTotals.netProfit)}
+                    sub={financeTotals.netProfit < 0 ? 'Currently a loss' : undefined}
+                    icon={Wallet2}
+                  />
+                  <StatCard label="Profit Margin" value={`${financeMarginPct}%`} icon={TrendingUp} />
+                </div>
+
+                <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto mt-3">
+                  <table className="w-full text-sm min-w-[680px]">
+                    <thead>
+                      <tr className="border-b border-background-warm text-left">
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide">
+                          <span className="inline-flex items-center gap-1.5"><Compass size={13} aria-hidden="true" /> Trip</span>
+                        </th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Travelers</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Revenue</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Total Costs</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Net Profit</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Profit/Person</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {financeByTrip.map(t => (
+                        <tr key={t.id} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
+                          <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[220px]">{t.title}</td>
+                          <td className="px-4 py-2.5 text-dark-muted text-right">{t.travelerCount}</td>
+                          <td className="px-4 py-2.5 text-dark font-semibold text-right whitespace-nowrap">{formatPrice(t.totalRevenue)}</td>
+                          <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(t.totalCosts)}</td>
+                          <td className={`px-4 py-2.5 font-semibold text-right whitespace-nowrap ${t.netProfit < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                            {formatPrice(t.netProfit)}
+                          </td>
+                          <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{formatPrice(Math.round(t.profitPerPerson))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </ReportSection>
+            )}
 
             {/* ---- Operational Reports ---- */}
             <ReportSection title="Operational Reports">

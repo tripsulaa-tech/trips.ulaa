@@ -22,6 +22,7 @@ import { COVER_IMAGE_TARGET_SIZE_BYTES } from '../../services/api';
 import type { UpcomingTrip } from '../../types/types-index';
 import { slugify, formatPrice } from '../../utils/utils-index';
 import { computeTripFinanceSummary } from '../../utils/tripFinance';
+import type { TripRevenue } from './useTripFinanceData';
 import { computeDuration, type TripForm } from './tripFormTypes';
 import { inputClass } from './useTripFormModal';
 
@@ -38,6 +39,12 @@ interface AdminTripFormModalProps {
   saving: boolean;
   handleSave: () => void;
   commitGroupBulletDraft: (gi: number, el: HTMLTextAreaElement) => void;
+  // Real revenue for editingTrip, summed from actual bookings' total_amount
+  // — see useTripFinanceData. Null while that fetch is still loading, and
+  // for a brand-new trip that hasn't been saved yet (no id to look
+  // enquiries up by); the Profit Summary below falls back to the old
+  // seats_booked x price estimate in either case.
+  actualRevenue?: TripRevenue | null;
 }
 
 /** The Add/Edit Trip modal — every field on the trip form, laid out across
@@ -50,7 +57,7 @@ interface AdminTripFormModalProps {
 export default function AdminTripFormModal({
   modalOpen, closeModal, editingTrip, form, setForm,
   modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef,
-  saving, handleSave, commitGroupBulletDraft,
+  saving, handleSave, commitGroupBulletDraft, actualRevenue,
 }: AdminTripFormModalProps) {
   return (
       <Modal
@@ -453,10 +460,21 @@ export default function AdminTripFormModal({
             </div>
 
             {(() => {
-              const s = computeTripFinanceSummary(form.trip_finance, form.seats_booked, Number(form.price) || 0);
+              // Prefer real revenue (sum of actual bookings' total_amount)
+              // whenever we have it. Falls back to booked seats x regular
+              // price only while that fetch is loading or for a brand-new
+              // trip with nothing booked yet — see useTripFinanceData.
+              const usingReal = !!actualRevenue;
+              const s = actualRevenue
+                ? computeTripFinanceSummary(form.trip_finance, actualRevenue.bookedCount, actualRevenue.totalRevenue)
+                : computeTripFinanceSummary(form.trip_finance, form.seats_booked, (Number(form.price) || 0) * form.seats_booked);
               return (
                 <div className="md:col-span-2 bg-background-warm/60 rounded-md p-4 space-y-1.5 text-sm">
-                  <h4 className="text-sm font-semibold text-dark mb-1">Profit Summary <span className="font-normal text-dark-muted text-xs">(live, based on {s.travelerCount} booked seats × regular price)</span></h4>
+                  <h4 className="text-sm font-semibold text-dark mb-1">Profit Summary <span className="font-normal text-dark-muted text-xs">
+                    {usingReal
+                      ? `(${s.travelerCount} real booking${s.travelerCount === 1 ? '' : 's'}, actual amounts invoiced)`
+                      : `(estimate: ${s.travelerCount} booked seats × regular price — no bookings to total yet)`}
+                  </span></h4>
                   <div className="flex justify-between"><span className="text-dark-muted">Total Revenue</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
                   <div className="flex justify-between"><span className="text-dark-muted">Entry Ticket + Kit Costs</span><span className="text-dark">{formatPrice(s.perTravelerCosts)}</span></div>
                   <div className="flex justify-between"><span className="text-dark-muted">Agency Cost</span><span className="text-dark">{formatPrice(s.agencyCost)}</span></div>

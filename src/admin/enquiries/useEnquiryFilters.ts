@@ -1,9 +1,55 @@
 import { useState } from 'react';
-import type { Enquiry } from '../../types/types-index';
+import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { PACKAGE_CONFIG } from './AdminEnquiryCommon';
-import { paymentStatus, isGroupEntry } from './AdminEnquiriesShared';
-import { formatDate, downloadCsv } from '../../utils/utils-index';
+import { paymentStatus, isGroupEntry, isBooked } from './AdminEnquiriesShared';
+import { formatDate } from '../../utils/utils-index';
+import { computeTripFinanceSummary } from '../../utils/tripFinance';
+
+// Local CSV writer, not utils-index's downloadCsv — that helper is
+// fixed-shape (one header row + uniform data rows), which is right for the
+// normal passenger list but can't express the extra "Trip Finance &
+// Profitability" mini-table this export sometimes needs above the
+// passenger rows (see handleExportCsv below). Mirrors downloadCsv's
+// escaping/BOM behaviour exactly (see utils/utils-index.ts) so both
+// exports round-trip into Excel/Sheets identically.
+function csvCell(v: string | number | null | undefined): string {
+  const str = v == null ? '' : String(v);
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+function csvRow(fields: (string | number | null | undefined)[]): string {
+  return fields.map(csvCell).join(',');
+}
+function downloadCsvLines(filename: string, lines: string[]): void {
+  const csvContent = '\ufeff' + lines.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// Business-wide per-trip profit rollup for the "all enquiries" export —
+// same computeTripFinanceSummary math as the Reports page's Trip Finance
+// section: revenue is the sum of each booked enquiry's real total_amount
+// (not bookedCount x listed price), since actual bookings routinely differ
+// from the regular price (early-bird, discounts, manual deals). Only trips
+// with the Finances tab actually filled in are included.
+function financeSummaryByTrip(allTrips: UpcomingTrip[], allEnquiries: Enquiry[]) {
+  return allTrips
+    .filter(t => !!t.trip_finance)
+    .map(t => {
+      const tripBookings = allEnquiries.filter(e => e.trip_id === t.id && isBooked(e));
+      const totalRevenue = tripBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0);
+      const summary = computeTripFinanceSummary(t.trip_finance, tripBookings.length, totalRevenue);
+      return { title: t.title || t.destination, ...summary };
+    })
+    .sort((a, b) => b.totalRevenue - a.totalRevenue);
+}
 
 export type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status' | 'follow_up';
 type FilterPanelKey = 'trip' | 'query' | 'journey' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null;
@@ -115,15 +161,68 @@ export function useEnquiryFilters() {
   const handleExportCsv = (
     sortedFiltered: Enquiry[],
     activeGroupTitle: string | null,
-    groupLabel: (e: Enquiry) => string
+    groupLabel: (e: Enquiry) => string,
+    trip?: UpcomingTrip,
+    allTrips?: UpcomingTrip[],
+    allEnquiries?: Enquiry[]
   ) => {
+    // Trip Finance columns — only meaningful (and only included) when the
+    // export is scoped to a single trip (the Trip filter picked one row of
+    // tripGroups, see AdminEnquiries.tsx) AND that trip actually has its
+    // Add/Edit Trip → "Finances & Profit" tab filled in. Same
+    // computeTripFinanceSummary rollup the Reports page's Trip Finance
+    // section and the read-only Trip Details view use, so a passenger-list
+    // export handed to the organiser/agency carries the same cost/profit
+    // picture as the rest of the admin — not a second, drifting copy of it.
+    // Both travelerCount and totalRevenue intentionally come from THIS
+    // export's own rows (real total_amount summed across isBooked rows in
+    // sortedFiltered, not the trip's business-wide numbers or bookedCount x
+    // listed price), so the figures agree with the passenger list sitting
+    // right next to them even if the admin has filtered down to e.g. one
+    // group, and reflect what each booking was actually invoiced for.
+    const scopedBookings = sortedFiltered.filter(isBooked);
+    const financeSummary = trip?.trip_finance
+      ? computeTripFinanceSummary(
+          trip.trip_finance,
+          scopedBookings.length,
+          scopedBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0)
+        )
+      : null;
+
+    const lines: string[] = [];
+
+    // Business-wide "Trip Finance & Profitability" mini-table — this is
+    // the multi-trip counterpart to the per-row Trip Revenue/Costs/Profit
+    // columns above: when the export spans more than one trip there's no
+    // single trip to hang those columns off, so instead this prepends one
+    // summary row per trip (same numbers as the Reports page's Trip
+    // Finance section) above the passenger list. Only rendered when no
+    // single trip is selected (an export already scoped to one trip gets
+    // the per-row columns instead, not both) and at least one trip
+    // actually has finance data entered.
+    if (!trip && allTrips && allEnquiries) {
+      const byTrip = financeSummaryByTrip(allTrips, allEnquiries);
+      if (byTrip.length > 0) {
+        lines.push(csvRow(['Trip Finance & Profitability (business-wide, all trips with Finances tab filled in)']));
+        lines.push(csvRow(['Trip', 'Travelers', 'Revenue', 'Total Costs', 'Net Profit', 'Profit/Person']));
+        byTrip.forEach(t => lines.push(csvRow([
+          t.title, t.travelerCount, t.totalRevenue, t.totalCosts, t.netProfit, Math.round(t.profitPerPerson),
+        ])));
+        lines.push('');
+      }
+    }
+
     const headers = [
       'Name', 'Phone', 'Email', 'Age', 'City', 'Trip', 'Group',
       'Package', 'Food Preference', 'Total Amount', 'Amount Paid',
       'Payment Status', 'Booking Status', 'Refund Amount', 'Lead Status',
       'Source', 'Cancelled', 'Created At',
+      ...(financeSummary ? [
+        'Trip Revenue (this export)', 'Trip Total Costs', 'Trip Net Profit', 'Trip Profit/Person',
+      ] : []),
     ];
-    const rows = sortedFiltered.map(e => [
+    lines.push(csvRow(headers));
+    sortedFiltered.forEach((e, idx) => lines.push(csvRow([
       e.full_name,
       e.phone,
       e.email,
@@ -142,9 +241,19 @@ export function useEnquiryFilters() {
       e.source,
       e.cancelled_at ? 'Yes' : 'No',
       formatDate(e.created_at),
-    ]);
+      // Repeated on every row (rather than a separate summary block) so
+      // the figures survive being opened straight in Excel/Sheets — and
+      // shown only on the first row so a quick glance at the sheet reads
+      // as one trip-level summary, not one profit figure per traveller.
+      ...(financeSummary ? [
+        idx === 0 ? financeSummary.totalRevenue : '',
+        idx === 0 ? financeSummary.totalCosts : '',
+        idx === 0 ? financeSummary.netProfit : '',
+        idx === 0 ? Math.round(financeSummary.profitPerPerson) : '',
+      ] : []),
+    ])));
     const scopeSuffix = activeGroupTitle ? `-${activeGroupTitle.replace(/\s+/g, '_')}` : '';
-    downloadCsv(`enquiries${scopeSuffix}-${new Date().toISOString().slice(0, 10)}`, headers, rows);
+    downloadCsvLines(`enquiries${scopeSuffix}-${new Date().toISOString().slice(0, 10)}`, lines);
   };
 
   return {
