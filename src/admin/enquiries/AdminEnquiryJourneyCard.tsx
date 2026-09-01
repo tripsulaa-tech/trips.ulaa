@@ -43,6 +43,27 @@ export default function AdminEnquiryJourneyCard({
           </div>
         </div>
 
+        {/* Kids fee — independent Total/Paid/Pending, tracked separately
+            from the adult booking above. See add_kids_payment_tracking.sql. */}
+        {enquiry.kids_count > 0 && (
+          <div className="grid grid-cols-3 gap-2 bg-amber-50/60 rounded-md px-3 py-2.5">
+            <div>
+              <p className="text-amber-800 text-[11px]">Kids Total</p>
+              <p className="text-dark text-sm font-semibold">{formatPrice(enquiry.kids_amount || 0)}</p>
+            </div>
+            <div>
+              <p className="text-amber-800 text-[11px]">Kids Paid</p>
+              <p className="text-green-700 text-sm font-semibold">{formatPrice(enquiry.kids_amount_paid || 0)}</p>
+            </div>
+            <div>
+              <p className="text-amber-800 text-[11px]">Kids Pending</p>
+              <p className="text-amber-600 text-sm font-semibold">
+                {formatPrice(Math.max(0, (enquiry.kids_amount || 0) - (enquiry.kids_amount_paid || 0)))}
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className={`grid gap-2 ${enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <Button variant="outline" size="sm" fullWidth onClick={onOpenPayment}>
             <IndianRupee size={13} aria-hidden="true" /> Payment

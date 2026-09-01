@@ -29,6 +29,11 @@ export async function recordPayment(
   payment: {
     amount_paid: number; // new running total, not a delta
     total_amount?: number | null;
+    // Flat ₹ off list price and the admin's note on why, saved alongside
+    // total_amount (already computed as list price - discount_amount by the
+    // caller) whenever the Track Payment / Bulk Edit forms touch pricing.
+    discount_amount?: number;
+    discount_reason?: string | null;
     package_type?: Enquiry['package_type'];
     food_preference?: 'veg' | 'non_veg' | null;
     payment_method?: string;
@@ -109,6 +114,8 @@ export async function recordPayment(
     .from('enquiries')
     .update({
       total_amount: newTotal,
+      discount_amount: payment.discount_amount !== undefined ? payment.discount_amount : current.discount_amount,
+      discount_reason: payment.discount_reason !== undefined ? payment.discount_reason : current.discount_reason,
       package_type: payment.package_type ?? current.package_type,
       food_preference: payment.food_preference !== undefined ? payment.food_preference : current.food_preference,
       is_paid: isPaidFull,
@@ -125,7 +132,113 @@ export async function recordPayment(
       `${formatPrice(Math.abs(delta))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
     );
   }
+
+  // Discount isn't a ledger transaction (nothing moves in `payments`), so
+  // the logActivity call above — gated on delta !== 0 — never fires for a
+  // discount-only save, and a discount applied alongside a payment would
+  // otherwise be silently folded into that payment's log line. Log it as
+  // its own activity entry whenever the discount actually changed, so the
+  // timeline (and anyone auditing it later) can see a discount was given,
+  // by whom it was reasoned, and for how much — independent of whether
+  // money moved in the same save.
+  const prevDiscount = current.discount_amount || 0;
+  const nextDiscount = payment.discount_amount !== undefined ? payment.discount_amount : prevDiscount;
+  const prevReason = current.discount_reason || null;
+  const nextReason = payment.discount_reason !== undefined ? payment.discount_reason : prevReason;
+  if (nextDiscount !== prevDiscount || nextReason !== prevReason) {
+    if (nextDiscount > 0) {
+      await logActivity(
+        current.id,
+        prevDiscount > 0 ? 'Discount updated' : 'Discount applied',
+        `${formatPrice(nextDiscount)} off${nextReason ? ` · ${nextReason}` : ''}`
+      );
+    } else if (prevDiscount > 0) {
+      await logActivity(current.id, 'Discount removed', `Was ${formatPrice(prevDiscount)} off${prevReason ? ` · ${prevReason}` : ''}`);
+    }
+  }
+
   return updated;
+}
+
+// Records a kids-fee payment — same running-total/delta shape as
+// recordPayment above, but scoped to its own independent bucket
+// (payments.for_kids = true / enquiries.kids_amount_paid) rather than the
+// adult booking's amount_paid, per add_kids_payment_tracking.sql. Kept as a
+// separate, smaller function rather than folded into recordPayment's many
+// branches (extra_charge/pending/refund) — a kid doesn't get its own seat,
+// invoice type menu, or refund flow in v1, just Total/Paid/Pending.
+//
+// `newKidsAmountPaid` is the running total after this transaction, same
+// convention as recordPayment's `payment.amount_paid`. Passing a value
+// equal to current.kids_amount_paid is a no-op.
+export async function recordKidsPayment(
+  current: Enquiry,
+  payment: {
+    kids_amount_paid: number; // new running total, not a delta
+    kids_amount?: number | null; // lets the admin correct the auto-computed child_price x kids_count if needed
+    payment_method?: string;
+    utr_number?: string;
+    notes?: string;
+  }
+): Promise<Enquiry> {
+  const newKidsTotal = payment.kids_amount !== undefined && payment.kids_amount != null
+    ? payment.kids_amount
+    : current.kids_amount;
+
+  if (payment.kids_amount_paid < 0) {
+    throw new Error('Kids amount paid cannot be negative.');
+  }
+  if (newKidsTotal != null && newKidsTotal > 0 && payment.kids_amount_paid > newKidsTotal) {
+    throw new Error("Kids amount paid can't exceed the kids fee total.");
+  }
+
+  const delta = payment.kids_amount_paid - (current.kids_amount_paid || 0);
+
+  const isFirstPayment = (current.kids_amount_paid || 0) <= 0;
+  const completesTotal = !!newKidsTotal && newKidsTotal > 0 && payment.kids_amount_paid >= newKidsTotal;
+  const invoiceType = isFirstPayment
+    ? (completesTotal ? 'full_payment' : 'advance')
+    : (completesTotal ? 'balance' : 'installment');
+
+  if (delta !== 0) {
+    const { error: paymentError } = await supabase.from('payments').insert({
+      enquiry_id: current.id,
+      amount: delta,
+      payment_type: invoiceType,
+      payment_method: payment.payment_method,
+      utr_number: payment.utr_number || null,
+      notes: payment.notes,
+      for_kids: true,
+    });
+    if (paymentError) throw paymentError;
+  }
+
+  if (newKidsTotal !== current.kids_amount) {
+    const { error } = await supabase
+      .from('enquiries')
+      .update({ kids_amount: newKidsTotal })
+      .eq('id', current.id);
+    if (error) throw error;
+  }
+
+  // Re-read the trigger-updated kids_amount_paid rather than assuming it
+  // from the delta, same reasoning as recordPayment above.
+  const { data: refreshed, error: refreshError } = await supabase
+    .from('enquiries')
+    .select('*')
+    .eq('id', current.id)
+    .single();
+  if (refreshError) throw refreshError;
+
+  if (delta !== 0) {
+    await logActivity(
+      current.id,
+      delta > 0 ? `Kids fee ${PAYMENT_TYPE_LOG_LABEL[invoiceType] || invoiceType} received` : 'Kids fee payment adjusted',
+      `${formatPrice(Math.abs(delta))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
+    );
+  }
+
+  return refreshed as Enquiry;
 }
 
 // Full payment ledger for one enquiry (booking_amount / installment /

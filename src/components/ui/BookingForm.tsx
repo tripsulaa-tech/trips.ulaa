@@ -16,6 +16,7 @@ import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
 import { validateFullName, validateCity, validateEmail, validatePhone, validateOptionalPhone, validateAge, DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
 import { MIN_GROUP_SIZE, MAX_GROUP_SIZE } from '../../utils/bookingDraft';
+import { formatPrice } from '../../utils/utils-index';
 import { INDIAN_CITIES } from '../../constants/indianCities';
 import { COMMON_EMAIL_DOMAINS } from '../../constants/emailDomains';
 import Button from './Button';
@@ -47,6 +48,11 @@ interface BookingFormProps {
   // src/utils/formValidation.ts.
   minAge?: number | null;
   maxAge?: number | null;
+  // Admin-set, fixed per-kid price for this trip (Admin → Trips → Pricing
+  // & Availability). Null/undefined means the admin hasn't set one — kids
+  // are then shown as free/no-charge rather than blocking the field. See
+  // Enquiry.kids_count/kids_amount and add_trip_kids_option.sql.
+  childPrice?: number | null;
   // Restores an in-progress (never submitted) entry — e.g. the user opened
   // this form, typed some details, then closed the modal without
   // submitting. Undefined/omitted means start blank, same as before this
@@ -60,7 +66,7 @@ interface BookingFormProps {
   onDraftChange?: (draft: BookingFormDraft | null) => void;
 }
 
-export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge, initialDraft, onDraftChange }: BookingFormProps) {
+export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge, childPrice, initialDraft, onDraftChange }: BookingFormProps) {
   // Shared id prefix so every label/input pair below has a stable,
   // unique-per-instance id — needed for htmlFor/aria-describedby wiring,
   // and unique in case this form is ever mounted more than once at a time.
@@ -76,6 +82,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     emergencyContact: `${uid}-emergency-contact`,
     foodPreference: `${uid}-food-preference`,
     vegCount: `${uid}-veg-count`,
+    kidsCount: `${uid}-kids-count`,
     message: `${uid}-message`,
   };
   const effectiveMinAge = minAge ?? DEFAULT_MIN_AGE;
@@ -116,6 +123,12 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // above. Kept in sync with groupVegCount whenever it changes elsewhere
   // (e.g. clamped down when groupSize shrinks) via the effect below.
   const [vegCountInput, setVegCountInput] = useState(String(initialDraft?.groupVegCount ?? MIN_GROUP_SIZE));
+  // How many kids are coming along — shared across the whole booking
+  // (solo or group), same as foodPreference/groupVegCount above rather
+  // than an RHF field, since it's just a headcount with no per-seat age
+  // collected. Kept as raw text (same reasoning as groupSizeInput) so the
+  // field can be emptied out mid-edit instead of snapping back to 0.
+  const [kidsCountInput, setKidsCountInput] = useState(initialDraft?.kidsCount ?? '');
 
   // Whether what's currently selected/entered actually fits in the seats
   // left. When it doesn't, submitting still succeeds — it just becomes a
@@ -124,6 +137,12 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   const soloFits = remainingSeats === undefined || remainingSeats >= 1;
   const groupFits = remainingSeats === undefined || groupSize <= remainingSeats;
   const willWaitlist = bookingMode === 'solo' ? !soloFits : !groupFits;
+
+  // Parsed, clamped kids headcount — kids don't count towards seat
+  // capacity (see remainingSeats/willWaitlist above, which deliberately
+  // never factor this in) and have no age collected, just a number.
+  const kidsCountParsed = Math.round(Number(kidsCountInput));
+  const kidsCount = kidsCountInput.trim() === '' || Number.isNaN(kidsCountParsed) || kidsCountParsed < 0 ? 0 : kidsCountParsed;
 
   // Keeps the veg-count text field's displayed value in sync whenever
   // groupVegCount is changed programmatically elsewhere (clamped down when
@@ -247,6 +266,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       emergency_contact: values.emergency_contact ?? '',
       message: values.message ?? '',
       terms_accepted: !!values.terms_accepted,
+      kidsCount: kidsCountInput,
     });
   };
 
@@ -261,7 +281,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     const subscription = watch(() => reportDraft());
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookingMode, groupSize, groupVegCount, foodPreference, watch]);
+  }, [bookingMode, groupSize, groupVegCount, foodPreference, kidsCountInput, watch]);
 
   const onSubmit = async (data: BookingFormData) => {
     // Trim all text fields to strip accidental leading/trailing whitespace
@@ -278,6 +298,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       city: (data.city ?? '').trim(),
       emergency_contact: (data.emergency_contact ?? '').trim(),
       message: data.message?.trim(),
+      kids_count: kidsCount,
     };
     if (bookingMode === 'group') {
       if (!Number.isInteger(groupSize) || groupSize < MIN_GROUP_SIZE || groupSize > MAX_GROUP_SIZE) {
@@ -337,6 +358,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           trip_id: tripId!,
           trip_title: tripTitle,
           group_size: groupSize,
+          kids_count: d.kids_count,
         };
 
         if (groupFitsLive) {
@@ -373,6 +395,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           trip_id: tripId!,
           trip_title: tripTitle,
           group_size: null,
+          kids_count: d.kids_count,
         };
 
         if (soloFitsLive) {
@@ -413,6 +436,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       setGroupSizeInput(String(MIN_GROUP_SIZE));
       setGroupVegCount(MIN_GROUP_SIZE);
       setFoodPreference(null);
+      setKidsCountInput('');
       onDraftChange?.(null);
       onSuccess?.();
     } catch (err) {
@@ -851,6 +875,34 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             </p>
           </>
         )}
+      </div>
+
+      {/* Kids — shared across the whole booking (solo or group), not a
+          per-seat field. Just a headcount: no age is collected, and kids
+          never count towards seat capacity (see willWaitlist above). */}
+      <div>
+        <label htmlFor={ids.kidsCount} className="block text-sm font-medium text-dark mb-1">Kids coming along (Optional)</label>
+        <input
+          id={ids.kidsCount}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={kidsCountInput}
+          onChange={e => setKidsCountInput(e.target.value)}
+          onBlur={() => {
+            if (kidsCountInput.trim() === '') return;
+            setKidsCountInput(String(kidsCount));
+          }}
+          placeholder="0"
+          aria-describedby={`${ids.kidsCount}-hint`}
+          className={inputClass}
+        />
+        <p id={`${ids.kidsCount}-hint`} className="text-xs text-dark-muted mt-1">
+          Kids don't need a seat and won't count against the group size above.
+          {childPrice != null
+            ? ` ${formatPrice(childPrice)} per kid.`
+            : ' No extra charge for kids on this trip.'}
+        </p>
       </div>
 
       {/* Message */}

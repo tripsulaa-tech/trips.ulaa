@@ -29,7 +29,7 @@ import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
 import {
   getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin, getActivityLog,
-  recordPayment, generatePendingInvoice, addExtraCharge,
+  recordPayment, recordKidsPayment, generatePendingInvoice, addExtraCharge,
   markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
   recordRefund, deleteEnquiry, setEnquiryFollowUp,
@@ -59,8 +59,8 @@ import AdminEnquiryNotInterestedModal from './AdminEnquiryNotInterestedModal';
 import AdminEnquiryFollowUpModal from './AdminEnquiryFollowUpModal';
 
 const emptyPaymentForm: PaymentForm = {
-  package_type: 'normal', total_amount: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '',
-  refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '',
+  package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '',
+  refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '', kids_amount_paid: '',
 };
 
 export default function AdminEnquiryDetail() {
@@ -178,7 +178,11 @@ export default function AdminEnquiryDetail() {
   // every render so a bad amount, a missing payment method, etc. show up
   // the moment it's entered/selected, instead of only surfacing behind an
   // alert() after Save. Same shared validator AdminPaymentModal uses.
-  const paymentErrors = paymentOpen ? validatePaymentForm(paymentForm, enquiry?.amount_paid || 0) : {};
+  const paymentErrors = paymentOpen
+    ? validatePaymentForm(paymentForm, enquiry?.amount_paid || 0, enquiry && enquiry.kids_count > 0
+      ? { total: enquiry.kids_amount || 0, alreadyPaid: enquiry.kids_amount_paid || 0 }
+      : undefined)
+    : {};
   const hasPaymentErrors = Object.keys(paymentErrors).length > 0;
   const [togglingNoShow, setTogglingNoShow] = useState(false);
 
@@ -207,6 +211,8 @@ export default function AdminEnquiryDetail() {
     setPaymentForm({
       package_type: packageType,
       total_amount: suggested ?? '',
+      discount_amount: enquiry.discount_amount || '',
+      discount_reason: enquiry.discount_reason || '',
       // Blank, not enquiry.amount_paid — same reasoning as AdminEnquiries'
       // openPayment: this field is this-payment's-own-amount now, matching
       // Generate Invoice, not a running total to edit down to.
@@ -221,6 +227,7 @@ export default function AdminEnquiryDetail() {
       refund_date: '',
       refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
+      kids_amount_paid: '',
     });
     setPaymentOpen(true);
   };
@@ -335,12 +342,15 @@ export default function AdminEnquiryDetail() {
     const isPending = paymentForm.status === 'pending';
     const newRunningTotal = (enquiry.amount_paid || 0) + thisPayment;
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
+    const discountAmount = paymentForm.discount_amount === '' ? 0 : Number(paymentForm.discount_amount);
     // The modal already shows every one of these live, field-by-field, and
     // disables Save while any are present — this is just the defense-in-
     // depth gate in case Save is reached some other way. Same shared
     // validator as AdminEnquiries.tsx, so the rules can't drift between
     // "what the admin sees live" and "what actually blocks the save".
-    const formErrors = validatePaymentForm(paymentForm, enquiry.amount_paid || 0);
+    const formErrors = validatePaymentForm(paymentForm, enquiry.amount_paid || 0, enquiry.kids_count > 0
+      ? { total: enquiry.kids_amount || 0, alreadyPaid: enquiry.kids_amount_paid || 0 }
+      : undefined);
     const firstError = Object.values(formErrors)[0];
     if (firstError) {
       alert(firstError);
@@ -354,6 +364,8 @@ export default function AdminEnquiryDetail() {
         updated = await recordPayment(enquiry, {
           amount_paid: enquiry.amount_paid || 0,
           package_type: paymentForm.package_type,
+          discount_amount: discountAmount,
+          discount_reason: paymentForm.discount_reason || null,
           food_preference: paymentForm.food_preference || null,
         });
         updated = await addExtraCharge(updated, thisPayment, {
@@ -366,6 +378,8 @@ export default function AdminEnquiryDetail() {
           amount_paid: enquiry.amount_paid || 0,
           total_amount: totalAmount,
           package_type: paymentForm.package_type,
+          discount_amount: discountAmount,
+          discount_reason: paymentForm.discount_reason || null,
           food_preference: paymentForm.food_preference || null,
         });
         if (thisPayment > 0) {
@@ -378,6 +392,8 @@ export default function AdminEnquiryDetail() {
           amount_paid: newRunningTotal,
           total_amount: totalAmount,
           package_type: paymentForm.package_type,
+          discount_amount: discountAmount,
+          discount_reason: paymentForm.discount_reason || null,
           food_preference: paymentForm.food_preference || null,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
@@ -395,6 +411,18 @@ export default function AdminEnquiryDetail() {
           paid_at: paymentForm.refund_date || undefined,
         });
       }
+
+      // Kids fee — independent Total/Paid/Pending, see the matching block
+      // in useEnquiryPayment.ts's handleSavePayment.
+      const thisKidsPayment = paymentForm.kids_amount_paid === '' ? 0 : Number(paymentForm.kids_amount_paid);
+      if (thisKidsPayment > 0) {
+        updated = await recordKidsPayment(updated, {
+          kids_amount_paid: (updated.kids_amount_paid || 0) + thisKidsPayment,
+          payment_method: paymentForm.payment_method || undefined,
+          utr_number: paymentForm.payment_utr || undefined,
+        });
+      }
+
       setEnquiry(updated);
       setPaymentOpen(false);
       getPaymentsForEnquiry(enquiry.id).then(setPayments).catch(console.error);

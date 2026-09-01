@@ -203,7 +203,12 @@ export default function GenerateInvoiceModal({
             </div>
           )}
 
-          <PaymentHistoryList payments={paymentHistory} loading={paymentHistoryLoading} />
+          <PaymentHistoryList
+            payments={paymentHistory}
+            loading={paymentHistoryLoading}
+            discountAmount={generateInvoiceTarget?.discount_amount}
+            discountReason={generateInvoiceTarget?.discount_reason}
+          />
 
           <div>
             <label htmlFor="gi-notes" className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>

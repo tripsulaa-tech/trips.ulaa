@@ -8,7 +8,8 @@ import {
   inputClass, validateBulkEditForm,
 } from './AdminEnquiriesShared';
 import type { BulkEditForm } from './AdminEnquiriesShared';
-import { parseNonNegative } from './AdminEnquiryCommon';
+import { parseNonNegative, computeDiscountedTotal } from './AdminEnquiryCommon';
+import { formatPrice } from '../../utils/utils-index';
 
 export default function BulkEditModal({
   isOpen,
@@ -45,6 +46,12 @@ export default function BulkEditModal({
   // alert() after Bulk Save.
   const { hasChanges, overpaid } = validateBulkEditForm(bulkForm, targets);
   const hasBulkErrors = !hasChanges || !!overpaid;
+  // Only well-defined once the whole selection is being set to one specific
+  // package on one trip — that's the one case where every selected row
+  // shares the same list price to discount from.
+  const listPrice = activeGroupTripId && bulkForm.package_type !== BULK_NO_CHANGE
+    ? getTripPrice(activeGroupTripId, bulkForm.package_type)
+    : undefined;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Bulk Edit — ${selectedCount} selected`} size="sm">
@@ -85,7 +92,7 @@ export default function BulkEditModal({
               setBulkForm(f => ({
                 ...f,
                 package_type: packageType,
-                total_amount: suggested ?? f.total_amount,
+                total_amount: suggested != null ? (computeDiscountedTotal(suggested, f.discount_amount) ?? suggested) : f.total_amount,
               }));
             }}
             options={BULK_PACKAGE_OPTIONS}
@@ -102,18 +109,58 @@ export default function BulkEditModal({
           )}
         </div>
 
-        <div>
-          <label htmlFor="bulk-total-amount" className="block text-sm font-medium text-dark mb-1">Enter Money — Total Amount (₹)</label>
-          <input
-            id="bulk-total-amount"
-            type="number"
-            min={0}
-            value={bulkForm.total_amount}
-            onChange={ev => setBulkForm(f => ({ ...f, total_amount: parseNonNegative(ev.target.value) }))}
-            className={inputClass}
-            placeholder="Leave blank to leave unchanged"
-          />
-        </div>
+        {listPrice != null ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">List Price (₹)</label>
+              <div className={`${inputClass} bg-background-warm text-dark-muted`}>{formatPrice(listPrice)}</div>
+            </div>
+            <div>
+              <label htmlFor="bulk-discount-amount" className="block text-sm font-medium text-dark mb-1">Discount (₹)</label>
+              <input
+                id="bulk-discount-amount"
+                type="number"
+                min={0}
+                value={bulkForm.discount_amount}
+                onChange={ev => {
+                  const discount = parseNonNegative(ev.target.value);
+                  setBulkForm(f => ({ ...f, discount_amount: discount, total_amount: computeDiscountedTotal(listPrice, discount) ?? f.total_amount }));
+                }}
+                className={inputClass}
+                placeholder="Leave blank to leave unchanged"
+              />
+            </div>
+            <div className="col-span-2">
+              <label htmlFor="bulk-discount-reason" className="block text-sm font-medium text-dark mb-1">Discount Reason (optional)</label>
+              <input
+                id="bulk-discount-reason"
+                type="text"
+                value={bulkForm.discount_reason}
+                onChange={ev => setBulkForm(f => ({ ...f, discount_reason: ev.target.value }))}
+                className={inputClass}
+                placeholder="e.g. repeat customer, referral"
+              />
+            </div>
+            <div className="col-span-2">
+              <p className="text-sm text-dark-muted">
+                Total Amount: <span className="font-semibold text-dark">{bulkForm.total_amount === '' ? 'Unchanged' : formatPrice(Number(bulkForm.total_amount))}</span>
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label htmlFor="bulk-total-amount" className="block text-sm font-medium text-dark mb-1">Enter Money — Total Amount (₹)</label>
+            <input
+              id="bulk-total-amount"
+              type="number"
+              min={0}
+              value={bulkForm.total_amount}
+              onChange={ev => setBulkForm(f => ({ ...f, total_amount: parseNonNegative(ev.target.value) }))}
+              className={inputClass}
+              placeholder="Leave blank to leave unchanged"
+            />
+          </div>
+        )}
 
         <div>
           <label htmlFor="bulk-amount-paid" className="block text-sm font-medium text-dark mb-1">Amount Paid (₹)</label>

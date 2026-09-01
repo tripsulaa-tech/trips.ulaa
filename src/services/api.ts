@@ -66,6 +66,7 @@ export {
   undoCheckInEnquiry,
   markEnquiryCompleted,
   recordPayment,
+  recordKidsPayment,
   getPaymentsForEnquiry,
   getAllPayments,
   recordTypedPayment,

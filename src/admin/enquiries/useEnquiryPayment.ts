@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  recordPayment, recordRefund, getAllUpcomingTripsAdmin,
+  recordPayment, recordKidsPayment, recordRefund, getAllUpcomingTripsAdmin,
   getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge,
 } from '../../services/api';
 import type { Enquiry, UpcomingTrip, Payment } from '../../types/types-index';
@@ -36,7 +36,7 @@ export function useEnquiryPayment(params: {
   const alert = useAlert();
 
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
-  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '' });
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '', kids_amount_paid: '' });
   const [savingPayment, setSavingPayment] = useState(false);
   // Read-only ledger shown inline in the Track Payment modal (Phase F) —
   // same on-demand fetch pattern as detailsInvoices in AdminEnquiries.tsx,
@@ -71,6 +71,8 @@ export function useEnquiryPayment(params: {
     setPaymentForm({
       package_type: packageType,
       total_amount: suggested ?? '',
+      discount_amount: enquiry.discount_amount || '',
+      discount_reason: enquiry.discount_reason || '',
       // Blank, not enquiry.amount_paid — this field is now "amount for this
       // payment," matching Generate Invoice, not a running total to edit
       // down to. Package/total/food-preference edits below can still be
@@ -88,6 +90,9 @@ export function useEnquiryPayment(params: {
       refund_date: '',
       refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
+      // Same "this transaction's own amount" convention as amount_paid
+      // above, not enquiry.kids_amount_paid — see PaymentForm.
+      kids_amount_paid: '',
     });
   };
 
@@ -111,12 +116,15 @@ export function useEnquiryPayment(params: {
     const isPending = paymentForm.status === 'pending';
     const newRunningTotal = (paymentTarget.amount_paid || 0) + thisPayment;
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
+    const discountAmount = paymentForm.discount_amount === '' ? 0 : Number(paymentForm.discount_amount);
     // The modal already shows every one of these live, field-by-field, and
     // disables Save while any are present — this is just the defense-in-
     // depth gate in case Save is reached some other way. Same shared
     // validator, so the rules can't drift between "what the admin sees
     // live" and "what actually blocks the save".
-    const formErrors = validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0);
+    const formErrors = validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0, paymentTarget.kids_count > 0
+      ? { total: paymentTarget.kids_amount || 0, alreadyPaid: paymentTarget.kids_amount_paid || 0 }
+      : undefined);
     const firstError = Object.values(formErrors)[0];
     if (firstError) {
       alert(firstError);
@@ -132,6 +140,8 @@ export function useEnquiryPayment(params: {
         updated = await recordPayment(paymentTarget, {
           amount_paid: paymentTarget.amount_paid || 0,
           package_type: paymentForm.package_type,
+          discount_amount: discountAmount,
+          discount_reason: paymentForm.discount_reason || null,
           food_preference: paymentForm.food_preference || null,
         });
         updated = await addExtraCharge(updated, thisPayment, {
@@ -144,6 +154,8 @@ export function useEnquiryPayment(params: {
           amount_paid: paymentTarget.amount_paid || 0,
           total_amount: totalAmount,
           package_type: paymentForm.package_type,
+          discount_amount: discountAmount,
+          discount_reason: paymentForm.discount_reason || null,
           food_preference: paymentForm.food_preference || null,
         });
         if (thisPayment > 0) {
@@ -156,6 +168,8 @@ export function useEnquiryPayment(params: {
           amount_paid: newRunningTotal,
           total_amount: totalAmount,
           package_type: paymentForm.package_type,
+          discount_amount: discountAmount,
+          discount_reason: paymentForm.discount_reason || null,
           food_preference: paymentForm.food_preference || null,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
@@ -177,6 +191,19 @@ export function useEnquiryPayment(params: {
           paid_at: paymentForm.refund_date || undefined,
         });
       }
+
+      // Kids fee — independent Total/Paid/Pending, tracked alongside
+      // whichever branch above handled the adult payment. Same "amount for
+      // this transaction" entry as amount_paid; a no-op when left blank.
+      const thisKidsPayment = paymentForm.kids_amount_paid === '' ? 0 : Number(paymentForm.kids_amount_paid);
+      if (thisKidsPayment > 0) {
+        updated = await recordKidsPayment(updated, {
+          kids_amount_paid: (updated.kids_amount_paid || 0) + thisKidsPayment,
+          payment_method: paymentForm.payment_method || undefined,
+          utr_number: paymentForm.payment_utr || undefined,
+        });
+      }
+
       setPaymentTarget(null);
       const freshTrips = await getAllUpcomingTripsAdmin();
       setTrips(freshTrips);

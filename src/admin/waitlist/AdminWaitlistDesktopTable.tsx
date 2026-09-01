@@ -17,7 +17,7 @@ import type { WaitlistSortKey } from './useWaitlistFilters';
 import { foodBadge, foodBreakdown, messageWithoutFoodBreakdown, hasSeatOpen, canConvert } from './waitlistShared';
 import {
   QueueRankBadge, ConvertedProgressBadge, SeatAvailabilityBadges,
-  ConvertedStatusBadges, ConvertedBookingLinks, WaitlistStatusControl,
+  ConvertedStatusBadges, ConvertedBookingLinks, WaitlistStatusControl, KidsBadge,
 } from './WaitlistRowBits';
 
 interface AdminWaitlistDesktopTableProps {
@@ -113,21 +113,24 @@ export default function AdminWaitlistDesktopTable({
                   )}
                 </td>
                 <td className="px-2 py-4 whitespace-nowrap">
-                  {e.group_size && e.group_size > 1 ? (
-                    <span
-                      title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
-                      className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
-                    >
-                      <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_size}
-                    </span>
-                  ) : (
-                    <span
-                      title="Booked individually, not part of a group"
-                      className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-slate-100 text-dark-muted whitespace-nowrap"
-                    >
-                      <UserPlus size={12} className="shrink-0" aria-hidden="true" /> Solo
-                    </span>
-                  )}
+                  <div className="flex flex-col items-start gap-1">
+                    {e.group_size && e.group_size > 1 ? (
+                      <span
+                        title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
+                        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
+                      >
+                        <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_size}
+                      </span>
+                    ) : (
+                      <span
+                        title="Booked individually, not part of a group"
+                        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-slate-100 text-dark-muted whitespace-nowrap"
+                      >
+                        <UserPlus size={12} className="shrink-0" aria-hidden="true" /> Solo
+                      </span>
+                    )}
+                    <KidsBadge entry={e} className="text-xs px-2 py-1 rounded-md" />
+                  </div>
                 </td>
                 <td className="px-2 py-4 whitespace-nowrap">
                   {foodBreakdown(e) ? (

@@ -6,7 +6,7 @@ import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
 import { useConfirm } from '../../components/ui/useConfirm';
 import MethodReferenceFields from './MethodReferenceFields';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, validatePaymentForm, GENERATE_INVOICE_STATUS_OPTIONS, foodBadge, foodPreferenceKey } from './AdminEnquiryCommon';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, REFUND_METHOD_OPTIONS, availablePaymentTypeOptions, clearsBalance, computeDiscountedTotal, validatePaymentForm, GENERATE_INVOICE_STATUS_OPTIONS, foodBadge, foodPreferenceKey } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -43,7 +43,15 @@ export default function PaymentModal({
   // Live, field-level errors — recomputed on every render so a bad amount,
   // a missing payment method, etc. show up the moment the admin enters or
   // selects it, instead of only surfacing behind an alert() after Save.
-  const paymentErrors = paymentTarget ? validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0) : {};
+  const paymentErrors = paymentTarget
+    ? validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0, paymentTarget.kids_count > 0
+      ? { total: paymentTarget.kids_amount || 0, alreadyPaid: paymentTarget.kids_amount_paid || 0 }
+      : undefined)
+    : {};
+  // Only meaningful when a trip is linked — that's the list price a
+  // discount comes off of. No-trip (general) enquiries have no list price,
+  // so they keep the old free-typed Total Amount field further down.
+  const listPrice = paymentTarget?.trip_id ? getTripPrice(paymentTarget.trip_id, paymentForm.package_type) : undefined;
   const hasPaymentErrors = Object.keys(paymentErrors).length > 0;
   const isDirty =
     paymentForm.total_amount !== '' ||
@@ -113,7 +121,13 @@ export default function PaymentModal({
               onChange={val => {
                 const packageType = val as Enquiry['package_type'];
                 const suggested = getTripPrice(paymentTarget.trip_id, packageType);
-                setPaymentForm(f => ({ ...f, package_type: packageType, total_amount: suggested ?? f.total_amount }));
+                setPaymentForm(f => ({
+                  ...f,
+                  package_type: packageType,
+                  total_amount: paymentTarget.trip_id
+                    ? (computeDiscountedTotal(suggested, f.discount_amount) ?? f.total_amount)
+                    : (suggested ?? f.total_amount),
+                }));
               }}
               options={PACKAGE_OPTIONS}
             />
@@ -155,7 +169,49 @@ export default function PaymentModal({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {paymentTarget.trip_id ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-dark mb-1">List Price (₹)</label>
+                <div className={`${inputClass} bg-background-warm text-dark-muted`}>
+                  {listPrice != null ? formatPrice(listPrice) : 'Not set'}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="pay-discount-amount" className="block text-sm font-medium text-dark mb-1">Discount (₹)</label>
+                <input
+                  id="pay-discount-amount"
+                  type="number"
+                  min={0}
+                  value={paymentForm.payment_type === 'extra_charge' ? '' : paymentForm.discount_amount}
+                  disabled={paymentForm.payment_type === 'extra_charge'}
+                  onChange={e => {
+                    const discount = parseNonNegative(e.target.value);
+                    setPaymentForm(f => ({ ...f, discount_amount: discount, total_amount: computeDiscountedTotal(listPrice, discount) ?? f.total_amount }));
+                  }}
+                  className={`${inputClass} ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  placeholder={paymentForm.payment_type === 'extra_charge' ? 'Updates automatically' : 'e.g. 1000'}
+                />
+              </div>
+              <div className="col-span-2">
+                <label htmlFor="pay-discount-reason" className="block text-sm font-medium text-dark mb-1">Discount Reason (optional)</label>
+                <input
+                  id="pay-discount-reason"
+                  type="text"
+                  value={paymentForm.discount_reason}
+                  disabled={paymentForm.payment_type === 'extra_charge'}
+                  onChange={e => setPaymentForm(f => ({ ...f, discount_reason: e.target.value }))}
+                  className={`${inputClass} ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  placeholder="e.g. repeat customer, referral"
+                />
+              </div>
+              <div className="col-span-2">
+                <p className="text-sm text-dark-muted">
+                  Total Amount: <span className="font-semibold text-dark">{paymentForm.total_amount === '' ? 'Not set' : formatPrice(Number(paymentForm.total_amount))}</span>
+                </p>
+              </div>
+            </div>
+          ) : (
             <div>
               <label htmlFor="pay-total-amount" className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
               <input
@@ -169,23 +225,24 @@ export default function PaymentModal({
                 placeholder={paymentForm.payment_type === 'extra_charge' ? 'Updates automatically' : 'e.g. 15000'}
               />
             </div>
-            <div>
-              <label htmlFor="pay-amount-paid" className="block text-sm font-medium text-dark mb-1">
-                {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
-              </label>
-              <input
-                id="pay-amount-paid"
-                type="number"
-                min={0}
-                value={paymentForm.amount_paid}
-                onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
-                aria-invalid={!!paymentErrors.amount_paid}
-                aria-describedby={paymentErrors.amount_paid ? 'pay-amount-paid-error' : undefined}
-                className={inputClass}
-                placeholder="e.g. 5000"
-              />
-              {paymentErrors.amount_paid && <p id="pay-amount-paid-error" role="alert" className={errorClass}>{paymentErrors.amount_paid}</p>}
-            </div>
+          )}
+
+          <div>
+            <label htmlFor="pay-amount-paid" className="block text-sm font-medium text-dark mb-1">
+              {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
+            </label>
+            <input
+              id="pay-amount-paid"
+              type="number"
+              min={0}
+              value={paymentForm.amount_paid}
+              onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
+              aria-invalid={!!paymentErrors.amount_paid}
+              aria-describedby={paymentErrors.amount_paid ? 'pay-amount-paid-error' : undefined}
+              className={inputClass}
+              placeholder="e.g. 5000"
+            />
+            {paymentErrors.amount_paid && <p id="pay-amount-paid-error" role="alert" className={errorClass}>{paymentErrors.amount_paid}</p>}
           </div>
 
           {/* This transaction's own amount + a manually-picked type — same
@@ -267,10 +324,45 @@ export default function PaymentModal({
             </div>
           )}
 
+          {paymentTarget.kids_count > 0 && (
+            <div className="bg-amber-50/60 rounded-md p-3 space-y-3">
+              <p className="text-xs font-medium text-amber-800">
+                Kids Fee — tracked independently of the adult booking above ({paymentTarget.kids_count} kid{paymentTarget.kids_count > 1 ? 's' : ''})
+              </p>
+              <p className="text-sm text-dark-muted">
+                Kids total <span className="font-medium text-dark">{formatPrice(paymentTarget.kids_amount || 0)}</span>
+                {' · '}already paid <span className="font-medium text-dark">{formatPrice(paymentTarget.kids_amount_paid || 0)}</span>
+                {' · '}pending <span className="font-medium text-dark">{formatPrice(Math.max(0, (paymentTarget.kids_amount || 0) - (paymentTarget.kids_amount_paid || 0)))}</span>
+              </p>
+              <div>
+                <label htmlFor="pay-kids-amount" className="block text-sm font-medium text-dark mb-1">Kids Amount Being Paid Now (₹)</label>
+                <input
+                  id="pay-kids-amount"
+                  type="number"
+                  min={0}
+                  value={paymentForm.kids_amount_paid}
+                  onChange={e => setPaymentForm(f => ({ ...f, kids_amount_paid: parseNonNegative(e.target.value) }))}
+                  aria-invalid={!!paymentErrors.kids_amount_paid}
+                  aria-describedby={paymentErrors.kids_amount_paid ? 'pay-kids-amount-error' : undefined}
+                  className={inputClass}
+                  placeholder="e.g. 2000"
+                />
+                {paymentErrors.kids_amount_paid && <p id="pay-kids-amount-error" role="alert" className={errorClass}>{paymentErrors.kids_amount_paid}</p>}
+                <p className="text-[11px] text-dark-muted mt-1">Uses the same payment method/UTR entered above for this transaction.</p>
+              </div>
+            </div>
+          )}
+
           {/* Inline payment history (Phase F) — read-only ledger so an
               admin can see exactly what's already been recorded before
               changing the running total above. */}
-          <PaymentHistoryList payments={paymentHistory} loading={paymentHistoryLoading} labelId="pay-history-label" />
+          <PaymentHistoryList
+            payments={paymentHistory}
+            loading={paymentHistoryLoading}
+            labelId="pay-history-label"
+            discountAmount={paymentTarget.discount_amount}
+            discountReason={paymentTarget.discount_reason}
+          />
 
           {paymentTarget.cancelled_at && (
             <div className="bg-red-50 rounded-md p-3 space-y-2">

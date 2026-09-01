@@ -87,6 +87,14 @@ export type BulkEditForm = {
   // (amount_paid) — setting only amount_paid without a total_amount is what
   // left rows stuck showing "Price not set" after a bulk save.
   total_amount: number | '';
+  // Flat ₹ off list price, applied uniformly to the whole selection — same
+  // computed-total_amount pattern as the single-enquiry Track Payment
+  // modal. Left blank, every row's discount_amount/total_amount is
+  // untouched. Only offered in the UI when a single package is chosen for
+  // the whole (trip-scoped) selection, so there's one well-defined list
+  // price to discount from.
+  discount_amount: number | '';
+  discount_reason: string;
   // What's actually been collected so far, set as a new running total (same
   // semantics as recordPayment) — not a delta added on top of each row's
   // current amount_paid. Left blank, every row's amount_paid is untouched.
@@ -98,6 +106,8 @@ export const emptyBulkForm: BulkEditForm = {
   food_preference: BULK_NO_CHANGE,
   package_type: BULK_NO_CHANGE,
   total_amount: '',
+  discount_amount: '',
+  discount_reason: '',
   amount_paid: '',
   status: BULK_NO_CHANGE,
 };
@@ -297,11 +307,16 @@ export type EnquiryForm = {
   payment_method: string;
   payment_utr: string;
   food_preference: 'veg' | 'non_veg' | '';
+  // How many kids are coming along — just a headcount, no age, priced
+  // (if the trip has a child_price set) by the same DB trigger the public
+  // booking form goes through. See add_trip_kids_option.sql.
+  kids_count: number | '';
 };
 
 export const emptyForm: EnquiryForm = {
   full_name: '', phone: '', email: '', age: '', city: '', trip_id: '', source: 'whatsapp', message: '',
   package_type: 'normal', total_amount: '', amount_paid: '', payment_method: '', payment_utr: '', food_preference: '',
+  kids_count: '',
 };
 
 // One row of the bulk waitlist-conversion form — trip/package/notes stay
@@ -385,6 +400,7 @@ export function validateBulkEditForm(bulkForm: BulkEditForm, targets: Enquiry[])
   const touchesPaymentFields = bulkForm.food_preference !== BULK_NO_CHANGE
     || bulkForm.package_type !== BULK_NO_CHANGE
     || bulkForm.total_amount !== ''
+    || bulkForm.discount_amount !== ''
     || bulkForm.amount_paid !== '';
   const touchesStatus = bulkForm.status !== BULK_NO_CHANGE;
 

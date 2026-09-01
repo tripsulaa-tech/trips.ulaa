@@ -143,6 +143,18 @@ export default function AdminAddWaitlistModal({
             Only how many seats they need together — not the number of separate people they're asking on behalf of.
           </p>
         </div>
+        <div>
+          <label htmlFor="wl-add-kids" className="block text-sm font-medium text-dark mb-1">Kids</label>
+          <input
+            id="wl-add-kids"
+            type="number"
+            min={0}
+            value={form.kids_count}
+            onChange={e => setForm(f => ({ ...f, kids_count: e.target.value === '' ? '' : +e.target.value }))}
+            className={inputClass}
+            placeholder="Optional — headcount, no seat needed"
+          />
+        </div>
         <div className="md:col-span-2">
           <label htmlFor="wl-add-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
           <textarea

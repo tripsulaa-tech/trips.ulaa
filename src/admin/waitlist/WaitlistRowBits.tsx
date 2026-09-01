@@ -3,6 +3,7 @@ import {
   XCircle,
   Confetti as PartyPopper,
   Clock,
+  Baby,
 } from '@phosphor-icons/react';
 import Select from '../../components/ui/Select';
 import type { WaitlistEntry } from '../../types/types-index';
@@ -35,6 +36,20 @@ export function QueueRankBadge({ entry, queueRank }: {
       }`}
     >
       #{rank!.rank} of {rank!.total} waiting
+    </span>
+  );
+}
+
+/** "N kid(s)" pill — purely informational (the waitlist holds no pricing
+ *  data at all), shown wherever the Group/Solo badge is shown. */
+export function KidsBadge({ entry, size = 12, className = '' }: { entry: WaitlistEntry; size?: number; className?: string }) {
+  if (!entry.kids_count) return null;
+  return (
+    <span
+      title={`${entry.kids_count} kid${entry.kids_count > 1 ? 's' : ''} coming along — no seat needed`}
+      className={`inline-flex items-center gap-1 font-button font-semibold whitespace-nowrap bg-amber-50 text-amber-700 ${className}`}
+    >
+      <Baby size={size} className="shrink-0" aria-hidden="true" /> {entry.kids_count} {entry.kids_count > 1 ? 'Kids' : 'Kid'}
     </span>
   );
 }

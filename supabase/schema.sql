@@ -174,6 +174,11 @@ create table public.upcoming_trips (
   -- surfaced on the public site. See add_trip_finance.sql and TripFinance
   -- in src/types/types-index.ts.
   trip_finance             jsonb,
+  -- Optional fixed per-kid price (admin-set, Pricing & Availability tab).
+  -- Null means "not set" -- the public booking form then treats kids as
+  -- free/no-charge. Kids never count towards total_seats/seats_booked --
+  -- see enquiries.kids_count below. See add_trip_kids_option.sql.
+  child_price              numeric(10, 2),
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
   constraint upcoming_trips_status_check
@@ -184,6 +189,8 @@ create table public.upcoming_trips (
     check (strike_through_price is null or strike_through_price >= 0),
   constraint upcoming_trips_advance_amount_check
     check (advance_amount is null or advance_amount >= 0),
+  constraint upcoming_trips_child_price_check
+    check (child_price is null or child_price >= 0),
   constraint upcoming_trips_min_age_check
     check (min_age is null or min_age >= 0),
   constraint upcoming_trips_max_age_check
@@ -271,6 +278,15 @@ create table public.enquiries (
   -- remains the authoritative timestamp, this is a denormalized label kept
   -- in sync with it by on_enquiry_cancelled(). See add_booking_state.sql.
   booking_state             text not null default 'active',
+  -- How many kids are travelling with this booking -- no seat/age
+  -- collected, just a headcount. Doesn't count towards seats/capacity.
+  -- Only meaningful on the group's group_seq = 1 row. See
+  -- add_trip_kids_option.sql.
+  kids_count                integer not null default 0,
+  -- child_price x kids_count for this booking, auto-computed once by
+  -- set_enquiry_active_price() the same way total_amount is -- never
+  -- trusted from the client. See add_trip_kids_option.sql.
+  kids_amount               numeric(10, 2) not null default 0,
   constraint enquiries_pkey primary key (id),
   constraint enquiries_status_check
     check (status = any (array['new'::text, 'contacted'::text, 'closed'::text])),
@@ -298,7 +314,9 @@ create table public.enquiries (
   constraint enquiries_group_seq_check
     check (group_seq >= 1),
   constraint enquiries_booking_state_check
-    check (booking_state = any (array['active'::text, 'cancelled'::text]))
+    check (booking_state = any (array['active'::text, 'cancelled'::text])),
+  constraint enquiries_kids_count_check check (kids_count >= 0),
+  constraint enquiries_kids_amount_check check (kids_amount >= 0)
 );
 
 create index enquiries_is_paid_idx on public.enquiries using btree (is_paid);
@@ -455,13 +473,18 @@ create table public.waitlist (
   -- so this one is safe to enforce. on delete set null so a later manual
   -- delete of the enquiry doesn't block deleting this row.
   converted_enquiry_id  uuid references public.enquiries (id) on delete set null,
+  -- How many kids are travelling with this signup -- purely
+  -- informational (the waitlist holds no pricing/payment data at all).
+  -- See add_trip_kids_option.sql.
+  kids_count            integer not null default 0,
   created_at            timestamptz not null default now(),
   constraint waitlist_pkey primary key (id),
   constraint waitlist_status_check
     check (status = any (array['waiting'::text, 'notified'::text, 'converted'::text, 'declined'::text, 'expired'::text])),
   -- Prevents the same person from spamming the same sold-out trip's
   -- waitlist with repeat submissions.
-  constraint waitlist_trip_email_unique unique (trip_id, email)
+  constraint waitlist_trip_email_unique unique (trip_id, email),
+  constraint waitlist_kids_count_check check (kids_count >= 0)
 );
 
 create index waitlist_trip_id_idx on public.waitlist using btree (trip_id);
@@ -1225,6 +1248,11 @@ $function$;
 -- package and price themselves (total_amount is supplied), so this leaves
 -- those untouched. Mirrors getActivePrice() in src/utils/utils-index.ts
 -- exactly. See add_enquiry_auto_pricing.sql.
+--
+-- Also auto-prices kids_amount from the trip's child_price x kids_count,
+-- the same "fill only if not already supplied" rule, and only on the
+-- lead row of a booking (group_seq = 1) so a group's kids charge isn't
+-- duplicated across every seat row. See add_trip_kids_option.sql.
 create or replace function public.set_enquiry_active_price()
 returns trigger
 language plpgsql
@@ -1233,6 +1261,7 @@ declare
   found_price               numeric(10, 2);
   found_early_bird_price    numeric(10, 2);
   found_early_bird_deadline date;
+  found_child_price         numeric(10, 2);
 begin
   if new.trip_id is not null and new.total_amount is null then
     select price, early_bird_price, early_bird_deadline
@@ -1248,6 +1277,19 @@ begin
       new.package_type := 'normal';
     end if;
   end if;
+
+  if new.trip_id is not null
+     and coalesce(new.group_seq, 1) = 1
+     and coalesce(new.kids_count, 0) > 0
+     and coalesce(new.kids_amount, 0) = 0 then
+    select child_price into found_child_price
+      from upcoming_trips where id = new.trip_id;
+
+    if found_child_price is not null then
+      new.kids_amount := found_child_price * new.kids_count;
+    end if;
+  end if;
+
   return new;
 end;
 $function$;

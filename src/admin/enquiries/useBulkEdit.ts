@@ -79,6 +79,8 @@ export function useBulkEdit(params: {
           await recordPayment(enquiry, {
             amount_paid: bulkForm.amount_paid !== '' ? Number(bulkForm.amount_paid) : enquiry.amount_paid,
             total_amount: bulkForm.total_amount !== '' ? Number(bulkForm.total_amount) : enquiry.total_amount,
+            discount_amount: bulkForm.discount_amount !== '' ? Number(bulkForm.discount_amount) : enquiry.discount_amount,
+            discount_reason: bulkForm.discount_reason !== '' ? bulkForm.discount_reason : enquiry.discount_reason,
             package_type: bulkForm.package_type !== BULK_NO_CHANGE ? bulkForm.package_type : enquiry.package_type,
             food_preference: bulkForm.food_preference !== BULK_NO_CHANGE
               ? (bulkForm.food_preference === 'not_set' ? null : bulkForm.food_preference)

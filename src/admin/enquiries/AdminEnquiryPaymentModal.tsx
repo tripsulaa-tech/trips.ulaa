@@ -11,14 +11,14 @@ import { formatPrice } from '../../utils/utils-index';
 import MethodReferenceFields from './MethodReferenceFields';
 import {
   parseNonNegative, PACKAGE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS,
-  availablePaymentTypeOptions, clearsBalance, FOOD_PREFERENCE_OPTIONS,
+  availablePaymentTypeOptions, clearsBalance, computeDiscountedTotal, FOOD_PREFERENCE_OPTIONS,
   REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
 } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import PaymentHistoryList from './PaymentHistoryList';
 
 type PaymentErrors = Partial<Record<
-  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr',
+  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr' | 'kids_amount_paid',
   string
 >>;
 
@@ -44,6 +44,10 @@ export default function AdminEnquiryPaymentModal({
   savingPayment, onSave, payments, paymentsLoading, togglingNoShow, onToggleNoShow, getTripPrice,
 }: AdminEnquiryPaymentModalProps) {
   const paymentErrorClass = 'text-red-500 text-xs mt-1';
+  const fieldClass = 'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none';
+  // Only meaningful when a trip is linked — no-trip (general) enquiries
+  // have no list price, so they keep the old free-typed Total Amount field.
+  const listPrice = enquiry.trip_id ? getTripPrice(enquiry.trip_id, paymentForm.package_type) : undefined;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Payment" size="sm">
@@ -65,12 +69,60 @@ export default function AdminEnquiryPaymentModal({
             onChange={val => {
               const packageType = val as Enquiry['package_type'];
               const suggested = getTripPrice(enquiry.trip_id, packageType);
-              setPaymentForm(f => ({ ...f, package_type: packageType, total_amount: suggested ?? f.total_amount }));
+              setPaymentForm(f => ({
+                ...f,
+                package_type: packageType,
+                total_amount: enquiry.trip_id
+                  ? (computeDiscountedTotal(suggested, f.discount_amount) ?? f.total_amount)
+                  : (suggested ?? f.total_amount),
+              }));
             }}
             options={PACKAGE_OPTIONS}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        {enquiry.trip_id ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark mb-1">List Price (₹)</label>
+              <div className={`${fieldClass} bg-background-warm text-dark-muted`}>
+                {listPrice != null ? formatPrice(listPrice) : 'Not set'}
+              </div>
+            </div>
+            <div>
+              <label htmlFor="ed-pay-discount" className="block text-sm font-medium text-dark mb-1">Discount (₹)</label>
+              <input
+                id="ed-pay-discount"
+                type="number"
+                min={0}
+                value={paymentForm.payment_type === 'extra_charge' ? '' : paymentForm.discount_amount}
+                disabled={paymentForm.payment_type === 'extra_charge'}
+                onChange={e => {
+                  const discount = parseNonNegative(e.target.value);
+                  setPaymentForm(f => ({ ...f, discount_amount: discount, total_amount: computeDiscountedTotal(listPrice, discount) ?? f.total_amount }));
+                }}
+                className={`${fieldClass} ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                placeholder={paymentForm.payment_type === 'extra_charge' ? 'Updates automatically' : 'e.g. 1000'}
+              />
+            </div>
+            <div className="col-span-2">
+              <label htmlFor="ed-pay-discount-reason" className="block text-sm font-medium text-dark mb-1">Discount Reason (optional)</label>
+              <input
+                id="ed-pay-discount-reason"
+                type="text"
+                value={paymentForm.discount_reason}
+                disabled={paymentForm.payment_type === 'extra_charge'}
+                onChange={e => setPaymentForm(f => ({ ...f, discount_reason: e.target.value }))}
+                className={`${fieldClass} ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                placeholder="e.g. repeat customer, referral"
+              />
+            </div>
+            <div className="col-span-2">
+              <p className="text-sm text-dark-muted">
+                Total Amount: <span className="font-semibold text-dark">{paymentForm.total_amount === '' ? 'Not set' : formatPrice(Number(paymentForm.total_amount))}</span>
+              </p>
+            </div>
+          </div>
+        ) : (
           <div>
             <label htmlFor="ed-pay-total" className="block text-sm font-medium text-dark mb-1">Total Amount (₹)</label>
             <input
@@ -80,27 +132,28 @@ export default function AdminEnquiryPaymentModal({
               value={paymentForm.payment_type === 'extra_charge' ? '' : paymentForm.total_amount}
               disabled={paymentForm.payment_type === 'extra_charge'}
               onChange={e => setPaymentForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
-              className={`w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
+              className={`${fieldClass} ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
               placeholder={paymentForm.payment_type === 'extra_charge' ? 'Updates automatically' : 'e.g. 15000'}
             />
           </div>
-          <div>
-            <label htmlFor="ed-pay-amount-paid" className="block text-sm font-medium text-dark mb-1">
-              {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
-            </label>
-            <input
-              id="ed-pay-amount-paid"
-              type="number"
-              min={0}
-              value={paymentForm.amount_paid}
-              onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
-              aria-invalid={!!paymentErrors.amount_paid}
-              aria-describedby={paymentErrors.amount_paid ? 'ed-pay-amount-paid-error' : undefined}
-              className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
-              placeholder="e.g. 5000"
-            />
-            {paymentErrors.amount_paid && <p id="ed-pay-amount-paid-error" role="alert" className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
-          </div>
+        )}
+
+        <div>
+          <label htmlFor="ed-pay-amount-paid" className="block text-sm font-medium text-dark mb-1">
+            {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
+          </label>
+          <input
+            id="ed-pay-amount-paid"
+            type="number"
+            min={0}
+            value={paymentForm.amount_paid}
+            onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
+            aria-invalid={!!paymentErrors.amount_paid}
+            aria-describedby={paymentErrors.amount_paid ? 'ed-pay-amount-paid-error' : undefined}
+            className={fieldClass}
+            placeholder="e.g. 5000"
+          />
+          {paymentErrors.amount_paid && <p id="ed-pay-amount-paid-error" role="alert" className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
         </div>
 
         {/* This transaction's own amount + a manually-picked type — same
@@ -177,7 +230,42 @@ export default function AdminEnquiryPaymentModal({
           );
         })()}
 
-        <PaymentHistoryList payments={payments} loading={paymentsLoading} showUtrNumber={false} />
+        {enquiry.kids_count > 0 && (
+          <div className="bg-amber-50/60 rounded-md p-3 space-y-3">
+            <p className="text-xs font-medium text-amber-800">
+              Kids Fee — tracked independently of the adult booking above ({enquiry.kids_count} kid{enquiry.kids_count > 1 ? 's' : ''})
+            </p>
+            <p className="text-sm text-dark-muted">
+              Kids total <span className="font-medium text-dark">{formatPrice(enquiry.kids_amount || 0)}</span>
+              {' · '}already paid <span className="font-medium text-dark">{formatPrice(enquiry.kids_amount_paid || 0)}</span>
+              {' · '}pending <span className="font-medium text-dark">{formatPrice(Math.max(0, (enquiry.kids_amount || 0) - (enquiry.kids_amount_paid || 0)))}</span>
+            </p>
+            <div>
+              <label htmlFor="ed-pay-kids-amount" className="block text-sm font-medium text-dark mb-1">Kids Amount Being Paid Now (₹)</label>
+              <input
+                id="ed-pay-kids-amount"
+                type="number"
+                min={0}
+                value={paymentForm.kids_amount_paid}
+                onChange={e => setPaymentForm(f => ({ ...f, kids_amount_paid: parseNonNegative(e.target.value) }))}
+                aria-invalid={!!paymentErrors.kids_amount_paid}
+                aria-describedby={paymentErrors.kids_amount_paid ? 'ed-pay-kids-amount-error' : undefined}
+                className={fieldClass}
+                placeholder="e.g. 2000"
+              />
+              {paymentErrors.kids_amount_paid && <p id="ed-pay-kids-amount-error" role="alert" className={paymentErrorClass}>{paymentErrors.kids_amount_paid}</p>}
+              <p className="text-[11px] text-dark-muted mt-1">Uses the same payment method/UTR entered above for this transaction.</p>
+            </div>
+          </div>
+        )}
+
+        <PaymentHistoryList
+          payments={payments}
+          loading={paymentsLoading}
+          showUtrNumber={false}
+          discountAmount={enquiry.discount_amount}
+          discountReason={enquiry.discount_reason}
+        />
 
         {enquiry.cancelled_at && (
           <div className="bg-red-50 rounded-md p-3 space-y-2">

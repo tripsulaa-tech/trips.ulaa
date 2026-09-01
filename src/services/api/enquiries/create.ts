@@ -91,6 +91,11 @@ export async function submitGroupEnquiry(enquiry: BookingFormData, groupSize: nu
     group_id: groupId,
     group_size: groupSize,
     group_seq: i + 1,
+    // Kids travelling with the group are a single shared headcount for
+    // the whole booking, not per-seat — only the lead row (group_seq = 1)
+    // carries it, so the DB's auto-pricing trigger (see
+    // add_trip_kids_option.sql) prices it once instead of once per seat.
+    kids_count: i === 0 ? enquiry.kids_count : 0,
   }));
   const { error } = await supabase.from('enquiries').insert(rows);
   if (error) {

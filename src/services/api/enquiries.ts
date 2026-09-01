@@ -43,6 +43,7 @@ export {
 
 export {
   recordPayment,
+  recordKidsPayment,
   getPaymentsForEnquiry,
   getAllPayments,
 } from './enquiries/payments';

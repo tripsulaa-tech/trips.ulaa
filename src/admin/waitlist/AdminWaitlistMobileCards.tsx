@@ -17,7 +17,7 @@ import { formatDate } from '../../utils/utils-index';
 import { STATUS_CONFIG, foodBreakdown, messageWithoutFoodBreakdown, hasSeatOpen, canConvert } from './waitlistShared';
 import {
   QueueRankBadge, ConvertedProgressBadge, SeatAvailabilityBadges,
-  ConvertedStatusBadges, ConvertedBookingLinks, WaitlistStatusControl,
+  ConvertedStatusBadges, ConvertedBookingLinks, WaitlistStatusControl, KidsBadge,
 } from './WaitlistRowBits';
 
 interface AdminWaitlistMobileCardsProps {
@@ -75,6 +75,7 @@ export default function AdminWaitlistMobileCards({
                         <Users size={9} aria-hidden="true" /> {groupLabel(e)} · {e.group_size}
                       </span>
                     )}
+                    <KidsBadge entry={e} size={9} className="text-[10px] px-1.5 py-0.5 rounded-md" />
                     <QueueRankBadge entry={e} queueRank={queueRank} />
                     <ConvertedProgressBadge entry={e} />
                   </p>

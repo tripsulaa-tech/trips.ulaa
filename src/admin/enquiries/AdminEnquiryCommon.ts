@@ -125,7 +125,16 @@ export const emptyGenerateInvoiceForm: GenerateInvoiceForm = {
 
 export type PaymentForm = {
   package_type: Enquiry['package_type'];
+  // Kept as the actual amount owed (list price - discount_amount, or the
+  // free-typed value on a no-trip enquiry) — every existing consumer below
+  // (clearsBalance, availablePaymentTypeOptions, validatePaymentForm) reads
+  // this unchanged. The modal computes it from discount_amount whenever the
+  // enquiry has a trip; see computeDiscountedTotal.
   total_amount: number | '';
+  // Flat ₹ off the trip's list price — what the admin now edits instead of
+  // total_amount directly, when a trip (and so a list price) is linked.
+  discount_amount: number | '';
+  discount_reason: string;
   // This transaction's own amount — not a running total. Matches Generate
   // Invoice's "Amount" field: the admin enters what's coming in right now,
   // and picks payment_type directly below, the same way Generate Invoice's
@@ -167,6 +176,13 @@ export type PaymentForm = {
   refund_date: string;
   refund_notes: string;
   food_preference: 'veg' | 'non_veg' | '';
+  // Kids fee — independent of everything above (see
+  // add_kids_payment_tracking.sql): this transaction's own kids-fee amount,
+  // same "not a running total" convention as amount_paid. Only shown/used
+  // when the enquiry has kids_count > 0. recordKidsPayment does the
+  // delta/running-total math the same way recordPayment does for the adult
+  // amount.
+  kids_amount_paid: number | '';
 };
 
 // Same types Generate Invoice offers, including Extra Charge and the
@@ -192,6 +208,16 @@ const PAYMENT_TYPE_OPTIONS: { value: PaymentForm['payment_type']; label: string 
 // labels misleading. Only 'Balance' is gated this way; every other type
 // (including 'Installment') stays freely selectable. Shared by both Track
 // Payment (PaymentForm) and Generate Invoice (GenerateInvoiceForm) below.
+// List price minus a flat discount, floored at 0 so a discount bigger than
+// the list price never produces a negative total. `listPrice` is undefined
+// when the trip (or its price for this package) isn't set yet — callers
+// fall back to whatever total_amount already holds in that case.
+export function computeDiscountedTotal(listPrice: number | undefined, discountAmount: number | ''): number | undefined {
+  if (listPrice == null) return undefined;
+  const discount = discountAmount === '' ? 0 : Number(discountAmount);
+  return Math.max(0, listPrice - discount);
+}
+
 function amountClearsBalance(totalAmount: number | '', alreadyPaid: number, thisAmount: number | ''): boolean {
   if (totalAmount === '') return false;
   const amt = thisAmount === '' ? 0 : Number(thisAmount);
@@ -220,11 +246,18 @@ export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPai
 // the final save-time gate — one source of truth so the two screens can
 // never drift on what counts as a valid payment.
 type PaymentFormErrors = Partial<Record<
-  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr',
+  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_utr' | 'refund_method' | 'kids_amount_paid',
   string
 >>;
 
-export function validatePaymentForm(paymentForm: PaymentForm, alreadyPaid: number): PaymentFormErrors {
+export function validatePaymentForm(
+  paymentForm: PaymentForm,
+  alreadyPaid: number,
+  // Kids fee's own bounds — see add_kids_payment_tracking.sql. Optional so
+  // existing callers keep working unchanged when kids_count is 0 (no kids
+  // section shown, so nothing to validate).
+  kids?: { total: number; alreadyPaid: number }
+): PaymentFormErrors {
   const errors: PaymentFormErrors = {};
   const totalAmount = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
   const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
@@ -264,6 +297,22 @@ export function validatePaymentForm(paymentForm: PaymentForm, alreadyPaid: numbe
   const effectiveAmountPaid = isPending ? alreadyPaid : isExtraCharge ? alreadyPaid + thisPayment : newRunningTotal;
   if (refundAmount > effectiveAmountPaid) {
     errors.refund_amount = "Refund amount can't be more than what was actually paid.";
+  }
+
+  if (kids) {
+    const thisKidsPayment = paymentForm.kids_amount_paid === '' ? 0 : Number(paymentForm.kids_amount_paid);
+    if (thisKidsPayment < 0) {
+      errors.kids_amount_paid = 'Kids amount cannot be negative.';
+    } else if (kids.total > 0 && kids.alreadyPaid + thisKidsPayment > kids.total) {
+      errors.kids_amount_paid = 'This would take the kids fee paid past its total.';
+    } else if (thisKidsPayment > 0 && !paymentForm.payment_method) {
+      // The adult-payment checks above only require a method when
+      // thisPayment > 0 — a kids-only payment (adult amount left blank)
+      // still needs one, since both legs share the same method/UTR fields.
+      errors.payment_method = errors.payment_method || 'Select a payment method.';
+    } else if (thisKidsPayment > 0 && paymentForm.payment_method && paymentForm.payment_method !== 'Cash' && !paymentForm.payment_utr.trim()) {
+      errors.payment_utr = errors.payment_utr || 'Enter a UTR / reference number.';
+    }
   }
 
   return errors;

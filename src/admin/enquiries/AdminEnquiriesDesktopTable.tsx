@@ -4,6 +4,7 @@ import {
   ChatCircle as MessageCircle,
   Users,
   User,
+  Baby,
   CalendarDot as CalendarClock,
   UserMinus,
   Bird,
@@ -197,17 +198,29 @@ export default function AdminEnquiriesDesktopTable({
                   <td className="px-2 py-4 whitespace-nowrap">
                     {e.group_size && e.group_size > 1 ? (
                       <span
-                        title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
+                        title={`${groupLabel(e)} — part of a group booking of ${e.group_size}${e.kids_count ? `, plus ${e.kids_count} kid${e.kids_count > 1 ? 's' : ''} (no seat needed)` : ''}`}
                         className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                       >
                         <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
+                        {!!e.kids_count && (
+                          <>
+                            <span className="opacity-50">+</span>
+                            <Baby size={12} className="shrink-0" aria-hidden="true" /> {e.kids_count} {e.kids_count > 1 ? 'Kids' : 'Kid'}
+                          </>
+                        )}
                       </span>
                     ) : (
                       <span
-                        title="Booked individually, not part of a group"
+                        title={`Booked individually, not part of a group${e.kids_count ? `, plus ${e.kids_count} kid${e.kids_count > 1 ? 's' : ''} (no seat needed)` : ''}`}
                         className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
                       >
                         <User size={12} className="shrink-0" aria-hidden="true" /> Solo
+                        {!!e.kids_count && (
+                          <>
+                            <span className="opacity-50">+</span>
+                            <Baby size={12} className="shrink-0" aria-hidden="true" /> {e.kids_count} {e.kids_count > 1 ? 'Kids' : 'Kid'}
+                          </>
+                        )}
                       </span>
                     )}
                   </td>

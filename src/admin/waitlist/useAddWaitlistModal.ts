@@ -61,6 +61,7 @@ export function useAddWaitlistModal(allTrips: UpcomingTrip[], load: () => void, 
         trip_id: form.trip_id,
         trip_title: trip?.title,
         group_size: form.group_size === '' ? undefined : form.group_size,
+        kids_count: form.kids_count === '' ? undefined : form.kids_count,
       });
       setModalOpen(false);
       load();
