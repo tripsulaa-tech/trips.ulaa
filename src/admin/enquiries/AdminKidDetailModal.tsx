@@ -6,7 +6,7 @@
 // follow-up reminder + notes, and a delete action — independent of
 // whatever's showing on the parent enquiry around it.
 import { useEffect, useState } from 'react';
-import { Baby, Trash as Trash2 } from '@phosphor-icons/react';
+import { Baby, Trash as Trash2, CurrencyInr as IndianRupee } from '@phosphor-icons/react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
@@ -14,6 +14,7 @@ import DatePicker from '../../components/ui/DatePicker';
 import { useConfirm } from '../../components/ui/useConfirm';
 import type { Kid, KidStatus } from '../../types/types-index';
 import { FOOD_PREFERENCE_OPTIONS } from '../../constants/foodPreference';
+import { formatPrice } from '../../utils/utils-index';
 
 const STATUS_OPTIONS: { value: KidStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
@@ -32,10 +33,14 @@ interface AdminKidDetailModalProps {
   onStatusChange: (status: KidStatus) => Promise<void>;
   onFollowUpChange: (followUpAt: string | null, notes?: string | null) => Promise<void>;
   onDelete: () => Promise<void>;
+  /** Opens this kid's own Payment modal (AdminKidPaymentModal) — owned by the
+   *  parent Kids card, same "own Total/Paid, own ledger" record described
+   *  there, just reachable from inside the detail view too. */
+  onManagePayment: () => void;
 }
 
 export default function AdminKidDetailModal({
-  isOpen, onClose, kid, fallbackLabel, busy, onSave, onStatusChange, onFollowUpChange, onDelete,
+  isOpen, onClose, kid, fallbackLabel, busy, onSave, onStatusChange, onFollowUpChange, onDelete, onManagePayment,
 }: AdminKidDetailModalProps) {
   const confirm = useConfirm();
   const [name, setName] = useState('');
@@ -132,6 +137,23 @@ export default function AdminKidDetailModal({
           </div>
         </div>
         <Button variant="outline" size="sm" onClick={handleSaveDetails} loading={busy}>Save Details</Button>
+
+        <div className="pt-3 border-t border-background-warm">
+          <p className="text-sm font-medium text-dark mb-1">Payment</p>
+          <button
+            type="button"
+            onClick={onManagePayment}
+            className="w-full text-left bg-background-warm rounded-md px-3 py-2 flex items-center gap-2.5 hover:opacity-75 transition-opacity"
+          >
+            <IndianRupee size={14} className="text-dark-muted shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-dark-muted text-[10px]">This kid's own total / paid — independent of the rest of the booking</p>
+              <p className="text-dark text-xs truncate">
+                {kid.amount ? `${formatPrice(kid.amount_paid || 0)} / ${formatPrice(kid.amount)}` : 'No total set yet'}
+              </p>
+            </div>
+          </button>
+        </div>
 
         <div className="pt-3 border-t border-background-warm">
           <label className="block text-sm font-medium text-dark mb-1">Status</label>

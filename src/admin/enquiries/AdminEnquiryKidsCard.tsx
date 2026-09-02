@@ -5,13 +5,15 @@
 // badge being the only trace of them (see Kid in types-index.ts and
 // add_kids_table.sql).
 import { useState } from 'react';
-import { Baby, CheckSquare, Square, CalendarDot as CalendarClock } from '@phosphor-icons/react';
+import { Baby, CheckSquare, Square, CalendarDot as CalendarClock, CurrencyInr as IndianRupee } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
 import type { Enquiry, Kid, KidStatus } from '../../types/types-index';
-import { formatDate } from '../../utils/utils-index';
+import { formatDate, formatPrice } from '../../utils/utils-index';
 import { useKidsForEnquiry } from './useKidsForEnquiry';
+import { useKidPayment } from './useKidPayment';
 import AdminKidDetailModal from './AdminKidDetailModal';
+import AdminKidPaymentModal from './AdminKidPaymentModal';
 import FoodMark from '../../components/ui/FoodMark';
 
 const STATUS_BADGE: Record<KidStatus, string> = {
@@ -37,15 +39,23 @@ const BULK_STATUS_OPTIONS: { value: KidStatus; label: string }[] = [
 
 interface AdminEnquiryKidsCardProps {
   enquiry: Enquiry;
+  /** Looks up the trip's flat per-kid fee (upcoming_trips.child_price) — same function AdminEnquiryDetail.tsx already builds for the adult modal's Kids Fee section, threaded through so the per-kid Payment modal's Total is sourced from the same place. */
+  getTripChildPrice: (tripId: string | undefined) => number | undefined;
 }
 
-export default function AdminEnquiryKidsCard({ enquiry }: AdminEnquiryKidsCardProps) {
+export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: AdminEnquiryKidsCardProps) {
   const {
     kids, loading, busy,
     selectedIds, toggleSelectOne, toggleSelectAll,
     kidLabel,
     handleUpdateStatus, handleBulkStatus, handleSetFollowUp, handleEdit, handleDelete,
+    reload,
   } = useKidsForEnquiry(enquiry.id);
+  const {
+    kidPaymentTarget, kidPaymentForm, setKidPaymentForm, kidPaymentChildPrice, savingKidPayment,
+    kidPaymentHistory, kidPaymentHistoryLoading, openKidPayment, handleSaveKidPayment,
+    setKidPaymentTarget,
+  } = useKidPayment({ onSaved: () => { reload(); }, getTripChildPrice });
   const [openKidId, setOpenKidId] = useState<string | null>(null);
   const [bulkAction, setBulkAction] = useState<KidStatus>('confirmed');
 
@@ -116,6 +126,15 @@ export default function AdminEnquiryKidsCard({ enquiry }: AdminEnquiryKidsCardPr
                     </p>
                   )}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => openKidPayment(kid, enquiry.trip_id)}
+                  title={`${kidLabel(kid, i)}'s own payment — independent of every other kid on this booking`}
+                  className="shrink-0 flex items-center gap-1 text-[11px] font-button font-medium text-dark-muted hover:text-primary whitespace-nowrap"
+                >
+                  <IndianRupee size={12} aria-hidden="true" />
+                  {kid.amount ? `${formatPrice(kid.amount_paid || 0)} / ${formatPrice(kid.amount)}` : 'Set fee'}
+                </button>
                 <span className={`text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${STATUS_BADGE[kid.status]}`}>
                   {STATUS_LABEL[kid.status]}
                 </span>
@@ -145,6 +164,20 @@ export default function AdminEnquiryKidsCard({ enquiry }: AdminEnquiryKidsCardPr
         onStatusChange={status => handleUpdateStatus(openKid as Kid, status)}
         onFollowUpChange={(followUpAt, notes) => handleSetFollowUp(openKid as Kid, followUpAt, notes)}
         onDelete={() => handleDelete(openKid as Kid)}
+        onManagePayment={() => { setOpenKidId(null); openKidPayment(openKid as Kid, enquiry.trip_id); }}
+      />
+
+      <AdminKidPaymentModal
+        kidPaymentTarget={kidPaymentTarget}
+        fallbackLabel={kidPaymentTarget ? kidLabel(kidPaymentTarget, kids.indexOf(kidPaymentTarget)) : ''}
+        onClose={() => setKidPaymentTarget(null)}
+        kidPaymentForm={kidPaymentForm}
+        setKidPaymentForm={setKidPaymentForm}
+        kidPaymentChildPrice={kidPaymentChildPrice}
+        kidPaymentHistory={kidPaymentHistory}
+        kidPaymentHistoryLoading={kidPaymentHistoryLoading}
+        savingKidPayment={savingKidPayment}
+        onSave={handleSaveKidPayment}
       />
     </div>
   );

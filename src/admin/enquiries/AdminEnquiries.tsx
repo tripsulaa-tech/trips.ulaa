@@ -21,8 +21,8 @@ import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import { getPaymentsForEnquiry } from '../../services/api';
-import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
+import { getPaymentsForEnquiry, getKidsForEnquiries } from '../../services/api';
+import type { Enquiry, Kid, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
 import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
 import {
@@ -38,6 +38,7 @@ import { useEnquirySelection } from './useEnquirySelection';
 import { useEnquiryLifecycle } from './useEnquiryLifecycle';
 import { useAddEnquiry } from './useAddEnquiry';
 import { useEnquiryPayment } from './useEnquiryPayment';
+import { useKidPayment } from './useKidPayment';
 import { useEnquiryDetailsModal } from './useEnquiryDetailsModal';
 import { useEditEnquiry } from './useEditEnquiry';
 import { useEnquiryStatusActions } from './useEnquiryStatusActions';
@@ -57,6 +58,7 @@ import FilterDropdown from './AdminFilterDropdown';
 import { KpiCards, KpiCarousel } from '../../components/ui/KpiCards';
 import AddEnquiryModal from './AdminAddEnquiryModal';
 import PaymentModal from './AdminPaymentModal';
+import AdminKidPaymentModal from './AdminKidPaymentModal';
 import DetailsModal from './AdminDetailsModal';
 import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
 import MarkPaidModal from './AdminMarkPaidModal';
@@ -161,6 +163,35 @@ export default function AdminEnquiries() {
     openPayment,
     handleSavePayment,
   } = useEnquiryPayment({ setTrips, load, getTripPrice, getTripChildPrice });
+  // Real per-kid rows for whichever enquiries are on the current page —
+  // bulk-loaded in one round trip (see getKidsForEnquiries) rather than
+  // one request per booking, keyed by enquiry_id so the table/card rows
+  // below can look a kid's own record up instead of falling back to the
+  // placeholder "Kid N" rows built purely from kids_count. Populated by
+  // an effect further down, once paginatedEnquiries is known.
+  const [kidsByEnquiry, setKidsByEnquiry] = useState<Record<string, Kid[]>>({});
+  // Owns the per-kid Payment modal (AdminKidPaymentModal) — same hook the
+  // enquiry detail page's Kids card uses, so the list and the detail page
+  // can never drift on what counts as a valid kid payment.
+  const {
+    kidPaymentTarget, setKidPaymentTarget,
+    kidPaymentForm, setKidPaymentForm,
+    kidPaymentChildPrice,
+    savingKidPayment,
+    kidPaymentHistory, kidPaymentHistoryLoading,
+    openKidPayment,
+    handleSaveKidPayment,
+  } = useKidPayment({
+    onSaved: updated => {
+      setKidsByEnquiry(prev => {
+        const list = prev[updated.enquiry_id];
+        if (!list) return prev;
+        return { ...prev, [updated.enquiry_id]: list.map(k => (k.id === updated.id ? updated : k)) };
+      });
+    },
+    getTripChildPrice,
+  });
+  const kidRowLabel = (kid: Kid, fallbackIndex: number) => kid.name?.trim() || `Kid ${fallbackIndex + 1}`;
   const {
     cancelTarget, setCancelTarget,
     cancelCharges, setCancelCharges,
@@ -568,6 +599,27 @@ export default function AdminEnquiries() {
     rangeStart: enquiriesRangeStart,
     rangeEnd: enquiriesRangeEnd,
   } = paginate(sortedFiltered, currentPage, ENQUIRIES_PAGE_SIZE);
+
+  // Bulk-loads real kid rows for whichever enquiries are on the current
+  // page (see kidsByEnquiry above) — re-runs only when the actual set of
+  // page ids changes, not on every paginatedEnquiries array reference.
+  useEffect(() => {
+    const idsWithKids = paginatedEnquiries.filter(e => e.kids_count > 0).map(e => e.id);
+    if (idsWithKids.length === 0) return;
+    let cancelled = false;
+    getKidsForEnquiries(idsWithKids)
+      .then(rows => {
+        if (cancelled) return;
+        const grouped: Record<string, Kid[]> = {};
+        for (const kid of rows) {
+          (grouped[kid.enquiry_id] ??= []).push(kid);
+        }
+        setKidsByEnquiry(grouped);
+      })
+      .catch(err => console.error('Failed to load kids for enquiries list:', err));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed to the page's set of enquiry ids, not the paginatedEnquiries array reference
+  }, [paginatedEnquiries.map(e => e.id).join(',')]);
 
   const counts = {
     all: scopedEnquiries.length,
@@ -1254,6 +1306,9 @@ export default function AdminEnquiries() {
               handleAdvance={handleAdvance}
               handleMarkNotInterested={handleMarkNotInterested}
               buildRowActions={buildRowActions}
+              kidsByEnquiry={kidsByEnquiry}
+              kidRowLabel={kidRowLabel}
+              onOpenKidPayment={openKidPayment}
             />
 
             <AdminEnquiriesMobileCards
@@ -1282,6 +1337,9 @@ export default function AdminEnquiries() {
               setBookingFollowUpTarget={setBookingFollowUpTarget}
               handleAdvance={handleAdvance}
               buildRowActions={buildRowActions}
+              kidsByEnquiry={kidsByEnquiry}
+              kidRowLabel={kidRowLabel}
+              onOpenKidPayment={openKidPayment}
             />
           </>
         )}
@@ -1308,13 +1366,25 @@ export default function AdminEnquiries() {
         paymentForm={paymentForm}
         setPaymentForm={setPaymentForm}
         getTripPrice={getTripPrice}
-        getTripChildPrice={getTripChildPrice}
         paymentHistory={paymentHistory}
         paymentHistoryLoading={paymentHistoryLoading}
         togglingNoShow={togglingNoShow}
         onToggleNoShow={handleToggleNoShow}
         onSave={handleSavePayment}
         savingPayment={savingPayment}
+      />
+
+      <AdminKidPaymentModal
+        kidPaymentTarget={kidPaymentTarget}
+        fallbackLabel={kidPaymentTarget ? kidRowLabel(kidPaymentTarget, (kidsByEnquiry[kidPaymentTarget.enquiry_id] || []).indexOf(kidPaymentTarget)) : ''}
+        onClose={() => setKidPaymentTarget(null)}
+        kidPaymentForm={kidPaymentForm}
+        setKidPaymentForm={setKidPaymentForm}
+        kidPaymentHistory={kidPaymentHistory}
+        kidPaymentHistoryLoading={kidPaymentHistoryLoading}
+        kidPaymentChildPrice={kidPaymentChildPrice}
+        savingKidPayment={savingKidPayment}
+        onSave={handleSaveKidPayment}
       />
 
       <DetailsModal

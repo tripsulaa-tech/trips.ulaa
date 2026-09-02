@@ -77,6 +77,24 @@ export async function updateKid(id: string, patch: Partial<Pick<Kid, 'name' | 'a
   if (error) throw error;
 }
 
+// Shared by recordKidPayment/generateKidPendingInvoice below — applies
+// this kid's own total-amount correction (auto-fetched from the trip's
+// child_price, see useKidPayment's openKidPayment) and/or a food
+// preference change alongside a payment, in the same round trip rather
+// than a second updateKid call. Only writes columns that actually
+// changed, same reasoning as every other targeted update in this file.
+async function syncKidProfile(
+  kid: Kid,
+  patch: { amount?: number | null; food_preference?: 'veg' | 'non_veg' | null }
+): Promise<void> {
+  const update: Partial<Pick<Kid, 'amount' | 'food_preference'>> = {};
+  if (patch.amount !== undefined && patch.amount !== kid.amount) update.amount = patch.amount ?? undefined;
+  if (patch.food_preference !== undefined && patch.food_preference !== kid.food_preference) update.food_preference = patch.food_preference;
+  if (Object.keys(update).length === 0) return;
+  const { error } = await supabase.from('kids').update(update).eq('id', kid.id);
+  if (error) throw error;
+}
+
 // Moves one kid's own status forward/back — independent of the parent
 // enquiry's status. Clears this kid's follow-up the moment it leaves
 // 'pending' (mirrors refreshJourneyStage's handling of
@@ -173,6 +191,16 @@ export async function recordKidPayment(
     payment_method?: string;
     utr_number?: string;
     notes?: string;
+    // Admin-picked type from the Kid Payment modal's own Payment Type
+    // dropdown — same options/meaning as the adult Track Payment modal's
+    // (see AdminKidPaymentModal). Wins over the auto-derived guess below
+    // when present; left undefined for older/simpler callers that don't
+    // offer the dropdown, which keeps the original auto-derived behavior.
+    payment_type?: 'full_payment' | 'advance' | 'balance' | 'installment';
+    // Lets the Kid Payment modal save a food preference edit in the same
+    // round trip as the payment — same field as updateKid's, just folded
+    // in here so the admin doesn't need a second save.
+    food_preference?: 'veg' | 'non_veg' | null;
   }
 ): Promise<Kid> {
   const newTotal = payment.amount !== undefined && payment.amount != null ? payment.amount : kid.amount;
@@ -188,9 +216,8 @@ export async function recordKidPayment(
 
   const isFirstPayment = (kid.amount_paid || 0) <= 0;
   const completesTotal = !!newTotal && newTotal > 0 && payment.amount_paid >= newTotal;
-  const invoiceType = isFirstPayment
-    ? (completesTotal ? 'full_payment' : 'advance')
-    : (completesTotal ? 'balance' : 'installment');
+  const invoiceType = payment.payment_type
+    || (isFirstPayment ? (completesTotal ? 'full_payment' : 'advance') : (completesTotal ? 'balance' : 'installment'));
 
   if (delta !== 0) {
     const { error: paymentError } = await supabase.from('payments').insert({
@@ -209,10 +236,7 @@ export async function recordKidPayment(
     if (paymentError) throw paymentError;
   }
 
-  if (newTotal !== kid.amount) {
-    const { error } = await supabase.from('kids').update({ amount: newTotal }).eq('id', kid.id);
-    if (error) throw error;
-  }
+  await syncKidProfile(kid, { amount: newTotal, food_preference: payment.food_preference });
 
   // Re-read the trigger-updated amount_paid rather than assuming it from
   // the delta, same reasoning as recordPayment/recordKidsPayment.
@@ -230,6 +254,61 @@ export async function recordKidPayment(
       `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(Math.abs(delta))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
     );
   }
+
+  return refreshed as Kid;
+}
+
+// Raises an invoice for this one kid's fee that hasn't been collected
+// yet — same idea as generatePendingInvoice in invoices.ts (enquiry-level),
+// just scoped to a kid_id. Inserted with status = 'pending', so
+// sync_kid_amount_paid() (add_kid_individual_payments.sql) leaves
+// kids.amount_paid untouched until it's later settled. Since this row still
+// carries the parent enquiry_id, it already surfaces in the enquiry's own
+// Invoices & Payments card (getPaymentsForEnquiry filters by enquiry_id
+// only) — so the existing Mark Paid flow there (markInvoicePaid) settles a
+// kid's pending invoice too, with no separate kid-scoped invoices UI needed.
+export async function generateKidPendingInvoice(
+  kid: Kid,
+  type: 'full_payment' | 'advance' | 'balance' | 'installment',
+  amount: number,
+  options?: {
+    notes?: string;
+    // Same "correct this kid's own total while raising the invoice" idea
+    // as recordKidPayment's `amount` — always the trip's live child_price
+    // from the modal, not admin-typed. See syncKidProfile.
+    newTotal?: number | null;
+    food_preference?: 'veg' | 'non_veg' | null;
+  }
+): Promise<Kid> {
+  if (amount <= 0) {
+    throw new Error('Invoice amount must be greater than zero.');
+  }
+
+  const { error: paymentError } = await supabase.from('payments').insert({
+    enquiry_id: kid.enquiry_id,
+    kid_id: kid.id,
+    for_kids: true,
+    amount,
+    payment_type: type,
+    status: 'pending',
+    notes: options?.notes,
+  });
+  if (paymentError) throw paymentError;
+
+  await syncKidProfile(kid, { amount: options?.newTotal, food_preference: options?.food_preference });
+
+  const { data: refreshed, error: refreshError } = await supabase
+    .from('kids')
+    .select('*')
+    .eq('id', kid.id)
+    .single();
+  if (refreshError) throw refreshError;
+
+  await logActivity(
+    kid.enquiry_id,
+    `Invoice generated · ${PAYMENT_TYPE_LOG_LABEL[type] || type}`,
+    `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(amount)} · pending`
+  );
 
   return refreshed as Kid;
 }

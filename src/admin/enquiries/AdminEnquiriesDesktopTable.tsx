@@ -15,7 +15,7 @@ import { TableHeaderBar, TablePagination, SortableTh } from '../../components/ui
 import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import type { useDragScroll } from '../../components/ui/dataTableUtils';
-import type { Enquiry, UpcomingTrip } from '../../types/types-index';
+import type { Enquiry, Kid, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, formatPrice } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG,
@@ -80,6 +80,13 @@ interface AdminEnquiriesDesktopTableProps {
   handleAdvance: (e: Enquiry) => void;
   handleMarkNotInterested: (e: Enquiry) => void;
   buildRowActions: (e: Enquiry) => ActionMenuItem[];
+
+  // Kids — real per-kid rows, bulk-loaded per page (see AdminEnquiries'
+  // kidsByEnquiry), falling back to enquiryGrouping's placeholder rows for
+  // any enquiry whose kids array hasn't landed yet (or is genuinely empty).
+  kidsByEnquiry: Record<string, Kid[]>;
+  kidRowLabel: (kid: Kid, fallbackIndex: number) => string;
+  onOpenKidPayment: (kid: Kid, tripId: string | undefined) => void;
 }
 
 /** Desktop/tablet table view of the enquiries list — extracted from
@@ -99,6 +106,7 @@ export default function AdminEnquiriesDesktopTable({
   tableScrollRef, dragHandlers, isDragging,
   updating, completingId, setDetailsTarget, openPayment, openFollowUpModal, setBookingFollowUpTarget,
   handleAdvance, handleMarkNotInterested, buildRowActions,
+  kidsByEnquiry, kidRowLabel, onOpenKidPayment,
 }: AdminEnquiriesDesktopTableProps) {
   return (
     <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
@@ -156,7 +164,20 @@ export default function AdminEnquiriesDesktopTable({
               const isHighlighted = highlightId === e.id;
               const clr = groupColor(e);
               const food = foodBadge(e);
-              const kidRows = kidDisplayRows(e);
+              const realKids = kidsByEnquiry[e.id] || [];
+              const kidRows = realKids.length > 0
+                ? realKids.map((kid, ki) => ({
+                    key: kid.id,
+                    label: kidRowLabel(kid, ki),
+                    onPayment: () => onOpenKidPayment(kid, e.trip_id),
+                    paymentText: kid.amount ? `${formatPrice(kid.amount_paid || 0)} / ${formatPrice(kid.amount)}` : 'No fee set yet',
+                  }))
+                : kidDisplayRows(e).map(kr => ({
+                    key: kr.id,
+                    label: `Kid ${kr.index}`,
+                    onPayment: () => openPayment(e),
+                    paymentText: e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'No kids fee set',
+                  }));
               return (
                 <Fragment key={e.id}>
                 <motion.tr
@@ -387,7 +408,7 @@ export default function AdminEnquiriesDesktopTable({
                 </motion.tr>
                 {kidRows.map(kid => (
                   <motion.tr
-                    key={kid.id}
+                    key={kid.key}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className={`opacity-80 ${clr ? clr.row : 'bg-slate-50/40'}`}
@@ -397,7 +418,7 @@ export default function AdminEnquiriesDesktopTable({
                     <td className="px-4 py-4">
                       <p className="pl-4 font-medium text-dark-muted flex items-center gap-1.5">
                         <Baby size={13} className="shrink-0" aria-hidden="true" />
-                        Kid {kid.index}
+                        {kid.label}
                         <span className="text-dark-muted/60 font-normal text-xs">of {e.full_name}</span>
                       </p>
                     </td>
@@ -448,16 +469,14 @@ export default function AdminEnquiriesDesktopTable({
                     </td>
                     <td className="px-2 py-4 text-left whitespace-nowrap">
                       <button
-                        onClick={() => openPayment(e)}
-                        title={`Manage ${e.full_name}'s kids fee — opens the same Payment modal as their own booking`}
+                        onClick={kid.onPayment}
+                        title={`Manage ${kid.label}'s own payment — independent of every other kid on this booking`}
                         className="text-left hover:opacity-75 transition-opacity"
                       >
                         <p className="text-dark text-xs">
                           <span className="font-medium">Included</span>
                           <span className="text-dark-muted"> · </span>
-                          <span className="text-dark-muted">
-                            {e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'No kids fee set'}
-                          </span>
+                          <span className="text-dark-muted">{kid.paymentText}</span>
                         </p>
                       </button>
                     </td>

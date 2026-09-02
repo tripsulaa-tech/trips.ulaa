@@ -73,5 +73,6 @@ export {
   deleteKid,
   getAllKidsFoodPreferences,
   recordKidPayment,
+  generateKidPendingInvoice,
   getPaymentsForKid,
 } from './enquiries/kids';

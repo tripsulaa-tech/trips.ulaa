@@ -27,7 +27,7 @@ import FoodMark from '../../components/ui/FoodMark';
 import { TablePagination, ContactQuickLinks } from '../../components/ui/DataTableChrome';
 import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
-import type { Enquiry, UpcomingTrip } from '../../types/types-index';
+import type { Enquiry, Kid, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, formatPrice } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG,
@@ -74,6 +74,11 @@ interface AdminEnquiriesMobileCardsProps {
   setBookingFollowUpTarget: (e: Enquiry) => void;
   handleAdvance: (e: Enquiry) => void;
   buildRowActions: (e: Enquiry) => ActionMenuItem[];
+
+  // Kids — see AdminEnquiriesDesktopTable's matching props.
+  kidsByEnquiry: Record<string, Kid[]>;
+  kidRowLabel: (kid: Kid, fallbackIndex: number) => string;
+  onOpenKidPayment: (kid: Kid, tripId: string | undefined) => void;
 }
 
 /** Mobile card-list view of the enquiries list (tap a card to expand full
@@ -90,6 +95,7 @@ export default function AdminEnquiriesMobileCards({
   activeGroup, highlightId, groupColor, groupLabel, cardRefs,
   updating, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
   openPayment, openFollowUpModal, setBookingFollowUpTarget, handleAdvance, buildRowActions,
+  kidsByEnquiry, kidRowLabel, onOpenKidPayment,
 }: AdminEnquiriesMobileCardsProps) {
   const navigate = useNavigate();
 
@@ -104,7 +110,18 @@ export default function AdminEnquiriesMobileCards({
           const isOpen = expandedId === e.id;
           const isHighlighted = highlightId === e.id;
           const clr = groupColor(e);
-          const kidRows = kidDisplayRows(e);
+          const realKids = kidsByEnquiry[e.id] || [];
+          const kidRows = realKids.length > 0
+            ? realKids.map((kid, ki) => ({
+                id: kid.id,
+                label: kidRowLabel(kid, ki),
+                realKid: kid as Kid | null,
+              }))
+            : kidDisplayRows(e).map(kr => ({
+                id: kr.id,
+                label: `Kid ${kr.index}`,
+                realKid: null as Kid | null,
+              }));
           return (
             <Fragment key={e.id}>
             <motion.div
@@ -457,7 +474,7 @@ export default function AdminEnquiriesMobileCards({
                   >
                     <div className="w-full flex items-start justify-between gap-3">
                       <p className="font-medium text-sm text-dark truncate flex items-center gap-1.5 min-w-0">
-                        <span className="text-dark-muted text-xs font-normal shrink-0">Kid {kid.index}</span>
+                        <span className="text-dark-muted text-xs font-normal shrink-0">{kid.label}</span>
                         <span className="text-dark-muted text-xs font-normal truncate">of {e.full_name}</span>
                       </p>
                       <div className="flex items-center gap-2 shrink-0">
@@ -601,22 +618,24 @@ export default function AdminEnquiriesMobileCards({
                           </span>
                           <div className="min-w-0">
                             <p className="text-dark-muted text-xs">Quick Contact</p>
-                            <ContactQuickLinks phone={e.phone} email={e.email} name={`${e.full_name} (Kid ${kid.index})`} tripTitle={e.trip_title} size="md" />
+                            <ContactQuickLinks phone={e.phone} email={e.email} name={`${e.full_name} (${kid.label})`} tripTitle={e.trip_title} size="md" />
                           </div>
                         </div>
                       </div>
                     </div>
 
                     <button
-                      onClick={() => openPayment(e)}
-                      title={`Manage ${e.full_name}'s kids fee — opens the same Payment modal as their own booking`}
+                      onClick={() => (kid.realKid ? onOpenKidPayment(kid.realKid, e.trip_id) : openPayment(e))}
+                      title={kid.realKid ? `Manage ${kid.label}'s own payment — independent of every other kid on this booking` : `Manage ${e.full_name}'s kids fee — opens the same Payment modal as their own booking`}
                       className="w-full text-left bg-background-warm rounded-md px-3 py-2 flex items-center gap-2.5 hover:opacity-75 transition-opacity"
                     >
                       <IndianRupee size={14} className="text-dark-muted shrink-0" aria-hidden="true" />
                       <div className="min-w-0">
-                        <p className="text-dark-muted text-[10px]">Kids Fee (whole booking)</p>
+                        <p className="text-dark-muted text-[10px]">{kid.realKid ? `${kid.label}'s Fee` : 'Kids Fee (whole booking)'}</p>
                         <p className="text-dark text-xs truncate">
-                          {e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'Not set'}
+                          {kid.realKid
+                            ? (kid.realKid.amount ? `${formatPrice(kid.realKid.amount_paid || 0)} / ${formatPrice(kid.realKid.amount)}` : 'Not set')
+                            : (e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'Not set')}
                         </p>
                       </div>
                     </button>

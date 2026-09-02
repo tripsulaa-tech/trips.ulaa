@@ -19,7 +19,6 @@ export default function PaymentModal({
   paymentForm,
   setPaymentForm,
   getTripPrice,
-  getTripChildPrice,
   paymentHistory,
   paymentHistoryLoading,
   togglingNoShow,
@@ -32,7 +31,6 @@ export default function PaymentModal({
   paymentForm: PaymentForm;
   setPaymentForm: Dispatch<SetStateAction<PaymentForm>>;
   getTripPrice: (tripId: string | undefined, packageType: Enquiry['package_type']) => number | undefined;
-  getTripChildPrice: (tripId: string | undefined) => number | undefined;
   paymentHistory: Payment[];
   paymentHistoryLoading: boolean;
   togglingNoShow: boolean;
@@ -46,17 +44,12 @@ export default function PaymentModal({
   // a missing payment method, etc. show up the moment the admin enters or
   // selects it, instead of only surfacing behind an alert() after Save.
   const paymentErrors = paymentTarget
-    ? validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0, paymentTarget.kids_count > 0
-      ? { total: paymentForm.kids_amount === '' ? 0 : Number(paymentForm.kids_amount), alreadyPaid: paymentTarget.kids_amount_paid || 0 }
-      : undefined)
+    ? validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0)
     : {};
   // Only meaningful when a trip is linked — that's the list price a
   // discount comes off of. No-trip (general) enquiries have no list price,
   // so they keep the old free-typed Total Amount field further down.
   const listPrice = paymentTarget?.trip_id ? getTripPrice(paymentTarget.trip_id, paymentForm.package_type) : undefined;
-  // Same idea, for the trip's flat per-kid price — see the Kids Fee
-  // section further down.
-  const kidsListPrice = paymentTarget?.trip_id ? getTripChildPrice(paymentTarget.trip_id) : undefined;
   const hasPaymentErrors = Object.keys(paymentErrors).length > 0;
   const isDirty =
     paymentForm.total_amount !== '' ||
@@ -326,55 +319,6 @@ export default function PaymentModal({
                 utrError={paymentErrors.payment_utr}
                 errorClassName={errorClass}
               />
-            </div>
-          )}
-
-          {paymentTarget.kids_count > 0 && (
-            <div className="bg-amber-50/60 rounded-md p-3 space-y-3">
-              <p className="text-xs font-medium text-amber-800">
-                Kids Fee — tracked independently of the adult booking above ({paymentTarget.kids_count} kid{paymentTarget.kids_count > 1 ? 's' : ''})
-              </p>
-              {kidsListPrice != null && (
-                <p className="text-xs text-dark-muted">
-                  Trip's per-kid price — <span className="font-medium text-dark">{formatPrice(kidsListPrice)}</span> × {paymentTarget.kids_count} = <span className="font-medium text-dark">{formatPrice(kidsListPrice * paymentTarget.kids_count)}</span>
-                </p>
-              )}
-              <div>
-                <label htmlFor="pay-kids-total" className="block text-sm font-medium text-dark mb-1">Kids Fee Total (₹)</label>
-                <input
-                  id="pay-kids-total"
-                  type="number"
-                  min={0}
-                  value={paymentForm.kids_amount}
-                  onChange={e => setPaymentForm(f => ({ ...f, kids_amount: parseNonNegative(e.target.value) }))}
-                  className={inputClass}
-                  placeholder={kidsListPrice != null ? `e.g. ${kidsListPrice * paymentTarget.kids_count}` : 'e.g. 6000'}
-                />
-                <p className="text-[11px] text-dark-muted mt-1">
-                  Prefilled from the trip's per-kid price above — override if it needs correcting for this booking.
-                </p>
-              </div>
-              <p className="text-sm text-dark-muted">
-                Kids total <span className="font-medium text-dark">{formatPrice(paymentForm.kids_amount === '' ? 0 : Number(paymentForm.kids_amount))}</span>
-                {' · '}already paid <span className="font-medium text-dark">{formatPrice(paymentTarget.kids_amount_paid || 0)}</span>
-                {' · '}pending <span className="font-medium text-dark">{formatPrice(Math.max(0, (paymentForm.kids_amount === '' ? 0 : Number(paymentForm.kids_amount)) - (paymentTarget.kids_amount_paid || 0)))}</span>
-              </p>
-              <div>
-                <label htmlFor="pay-kids-amount" className="block text-sm font-medium text-dark mb-1">Kids Amount Being Paid Now (₹)</label>
-                <input
-                  id="pay-kids-amount"
-                  type="number"
-                  min={0}
-                  value={paymentForm.kids_amount_paid}
-                  onChange={e => setPaymentForm(f => ({ ...f, kids_amount_paid: parseNonNegative(e.target.value) }))}
-                  aria-invalid={!!paymentErrors.kids_amount_paid}
-                  aria-describedby={paymentErrors.kids_amount_paid ? 'pay-kids-amount-error' : undefined}
-                  className={inputClass}
-                  placeholder="e.g. 2000"
-                />
-                {paymentErrors.kids_amount_paid && <p id="pay-kids-amount-error" role="alert" className={errorClass}>{paymentErrors.kids_amount_paid}</p>}
-                <p className="text-[11px] text-dark-muted mt-1">Uses the same payment method/UTR entered above for this transaction.</p>
-              </div>
             </div>
           )}
 

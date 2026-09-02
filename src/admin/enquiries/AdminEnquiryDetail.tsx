@@ -824,7 +824,7 @@ export default function AdminEnquiryDetail() {
           onMarkCompleted={handleMarkCompleted}
         />
 
-        <AdminEnquiryKidsCard enquiry={enquiry} />
+        <AdminEnquiryKidsCard enquiry={enquiry} getTripChildPrice={getTripChildPrice} />
 
         <AdminEnquiryInvoicesCard
           enquiry={enquiry}
@@ -864,7 +864,6 @@ export default function AdminEnquiryDetail() {
         togglingNoShow={togglingNoShow}
         onToggleNoShow={handleToggleNoShow}
         getTripPrice={getTripPrice}
-        getTripChildPrice={getTripChildPrice}
       />
 
       {/* Generate Invoice modal — same component the Enquiries list uses. */}
