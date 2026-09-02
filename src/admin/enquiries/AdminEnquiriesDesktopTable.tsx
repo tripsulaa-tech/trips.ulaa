@@ -9,6 +9,7 @@ import {
   Baby,
   CalendarDot as CalendarClock,
   UserMinus,
+  ArrowRight,
   ArrowsClockwise as RefreshCw,
   Bird,
   ArrowSquareOut,
@@ -33,7 +34,7 @@ import { formatDate, formatTime, formatPrice } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG,
   foodBadge, foodPreferenceKey, SOURCE_CONFIG,
-  journeyBadge, nextManualAction, canMarkNotInterested,
+  journeyBadge, nextManualAction,
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
   kidStatusBadge, canMarkKidNotInterested, canReopenKid, kidNotInterestedReasonLabel, nextKidManualAction,
@@ -93,7 +94,6 @@ interface AdminEnquiriesDesktopTableProps {
   openFollowUpModal: (e: Enquiry) => void;
   setBookingFollowUpTarget: (e: Enquiry) => void;
   handleAdvance: (e: Enquiry) => void;
-  handleMarkNotInterested: (e: Enquiry) => void;
   buildRowActions: (e: Enquiry) => ActionMenuItem[];
 
   // Kids — real per-kid rows, bulk-loaded per page (see AdminEnquiries'
@@ -160,7 +160,7 @@ export default function AdminEnquiriesDesktopTable({
   activeGroup, highlightId, groupColor, groupLabel, cardRefs,
   tableScrollRef, dragHandlers, isDragging,
   updating, completingId, setDetailsTarget, openPayment, openFollowUpModal, setBookingFollowUpTarget,
-  handleAdvance, handleMarkNotInterested, buildRowActions,
+  handleAdvance, buildRowActions,
   kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested, onReopenKid,
   onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
   invoiceBusyId, onDownloadKidInvoice, onShareKidInvoice, onClearKidFollowUp,
@@ -279,8 +279,13 @@ export default function AdminEnquiriesDesktopTable({
                   );
                 }
                 if (rk) {
-                  const nma = nextKidManualAction(rk);
-                  if (nma) items.push({ label: nma.label, icon: nma.icon, onClick: () => onUpdateKidStatus(rk, nma.status) });
+                  // nma shown as its own visible chip on the row already
+                  // (dispatched via onAdvanceKid, which routes a kid's
+                  // first "Mark Contacted" through the Log Call Outcome
+                  // popup — see AdminEnquiries' handleAdvanceKid) — not
+                  // duplicated here, mirroring the mobile kid card's own
+                  // buildKidActions and the adult row's kebab (neither
+                  // repeats their own nma chip either).
                   if (canMarkKidNotInterested(rk)) items.push({ label: 'Not Interested', icon: UserMinus, onClick: () => onMarkKidNotInterested(rk) });
                   if (canReopenKid(rk)) items.push({ label: 'Reopen', icon: RefreshCw, onClick: () => onReopenKid(rk) });
                   // Clear Follow-up — counterpart to the adult kebab's own
@@ -535,17 +540,23 @@ export default function AdminEnquiriesDesktopTable({
                           {nma.label}
                         </button>
                       )}
-                      {canMarkNotInterested(e) && (
-                        <button
-                          onClick={() => handleMarkNotInterested(e)}
-                          disabled={updating === e.id || completingId === e.id}
-                          aria-label={`Mark ${e.full_name} as Not Interested (Close Query)`}
-                          title="Not Interested (Close Query)"
-                          className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
-                        >
-                          <UserMinus size={12} className="shrink-0" aria-hidden="true" />
-                        </button>
-                      )}
+                      {/* "Not Interested (Close Query)" used to have its
+                          own standalone icon button here too — dropped
+                          since it's already one click away in the kebab
+                          below (see useRowActions.ts), and having it twice
+                          on the same row was redundant. This slot now
+                          carries the same "View Full CRM" jump the mobile
+                          card's footer already has next to its own
+                          Mark Contacted/nma chip, which the desktop table
+                          had no equivalent of before. */}
+                      <button
+                        onClick={() => navigate(`/admin/enquiries/${e.id}`)}
+                        disabled={updating === e.id || completingId === e.id}
+                        title="View Full CRM"
+                        className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                      >
+                        View Full CRM <ArrowRight size={12} className="shrink-0" aria-hidden="true" />
+                      </button>
                       <ActionsMenu disabled={updating === e.id} items={buildRowActions(e)} />
                     </div>
                   </td>
@@ -721,18 +732,25 @@ export default function AdminEnquiriesDesktopTable({
                             </button>
                           );
                         })()}
-                        {kid.realKid && canMarkKidNotInterested(kid.realKid) && (
-                          <button
-                            onClick={() => onMarkKidNotInterested(kid.realKid!)}
-                            disabled={updating === kid.realKid.id}
-                            aria-label={`Mark ${kid.label} as Not Interested`}
-                            title="Not Interested"
-                            className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
-                          >
-                            <UserMinus size={12} className="shrink-0" aria-hidden="true" />
-                          </button>
-                        )}
-                        {/* Counterpart to the button above — undoes a Not
+                        {/* "Not Interested" used to have its own
+                            standalone icon button here too — dropped
+                            since it's already one click away in the kebab
+                            below (see buildKidActions), and having it
+                            twice on the same row was redundant. This slot
+                            now carries the same View Full CRM / View
+                            Enquiry jump the kid card's mobile footer
+                            already has next to its own Mark Contacted/nma
+                            chip, which the desktop table had no
+                            equivalent of before. */}
+                        <button
+                          onClick={() => (kid.realKid ? onViewKidDetails(kid.realKid) : navigate(`/admin/enquiries/${e.id}`))}
+                          disabled={!!kid.realKid && updating === kid.realKid.id}
+                          title={kid.realKid ? 'View Full CRM' : 'View Enquiry'}
+                          className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                        >
+                          {kid.realKid ? 'View Full CRM' : 'View Enquiry'} <ArrowRight size={12} className="shrink-0" aria-hidden="true" />
+                        </button>
+                        {/* Counterpart to the Not Interested kebab item —
                             Interested marking, mirroring the adult side's
                             Reopen Enquiry action. */}
                         {kid.realKid && canReopenKid(kid.realKid) && (

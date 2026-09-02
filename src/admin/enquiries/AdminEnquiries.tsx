@@ -1537,7 +1537,6 @@ export default function AdminEnquiries() {
               openFollowUpModal={openFollowUpModal}
               setBookingFollowUpTarget={setBookingFollowUpTarget}
               handleAdvance={handleAdvance}
-              handleMarkNotInterested={handleMarkNotInterested}
               buildRowActions={buildRowActions}
               kidsByEnquiry={kidsByEnquiry}
               kidRowLabel={kidRowLabel}

@@ -784,18 +784,12 @@ export default function AdminEnquiriesMobileCards({
                         the row doesn't try to fit every possible
                         action inline. */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      {kid.realKid && (kidFollowUpStatus(kid.realKid) || canSetKidFollowUp(kid.realKid)) && (
-                        <Button
-                          variant={kidFollowUpStatus(kid.realKid)?.isOverdue ? 'outlineDanger' : kidFollowUpStatus(kid.realKid) ? 'secondary' : 'outline'}
-                          size="sm"
-                          onClick={() => onViewKidDetails(kid.realKid!)}
-                          disabled={updating === kid.realKid.id}
-                          className="flex-1 min-w-[140px] text-xs !gap-1.5 whitespace-nowrap"
-                        >
-                          <CalendarClock size={14} aria-hidden="true" />
-                          {kidFollowUpStatus(kid.realKid)?.label || 'Set Follow-up'}
-                        </Button>
-                      )}
+                      {/* Set Follow-up chip intentionally removed for kid
+                          cards — kids share the booking's follow-up flow
+                          via the parent enquiry, so keeping a second,
+                          per-kid follow-up chip here was redundant and
+                          also crowded out Mark Contacted / View Full CRM
+                          onto their own row. */}
                       {kid.realKid && nextKidManualAction(kid.realKid) && (() => {
                         const knma = nextKidManualAction(kid.realKid!)!;
                         return (
