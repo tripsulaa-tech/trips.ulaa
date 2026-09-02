@@ -459,16 +459,27 @@ export function journeyBadge(e: Enquiry) {
 // cards, where each kid now gets its own row/action) and
 // AdminEnquiryKidsCard on the detail page, so the badge/label/action
 // eligibility can't drift between the two views.
+//
+// Label and color for every state a kid shares with the adult journey
+// (pending~new_enquiry, confirmed, checked_in, completed, cancelled,
+// not_interested) are kept identical to JOURNEY_STAGE_CONFIG's matching
+// entry above — same word, same color — so an admin's "Confirmed is teal"
+// mental model from the adult row above carries straight down to the kid
+// rows under it instead of needing a second palette. 'pending' specifically
+// is labelled "New Enquiry": it's the kid's exact equivalent of the adult's
+// first, untouched state, so it gets the adult's own label rather than a
+// differently-worded one for the same thing.
 export const KID_STATUS_CONFIG: Record<KidStatus, { label: string; color: string; icon: typeof Clock }> = {
-  pending: { label: 'Pending', color: 'bg-amber-50 text-amber-700', icon: Clock },
-  confirmed: { label: 'Confirmed', color: 'bg-green-50 text-green-700', icon: CheckCircle2 },
-  checked_in: { label: 'Checked In', color: 'bg-blue-50 text-blue-700', icon: LogIn },
+  pending: { label: 'New Enquiry', color: 'bg-blue-100 text-blue-700', icon: Clock },
+  contacted: { label: 'Contacted', color: 'bg-amber-100 text-amber-700', icon: RefreshCw },
+  confirmed: { label: 'Confirmed', color: 'bg-teal-100 text-teal-700', icon: CheckCircle2 },
+  checked_in: { label: 'Checked In', color: 'bg-indigo-100 text-indigo-700', icon: LogIn },
   // Post-trip terminal state, the kid-scoped equivalent of
   // enquiries.booking_status reaching 'completed' — see
   // add_kids_completed_no_show.sql.
-  completed: { label: 'Completed', color: 'bg-purple-50 text-purple-700', icon: PartyPopper },
-  cancelled: { label: 'Cancelled', color: 'bg-red-50 text-red-700', icon: XCircle },
-  not_interested: { label: 'Not Interested', color: 'bg-gray-100 text-gray-600', icon: UserMinus },
+  completed: { label: 'Completed', color: 'bg-green-100 text-green-700', icon: PartyPopper },
+  cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', icon: XCircle },
+  not_interested: { label: 'Not Interested', color: 'bg-slate-200 text-dark-muted', icon: UserMinus },
 };
 
 // A kid's independent "No Show" attendance flag (kids.is_no_show) — same
@@ -484,12 +495,14 @@ export function kidStatusBadge(kid: Kid) {
 
 // Whether the row-level "Not Interested" quick action makes sense for this
 // kid right now — hidden once the kid's already in some closed-out or
-// later state (cancelled/not_interested/checked_in), same as
-// canMarkNotInterested's gating on the adult side just above. Unlike the
-// adult version, this isn't gated on payment — kids never have seat/refund
-// consequences tied to their status.
+// later state (cancelled/not_interested/checked_in), and, same as
+// canMarkNotInterested's gating on the adult side just above, only while
+// no money has actually come in for this kid: once amount_paid > 0 a
+// dropped kid needs Mark Cancelled instead (which carries the refund
+// conversation Not Interested doesn't), not a one-click close-out that
+// quietly leaves paid money unaccounted for.
 export function canMarkKidNotInterested(kid: Kid): boolean {
-  return kid.status === 'pending' || kid.status === 'confirmed';
+  return (kid.status === 'pending' || kid.status === 'contacted' || kid.status === 'confirmed') && (kid.amount_paid || 0) <= 0;
 }
 
 // Counterpart to canMarkKidNotInterested — whether the row-level "Reopen"
@@ -524,6 +537,8 @@ export function canMarkKidNoShow(kid: Kid): boolean {
 export function nextKidManualAction(kid: Kid): { label: string; status: KidStatus; icon: typeof Clock } | null {
   switch (kid.status) {
     case 'pending':
+      return { label: 'Mark Contacted', status: 'contacted', icon: RefreshCw };
+    case 'contacted':
       return { label: 'Mark Confirmed', status: 'confirmed', icon: CheckCircle2 };
     case 'confirmed':
       return { label: 'Mark Checked In', status: 'checked_in', icon: LogIn };
@@ -557,7 +572,7 @@ export function kidFollowUpStatus(kid: Kid): { label: string; color: string; ico
 // checked in/cancelled/not_interested there's nothing left to follow up
 // on).
 export function canSetKidFollowUp(kid: Kid): boolean {
-  return kid.status === 'pending' || kid.status === 'confirmed';
+  return kid.status === 'pending' || kid.status === 'contacted' || kid.status === 'confirmed';
 }
 
 // The invoice PDF pipeline (src/utils/invoicePdf.ts and pdf/invoice/*)
@@ -598,8 +613,12 @@ export function kidAsInvoiceEnquiry(kid: Kid, enquiry: Enquiry, kidLabel: string
 // booking needs its own Undo Check In before Cancel Booking reappears. A
 // completed kid can't be cancelled either, same "trip already happened"
 // reasoning canCancelBooking applies via journey_stage === 'completed'.
+// Also excludes 'pending' and 'contacted' (the kid's own New Enquiry/
+// Contacted stages), mirroring canCancelBooking's refusal to cancel
+// journey_stage 'new_enquiry'/'contacted' — a lead nobody's agreed to book
+// yet gets closed out via Not Interested, not Cancel.
 export function canCancelKid(kid: Kid): boolean {
-  return kid.status !== 'cancelled' && kid.status !== 'not_interested' && kid.status !== 'checked_in' && kid.status !== 'completed';
+  return kid.status !== 'pending' && kid.status !== 'contacted' && kid.status !== 'cancelled' && kid.status !== 'not_interested' && kid.status !== 'checked_in' && kid.status !== 'completed';
 }
 
 // True when this enquiry was closed out before ever becoming a paying

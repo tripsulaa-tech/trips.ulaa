@@ -38,17 +38,22 @@ import { FOOD_PREFERENCE_OPTIONS } from '../../constants/foodPreference';
 import { formatPrice } from '../../utils/utils-index';
 import {
   kidStatusBadge, KID_NO_SHOW_BADGE, canMarkKidNotInterested, canReopenKid,
-  canMarkKidNoShow, kidNotInterestedReasonLabel,
+  canMarkKidNoShow, kidNotInterestedReasonLabel, KID_STATUS_CONFIG,
 } from '../enquiries/AdminEnquiryCommon';
 import { kidFoodBadge, kidPaymentBadge } from './kidsShared';
 
+// Labels pulled straight from KID_STATUS_CONFIG (AdminEnquiryCommon.ts) —
+// this used to hardcode its own copy, which is how 'pending' ended up
+// reading "Pending" here while the Enquiries list called the very same
+// state "New Enquiry". One label per status, defined once.
 const STATUS_OPTIONS: { value: KidStatus; label: string }[] = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'checked_in', label: 'Checked In' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
-  { value: 'not_interested', label: 'Not Interested' },
+  { value: 'pending', label: KID_STATUS_CONFIG.pending.label },
+  { value: 'contacted', label: KID_STATUS_CONFIG.contacted.label },
+  { value: 'confirmed', label: KID_STATUS_CONFIG.confirmed.label },
+  { value: 'checked_in', label: KID_STATUS_CONFIG.checked_in.label },
+  { value: 'completed', label: KID_STATUS_CONFIG.completed.label },
+  { value: 'cancelled', label: KID_STATUS_CONFIG.cancelled.label },
+  { value: 'not_interested', label: KID_STATUS_CONFIG.not_interested.label },
 ];
 
 export default function AdminKidDetail() {

@@ -21,7 +21,7 @@ import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import { getPaymentsForEnquiry, getKidsForEnquiries, updateKidStatus, deleteKid } from '../../services/api';
+import { getPaymentsForEnquiry, getKidsForEnquiries, updateKidStatus, recordKidContactOutcome, deleteKid } from '../../services/api';
 import { logKidActivity, setKidFollowUp, updateKidNoShow } from '../../services/api/enquiries/kids';
 import { subscribeToTable } from '../../services/realtime';
 import { useConfirm } from '../../components/ui/useConfirm';
@@ -67,6 +67,8 @@ import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
 import MarkPaidModal from './AdminMarkPaidModal';
 import NotInterestedModal from './AdminNotInterestedModal';
 import AdminKidNotInterestedModal from './AdminKidNotInterestedModal';
+import AdminKidContactOutcomeModal from './AdminKidContactOutcomeModal';
+import type { KidContactOutcomeTarget, KidContactOutcomeResult } from './AdminKidContactOutcomeModal';
 import FollowUpModal from './AdminFollowUpModal';
 import BookingFollowUpModal from './AdminBookingFollowUpModal';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
@@ -272,6 +274,60 @@ export default function AdminEnquiries() {
     } finally {
       setUpdating(null);
     }
+  };
+  // Log Call Outcome for a kid — the kid-scoped equivalent of
+  // handleAdvance/handleSaveContactOutcome in useEnquiryStatusActions.ts.
+  // Replaces the old direct "Mark Contacted" status flip for a kid's own
+  // *first* contact only (status still starts at 'pending'): status never
+  // becomes 'contacted' until this popup is saved. Every later nma step
+  // for the kid (Mark Confirmed, Mark Checked In, ...) stays a direct
+  // handleUpdateKidStatus call via handleAdvanceKid below — there's no
+  // "next call" concept for those the way there is for the first contact.
+  // See AdminKidContactOutcomeModal.tsx and recordKidContactOutcome() in
+  // services/api/enquiries/kids.ts.
+  const [kidContactOutcomeTarget, setKidContactOutcomeTarget] = useState<KidContactOutcomeTarget | null>(null);
+  const [savingKidContactOutcome, setSavingKidContactOutcome] = useState(false);
+  const handleSaveKidContactOutcome = async (result: KidContactOutcomeResult) => {
+    if (!kidContactOutcomeTarget) return;
+    const { kid, tripId } = kidContactOutcomeTarget;
+    setSavingKidContactOutcome(true);
+    try {
+      const updated = await recordKidContactOutcome(kid.id, {
+        outcome: result.outcome,
+        notes: result.notes,
+        followUpAt: result.followUpAt || null,
+        closedReason: result.closedReason,
+      });
+      setKidsByEnquiry(prev => {
+        const list = prev[kid.enquiry_id];
+        if (!list) return prev;
+        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? updated : k)) };
+      });
+      setKidContactOutcomeTarget(null);
+      // Interested is the one outcome that moves towards a booking — open
+      // this kid's own Payment modal right away, same as the adult side's
+      // auto-open-on-Contacted behaviour, so the admin can record the
+      // advance in one flow.
+      if (result.outcome === 'interested') {
+        openKidPayment(updated, tripId);
+      }
+    } finally {
+      setSavingKidContactOutcome(false);
+    }
+  };
+  // Single entry point for a kid row's "next step" chip — dispatches to
+  // the Log Call Outcome popup for the kid's first contact (pending ->
+  // contacted), same as handleAdvance does for the adult side, or applies
+  // every later status jump (Confirmed/Checked In/Completed) directly,
+  // same as before. `status` is nextKidManualAction(kid)'s own suggested
+  // next status, passed in from the row rather than recomputed here so
+  // this stays a plain dispatcher.
+  const handleAdvanceKid = (kid: Kid, status: KidStatus, label: string, enquiry: Enquiry) => {
+    if (kid.status === 'pending' && status === 'contacted') {
+      setKidContactOutcomeTarget({ kid, label, parentName: enquiry.full_name, tripTitle: enquiry.trip_title, tripId: enquiry.trip_id });
+      return;
+    }
+    handleUpdateKidStatus(kid, status);
   };
   // Toggles a kid's independent is_no_show flag, right from its own row —
   // same idea as handleUpdateKidStatus just above but for the separate
@@ -1489,6 +1545,7 @@ export default function AdminEnquiries() {
               onMarkKidNotInterested={handleMarkKidNotInterested}
               onReopenKid={handleReopenKid}
               onUpdateKidStatus={handleUpdateKidStatus}
+              onAdvanceKid={handleAdvanceKid}
               onToggleKidNoShow={handleToggleKidNoShow}
               onDeleteKid={handleDeleteKid}
               onViewKidDetails={kid => navigate(`/admin/kids/${kid.id}`)}
@@ -1530,6 +1587,7 @@ export default function AdminEnquiries() {
               onMarkKidNotInterested={handleMarkKidNotInterested}
               onReopenKid={handleReopenKid}
               onUpdateKidStatus={handleUpdateKidStatus}
+              onAdvanceKid={handleAdvanceKid}
               onToggleKidNoShow={handleToggleKidNoShow}
               onDeleteKid={handleDeleteKid}
               onViewKidDetails={kid => navigate(`/admin/kids/${kid.id}`)}
@@ -1656,6 +1714,13 @@ export default function AdminEnquiries() {
         setClosedReason={setKidClosedReason}
         onConfirm={handleConfirmKidNotInterested}
         updating={updating}
+      />
+
+      <AdminKidContactOutcomeModal
+        target={kidContactOutcomeTarget}
+        onClose={() => setKidContactOutcomeTarget(null)}
+        onSave={handleSaveKidContactOutcome}
+        saving={savingKidContactOutcome}
       />
 
       <FollowUpModal

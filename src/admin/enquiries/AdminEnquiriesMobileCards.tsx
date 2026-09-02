@@ -97,6 +97,11 @@ interface AdminEnquiriesMobileCardsProps {
   // Powers the kid card's kebab menu — see AdminEnquiriesDesktopTable's
   // matching props / AdminEnquiries' handleUpdateKidStatus/handleDeleteKid.
   onUpdateKidStatus: (kid: Kid, status: KidStatus) => void;
+  // Single "next step" chip dispatcher — routes a kid's first contact
+  // (pending -> contacted) through the Log Call Outcome popup instead of
+  // flipping status directly; every later step still falls through to
+  // onUpdateKidStatus above. See AdminEnquiries' handleAdvanceKid.
+  onAdvanceKid: (kid: Kid, status: KidStatus, label: string, enquiry: Enquiry) => void;
   // Toggles a kid's independent is_no_show flag — see canMarkKidNoShow /
   // AdminEnquiries' handleToggleKidNoShow.
   onToggleKidNoShow: (kid: Kid, isNoShow: boolean) => void;
@@ -127,7 +132,7 @@ export default function AdminEnquiriesMobileCards({
   updating, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
   openPayment, openFollowUpModal, setBookingFollowUpTarget, handleAdvance, buildRowActions,
   kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested, onReopenKid,
-  onUpdateKidStatus, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
+  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
   onDownloadKidInvoice, onShareKidInvoice, onClearKidFollowUp,
 }: AdminEnquiriesMobileCardsProps) {
   const navigate = useNavigate();
@@ -179,8 +184,9 @@ export default function AdminEnquiriesMobileCards({
               );
             }
             if (rk) {
-              const nma = nextKidManualAction(rk);
-              if (nma) items.push({ label: nma.label, icon: nma.icon, onClick: () => onUpdateKidStatus(rk, nma.status) });
+              // nma shown as its own visible button on the card footer
+              // now (mirrors the adult row's nma button) — not
+              // duplicated here.
               if (canMarkKidNotInterested(rk)) items.push({ label: 'Not Interested', icon: UserMinus, onClick: () => onMarkKidNotInterested(rk) });
               if (canReopenKid(rk)) items.push({ label: 'Reopen', icon: RefreshCw, onClick: () => onReopenKid(rk) });
               // Clear Follow-up — see AdminEnquiriesDesktopTable's matching
@@ -482,22 +488,32 @@ export default function AdminEnquiriesMobileCards({
                     </div>
                   )}
 
-                  {/* Simplified action row — a single "Set Follow-up"
-                      chip (lead or booking, whichever applies) plus
-                      a primary "View Full CRM" CTA. Payment, seat
-                      status, Journey Advance, Not Interested, and the
-                      rest now live in the kebab so the card footer
-                      stays to these two buttons. Themed to match the
+                  {/* Action row — Follow-up chip (if applicable) +
+                      Journey Advance (the one obvious next step for
+                      this row, e.g. "Mark Contacted" on a fresh lead)
+                      + the primary "View Full CRM" CTA + kebab. Journey
+                      Advance used to only live inside the kebab, which
+                      buried the single highest-leverage action for a
+                      New Enquiry card behind Record Payment/Edit/View/
+                      Not Interested/Delete — now it gets the same
+                      visible-chip treatment as Set Follow-up, ahead of
+                      View Full CRM (a navigation action, not a
+                      forward-moving one). Record Payment, Edit Details,
+                      View Details, Not Interested, and Delete remain in
+                      the kebab so the row doesn't have to fit every
+                      possible action inline. Themed to match the
                       "Payment" (outline) / "Add Invoice" (primary)
                       buttons on the enquiry detail page — same Button
                       component, same size, same variants — so the
                       list and detail views feel consistent. */}
-                  {/* All three controls fit one row: the two buttons
-                      share the row via flex-1 (not fullWidth — two
-                      buttons each claiming 100% width was pushing the
-                      "more" kebab menu off screen) while the kebab
-                      stays a fixed, always-visible width. */}
-                  <div className="flex items-center gap-2 pt-3">
+                  {/* flex-wrap so a New Enquiry (Follow-up n/a) still
+                      fits Mark Contacted + View Full CRM + kebab on one
+                      line, while a Contacted lead with both a Follow-up
+                      chip and Log Call Outcome showing at once wraps to
+                      a second line instead of squeezing four controls
+                      into an unreadable row. Kebab stays shrink-0 so it
+                      never grows/shrinks with the wrap. */}
+                  <div className="flex items-center gap-2 pt-3 flex-wrap">
                     {(followUpStatus(e) || canSetFollowUp(e) || bookingFollowUpStatus(e) || canSetBookingFollowUp(e)) && (
                       <Button
                         variant={
@@ -508,17 +524,29 @@ export default function AdminEnquiriesMobileCards({
                         size="sm"
                         onClick={() => (followUpStatus(e) || canSetFollowUp(e) ? openFollowUpModal(e) : setBookingFollowUpTarget(e))}
                         disabled={updating === e.id}
-                        className="flex-1 min-w-0 text-xs !gap-1.5 whitespace-nowrap"
+                        className="flex-1 min-w-[140px] text-xs !gap-1.5 whitespace-nowrap"
                       >
                         <CalendarClock size={14}  aria-hidden="true" />
                         {followUpStatus(e)?.label || bookingFollowUpStatus(e)?.label || 'Set Follow-up'}
+                      </Button>
+                    )}
+                    {nma && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleAdvance(e)}
+                        disabled={updating === e.id}
+                        className="flex-1 min-w-[140px] text-xs !gap-1.5 whitespace-nowrap"
+                      >
+                        <nma.icon size={14} aria-hidden="true" />
+                        {nma.label}
                       </Button>
                     )}
                     <Button
                       variant="primary"
                       size="sm"
                       onClick={() => navigate(`/admin/enquiries/${e.id}`)}
-                      className="flex-1 min-w-0 text-xs !gap-1.5 whitespace-nowrap"
+                      className="flex-1 min-w-[140px] text-xs !gap-1.5 whitespace-nowrap"
                     >
                       View Full CRM <ArrowRight size={14}  aria-hidden="true" />
                     </Button>
@@ -527,7 +555,6 @@ export default function AdminEnquiriesMobileCards({
                         disabled={updating === e.id}
                         items={[
                           { label: 'Record Payment', icon: IndianRupee, onClick: () => openPayment(e) },
-                          ...(nma ? [{ label: nma.label, icon: nma.icon, onClick: () => handleAdvance(e) }] : []),
                           ...buildRowActions(e),
                         ]}
                       />
@@ -748,28 +775,41 @@ export default function AdminEnquiriesMobileCards({
                     </button>
 
                     {/* Footer row — mirrors the adult card's own footer
-                        exactly: an optional Follow-up chip, a single
-                        primary CTA, and the kebab, all sharing one row
-                        (flex-1 each, kebab shrink-0). The per-status quick
-                        actions (Mark Confirmed/Not Interested/Reopen) that
-                        used to sit here as their own buttons are already
-                        in buildKidActions' kebab menu below — showing them
-                        again inline just duplicated the kebab and made a
-                        "new enquiry" kid look busier than the same-stage
-                        adult card right above it. */}
-                    <div className="flex items-center gap-2">
+                        exactly: optional Follow-up chip, Journey
+                        Advance (kid's nma — "Mark Confirmed" etc, the
+                        one obvious next step), primary CTA, and the
+                        kebab, wrapping onto a second line if all four
+                        show at once. Not Interested/Reopen/Delete and
+                        the rest stay in buildKidActions' kebab menu so
+                        the row doesn't try to fit every possible
+                        action inline. */}
+                    <div className="flex items-center gap-2 flex-wrap">
                       {kid.realKid && (kidFollowUpStatus(kid.realKid) || canSetKidFollowUp(kid.realKid)) && (
                         <Button
                           variant={kidFollowUpStatus(kid.realKid)?.isOverdue ? 'outlineDanger' : kidFollowUpStatus(kid.realKid) ? 'secondary' : 'outline'}
                           size="sm"
                           onClick={() => onViewKidDetails(kid.realKid!)}
                           disabled={updating === kid.realKid.id}
-                          className="flex-1 min-w-0 text-xs !gap-1.5 whitespace-nowrap"
+                          className="flex-1 min-w-[140px] text-xs !gap-1.5 whitespace-nowrap"
                         >
                           <CalendarClock size={14} aria-hidden="true" />
                           {kidFollowUpStatus(kid.realKid)?.label || 'Set Follow-up'}
                         </Button>
                       )}
+                      {kid.realKid && nextKidManualAction(kid.realKid) && (() => {
+                        const knma = nextKidManualAction(kid.realKid!)!;
+                        return (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => onAdvanceKid(kid.realKid!, knma.status, kid.label, e)}
+                            disabled={updating === kid.realKid!.id}
+                            className="flex-1 min-w-[140px] text-xs !gap-1.5 whitespace-nowrap"
+                          >
+                            <knma.icon size={14} aria-hidden="true" /> {knma.label}
+                          </Button>
+                        );
+                      })()}
                       {/* Kid's own equivalent of the adult card's primary
                           "View Full CRM" CTA. Real kid -> its own full page
                           (/admin/kids/:id, the same page "Set Follow-up"
@@ -781,7 +821,7 @@ export default function AdminEnquiriesMobileCards({
                         size="sm"
                         onClick={() => (kid.realKid ? onViewKidDetails(kid.realKid) : navigate(`/admin/enquiries/${e.id}`))}
                         disabled={!!kid.realKid && updating === kid.realKid.id}
-                        className="flex-1 min-w-0 text-xs !gap-1.5 whitespace-nowrap"
+                        className="flex-1 min-w-[140px] text-xs !gap-1.5 whitespace-nowrap"
                       >
                         {kid.realKid ? 'View Full CRM' : 'View Enquiry'} <ArrowRight size={14} aria-hidden="true" />
                       </Button>

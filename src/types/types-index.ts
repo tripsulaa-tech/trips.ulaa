@@ -491,7 +491,7 @@ export interface Enquiry {
 // draws between journey_stage 'cancelled' and 'not_interested'. No seat or
 // pricing logic keys off either value — kids never occupy a seat or count
 // toward total_seats, so this is purely a status label.
-export type KidStatus = 'pending' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled' | 'not_interested';
+export type KidStatus = 'pending' | 'contacted' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled' | 'not_interested';
 
 // One row per individual kid travelling on a booking — its own genuine
 // record (name, status, follow-up), not just a unit counted in the parent

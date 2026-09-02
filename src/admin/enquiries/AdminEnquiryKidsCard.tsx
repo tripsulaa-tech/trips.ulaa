@@ -33,36 +33,22 @@ import { useKidPayment } from './useKidPayment';
 import AdminKidPaymentModal from './AdminKidPaymentModal';
 import AdminKidNotInterestedModal from './AdminKidNotInterestedModal';
 import FoodMark from '../../components/ui/FoodMark';
-import { canMarkKidNotInterested, canReopenKid, canMarkKidNoShow, KID_NO_SHOW_BADGE } from './AdminEnquiryCommon';
+import { canMarkKidNotInterested, canReopenKid, canMarkKidNoShow, KID_NO_SHOW_BADGE, KID_STATUS_CONFIG } from './AdminEnquiryCommon';
 
-const STATUS_BADGE: Record<KidStatus, string> = {
-  pending: 'bg-amber-50 text-amber-700',
-  confirmed: 'bg-green-50 text-green-700',
-  checked_in: 'bg-blue-50 text-blue-700',
-  // Post-trip terminal state — see add_kids_completed_no_show.sql.
-  completed: 'bg-purple-50 text-purple-700',
-  cancelled: 'bg-red-50 text-red-700',
-  // Muted grey (not red) — distinct from 'cancelled' at a glance, same
-  // "closed but not a dropout" tone the adult Not Interested badge uses.
-  not_interested: 'bg-gray-100 text-gray-600',
-};
-
-const STATUS_LABEL: Record<KidStatus, string> = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  checked_in: 'Checked In',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-  not_interested: 'Not Interested',
-};
-
+// Badge color/label used to come from a local STATUS_BADGE/STATUS_LABEL map
+// here that had drifted from the Enquiries list's own KID_STATUS_CONFIG
+// (AdminEnquiryCommon.ts) — two sources of truth for the same badge meant a
+// kid's status could read differently on this detail-page card than it did
+// on the list. Reading directly off KID_STATUS_CONFIG keeps this card and
+// the list in permanent lockstep.
 const BULK_STATUS_OPTIONS: { value: KidStatus; label: string }[] = [
+  { value: 'contacted', label: `Mark ${KID_STATUS_CONFIG.contacted.label}` },
   { value: 'confirmed', label: 'Mark Confirmed' },
   { value: 'checked_in', label: 'Mark Checked In' },
   { value: 'completed', label: 'Mark Completed' },
   { value: 'cancelled', label: 'Mark Cancelled' },
   { value: 'not_interested', label: 'Mark Not Interested' },
-  { value: 'pending', label: 'Mark Pending' },
+  { value: 'pending', label: `Mark ${KID_STATUS_CONFIG.pending.label}` },
 ];
 
 interface AdminEnquiryKidsCardProps {
@@ -220,8 +206,8 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
                   <IndianRupee size={12} aria-hidden="true" />
                   {kid.amount ? `${formatPrice(kid.amount_paid || 0)} / ${formatPrice(kid.amount)}` : 'Set fee'}
                 </button>
-                <span className={`text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${STATUS_BADGE[kid.status]}`}>
-                  {STATUS_LABEL[kid.status]}
+                <span className={`text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${KID_STATUS_CONFIG[kid.status].color}`}>
+                  {KID_STATUS_CONFIG[kid.status].label}
                 </span>
                 {kid.is_no_show && (
                   <span className={`text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${KID_NO_SHOW_BADGE.color}`}>

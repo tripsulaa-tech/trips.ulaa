@@ -115,6 +115,11 @@ interface AdminEnquiriesDesktopTableProps {
   // Cancelled) and permanent removal, both previously only reachable by
   // opening the full CRM page and finding AdminEnquiryKidsCard's own menu.
   onUpdateKidStatus: (kid: Kid, status: KidStatus) => void;
+  // Single "next step" chip dispatcher — routes a kid's first contact
+  // (pending -> contacted) through the Log Call Outcome popup instead of
+  // flipping status directly; every later step still falls through to
+  // onUpdateKidStatus above. See AdminEnquiries' handleAdvanceKid.
+  onAdvanceKid: (kid: Kid, status: KidStatus, label: string, enquiry: Enquiry) => void;
   // Toggles a kid's independent is_no_show flag — see canMarkKidNoShow /
   // AdminEnquiries' handleToggleKidNoShow.
   onToggleKidNoShow: (kid: Kid, isNoShow: boolean) => void;
@@ -157,7 +162,7 @@ export default function AdminEnquiriesDesktopTable({
   updating, completingId, setDetailsTarget, openPayment, openFollowUpModal, setBookingFollowUpTarget,
   handleAdvance, handleMarkNotInterested, buildRowActions,
   kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested, onReopenKid,
-  onUpdateKidStatus, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
+  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
   invoiceBusyId, onDownloadKidInvoice, onShareKidInvoice, onClearKidFollowUp,
 }: AdminEnquiriesDesktopTableProps) {
   // Only used for the "Open Full CRM Page" link below — the desktop table
@@ -706,7 +711,7 @@ export default function AdminEnquiriesDesktopTable({
                           const knma = nextKidManualAction(kid.realKid!)!;
                           return (
                             <button
-                              onClick={() => onUpdateKidStatus(kid.realKid!, knma.status)}
+                              onClick={() => onAdvanceKid(kid.realKid!, knma.status, kid.label, e)}
                               disabled={updating === kid.realKid!.id}
                               title={knma.label}
                               className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"

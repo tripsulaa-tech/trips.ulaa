@@ -84,6 +84,7 @@ export {
   createKidsForEnquiry,
   updateKid,
   updateKidStatus,
+  recordKidContactOutcome,
   bulkUpdateKidsStatus,
   setKidFollowUp,
   updateKidNoShow,

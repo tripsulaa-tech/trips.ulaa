@@ -1,5 +1,5 @@
 import { supabase } from '../../supabase';
-import type { ClosedReason, Kid, KidStatus, Payment } from '../../../types/types-index';
+import type { ClosedReason, ContactOutcome, Kid, KidStatus, Payment } from '../../../types/types-index';
 import { formatPrice } from '../../../utils/utils-index';
 import { PAYMENT_TYPE_LOG_LABEL } from './shared';
 import { logActivity } from './activity';
@@ -109,23 +109,33 @@ async function syncKidProfile(
   if (error) throw error;
 }
 
+// A kid's own follow-up reminder stays meaningful across the same window
+// canSetKidFollowUp() (AdminEnquiryCommon.ts) offers it in, and
+// kids_follow_up_requires_pending_status (add_kid_contacted_status.sql)
+// enforces at the DB level — pending, contacted, and confirmed. Kept here
+// as its own helper so updateKidStatus/bulkUpdateKidsStatus can't drift
+// from that window independently of each other.
+function kidStatusKeepsFollowUp(status: KidStatus): boolean {
+  return status === 'pending' || status === 'contacted' || status === 'confirmed';
+}
+
 // Moves one kid's own status forward/back — independent of the parent
-// enquiry's status. Clears this kid's follow-up the moment it leaves
-// 'pending' (mirrors refreshJourneyStage's handling of
-// enquiries.follow_up_at — see add_enquiry_follow_up.sql's check
-// constraint, which kids_follow_up_requires_pending_status mirrors), so a
-// reminder never lingers on a kid that's since moved on. `reason` mirrors
-// updateEnquiryStatus's closedReason param — only written when status is
-// 'not_interested' (defaulting to null if the caller didn't pick one, e.g.
-// the plain Status dropdown in AdminKidDetailModal), and cleared back to
-// null on every other status change. See add_kid_not_interested_reason.sql.
+// enquiry's status. Clears this kid's follow-up the moment it leaves the
+// pending/contacted/confirmed window above (mirrors refreshJourneyStage's
+// handling of enquiries.follow_up_at — see add_enquiry_follow_up.sql's
+// check constraint), so a reminder never lingers on a kid that's since
+// moved on. `reason` mirrors updateEnquiryStatus's closedReason param —
+// only written when status is 'not_interested' (defaulting to null if the
+// caller didn't pick one, e.g. the plain Status dropdown in
+// AdminKidDetailModal), and cleared back to null on every other status
+// change. See add_kid_not_interested_reason.sql.
 export async function updateKidStatus(id: string, status: KidStatus, reason?: ClosedReason): Promise<void> {
   const { error } = await supabase
     .from('kids')
     .update({
       status,
       not_interested_reason: status === 'not_interested' ? (reason ?? null) : null,
-      ...(status !== 'pending' ? { follow_up_at: null, follow_up_notes: null } : {}),
+      ...(kidStatusKeepsFollowUp(status) ? {} : { follow_up_at: null, follow_up_notes: null }),
     })
     .eq('id', id);
   if (error) throw error;
@@ -139,22 +149,79 @@ export async function bulkUpdateKidsStatus(ids: string[], status: KidStatus): Pr
   if (ids.length === 0) return;
   const { error } = await supabase
     .from('kids')
-    .update({ status, not_interested_reason: null, ...(status !== 'pending' ? { follow_up_at: null, follow_up_notes: null } : {}) })
+    .update({ status, not_interested_reason: null, ...(kidStatusKeepsFollowUp(status) ? {} : { follow_up_at: null, follow_up_notes: null }) })
     .in('id', ids);
   if (error) throw error;
 }
 
 // Sets/clears this kid's own follow-up reminder — same shape as
 // setEnquiryFollowUp in status.ts, just scoped to a kid row instead of the
-// enquiry. Only meaningful while the kid is still 'pending' (enforced by
-// kids_follow_up_requires_pending_status), so this is only ever called
-// from UI that already keeps that rule.
+// enquiry. Only meaningful while the kid is pending/contacted/confirmed
+// (enforced by kids_follow_up_requires_pending_status, see
+// add_kid_contacted_status.sql), so this is only ever called from UI that
+// already keeps that rule (canSetKidFollowUp).
 export async function setKidFollowUp(id: string, followUpAt: string | null, notes?: string | null): Promise<void> {
   const { error } = await supabase
     .from('kids')
     .update({ follow_up_at: followUpAt, follow_up_notes: followUpAt ? (notes ?? null) : null })
     .eq('id', id);
   if (error) throw error;
+}
+
+// The kid-scoped equivalent of recordContactOutcome (status.ts) — the one
+// entry point for "Log Call Outcome" the first time an admin actually
+// speaks to a kid's contact (pending -> contacted), mirroring the adult
+// side's "Status must NEVER become Contacted until the popup is
+// successfully saved" rule (see AdminKidContactOutcomeModal.tsx). Kids
+// have no last_contact_outcome/last_contact_notes/last_contact_at columns
+// of their own (see add_kids_table.sql) — this folds the call's notes into
+// the existing follow_up_notes field instead of layering on a parallel set
+// of columns just for this one popup, and there's no follow_up_time column
+// to mirror either, so (unlike the adult modal) this never collects one.
+//
+// Branching mirrors CONTACT_OUTCOME_CONFIG.effect in AdminEnquiryCommon.ts:
+//   - interested                    -> status 'contacted'; caller opens
+//                                       this kid's Payment modal right
+//                                       after, same as the adult side's
+//                                       auto-open-Track-Payment.
+//   - needs_time/call_later/
+//     payment_arrangement/no_response -> status 'contacted', follow_up_at/
+//                                       notes set.
+//   - not_interested/wrong_number   -> status 'not_interested',
+//                                       not_interested_reason set
+//                                       ('wrong_number' forced for that
+//                                       outcome regardless of what's
+//                                       passed in) — kids have no 'closed'
+//                                       status, 'not_interested' is their
+//                                       own terminal-before-booking state
+//                                       (see add_kids_not_interested_status.sql).
+export async function recordKidContactOutcome(
+  id: string,
+  args: {
+    outcome: ContactOutcome;
+    notes?: string | null;
+    followUpAt?: string | null;
+    closedReason?: ClosedReason;
+  }
+): Promise<Kid> {
+  const isClosed = args.outcome === 'not_interested' || args.outcome === 'wrong_number';
+  const patch: Record<string, unknown> = {
+    status: isClosed ? 'not_interested' : 'contacted',
+    not_interested_reason: isClosed
+      ? (args.outcome === 'wrong_number' ? 'wrong_number' : (args.closedReason ?? null))
+      : null,
+    follow_up_at: isClosed ? null : (args.followUpAt || null),
+    follow_up_notes: isClosed ? null : (args.notes?.trim() || null),
+  };
+  const { data, error } = await supabase.from('kids').update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  const outcomeLabel = args.outcome.replace(/_/g, ' ');
+  await logActivity(
+    data.enquiry_id,
+    'Kid contact outcome recorded',
+    [outcomeLabel, args.notes?.trim() || null].filter(Boolean).join(' · ') || null
+  );
+  return data;
 }
 
 // Toggles this kid's own is_no_show flag — independent of status, same
