@@ -1,35 +1,46 @@
 // Kids card — split out of AdminEnquiryDetail.tsx. Each kid on this
 // booking gets its own genuinely-trackable row here (own status, own
-// follow-up, its own detail view via AdminKidDetailModal), selectable via
+// follow-up, its own full detail page at /admin/kids/:id — see
+// AdminKidDetail.tsx), selectable via
 // checkbox for a bulk status change — rather than the header's "N Kids"
 // badge being the only trace of them (see Kid in types-index.ts and
 // add_kids_table.sql).
 //
-// The one-click "Not Interested" quick action on each row (below) mirrors
-// AdminEnquiryHeaderCard's own canMarkNotInterested button — before this,
-// the only way to mark a kid Not Interested/Cancelled was three steps deep
-// (open the row -> open the modal -> find the Status dropdown), while the
-// adult side got a single visible button. Kids never had that gating logic
-// to begin with (see add_kids_not_interested_status.sql), so it's offered
-// unconditionally whenever the kid isn't already in a closed-out state.
+// The one-click "Not Interested"/"Reopen" quick actions on each row (below)
+// mirror AdminEnquiryHeaderCard's own canMarkNotInterested/Reopen Enquiry
+// pair — before this, the only way to mark a kid Not Interested/Cancelled
+// (or undo it) was three steps deep (open the row -> open the modal ->
+// find the Status dropdown), while the adult side got single visible
+// buttons for both directions. Kids never had that gating logic to begin
+// with (see add_kids_not_interested_status.sql), so Not Interested is
+// offered unconditionally whenever the kid isn't already in a closed-out
+// state.
 import { useState } from 'react';
-import { Baby, CheckSquare, Square, CalendarDot as CalendarClock, CurrencyInr as IndianRupee, UserMinus } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Baby, CheckSquare, Square, CalendarDot as CalendarClock, CurrencyInr as IndianRupee,
+  UserMinus, ArrowsClockwise as RefreshCw, Pencil, Eye, CheckCircle as CheckCircle2,
+  SignIn as LogIn, Clock, XCircle, Trash as Trash2, Confetti as PartyPopper,
+  UserCheck, UserMinus as UserX,
+} from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
+import ActionsMenu, { type ActionMenuItem } from '../../components/ui/ActionsMenu';
 import type { ClosedReason, Enquiry, Kid, KidStatus } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
 import { useKidsForEnquiry } from './useKidsForEnquiry';
 import { useKidPayment } from './useKidPayment';
-import AdminKidDetailModal from './AdminKidDetailModal';
 import AdminKidPaymentModal from './AdminKidPaymentModal';
 import AdminKidNotInterestedModal from './AdminKidNotInterestedModal';
 import FoodMark from '../../components/ui/FoodMark';
-import { canMarkKidNotInterested } from './AdminEnquiryCommon';
+import { canMarkKidNotInterested, canReopenKid, canMarkKidNoShow, KID_NO_SHOW_BADGE } from './AdminEnquiryCommon';
 
 const STATUS_BADGE: Record<KidStatus, string> = {
   pending: 'bg-amber-50 text-amber-700',
   confirmed: 'bg-green-50 text-green-700',
   checked_in: 'bg-blue-50 text-blue-700',
+  // Post-trip terminal state — see add_kids_completed_no_show.sql.
+  completed: 'bg-purple-50 text-purple-700',
   cancelled: 'bg-red-50 text-red-700',
   // Muted grey (not red) — distinct from 'cancelled' at a glance, same
   // "closed but not a dropout" tone the adult Not Interested badge uses.
@@ -40,6 +51,7 @@ const STATUS_LABEL: Record<KidStatus, string> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
   checked_in: 'Checked In',
+  completed: 'Completed',
   cancelled: 'Cancelled',
   not_interested: 'Not Interested',
 };
@@ -47,6 +59,7 @@ const STATUS_LABEL: Record<KidStatus, string> = {
 const BULK_STATUS_OPTIONS: { value: KidStatus; label: string }[] = [
   { value: 'confirmed', label: 'Mark Confirmed' },
   { value: 'checked_in', label: 'Mark Checked In' },
+  { value: 'completed', label: 'Mark Completed' },
   { value: 'cancelled', label: 'Mark Cancelled' },
   { value: 'not_interested', label: 'Mark Not Interested' },
   { value: 'pending', label: 'Mark Pending' },
@@ -59,11 +72,12 @@ interface AdminEnquiryKidsCardProps {
 }
 
 export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: AdminEnquiryKidsCardProps) {
+  const navigate = useNavigate();
   const {
     kids, loading, busy,
     selectedIds, toggleSelectOne, toggleSelectAll,
     kidLabel,
-    handleUpdateStatus, handleBulkStatus, handleSetFollowUp, handleEdit, handleDelete,
+    handleUpdateStatus, handleBulkStatus, handleToggleNoShow, handleDelete,
     reload,
   } = useKidsForEnquiry(enquiry.id);
   const {
@@ -71,7 +85,6 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
     kidPaymentHistory, kidPaymentHistoryLoading, openKidPayment, handleSaveKidPayment,
     setKidPaymentTarget,
   } = useKidPayment({ onSaved: () => { reload(); }, getTripChildPrice });
-  const [openKidId, setOpenKidId] = useState<string | null>(null);
   const [bulkAction, setBulkAction] = useState<KidStatus>('confirmed');
   // Not Interested reason picker — mirrors AdminEnquiries.tsx's own
   // kidNotInterestedTarget/kidClosedReason state, just scoped to this
@@ -88,13 +101,56 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
     setKidNotInterestedTarget(null);
   };
 
+  // Kebab menu per kid — mirrors the adult side's useRowActions.ts: the
+  // row itself keeps its one-click quick actions (Not Interested/Reopen,
+  // tap-to-open payment/detail), and this menu adds everything else that
+  // used to only be reachable three steps deep inside the detail modal's
+  // own Status dropdown (Edit Details, Manage Payment, the other status
+  // jumps, Delete) — same "consolidate the scattered actions into one ⋮"
+  // treatment as AdminEnquiriesDesktopTable's row menu.
+  const buildKidActions = (kid: Kid): ActionMenuItem[] => {
+    const items: ActionMenuItem[] = [
+      { label: 'View / Edit Details', icon: Eye, onClick: () => navigate(`/admin/kids/${kid.id}`) },
+      { label: 'Manage Payment', icon: IndianRupee, onClick: () => openKidPayment(kid, enquiry.trip_id) },
+    ];
+    if (kid.status !== 'confirmed') {
+      items.push({ label: 'Mark Confirmed', icon: CheckCircle2, onClick: () => handleUpdateStatus(kid, 'confirmed') });
+    }
+    if (kid.status !== 'checked_in') {
+      items.push({ label: 'Mark Checked In', icon: LogIn, onClick: () => handleUpdateStatus(kid, 'checked_in') });
+    }
+    if (kid.status !== 'completed') {
+      items.push({ label: 'Mark Completed', icon: PartyPopper, onClick: () => handleUpdateStatus(kid, 'completed') });
+    }
+    if (kid.status !== 'pending') {
+      items.push({ label: 'Mark Pending', icon: Clock, onClick: () => handleUpdateStatus(kid, 'pending') });
+    }
+    if (kid.status !== 'cancelled') {
+      items.push({ label: 'Mark Cancelled', icon: XCircle, danger: true, onClick: () => handleUpdateStatus(kid, 'cancelled') });
+    }
+    if (canMarkKidNotInterested(kid)) {
+      items.push({ label: 'Not Interested', icon: UserMinus, onClick: () => openKidNotInterestedModal(kid) });
+    }
+    if (canReopenKid(kid)) {
+      items.push({ label: 'Reopen', icon: RefreshCw, onClick: () => handleUpdateStatus(kid, 'pending') });
+    }
+    // Independent attendance flag, same "Mark/Undo No Show" pair the adult
+    // side offers — see canMarkKidNoShow.
+    if (kid.is_no_show) {
+      items.push({ label: 'Undo No Show', icon: UserCheck, onClick: () => handleToggleNoShow(kid, false) });
+    } else if (canMarkKidNoShow(kid)) {
+      items.push({ label: 'Mark No Show', icon: UserX, onClick: () => handleToggleNoShow(kid, true) });
+    }
+    items.push({ label: 'Edit Name / Age / Food', icon: Pencil, onClick: () => navigate(`/admin/kids/${kid.id}`) });
+    items.push({ label: 'Delete', icon: Trash2, danger: true, onClick: () => handleDelete(kid) });
+    return items;
+  };
+
   // Only meaningful on the booking's own kids — no rows yet just means
   // either this booking has no kids, or (a rare race) the seed insert
   // that runs alongside enquiry creation hasn't landed yet.
   if (!loading && kids.length === 0 && enquiry.kids_count === 0) return null;
 
-  const openKid = kids.find(k => k.id === openKidId) ?? null;
-  const openKidIndex = openKid ? kids.indexOf(openKid) : -1;
   const allSelected = kids.length > 0 && kids.every(k => selectedIds.has(k.id));
 
   return (
@@ -136,7 +192,7 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
                 </button>
                 <button
                   type="button"
-                  onClick={() => setOpenKidId(kid.id)}
+                  onClick={() => navigate(`/admin/kids/${kid.id}`)}
                   className="min-w-0 flex-1 text-left"
                 >
                   <p className="text-dark text-sm font-medium truncate flex items-center gap-1.5">
@@ -167,6 +223,11 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
                 <span className={`text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${STATUS_BADGE[kid.status]}`}>
                   {STATUS_LABEL[kid.status]}
                 </span>
+                {kid.is_no_show && (
+                  <span className={`text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${KID_NO_SHOW_BADGE.color}`}>
+                    {KID_NO_SHOW_BADGE.label}
+                  </span>
+                )}
                 {/* One-click quick action — same "Not Interested" button
                     AdminEnquiryHeaderCard shows for the adult booking,
                     brought down to each individual kid so it doesn't take
@@ -182,6 +243,25 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
                     <UserMinus size={12} aria-hidden="true" /> Not Interested
                   </Button>
                 )}
+                {/* Counterpart to the button above — undoes a Not
+                    Interested marking the same one-click way it was set,
+                    mirroring the adult side's Reopen Enquiry action. */}
+                {canReopenKid(kid) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUpdateStatus(kid, 'pending')}
+                    disabled={busy}
+                    className="!px-2 !py-1 !gap-1 text-[11px] whitespace-nowrap shrink-0"
+                  >
+                    <RefreshCw size={12} aria-hidden="true" /> Reopen
+                  </Button>
+                )}
+                <ActionsMenu
+                  items={buildKidActions(kid)}
+                  disabled={busy}
+                  label={`${kidLabel(kid, i)} actions`}
+                />
               </div>
             );
           })}
@@ -197,19 +277,6 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
           <Button variant="outline" size="sm" onClick={() => handleBulkStatus(bulkAction)} disabled={busy}>Apply</Button>
         </div>
       )}
-
-      <AdminKidDetailModal
-        isOpen={!!openKid}
-        onClose={() => setOpenKidId(null)}
-        kid={openKid}
-        fallbackLabel={openKid ? kidLabel(openKid, openKidIndex) : ''}
-        busy={busy}
-        onSave={patch => handleEdit(openKid as Kid, patch)}
-        onStatusChange={status => handleUpdateStatus(openKid as Kid, status)}
-        onFollowUpChange={(followUpAt, notes) => handleSetFollowUp(openKid as Kid, followUpAt, notes)}
-        onDelete={() => handleDelete(openKid as Kid)}
-        onManagePayment={() => { setOpenKidId(null); openKidPayment(openKid as Kid, enquiry.trip_id); }}
-      />
 
       <AdminKidPaymentModal
         kidPaymentTarget={kidPaymentTarget}

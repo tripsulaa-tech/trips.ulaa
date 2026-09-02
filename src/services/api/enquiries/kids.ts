@@ -43,6 +43,20 @@ export async function getKidsForEnquiries(enquiryIds: string[]): Promise<Kid[]> 
   return data || [];
 }
 
+// Every kid row business-wide, oldest first — same ordering convention as
+// getKidsForEnquiry/getKidsForEnquiries (so "Kid 1"/"Kid 2" fallback labels
+// stay stable once grouped back by enquiry_id client-side), just unfiltered.
+// Powers the standalone Kids CRM page (/admin/kids), which needs to list
+// every kid across every booking rather than one enquiry's handful.
+export async function getAllKids(): Promise<Kid[]> {
+  const { data, error } = await supabase
+    .from('kids')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
 // Seeds one row per kid on a fresh booking — called right after the
 // enquiry insert succeeds (submitEnquiry/submitGroupEnquiry/
 // createManualEnquiry), never directly by a form. `count` is the
@@ -140,6 +154,19 @@ export async function setKidFollowUp(id: string, followUpAt: string | null, note
     .from('kids')
     .update({ follow_up_at: followUpAt, follow_up_notes: followUpAt ? (notes ?? null) : null })
     .eq('id', id);
+  if (error) throw error;
+}
+
+// Toggles this kid's own is_no_show flag — independent of status, same
+// idea as setEnquiryNoShow in status.ts for the adult booking. Deliberately
+// ungated (no Fully-Paid/trip-departed checks, no refund side effects, both
+// directions treated the same): kids.status has never had that kind of
+// eligibility gating (see add_kids_not_interested_status.sql) and kids
+// carry no seat/refund consequences of their own for a no-show to affect,
+// so this just follows the same "no guardrails, it's a label" treatment as
+// every other kids.status transition. See add_kids_completed_no_show.sql.
+export async function updateKidNoShow(id: string, isNoShow: boolean): Promise<void> {
+  const { error } = await supabase.from('kids').update({ is_no_show: isNoShow }).eq('id', id);
   if (error) throw error;
 }
 

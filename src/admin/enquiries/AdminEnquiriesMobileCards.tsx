@@ -22,13 +22,20 @@ import {
   Globe,
   ArrowRight,
   UserMinus,
+  ArrowsClockwise as RefreshCw,
+  Eye,
+  SignIn as LogIn,
+  Trash as Trash2,
+  UserCheck,
+  UserMinus as UserX,
+  X,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { TablePagination, ContactQuickLinks } from '../../components/ui/DataTableChrome';
 import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
-import type { Enquiry, Kid, UpcomingTrip } from '../../types/types-index';
+import type { Enquiry, Kid, KidStatus, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, formatPrice } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG,
@@ -36,7 +43,8 @@ import {
   journeyBadge, nextManualAction,
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
-  kidStatusBadge, canMarkKidNotInterested, kidNotInterestedReasonLabel,
+  kidStatusBadge, canMarkKidNotInterested, canReopenKid, kidNotInterestedReasonLabel, nextKidManualAction,
+  kidFollowUpStatus, canSetKidFollowUp, canCancelKid, canMarkKidNoShow, KID_NO_SHOW_BADGE,
 } from './AdminEnquiryCommon';
 import { isGeneralContactMessage, groupColorFor, kidDisplayRows } from './enquiryGrouping';
 import { paymentBalance, paymentFilterKey, refundStatus } from './AdminEnquiriesShared';
@@ -84,6 +92,24 @@ interface AdminEnquiriesMobileCardsProps {
   // Same one-click "Not Interested" action as the desktop table — see
   // AdminEnquiries' handleMarkKidNotInterested.
   onMarkKidNotInterested: (kid: Kid) => void;
+  // Counterpart to the above — see AdminEnquiries' handleReopenKid.
+  onReopenKid: (kid: Kid) => void;
+  // Powers the kid card's kebab menu — see AdminEnquiriesDesktopTable's
+  // matching props / AdminEnquiries' handleUpdateKidStatus/handleDeleteKid.
+  onUpdateKidStatus: (kid: Kid, status: KidStatus) => void;
+  // Toggles a kid's independent is_no_show flag — see canMarkKidNoShow /
+  // AdminEnquiries' handleToggleKidNoShow.
+  onToggleKidNoShow: (kid: Kid, isNoShow: boolean) => void;
+  onDeleteKid: (kid: Kid) => void;
+  // Navigates to this kid's own full routed detail page — see
+  // AdminEnquiriesDesktopTable's matching prop for the reasoning.
+  onViewKidDetails: (kid: Kid) => void;
+  // Kid-side Download/Share Invoice and Clear Follow-up — see
+  // AdminEnquiriesDesktopTable's matching props for the reasoning. Reuses
+  // this component's own `invoiceBusyId` prop above (keyed off kid.id).
+  onDownloadKidInvoice: (kid: Kid, enquiry: Enquiry, kidLabel: string) => void;
+  onShareKidInvoice: (kid: Kid, enquiry: Enquiry, kidLabel: string) => void;
+  onClearKidFollowUp: (kid: Kid) => void;
 }
 
 /** Mobile card-list view of the enquiries list (tap a card to expand full
@@ -100,7 +126,9 @@ export default function AdminEnquiriesMobileCards({
   activeGroup, highlightId, groupColor, groupLabel, cardRefs,
   updating, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
   openPayment, openFollowUpModal, setBookingFollowUpTarget, handleAdvance, buildRowActions,
-  kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested,
+  kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested, onReopenKid,
+  onUpdateKidStatus, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
+  onDownloadKidInvoice, onShareKidInvoice, onClearKidFollowUp,
 }: AdminEnquiriesMobileCardsProps) {
   const navigate = useNavigate();
 
@@ -127,6 +155,57 @@ export default function AdminEnquiriesMobileCards({
                 label: `Kid ${kr.index}`,
                 realKid: null as Kid | null,
               }));
+          // Kid card kebab — see AdminEnquiriesDesktopTable's matching
+          // buildKidActions for the reasoning.
+          const buildKidActions = (kid: { realKid: Kid | null; label: string }): ActionMenuItem[] => {
+            const rk = kid.realKid;
+            // Real kid -> its own detail modal (kid-only fields). No
+            // record yet -> nothing of its own to show, falls back to
+            // the enquiry page. See AdminEnquiriesDesktopTable's matching
+            // buildKidActions for the reasoning.
+            const items: ActionMenuItem[] = [
+              rk
+                ? { label: 'View / Edit Details', icon: Eye, onClick: () => onViewKidDetails(rk) }
+                : { label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) },
+              { label: 'Manage Payment', icon: IndianRupee, onClick: () => (kid.realKid ? onOpenKidPayment(kid.realKid, e.trip_id) : openPayment(e)) },
+            ];
+            // Download/Share Invoice — see AdminEnquiriesDesktopTable's
+            // matching buildKidActions for the reasoning/gating.
+            if (rk && rk.amount_paid > 0) {
+              items.push(
+                { label: 'Download Invoice', icon: FileText, onClick: () => onDownloadKidInvoice(rk, e, kid.label), disabled: invoiceBusyId === rk.id },
+                { label: 'Share Invoice', icon: Share2, onClick: () => onShareKidInvoice(rk, e, kid.label), disabled: invoiceBusyId === rk.id },
+              );
+            }
+            if (rk) {
+              const nma = nextKidManualAction(rk);
+              if (nma) items.push({ label: nma.label, icon: nma.icon, onClick: () => onUpdateKidStatus(rk, nma.status) });
+              if (canMarkKidNotInterested(rk)) items.push({ label: 'Not Interested', icon: UserMinus, onClick: () => onMarkKidNotInterested(rk) });
+              if (canReopenKid(rk)) items.push({ label: 'Reopen', icon: RefreshCw, onClick: () => onReopenKid(rk) });
+              // Clear Follow-up — see AdminEnquiriesDesktopTable's matching
+              // buildKidActions for the reasoning.
+              if (canSetKidFollowUp(rk) && rk.follow_up_at) {
+                items.push({ label: 'Clear Follow-up', icon: X, onClick: () => onClearKidFollowUp(rk) });
+              }
+              if (rk.status === 'checked_in') {
+                items.push({ label: 'Undo Check In', icon: LogIn, onClick: () => onUpdateKidStatus(rk, 'confirmed') });
+              }
+              if (rk.status === 'cancelled') {
+                items.push({ label: 'Reopen (Undo Cancel)', icon: RefreshCw, onClick: () => onUpdateKidStatus(rk, 'pending') });
+              } else if (canCancelKid(rk)) {
+                items.push({ label: 'Mark Cancelled', icon: XCircle, danger: true, onClick: () => onUpdateKidStatus(rk, 'cancelled') });
+              }
+              // Independent attendance flag — same Mark/Undo No Show pair
+              // the adult kebab offers (useRowActions.ts).
+              if (rk.is_no_show) {
+                items.push({ label: 'Undo No Show', icon: UserCheck, onClick: () => onToggleKidNoShow(rk, false) });
+              } else if (canMarkKidNoShow(rk)) {
+                items.push({ label: 'Mark No Show', icon: UserX, onClick: () => onToggleKidNoShow(rk, true) });
+              }
+              items.push({ label: 'Delete', icon: Trash2, danger: true, onClick: () => onDeleteKid(rk) });
+            }
+            return items;
+          };
           return (
             <Fragment key={e.id}>
             <motion.div
@@ -487,10 +566,17 @@ export default function AdminEnquiriesMobileCards({
                           const ksb = kidStatusBadge(kid.realKid!);
                           const reasonLabel = kidNotInterestedReasonLabel(kid.realKid!);
                           return (
-                            <span title={reasonLabel ? `${kid.label}'s own status — independent of ${e.full_name}'s booking — ${reasonLabel}` : `${kid.label}'s own status — independent of ${e.full_name}'s booking`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${ksb.color}`}>
-                              <ksb.icon size={12} className="shrink-0" aria-hidden="true" />
-                              {ksb.label}
-                            </span>
+                            <>
+                              {kid.realKid!.is_no_show && (
+                                <span title={`${kid.label} — marked No Show`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-1.5 py-1 rounded-md whitespace-nowrap ${KID_NO_SHOW_BADGE.color}`}>
+                                  <KID_NO_SHOW_BADGE.icon size={12} className="shrink-0" aria-hidden="true" />
+                                </span>
+                              )}
+                              <span title={reasonLabel ? `${kid.label}'s own status — independent of ${e.full_name}'s booking — ${reasonLabel}` : `${kid.label}'s own status — independent of ${e.full_name}'s booking`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${ksb.color}`}>
+                                <ksb.icon size={12} className="shrink-0" aria-hidden="true" />
+                                {ksb.label}
+                              </span>
+                            </>
                           );
                         })() : (
                           <span title={`Booking Journey: ${jb.label} (same as ${e.full_name})`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
@@ -660,32 +746,73 @@ export default function AdminEnquiriesMobileCards({
                       </div>
                     </button>
 
-                    {followUpStatus(e) && (() => {
-                      const fu = followUpStatus(e)!;
-                      return (
-                        <div className={`rounded-md px-3 py-2 ${fu.color}`} title={`Follow-up set on ${e.full_name}'s booking`}>
-                          <p className="text-xs font-medium flex items-center gap-1">
-                            <fu.icon size={12} className="shrink-0" aria-hidden="true" /> {fu.label}
-                          </p>
-                        </div>
-                      );
-                    })()}
-
-                    {kid.realKid && canMarkKidNotInterested(kid.realKid) ? (
+                    {kid.realKid && (kidFollowUpStatus(kid.realKid) || canSetKidFollowUp(kid.realKid)) && (
                       <Button
-                        variant="outline"
+                        variant={kidFollowUpStatus(kid.realKid)?.isOverdue ? 'outlineDanger' : kidFollowUpStatus(kid.realKid) ? 'secondary' : 'outline'}
                         size="sm"
-                        onClick={() => onMarkKidNotInterested(kid.realKid!)}
+                        onClick={() => onViewKidDetails(kid.realKid!)}
                         disabled={updating === kid.realKid.id}
                         className="w-full !gap-1.5 text-xs"
                       >
-                        <UserMinus size={13} aria-hidden="true" /> Not Interested
+                        <CalendarClock size={14} aria-hidden="true" />
+                        {kidFollowUpStatus(kid.realKid)?.label || 'Set Follow-up'}
                       </Button>
-                    ) : !kid.realKid ? (
-                      <p className="text-dark-muted/70 text-[11px] text-center pt-1" title="Kids have no separate record — everything above lives on this booking">
-                        Part of {e.full_name}'s booking · no separate record to open
-                      </p>
-                    ) : null}
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      {kid.realKid && nextKidManualAction(kid.realKid) && (() => {
+                        const knma = nextKidManualAction(kid.realKid!)!;
+                        return (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onUpdateKidStatus(kid.realKid!, knma.status)}
+                            disabled={updating === kid.realKid!.id}
+                            className="flex-1 !gap-1.5 text-xs"
+                          >
+                            <knma.icon size={13} aria-hidden="true" /> {knma.label}
+                          </Button>
+                        );
+                      })()}
+                      {kid.realKid && canMarkKidNotInterested(kid.realKid) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onMarkKidNotInterested(kid.realKid!)}
+                          disabled={updating === kid.realKid.id}
+                          className="flex-1 !gap-1.5 text-xs"
+                        >
+                          <UserMinus size={13} aria-hidden="true" /> Not Interested
+                        </Button>
+                      ) : kid.realKid && canReopenKid(kid.realKid) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onReopenKid(kid.realKid!)}
+                          disabled={updating === kid.realKid.id}
+                          className="flex-1 !gap-1.5 text-xs"
+                        >
+                          <RefreshCw size={13} aria-hidden="true" /> Reopen
+                        </Button>
+                      ) : !kid.realKid ? (
+                        <p className="flex-1 text-dark-muted/70 text-[11px] text-center pt-1" title="Kids have no separate record — everything above lives on this booking">
+                          Part of {e.full_name}'s booking · no separate record to open
+                        </p>
+                      ) : (
+                        <div className="flex-1" />
+                      )}
+                      {/* The kebab that was missing here — every kid card
+                          now gets the same ⋮ menu the adult card has,
+                          instead of only the one quick-action button
+                          above (which disappears once neither applies). */}
+                      <div className="shrink-0">
+                        <ActionsMenu
+                          disabled={!!kid.realKid && updating === kid.realKid.id}
+                          items={buildKidActions(kid)}
+                          label={`${kid.label} actions`}
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </motion.div>

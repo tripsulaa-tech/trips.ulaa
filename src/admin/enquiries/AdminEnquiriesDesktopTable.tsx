@@ -9,15 +9,26 @@ import {
   Baby,
   CalendarDot as CalendarClock,
   UserMinus,
+  ArrowsClockwise as RefreshCw,
   Bird,
   ArrowSquareOut,
+  Eye,
+  CurrencyInr as IndianRupee,
+  SignIn as LogIn,
+  XCircle,
+  Trash as Trash2,
+  UserCheck,
+  UserMinus as UserX,
+  FileText,
+  ShareNetwork as Share2,
+  X,
 } from '@phosphor-icons/react';
 import FoodMark from '../../components/ui/FoodMark';
 import { TableHeaderBar, TablePagination, SortableTh } from '../../components/ui/DataTableChrome';
 import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import type { useDragScroll } from '../../components/ui/dataTableUtils';
-import type { Enquiry, Kid, UpcomingTrip } from '../../types/types-index';
+import type { Enquiry, Kid, KidStatus, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, formatPrice } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG,
@@ -25,7 +36,8 @@ import {
   journeyBadge, nextManualAction, canMarkNotInterested,
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
-  kidStatusBadge, canMarkKidNotInterested, kidNotInterestedReasonLabel,
+  kidStatusBadge, canMarkKidNotInterested, canReopenKid, kidNotInterestedReasonLabel, nextKidManualAction,
+  kidFollowUpStatus, canSetKidFollowUp, canCancelKid, canMarkKidNoShow, KID_NO_SHOW_BADGE,
 } from './AdminEnquiryCommon';
 import { isGeneralContactMessage, groupColorFor, kidDisplayRows } from './enquiryGrouping';
 import {
@@ -95,6 +107,36 @@ interface AdminEnquiriesDesktopTableProps {
   // a bare kids_count have no id to update). See AdminEnquiries'
   // handleMarkKidNotInterested.
   onMarkKidNotInterested: (kid: Kid) => void;
+  // Counterpart to the above — one-click "Reopen" for a kid already marked
+  // not_interested. See AdminEnquiries' handleReopenKid.
+  onReopenKid: (kid: Kid) => void;
+  // Powers the kid row's kebab menu (mirroring buildRowActions for the
+  // adult row) — a direct status jump (Confirmed/Checked In/Pending/
+  // Cancelled) and permanent removal, both previously only reachable by
+  // opening the full CRM page and finding AdminEnquiryKidsCard's own menu.
+  onUpdateKidStatus: (kid: Kid, status: KidStatus) => void;
+  // Toggles a kid's independent is_no_show flag — see canMarkKidNoShow /
+  // AdminEnquiries' handleToggleKidNoShow.
+  onToggleKidNoShow: (kid: Kid, isNoShow: boolean) => void;
+  onDeleteKid: (kid: Kid) => void;
+  // Navigates to this kid's own full routed detail page (/admin/kids/:id
+  // — see AdminKidDetail.tsx): own name/age/food/status/follow-up, never
+  // the parent enquiry's own record. Replaces the row's former "View Full
+  // Details" jump to the enquiry's detail page, which showed the adult
+  // booking only.
+  onViewKidDetails: (kid: Kid) => void;
+  // Kid-side counterparts to the adult row's Download/Share Invoice pair
+  // (useRowActions.ts) — full parity with the adult kebab menu, sourced
+  // from the kid's own payment ledger via kidAsInvoiceEnquiry. Shares the
+  // same busy-id tracking as the adult actions (useEnquiryDetailsModal),
+  // just keyed off kid.id instead of enquiry.id.
+  invoiceBusyId: string | null;
+  onDownloadKidInvoice: (kid: Kid, enquiry: Enquiry, kidLabel: string) => void;
+  onShareKidInvoice: (kid: Kid, enquiry: Enquiry, kidLabel: string) => void;
+  // Kid-side counterpart to the adult row's "Clear Follow-up" kebab entry —
+  // setting/editing stays on the row's own "Set Follow-up" chip, same as
+  // the adult side.
+  onClearKidFollowUp: (kid: Kid) => void;
 }
 
 /** Desktop/tablet table view of the enquiries list — extracted from
@@ -114,7 +156,9 @@ export default function AdminEnquiriesDesktopTable({
   tableScrollRef, dragHandlers, isDragging,
   updating, completingId, setDetailsTarget, openPayment, openFollowUpModal, setBookingFollowUpTarget,
   handleAdvance, handleMarkNotInterested, buildRowActions,
-  kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested,
+  kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested, onReopenKid,
+  onUpdateKidStatus, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
+  invoiceBusyId, onDownloadKidInvoice, onShareKidInvoice, onClearKidFollowUp,
 }: AdminEnquiriesDesktopTableProps) {
   // Only used for the "Open Full CRM Page" link below — the desktop table
   // otherwise has zero navigation behavior of its own (see the component
@@ -200,6 +244,69 @@ export default function AdminEnquiriesDesktopTable({
                     paymentText: e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'No kids fee set',
                     realKid: null as Kid | null,
                   }));
+              // Kid row kebab — mirrors buildRowActions for the adult row
+              // just above, action for action: Edit/View Details, a
+              // single contextual "next step" instead of every status
+              // jump at once (see nextKidManualAction), the same Not
+              // Interested/Reopen pair the adult side offers, a single
+              // Cancel action in place of Cancel Booking, then Delete.
+              const buildKidActions = (kid: { realKid: Kid | null; onPayment: () => void; label: string }): ActionMenuItem[] => {
+                const rk = kid.realKid;
+                // A real kid opens its own detail modal (name/age/food/
+                // status/follow-up — nothing about the parent booking). A
+                // placeholder row (no kid record yet, just a headcount)
+                // has nothing of its own to show, so it falls back to the
+                // enquiry page instead.
+                const items: ActionMenuItem[] = [
+                  rk
+                    ? { label: 'View / Edit Details', icon: Eye, onClick: () => onViewKidDetails(rk) }
+                    : { label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) },
+                  { label: 'Manage Payment', icon: IndianRupee, onClick: kid.onPayment },
+                ];
+                // Download/Share Invoice — full parity with the adult
+                // kebab's own pair (useRowActions.ts), gated on money
+                // actually having moved for this kid (there's no
+                // booking_id equivalent to gate on the way the adult side
+                // does, so amount_paid > 0 is the direct substitute).
+                if (rk && rk.amount_paid > 0) {
+                  items.push(
+                    { label: 'Download Invoice', icon: FileText, onClick: () => onDownloadKidInvoice(rk, e, kid.label), disabled: invoiceBusyId === rk.id },
+                    { label: 'Share Invoice', icon: Share2, onClick: () => onShareKidInvoice(rk, e, kid.label), disabled: invoiceBusyId === rk.id },
+                  );
+                }
+                if (rk) {
+                  const nma = nextKidManualAction(rk);
+                  if (nma) items.push({ label: nma.label, icon: nma.icon, onClick: () => onUpdateKidStatus(rk, nma.status) });
+                  if (canMarkKidNotInterested(rk)) items.push({ label: 'Not Interested', icon: UserMinus, onClick: () => onMarkKidNotInterested(rk) });
+                  if (canReopenKid(rk)) items.push({ label: 'Reopen', icon: RefreshCw, onClick: () => onReopenKid(rk) });
+                  // Clear Follow-up — counterpart to the adult kebab's own
+                  // entry; setting/editing stays on the row's "Set
+                  // Follow-up" chip, same convention as the adult side.
+                  if (canSetKidFollowUp(rk) && rk.follow_up_at) {
+                    items.push({ label: 'Clear Follow-up', icon: X, onClick: () => onClearKidFollowUp(rk) });
+                  }
+                  // Undo Check In — counterpart to the adult kebab's own
+                  // entry, and the only way back to Mark Cancelled below
+                  // once a kid's checked in (see canCancelKid).
+                  if (rk.status === 'checked_in') {
+                    items.push({ label: 'Undo Check In', icon: LogIn, onClick: () => onUpdateKidStatus(rk, 'confirmed') });
+                  }
+                  if (rk.status === 'cancelled') {
+                    items.push({ label: 'Reopen (Undo Cancel)', icon: RefreshCw, onClick: () => onUpdateKidStatus(rk, 'pending') });
+                  } else if (canCancelKid(rk)) {
+                    items.push({ label: 'Mark Cancelled', icon: XCircle, danger: true, onClick: () => onUpdateKidStatus(rk, 'cancelled') });
+                  }
+                  // Independent attendance flag — same Mark/Undo No Show
+                  // pair the adult kebab offers (useRowActions.ts).
+                  if (rk.is_no_show) {
+                    items.push({ label: 'Undo No Show', icon: UserCheck, onClick: () => onToggleKidNoShow(rk, false) });
+                  } else if (canMarkKidNoShow(rk)) {
+                    items.push({ label: 'Mark No Show', icon: UserX, onClick: () => onToggleKidNoShow(rk, true) });
+                  }
+                  items.push({ label: 'Delete', icon: Trash2, danger: true, onClick: () => onDeleteKid(rk) });
+                }
+                return items;
+              };
               return (
                 <Fragment key={e.id}>
                 <motion.tr
@@ -518,10 +625,18 @@ export default function AdminEnquiriesDesktopTable({
                         const ksb = kidStatusBadge(kid.realKid!);
                         const reasonLabel = kidNotInterestedReasonLabel(kid.realKid!);
                         return (
-                          <span title={reasonLabel ? `${kid.label}'s own status — independent of ${e.full_name}'s booking — ${reasonLabel}` : `${kid.label}'s own status — independent of ${e.full_name}'s booking`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${ksb.color}`}>
-                            <ksb.icon size={12} className="shrink-0" aria-hidden="true" />
-                            {ksb.label}
-                          </span>
+                          <div className="flex items-center justify-center gap-1 flex-wrap">
+                            <span title={reasonLabel ? `${kid.label}'s own status — independent of ${e.full_name}'s booking — ${reasonLabel}` : `${kid.label}'s own status — independent of ${e.full_name}'s booking`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${ksb.color}`}>
+                              <ksb.icon size={12} className="shrink-0" aria-hidden="true" />
+                              {ksb.label}
+                            </span>
+                            {kid.realKid!.is_no_show && (
+                              <span title={`${kid.label} — marked No Show`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${KID_NO_SHOW_BADGE.color}`}>
+                                <KID_NO_SHOW_BADGE.icon size={12} className="shrink-0" aria-hidden="true" />
+                                {KID_NO_SHOW_BADGE.label}
+                              </span>
+                            )}
+                          </div>
                         );
                       })() : (
                         <span title={`Booking Journey: ${jb.label} (same as ${e.full_name})`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap opacity-80 ${jb.color}`}>
@@ -531,16 +646,35 @@ export default function AdminEnquiriesDesktopTable({
                       )}
                     </td>
                     <td className="px-2 py-4 hidden md:table-cell">
-                      {(() => {
-                        const fu = followUpStatus(e);
-                        if (!fu) return <span className="text-dark-muted/50 text-xs">—</span>;
-                        return (
-                          <span title={`Follow-up: ${fu.label} (set on ${e.full_name}'s booking)`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap opacity-80 ${fu.color}`}>
-                            <fu.icon size={12} className="shrink-0" aria-hidden="true" />
-                            {fu.label}
-                          </span>
-                        );
-                      })()}
+                      {kid.realKid ? (() => {
+                        const kfu = kidFollowUpStatus(kid.realKid!);
+                        if (kfu) {
+                          return (
+                            <button
+                              onClick={() => onViewKidDetails(kid.realKid!)}
+                              disabled={updating === kid.realKid!.id}
+                              title={`${kid.label}'s own follow-up — click to change`}
+                              className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-50 ${kfu.color}`}
+                            >
+                              <kfu.icon size={12} className="shrink-0" aria-hidden="true" />
+                              {kfu.label}
+                            </button>
+                          );
+                        }
+                        if (canSetKidFollowUp(kid.realKid!)) {
+                          return (
+                            <button
+                              onClick={() => onViewKidDetails(kid.realKid!)}
+                              disabled={updating === kid.realKid!.id}
+                              title={`Set a follow-up reminder for ${kid.label}`}
+                              className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                            >
+                              <CalendarClock size={12} className="shrink-0" aria-hidden="true" /> Set
+                            </button>
+                          );
+                        }
+                        return <span className="text-dark-muted/50 text-xs">—</span>;
+                      })() : <span className="text-dark-muted/50 text-xs">—</span>}
                     </td>
                     <td className="px-2 py-4 text-center">
                       <span title="Kids never occupy a seat or count towards capacity" className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
@@ -548,8 +682,24 @@ export default function AdminEnquiriesDesktopTable({
                       </span>
                     </td>
                     <td className="px-2 py-4 text-right">
-                      {kid.realKid && canMarkKidNotInterested(kid.realKid) && (
-                        <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Single contextual "next step" pill — mirrors
+                            the adult row's nma button just above. */}
+                        {kid.realKid && nextKidManualAction(kid.realKid) && (() => {
+                          const knma = nextKidManualAction(kid.realKid!)!;
+                          return (
+                            <button
+                              onClick={() => onUpdateKidStatus(kid.realKid!, knma.status)}
+                              disabled={updating === kid.realKid!.id}
+                              title={knma.label}
+                              className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"
+                            >
+                              <knma.icon size={12} className="shrink-0" aria-hidden="true" />
+                              {knma.label}
+                            </button>
+                          );
+                        })()}
+                        {kid.realKid && canMarkKidNotInterested(kid.realKid) && (
                           <button
                             onClick={() => onMarkKidNotInterested(kid.realKid!)}
                             disabled={updating === kid.realKid.id}
@@ -559,8 +709,31 @@ export default function AdminEnquiriesDesktopTable({
                           >
                             <UserMinus size={12} className="shrink-0" aria-hidden="true" />
                           </button>
-                        </div>
-                      )}
+                        )}
+                        {/* Counterpart to the button above — undoes a Not
+                            Interested marking, mirroring the adult side's
+                            Reopen Enquiry action. */}
+                        {kid.realKid && canReopenKid(kid.realKid) && (
+                          <button
+                            onClick={() => onReopenKid(kid.realKid!)}
+                            disabled={updating === kid.realKid.id}
+                            aria-label={`Reopen ${kid.label}`}
+                            title="Reopen"
+                            className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                          >
+                            <RefreshCw size={12} className="shrink-0" aria-hidden="true" />
+                          </button>
+                        )}
+                        {/* The kebab that was missing here — every kid row
+                            now gets the same ⋮ menu the adult row has,
+                            instead of only the two quick-action buttons
+                            above (which vanish once neither applies). */}
+                        <ActionsMenu
+                          disabled={!!kid.realKid && updating === kid.realKid.id}
+                          items={buildKidActions(kid)}
+                          label={`${kid.label} actions`}
+                        />
+                      </div>
                     </td>
                   </motion.tr>
                 ))}

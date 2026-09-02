@@ -29,6 +29,7 @@ import {
   MapPin,
   Question as HelpCircle,
   UserMinus,
+  UserMinus as UserX,
   CalendarDot as CalendarClock,
 } from '@phosphor-icons/react';
 import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Kid, KidStatus, Payment, UpcomingTrip } from '../../types/types-index';
@@ -462,9 +463,20 @@ export const KID_STATUS_CONFIG: Record<KidStatus, { label: string; color: string
   pending: { label: 'Pending', color: 'bg-amber-50 text-amber-700', icon: Clock },
   confirmed: { label: 'Confirmed', color: 'bg-green-50 text-green-700', icon: CheckCircle2 },
   checked_in: { label: 'Checked In', color: 'bg-blue-50 text-blue-700', icon: LogIn },
+  // Post-trip terminal state, the kid-scoped equivalent of
+  // enquiries.booking_status reaching 'completed' — see
+  // add_kids_completed_no_show.sql.
+  completed: { label: 'Completed', color: 'bg-purple-50 text-purple-700', icon: PartyPopper },
   cancelled: { label: 'Cancelled', color: 'bg-red-50 text-red-700', icon: XCircle },
   not_interested: { label: 'Not Interested', color: 'bg-gray-100 text-gray-600', icon: UserMinus },
 };
+
+// A kid's independent "No Show" attendance flag (kids.is_no_show) — same
+// idea as attendanceBadge()'s 'No Show' branch for the adult booking
+// (AdminEnquiriesShared.tsx), just a fixed label/color since a kid has no
+// other attendance states to distinguish it from (no "Checked In"/"Not
+// Started" variants layered in here — kid.status already covers that).
+export const KID_NO_SHOW_BADGE = { label: 'No Show', color: 'bg-orange-50 text-orange-700', icon: UserX };
 
 export function kidStatusBadge(kid: Kid) {
   return KID_STATUS_CONFIG[kid.status] || KID_STATUS_CONFIG.pending;
@@ -478,6 +490,116 @@ export function kidStatusBadge(kid: Kid) {
 // consequences tied to their status.
 export function canMarkKidNotInterested(kid: Kid): boolean {
   return kid.status === 'pending' || kid.status === 'confirmed';
+}
+
+// Counterpart to canMarkKidNotInterested — whether the row-level "Reopen"
+// quick action makes sense for this kid right now. Mirrors the adult
+// side's Reopen Enquiry (isNotInterested(e) in useRowActions.ts): only
+// offered once a kid's actually been marked not_interested, not from
+// 'cancelled' (a different outcome — see add_kids_not_interested_status.sql
+// — that isn't meant to be "undone" the same casual way a dropped lead is).
+export function canReopenKid(kid: Kid): boolean {
+  return kid.status === 'not_interested';
+}
+
+// Whether "Mark No Show" should be offered for this kid right now —
+// kids.is_no_show equivalent of setEnquiryNoShow's gating, but ungated the
+// same way the rest of kids.status is (see add_kids_completed_no_show.sql):
+// offered once a kid is Confirmed and not already flagged. A checked-in
+// kid needs Undo Check In first (same "reverse the forward step first"
+// rule canCancelKid follows), and cancelled/not_interested/completed kids
+// are already closed out.
+export function canMarkKidNoShow(kid: Kid): boolean {
+  return kid.status === 'confirmed' && !kid.is_no_show;
+}
+
+// Single "obvious next step" for a kid's kebab menu — mirrors
+// nextManualAction's role for the adult row just below (one contextual
+// action instead of every possible status jump listed at once), so the
+// kid menu stays as short as the adult one instead of offering all 5
+// "Mark X" entries every time. The forward progression
+// pending -> confirmed -> checked_in -> completed gets a suggested next
+// step; cancelled/not_interested are terminal here (undone via
+// canReopenKid/Reopen instead) and completed has nowhere further to go.
+export function nextKidManualAction(kid: Kid): { label: string; status: KidStatus; icon: typeof Clock } | null {
+  switch (kid.status) {
+    case 'pending':
+      return { label: 'Mark Confirmed', status: 'confirmed', icon: CheckCircle2 };
+    case 'confirmed':
+      return { label: 'Mark Checked In', status: 'checked_in', icon: LogIn };
+    case 'checked_in':
+      return { label: 'Mark Completed', status: 'completed', icon: PartyPopper };
+    default:
+      return null;
+  }
+}
+
+// A kid's own follow-up reminder chip — mirrors followUpStatus() for the
+// adult side (same escalating overdue/today/upcoming coloring via
+// computeDueStatus), just reading kid.follow_up_at instead of the
+// enquiry's. Kept separate from the parent enquiry's own follow-up so a
+// kid row's Follow-up column reflects that kid's own reminder rather than
+// silently reusing the booking's.
+export function kidFollowUpStatus(kid: Kid): { label: string; color: string; icon: typeof Clock; isDue: boolean; isOverdue: boolean } | null {
+  if (!kid.follow_up_at) return null;
+  const status = computeDueStatus(kid.follow_up_at, {
+    overdue: (dateLabel) => `Overdue · ${dateLabel}`,
+    today: 'Follow up today',
+    upcoming: (dateLabel) => `Follow up ${dateLabel}`,
+  });
+  return { ...status, icon: CalendarClock };
+}
+
+// Whether a follow-up reminder can be set on this kid right now — mirrors
+// canSetFollowUp()'s "only while the lead is still open" window on the
+// adult side, translated to the kid's smaller status set: pending/
+// confirmed are the only states a reminder still makes sense in (once
+// checked in/cancelled/not_interested there's nothing left to follow up
+// on).
+export function canSetKidFollowUp(kid: Kid): boolean {
+  return kid.status === 'pending' || kid.status === 'confirmed';
+}
+
+// The invoice PDF pipeline (src/utils/invoicePdf.ts and pdf/invoice/*)
+// only ever knows how to draw an Enquiry — it was built long before kids
+// had their own payment ledger (see add_kid_individual_payments.sql). This
+// adapts one kid + its parent enquiry into an Enquiry-shaped object that
+// invoice renders correctly, so a kid's Download/Share Invoice action can
+// reuse downloadInvoicePdf()/invoiceAsFile() unchanged. Reuses the parent
+// booking's contact/trip fields (a kid has no phone/email/departure date
+// of its own) but substitutes the kid's own name, price, and a
+// booking-ID suffix so the file/download doesn't collide with the adult's
+// own invoice — see kidRowLabel for where `kidLabel` (the "Kid N"
+// fallback) comes from.
+export function kidAsInvoiceEnquiry(kid: Kid, enquiry: Enquiry, kidLabel: string): Enquiry {
+  return {
+    ...enquiry,
+    id: kid.id,
+    full_name: kid.name || kidLabel,
+    total_amount: kid.amount,
+    amount_paid: kid.amount_paid,
+    // Discounts are tracked per adult booking only — kids have no
+    // discount field of their own (see the Kid interface), so this never
+    // carries one over from the parent enquiry.
+    discount_amount: 0,
+    discount_reason: null,
+    booking_id: enquiry.booking_id ? `${enquiry.booking_id}-${kidLabel.replace(/\s+/g, '').toUpperCase()}` : null,
+    // A kid's fee is never part of a multi-seat group the way the adult
+    // booking can be — always render as a single, standalone line.
+    group_id: null,
+    group_size: null,
+    group_seq: 1,
+  };
+}
+
+// Whether "Mark Cancelled" should be offered for this kid right now —
+// mirrors canCancelBooking()'s "not once checked in" rule on the adult
+// side: a checked-in kid needs Undo Check In first, same as a checked-in
+// booking needs its own Undo Check In before Cancel Booking reappears. A
+// completed kid can't be cancelled either, same "trip already happened"
+// reasoning canCancelBooking applies via journey_stage === 'completed'.
+export function canCancelKid(kid: Kid): boolean {
+  return kid.status !== 'cancelled' && kid.status !== 'not_interested' && kid.status !== 'checked_in' && kid.status !== 'completed';
 }
 
 // True when this enquiry was closed out before ever becoming a paying

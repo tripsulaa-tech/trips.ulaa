@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowsClockwise as RefreshCw,
@@ -21,9 +21,10 @@ import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import { getPaymentsForEnquiry, getKidsForEnquiries, updateKidStatus } from '../../services/api';
-import { logKidActivity } from '../../services/api/enquiries/kids';
-import type { ClosedReason, Enquiry, Kid, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
+import { getPaymentsForEnquiry, getKidsForEnquiries, updateKidStatus, deleteKid } from '../../services/api';
+import { logKidActivity, setKidFollowUp, updateKidNoShow } from '../../services/api/enquiries/kids';
+import { useConfirm } from '../../components/ui/useConfirm';
+import type { ClosedReason, Enquiry, Kid, KidStatus, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
 import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
 import {
@@ -75,7 +76,9 @@ import AdminEnquiriesDesktopTable from './AdminEnquiriesDesktopTable';
 import AdminEnquiriesMobileCards from './AdminEnquiriesMobileCards';
 
 export default function AdminEnquiries() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const confirm = useConfirm();
   const { enquiries, trips, completedTrips, loading, load, setTrips } = useEnquiryData();
   // Restores scroll position when the admin comes back to this list — e.g.
   // expand a card, tap "View Full CRM", then go back — instead of always
@@ -112,6 +115,8 @@ export default function AdminEnquiries() {
     invoiceBusyId,
     handleDownloadInvoice,
     handleShareInvoice,
+    handleDownloadKidInvoice,
+    handleShareKidInvoice,
   } = useEnquiryDetailsModal();
   // Which mobile card is expanded — restored from sessionStorage on mount so
   // that expanding a card, tapping "View Full CRM" to drill into the detail
@@ -228,6 +233,111 @@ export default function AdminEnquiries() {
       setUpdating(null);
     }
   };
+  // Counterpart to the above — one-click "Reopen" for a kid already marked
+  // not_interested, mirroring the adult side's Reopen Enquiry (no reason
+  // capture needed either direction — see handleReopenEnquiry in
+  // useEnquiryStatusActions.ts). Same local-state update afterwards.
+  const handleReopenKid = async (kid: Kid) => {
+    setUpdating(kid.id);
+    try {
+      await updateKidStatus(kid.id, 'pending');
+      await logKidActivity(kid.enquiry_id, 'Kid reopened', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      setKidsByEnquiry(prev => {
+        const list = prev[kid.enquiry_id];
+        if (!list) return prev;
+        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, status: 'pending', not_interested_reason: null } : k)) };
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+  // General-purpose status jump for a single kid, right from its own row's
+  // kebab menu (see AdminEnquiriesDesktopTable/AdminEnquiriesMobileCards'
+  // ActionsMenu) — covers the statuses handleMarkKidNotInterested/
+  // handleReopenKid don't (Confirmed/Checked In/Cancelled/back to
+  // Pending), the same set AdminEnquiryKidsCard's own kebab offers on the
+  // detail page, so a kid's status is reachable the same way regardless
+  // of which screen the admin is on.
+  const handleUpdateKidStatus = async (kid: Kid, status: KidStatus) => {
+    setUpdating(kid.id);
+    try {
+      await updateKidStatus(kid.id, status);
+      await logKidActivity(kid.enquiry_id, `Kid marked ${status.replace('_', ' ')}`, kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      setKidsByEnquiry(prev => {
+        const list = prev[kid.enquiry_id];
+        if (!list) return prev;
+        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, status, ...(status !== 'not_interested' ? { not_interested_reason: null } : {}) } : k)) };
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+  // Toggles a kid's independent is_no_show flag, right from its own row —
+  // same idea as handleUpdateKidStatus just above but for the separate
+  // attendance axis (kids.is_no_show), mirroring useEnquiryLifecycle's own
+  // handleToggleNoShow for the adult booking. See canMarkKidNoShow /
+  // add_kids_completed_no_show.sql.
+  const handleToggleKidNoShow = async (kid: Kid, isNoShow: boolean) => {
+    setUpdating(kid.id);
+    try {
+      await updateKidNoShow(kid.id, isNoShow);
+      await logKidActivity(
+        kid.enquiry_id,
+        isNoShow ? 'Kid marked no-show' : 'Kid no-show undone',
+        kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid))
+      );
+      setKidsByEnquiry(prev => {
+        const list = prev[kid.enquiry_id];
+        if (!list) return prev;
+        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, is_no_show: isNoShow } : k)) };
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+  // Permanently removes one kid's record, right from the list — mirrors
+  // useKidsForEnquiry's handleDelete on the detail page (same confirm
+  // dialog, same "cannot be undone" copy), just updating kidsByEnquiry's
+  // local cache afterwards instead of a hook-owned kids array.
+  const handleDeleteKid = async (kid: Kid) => {
+    const ok = await confirm({
+      title: 'Delete this kid?',
+      message: `This permanently removes ${kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid))}'s record and payment history. This cannot be undone.`,
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+    setUpdating(kid.id);
+    try {
+      await deleteKid(kid.id);
+      await logKidActivity(kid.enquiry_id, 'Kid record removed', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      setKidsByEnquiry(prev => {
+        const list = prev[kid.enquiry_id];
+        if (!list) return prev;
+        return { ...prev, [kid.enquiry_id]: list.filter(k => k.id !== kid.id) };
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+  const handleSetKidFollowUp = async (kid: Kid, followUpAt: string | null, notes?: string | null) => {
+    setUpdating(kid.id);
+    try {
+      await setKidFollowUp(kid.id, followUpAt, notes);
+      await logKidActivity(kid.enquiry_id, followUpAt ? 'Kid follow-up set' : 'Kid follow-up cleared', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      setKidsByEnquiry(prev => {
+        const list = prev[kid.enquiry_id];
+        if (!list) return prev;
+        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, follow_up_at: followUpAt, follow_up_notes: notes ?? null } : k)) };
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+  // Clear Follow-up counterpart for a kid's own reminder — same "Clear"-
+  // only kebab entry the adult row offers (setting/editing stays on the
+  // row's own "Set Follow-up" chip), just reusing handleSetKidFollowUp
+  // with a null date/notes.
+  const handleClearKidFollowUp = (kid: Kid) => handleSetKidFollowUp(kid, null, null);
   const {
     cancelTarget, setCancelTarget,
     cancelCharges, setCancelCharges,
@@ -1346,6 +1456,15 @@ export default function AdminEnquiries() {
               kidRowLabel={kidRowLabel}
               onOpenKidPayment={openKidPayment}
               onMarkKidNotInterested={handleMarkKidNotInterested}
+              onReopenKid={handleReopenKid}
+              onUpdateKidStatus={handleUpdateKidStatus}
+              onToggleKidNoShow={handleToggleKidNoShow}
+              onDeleteKid={handleDeleteKid}
+              onViewKidDetails={kid => navigate(`/admin/kids/${kid.id}`)}
+              invoiceBusyId={invoiceBusyId}
+              onDownloadKidInvoice={handleDownloadKidInvoice}
+              onShareKidInvoice={handleShareKidInvoice}
+              onClearKidFollowUp={handleClearKidFollowUp}
             />
 
             <AdminEnquiriesMobileCards
@@ -1378,6 +1497,14 @@ export default function AdminEnquiries() {
               kidRowLabel={kidRowLabel}
               onOpenKidPayment={openKidPayment}
               onMarkKidNotInterested={handleMarkKidNotInterested}
+              onReopenKid={handleReopenKid}
+              onUpdateKidStatus={handleUpdateKidStatus}
+              onToggleKidNoShow={handleToggleKidNoShow}
+              onDeleteKid={handleDeleteKid}
+              onViewKidDetails={kid => navigate(`/admin/kids/${kid.id}`)}
+              onDownloadKidInvoice={handleDownloadKidInvoice}
+              onShareKidInvoice={handleShareKidInvoice}
+              onClearKidFollowUp={handleClearKidFollowUp}
             />
           </>
         )}

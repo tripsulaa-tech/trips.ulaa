@@ -491,7 +491,7 @@ export interface Enquiry {
 // draws between journey_stage 'cancelled' and 'not_interested'. No seat or
 // pricing logic keys off either value — kids never occupy a seat or count
 // toward total_seats, so this is purely a status label.
-export type KidStatus = 'pending' | 'confirmed' | 'checked_in' | 'cancelled' | 'not_interested';
+export type KidStatus = 'pending' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled' | 'not_interested';
 
 // One row per individual kid travelling on a booking — its own genuine
 // record (name, status, follow-up), not just a unit counted in the parent
@@ -513,6 +513,10 @@ export interface Kid {
   // split veg/non-veg. See add_kids_food_preference.sql.
   food_preference?: 'veg' | 'non_veg' | null;
   status: KidStatus;
+  // Independent attendance flag, same idea as Enquiry.is_no_show — a kid
+  // can be marked a no-show without touching status itself. See
+  // add_kids_completed_no_show.sql.
+  is_no_show: boolean;
   // Why this kid was marked not_interested — only meaningful alongside
   // status === 'not_interested'; null/undefined for a kid closed out
   // before this column existed or via a path with no reason picker (the

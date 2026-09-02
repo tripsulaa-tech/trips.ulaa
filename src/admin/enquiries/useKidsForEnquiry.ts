@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getKidsForEnquiry, updateKid, updateKidStatus, bulkUpdateKidsStatus, setKidFollowUp, deleteKid, logKidActivity } from '../../services/api/enquiries/kids';
+import { getKidsForEnquiry, updateKid, updateKidStatus, bulkUpdateKidsStatus, setKidFollowUp, updateKidNoShow, deleteKid, logKidActivity } from '../../services/api/enquiries/kids';
+import { useConfirm } from '../../components/ui/useConfirm';
 import type { ClosedReason, Kid, KidStatus } from '../../types/types-index';
 
 /** Owns the Kids card's data + bulk-selection state for one enquiry —
@@ -12,6 +13,7 @@ import type { ClosedReason, Kid, KidStatus } from '../../types/types-index';
  *  mounted on — kids only ever get "selected for bulk action" within
  *  their own parent booking, not across enquiries. */
 export function useKidsForEnquiry(enquiryId: string) {
+  const confirm = useConfirm();
   const [kids, setKids] = useState<Kid[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -92,6 +94,21 @@ export function useKidsForEnquiry(enquiryId: string) {
     }
   };
 
+  const handleToggleNoShow = async (kid: Kid, isNoShow: boolean) => {
+    setBusy(true);
+    try {
+      await updateKidNoShow(kid.id, isNoShow);
+      await logKidActivity(
+        enquiryId,
+        isNoShow ? 'Kid marked no-show' : 'Kid no-show undone',
+        kidLabel(kid, kids.indexOf(kid))
+      );
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleEdit = async (kid: Kid, patch: Partial<Pick<Kid, 'name' | 'age' | 'food_preference'>>) => {
     setBusy(true);
     try {
@@ -103,6 +120,12 @@ export function useKidsForEnquiry(enquiryId: string) {
   };
 
   const handleDelete = async (kid: Kid) => {
+    const ok = await confirm({
+      title: 'Delete this kid?',
+      message: `This permanently removes ${kidLabel(kid, kids.indexOf(kid))}'s record and payment history. This cannot be undone.`,
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await deleteKid(kid.id);
@@ -122,7 +145,7 @@ export function useKidsForEnquiry(enquiryId: string) {
     kids, loading, busy,
     selectedIds, toggleSelectOne, toggleSelectAll, clearSelection: () => setSelectedIds(new Set()),
     kidLabel,
-    handleUpdateStatus, handleBulkStatus, handleSetFollowUp, handleEdit, handleDelete,
+    handleUpdateStatus, handleBulkStatus, handleSetFollowUp, handleToggleNoShow, handleEdit, handleDelete,
     reload: load,
   };
 }
