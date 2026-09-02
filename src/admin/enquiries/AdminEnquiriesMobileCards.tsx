@@ -159,14 +159,15 @@ export default function AdminEnquiriesMobileCards({
           // buildKidActions for the reasoning.
           const buildKidActions = (kid: { realKid: Kid | null; label: string }): ActionMenuItem[] => {
             const rk = kid.realKid;
-            // Real kid -> its own detail modal (kid-only fields). No
-            // record yet -> nothing of its own to show, falls back to
-            // the enquiry page. See AdminEnquiriesDesktopTable's matching
-            // buildKidActions for the reasoning.
+            // Real kid -> its own full page is now reachable via the
+            // dedicated "View Full CRM" button on the card itself (see
+            // below), so no duplicate entry here — mirrors the adult
+            // card's kebab, which likewise has no "View Full CRM" entry
+            // since its own button already covers it. No record yet ->
+            // nothing of its own to show, falls back to the enquiry page,
+            // same as AdminEnquiriesDesktopTable's matching buildKidActions.
             const items: ActionMenuItem[] = [
-              rk
-                ? { label: 'View / Edit Details', icon: Eye, onClick: () => onViewKidDetails(rk) }
-                : { label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) },
+              ...(rk ? [] : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
               { label: 'Manage Payment', icon: IndianRupee, onClick: () => (kid.realKid ? onOpenKidPayment(kid.realKid, e.trip_id) : openPayment(e)) },
             ];
             // Download/Share Invoice — see AdminEnquiriesDesktopTable's
@@ -746,65 +747,44 @@ export default function AdminEnquiriesMobileCards({
                       </div>
                     </button>
 
-                    {kid.realKid && (kidFollowUpStatus(kid.realKid) || canSetKidFollowUp(kid.realKid)) && (
-                      <Button
-                        variant={kidFollowUpStatus(kid.realKid)?.isOverdue ? 'outlineDanger' : kidFollowUpStatus(kid.realKid) ? 'secondary' : 'outline'}
-                        size="sm"
-                        onClick={() => onViewKidDetails(kid.realKid!)}
-                        disabled={updating === kid.realKid.id}
-                        className="w-full !gap-1.5 text-xs"
-                      >
-                        <CalendarClock size={14} aria-hidden="true" />
-                        {kidFollowUpStatus(kid.realKid)?.label || 'Set Follow-up'}
-                      </Button>
-                    )}
-
+                    {/* Footer row — mirrors the adult card's own footer
+                        exactly: an optional Follow-up chip, a single
+                        primary CTA, and the kebab, all sharing one row
+                        (flex-1 each, kebab shrink-0). The per-status quick
+                        actions (Mark Confirmed/Not Interested/Reopen) that
+                        used to sit here as their own buttons are already
+                        in buildKidActions' kebab menu below — showing them
+                        again inline just duplicated the kebab and made a
+                        "new enquiry" kid look busier than the same-stage
+                        adult card right above it. */}
                     <div className="flex items-center gap-2">
-                      {kid.realKid && nextKidManualAction(kid.realKid) && (() => {
-                        const knma = nextKidManualAction(kid.realKid!)!;
-                        return (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onUpdateKidStatus(kid.realKid!, knma.status)}
-                            disabled={updating === kid.realKid!.id}
-                            className="flex-1 !gap-1.5 text-xs"
-                          >
-                            <knma.icon size={13} aria-hidden="true" /> {knma.label}
-                          </Button>
-                        );
-                      })()}
-                      {kid.realKid && canMarkKidNotInterested(kid.realKid) ? (
+                      {kid.realKid && (kidFollowUpStatus(kid.realKid) || canSetKidFollowUp(kid.realKid)) && (
                         <Button
-                          variant="outline"
+                          variant={kidFollowUpStatus(kid.realKid)?.isOverdue ? 'outlineDanger' : kidFollowUpStatus(kid.realKid) ? 'secondary' : 'outline'}
                           size="sm"
-                          onClick={() => onMarkKidNotInterested(kid.realKid!)}
+                          onClick={() => onViewKidDetails(kid.realKid!)}
                           disabled={updating === kid.realKid.id}
-                          className="flex-1 !gap-1.5 text-xs"
+                          className="flex-1 min-w-0 text-xs !gap-1.5 whitespace-nowrap"
                         >
-                          <UserMinus size={13} aria-hidden="true" /> Not Interested
+                          <CalendarClock size={14} aria-hidden="true" />
+                          {kidFollowUpStatus(kid.realKid)?.label || 'Set Follow-up'}
                         </Button>
-                      ) : kid.realKid && canReopenKid(kid.realKid) ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onReopenKid(kid.realKid!)}
-                          disabled={updating === kid.realKid.id}
-                          className="flex-1 !gap-1.5 text-xs"
-                        >
-                          <RefreshCw size={13} aria-hidden="true" /> Reopen
-                        </Button>
-                      ) : !kid.realKid ? (
-                        <p className="flex-1 text-dark-muted/70 text-[11px] text-center pt-1" title="Kids have no separate record — everything above lives on this booking">
-                          Part of {e.full_name}'s booking · no separate record to open
-                        </p>
-                      ) : (
-                        <div className="flex-1" />
                       )}
-                      {/* The kebab that was missing here — every kid card
-                          now gets the same ⋮ menu the adult card has,
-                          instead of only the one quick-action button
-                          above (which disappears once neither applies). */}
+                      {/* Kid's own equivalent of the adult card's primary
+                          "View Full CRM" CTA. Real kid -> its own full page
+                          (/admin/kids/:id, the same page "Set Follow-up"
+                          above already opens); placeholder (no kid record
+                          yet) -> falls back to the parent enquiry page,
+                          same as the kebab's own "View Enquiry" fallback. */}
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => (kid.realKid ? onViewKidDetails(kid.realKid) : navigate(`/admin/enquiries/${e.id}`))}
+                        disabled={!!kid.realKid && updating === kid.realKid.id}
+                        className="flex-1 min-w-0 text-xs !gap-1.5 whitespace-nowrap"
+                      >
+                        {kid.realKid ? 'View Full CRM' : 'View Enquiry'} <ArrowRight size={14} aria-hidden="true" />
+                      </Button>
                       <div className="shrink-0">
                         <ActionsMenu
                           disabled={!!kid.realKid && updating === kid.realKid.id}

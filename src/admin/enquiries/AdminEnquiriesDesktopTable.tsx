@@ -252,15 +252,14 @@ export default function AdminEnquiriesDesktopTable({
               // Cancel action in place of Cancel Booking, then Delete.
               const buildKidActions = (kid: { realKid: Kid | null; onPayment: () => void; label: string }): ActionMenuItem[] => {
                 const rk = kid.realKid;
-                // A real kid opens its own detail modal (name/age/food/
-                // status/follow-up — nothing about the parent booking). A
-                // placeholder row (no kid record yet, just a headcount)
-                // has nothing of its own to show, so it falls back to the
-                // enquiry page instead.
+                // Real kid -> its own full page is now reachable via the
+                // "Open Full CRM Page" icon-link next to its name (see the
+                // name cell below) — mirrors the adult row, which
+                // likewise keeps that link out of its own kebab. No
+                // record yet -> nothing of its own to show, falls back to
+                // the enquiry page.
                 const items: ActionMenuItem[] = [
-                  rk
-                    ? { label: 'View / Edit Details', icon: Eye, onClick: () => onViewKidDetails(rk) }
-                    : { label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) },
+                  ...(rk ? [] : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
                   { label: 'Manage Payment', icon: IndianRupee, onClick: kid.onPayment },
                 ];
                 // Download/Share Invoice — full parity with the adult
@@ -556,11 +555,29 @@ export default function AdminEnquiriesDesktopTable({
                     <td className="px-3 py-4" />
                     <td className="px-3 py-4 hidden md:table-cell" />
                     <td className="px-4 py-4">
-                      <p className="pl-4 font-medium text-dark-muted flex items-center gap-1.5">
-                        <Baby size={13} className="shrink-0" aria-hidden="true" />
-                        {kid.label}
-                        <span className="text-dark-muted/60 font-normal text-xs">of {e.full_name}</span>
-                      </p>
+                      <div className="flex items-center gap-1 pl-4">
+                        <p className="font-medium text-dark-muted flex items-center gap-1.5 min-w-0">
+                          <Baby size={13} className="shrink-0" aria-hidden="true" />
+                          {kid.label}
+                          <span className="text-dark-muted/60 font-normal text-xs">of {e.full_name}</span>
+                        </p>
+                        {/* Kid's own equivalent of the adult name cell's
+                            "Open Full CRM Page" link just above — real kid
+                            only, since a placeholder row has no page of
+                            its own to open (see buildKidActions' matching
+                            "View Enquiry" fallback in the kebab instead). */}
+                        {kid.realKid && (
+                          <button
+                            type="button"
+                            onClick={() => onViewKidDetails(kid.realKid!)}
+                            title={`Open Full CRM Page for ${kid.label} — own status, payment, follow-up`}
+                            aria-label={`Open full CRM page for ${kid.label}`}
+                            className="shrink-0 text-dark-muted hover:text-primary p-1 -m-1 rounded transition-colors"
+                          >
+                            <ArrowSquareOut size={13} aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap">
                       <span

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getKidsForEnquiry, updateKid, updateKidStatus, bulkUpdateKidsStatus, setKidFollowUp, updateKidNoShow, deleteKid, logKidActivity } from '../../services/api/enquiries/kids';
+import { subscribeToTable } from '../../services/realtime';
 import { useConfirm } from '../../components/ui/useConfirm';
 import type { ClosedReason, Kid, KidStatus } from '../../types/types-index';
 
@@ -35,6 +36,17 @@ export function useKidsForEnquiry(enquiryId: string) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load() is an async fetch-on-mount, not a synchronous external-system sync
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enquiryId]);
+
+  // Live updates — the instant a kid row for this enquiry changes (e.g.
+  // kids_price_sync_on_trip_update bulk-repricing every unpaid kid the
+  // moment an admin edits the trip's Child Fee elsewhere in the app),
+  // re-pull this card's kids so it's never showing a stale fee. Requires
+  // enable_realtime_kids.sql to have been run — see that file.
+  useEffect(() => {
+    const unsubscribe = subscribeToTable('kids', () => { load(); }, `enquiry_id=eq.${enquiryId}`);
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load() is stable in intent (re-reads enquiryId via closure), re-subscribing only needs to key off enquiryId itself
   }, [enquiryId]);
 
   const toggleSelectOne = (id: string) => {

@@ -23,6 +23,7 @@ import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import { getPaymentsForEnquiry, getKidsForEnquiries, updateKidStatus, deleteKid } from '../../services/api';
 import { logKidActivity, setKidFollowUp, updateKidNoShow } from '../../services/api/enquiries/kids';
+import { subscribeToTable } from '../../services/realtime';
 import { useConfirm } from '../../components/ui/useConfirm';
 import type { ClosedReason, Enquiry, Kid, KidStatus, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
 import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap } from '../../utils/utils-index';
@@ -765,6 +766,36 @@ export default function AdminEnquiries() {
       .catch(err => console.error('Failed to load kids for enquiries list:', err));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed to the page's set of enquiry ids, not the paginatedEnquiries array reference
+  }, [paginatedEnquiries.map(e => e.id).join(',')]);
+
+  // Live updates — patches kidsByEnquiry in place the instant a kid row
+  // for a currently-visible enquiry changes, so e.g.
+  // kids_price_sync_on_trip_update bulk-repricing every unpaid kid the
+  // moment an admin edits a trip's Child Fee shows up here without a
+  // reload. No `filter` here (unlike useKidsForEnquiry's single-enquiry
+  // version) since this page spans many enquiries at once — membership is
+  // checked client-side against the current page's id set instead.
+  // Requires enable_realtime_kids.sql to have been run — see that file.
+  useEffect(() => {
+    const idsWithKids = new Set(paginatedEnquiries.filter(e => e.kids_count > 0).map(e => e.id));
+    if (idsWithKids.size === 0) return;
+    const unsubscribe = subscribeToTable('kids', payload => {
+      const row = (payload.eventType === 'DELETE' ? payload.old : payload.new) as unknown as Kid | undefined;
+      if (!row?.enquiry_id || !idsWithKids.has(row.enquiry_id)) return;
+      setKidsByEnquiry(prev => {
+        const list = prev[row.enquiry_id] || [];
+        if (payload.eventType === 'DELETE') {
+          return { ...prev, [row.enquiry_id]: list.filter(k => k.id !== row.id) };
+        }
+        const idx = list.findIndex(k => k.id === row.id);
+        const nextList = idx === -1
+          ? [...list, row].sort((a, b) => a.created_at.localeCompare(b.created_at))
+          : list.map(k => (k.id === row.id ? row : k));
+        return { ...prev, [row.enquiry_id]: nextList };
+      });
+    });
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed to the page's set of enquiry ids, same reasoning as the fetch effect above
   }, [paginatedEnquiries.map(e => e.id).join(',')]);
 
   const counts = {
