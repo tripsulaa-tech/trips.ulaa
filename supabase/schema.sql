@@ -444,6 +444,10 @@ create table public.kids (
   status            text not null default 'pending',
   follow_up_at      date,
   follow_up_notes   text,
+  -- Why a kid was marked 'not_interested' — only meaningful alongside that
+  -- status, same relationship enquiries.closed_reason has with status =
+  -- 'closed'. See add_kid_not_interested_reason.sql.
+  not_interested_reason text,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now(),
   constraint kids_pkey primary key (id),
@@ -453,15 +457,26 @@ create table public.kids (
   constraint kids_food_preference_check
     check (food_preference is null or food_preference = any (array['veg'::text, 'non_veg'::text])),
   constraint kids_status_check
-    check (status = any (array['pending'::text, 'confirmed'::text, 'checked_in'::text, 'cancelled'::text])),
+    check (status = any (array['pending'::text, 'confirmed'::text, 'checked_in'::text, 'cancelled'::text, 'not_interested'::text])),
   constraint kids_follow_up_requires_pending_status
-    check (follow_up_at is null or status = 'pending')
+    check (follow_up_at is null or status = 'pending'),
+  constraint kids_not_interested_reason_check
+    check (not_interested_reason is null or not_interested_reason = any (array[
+      'no_response'::text, 'price_too_high'::text, 'date_conflict'::text,
+      'destination_changed'::text, 'booked_elsewhere'::text,
+      'personal_reason'::text, 'wrong_number'::text, 'other'::text
+    ])),
+  constraint kids_not_interested_reason_requires_status
+    check (not_interested_reason is null or status = 'not_interested')
 );
 
 create index kids_enquiry_id_idx on public.kids using btree (enquiry_id);
 create index kids_follow_up_at_idx
   on public.kids using btree (follow_up_at)
   where follow_up_at is not null;
+create index kids_not_interested_reason_idx
+  on public.kids using btree (not_interested_reason)
+  where not_interested_reason is not null;
 
 create or replace function public.set_kids_updated_at()
 returns trigger

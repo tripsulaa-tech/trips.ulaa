@@ -21,6 +21,7 @@ const STATUS_OPTIONS: { value: KidStatus; label: string }[] = [
   { value: 'confirmed', label: 'Confirmed' },
   { value: 'checked_in', label: 'Checked In' },
   { value: 'cancelled', label: 'Cancelled' },
+  { value: 'not_interested', label: 'Not Interested' },
 ];
 
 interface AdminKidDetailModalProps {

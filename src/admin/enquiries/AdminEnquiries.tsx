@@ -21,8 +21,9 @@ import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import { getPaymentsForEnquiry, getKidsForEnquiries } from '../../services/api';
-import type { Enquiry, Kid, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
+import { getPaymentsForEnquiry, getKidsForEnquiries, updateKidStatus } from '../../services/api';
+import { logKidActivity } from '../../services/api/enquiries/kids';
+import type { ClosedReason, Enquiry, Kid, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
 import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
 import {
@@ -63,6 +64,7 @@ import DetailsModal from './AdminDetailsModal';
 import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
 import MarkPaidModal from './AdminMarkPaidModal';
 import NotInterestedModal from './AdminNotInterestedModal';
+import AdminKidNotInterestedModal from './AdminKidNotInterestedModal';
 import FollowUpModal from './AdminFollowUpModal';
 import BookingFollowUpModal from './AdminBookingFollowUpModal';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
@@ -192,6 +194,40 @@ export default function AdminEnquiries() {
     getTripChildPrice,
   });
   const kidRowLabel = (kid: Kid, fallbackIndex: number) => kid.name?.trim() || `Kid ${fallbackIndex + 1}`;
+  // Not Interested reason picker for a single kid, right from its own row
+  // in the list (table + mobile cards) — the same action AdminEnquiryKidsCard
+  // already offers on the detail page, just reachable without opening the
+  // full CRM page first. Opens AdminKidNotInterestedModal instead of
+  // flipping status instantly (mirrors handleMarkNotInterested/
+  // handleConfirmNotInterested for the adult side in
+  // useEnquiryStatusActions.ts), so the reason gets captured the same way
+  // regardless of where the action is triggered from. Updates
+  // kidsByEnquiry locally afterwards so the row's status badge/action
+  // reflect the change immediately, without waiting on the next full page
+  // reload.
+  const [kidNotInterestedTarget, setKidNotInterestedTarget] = useState<Kid | null>(null);
+  const [kidClosedReason, setKidClosedReason] = useState<ClosedReason>('no_response');
+  const handleMarkKidNotInterested = (kid: Kid) => {
+    setKidClosedReason('no_response');
+    setKidNotInterestedTarget(kid);
+  };
+  const handleConfirmKidNotInterested = async () => {
+    if (!kidNotInterestedTarget) return;
+    const kid = kidNotInterestedTarget;
+    setUpdating(kid.id);
+    try {
+      await updateKidStatus(kid.id, 'not_interested', kidClosedReason);
+      await logKidActivity(kid.enquiry_id, 'Kid marked not interested', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      setKidsByEnquiry(prev => {
+        const list = prev[kid.enquiry_id];
+        if (!list) return prev;
+        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, status: 'not_interested', not_interested_reason: kidClosedReason } : k)) };
+      });
+      setKidNotInterestedTarget(null);
+    } finally {
+      setUpdating(null);
+    }
+  };
   const {
     cancelTarget, setCancelTarget,
     cancelCharges, setCancelCharges,
@@ -1309,6 +1345,7 @@ export default function AdminEnquiries() {
               kidsByEnquiry={kidsByEnquiry}
               kidRowLabel={kidRowLabel}
               onOpenKidPayment={openKidPayment}
+              onMarkKidNotInterested={handleMarkKidNotInterested}
             />
 
             <AdminEnquiriesMobileCards
@@ -1340,6 +1377,7 @@ export default function AdminEnquiries() {
               kidsByEnquiry={kidsByEnquiry}
               kidRowLabel={kidRowLabel}
               onOpenKidPayment={openKidPayment}
+              onMarkKidNotInterested={handleMarkKidNotInterested}
             />
           </>
         )}
@@ -1449,6 +1487,16 @@ export default function AdminEnquiries() {
         closedReason={closedReason}
         setClosedReason={setClosedReason}
         onConfirm={handleConfirmNotInterested}
+        updating={updating}
+      />
+
+      <AdminKidNotInterestedModal
+        kidNotInterestedTarget={kidNotInterestedTarget}
+        targetLabel={kidNotInterestedTarget ? kidRowLabel(kidNotInterestedTarget, (kidsByEnquiry[kidNotInterestedTarget.enquiry_id] || []).indexOf(kidNotInterestedTarget)) : ''}
+        onClose={() => setKidNotInterestedTarget(null)}
+        closedReason={kidClosedReason}
+        setClosedReason={setKidClosedReason}
+        onConfirm={handleConfirmKidNotInterested}
         updating={updating}
       />
 

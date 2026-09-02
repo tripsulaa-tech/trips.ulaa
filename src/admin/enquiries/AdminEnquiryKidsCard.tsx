@@ -4,23 +4,36 @@
 // checkbox for a bulk status change — rather than the header's "N Kids"
 // badge being the only trace of them (see Kid in types-index.ts and
 // add_kids_table.sql).
+//
+// The one-click "Not Interested" quick action on each row (below) mirrors
+// AdminEnquiryHeaderCard's own canMarkNotInterested button — before this,
+// the only way to mark a kid Not Interested/Cancelled was three steps deep
+// (open the row -> open the modal -> find the Status dropdown), while the
+// adult side got a single visible button. Kids never had that gating logic
+// to begin with (see add_kids_not_interested_status.sql), so it's offered
+// unconditionally whenever the kid isn't already in a closed-out state.
 import { useState } from 'react';
-import { Baby, CheckSquare, Square, CalendarDot as CalendarClock, CurrencyInr as IndianRupee } from '@phosphor-icons/react';
+import { Baby, CheckSquare, Square, CalendarDot as CalendarClock, CurrencyInr as IndianRupee, UserMinus } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
-import type { Enquiry, Kid, KidStatus } from '../../types/types-index';
+import type { ClosedReason, Enquiry, Kid, KidStatus } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
 import { useKidsForEnquiry } from './useKidsForEnquiry';
 import { useKidPayment } from './useKidPayment';
 import AdminKidDetailModal from './AdminKidDetailModal';
 import AdminKidPaymentModal from './AdminKidPaymentModal';
+import AdminKidNotInterestedModal from './AdminKidNotInterestedModal';
 import FoodMark from '../../components/ui/FoodMark';
+import { canMarkKidNotInterested } from './AdminEnquiryCommon';
 
 const STATUS_BADGE: Record<KidStatus, string> = {
   pending: 'bg-amber-50 text-amber-700',
   confirmed: 'bg-green-50 text-green-700',
   checked_in: 'bg-blue-50 text-blue-700',
   cancelled: 'bg-red-50 text-red-700',
+  // Muted grey (not red) — distinct from 'cancelled' at a glance, same
+  // "closed but not a dropout" tone the adult Not Interested badge uses.
+  not_interested: 'bg-gray-100 text-gray-600',
 };
 
 const STATUS_LABEL: Record<KidStatus, string> = {
@@ -28,12 +41,14 @@ const STATUS_LABEL: Record<KidStatus, string> = {
   confirmed: 'Confirmed',
   checked_in: 'Checked In',
   cancelled: 'Cancelled',
+  not_interested: 'Not Interested',
 };
 
 const BULK_STATUS_OPTIONS: { value: KidStatus; label: string }[] = [
   { value: 'confirmed', label: 'Mark Confirmed' },
   { value: 'checked_in', label: 'Mark Checked In' },
   { value: 'cancelled', label: 'Mark Cancelled' },
+  { value: 'not_interested', label: 'Mark Not Interested' },
   { value: 'pending', label: 'Mark Pending' },
 ];
 
@@ -58,6 +73,20 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
   } = useKidPayment({ onSaved: () => { reload(); }, getTripChildPrice });
   const [openKidId, setOpenKidId] = useState<string | null>(null);
   const [bulkAction, setBulkAction] = useState<KidStatus>('confirmed');
+  // Not Interested reason picker — mirrors AdminEnquiries.tsx's own
+  // kidNotInterestedTarget/kidClosedReason state, just scoped to this
+  // card. See AdminKidNotInterestedModal.tsx.
+  const [kidNotInterestedTarget, setKidNotInterestedTarget] = useState<Kid | null>(null);
+  const [kidClosedReason, setKidClosedReason] = useState<ClosedReason>('no_response');
+  const openKidNotInterestedModal = (kid: Kid) => {
+    setKidClosedReason('no_response');
+    setKidNotInterestedTarget(kid);
+  };
+  const handleConfirmKidNotInterested = async () => {
+    if (!kidNotInterestedTarget) return;
+    await handleUpdateStatus(kidNotInterestedTarget, 'not_interested', kidClosedReason);
+    setKidNotInterestedTarget(null);
+  };
 
   // Only meaningful on the booking's own kids — no rows yet just means
   // either this booking has no kids, or (a rare race) the seed insert
@@ -95,7 +124,7 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
             return (
               <div
                 key={kid.id}
-                className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 border ${selected ? 'border-primary bg-primary/5' : 'border-background-warm'}`}
+                className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 border flex-wrap ${selected ? 'border-primary bg-primary/5' : 'border-background-warm'}`}
               >
                 <button
                   type="button"
@@ -138,6 +167,21 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
                 <span className={`text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${STATUS_BADGE[kid.status]}`}>
                   {STATUS_LABEL[kid.status]}
                 </span>
+                {/* One-click quick action — same "Not Interested" button
+                    AdminEnquiryHeaderCard shows for the adult booking,
+                    brought down to each individual kid so it doesn't take
+                    opening the modal's Status dropdown to reach. */}
+                {canMarkKidNotInterested(kid) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openKidNotInterestedModal(kid)}
+                    disabled={busy}
+                    className="!px-2 !py-1 !gap-1 text-[11px] whitespace-nowrap shrink-0"
+                  >
+                    <UserMinus size={12} aria-hidden="true" /> Not Interested
+                  </Button>
+                )}
               </div>
             );
           })}
@@ -178,6 +222,16 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
         kidPaymentHistoryLoading={kidPaymentHistoryLoading}
         savingKidPayment={savingKidPayment}
         onSave={handleSaveKidPayment}
+      />
+
+      <AdminKidNotInterestedModal
+        kidNotInterestedTarget={kidNotInterestedTarget}
+        targetLabel={kidNotInterestedTarget ? kidLabel(kidNotInterestedTarget, kids.indexOf(kidNotInterestedTarget)) : ''}
+        onClose={() => setKidNotInterestedTarget(null)}
+        closedReason={kidClosedReason}
+        setClosedReason={setKidClosedReason}
+        onConfirm={handleConfirmKidNotInterested}
+        updating={busy && kidNotInterestedTarget ? kidNotInterestedTarget.id : null}
       />
     </div>
   );

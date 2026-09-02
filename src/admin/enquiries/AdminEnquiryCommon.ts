@@ -31,7 +31,7 @@ import {
   UserMinus,
   CalendarDot as CalendarClock,
 } from '@phosphor-icons/react';
-import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
+import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Kid, KidStatus, Payment, UpcomingTrip } from '../../types/types-index';
 import { formatDate, getActivePrice } from '../../utils/utils-index';
 import { FOOD_PREFERENCE_OPTIONS, foodPreferenceBadge } from '../../constants/foodPreference';
 
@@ -449,6 +449,37 @@ export function journeyBadge(e: Enquiry) {
   return JOURNEY_STAGE_CONFIG[e.journey_stage] || JOURNEY_STAGE_CONFIG.new_enquiry;
 }
 
+// A kid's own trackable state (see Kid/KidStatus in types-index.ts and
+// add_kids_table.sql / add_kids_not_interested_status.sql) — deliberately
+// its own small config, separate from JOURNEY_STAGE_CONFIG above, since a
+// kid's status is independent of its parent enquiry's journey_stage and
+// has a much smaller set of states (no payment-stage granularity — kids
+// never occupy a seat). Shared by the Enquiries list (table + mobile
+// cards, where each kid now gets its own row/action) and
+// AdminEnquiryKidsCard on the detail page, so the badge/label/action
+// eligibility can't drift between the two views.
+export const KID_STATUS_CONFIG: Record<KidStatus, { label: string; color: string; icon: typeof Clock }> = {
+  pending: { label: 'Pending', color: 'bg-amber-50 text-amber-700', icon: Clock },
+  confirmed: { label: 'Confirmed', color: 'bg-green-50 text-green-700', icon: CheckCircle2 },
+  checked_in: { label: 'Checked In', color: 'bg-blue-50 text-blue-700', icon: LogIn },
+  cancelled: { label: 'Cancelled', color: 'bg-red-50 text-red-700', icon: XCircle },
+  not_interested: { label: 'Not Interested', color: 'bg-gray-100 text-gray-600', icon: UserMinus },
+};
+
+export function kidStatusBadge(kid: Kid) {
+  return KID_STATUS_CONFIG[kid.status] || KID_STATUS_CONFIG.pending;
+}
+
+// Whether the row-level "Not Interested" quick action makes sense for this
+// kid right now — hidden once the kid's already in some closed-out or
+// later state (cancelled/not_interested/checked_in), same as
+// canMarkNotInterested's gating on the adult side just above. Unlike the
+// adult version, this isn't gated on payment — kids never have seat/refund
+// consequences tied to their status.
+export function canMarkKidNotInterested(kid: Kid): boolean {
+  return kid.status === 'pending' || kid.status === 'confirmed';
+}
+
 // True when this enquiry was closed out before ever becoming a paying
 // booking — i.e. an admin followed up and the person just wasn't
 // interested, as opposed to `status: 'closed'` on a booking that actually
@@ -725,6 +756,16 @@ export const CONTACT_OUTCOME_OPTIONS: { value: ContactOutcome; label: string }[]
 export function closedReasonLabel(e: Enquiry): string | null {
   if (!isNotInterested(e) || !e.closed_reason) return null;
   return CLOSED_REASON_CONFIG[e.closed_reason]?.label ?? null;
+}
+
+// Human label for why a kid was marked not interested, or null when the
+// kid isn't in that state or predates add_kid_not_interested_reason.sql
+// (marked not interested via a path with no reason picker — the plain
+// Status dropdown, a bulk action). Same idea as closedReasonLabel above,
+// used to enrich the kid status badge's tooltip.
+export function kidNotInterestedReasonLabel(kid: Kid): string | null {
+  if (kid.status !== 'not_interested' || !kid.not_interested_reason) return null;
+  return CLOSED_REASON_CONFIG[kid.not_interested_reason]?.label ?? null;
 }
 
 // Counts closed-without-booking enquiries by reason, for the reporting

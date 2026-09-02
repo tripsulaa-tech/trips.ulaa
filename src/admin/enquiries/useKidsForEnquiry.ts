@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getKidsForEnquiry, updateKid, updateKidStatus, bulkUpdateKidsStatus, setKidFollowUp, deleteKid, logKidActivity } from '../../services/api/enquiries/kids';
-import type { Kid, KidStatus } from '../../types/types-index';
+import type { ClosedReason, Kid, KidStatus } from '../../types/types-index';
 
 /** Owns the Kids card's data + bulk-selection state for one enquiry —
  *  loading the kid rows, the checkbox selection set, and the mutating
@@ -52,10 +52,10 @@ export function useKidsForEnquiry(enquiryId: string) {
 
   const kidLabel = (kid: Kid, fallbackIndex: number) => kid.name?.trim() || `Kid ${fallbackIndex + 1}`;
 
-  const handleUpdateStatus = async (kid: Kid, status: KidStatus) => {
+  const handleUpdateStatus = async (kid: Kid, status: KidStatus, reason?: ClosedReason) => {
     setBusy(true);
     try {
-      await updateKidStatus(kid.id, status);
+      await updateKidStatus(kid.id, status, reason);
       await logKidActivity(enquiryId, `Kid marked ${status.replace('_', ' ')}`, kidLabel(kid, kids.indexOf(kid)));
       await load();
     } finally {

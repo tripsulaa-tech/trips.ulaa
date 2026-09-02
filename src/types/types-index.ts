@@ -483,7 +483,15 @@ export interface Enquiry {
 // =============================================
 // This kid's own trackable state, independent of the parent enquiry's
 // status/journey_stage. See add_kids_table.sql for what each value means.
-export type KidStatus = 'pending' | 'confirmed' | 'checked_in' | 'cancelled';
+// 'not_interested' (see add_kids_not_interested_status.sql) covers the same
+// "this one kid isn't coming" outcome as 'cancelled' — kept as its own
+// value rather than folded into 'cancelled' so the Kids card can show which
+// of the two actually happened (a booked kid backing out vs. a kid that was
+// never going to come in the first place), same distinction the adult side
+// draws between journey_stage 'cancelled' and 'not_interested'. No seat or
+// pricing logic keys off either value — kids never occupy a seat or count
+// toward total_seats, so this is purely a status label.
+export type KidStatus = 'pending' | 'confirmed' | 'checked_in' | 'cancelled' | 'not_interested';
 
 // One row per individual kid travelling on a booking — its own genuine
 // record (name, status, follow-up), not just a unit counted in the parent
@@ -505,6 +513,13 @@ export interface Kid {
   // split veg/non-veg. See add_kids_food_preference.sql.
   food_preference?: 'veg' | 'non_veg' | null;
   status: KidStatus;
+  // Why this kid was marked not_interested — only meaningful alongside
+  // status === 'not_interested'; null/undefined for a kid closed out
+  // before this column existed or via a path with no reason picker (the
+  // plain Status dropdown, a bulk action). Same relationship
+  // Enquiry.closed_reason has with status === 'closed'. See
+  // add_kid_not_interested_reason.sql.
+  not_interested_reason?: ClosedReason | null;
   // Reminder for this one kid's record — same idea as
   // Enquiry.follow_up_at but scoped to the kid, only meaningful while
   // status === 'pending'.

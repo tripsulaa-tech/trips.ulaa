@@ -1,5 +1,5 @@
 import { supabase } from '../../supabase';
-import type { Kid, KidStatus, Payment } from '../../../types/types-index';
+import type { ClosedReason, Kid, KidStatus, Payment } from '../../../types/types-index';
 import { formatPrice } from '../../../utils/utils-index';
 import { PAYMENT_TYPE_LOG_LABEL } from './shared';
 import { logActivity } from './activity';
@@ -100,22 +100,32 @@ async function syncKidProfile(
 // 'pending' (mirrors refreshJourneyStage's handling of
 // enquiries.follow_up_at — see add_enquiry_follow_up.sql's check
 // constraint, which kids_follow_up_requires_pending_status mirrors), so a
-// reminder never lingers on a kid that's since moved on.
-export async function updateKidStatus(id: string, status: KidStatus): Promise<void> {
+// reminder never lingers on a kid that's since moved on. `reason` mirrors
+// updateEnquiryStatus's closedReason param — only written when status is
+// 'not_interested' (defaulting to null if the caller didn't pick one, e.g.
+// the plain Status dropdown in AdminKidDetailModal), and cleared back to
+// null on every other status change. See add_kid_not_interested_reason.sql.
+export async function updateKidStatus(id: string, status: KidStatus, reason?: ClosedReason): Promise<void> {
   const { error } = await supabase
     .from('kids')
-    .update({ status, ...(status !== 'pending' ? { follow_up_at: null, follow_up_notes: null } : {}) })
+    .update({
+      status,
+      not_interested_reason: status === 'not_interested' ? (reason ?? null) : null,
+      ...(status !== 'pending' ? { follow_up_at: null, follow_up_notes: null } : {}),
+    })
     .eq('id', id);
   if (error) throw error;
 }
 
 // Same idea as bulk-editing enquiries (AdminBulkEditModal) — apply one
-// status to every selected kid in a single round trip.
+// status to every selected kid in a single round trip. No reason picker on
+// bulk actions (matching the adult side's bulk-close behaviour), so
+// not_interested_reason is always cleared here regardless of status.
 export async function bulkUpdateKidsStatus(ids: string[], status: KidStatus): Promise<void> {
   if (ids.length === 0) return;
   const { error } = await supabase
     .from('kids')
-    .update({ status, ...(status !== 'pending' ? { follow_up_at: null, follow_up_notes: null } : {}) })
+    .update({ status, not_interested_reason: null, ...(status !== 'pending' ? { follow_up_at: null, follow_up_notes: null } : {}) })
     .in('id', ids);
   if (error) throw error;
 }

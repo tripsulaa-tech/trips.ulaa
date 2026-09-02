@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import type { MutableRefObject, RefObject } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ChatCircle as MessageCircle,
@@ -9,6 +10,7 @@ import {
   CalendarDot as CalendarClock,
   UserMinus,
   Bird,
+  ArrowSquareOut,
 } from '@phosphor-icons/react';
 import FoodMark from '../../components/ui/FoodMark';
 import { TableHeaderBar, TablePagination, SortableTh } from '../../components/ui/DataTableChrome';
@@ -23,6 +25,7 @@ import {
   journeyBadge, nextManualAction, canMarkNotInterested,
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
+  kidStatusBadge, canMarkKidNotInterested, kidNotInterestedReasonLabel,
 } from './AdminEnquiryCommon';
 import { isGeneralContactMessage, groupColorFor, kidDisplayRows } from './enquiryGrouping';
 import {
@@ -87,6 +90,11 @@ interface AdminEnquiriesDesktopTableProps {
   kidsByEnquiry: Record<string, Kid[]>;
   kidRowLabel: (kid: Kid, fallbackIndex: number) => string;
   onOpenKidPayment: (kid: Kid, tripId: string | undefined) => void;
+  // One-click "Not Interested" for a single kid, right from its own row —
+  // only ever callable for a real kid record (placeholder rows built from
+  // a bare kids_count have no id to update). See AdminEnquiries'
+  // handleMarkKidNotInterested.
+  onMarkKidNotInterested: (kid: Kid) => void;
 }
 
 /** Desktop/tablet table view of the enquiries list — extracted from
@@ -106,8 +114,17 @@ export default function AdminEnquiriesDesktopTable({
   tableScrollRef, dragHandlers, isDragging,
   updating, completingId, setDetailsTarget, openPayment, openFollowUpModal, setBookingFollowUpTarget,
   handleAdvance, handleMarkNotInterested, buildRowActions,
-  kidsByEnquiry, kidRowLabel, onOpenKidPayment,
+  kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested,
 }: AdminEnquiriesDesktopTableProps) {
+  // Only used for the "Open Full CRM Page" link below — the desktop table
+  // otherwise has zero navigation behavior of its own (see the component
+  // doc comment). Mirrors AdminEnquiriesMobileCards' "View Full CRM"
+  // button, which is the only way to reach /admin/enquiries/:id (the page
+  // with the per-kid Kids card, Activity Timeline, etc) on mobile — before
+  // this, the desktop table had no equivalent at all; clicking a name here
+  // only ever opened AdminDetailsModal's lightweight summary, which never
+  // rendered kids as individual rows.
+  const navigate = useNavigate();
   return (
     <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
       <TableHeaderBar
@@ -171,12 +188,17 @@ export default function AdminEnquiriesDesktopTable({
                     label: kidRowLabel(kid, ki),
                     onPayment: () => onOpenKidPayment(kid, e.trip_id),
                     paymentText: kid.amount ? `${formatPrice(kid.amount_paid || 0)} / ${formatPrice(kid.amount)}` : 'No fee set yet',
+                    // Only real kid rows carry their own status/action —
+                    // placeholder rows (below) are just a bare headcount
+                    // with no kid record to update yet.
+                    realKid: kid as Kid | null,
                   }))
                 : kidDisplayRows(e).map(kr => ({
                     key: kr.id,
                     label: `Kid ${kr.index}`,
                     onPayment: () => openPayment(e),
                     paymentText: e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'No kids fee set',
+                    realKid: null as Kid | null,
                   }));
               return (
                 <Fragment key={e.id}>
@@ -199,24 +221,35 @@ export default function AdminEnquiriesDesktopTable({
                   </td>
                   <td className="px-3 py-4 text-dark-muted hidden md:table-cell whitespace-nowrap">{idx + 1}</td>
                   <td className="px-4 py-4 max-w-[150px] sm:max-w-none">
-                    <button
-                      onClick={() => setDetailsTarget(e)}
-                      className="text-left w-full group"
-                      title="Click for full details"
-                    >
-                      <p className="font-medium text-dark truncate group-hover:text-primary transition-colors flex items-center gap-1.5">
-                        {e.full_name}
-                        {!e.trip_id && !activeGroup && (
-                          <span
-                            title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
-                            className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
-                          >
-                            <MessageCircle size={9} className="shrink-0" aria-hidden="true" /> General
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-dark-muted text-xs truncate sm:hidden">{e.email}</p>
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setDetailsTarget(e)}
+                        className="text-left min-w-0 flex-1 group"
+                        title="Click for a quick summary"
+                      >
+                        <p className="font-medium text-dark truncate group-hover:text-primary transition-colors flex items-center gap-1.5">
+                          {e.full_name}
+                          {!e.trip_id && !activeGroup && (
+                            <span
+                              title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
+                              className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
+                            >
+                              <MessageCircle size={9} className="shrink-0" aria-hidden="true" /> General
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-dark-muted text-xs truncate sm:hidden">{e.email}</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/enquiries/${e.id}`)}
+                        title="Open Full CRM Page — Kids, Activity Timeline, Invoices, and every other detail live here"
+                        aria-label={`Open full CRM page for ${e.full_name}`}
+                        className="shrink-0 text-dark-muted hover:text-primary p-1 -m-1 rounded transition-colors"
+                      >
+                        <ArrowSquareOut size={13} aria-hidden="true" />
+                      </button>
+                    </div>
                   </td>
                   <td className="px-2 py-4 whitespace-nowrap">
                     {e.group_size && e.group_size > 1 ? (
@@ -481,10 +514,21 @@ export default function AdminEnquiriesDesktopTable({
                       </button>
                     </td>
                     <td className="px-2 py-4 text-center">
-                      <span title={`Booking Journey: ${jb.label} (same as ${e.full_name})`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap opacity-80 ${jb.color}`}>
-                        <jb.icon size={12} className="shrink-0" aria-hidden="true" />
-                        {jb.label}
-                      </span>
+                      {kid.realKid ? (() => {
+                        const ksb = kidStatusBadge(kid.realKid!);
+                        const reasonLabel = kidNotInterestedReasonLabel(kid.realKid!);
+                        return (
+                          <span title={reasonLabel ? `${kid.label}'s own status — independent of ${e.full_name}'s booking — ${reasonLabel}` : `${kid.label}'s own status — independent of ${e.full_name}'s booking`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${ksb.color}`}>
+                            <ksb.icon size={12} className="shrink-0" aria-hidden="true" />
+                            {ksb.label}
+                          </span>
+                        );
+                      })() : (
+                        <span title={`Booking Journey: ${jb.label} (same as ${e.full_name})`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap opacity-80 ${jb.color}`}>
+                          <jb.icon size={12} className="shrink-0" aria-hidden="true" />
+                          {jb.label}
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-4 hidden md:table-cell">
                       {(() => {
@@ -503,7 +547,21 @@ export default function AdminEnquiriesDesktopTable({
                         <Baby size={12} className="shrink-0" aria-hidden="true" /> No seat
                       </span>
                     </td>
-                    <td className="px-2 py-4" />
+                    <td className="px-2 py-4 text-right">
+                      {kid.realKid && canMarkKidNotInterested(kid.realKid) && (
+                        <div className="flex items-center justify-end">
+                          <button
+                            onClick={() => onMarkKidNotInterested(kid.realKid!)}
+                            disabled={updating === kid.realKid.id}
+                            aria-label={`Mark ${kid.label} as Not Interested`}
+                            title="Not Interested"
+                            className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                          >
+                            <UserMinus size={12} className="shrink-0" aria-hidden="true" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
                   </motion.tr>
                 ))}
                 </Fragment>

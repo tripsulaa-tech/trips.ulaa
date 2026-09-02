@@ -21,6 +21,7 @@ import {
   ShareNetwork as Share2,
   Globe,
   ArrowRight,
+  UserMinus,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
@@ -35,6 +36,7 @@ import {
   journeyBadge, nextManualAction,
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
+  kidStatusBadge, canMarkKidNotInterested, kidNotInterestedReasonLabel,
 } from './AdminEnquiryCommon';
 import { isGeneralContactMessage, groupColorFor, kidDisplayRows } from './enquiryGrouping';
 import { paymentBalance, paymentFilterKey, refundStatus } from './AdminEnquiriesShared';
@@ -79,6 +81,9 @@ interface AdminEnquiriesMobileCardsProps {
   kidsByEnquiry: Record<string, Kid[]>;
   kidRowLabel: (kid: Kid, fallbackIndex: number) => string;
   onOpenKidPayment: (kid: Kid, tripId: string | undefined) => void;
+  // Same one-click "Not Interested" action as the desktop table — see
+  // AdminEnquiries' handleMarkKidNotInterested.
+  onMarkKidNotInterested: (kid: Kid) => void;
 }
 
 /** Mobile card-list view of the enquiries list (tap a card to expand full
@@ -95,7 +100,7 @@ export default function AdminEnquiriesMobileCards({
   activeGroup, highlightId, groupColor, groupLabel, cardRefs,
   updating, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
   openPayment, openFollowUpModal, setBookingFollowUpTarget, handleAdvance, buildRowActions,
-  kidsByEnquiry, kidRowLabel, onOpenKidPayment,
+  kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested,
 }: AdminEnquiriesMobileCardsProps) {
   const navigate = useNavigate();
 
@@ -478,10 +483,21 @@ export default function AdminEnquiriesMobileCards({
                         <span className="text-dark-muted text-xs font-normal truncate">of {e.full_name}</span>
                       </p>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span title={`Booking Journey: ${jb.label} (same as ${e.full_name})`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
-                          <jb.icon size={12} className="shrink-0" aria-hidden="true" />
-                          {jb.label}
-                        </span>
+                        {kid.realKid ? (() => {
+                          const ksb = kidStatusBadge(kid.realKid!);
+                          const reasonLabel = kidNotInterestedReasonLabel(kid.realKid!);
+                          return (
+                            <span title={reasonLabel ? `${kid.label}'s own status — independent of ${e.full_name}'s booking — ${reasonLabel}` : `${kid.label}'s own status — independent of ${e.full_name}'s booking`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${ksb.color}`}>
+                              <ksb.icon size={12} className="shrink-0" aria-hidden="true" />
+                              {ksb.label}
+                            </span>
+                          );
+                        })() : (
+                          <span title={`Booking Journey: ${jb.label} (same as ${e.full_name})`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
+                            <jb.icon size={12} className="shrink-0" aria-hidden="true" />
+                            {jb.label}
+                          </span>
+                        )}
                         <ChevronDown size={16} className={`text-dark-muted transition-transform ${isKidOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                       </div>
                     </div>
@@ -543,13 +559,17 @@ export default function AdminEnquiriesMobileCards({
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2.5 min-w-0" title="Kids have no separate age/name record — see Enquiry.kids_count">
+                        <div className="flex items-center gap-2.5 min-w-0" title={kid.realKid ? "Admin-entered — the public booking form doesn't collect a kid's age" : "Kids have no separate age/name record — see Enquiry.kids_count"}>
                           <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
                             <User size={15} aria-hidden="true" />
                           </span>
                           <div className="min-w-0">
                             <p className="text-dark-muted text-xs">Age</p>
-                            <p className="text-dark text-sm truncate text-dark-muted italic">Not tracked</p>
+                            {kid.realKid ? (
+                              <p className="text-dark text-sm truncate">{kid.realKid.age ?? '—'}</p>
+                            ) : (
+                              <p className="text-dark text-sm truncate text-dark-muted italic">Not tracked</p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -651,9 +671,21 @@ export default function AdminEnquiriesMobileCards({
                       );
                     })()}
 
-                    <p className="text-dark-muted/70 text-[11px] text-center pt-1" title="Kids have no separate record — everything above lives on this booking">
-                      Part of {e.full_name}'s booking · no separate record to open
-                    </p>
+                    {kid.realKid && canMarkKidNotInterested(kid.realKid) ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onMarkKidNotInterested(kid.realKid!)}
+                        disabled={updating === kid.realKid.id}
+                        className="w-full !gap-1.5 text-xs"
+                      >
+                        <UserMinus size={13} aria-hidden="true" /> Not Interested
+                      </Button>
+                    ) : !kid.realKid ? (
+                      <p className="text-dark-muted/70 text-[11px] text-center pt-1" title="Kids have no separate record — everything above lives on this booking">
+                        Part of {e.full_name}'s booking · no separate record to open
+                      </p>
+                    ) : null}
                   </div>
                 )}
               </motion.div>
