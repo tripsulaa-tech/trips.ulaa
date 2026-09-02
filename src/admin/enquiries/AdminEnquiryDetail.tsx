@@ -61,7 +61,7 @@ import AdminEnquiryFollowUpModal from './AdminEnquiryFollowUpModal';
 
 const emptyPaymentForm: PaymentForm = {
   package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '',
-  refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '', kids_amount_paid: '',
+  refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '', kids_amount: '', kids_amount_paid: '',
 };
 
 export default function AdminEnquiryDetail() {
@@ -164,6 +164,16 @@ export default function AdminEnquiryDetail() {
     return price ?? undefined;
   };
 
+  // Same lookup, for the trip's flat per-kid price — already recorded on
+  // upcoming_trips.child_price (see add_trip_kids_option.sql), so the Kids
+  // Fee section can suggest/verify a total the same way getTripPrice does
+  // for the adult booking, instead of only ever trusting whatever
+  // kids_amount happened to get auto-computed at insert time.
+  const getTripChildPrice = (tripId: string | undefined): number | undefined => {
+    const trip = trips.find(t => t.id === tripId);
+    return trip?.child_price ?? undefined;
+  };
+
   // Which price is *currently* live for this enquiry's trip, worked out
   // from today's date against the trip's early-bird deadline — same rule
   // the public site uses to decide what a new visitor gets quoted. This is
@@ -181,7 +191,7 @@ export default function AdminEnquiryDetail() {
   // alert() after Save. Same shared validator AdminPaymentModal uses.
   const paymentErrors = paymentOpen
     ? validatePaymentForm(paymentForm, enquiry?.amount_paid || 0, enquiry && enquiry.kids_count > 0
-      ? { total: enquiry.kids_amount || 0, alreadyPaid: enquiry.kids_amount_paid || 0 }
+      ? { total: paymentForm.kids_amount === '' ? 0 : Number(paymentForm.kids_amount), alreadyPaid: enquiry.kids_amount_paid || 0 }
       : undefined)
     : {};
   const hasPaymentErrors = Object.keys(paymentErrors).length > 0;
@@ -209,6 +219,12 @@ export default function AdminEnquiryDetail() {
     // price is live right now.
     const packageType = enquiry.package_type || activePricing?.packageType || 'normal';
     const suggested = enquiry.total_amount ?? getTripPrice(enquiry.trip_id, packageType) ?? activePricing?.amount;
+    // Same "keep what's already on record, only suggest for a brand-new
+    // one" reasoning as the adult total_amount above — but kids_amount
+    // defaults to 0 rather than being nullable, so `||` falling through to
+    // the trip's live child_price × kids_count is the right check here.
+    const childPrice = getTripChildPrice(enquiry.trip_id);
+    const suggestedKidsAmount = enquiry.kids_amount || (childPrice != null ? childPrice * enquiry.kids_count : undefined);
     setPaymentForm({
       package_type: packageType,
       total_amount: suggested ?? '',
@@ -228,6 +244,7 @@ export default function AdminEnquiryDetail() {
       refund_date: '',
       refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
+      kids_amount: suggestedKidsAmount ?? '',
       kids_amount_paid: '',
     });
     setPaymentOpen(true);
@@ -350,7 +367,7 @@ export default function AdminEnquiryDetail() {
     // validator as AdminEnquiries.tsx, so the rules can't drift between
     // "what the admin sees live" and "what actually blocks the save".
     const formErrors = validatePaymentForm(paymentForm, enquiry.amount_paid || 0, enquiry.kids_count > 0
-      ? { total: enquiry.kids_amount || 0, alreadyPaid: enquiry.kids_amount_paid || 0 }
+      ? { total: paymentForm.kids_amount === '' ? 0 : Number(paymentForm.kids_amount), alreadyPaid: enquiry.kids_amount_paid || 0 }
       : undefined);
     const firstError = Object.values(formErrors)[0];
     if (firstError) {
@@ -416,9 +433,12 @@ export default function AdminEnquiryDetail() {
       // Kids fee — independent Total/Paid/Pending, see the matching block
       // in useEnquiryPayment.ts's handleSavePayment.
       const thisKidsPayment = paymentForm.kids_amount_paid === '' ? 0 : Number(paymentForm.kids_amount_paid);
-      if (thisKidsPayment > 0) {
+      const kidsAmount = paymentForm.kids_amount === '' ? null : Number(paymentForm.kids_amount);
+      const kidsAmountChanged = kidsAmount != null && kidsAmount !== (updated.kids_amount || 0);
+      if (thisKidsPayment > 0 || kidsAmountChanged) {
         updated = await recordKidsPayment(updated, {
           kids_amount_paid: (updated.kids_amount_paid || 0) + thisKidsPayment,
+          kids_amount: kidsAmount,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
         });
@@ -844,6 +864,7 @@ export default function AdminEnquiryDetail() {
         togglingNoShow={togglingNoShow}
         onToggleNoShow={handleToggleNoShow}
         getTripPrice={getTripPrice}
+        getTripChildPrice={getTripChildPrice}
       />
 
       {/* Generate Invoice modal — same component the Enquiries list uses. */}

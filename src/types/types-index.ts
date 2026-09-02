@@ -510,6 +510,11 @@ export interface Kid {
   // status === 'pending'.
   follow_up_at?: string | null;
   follow_up_notes?: string | null;
+  // This kid's own total price and running total collected — independent
+  // of every other kid on the same booking and of the adult booking's own
+  // total_amount/amount_paid. See add_kid_individual_payments.sql.
+  amount: number;
+  amount_paid: number;
   created_at: string;
   updated_at: string;
 }
@@ -549,6 +554,11 @@ export interface Payment {
   // and still counts as, an adult-booking payment. See
   // add_kids_payment_tracking.sql.
   for_kids?: boolean;
+  // Scopes this row to one specific kid's own payment record rather than
+  // the adult booking or the older combined kids bucket for_kids alone
+  // used to mean. Null for every payment that isn't a kid's own — see
+  // add_kid_individual_payments.sql.
+  kid_id?: string | null;
 }
 
 // =============================================

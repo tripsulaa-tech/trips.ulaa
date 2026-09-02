@@ -64,6 +64,7 @@ export {
 
 export {
   getKidsForEnquiry,
+  getKidsForEnquiries,
   createKidsForEnquiry,
   updateKid,
   updateKidStatus,
@@ -71,4 +72,6 @@ export {
   setKidFollowUp,
   deleteKid,
   getAllKidsFoodPreferences,
+  recordKidPayment,
+  getPaymentsForKid,
 } from './enquiries/kids';

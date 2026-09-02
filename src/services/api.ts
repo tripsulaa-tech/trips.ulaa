@@ -79,6 +79,7 @@ export {
   uncancelEnquiry,
   recordRefund,
   getKidsForEnquiry,
+  getKidsForEnquiries,
   createKidsForEnquiry,
   updateKid,
   updateKidStatus,
@@ -86,6 +87,8 @@ export {
   setKidFollowUp,
   deleteKid,
   getAllKidsFoodPreferences,
+  recordKidPayment,
+  getPaymentsForKid,
 } from './api/enquiries';
 
 export {

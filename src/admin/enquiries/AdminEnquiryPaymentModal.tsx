@@ -37,17 +37,21 @@ interface AdminEnquiryPaymentModalProps {
   togglingNoShow: boolean;
   onToggleNoShow: (isNoShow: boolean) => void;
   getTripPrice: (tripId: string | undefined, packageType: Enquiry['package_type']) => number | undefined;
+  getTripChildPrice: (tripId: string | undefined) => number | undefined;
 }
 
 export default function AdminEnquiryPaymentModal({
   isOpen, onClose, enquiry, paymentForm, setPaymentForm, paymentErrors, hasPaymentErrors,
-  savingPayment, onSave, payments, paymentsLoading, togglingNoShow, onToggleNoShow, getTripPrice,
+  savingPayment, onSave, payments, paymentsLoading, togglingNoShow, onToggleNoShow, getTripPrice, getTripChildPrice,
 }: AdminEnquiryPaymentModalProps) {
   const paymentErrorClass = 'text-red-500 text-xs mt-1';
   const fieldClass = 'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none';
   // Only meaningful when a trip is linked — no-trip (general) enquiries
   // have no list price, so they keep the old free-typed Total Amount field.
   const listPrice = enquiry.trip_id ? getTripPrice(enquiry.trip_id, paymentForm.package_type) : undefined;
+  // Same idea, for the trip's flat per-kid price — see the matching
+  // Kids Fee section below.
+  const kidsListPrice = enquiry.trip_id ? getTripChildPrice(enquiry.trip_id) : undefined;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Payment" size="sm">
@@ -235,10 +239,30 @@ export default function AdminEnquiryPaymentModal({
             <p className="text-xs font-medium text-amber-800">
               Kids Fee — tracked independently of the adult booking above ({enquiry.kids_count} kid{enquiry.kids_count > 1 ? 's' : ''})
             </p>
+            {kidsListPrice != null && (
+              <p className="text-xs text-dark-muted">
+                Trip's per-kid price — <span className="font-medium text-dark">{formatPrice(kidsListPrice)}</span> × {enquiry.kids_count} = <span className="font-medium text-dark">{formatPrice(kidsListPrice * enquiry.kids_count)}</span>
+              </p>
+            )}
+            <div>
+              <label htmlFor="ed-pay-kids-total" className="block text-sm font-medium text-dark mb-1">Kids Fee Total (₹)</label>
+              <input
+                id="ed-pay-kids-total"
+                type="number"
+                min={0}
+                value={paymentForm.kids_amount}
+                onChange={e => setPaymentForm(f => ({ ...f, kids_amount: parseNonNegative(e.target.value) }))}
+                className={fieldClass}
+                placeholder={kidsListPrice != null ? `e.g. ${kidsListPrice * enquiry.kids_count}` : 'e.g. 6000'}
+              />
+              <p className="text-[11px] text-dark-muted mt-1">
+                Prefilled from the trip's per-kid price above — override if it needs correcting for this booking.
+              </p>
+            </div>
             <p className="text-sm text-dark-muted">
-              Kids total <span className="font-medium text-dark">{formatPrice(enquiry.kids_amount || 0)}</span>
+              Kids total <span className="font-medium text-dark">{formatPrice(paymentForm.kids_amount === '' ? 0 : Number(paymentForm.kids_amount))}</span>
               {' · '}already paid <span className="font-medium text-dark">{formatPrice(enquiry.kids_amount_paid || 0)}</span>
-              {' · '}pending <span className="font-medium text-dark">{formatPrice(Math.max(0, (enquiry.kids_amount || 0) - (enquiry.kids_amount_paid || 0)))}</span>
+              {' · '}pending <span className="font-medium text-dark">{formatPrice(Math.max(0, (paymentForm.kids_amount === '' ? 0 : Number(paymentForm.kids_amount)) - (enquiry.kids_amount_paid || 0)))}</span>
             </p>
             <div>
               <label htmlFor="ed-pay-kids-amount" className="block text-sm font-medium text-dark mb-1">Kids Amount Being Paid Now (₹)</label>

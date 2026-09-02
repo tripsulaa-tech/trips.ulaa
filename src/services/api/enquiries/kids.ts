@@ -1,5 +1,7 @@
 import { supabase } from '../../supabase';
-import type { Kid, KidStatus } from '../../../types/types-index';
+import type { Kid, KidStatus, Payment } from '../../../types/types-index';
+import { formatPrice } from '../../../utils/utils-index';
+import { PAYMENT_TYPE_LOG_LABEL } from './shared';
 import { logActivity } from './activity';
 
 // =============================================
@@ -19,6 +21,23 @@ export async function getKidsForEnquiry(enquiryId: string): Promise<Kid[]> {
     .from('kids')
     .select('*')
     .eq('enquiry_id', enquiryId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+// Same as getKidsForEnquiry, batched across several enquiries in one round
+// trip — for screens that need real kid rows for a whole page of bookings
+// at once (the Enquiries list table's per-kid rows) rather than one
+// enquiry's detail page. Caller groups the flat result back by
+// `enquiry_id` itself; still oldest-first per enquiry so "Kid 1"/"Kid 2"
+// fallback ordering stays stable, same reasoning as the singular version.
+export async function getKidsForEnquiries(enquiryIds: string[]): Promise<Kid[]> {
+  if (enquiryIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('kids')
+    .select('*')
+    .in('enquiry_id', enquiryIds)
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data || [];
@@ -123,4 +142,107 @@ export async function getAllKidsFoodPreferences(): Promise<Pick<Kid, 'enquiry_id
 // the Kids card. Best-effort, same as logActivity itself.
 export async function logKidActivity(enquiryId: string, action: string, details?: string | null): Promise<void> {
   await logActivity(enquiryId, action, details);
+}
+
+// =============================================
+// Kids — their own individual payment record
+// =============================================
+// One kid, one Total/Paid, own ledger rows — genuinely independent of
+// every other kid on the same booking and of the adult booking's own
+// amount_paid, unlike the older combined enquiries.kids_amount_paid bucket
+// (add_kids_payment_tracking.sql, still maintained underneath for its own
+// business-wide rollup use but no longer what the admin UI edits). See
+// add_kid_individual_payments.sql.
+
+// Records a payment against one specific kid — same running-total/delta
+// shape as recordPayment/recordKidsPayment in payments.ts, just scoped to
+// a single kid's own `amount`/`amount_paid` instead of an enquiry's (or a
+// whole booking's combined kids bucket's). No refund/pending-invoice
+// branching in v1, same simplicity recordKidsPayment originally shipped
+// with — a kid doesn't get its own seat or invoice-type menu, just
+// Total/Paid/Pending.
+//
+// `newAmountPaid` is the running total after this transaction, same
+// convention as recordPayment's `payment.amount_paid`. Passing a value
+// equal to current.amount_paid is a no-op on the ledger.
+export async function recordKidPayment(
+  kid: Kid,
+  payment: {
+    amount_paid: number; // new running total, not a delta
+    amount?: number | null; // lets the admin correct this kid's own total
+    payment_method?: string;
+    utr_number?: string;
+    notes?: string;
+  }
+): Promise<Kid> {
+  const newTotal = payment.amount !== undefined && payment.amount != null ? payment.amount : kid.amount;
+
+  if (payment.amount_paid < 0) {
+    throw new Error('Amount paid cannot be negative.');
+  }
+  if (newTotal != null && newTotal > 0 && payment.amount_paid > newTotal) {
+    throw new Error("Amount paid can't exceed this kid's total amount.");
+  }
+
+  const delta = payment.amount_paid - (kid.amount_paid || 0);
+
+  const isFirstPayment = (kid.amount_paid || 0) <= 0;
+  const completesTotal = !!newTotal && newTotal > 0 && payment.amount_paid >= newTotal;
+  const invoiceType = isFirstPayment
+    ? (completesTotal ? 'full_payment' : 'advance')
+    : (completesTotal ? 'balance' : 'installment');
+
+  if (delta !== 0) {
+    const { error: paymentError } = await supabase.from('payments').insert({
+      enquiry_id: kid.enquiry_id,
+      kid_id: kid.id,
+      // Kept true for backward compatibility with anything still reading
+      // this flag business-wide (Reports); kid_id is the precise
+      // discriminator now — see add_kid_individual_payments.sql.
+      for_kids: true,
+      amount: delta,
+      payment_type: invoiceType,
+      payment_method: payment.payment_method,
+      utr_number: payment.utr_number || null,
+      notes: payment.notes,
+    });
+    if (paymentError) throw paymentError;
+  }
+
+  if (newTotal !== kid.amount) {
+    const { error } = await supabase.from('kids').update({ amount: newTotal }).eq('id', kid.id);
+    if (error) throw error;
+  }
+
+  // Re-read the trigger-updated amount_paid rather than assuming it from
+  // the delta, same reasoning as recordPayment/recordKidsPayment.
+  const { data: refreshed, error: refreshError } = await supabase
+    .from('kids')
+    .select('*')
+    .eq('id', kid.id)
+    .single();
+  if (refreshError) throw refreshError;
+
+  if (delta !== 0) {
+    await logActivity(
+      kid.enquiry_id,
+      delta > 0 ? `${PAYMENT_TYPE_LOG_LABEL[invoiceType] || invoiceType} received` : 'Payment adjusted',
+      `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(Math.abs(delta))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
+    );
+  }
+
+  return refreshed as Kid;
+}
+
+// One kid's own payment ledger, oldest first — same idea as
+// getPaymentsForEnquiry, just filtered to a single kid_id instead of a
+// whole enquiry_id.
+export async function getPaymentsForKid(kidId: string): Promise<Payment[]> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('kid_id', kidId)
+    .order('paid_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
 }

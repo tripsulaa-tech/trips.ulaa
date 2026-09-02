@@ -176,6 +176,15 @@ export type PaymentForm = {
   refund_date: string;
   refund_notes: string;
   food_preference: 'veg' | 'non_veg' | '';
+  // Kids fee's own total — same "list price, admin-adjustable" shape as
+  // total_amount above, but for the kids fee instead of the adult booking.
+  // Prefilled from enquiry.kids_amount (itself auto-computed once from the
+  // trip's child_price × kids_count — see add_trip_kids_option.sql), and
+  // editable here so an admin can correct it (e.g. child_price was added
+  // to the trip after this booking existed) via recordKidsPayment's own
+  // kids_amount override. Only shown/used when the enquiry has
+  // kids_count > 0.
+  kids_amount: number | '';
   // Kids fee — independent of everything above (see
   // add_kids_payment_tracking.sql): this transaction's own kids-fee amount,
   // same "not a running total" convention as amount_paid. Only shown/used

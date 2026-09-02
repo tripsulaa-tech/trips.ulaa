@@ -143,6 +143,14 @@ export default function AdminEnquiries() {
     const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
     return price ?? undefined;
   };
+  // Same lookup, for the trip's flat per-kid price (upcoming_trips.child_price
+  // — see add_trip_kids_option.sql), so the Track Payment modal's Kids Fee
+  // section can suggest/verify a total the same way getTripPrice does for
+  // the adult booking above.
+  const getTripChildPrice = (tripId: string | undefined): number | undefined => {
+    const trip = trips.find(t => t.id === tripId);
+    return trip?.child_price ?? undefined;
+  };
   // Owns the Track Payment modal — target/form state, inline history,
   // opening with a suggested amount, and saving.
   const {
@@ -152,7 +160,7 @@ export default function AdminEnquiries() {
     paymentHistory, paymentHistoryLoading,
     openPayment,
     handleSavePayment,
-  } = useEnquiryPayment({ setTrips, load, getTripPrice });
+  } = useEnquiryPayment({ setTrips, load, getTripPrice, getTripChildPrice });
   const {
     cancelTarget, setCancelTarget,
     cancelCharges, setCancelCharges,
@@ -1300,6 +1308,7 @@ export default function AdminEnquiries() {
         paymentForm={paymentForm}
         setPaymentForm={setPaymentForm}
         getTripPrice={getTripPrice}
+        getTripChildPrice={getTripChildPrice}
         paymentHistory={paymentHistory}
         paymentHistoryLoading={paymentHistoryLoading}
         togglingNoShow={togglingNoShow}

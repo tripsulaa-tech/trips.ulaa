@@ -446,14 +446,20 @@ export default function AdminEnquiriesDesktopTable({
                         {PACKAGE_CONFIG[e.package_type || 'normal'].label}
                       </span>
                     </td>
-                    <td className="px-2 py-4 text-left whitespace-nowrap" title="Kids are billed as part of the booking's kids fee — no separate payment record">
-                      <p className="text-dark text-xs">
-                        <span className="font-medium">Included</span>
-                        <span className="text-dark-muted"> · </span>
-                        <span className="text-dark-muted">
-                          {e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'No kids fee set'}
-                        </span>
-                      </p>
+                    <td className="px-2 py-4 text-left whitespace-nowrap">
+                      <button
+                        onClick={() => openPayment(e)}
+                        title={`Manage ${e.full_name}'s kids fee — opens the same Payment modal as their own booking`}
+                        className="text-left hover:opacity-75 transition-opacity"
+                      >
+                        <p className="text-dark text-xs">
+                          <span className="font-medium">Included</span>
+                          <span className="text-dark-muted"> · </span>
+                          <span className="text-dark-muted">
+                            {e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'No kids fee set'}
+                          </span>
+                        </p>
+                      </button>
                     </td>
                     <td className="px-2 py-4 text-center">
                       <span title={`Booking Journey: ${jb.label} (same as ${e.full_name})`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap opacity-80 ${jb.color}`}>

@@ -31,12 +31,13 @@ export function useEnquiryPayment(params: {
   setTrips: (trips: UpcomingTrip[]) => void;
   load: () => void;
   getTripPrice: (tripId: string | undefined, packageType: Enquiry['package_type']) => number | undefined;
+  getTripChildPrice: (tripId: string | undefined) => number | undefined;
 }) {
-  const { setTrips, load, getTripPrice } = params;
+  const { setTrips, load, getTripPrice, getTripChildPrice } = params;
   const alert = useAlert();
 
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
-  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '', kids_amount_paid: '' });
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '', kids_amount: '', kids_amount_paid: '' });
   const [savingPayment, setSavingPayment] = useState(false);
   // Read-only ledger shown inline in the Track Payment modal (Phase F) —
   // same on-demand fetch pattern as detailsInvoices in AdminEnquiries.tsx,
@@ -68,6 +69,11 @@ export function useEnquiryPayment(params: {
     // If no amount has been recorded yet, pull the trip's price for whichever
     // package this booking is under so the admin isn't starting from blank.
     const suggested = enquiry.total_amount ?? getTripPrice(enquiry.trip_id, packageType);
+    // Same idea for the kids fee — kids_amount defaults to 0 (not
+    // nullable), so `||` is the right fallback to the trip's live
+    // child_price × kids_count instead of a strict null check.
+    const childPrice = getTripChildPrice(enquiry.trip_id);
+    const suggestedKidsAmount = enquiry.kids_amount || (childPrice != null ? childPrice * enquiry.kids_count : undefined);
     setPaymentForm({
       package_type: packageType,
       total_amount: suggested ?? '',
@@ -90,6 +96,7 @@ export function useEnquiryPayment(params: {
       refund_date: '',
       refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
+      kids_amount: suggestedKidsAmount ?? '',
       // Same "this transaction's own amount" convention as amount_paid
       // above, not enquiry.kids_amount_paid — see PaymentForm.
       kids_amount_paid: '',
@@ -123,7 +130,7 @@ export function useEnquiryPayment(params: {
     // validator, so the rules can't drift between "what the admin sees
     // live" and "what actually blocks the save".
     const formErrors = validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0, paymentTarget.kids_count > 0
-      ? { total: paymentTarget.kids_amount || 0, alreadyPaid: paymentTarget.kids_amount_paid || 0 }
+      ? { total: paymentForm.kids_amount === '' ? 0 : Number(paymentForm.kids_amount), alreadyPaid: paymentTarget.kids_amount_paid || 0 }
       : undefined);
     const firstError = Object.values(formErrors)[0];
     if (firstError) {
@@ -196,9 +203,15 @@ export function useEnquiryPayment(params: {
       // whichever branch above handled the adult payment. Same "amount for
       // this transaction" entry as amount_paid; a no-op when left blank.
       const thisKidsPayment = paymentForm.kids_amount_paid === '' ? 0 : Number(paymentForm.kids_amount_paid);
-      if (thisKidsPayment > 0) {
+      const kidsAmount = paymentForm.kids_amount === '' ? null : Number(paymentForm.kids_amount);
+      // Also persist a corrected Kids Fee Total even when no payment is
+      // being made this time — same "profile-only edit" case recordPayment
+      // already handles for the adult total_amount/package/discount above.
+      const kidsAmountChanged = kidsAmount != null && kidsAmount !== (updated.kids_amount || 0);
+      if (thisKidsPayment > 0 || kidsAmountChanged) {
         updated = await recordKidsPayment(updated, {
           kids_amount_paid: (updated.kids_amount_paid || 0) + thisKidsPayment,
+          kids_amount: kidsAmount,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
         });

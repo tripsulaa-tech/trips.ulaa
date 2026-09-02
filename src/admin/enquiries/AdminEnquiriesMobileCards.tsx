@@ -607,9 +607,10 @@ export default function AdminEnquiriesMobileCards({
                       </div>
                     </div>
 
-                    <div
-                      className="bg-background-warm rounded-md px-3 py-2 flex items-center gap-2.5"
-                      title="Kids are billed as part of the booking's kids fee — no separate payment record"
+                    <button
+                      onClick={() => openPayment(e)}
+                      title={`Manage ${e.full_name}'s kids fee — opens the same Payment modal as their own booking`}
+                      className="w-full text-left bg-background-warm rounded-md px-3 py-2 flex items-center gap-2.5 hover:opacity-75 transition-opacity"
                     >
                       <IndianRupee size={14} className="text-dark-muted shrink-0" aria-hidden="true" />
                       <div className="min-w-0">
@@ -618,7 +619,7 @@ export default function AdminEnquiriesMobileCards({
                           {e.kids_amount ? `${formatPrice(e.kids_amount_paid || 0)} / ${formatPrice(e.kids_amount)}` : 'Not set'}
                         </p>
                       </div>
-                    </div>
+                    </button>
 
                     {followUpStatus(e) && (() => {
                       const fu = followUpStatus(e)!;
