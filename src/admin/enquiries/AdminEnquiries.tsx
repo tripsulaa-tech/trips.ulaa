@@ -43,7 +43,6 @@ import { useAddEnquiry } from './useAddEnquiry';
 import { useEnquiryPayment } from './useEnquiryPayment';
 import { useKidPayment } from './useKidPayment';
 import { useEnquiryDetailsModal } from './useEnquiryDetailsModal';
-import { useEditEnquiry } from './useEditEnquiry';
 import { useEnquiryStatusActions } from './useEnquiryStatusActions';
 import { useBulkEdit } from './useBulkEdit';
 import { useRowActions } from './useRowActions';
@@ -74,7 +73,6 @@ import BookingFollowUpModal from './AdminBookingFollowUpModal';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import CancelModal from './AdminCancelModal';
 import BulkEditModal from './AdminBulkEditModal';
-import EditDetailsModal from './AdminEditDetailsModal';
 import AdminEnquiriesDesktopTable from './AdminEnquiriesDesktopTable';
 import AdminEnquiriesMobileCards from './AdminEnquiriesMobileCards';
 
@@ -406,16 +404,11 @@ export default function AdminEnquiries() {
     handleToggleNoShow, handleDelete, handleMarkCompleted,
     handleCheckIn, handleUndoCheckIn,
   } = useEnquiryLifecycle({ load, setTrips, setUpdating, setPaymentTarget, setPaymentForm, setDetailsTarget });
-  // Owns the Edit Details modal — target/form/touched state, opening with
-  // the enquiry's current values prefilled, and saving.
-  const {
-    editTarget, setEditTarget,
-    editForm, setEditForm,
-    editTouched, setEditTouched,
-    savingEdit,
-    openEdit,
-    handleSaveEdit,
-  } = useEditEnquiry({ trips, load });
+  // Edit Details used to be owned here (target/form/touched state, opening
+  // with the enquiry's current values prefilled, and saving) but that flow
+  // now lives solely on the "View Full CRM" detail page — see
+  // AdminEnquiryDetail.tsx's own useEditEnquiry() call — so there's one
+  // place to fix a wrong name/contact/trip instead of two.
   // How many waitlist signups — and how many actual people, since a group
   // signup (group_size > 1) is one signup but several people — are
   // waiting (status 'waiting') for each trip. Used to warn admins before
@@ -599,7 +592,7 @@ export default function AdminEnquiries() {
   // wiring together handlers owned by the hooks above — see
   // useRowActions.ts for what's included/excluded and why.
   const { buildRowActions } = useRowActions({
-    openEdit, setDetailsTarget, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
+    setDetailsTarget, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
     handleToggleNoShow, handleUndoCheckIn, handleClearFollowUp, handleClearBookingFollowUp,
     handleReopenEnquiry, handleMarkNotInterested, handleCancelToggle, handleDelete,
   });
@@ -1655,18 +1648,6 @@ export default function AdminEnquiries() {
         onOpenGenerateInvoice={generateInvoice.open}
         invoiceRowBusyId={markPaid.busyId}
         onMarkInvoicePaid={markPaid.open}
-      />
-
-      <EditDetailsModal
-        editTarget={editTarget}
-        onClose={() => setEditTarget(null)}
-        editForm={editForm}
-        setEditForm={setEditForm}
-        editTouched={editTouched}
-        setEditTouched={setEditTouched}
-        trips={trips}
-        onSave={handleSaveEdit}
-        saving={savingEdit}
       />
 
       <GenerateInvoiceModal

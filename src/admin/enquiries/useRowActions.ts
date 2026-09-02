@@ -1,5 +1,5 @@
 import {
-  Pencil, Eye, FileText, ShareNetwork as Share2, UserCheck, UserMinus as UserX,
+  Eye, FileText, ShareNetwork as Share2, UserCheck, UserMinus as UserX,
   SignIn as LogIn, X, ArrowsClockwise as RefreshCw, UserMinus, XCircle, Trash as Trash2,
 } from '@phosphor-icons/react';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
@@ -8,14 +8,16 @@ import { isNotInterested, canSetFollowUp, canSetBookingFollowUp, canCancelBookin
 
 /** Consolidates every per-row action that used to be a separate icon button
  *  (or, for Cancel/Delete, still is on narrower layouts) into one kebab
- *  menu — Edit Details, Mark/Undo No Show, invoice download/share, View
- *  Details, Delete. (WhatsApp/Call stay out — they're already one tap away
- *  via the round quick-link icons on the row itself, so listing them again
- *  here would just be the same actions twice. "Open Full CRM Page" and
- *  setting/editing a follow-up date also stay out — the card already has a
- *  dedicated "View Full CRM" button and a "Set Follow-up" chip that do
- *  exactly that; only Clear Follow-up stays here since there's no other way
- *  to reach it.)
+ *  menu — Mark/Undo No Show, invoice download/share, View Details, Delete.
+ *  (WhatsApp/Call stay out — they're already one tap away via the round
+ *  quick-link icons on the row itself, so listing them again here would
+ *  just be the same actions twice. "Open Full CRM Page" and setting/editing
+ *  a follow-up date also stay out — the card already has a dedicated
+ *  "View Full CRM" button and a "Set Follow-up" chip that do exactly that;
+ *  only Clear Follow-up stays here since there's no other way to reach it.
+ *  Edit Details also stays out — it now lives solely on the "View Full CRM"
+ *  detail page, so there's one place to fix a wrong name/contact/trip
+ *  instead of two.)
  *
  *  Every handler this menu calls is owned by another hook (useEditEnquiry,
  *  useEnquiryDetailsModal, useEnquiryLifecycle, useEnquiryStatusActions) —
@@ -26,7 +28,6 @@ import { isNotInterested, canSetFollowUp, canSetBookingFollowUp, canCancelBookin
  *  Extracted from AdminEnquiries.tsx (see that file's history for the
  *  original single-component version). */
 export function useRowActions(params: {
-  openEdit: (enquiry: Enquiry) => void;
   setDetailsTarget: (enquiry: Enquiry) => void;
   invoiceBusyId: string | null;
   handleDownloadInvoice: (enquiry: Enquiry) => void;
@@ -41,14 +42,18 @@ export function useRowActions(params: {
   handleDelete: (enquiry: Enquiry) => void;
 }) {
   const {
-    openEdit, setDetailsTarget, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
+    setDetailsTarget, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
     handleToggleNoShow, handleUndoCheckIn, handleClearFollowUp, handleClearBookingFollowUp,
     handleReopenEnquiry, handleMarkNotInterested, handleCancelToggle, handleDelete,
   } = params;
 
   const buildRowActions = (e: Enquiry): ActionMenuItem[] => {
+    // Edit Details deliberately NOT in this menu anymore — it now lives
+    // solely on the "View Full CRM" detail page (AdminEnquiryDetail.tsx's
+    // own kebab), so there's one place to fix a wrong name/contact/trip
+    // instead of two. `openEdit` is kept as a param for callers that still
+    // pass it in, but this menu no longer calls it.
     const items: ActionMenuItem[] = [
-      { label: 'Edit Details', icon: Pencil, onClick: () => openEdit(e) },
       { label: 'View Details', icon: Eye, onClick: () => setDetailsTarget(e) },
     ];
     if (e.booking_id) {

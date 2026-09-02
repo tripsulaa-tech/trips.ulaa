@@ -423,6 +423,15 @@ export const SOURCE_CONFIG = {
   other: { label: 'Other', icon: HelpCircle },
 } as const;
 
+// Full source list including "Website" — unlike AdminEnquiriesShared's
+// SOURCE_OPTIONS (which deliberately omits Website since that form is only
+// for enquiries an admin is logging by hand), this is for editing an
+// *existing* enquiry, which may already be a website submission.
+export const SOURCE_OPTIONS_ALL = (Object.keys(SOURCE_CONFIG) as (keyof typeof SOURCE_CONFIG)[]).map(value => ({
+  value,
+  label: SOURCE_CONFIG[value].label,
+}));
+
 // Single "Booking Journey" badge shown in the table/detail page,
 // superseding the old status/booking_status dropdown combination — see
 // supabase/migration/add_booking_journey_stage.sql for how each stage is

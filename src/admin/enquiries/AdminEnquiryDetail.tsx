@@ -18,7 +18,6 @@ import {
   SignIn as LogIn,
   ArrowsClockwise as RefreshCw,
   Trash as Trash2,
-  Pencil,
   CalendarDot as CalendarClock,
   X,
 } from '@phosphor-icons/react';
@@ -49,10 +48,8 @@ import { useMarkInvoicePaid } from './useMarkInvoicePaid';
 import AdminEnquiryHeaderCard from './AdminEnquiryHeaderCard';
 import AdminEnquiryJourneyCard from './AdminEnquiryJourneyCard';
 import AdminEnquiryInvoicesCard from './AdminEnquiryInvoicesCard';
-import AdminEnquiryTravellerCard from './AdminEnquiryTravellerCard';
-import AdminEnquiryActivityTimeline from './AdminEnquiryActivityTimeline';
+import AdminEnquiryTravellerCard from './AdminEnquiryTravellerCard';import AdminEnquiryActivityTimeline from './AdminEnquiryActivityTimeline';
 import AdminEnquiryPaymentModal from './AdminEnquiryPaymentModal';
-import EditDetailsModal from './AdminEditDetailsModal';
 import { useEditEnquiry } from './useEditEnquiry';
 import AdminEnquiryCancelModal from './AdminEnquiryCancelModal';
 import AdminEnquiryNotInterestedModal from './AdminEnquiryNotInterestedModal';
@@ -719,9 +716,7 @@ export default function AdminEnquiryDetail() {
 
   const isGeneralContactMessage = !enquiry.trip_id && enquiry.source === 'website';
 
-  const rowActions: ActionMenuItem[] = [
-    { label: 'Edit Details', icon: Pencil, onClick: () => openEdit(enquiry) },
-  ];
+  const rowActions: ActionMenuItem[] = [];
   // "Reopen" only makes sense before any money's changed hands — once
   // there's a booking_id or a payment on record, closing the lead out is a
   // Cancel Booking decision instead (different consequences: refunds, seat
@@ -838,7 +833,20 @@ export default function AdminEnquiryDetail() {
 
         <div className="lg:col-span-1 space-y-4 min-w-0">
 
-        <AdminEnquiryTravellerCard enquiry={enquiry} isGeneralContactMessage={isGeneralContactMessage} />
+        <AdminEnquiryTravellerCard
+          enquiry={enquiry}
+          isGeneralContactMessage={isGeneralContactMessage}
+          editing={!!editTarget}
+          editForm={editForm}
+          setEditForm={setEditForm}
+          editTouched={editTouched}
+          setEditTouched={setEditTouched}
+          trips={trips}
+          savingEdit={savingEdit}
+          onStartEdit={() => openEdit(enquiry)}
+          onCancelEdit={() => setEditTarget(null)}
+          onSaveEdit={handleSaveEdit}
+        />
 
         <AdminEnquiryActivityTimeline activityLog={activityLog} loading={activityLogLoading} />
 
@@ -909,18 +917,6 @@ export default function AdminEnquiryDetail() {
         setFollowUpDate={setFollowUpDate}
         busy={busyFollowUp}
         onSave={handleSaveFollowUp}
-      />
-
-      <EditDetailsModal
-        editTarget={editTarget}
-        onClose={() => setEditTarget(null)}
-        editForm={editForm}
-        setEditForm={setEditForm}
-        editTouched={editTouched}
-        setEditTouched={setEditTouched}
-        trips={trips}
-        onSave={handleSaveEdit}
-        saving={savingEdit}
       />
 
       <AdminEnquiryCancelModal

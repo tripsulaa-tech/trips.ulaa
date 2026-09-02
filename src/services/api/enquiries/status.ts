@@ -121,6 +121,8 @@ export async function updateEnquiryDetails(
     // snapshot (not a join) is what's shown.
     trip_title?: string | null;
     source?: Enquiry['source'];
+    food_preference?: 'veg' | 'non_veg' | null;
+    package_type?: 'early_bird' | 'normal';
   }
 ): Promise<Enquiry> {
   const patch: Record<string, unknown> = {};
@@ -140,6 +142,8 @@ export async function updateEnquiryDetails(
   if (fields.trip_id !== undefined) patch.trip_id = fields.trip_id || null;
   if (fields.trip_title !== undefined) patch.trip_title = fields.trip_title || null;
   if (fields.source !== undefined) patch.source = fields.source;
+  if (fields.food_preference !== undefined) patch.food_preference = fields.food_preference;
+  if (fields.package_type !== undefined) patch.package_type = fields.package_type;
 
   const { data, error } = await supabase
     .from('enquiries')

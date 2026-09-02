@@ -36,6 +36,9 @@ export function useEditEnquiry(params: {
       city: enquiry.city || '',
       age: enquiry.age ?? '',
       trip_id: enquiry.trip_id || '',
+      food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
+      source: enquiry.source,
+      package_type: enquiry.package_type === 'early_bird' ? 'early_bird' : 'normal',
     });
     setEditTouched(new Set());
     setEditTarget(enquiry);
@@ -58,6 +61,9 @@ export function useEditEnquiry(params: {
         age: editForm.age === '' ? null : Number(editForm.age),
         trip_id: editForm.trip_id || null,
         trip_title: editForm.trip_id ? (newTrip?.title ?? null) : null,
+        food_preference: editForm.food_preference || null,
+        source: editForm.source,
+        package_type: editForm.package_type,
       });
       setEditTarget(null);
       load();

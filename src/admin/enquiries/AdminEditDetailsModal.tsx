@@ -15,11 +15,15 @@ export type EditDetailsForm = {
   city: string;
   age: number | '';
   trip_id: string;
+  food_preference: 'veg' | 'non_veg' | '';
+  source: Enquiry['source'];
+  package_type: 'early_bird' | 'normal';
 };
 
 // eslint-disable-next-line react-refresh/only-export-components -- tiny form-shape constant only ever imported alongside this modal's default export; not worth a dedicated file
 export const emptyEditDetailsForm: EditDetailsForm = {
   full_name: '', email: '', phone: '', city: '', age: '', trip_id: '',
+  food_preference: '', source: 'website', package_type: 'normal',
 };
 
 export default function EditDetailsModal({
