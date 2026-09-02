@@ -313,6 +313,57 @@ export async function generateKidPendingInvoice(
   return refreshed as Kid;
 }
 
+// Adds an extra charge to this one kid's own fee (e.g. a costume rental, a
+// late add-on) — same idea as addExtraCharge (invoices.ts) for the adult
+// booking, just scoped to a kid_id. Bumps this kid's own `amount` (the
+// per-kid analog of enquiries.total_amount) right away, since that's now
+// part of what's owed for this kid whether or not it's been collected yet,
+// and logs an 'extra_charge' payments row for it. Pass collectedNow: true
+// if the customer paid on the spot; otherwise the row is raised as
+// 'pending' and — same as generateKidPendingInvoice — still carries the
+// parent enquiry_id, so it's settleable later via the existing
+// markInvoicePaid ("Mark Paid") flow with no separate kid-scoped UI needed.
+export async function addExtraChargeForKid(
+  kid: Kid,
+  amount: number,
+  options?: { collectedNow?: boolean; payment_method?: string; utr_number?: string; notes?: string }
+): Promise<Kid> {
+  if (amount <= 0) {
+    throw new Error('Extra charge amount must be greater than zero.');
+  }
+  const newTotal = (kid.amount || 0) + amount;
+
+  const { error: totalError } = await supabase
+    .from('kids')
+    .update({ amount: newTotal })
+    .eq('id', kid.id);
+  if (totalError) throw totalError;
+
+  const { error: paymentError } = await supabase.from('payments').insert({
+    enquiry_id: kid.enquiry_id,
+    kid_id: kid.id,
+    for_kids: true,
+    amount,
+    payment_type: 'extra_charge',
+    status: options?.collectedNow ? 'paid' : 'pending',
+    payment_method: options?.payment_method,
+    utr_number: options?.collectedNow ? (options?.utr_number || null) : null,
+    notes: options?.notes,
+  });
+  if (paymentError) throw paymentError;
+
+  const { data, error } = await supabase.from('kids').select('*').eq('id', kid.id).single();
+  if (error) throw error;
+
+  await logActivity(
+    kid.enquiry_id,
+    'Extra charge added',
+    `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(amount)}${options?.collectedNow ? ' · collected' : ' · pending'}`
+  );
+
+  return data as Kid;
+}
+
 // One kid's own payment ledger, oldest first — same idea as
 // getPaymentsForEnquiry, just filtered to a single kid_id instead of a
 // whole enquiry_id.

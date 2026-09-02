@@ -89,6 +89,7 @@ export {
   getAllKidsFoodPreferences,
   recordKidPayment,
   generateKidPendingInvoice,
+  addExtraChargeForKid,
   getPaymentsForKid,
 } from './api/enquiries';
 

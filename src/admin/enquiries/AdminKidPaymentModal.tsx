@@ -120,7 +120,9 @@ export default function AdminKidPaymentModal({
               {displayTotal != null ? formatPrice(displayTotal) : 'Not set'}
             </div>
             <p className="text-[11px] text-dark-muted mt-1">
-              {displayTotal != null
+              {kidPaymentForm.payment_type === 'extra_charge'
+                ? 'Updates automatically once the extra charge below is saved.'
+                : displayTotal != null
                 ? "Set by this trip's Kids Fee — not editable here."
                 : (
                   <>
@@ -135,7 +137,9 @@ export default function AdminKidPaymentModal({
 
           <div>
             <label htmlFor="kid-pay-amount-paid" className="block text-sm font-medium text-dark mb-1">
-              {kidPaymentForm.status === 'pending' ? 'Invoice Amount (₹)' : 'Amount Being Paid Now (₹)'}
+              {kidPaymentForm.payment_type === 'extra_charge'
+                ? 'Extra Charge Amount (₹)'
+                : kidPaymentForm.status === 'pending' ? 'Invoice Amount (₹)' : 'Amount Being Paid Now (₹)'}
             </label>
             <input
               id="kid-pay-amount-paid"
@@ -159,7 +163,12 @@ export default function AdminKidPaymentModal({
               onChange={val => setKidPaymentForm(f => ({ ...f, payment_type: val as KidPaymentForm['payment_type'] }))}
               options={availableKidPaymentTypeOptions(kidPaymentForm, kidPaymentTarget.amount_paid || 0)}
             />
-            {!availableKidPaymentTypeOptions(kidPaymentForm, kidPaymentTarget.amount_paid || 0).some(o => o.value === 'balance') && (
+            {kidPaymentForm.payment_type === 'extra_charge' && (
+              <p className="text-[11px] text-dark-muted mt-1">
+                Adds this amount on top of this kid's total right away — e.g. a costume rental — whether or not it's collected now.
+              </p>
+            )}
+            {kidPaymentForm.payment_type !== 'extra_charge' && !availableKidPaymentTypeOptions(kidPaymentForm, kidPaymentTarget.amount_paid || 0).some(o => o.value === 'balance') && (
               <p className="text-[11px] text-dark-muted mt-1">
                 'Balance' will appear here once the amount above clears what's still owed.
               </p>
@@ -179,16 +188,23 @@ export default function AdminKidPaymentModal({
           {(() => {
             const alreadyPaid = kidPaymentTarget.amount_paid || 0;
             const thisPayment = kidPaymentForm.amount_paid === '' ? 0 : Number(kidPaymentForm.amount_paid);
+            const isExtraCharge = kidPaymentForm.payment_type === 'extra_charge';
             const isPending = kidPaymentForm.status === 'pending';
+            // Extra Charge (collected now) and a normal paid-now payment
+            // both land in amount_paid right away; a Pending invoice —
+            // extra charge or otherwise — doesn't touch it until it's
+            // later marked paid, same as the adult modal's own preview.
             const projectedTotal = isPending ? alreadyPaid : alreadyPaid + thisPayment;
             const total = kidPaymentForm.amount === '' ? null : Number(kidPaymentForm.amount);
+            const projectedKidTotal = isExtraCharge && total != null ? total + thisPayment : total;
             return (
               <p className="text-sm text-dark-muted">
                 Already paid <span className="font-medium text-dark">{formatPrice(alreadyPaid)}</span>
                 {thisPayment > 0 && !isPending && <> · after this payment: <span className="font-semibold text-dark">{formatPrice(projectedTotal)}</span></>}
                 {thisPayment > 0 && isPending && <> · <span className="font-semibold text-amber-700">{formatPrice(thisPayment)} raised as pending</span>, not yet counted as paid</>}
-                {total != null && (
-                  <> · Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, total - projectedTotal))}</span></>
+                {isExtraCharge && thisPayment > 0 && <> · this kid's total will rise by <span className="font-semibold text-dark">{formatPrice(thisPayment)}</span></>}
+                {projectedKidTotal != null && (
+                  <> · Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, projectedKidTotal - projectedTotal))}</span></>
                 )}
               </p>
             );

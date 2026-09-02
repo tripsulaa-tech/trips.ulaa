@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
@@ -104,6 +104,13 @@ export default function TripDetailPage() {
   };
   const navBarRef = useRef<HTMLElement>(null);
   const navLinkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
+  // Stable callback passed down to TripQuickNav/NavTab instead of the raw
+  // navLinkRefs object, so the child never mutates a ref reachable through
+  // its own props directly (react-hooks/immutability) — the mutation stays
+  // local to the component that owns the ref.
+  const registerNavLink = useCallback((id: string, el: HTMLAnchorElement | null) => {
+    navLinkRefs.current[id] = el;
+  }, []);
   const calendarMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -269,7 +276,7 @@ export default function TripDetailPage() {
         trip={trip}
         activeSection={activeSection}
         navBarRef={navBarRef}
-        navLinkRefs={navLinkRefs}
+        registerNavLink={registerNavLink}
         hasConfidenceItems={hasConfidenceItems}
         hasDetailsSection={hasDetailsSection}
       />

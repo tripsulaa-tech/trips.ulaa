@@ -8,7 +8,11 @@ interface TripQuickNavProps {
   trip: UpcomingTrip;
   activeSection: string;
   navBarRef: RefObject<HTMLElement | null>;
-  navLinkRefs: RefObject<Record<string, HTMLAnchorElement | null>>;
+  // Callback that stores/clears this nav link's DOM node on the owning
+  // page's navLinkRefs — passed down instead of the ref object itself so
+  // NavTab never mutates a value reachable through its own props (see
+  // TripDetailPage's registerNavLink).
+  registerNavLink: (id: string, el: HTMLAnchorElement | null) => void;
   hasConfidenceItems: boolean;
   hasDetailsSection: boolean;
 }
@@ -19,17 +23,17 @@ function NavTab({
   id,
   label,
   activeSection,
-  navLinkRefs,
+  registerNavLink,
 }: {
   id: string;
   label: string;
   activeSection: string;
-  navLinkRefs: RefObject<Record<string, HTMLAnchorElement | null>>;
+  registerNavLink: (id: string, el: HTMLAnchorElement | null) => void;
 }) {
   return (
     <a
       href={`#${id}`}
-      ref={el => { navLinkRefs.current[id] = el; }}
+      ref={el => registerNavLink(id, el)}
       aria-current={activeSection === id ? 'true' : undefined}
       className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-button font-semibold transition-colors whitespace-nowrap ${activeSection === id ? 'bg-primary text-white' : 'text-dark-muted hover:text-primary hover:bg-background-warm'}`}
     >
@@ -42,7 +46,7 @@ export default function TripQuickNav({
   trip,
   activeSection,
   navBarRef,
-  navLinkRefs,
+  registerNavLink,
   hasConfidenceItems,
   hasDetailsSection,
 }: TripQuickNavProps) {
@@ -51,28 +55,28 @@ export default function TripQuickNav({
       <div className="max-w-[1344px] mx-auto flex items-center gap-1 sm:gap-2">
         <nav ref={navBarRef} aria-label="Jump to section" className="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar py-2.5 sm:py-3">
           {(trip.highlight_cards?.length ?? 0) > 0 && (
-            <NavTab id="highlights" label="Highlights" activeSection={activeSection} navLinkRefs={navLinkRefs} />
+            <NavTab id="highlights" label="Highlights" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
           {trip.itinerary.length > 0 && (
-            <NavTab id="itinerary" label="Itinerary" activeSection={activeSection} navLinkRefs={navLinkRefs} />
+            <NavTab id="itinerary" label="Itinerary" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
           {(trip.accommodation_description || (trip.accommodation_photos?.length ?? 0) > 0) && (
-            <NavTab id="accommodation" label="Stay" activeSection={activeSection} navLinkRefs={navLinkRefs} />
+            <NavTab id="accommodation" label="Stay" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
-          <NavTab id="inclusions" label="Inclusions" activeSection={activeSection} navLinkRefs={navLinkRefs} />
+          <NavTab id="inclusions" label="Inclusions" activeSection={activeSection} registerNavLink={registerNavLink} />
           {(trip.gallery_images.length > 0 || (trip.gallery_items?.length ?? 0) > 0) && (
-            <NavTab id="gallery" label="Gallery" activeSection={activeSection} navLinkRefs={navLinkRefs} />
+            <NavTab id="gallery" label="Gallery" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
           {hasConfidenceItems && (
-            <NavTab id="confidence" label="Confidence" activeSection={activeSection} navLinkRefs={navLinkRefs} />
+            <NavTab id="confidence" label="Confidence" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
           {hasDetailsSection && (
-            <NavTab id="details" label="Details" activeSection={activeSection} navLinkRefs={navLinkRefs} />
+            <NavTab id="details" label="Details" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
           {trip.faqs.length > 0 && (
-            <NavTab id="faqs" label="FAQs" activeSection={activeSection} navLinkRefs={navLinkRefs} />
+            <NavTab id="faqs" label="FAQs" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
-          <NavTab id="cancellation" label="Cancellation" activeSection={activeSection} navLinkRefs={navLinkRefs} />
+          <NavTab id="cancellation" label="Cancellation" activeSection={activeSection} registerNavLink={registerNavLink} />
         </nav>
 
         {/* Pinned actions — stay visible through the whole page scroll. */}

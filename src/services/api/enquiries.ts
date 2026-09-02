@@ -74,5 +74,6 @@ export {
   getAllKidsFoodPreferences,
   recordKidPayment,
   generateKidPendingInvoice,
+  addExtraChargeForKid,
   getPaymentsForKid,
 } from './enquiries/kids';

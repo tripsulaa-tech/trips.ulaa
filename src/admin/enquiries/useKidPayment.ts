@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { recordKidPayment, generateKidPendingInvoice, getPaymentsForKid } from '../../services/api';
+import { recordKidPayment, generateKidPendingInvoice, addExtraChargeForKid, getPaymentsForKid } from '../../services/api';
 import type { Kid, Payment } from '../../types/types-index';
 import { useAlert } from '../../components/ui/useAlert';
 
@@ -9,8 +9,9 @@ import { useAlert } from '../../components/ui/useAlert';
  *  modal (which no longer carries a combined Kids Fee section; see
  *  AdminEnquiryPaymentModal/AdminPaymentModal). Deliberately simpler than
  *  useEnquiryPayment: no package/discount (kids don't have a package), no
- *  refund/extra-charge branching in v1 — a kid doesn't get its own seat or
- *  refund flow. Total is never admin-typed here — it's always the trip's
+ *  refund flow — a kid doesn't get its own seat or cancellation. Extra
+ *  Charge is supported (see addExtraChargeForKid), same as the adult
+ *  modal's own Extra Charge type. Total is never admin-typed here — it's always the trip's
  *  own child_price (see getTripChildPrice below and AdminKidPaymentModal),
  *  same "list price, not free-typed" idea as the adult modal's own List
  *  Price field.
@@ -31,11 +32,10 @@ export type KidPaymentForm = {
   amount_paid: number | '';
   payment_method: string;
   payment_utr: string;
-  // Full Payment / Advance / Balance / Installment — same options and
-  // meaning as the adult Track Payment modal's Payment Type dropdown
-  // (minus Extra Charge, which doesn't apply — a kid doesn't have a
-  // booking total to bump). See KID_PAYMENT_TYPE_OPTIONS below.
-  payment_type: 'full_payment' | 'advance' | 'balance' | 'installment';
+  // Full Payment / Advance / Balance / Installment / Extra Charge — same
+  // options and meaning as the adult Track Payment modal's Payment Type
+  // dropdown. See KID_PAYMENT_TYPE_OPTIONS below.
+  payment_type: 'full_payment' | 'advance' | 'balance' | 'installment' | 'extra_charge';
   // Paid now vs pending — same meaning as the adult modal's Status
   // dropdown. 'pending' raises an invoice (generateKidPendingInvoice)
   // without touching this kid's amount_paid; it still carries the parent
@@ -49,20 +49,25 @@ export const emptyKidPaymentForm: KidPaymentForm = {
   amount: '', amount_paid: '', payment_method: '', payment_utr: '', payment_type: 'advance', status: 'paid', food_preference: '',
 };
 
-// Same four types the adult modal offers, minus Extra Charge — see
-// KidPaymentForm.payment_type above.
+// Same five types the adult modal offers — see KidPaymentForm.payment_type
+// above.
 export const KID_PAYMENT_TYPE_OPTIONS: { value: KidPaymentForm['payment_type']; label: string }[] = [
   { value: 'full_payment', label: 'Full Payment' },
   { value: 'advance', label: 'Advance' },
   { value: 'balance', label: 'Balance' },
   { value: 'installment', label: 'Installment' },
+  { value: 'extra_charge', label: 'Extra Charge' },
 ];
 
 // 'Balance' is meant for the payment that clears whatever's left owing on
 // this kid's own total — same reasoning/gating as the adult modal's
 // clearsBalance (AdminEnquiryCommon.ts), just re-derived here rather than
-// widened to accept this narrower KidPaymentForm shape.
-function kidAmountClearsBalance(totalAmount: number | '', alreadyPaid: number, thisAmount: number | ''): boolean {
+// widened to accept this narrower KidPaymentForm shape. Extra Charge never
+// clears a balance — it raises the total instead — same as the adult
+// modal's own clearsBalance short-circuit.
+function kidAmountClearsBalance(form: KidPaymentForm, alreadyPaid: number): boolean {
+  if (form.payment_type === 'extra_charge') return false;
+  const { amount: totalAmount, amount_paid: thisAmount } = form;
   if (totalAmount === '') return false;
   const amt = thisAmount === '' ? 0 : Number(thisAmount);
   if (amt <= 0) return false;
@@ -70,7 +75,7 @@ function kidAmountClearsBalance(totalAmount: number | '', alreadyPaid: number, t
 }
 
 export function availableKidPaymentTypeOptions(form: KidPaymentForm, alreadyPaid: number): { value: KidPaymentForm['payment_type']; label: string }[] {
-  return kidAmountClearsBalance(form.amount, alreadyPaid, form.amount_paid)
+  return kidAmountClearsBalance(form, alreadyPaid)
     ? KID_PAYMENT_TYPE_OPTIONS
     : KID_PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'balance');
 }
@@ -81,12 +86,15 @@ export function validateKidPaymentForm(form: KidPaymentForm, alreadyPaid: number
   const errors: KidPaymentFormErrors = {};
   const totalAmount = form.amount === '' ? null : Number(form.amount);
   const thisPayment = form.amount_paid === '' ? 0 : Number(form.amount_paid);
+  const isExtraCharge = form.payment_type === 'extra_charge';
   const isPending = form.status === 'pending';
 
-  if (!isPending && totalAmount != null && totalAmount > 0 && thisPayment > 0 && alreadyPaid + thisPayment > totalAmount) {
+  if (!isExtraCharge && !isPending && totalAmount != null && totalAmount > 0 && thisPayment > 0 && alreadyPaid + thisPayment > totalAmount) {
     errors.amount_paid = "This would take the amount paid past this kid's total.";
-  } else if (isPending && thisPayment <= 0) {
-    errors.amount_paid = 'Enter an amount greater than zero for the pending invoice.';
+  } else if ((isExtraCharge || isPending) && thisPayment <= 0) {
+    errors.amount_paid = isExtraCharge
+      ? 'Enter an extra charge amount greater than zero.'
+      : 'Enter an amount greater than zero for the pending invoice.';
   }
 
   if (!isPending && thisPayment > 0 && !form.payment_method) {
@@ -168,6 +176,8 @@ export function useKidPayment(params: {
     const thisPayment = kidPaymentForm.amount_paid === '' ? 0 : Number(kidPaymentForm.amount_paid);
     const newAmount = kidPaymentForm.amount === '' ? null : Number(kidPaymentForm.amount);
     const foodPreference = kidPaymentForm.food_preference || null;
+    const isExtraCharge = kidPaymentForm.payment_type === 'extra_charge';
+    const isPending = kidPaymentForm.status === 'pending';
     const formErrors = validateKidPaymentForm(kidPaymentForm, kidPaymentTarget.amount_paid || 0);
     const firstError = Object.values(formErrors)[0];
     if (firstError) {
@@ -176,19 +186,43 @@ export function useKidPayment(params: {
     }
     try {
       setSavingKidPayment(true);
-      const updated = kidPaymentForm.status === 'pending'
-        ? await generateKidPendingInvoice(kidPaymentTarget, kidPaymentForm.payment_type, thisPayment, {
-            newTotal: newAmount,
-            food_preference: foodPreference,
-          })
-        : await recordKidPayment(kidPaymentTarget, {
-            amount_paid: (kidPaymentTarget.amount_paid || 0) + thisPayment,
-            amount: newAmount,
-            payment_method: kidPaymentForm.payment_method || undefined,
-            utr_number: kidPaymentForm.payment_utr || undefined,
-            payment_type: thisPayment > 0 ? kidPaymentForm.payment_type : undefined,
-            food_preference: foodPreference,
-          });
+      let updated: Kid;
+      if (isExtraCharge) {
+        // Same routing as useEnquiryPayment's own extra_charge branch —
+        // this kid's Total is disabled in the UI for this type, so there's
+        // nothing to reconcile beyond the food-preference edit (folded
+        // into recordKidPayment's own no-op-on-the-ledger call), then
+        // addExtraChargeForKid bumps this kid's own total by thisPayment.
+        updated = await recordKidPayment(kidPaymentTarget, {
+          amount_paid: kidPaymentTarget.amount_paid || 0,
+          food_preference: foodPreference,
+        });
+        updated = await addExtraChargeForKid(updated, thisPayment, {
+          collectedNow: !isPending,
+          payment_method: kidPaymentForm.payment_method || undefined,
+          utr_number: kidPaymentForm.payment_utr || undefined,
+        });
+      } else if (isPending) {
+        // Not extra_charge in this branch (handled above), so this is
+        // always one of the four types generateKidPendingInvoice accepts.
+        updated = await generateKidPendingInvoice(
+          kidPaymentTarget,
+          kidPaymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment',
+          thisPayment,
+          { newTotal: newAmount, food_preference: foodPreference }
+        );
+      } else {
+        updated = await recordKidPayment(kidPaymentTarget, {
+          amount_paid: (kidPaymentTarget.amount_paid || 0) + thisPayment,
+          amount: newAmount,
+          payment_method: kidPaymentForm.payment_method || undefined,
+          utr_number: kidPaymentForm.payment_utr || undefined,
+          // Not extra_charge in this branch (handled above), so this is
+          // always one of the four types recordKidPayment's override accepts.
+          payment_type: thisPayment > 0 ? (kidPaymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment') : undefined,
+          food_preference: foodPreference,
+        });
+      }
       setKidPaymentTarget(null);
       onSaved(updated);
     } catch (err) {

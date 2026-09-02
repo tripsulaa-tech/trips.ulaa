@@ -168,6 +168,13 @@ const asNumOrNull = (v: unknown): number | null => {
 const asStrArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter(item => !isPlaceholder(item)).map(item => String(item)) : [];
 
+// Narrows an unknown value (parsed JSON) down to a plain object/array we
+// can safely dot into, without resorting to `any` — every property read
+// off the result is still `unknown` and goes through asStr/asNum/asArr/
+// asObj again, same as before this was typed as `any`.
+const asObj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? v as Record<string, unknown> : {});
+const asArr = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v as Record<string, unknown>[] : []);
+
 // Imported JSON is a common source of `icon` values that bypass the
 // TripHighlightIconPicker (e.g. an externally-drafted template filled in
 // with emoji). TripHighlightIconDisplay only renders the colored icon
@@ -211,107 +218,95 @@ const asIconKey = (v: unknown): string => {
 // retyping everything by hand. Throws if `raw` isn't parseable JSON shaped
 // like the template; the caller is responsible for catching that and
 // showing an "Import failed" message.
-export function parseImportedTripForm(raw: any): TripForm {
+export function parseImportedTripForm(raw: unknown): TripForm {
+  const r = asObj(raw);
+  const cancellationPolicySrc = asObj(r.cancellation_policy);
+  const tripFounderSrc = asObj(r.trip_founder);
+  const endBannerSrc = asObj(r.end_banner);
   const imported: TripForm = {
-      title: asStr(raw.title),
-      destination: asStr(raw.destination),
-      start_date: asStr(raw.start_date),
-      end_date: asStr(raw.end_date),
-      duration: computeDuration(asStr(raw.start_date), asStr(raw.end_date)),
-      description: asStr(raw.description),
-      itinerary: Array.isArray(raw.itinerary)
-        ? raw.itinerary.map((d: Record<string, unknown>, i: number) => ({
+      title: asStr(r.title),
+      destination: asStr(r.destination),
+      start_date: asStr(r.start_date),
+      end_date: asStr(r.end_date),
+      duration: computeDuration(asStr(r.start_date), asStr(r.end_date)),
+      description: asStr(r.description),
+      itinerary: asArr(r.itinerary).map((d, i) => ({
             day: asNum(d?.day) || i + 1,
             title: asStr(d?.title),
             description: asStr(d?.description),
             images: asStrArray(d?.images),
             icon: asIconKey(d?.icon),
             bullets: asStrArray(d?.bullets),
-          }))
-        : [],
-      not_included: asStrArray(raw.not_included),
-      meeting_point: asStr(raw.meeting_point),
-      meeting_point_map_url: asStr(raw.meeting_point_map_url),
-      meeting_time: asStr(raw.meeting_time),
-      meeting_terminal: asStr(raw.meeting_terminal),
-      meeting_details: asStr(raw.meeting_details),
-      faqs: Array.isArray(raw.faqs)
-        ? raw.faqs
-            .filter((f: Record<string, unknown>) => !isPlaceholder(f?.question) || !isPlaceholder(f?.answer))
-            .map((f: Record<string, unknown>) => ({ question: asStr(f?.question), answer: asStr(f?.answer) }))
-        : [],
-      total_seats: asNum(raw.total_seats) || emptyForm.total_seats,
-      seats_booked: asNum(raw.seats_booked) || 0,
-      min_age: asNum(raw.min_age),
-      max_age: asNum(raw.max_age),
-      price: asNum(raw.price),
-      child_price: asNum(raw.child_price),
-      early_bird_price: asNum(raw.early_bird_price),
-      early_bird_deadline: asStr(raw.early_bird_deadline),
-      strike_through_price: asNum(raw.strike_through_price),
-      advance_amount: asNum(raw.advance_amount),
-      trip_type: raw.trip_type === 'domestic' || raw.trip_type === 'international' ? raw.trip_type : '',
+          })),
+      not_included: asStrArray(r.not_included),
+      meeting_point: asStr(r.meeting_point),
+      meeting_point_map_url: asStr(r.meeting_point_map_url),
+      meeting_time: asStr(r.meeting_time),
+      meeting_terminal: asStr(r.meeting_terminal),
+      meeting_details: asStr(r.meeting_details),
+      faqs: asArr(r.faqs)
+            .filter(f => !isPlaceholder(f?.question) || !isPlaceholder(f?.answer))
+            .map(f => ({ question: asStr(f?.question), answer: asStr(f?.answer) })),
+      total_seats: asNum(r.total_seats) || emptyForm.total_seats,
+      seats_booked: asNum(r.seats_booked) || 0,
+      min_age: asNum(r.min_age),
+      max_age: asNum(r.max_age),
+      price: asNum(r.price),
+      child_price: asNum(r.child_price),
+      early_bird_price: asNum(r.early_bird_price),
+      early_bird_deadline: asStr(r.early_bird_deadline),
+      strike_through_price: asNum(r.strike_through_price),
+      advance_amount: asNum(r.advance_amount),
+      trip_type: r.trip_type === 'domestic' || r.trip_type === 'international' ? r.trip_type : '',
       // Imported the same way itinerary images always were: real URLs
       // (e.g. Wikimedia/Unsplash links an admin filled in) come through
       // as-is; leftover template placeholders like "(leave blank —
       // uploaded manually)" still resolve to '' via isPlaceholder/asStr,
       // so an untouched export template still opens with blank fields.
-      cover_image: asStr(raw.cover_image),
+      cover_image: asStr(r.cover_image),
       cover_image_crop: null,
-      hero_mobile_image: asStr(raw.hero_mobile_image),
-      terms_and_conditions: isPlaceholder(raw.terms_and_conditions) ? DEFAULT_TERMS_AND_CONDITIONS : raw.terms_and_conditions,
-      cancellation_policy: raw.cancellation_policy ? {
-        payment_due_days: asNum(raw.cancellation_policy.payment_due_days) || DEFAULT_CANCELLATION_POLICY.payment_due_days,
-        tiers: Array.isArray(raw.cancellation_policy.tiers)
-          ? raw.cancellation_policy.tiers.map((t: Record<string, unknown>) => ({
+      hero_mobile_image: asStr(r.hero_mobile_image),
+      terms_and_conditions: isPlaceholder(r.terms_and_conditions) ? DEFAULT_TERMS_AND_CONDITIONS : asStr(r.terms_and_conditions),
+      cancellation_policy: r.cancellation_policy ? {
+        payment_due_days: asNum(cancellationPolicySrc.payment_due_days) || DEFAULT_CANCELLATION_POLICY.payment_due_days,
+        tiers: Array.isArray(cancellationPolicySrc.tiers)
+          ? asArr(cancellationPolicySrc.tiers).map(t => ({
               min_days: asNumOrNull(t?.min_days),
               max_days: asNumOrNull(t?.max_days),
               description: asStr(t?.description),
             }))
           : DEFAULT_CANCELLATION_POLICY.tiers,
-        refund_min_days: asNum(raw.cancellation_policy.refund_min_days) || DEFAULT_CANCELLATION_POLICY.refund_min_days,
-        refund_max_days: asNum(raw.cancellation_policy.refund_max_days) || DEFAULT_CANCELLATION_POLICY.refund_max_days,
+        refund_min_days: asNum(cancellationPolicySrc.refund_min_days) || DEFAULT_CANCELLATION_POLICY.refund_min_days,
+        refund_max_days: asNum(cancellationPolicySrc.refund_max_days) || DEFAULT_CANCELLATION_POLICY.refund_max_days,
       } : DEFAULT_CANCELLATION_POLICY,
       status: 'draft',
-      highlight_cards: Array.isArray(raw.highlight_cards)
-        ? raw.highlight_cards.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), heading: asStr(c?.heading), description: asStr(c?.description) }))
-        : [],
-      card_feature_tags: Array.isArray(raw.card_feature_tags)
-        ? raw.card_feature_tags.slice(0, 4).map((t: Record<string, unknown>) => ({ icon: asIconKey(t?.icon), label: asStr(t?.label), sublabel: asStr(t?.sublabel) }))
-        : [],
-      accommodation_description: asStr(raw.accommodation_description),
-      accommodation_photos: asStrArray(raw.accommodation_photos),
-      included_groups: Array.isArray(raw.included_groups)
-        ? raw.included_groups.map((g: Record<string, unknown>) => ({
+      highlight_cards: asArr(r.highlight_cards).map(c => ({ icon: asIconKey(c?.icon), heading: asStr(c?.heading), description: asStr(c?.description) })),
+      card_feature_tags: asArr(r.card_feature_tags).slice(0, 4).map(t => ({ icon: asIconKey(t?.icon), label: asStr(t?.label), sublabel: asStr(t?.sublabel) })),
+      accommodation_description: asStr(r.accommodation_description),
+      accommodation_photos: asStrArray(r.accommodation_photos),
+      included_groups: asArr(r.included_groups).map(g => ({
             icon: asIconKey(g?.icon),
             heading: asStr(g?.heading),
             bullets: asStrArray(g?.bullets),
-          }))
-        : [],
-      gallery_items: Array.isArray(raw.gallery_items)
-        ? raw.gallery_items.map((g: Record<string, unknown>) => ({ photo: asStr(g?.photo), description: asStr(g?.description) }))
-        : [],
-      gallery_description: asStr(raw.gallery_description),
-      fashion_photos: asStrArray(raw.fashion_photos),
-      fashion_description: asStr(raw.fashion_description),
-      things_to_carry_items: Array.isArray(raw.things_to_carry_items)
-        ? raw.things_to_carry_items.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) }))
-        : [],
-      trip_founder: raw.trip_founder
-        ? { photo: asStr(raw.trip_founder.photo), name: asStr(raw.trip_founder.name), designation: asStr(raw.trip_founder.designation), description: asStr(raw.trip_founder.description) }
+          })),
+      gallery_items: asArr(r.gallery_items).map(g => ({ photo: asStr(g?.photo), description: asStr(g?.description) })),
+      gallery_description: asStr(r.gallery_description),
+      fashion_photos: asStrArray(r.fashion_photos),
+      fashion_description: asStr(r.fashion_description),
+      things_to_carry_items: asArr(r.things_to_carry_items).map(c => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) })),
+      trip_founder: r.trip_founder
+        ? { photo: asStr(tripFounderSrc.photo), name: asStr(tripFounderSrc.name), designation: asStr(tripFounderSrc.designation), description: asStr(tripFounderSrc.description) }
         : emptyFounder,
-      confidence_items: Array.isArray(raw.confidence_items)
-        ? raw.confidence_items.map((c: Record<string, unknown>) => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) }))
-        : [],
-      confidence_description: asStr(raw.confidence_description),
-      meeting_address: asStr(raw.meeting_address),
-      end_banner: raw.end_banner
+      confidence_items: asArr(r.confidence_items).map(c => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) })),
+      confidence_description: asStr(r.confidence_description),
+      meeting_address: asStr(r.meeting_address),
+      end_banner: r.end_banner
         ? {
-            image: asStr(raw.end_banner.image),
-            heading: asStr(raw.end_banner.heading),
-            description: asStr(raw.end_banner.description),
-            cta_label: asStr(raw.end_banner.cta_label),
-            cta_url: asStr(raw.end_banner.cta_url),
+            image: asStr(endBannerSrc.image),
+            heading: asStr(endBannerSrc.heading),
+            description: asStr(endBannerSrc.description),
+            cta_label: asStr(endBannerSrc.cta_label),
+            cta_url: asStr(endBannerSrc.cta_url),
           }
         : emptyEndBanner,
       // Deliberately never part of the export/import template — this is
