@@ -1240,7 +1240,6 @@ export default function AdminEnquiries() {
               setBookingFollowUpTarget={setBookingFollowUpTarget}
               handleAdvance={handleAdvance}
               buildRowActions={buildRowActions}
-              invoiceBusyId={invoiceBusyId}
             />
 
             <AdminEnquiriesMobileCards
