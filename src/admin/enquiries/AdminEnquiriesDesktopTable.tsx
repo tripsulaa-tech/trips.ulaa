@@ -258,17 +258,17 @@ export default function AdminEnquiriesDesktopTable({
               // Cancel action in place of Cancel Booking, then Delete.
               const buildKidActions = (kid: { realKid: Kid | null; onPayment: () => void; label: string }): ActionMenuItem[] => {
                 const rk = kid.realKid;
-                // Real kid -> its own full page (mirrors the adult row's
-                // "View Details" kebab entry, which opens the enquiry's
-                // details popup — the kid equivalent is its dedicated
-                // detail page, same place the name-cell icon-link already
-                // goes via onViewKidDetails). No record yet -> nothing of
-                // its own to view, falls back to the enquiry page.
-                const items: ActionMenuItem[] = [
-                  ...(rk
-                    ? [{ label: 'View Details', icon: Eye, onClick: () => onViewKidDetails(rk) }]
-                    : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
-                ];
+                // Real kid -> already reachable via the name-cell
+                // icon-link (onViewKidDetails, just above) and via the
+                // parent enquiry's own "View Full CRM" -> Kids card, so a
+                // "View Details" entry here would just be a third way to
+                // the same place — left out of this menu the same reason
+                // the adult kebab dropped its own duplicate (see
+                // useRowActions.ts). No record yet -> nothing of its own
+                // to view, falls back to the enquiry page.
+                const items: ActionMenuItem[] = rk
+                  ? []
+                  : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }];
                 // Download/Share Invoice — full parity with the adult
                 // kebab's own pair (useRowActions.ts), gated on money
                 // actually having moved for this kid (there's no

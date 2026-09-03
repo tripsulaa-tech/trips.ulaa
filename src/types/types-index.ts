@@ -366,6 +366,14 @@ export interface Enquiry {
   amount_paid: number;
   terms_accepted?: boolean;
   cancelled_at?: string | null;
+  // Soft-delete marker — getEnquiries() always filters this out
+  // (`.is('deleted_at', null)`), so a hard-"deleted" row never appears in
+  // the admin list even though it's still physically in the table. Surfaced
+  // on the type only so the live-realtime subscription in
+  // useEnquiryData.ts can recognize and drop a row the instant it's
+  // soft-deleted, the same way getEnquiries() already excludes it on a
+  // fresh load.
+  deleted_at?: string | null;
   // Why this booking was cancelled — only ever set alongside cancelled_at
   // (see CancellationReason above). Null for bookings cancelled before
   // add_cancellation_reason.sql, and cleared back to null on reactivation

@@ -165,16 +165,16 @@ export default function AdminEnquiriesMobileCards({
           // buildKidActions for the reasoning.
           const buildKidActions = (kid: { realKid: Kid | null; label: string }): ActionMenuItem[] => {
             const rk = kid.realKid;
-            // Real kid -> its own full page (mirrors the adult card's
-            // "View Details" kebab entry) plus Edit Details right from the
-            // kebab (see AdminKidEditModal.tsx). No record yet -> nothing
-            // of its own to view/edit, falls back to the enquiry page,
-            // same as AdminEnquiriesDesktopTable's matching buildKidActions.
-            const items: ActionMenuItem[] = [
-              ...(rk
-                ? [{ label: 'View Details', icon: Eye, onClick: () => navigate(`/admin/kids/${rk.id}`) }]
-                : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
-            ];
+            // Real kid -> reachable via the parent enquiry's own "View
+            // Full CRM" -> Kids card, so a "View Details" entry here would
+            // just be a second way to the same place — left out, same
+            // reason the adult kebab dropped its own duplicate (see
+            // useRowActions.ts). No record yet -> nothing of its own to
+            // view, falls back to the enquiry page, same as
+            // AdminEnquiriesDesktopTable's matching buildKidActions.
+            const items: ActionMenuItem[] = rk
+              ? []
+              : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }];
             // Download/Share Invoice — see AdminEnquiriesDesktopTable's
             // matching buildKidActions for the reasoning/gating.
             if (rk && rk.amount_paid > 0) {

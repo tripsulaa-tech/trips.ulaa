@@ -11,7 +11,7 @@ import { formatPrice } from '../../utils/utils-index';
 import MethodReferenceFields from './MethodReferenceFields';
 import {
   parseNonNegative, PACKAGE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS,
-  availablePaymentTypeOptions, clearsBalance, computeDiscountedTotal, FOOD_PREFERENCE_OPTIONS,
+  availablePaymentTypeOptions, clearsBalance, computeDiscountedTotal,
   REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
 } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
@@ -57,35 +57,24 @@ export default function PaymentFormFields({
   return (
     <div className="space-y-4">
       {!compact && (
-        <div className={pairClass}>
-          <div>
-            <label htmlFor={`${idPrefix}-food`} className="block text-sm font-medium text-dark mb-1">Food Preference</label>
-            <Select
-              inputId={`${idPrefix}-food`}
-              value={paymentForm.food_preference}
-              onChange={val => setPaymentForm(f => ({ ...f, food_preference: val as PaymentForm['food_preference'] }))}
-              options={FOOD_PREFERENCE_OPTIONS}
-            />
-          </div>
-          <div>
-            <label htmlFor={`${idPrefix}-package`} className="block text-sm font-medium text-dark mb-1">Package</label>
-            <Select
-              inputId={`${idPrefix}-package`}
-              value={paymentForm.package_type}
-              onChange={val => {
-                const packageType = val as Enquiry['package_type'];
-                const suggested = getTripPrice(enquiry.trip_id, packageType);
-                setPaymentForm(f => ({
-                  ...f,
-                  package_type: packageType,
-                  total_amount: enquiry.trip_id
-                    ? (computeDiscountedTotal(suggested, f.discount_amount) ?? f.total_amount)
-                    : (suggested ?? f.total_amount),
-                }));
-              }}
-              options={PACKAGE_OPTIONS}
-            />
-          </div>
+        <div>
+          <label htmlFor={`${idPrefix}-package`} className="block text-sm font-medium text-dark mb-1">Package</label>
+          <Select
+            inputId={`${idPrefix}-package`}
+            value={paymentForm.package_type}
+            onChange={val => {
+              const packageType = val as Enquiry['package_type'];
+              const suggested = getTripPrice(enquiry.trip_id, packageType);
+              setPaymentForm(f => ({
+                ...f,
+                package_type: packageType,
+                total_amount: enquiry.trip_id
+                  ? (computeDiscountedTotal(suggested, f.discount_amount) ?? f.total_amount)
+                  : (suggested ?? f.total_amount),
+              }));
+            }}
+            options={PACKAGE_OPTIONS}
+          />
         </div>
       )}
       {enquiry.trip_id ? (
