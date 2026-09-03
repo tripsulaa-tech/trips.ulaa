@@ -316,7 +316,7 @@ export default function AdminEnquiryTravellerCard({
             </span>
             <div className="min-w-0 flex-1">
               <label htmlFor="eq-detail-edit-package" className="text-dark-muted text-xs">Package</label>
-              {editing ? (
+              {editing && !enquiry.booking_id ? (
                 <div className="mt-0.5">
                   <Select
                     inputId="eq-detail-edit-package"
@@ -327,7 +327,16 @@ export default function AdminEnquiryTravellerCard({
                   />
                 </div>
               ) : (
-                <p className="text-dark text-sm font-semibold truncate">{PACKAGE_CONFIG[enquiry.package_type || 'normal'].label}</p>
+                <p className="text-dark text-sm font-semibold truncate">
+                  {PACKAGE_CONFIG[enquiry.package_type || 'normal'].label}
+                  {/* Once a booking exists, changing package here would write
+                      package_type straight to the row with no price
+                      reconciliation — Track Payment's own Package field is
+                      the only place that updates both together. */}
+                  {editing && enquiry.booking_id && (
+                    <span className="block text-[11px] text-dark-muted font-normal">Change via Track Payment</span>
+                  )}
+                </p>
               )}
             </div>
           </div>

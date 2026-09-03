@@ -2,6 +2,7 @@ import { supabase } from '../../supabase';
 import type { Enquiry, ContactOutcome, BookingFollowUpType } from '../../../types/types-index';
 import { isAgeNotEligibleError, refreshJourneyStage } from './shared';
 import { logActivity } from './activity';
+import { formatPrice } from '../../../utils/utils-index';
 
 // =============================================
 // Enquiries — status / lifecycle
@@ -105,6 +106,13 @@ export async function recordContactOutcome(
 // "wrong trip" is the same class of mistake as "wrong name" here; if it
 // changes, any already-tracked total_amount/package_type is left as-is —
 // re-open Track Payment afterwards if the new trip's price differs.
+//
+// total_amount is the one exception to "never touches money": it's only
+// ever passed alongside a package_type change (Traveller & Trip's own
+// Package field, editable pre-booking only — see useEditEnquiry), so the
+// list price on the enquiry row stays in sync with whichever package was
+// just picked instead of silently going stale until Track Payment is
+// opened.
 export async function updateEnquiryDetails(
   id: string,
   current: Enquiry,
@@ -124,6 +132,7 @@ export async function updateEnquiryDetails(
     source?: Enquiry['source'];
     food_preference?: 'veg' | 'non_veg' | null;
     package_type?: 'early_bird' | 'normal';
+    total_amount?: number | null;
   }
 ): Promise<Enquiry> {
   const patch: Record<string, unknown> = {};
@@ -190,6 +199,10 @@ export async function updateEnquiryDetails(
   if (fields.package_type !== undefined) {
     track('Package', PACKAGE_LABEL[current.package_type] || current.package_type, PACKAGE_LABEL[fields.package_type] || fields.package_type);
     patch.package_type = fields.package_type;
+  }
+  if (fields.total_amount !== undefined) {
+    track('List Price', current.total_amount != null ? formatPrice(current.total_amount) : '', fields.total_amount != null ? formatPrice(fields.total_amount) : '');
+    patch.total_amount = fields.total_amount;
   }
 
   const { data, error } = await supabase

@@ -21,7 +21,7 @@ import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import { getPaymentsForEnquiry, getKidsForEnquiries, updateKidStatus, recordKidContactOutcome, deleteKid } from '../../services/api';
+import { getPaymentsForEnquiry, getKidsForEnquiries, updateKid, updateKidStatus, recordKidContactOutcome, deleteKid } from '../../services/api';
 import { logKidActivity, setKidFollowUp, updateKidNoShow } from '../../services/api/enquiries/kids';
 import { subscribeToTable } from '../../services/realtime';
 import { useConfirm } from '../../components/ui/useConfirm';
@@ -59,13 +59,13 @@ import {
 import FilterDropdown from './AdminFilterDropdown';
 import { KpiCards, KpiCarousel } from '../../components/ui/KpiCards';
 import AddEnquiryModal from './AdminAddEnquiryModal';
-import PaymentModal from './AdminPaymentModal';
 import AdminKidPaymentModal from './AdminKidPaymentModal';
 import DetailsModal from './AdminDetailsModal';
 import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
 import MarkPaidModal from './AdminMarkPaidModal';
 import NotInterestedModal from './AdminNotInterestedModal';
 import AdminKidNotInterestedModal from './AdminKidNotInterestedModal';
+import AdminKidEditModal, { kidEditFormFromKid, type KidEditForm } from './AdminKidEditModal';
 import AdminKidContactOutcomeModal from './AdminKidContactOutcomeModal';
 import type { KidContactOutcomeTarget, KidContactOutcomeResult } from './AdminKidContactOutcomeModal';
 import FollowUpModal from './AdminFollowUpModal';
@@ -161,16 +161,18 @@ export default function AdminEnquiries() {
     const trip = trips.find(t => t.id === tripId);
     return trip?.child_price ?? undefined;
   };
-  // Owns the Track Payment modal — target/form state, inline history,
-  // opening with a suggested amount, and saving.
+  // The Track Payment modal (AdminPaymentModal) has been retired from the
+  // list view — only setPaymentTarget/setPaymentForm are still needed here,
+  // for useEnquiryLifecycle's handleToggleNoShow to keep in sync. Every
+  // former trigger for that modal (the Payment cell, row-action "Record/
+  // Manage Payment", and the auto-open after marking an enquiry Interested)
+  // now navigates to the enquiry's full CRM page instead, matching the
+  // "View Full CRM" link already used elsewhere in this table.
   const {
-    paymentTarget, setPaymentTarget,
-    paymentForm, setPaymentForm,
-    savingPayment,
-    paymentHistory, paymentHistoryLoading,
-    openPayment,
-    handleSavePayment,
+    setPaymentTarget,
+    setPaymentForm,
   } = useEnquiryPayment({ setTrips, load, getTripPrice, getTripChildPrice });
+  const openPayment = (enquiry: Enquiry) => navigate(`/admin/enquiries/${enquiry.id}`);
   // Real per-kid rows for whichever enquiries are on the current page —
   // bulk-loaded in one round trip (see getKidsForEnquiries) rather than
   // one request per booking, keyed by enquiry_id so the table/card rows
@@ -393,13 +395,44 @@ export default function AdminEnquiries() {
   // row's own "Set Follow-up" chip), just reusing handleSetKidFollowUp
   // with a null date/notes.
   const handleClearKidFollowUp = (kid: Kid) => handleSetKidFollowUp(kid, null, null);
+  // Edit Details modal for a kid, right from the list — mirrors
+  // AdminEnquiryKidsCard's own kidEditTarget/kidEditForm wiring, just
+  // updating kidsByEnquiry's local cache afterwards instead of a
+  // hook-owned kids array (same pattern handleDeleteKid/handleToggleKidNoShow
+  // already follow above). See AdminKidEditModal.tsx.
+  const [kidEditTarget, setKidEditTarget] = useState<Kid | null>(null);
+  const [kidEditForm, setKidEditForm] = useState<KidEditForm>({ name: '', age: '', food_preference: '' });
+  const openKidEditModal = (kid: Kid) => {
+    setKidEditForm(kidEditFormFromKid(kid));
+    setKidEditTarget(kid);
+  };
+  const handleSaveKidEdit = async () => {
+    if (!kidEditTarget) return;
+    const patch = {
+      name: kidEditForm.name.trim() || null,
+      age: kidEditForm.age === '' ? null : kidEditForm.age,
+      food_preference: kidEditForm.food_preference || null,
+    };
+    setUpdating(kidEditTarget.id);
+    try {
+      await updateKid(kidEditTarget.id, patch);
+      setKidsByEnquiry(prev => {
+        const list = prev[kidEditTarget.enquiry_id];
+        if (!list) return prev;
+        return { ...prev, [kidEditTarget.enquiry_id]: list.map(k => (k.id === kidEditTarget.id ? { ...k, ...patch } : k)) };
+      });
+      setKidEditTarget(null);
+    } finally {
+      setUpdating(null);
+    }
+  };
   const {
     cancelTarget, setCancelTarget,
     cancelCharges, setCancelCharges,
     cancelIsNoShow, setCancelIsNoShow,
     cancelReason, setCancelReason,
     cancelNotes, setCancelNotes,
-    togglingNoShow, cancelling, completingId,
+    cancelling, completingId,
     handleCancelToggle, handleConfirmCancel,
     handleToggleNoShow, handleDelete, handleMarkCompleted,
     handleCheckIn, handleUndoCheckIn,
@@ -1540,7 +1573,14 @@ export default function AdminEnquiries() {
               onAdvanceKid={handleAdvanceKid}
               onToggleKidNoShow={handleToggleKidNoShow}
               onDeleteKid={handleDeleteKid}
+              // Was routing to the kid's parent enquiry page — same page
+              // for every kid on a group booking, so clicking "Aarav" and
+              // "Vaarav" both landed on Kabson's own enquiry with no way
+              // to tell which kid you'd clicked. Kids now have their own
+              // routed page (AdminKidDetail, see AppRouter's /admin/kids/:id)
+              // that shows that one kid's own status/payment/follow-up.
               onViewKidDetails={kid => navigate(`/admin/kids/${kid.id}`)}
+              onEditKid={openKidEditModal}
               invoiceBusyId={invoiceBusyId}
               onDownloadKidInvoice={handleDownloadKidInvoice}
               onShareKidInvoice={handleShareKidInvoice}
@@ -1582,7 +1622,7 @@ export default function AdminEnquiries() {
               onAdvanceKid={handleAdvanceKid}
               onToggleKidNoShow={handleToggleKidNoShow}
               onDeleteKid={handleDeleteKid}
-              onViewKidDetails={kid => navigate(`/admin/kids/${kid.id}`)}
+              onEditKid={openKidEditModal}
               onDownloadKidInvoice={handleDownloadKidInvoice}
               onShareKidInvoice={handleShareKidInvoice}
               onClearKidFollowUp={handleClearKidFollowUp}
@@ -1604,20 +1644,6 @@ export default function AdminEnquiries() {
         applySuggestedAmount={applySuggestedAmount}
         onSave={handleSave}
         saving={saving}
-      />
-
-      <PaymentModal
-        paymentTarget={paymentTarget}
-        onClose={() => setPaymentTarget(null)}
-        paymentForm={paymentForm}
-        setPaymentForm={setPaymentForm}
-        getTripPrice={getTripPrice}
-        paymentHistory={paymentHistory}
-        paymentHistoryLoading={paymentHistoryLoading}
-        togglingNoShow={togglingNoShow}
-        onToggleNoShow={handleToggleNoShow}
-        onSave={handleSavePayment}
-        savingPayment={savingPayment}
       />
 
       <AdminKidPaymentModal
@@ -1701,6 +1727,16 @@ export default function AdminEnquiries() {
         onClose={() => setKidContactOutcomeTarget(null)}
         onSave={handleSaveKidContactOutcome}
         saving={savingKidContactOutcome}
+      />
+
+      <AdminKidEditModal
+        kidEditTarget={kidEditTarget}
+        targetLabel={kidEditTarget ? kidRowLabel(kidEditTarget, (kidsByEnquiry[kidEditTarget.enquiry_id] || []).indexOf(kidEditTarget)) : ''}
+        onClose={() => setKidEditTarget(null)}
+        editForm={kidEditForm}
+        setEditForm={setKidEditForm}
+        onSave={handleSaveKidEdit}
+        saving={!!kidEditTarget && updating === kidEditTarget.id}
       />
 
       <FollowUpModal

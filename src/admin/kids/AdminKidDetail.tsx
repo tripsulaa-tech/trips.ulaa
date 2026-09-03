@@ -126,8 +126,10 @@ export default function AdminKidDetail() {
     await handleDelete(kid);
     // handleDelete already confirmed and removed the row — nothing left to
     // show on this page for it, so head back to the list it was opened
-    // from rather than lingering on a now-gone kid.
-    navigate('/admin/kids');
+    // from rather than lingering on a now-gone kid. There's no standalone
+    // /admin/kids list page yet, so land back on Enquiries (where every
+    // kid row actually lives today) instead of a dead route.
+    navigate('/admin/enquiries');
   };
 
   if (loading) {
@@ -143,8 +145,8 @@ export default function AdminKidDetail() {
       <AdminLayout title="Kid Details">
         <div className="p-6 space-y-3">
           <p className="text-dark-muted text-sm">This kid record couldn't be found — it may have been deleted.</p>
-          <Button variant="primary" size="sm" onClick={() => navigate('/admin/kids')}>
-            <ArrowLeft size={14} aria-hidden="true" /> Back to Kids
+          <Button variant="primary" size="sm" onClick={() => navigate('/admin/enquiries')}>
+            <ArrowLeft size={14} aria-hidden="true" /> Back to Enquiries
           </Button>
         </div>
       </AdminLayout>
@@ -178,10 +180,10 @@ export default function AdminKidDetail() {
     <AdminLayout title="Kid Details" subtitle={kid.label}>
       <div className="max-w-7xl mx-auto space-y-4">
         <button
-          onClick={() => navigate('/admin/kids')}
+          onClick={() => navigate('/admin/enquiries')}
           className="inline-flex items-center gap-1.5 text-sm font-button font-medium text-dark-muted hover:text-primary transition-colors"
         >
-          <ArrowLeft size={15} aria-hidden="true" /> Back to Kids
+          <ArrowLeft size={15} aria-hidden="true" /> Back to Enquiries
         </button>
 
         {/* Same "record + fixed-context sidebar" split AdminEnquiryDetail

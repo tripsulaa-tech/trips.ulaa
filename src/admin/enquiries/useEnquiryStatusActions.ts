@@ -13,10 +13,10 @@ import { useAlert } from '../../components/ui/useAlert';
  *
  *  `openPayment`, `handleCheckIn`, and `handleMarkCompleted` are passed in
  *  rather than owned here because handleAdvance's job is purely to
- *  dispatch to whichever one of those (from useEnquiryPayment /
- *  useEnquiryLifecycle) applies for the row's current journey_stage — same
- *  cross-hook wiring pattern already used for setDetailsTarget/
- *  setPaymentTarget elsewhere.
+ *  dispatch to whichever one of those applies for the row's current
+ *  journey_stage — same cross-hook wiring pattern already used for
+ *  setDetailsTarget elsewhere. `openPayment` now just navigates to the
+ *  enquiry's full CRM page (the old Track Payment modal is retired).
  *
  *  Extracted from AdminEnquiries.tsx (see that file's history for the
  *  original single-component version). */
@@ -52,9 +52,10 @@ export function useEnquiryStatusActions(params: {
       const target = contactOutcomeTarget;
       setContactOutcomeTarget(null);
       load();
-      // Interested is the one outcome that moves towards a booking — open
-      // Track Payment right away, same as the old auto-open-on-Contacted
-      // behaviour, so the admin can record the advance in one flow.
+      // Interested is the one outcome that moves towards a booking — jump
+      // straight to the enquiry's full CRM page so the admin can record
+      // the advance there (the old auto-open-on-Contacted Track Payment
+      // modal has been retired in favour of this single, consistent path).
       if (result.outcome === 'interested') {
         openPayment({ ...target, status: 'contacted' });
       }

@@ -24,6 +24,7 @@ import {
   UserMinus,
   ArrowsClockwise as RefreshCw,
   Eye,
+  Pencil,
   SignIn as LogIn,
   Trash as Trash2,
   UserCheck,
@@ -106,9 +107,10 @@ interface AdminEnquiriesMobileCardsProps {
   // AdminEnquiries' handleToggleKidNoShow.
   onToggleKidNoShow: (kid: Kid, isNoShow: boolean) => void;
   onDeleteKid: (kid: Kid) => void;
-  // Navigates to this kid's own full routed detail page — see
-  // AdminEnquiriesDesktopTable's matching prop for the reasoning.
-  onViewKidDetails: (kid: Kid) => void;
+  // Opens the Edit Details modal (name/age/food_preference) for one kid —
+  // see AdminKidEditModal.tsx. Mirrors the adult card's own Edit Details
+  // kebab entry.
+  onEditKid: (kid: Kid) => void;
   // Kid-side Download/Share Invoice and Clear Follow-up — see
   // AdminEnquiriesDesktopTable's matching props for the reasoning. Reuses
   // this component's own `invoiceBusyId` prop above (keyed off kid.id).
@@ -132,7 +134,7 @@ export default function AdminEnquiriesMobileCards({
   updating, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
   openPayment, openFollowUpModal, setBookingFollowUpTarget, handleAdvance, buildRowActions,
   kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested, onReopenKid,
-  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
+  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onEditKid,
   onDownloadKidInvoice, onShareKidInvoice, onClearKidFollowUp,
 }: AdminEnquiriesMobileCardsProps) {
   const navigate = useNavigate();
@@ -164,15 +166,13 @@ export default function AdminEnquiriesMobileCards({
           // buildKidActions for the reasoning.
           const buildKidActions = (kid: { realKid: Kid | null; label: string }): ActionMenuItem[] => {
             const rk = kid.realKid;
-            // Real kid -> its own full page is now reachable via the
-            // dedicated "View Full CRM" button on the card itself (see
-            // below), so no duplicate entry here — mirrors the adult
-            // card's kebab, which likewise has no "View Full CRM" entry
-            // since its own button already covers it. No record yet ->
-            // nothing of its own to show, falls back to the enquiry page,
-            // same as AdminEnquiriesDesktopTable's matching buildKidActions.
+            // Real kid -> Edit Details opens name/age/food right from the
+            // kebab (see AdminKidEditModal.tsx) — mirrors the adult card's
+            // own Edit Details entry. No record yet -> nothing of its own
+            // to edit, falls back to the enquiry page, same as
+            // AdminEnquiriesDesktopTable's matching buildKidActions.
             const items: ActionMenuItem[] = [
-              ...(rk ? [] : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
+              ...(rk ? [{ label: 'Edit Details', icon: Pencil, onClick: () => onEditKid(rk) }] : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
               { label: 'Manage Payment', icon: IndianRupee, onClick: () => (kid.realKid ? onOpenKidPayment(kid.realKid, e.trip_id) : openPayment(e)) },
             ];
             // Download/Share Invoice — see AdminEnquiriesDesktopTable's
@@ -760,7 +760,7 @@ export default function AdminEnquiriesMobileCards({
 
                     <button
                       onClick={() => (kid.realKid ? onOpenKidPayment(kid.realKid, e.trip_id) : openPayment(e))}
-                      title={kid.realKid ? `Manage ${kid.label}'s own payment — independent of every other kid on this booking` : `Manage ${e.full_name}'s kids fee — opens the same Payment modal as their own booking`}
+                      title={kid.realKid ? `Manage ${kid.label}'s own payment — independent of every other kid on this booking` : `Manage ${e.full_name}'s kids fee — opens their full CRM page, same as their own booking`}
                       className="w-full text-left bg-background-warm rounded-md px-3 py-2 flex items-center gap-2.5 hover:opacity-75 transition-opacity"
                     >
                       <IndianRupee size={14} className="text-dark-muted shrink-0" aria-hidden="true" />
@@ -805,19 +805,18 @@ export default function AdminEnquiriesMobileCards({
                         );
                       })()}
                       {/* Kid's own equivalent of the adult card's primary
-                          "View Full CRM" CTA. Real kid -> its own full page
-                          (/admin/kids/:id, the same page "Set Follow-up"
-                          above already opens); placeholder (no kid record
-                          yet) -> falls back to the parent enquiry page,
-                          same as the kebab's own "View Enquiry" fallback. */}
+                          "View Enquiry" CTA — both a real kid record and a
+                          bare placeholder (no kid record yet) land on the
+                          same parent enquiry page, whose Kids card is where
+                          this kid's own status/payment/follow-up live. */}
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => (kid.realKid ? onViewKidDetails(kid.realKid) : navigate(`/admin/enquiries/${e.id}`))}
+                        onClick={() => navigate(`/admin/enquiries/${e.id}`)}
                         disabled={!!kid.realKid && updating === kid.realKid.id}
                         className="flex-1 min-w-[140px] text-xs !gap-1.5 whitespace-nowrap"
                       >
-                        {kid.realKid ? 'View Full CRM' : 'View Enquiry'} <ArrowRight size={14} aria-hidden="true" />
+                        View Enquiry <ArrowRight size={14} aria-hidden="true" />
                       </Button>
                       <div className="shrink-0">
                         <ActionsMenu

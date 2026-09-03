@@ -33,48 +33,61 @@ interface PaymentFormFieldsProps {
   onToggleNoShow: (isNoShow: boolean) => void;
   getTripPrice: (tripId: string | undefined, packageType: Enquiry['package_type']) => number | undefined;
   idPrefix?: string;
+  // Pairs up fields that are otherwise single, full-width rows (Food
+  // Preference/Package, Amount Being Paid Now/Payment Type) into a 2-col
+  // grid on sm+ screens. Off by default so the narrow payment Modal keeps
+  // its single-column layout; the wide inline "No Payment Yet" card on
+  // AdminEnquiryJourneyCard turns it on since it has the room to spare.
+  compact?: boolean;
 }
 
 export default function PaymentFormFields({
   enquiry, paymentForm, setPaymentForm, paymentErrors, payments, paymentsLoading,
-  togglingNoShow, onToggleNoShow, getTripPrice, idPrefix = 'ed-pay',
+  togglingNoShow, onToggleNoShow, getTripPrice, idPrefix = 'ed-pay', compact = false,
 }: PaymentFormFieldsProps) {
   const paymentErrorClass = 'text-red-500 text-xs mt-1';
   const fieldClass = 'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none';
   // Only meaningful when a trip is linked — no-trip (general) enquiries
   // have no list price, so they keep the old free-typed Total Amount field.
   const listPrice = enquiry.trip_id ? getTripPrice(enquiry.trip_id, paymentForm.package_type) : undefined;
+  // space-y-4 in non-compact mode reproduces the original stacked spacing
+  // for these two fields; grid+gap-4 in compact mode sits them side by side.
+  const pairClass = compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-4';
 
   return (
     <div className="space-y-4">
-      <div>
-        <label htmlFor={`${idPrefix}-food`} className="block text-sm font-medium text-dark mb-1">Food Preference</label>
-        <Select
-          inputId={`${idPrefix}-food`}
-          value={paymentForm.food_preference}
-          onChange={val => setPaymentForm(f => ({ ...f, food_preference: val as PaymentForm['food_preference'] }))}
-          options={FOOD_PREFERENCE_OPTIONS}
-        />
-      </div>
-      <div>
-        <label htmlFor={`${idPrefix}-package`} className="block text-sm font-medium text-dark mb-1">Package</label>
-        <Select
-          inputId={`${idPrefix}-package`}
-          value={paymentForm.package_type}
-          onChange={val => {
-            const packageType = val as Enquiry['package_type'];
-            const suggested = getTripPrice(enquiry.trip_id, packageType);
-            setPaymentForm(f => ({
-              ...f,
-              package_type: packageType,
-              total_amount: enquiry.trip_id
-                ? (computeDiscountedTotal(suggested, f.discount_amount) ?? f.total_amount)
-                : (suggested ?? f.total_amount),
-            }));
-          }}
-          options={PACKAGE_OPTIONS}
-        />
-      </div>
+      {!compact && (
+        <div className={pairClass}>
+          <div>
+            <label htmlFor={`${idPrefix}-food`} className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <Select
+              inputId={`${idPrefix}-food`}
+              value={paymentForm.food_preference}
+              onChange={val => setPaymentForm(f => ({ ...f, food_preference: val as PaymentForm['food_preference'] }))}
+              options={FOOD_PREFERENCE_OPTIONS}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${idPrefix}-package`} className="block text-sm font-medium text-dark mb-1">Package</label>
+            <Select
+              inputId={`${idPrefix}-package`}
+              value={paymentForm.package_type}
+              onChange={val => {
+                const packageType = val as Enquiry['package_type'];
+                const suggested = getTripPrice(enquiry.trip_id, packageType);
+                setPaymentForm(f => ({
+                  ...f,
+                  package_type: packageType,
+                  total_amount: enquiry.trip_id
+                    ? (computeDiscountedTotal(suggested, f.discount_amount) ?? f.total_amount)
+                    : (suggested ?? f.total_amount),
+                }));
+              }}
+              options={PACKAGE_OPTIONS}
+            />
+          </div>
+        </div>
+      )}
       {enquiry.trip_id ? (
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -82,6 +95,7 @@ export default function PaymentFormFields({
             <div className={`${fieldClass} bg-background-warm text-dark-muted`}>
               {listPrice != null ? formatPrice(listPrice) : 'Not set'}
             </div>
+            <p className="text-[11px] text-dark-muted mt-1">Trip's price for this package, before discount</p>
           </div>
           <div>
             <label htmlFor={`${idPrefix}-discount`} className="block text-sm font-medium text-dark mb-1">Discount (₹)</label>
@@ -133,48 +147,50 @@ export default function PaymentFormFields({
         </div>
       )}
 
-      <div>
-        <label htmlFor={`${idPrefix}-amount-paid`} className="block text-sm font-medium text-dark mb-1">
-          {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
-        </label>
-        <input
-          id={`${idPrefix}-amount-paid`}
-          type="number"
-          min={0}
-          value={paymentForm.amount_paid}
-          onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
-          aria-invalid={!!paymentErrors.amount_paid}
-          aria-describedby={paymentErrors.amount_paid ? `${idPrefix}-amount-paid-error` : undefined}
-          className={fieldClass}
-          placeholder="e.g. 5000"
-        />
-        {paymentErrors.amount_paid && <p id={`${idPrefix}-amount-paid-error`} role="alert" className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
+      <div className={pairClass}>
+        <div>
+          <label htmlFor={`${idPrefix}-amount-paid`} className="block text-sm font-medium text-dark mb-1">
+            {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
+          </label>
+          <input
+            id={`${idPrefix}-amount-paid`}
+            type="number"
+            min={0}
+            value={paymentForm.amount_paid}
+            onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
+            aria-invalid={!!paymentErrors.amount_paid}
+            aria-describedby={paymentErrors.amount_paid ? `${idPrefix}-amount-paid-error` : undefined}
+            className={fieldClass}
+            placeholder="e.g. 5000"
+          />
+          {paymentErrors.amount_paid && <p id={`${idPrefix}-amount-paid-error`} role="alert" className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
+        </div>
+
+        {/* This transaction's own amount + a manually-picked type — same
+            shape as Generate Invoice, rather than a running total the
+            label gets inferred from. */}
+        <div>
+          <label htmlFor={`${idPrefix}-type`} className="block text-sm font-medium text-dark mb-1">Payment Type</label>
+          <Select
+            inputId={`${idPrefix}-type`}
+            value={paymentForm.payment_type}
+            onChange={val => setPaymentForm(f => ({ ...f, payment_type: val as PaymentForm['payment_type'] }))}
+            options={availablePaymentTypeOptions(paymentForm, enquiry.amount_paid || 0)}
+          />
+          {paymentForm.payment_type === 'extra_charge' && (
+            <p className="text-[11px] text-dark-muted mt-1">
+              Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
+            </p>
+          )}
+          {paymentForm.payment_type !== 'extra_charge' && !clearsBalance(paymentForm, enquiry.amount_paid || 0) && (
+            <p className="text-[11px] text-dark-muted mt-1">
+              'Balance' will appear here once the amount above clears what's still owed.
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* This transaction's own amount + a manually-picked type — same
-          shape as Generate Invoice, rather than a running total the
-          label gets inferred from. */}
-      <div>
-        <label htmlFor={`${idPrefix}-type`} className="block text-sm font-medium text-dark mb-1">Payment Type</label>
-        <Select
-          inputId={`${idPrefix}-type`}
-          value={paymentForm.payment_type}
-          onChange={val => setPaymentForm(f => ({ ...f, payment_type: val as PaymentForm['payment_type'] }))}
-          options={availablePaymentTypeOptions(paymentForm, enquiry.amount_paid || 0)}
-        />
-        {paymentForm.payment_type === 'extra_charge' && (
-          <p className="text-[11px] text-dark-muted mt-1">
-            Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
-          </p>
-        )}
-        {paymentForm.payment_type !== 'extra_charge' && !clearsBalance(paymentForm, enquiry.amount_paid || 0) && (
-          <p className="text-[11px] text-dark-muted mt-1">
-            'Balance' will appear here once the amount above clears what's still owed.
-          </p>
-        )}
-      </div>
-
-      <div>
+      <div className={compact ? 'sm:max-w-[calc(50%-0.5rem)]' : ''}>
         <label htmlFor={`${idPrefix}-status`} className="block text-sm font-medium text-dark mb-1">Status</label>
         <Select
           inputId={`${idPrefix}-status`}

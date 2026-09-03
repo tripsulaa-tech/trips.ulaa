@@ -37,7 +37,7 @@ import {
 import type { ActivityLogEntry, CancellationReason, ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatPrice } from '../../utils/utils-index';
-import { clearsBalance, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm } from './AdminEnquiryCommon';
+import { clearsBalance, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, computeDiscountedTotal } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
@@ -215,7 +215,19 @@ export default function AdminEnquiryDetail() {
     // package is set on the enquiry (package_type always has a value —
     // 'normal' by default).
     const packageType = enquiry.package_type;
-    const suggested = enquiry.total_amount ?? getTripPrice(enquiry.trip_id, packageType) ?? activePricing?.amount;
+    const listPriceNow = enquiry.trip_id ? getTripPrice(enquiry.trip_id, packageType) : undefined;
+    const suggested = enquiry.total_amount ?? listPriceNow ?? activePricing?.amount;
+    // The enquiry can carry an already-recorded total with nothing in
+    // discount_amount to explain why it's under today's list price — e.g.
+    // a total set by the public website form, or a list price that's
+    // since changed. Rather than showing that gap as an unexplained
+    // mismatch, imply the discount that would reconcile them, so List
+    // Price − Discount = Total Amount actually holds. Only kicks in when
+    // nothing's already recorded in discount_amount — a real discount on
+    // file always wins.
+    const impliedDiscount = enquiry.trip_id && !enquiry.discount_amount && listPriceNow != null && enquiry.total_amount != null && listPriceNow > enquiry.total_amount
+      ? listPriceNow - enquiry.total_amount
+      : undefined;
     // Same "keep what's already on record, only suggest for a brand-new
     // one" reasoning as the adult total_amount above — but kids_amount
     // defaults to 0 rather than being nullable, so `||` falling through to
@@ -225,8 +237,8 @@ export default function AdminEnquiryDetail() {
     return {
       package_type: packageType,
       total_amount: suggested ?? '',
-      discount_amount: enquiry.discount_amount || '',
-      discount_reason: enquiry.discount_reason || '',
+      discount_amount: enquiry.discount_amount || impliedDiscount || '',
+      discount_reason: enquiry.discount_reason || (impliedDiscount ? 'Backfilled — matches previously recorded total' : ''),
       // Blank, not enquiry.amount_paid — same reasoning as AdminEnquiries'
       // openPayment: this field is this-payment's-own-amount now, matching
       // Generate Invoice, not a running total to edit down to.
@@ -271,6 +283,30 @@ export default function AdminEnquiryDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately re-runs only when the enquiry identity or its booking state changes, not on every field edit elsewhere on the page
   }, [enquiry?.id, enquiry?.booking_id]);
 
+  // Food Preference/Package are no longer their own editable fields on the
+  // "No Payment Yet" form (that duplicated Traveller & Trip, which already
+  // covers them) — so once a booking doesn't exist yet, keep just these two
+  // (plus the price they imply) synced to whatever's saved on the enquiry,
+  // same way the full prefill above does for a brand-new form. Narrowed to
+  // only these fields, same reasoning as that effect, so an admin's
+  // already-typed amount survives an unrelated Traveller & Trip save.
+  useEffect(() => {
+    if (!enquiry || enquiry.booking_id) return;
+    const nextFoodPreference = enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '';
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing two fields (and the price they imply) to their source of truth on the enquiry, not reacting to this form's own edits
+    setPaymentForm(f => {
+      if (f.package_type === enquiry.package_type && f.food_preference === nextFoodPreference) return f;
+      const suggested = getTripPrice(enquiry.trip_id, enquiry.package_type);
+      return {
+        ...f,
+        package_type: enquiry.package_type,
+        food_preference: nextFoodPreference,
+        total_amount: enquiry.trip_id ? (computeDiscountedTotal(suggested, f.discount_amount) ?? f.total_amount) : f.total_amount,
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getTripPrice is derived fresh from `trips` every render; keying on `enquiry` alone (not trips) avoids re-syncing on unrelated trip-list refreshes
+  }, [enquiry]);
+
 
   // ---- Edit Details modal (fixing wrong name/contact/trip) --------------
   // Shared with the Enquiries list page — see useEditEnquiry for why the
@@ -280,7 +316,7 @@ export default function AdminEnquiryDetail() {
   const {
     editTarget, setEditTarget, editForm, setEditForm, editTouched, setEditTouched,
     savingEdit, openEdit, handleSaveEdit,
-  } = useEditEnquiry({ trips, load });
+  } = useEditEnquiry({ trips, load, getTripPrice });
 
   // ---- Not Interested / Reopen (this is just a query, not a booking) ----
   // Distinct from Cancel Booking, which is for a booking that had money on

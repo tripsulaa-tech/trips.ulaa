@@ -14,6 +14,7 @@ import {
   Bird,
   ArrowSquareOut,
   Eye,
+  Pencil,
   CurrencyInr as IndianRupee,
   SignIn as LogIn,
   XCircle,
@@ -124,12 +125,14 @@ interface AdminEnquiriesDesktopTableProps {
   // AdminEnquiries' handleToggleKidNoShow.
   onToggleKidNoShow: (kid: Kid, isNoShow: boolean) => void;
   onDeleteKid: (kid: Kid) => void;
-  // Navigates to this kid's own full routed detail page (/admin/kids/:id
-  // — see AdminKidDetail.tsx): own name/age/food/status/follow-up, never
-  // the parent enquiry's own record. Replaces the row's former "View Full
-  // Details" jump to the enquiry's detail page, which showed the adult
-  // booking only.
+  // Navigates to this kid's parent enquiry page (/admin/enquiries/:id),
+  // whose Kids card is where this kid's own status/payment/follow-up
+  // actually live — there's no separate routed page for a kid on its own.
   onViewKidDetails: (kid: Kid) => void;
+  // Opens the Edit Details modal (name/age/food_preference) for one kid —
+  // see AdminKidEditModal.tsx. Mirrors the adult row's own Edit Details
+  // kebab entry.
+  onEditKid: (kid: Kid) => void;
   // Kid-side counterparts to the adult row's Download/Share Invoice pair
   // (useRowActions.ts) — full parity with the adult kebab menu, sourced
   // from the kid's own payment ledger via kidAsInvoiceEnquiry. Shares the
@@ -162,7 +165,7 @@ export default function AdminEnquiriesDesktopTable({
   updating, completingId, setDetailsTarget, openPayment, openFollowUpModal, setBookingFollowUpTarget,
   handleAdvance, buildRowActions,
   kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested, onReopenKid,
-  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
+  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onViewKidDetails, onEditKid,
   invoiceBusyId, onDownloadKidInvoice, onShareKidInvoice, onClearKidFollowUp,
 }: AdminEnquiriesDesktopTableProps) {
   // Only used for the "Open Full CRM Page" link below — the desktop table
@@ -257,14 +260,13 @@ export default function AdminEnquiriesDesktopTable({
               // Cancel action in place of Cancel Booking, then Delete.
               const buildKidActions = (kid: { realKid: Kid | null; onPayment: () => void; label: string }): ActionMenuItem[] => {
                 const rk = kid.realKid;
-                // Real kid -> its own full page is now reachable via the
-                // "Open Full CRM Page" icon-link next to its name (see the
-                // name cell below) — mirrors the adult row, which
-                // likewise keeps that link out of its own kebab. No
-                // record yet -> nothing of its own to show, falls back to
-                // the enquiry page.
+                // Real kid -> its parent enquiry page is reachable via the
+                // icon-link next to its name (see the name cell below) —
+                // mirrors the adult row, which likewise keeps that link
+                // out of its own kebab. No record yet -> nothing of its
+                // own to show, falls back to the enquiry page directly.
                 const items: ActionMenuItem[] = [
-                  ...(rk ? [] : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
+                  ...(rk ? [{ label: 'Edit Details', icon: Pencil, onClick: () => onEditKid(rk) }] : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
                   { label: 'Manage Payment', icon: IndianRupee, onClick: kid.onPayment },
                 ];
                 // Download/Share Invoice — full parity with the adult
@@ -579,15 +581,15 @@ export default function AdminEnquiriesDesktopTable({
                         </p>
                         {/* Kid's own equivalent of the adult name cell's
                             "Open Full CRM Page" link just above — real kid
-                            only, since a placeholder row has no page of
+                            only, since a placeholder row has no enquiry of
                             its own to open (see buildKidActions' matching
                             "View Enquiry" fallback in the kebab instead). */}
                         {kid.realKid && (
                           <button
                             type="button"
                             onClick={() => onViewKidDetails(kid.realKid!)}
-                            title={`Open Full CRM Page for ${kid.label} — own status, payment, follow-up`}
-                            aria-label={`Open full CRM page for ${kid.label}`}
+                            title={`Open ${kid.label}'s enquiry — own status, payment, follow-up`}
+                            aria-label={`Open enquiry for ${kid.label}`}
                             className="shrink-0 text-dark-muted hover:text-primary p-1 -m-1 rounded transition-colors"
                           >
                             <ArrowSquareOut size={13} aria-hidden="true" />
@@ -686,23 +688,11 @@ export default function AdminEnquiriesDesktopTable({
                             <button
                               onClick={() => onViewKidDetails(kid.realKid!)}
                               disabled={updating === kid.realKid!.id}
-                              title={`${kid.label}'s own follow-up — click to change`}
+                              title={`${kid.label}'s own follow-up — click to view on its enquiry page`}
                               className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-50 ${kfu.color}`}
                             >
                               <kfu.icon size={12} className="shrink-0" aria-hidden="true" />
                               {kfu.label}
-                            </button>
-                          );
-                        }
-                        if (canSetKidFollowUp(kid.realKid!)) {
-                          return (
-                            <button
-                              onClick={() => onViewKidDetails(kid.realKid!)}
-                              disabled={updating === kid.realKid!.id}
-                              title={`Set a follow-up reminder for ${kid.label}`}
-                              className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
-                            >
-                              <CalendarClock size={12} className="shrink-0" aria-hidden="true" /> Set
                             </button>
                           );
                         }
@@ -737,18 +727,17 @@ export default function AdminEnquiriesDesktopTable({
                             since it's already one click away in the kebab
                             below (see buildKidActions), and having it
                             twice on the same row was redundant. This slot
-                            now carries the same View Full CRM / View
-                            Enquiry jump the kid card's mobile footer
-                            already has next to its own Mark Contacted/nma
-                            chip, which the desktop table had no
-                            equivalent of before. */}
+                            now carries the same View Enquiry jump the kid
+                            card's mobile footer already has next to its
+                            own Mark Contacted/nma chip, which the desktop
+                            table had no equivalent of before. */}
                         <button
                           onClick={() => (kid.realKid ? onViewKidDetails(kid.realKid) : navigate(`/admin/enquiries/${e.id}`))}
                           disabled={!!kid.realKid && updating === kid.realKid.id}
-                          title={kid.realKid ? 'View Full CRM' : 'View Enquiry'}
+                          title="View Enquiry"
                           className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
                         >
-                          {kid.realKid ? 'View Full CRM' : 'View Enquiry'} <ArrowRight size={12} className="shrink-0" aria-hidden="true" />
+                          View Enquiry <ArrowRight size={12} className="shrink-0" aria-hidden="true" />
                         </button>
                         {/* Counterpart to the Not Interested kebab item —
                             Interested marking, mirroring the adult side's

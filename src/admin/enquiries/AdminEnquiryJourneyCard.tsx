@@ -118,6 +118,7 @@ export default function AdminEnquiryJourneyCard({
         onToggleNoShow={onToggleNoShow}
         getTripPrice={getTripPrice}
         idPrefix="jc-pay"
+        compact
       />
 
       <Button

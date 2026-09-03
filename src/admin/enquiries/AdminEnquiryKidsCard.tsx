@@ -1,7 +1,6 @@
 // Kids card — split out of AdminEnquiryDetail.tsx. Each kid on this
 // booking gets its own genuinely-trackable row here (own status, own
-// follow-up, its own full detail page at /admin/kids/:id — see
-// AdminKidDetail.tsx), selectable via
+// follow-up), selectable via
 // checkbox for a bulk status change — rather than the header's "N Kids"
 // badge being the only trace of them (see Kid in types-index.ts and
 // add_kids_table.sql).
@@ -16,10 +15,9 @@
 // offered unconditionally whenever the kid isn't already in a closed-out
 // state.
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Baby, CheckSquare, Square, CalendarDot as CalendarClock, CurrencyInr as IndianRupee,
-  UserMinus, ArrowsClockwise as RefreshCw, Pencil, Eye, CheckCircle as CheckCircle2,
+  UserMinus, ArrowsClockwise as RefreshCw, CheckCircle as CheckCircle2, Pencil,
   SignIn as LogIn, Clock, XCircle, Trash as Trash2, Confetti as PartyPopper,
   UserCheck, UserMinus as UserX,
 } from '@phosphor-icons/react';
@@ -32,6 +30,7 @@ import { useKidsForEnquiry } from './useKidsForEnquiry';
 import { useKidPayment } from './useKidPayment';
 import AdminKidPaymentModal from './AdminKidPaymentModal';
 import AdminKidNotInterestedModal from './AdminKidNotInterestedModal';
+import AdminKidEditModal, { kidEditFormFromKid, type KidEditForm } from './AdminKidEditModal';
 import FoodMark from '../../components/ui/FoodMark';
 import { canMarkKidNotInterested, canReopenKid, canMarkKidNoShow, KID_NO_SHOW_BADGE, KID_STATUS_CONFIG } from './AdminEnquiryCommon';
 
@@ -58,12 +57,11 @@ interface AdminEnquiryKidsCardProps {
 }
 
 export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: AdminEnquiryKidsCardProps) {
-  const navigate = useNavigate();
   const {
     kids, loading, busy,
     selectedIds, toggleSelectOne, toggleSelectAll,
     kidLabel,
-    handleUpdateStatus, handleBulkStatus, handleToggleNoShow, handleDelete,
+    handleUpdateStatus, handleBulkStatus, handleToggleNoShow, handleEdit, handleDelete,
     reload,
   } = useKidsForEnquiry(enquiry.id);
   const {
@@ -87,6 +85,25 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
     setKidNotInterestedTarget(null);
   };
 
+  // Edit Details modal — name/age/food_preference, the only fields a kid
+  // has of its own to fix up. Mirrors the Not Interested picker's own
+  // local wiring just above; see AdminKidEditModal.tsx.
+  const [kidEditTarget, setKidEditTarget] = useState<Kid | null>(null);
+  const [kidEditForm, setKidEditForm] = useState<KidEditForm>({ name: '', age: '', food_preference: '' });
+  const openKidEditModal = (kid: Kid) => {
+    setKidEditForm(kidEditFormFromKid(kid));
+    setKidEditTarget(kid);
+  };
+  const handleSaveKidEdit = async () => {
+    if (!kidEditTarget) return;
+    await handleEdit(kidEditTarget, {
+      name: kidEditForm.name.trim() || null,
+      age: kidEditForm.age === '' ? null : kidEditForm.age,
+      food_preference: kidEditForm.food_preference || null,
+    });
+    setKidEditTarget(null);
+  };
+
   // Kebab menu per kid — mirrors the adult side's useRowActions.ts: the
   // row itself keeps its one-click quick actions (Not Interested/Reopen,
   // tap-to-open payment/detail), and this menu adds everything else that
@@ -96,7 +113,7 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
   // treatment as AdminEnquiriesDesktopTable's row menu.
   const buildKidActions = (kid: Kid): ActionMenuItem[] => {
     const items: ActionMenuItem[] = [
-      { label: 'View / Edit Details', icon: Eye, onClick: () => navigate(`/admin/kids/${kid.id}`) },
+      { label: 'Edit Details', icon: Pencil, onClick: () => openKidEditModal(kid) },
       { label: 'Manage Payment', icon: IndianRupee, onClick: () => openKidPayment(kid, enquiry.trip_id) },
     ];
     if (kid.status !== 'confirmed') {
@@ -127,7 +144,6 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
     } else if (canMarkKidNoShow(kid)) {
       items.push({ label: 'Mark No Show', icon: UserX, onClick: () => handleToggleNoShow(kid, true) });
     }
-    items.push({ label: 'Edit Name / Age / Food', icon: Pencil, onClick: () => navigate(`/admin/kids/${kid.id}`) });
     items.push({ label: 'Delete', icon: Trash2, danger: true, onClick: () => handleDelete(kid) });
     return items;
   };
@@ -178,7 +194,7 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate(`/admin/kids/${kid.id}`)}
+                  onClick={() => openKidEditModal(kid)}
                   className="min-w-0 flex-1 text-left"
                 >
                   <p className="text-dark text-sm font-medium truncate flex items-center gap-1.5">
@@ -285,6 +301,16 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
         setClosedReason={setKidClosedReason}
         onConfirm={handleConfirmKidNotInterested}
         updating={busy && kidNotInterestedTarget ? kidNotInterestedTarget.id : null}
+      />
+
+      <AdminKidEditModal
+        kidEditTarget={kidEditTarget}
+        targetLabel={kidEditTarget ? kidLabel(kidEditTarget, kids.indexOf(kidEditTarget)) : ''}
+        onClose={() => setKidEditTarget(null)}
+        editForm={kidEditForm}
+        setEditForm={setKidEditForm}
+        onSave={handleSaveKidEdit}
+        saving={busy}
       />
     </div>
   );

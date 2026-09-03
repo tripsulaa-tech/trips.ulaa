@@ -83,8 +83,8 @@ const AdminAlbums = lazy(() => import('../admin/AdminAlbums'));
 const AdminGallery = lazy(() => import('../admin/AdminGallery'));
 const AdminEnquiries = lazy(() => import('../admin/enquiries/AdminEnquiries'));
 const AdminEnquiryDetail = lazy(() => import('../admin/enquiries/AdminEnquiryDetail'));
-const AdminWaitlist = lazy(() => import('../admin/AdminWaitlist'));
 const AdminKidDetail = lazy(() => import('../admin/kids/AdminKidDetail'));
+const AdminWaitlist = lazy(() => import('../admin/AdminWaitlist'));
 const AdminReports = lazy(() => import('../admin/AdminReports'));
 const AdminAbout = lazy(() => import('../admin/AdminAbout'));
 const AdminHomeHero = lazy(() => import('../admin/AdminHomeHero'));
@@ -158,11 +158,11 @@ export default function AppRouter() {
             <Route path="/admin/enquiries/:id" element={
               <ProtectedRoute><AdminEnquiryDetail /></ProtectedRoute>
             } />
-            <Route path="/admin/waitlist" element={
-              <ProtectedRoute><AdminWaitlist /></ProtectedRoute>
-            } />
             <Route path="/admin/kids/:id" element={
               <ProtectedRoute><AdminKidDetail /></ProtectedRoute>
+            } />
+            <Route path="/admin/waitlist" element={
+              <ProtectedRoute><AdminWaitlist /></ProtectedRoute>
             } />
             <Route path="/admin/reports" element={
               <ProtectedRoute><AdminReports /></ProtectedRoute>

@@ -46,8 +46,6 @@ export async function getKidsForEnquiries(enquiryIds: string[]): Promise<Kid[]> 
 // Every kid row business-wide, oldest first — same ordering convention as
 // getKidsForEnquiry/getKidsForEnquiries (so "Kid 1"/"Kid 2" fallback labels
 // stay stable once grouped back by enquiry_id client-side), just unfiltered.
-// Powers the standalone Kids CRM page (/admin/kids), which needs to list
-// every kid across every booking rather than one enquiry's handful.
 export async function getAllKids(): Promise<Kid[]> {
   const { data, error } = await supabase
     .from('kids')
@@ -126,8 +124,7 @@ function kidStatusKeepsFollowUp(status: KidStatus): boolean {
 // check constraint), so a reminder never lingers on a kid that's since
 // moved on. `reason` mirrors updateEnquiryStatus's closedReason param —
 // only written when status is 'not_interested' (defaulting to null if the
-// caller didn't pick one, e.g. the plain Status dropdown in
-// AdminKidDetailModal), and cleared back to null on every other status
+// caller didn't pick one), and cleared back to null on every other status
 // change. See add_kid_not_interested_reason.sql.
 export async function updateKidStatus(id: string, status: KidStatus, reason?: ClosedReason): Promise<void> {
   const { error } = await supabase
