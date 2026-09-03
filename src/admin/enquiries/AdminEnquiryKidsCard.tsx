@@ -20,7 +20,7 @@ import {
   Baby, CheckSquare, Square, CalendarDot as CalendarClock, CurrencyInr as IndianRupee,
   UserMinus, ArrowsClockwise as RefreshCw, CheckCircle as CheckCircle2, Eye,
   SignIn as LogIn, Clock, XCircle, Trash as Trash2, Confetti as PartyPopper,
-  UserCheck, UserMinus as UserX,
+  UserCheck, UserMinus as UserX, X,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
@@ -33,7 +33,7 @@ import AdminKidPaymentModal from './AdminKidPaymentModal';
 import AdminKidNotInterestedModal from './AdminKidNotInterestedModal';
 import AdminKidEditModal, { kidEditFormFromKid, type KidEditForm } from './AdminKidEditModal';
 import FoodMark from '../../components/ui/FoodMark';
-import { canMarkKidNotInterested, canReopenKid, canMarkKidNoShow, KID_NO_SHOW_BADGE, KID_STATUS_CONFIG } from './AdminEnquiryCommon';
+import { canMarkKidNotInterested, canReopenKid, canMarkKidNoShow, canSetKidFollowUp, KID_NO_SHOW_BADGE, KID_STATUS_CONFIG } from './AdminEnquiryCommon';
 
 // Badge color/label used to come from a local STATUS_BADGE/STATUS_LABEL map
 // here that had drifted from the Enquiries list's own KID_STATUS_CONFIG
@@ -64,6 +64,7 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
     selectedIds, toggleSelectOne, toggleSelectAll,
     kidLabel,
     handleUpdateStatus, handleBulkStatus, handleToggleNoShow, handleEdit, handleDelete,
+    handleSetFollowUp,
     reload,
   } = useKidsForEnquiry(enquiry.id);
   const {
@@ -137,6 +138,17 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
     }
     if (canReopenKid(kid)) {
       items.push({ label: 'Reopen', icon: RefreshCw, onClick: () => handleUpdateStatus(kid, 'pending') });
+    }
+    // Clear Follow-up — same entry the enquiries list's own kid kebab
+    // offers (AdminEnquiriesDesktopTable/MobileCards). Setting a kid's
+    // follow-up date deliberately stays out of this menu — unlike the
+    // adult side, it isn't a standalone action; it's only ever set as
+    // part of logging a kid's call outcome (see
+    // AdminKidContactOutcomeModal.tsx) — so Clear is the only follow-up
+    // action that belongs here, and it was missing from this card even
+    // though the handler (handleSetFollowUp) already existed in the hook.
+    if (canSetKidFollowUp(kid) && kid.follow_up_at) {
+      items.push({ label: 'Clear Follow-up', icon: X, onClick: () => handleSetFollowUp(kid, null, null) });
     }
     // Independent attendance flag, same "Mark/Undo No Show" pair the adult
     // side offers — see canMarkKidNoShow.

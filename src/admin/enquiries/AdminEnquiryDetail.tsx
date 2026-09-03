@@ -18,7 +18,6 @@ import {
   SignIn as LogIn,
   ArrowsClockwise as RefreshCw,
   Trash as Trash2,
-  CalendarDot as CalendarClock,
   X,
 } from '@phosphor-icons/react';
 import AdminLayout from '../AdminLayout';
@@ -789,15 +788,14 @@ export default function AdminEnquiryDetail() {
   if (!enquiry.cancelled_at && !enquiry.booking_id && (enquiry.amount_paid || 0) <= 0 && isNotInterested(enquiry)) {
     rowActions.push({ label: 'Reopen Enquiry', icon: RefreshCw, onClick: handleReopenEnquiry });
   }
-  if (canSetFollowUp(enquiry)) {
-    rowActions.push(
-      enquiry.follow_up_at
-        ? { label: 'Edit Follow-up Date', icon: CalendarClock, onClick: handleOpenFollowUp }
-        : { label: 'Set Follow-up Reminder', icon: CalendarClock, onClick: handleOpenFollowUp }
-    );
-    if (enquiry.follow_up_at) {
-      rowActions.push({ label: 'Clear Follow-up', icon: X, onClick: handleClearFollowUp });
-    }
+  // Setting/editing the follow-up date is intentionally NOT duplicated here
+  // — the header card already has a dedicated "Set Follow-up" chip (and,
+  // once a date is set, that same chip becomes the clickable follow-up
+  // badge) that does exactly that. Only Clear Follow-up stays in this menu,
+  // since there's no other way to reach it. Mirrors the same rule already
+  // applied to the enquiries table's row-actions menu (see useRowActions.ts).
+  if (canSetFollowUp(enquiry) && enquiry.follow_up_at) {
+    rowActions.push({ label: 'Clear Follow-up', icon: X, onClick: handleClearFollowUp });
   }
   if (enquiry.booking_id) {
     rowActions.push(
