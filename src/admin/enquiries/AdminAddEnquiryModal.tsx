@@ -168,18 +168,6 @@ export default function AddEnquiryModal({
                 options={SOURCE_OPTIONS}
               />
             </div>
-            <div>
-              <label htmlFor="ge-g-kids" className="block text-sm font-medium text-dark mb-1">Kids <span className="text-dark-muted font-normal">— shared for the whole group</span></label>
-              <input
-                id="ge-g-kids"
-                type="number"
-                min={0}
-                value={form.kids_count}
-                onChange={e => setForm(f => ({ ...f, kids_count: e.target.value === '' ? '' : +e.target.value }))}
-                className={inputClass}
-                placeholder="Optional — headcount, no seat needed"
-              />
-            </div>
             <MethodReferenceFields
               idPrefix="ge-g"
               methodLabel={<>Payment Method <span className="text-dark-muted font-normal">— for everyone's advance</span></>}
@@ -337,18 +325,6 @@ export default function AddEnquiryModal({
           <div>
             <label htmlFor="ge-city" className="block text-sm font-medium text-dark mb-1">City</label>
             <input id="ge-city" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputClass} placeholder="Optional" />
-          </div>
-          <div>
-            <label htmlFor="ge-kids" className="block text-sm font-medium text-dark mb-1">Kids</label>
-            <input
-              id="ge-kids"
-              type="number"
-              min={0}
-              value={form.kids_count}
-              onChange={e => setForm(f => ({ ...f, kids_count: e.target.value === '' ? '' : +e.target.value }))}
-              className={inputClass}
-              placeholder="Optional — headcount, no seat needed"
-            />
           </div>
           <div>
             <label htmlFor="ge-source" className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>

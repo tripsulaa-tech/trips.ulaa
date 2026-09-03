@@ -34,8 +34,7 @@ export function useEnquiryData() {
   // this list the instant it's submitted, and patches an existing row in
   // place for every other mutation (Mark Contacted, Track Payment, etc.),
   // so an admin sitting on this page never has to manually refresh to see
-  // a lead that just came in or moved. Mirrors the `kids` live-subscription
-  // pattern already used lower in AdminEnquiries.tsx. Requires
+  // a lead that just came in or moved. Requires
   // enable_realtime_enquiries.sql to have been run — see that file.
   useEffect(() => {
     const unsubscribe = subscribeToTable('enquiries', payload => {

@@ -307,16 +307,11 @@ export type EnquiryForm = {
   payment_method: string;
   payment_utr: string;
   food_preference: 'veg' | 'non_veg' | '';
-  // How many kids are coming along — just a headcount, no age, priced
-  // (if the trip has a child_price set) by the same DB trigger the public
-  // booking form goes through. See add_trip_kids_option.sql.
-  kids_count: number | '';
 };
 
 export const emptyForm: EnquiryForm = {
   full_name: '', phone: '', email: '', age: '', city: '', trip_id: '', source: 'whatsapp', message: '',
   package_type: 'normal', total_amount: '', amount_paid: '', payment_method: '', payment_utr: '', food_preference: '',
-  kids_count: '',
 };
 
 // One row of the bulk waitlist-conversion form — trip/package/notes stay

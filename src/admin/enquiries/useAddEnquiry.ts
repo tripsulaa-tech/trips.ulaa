@@ -257,11 +257,6 @@ export function useAddEnquiry(params: {
           group_id: convertingWaitlist.groupId ?? undefined,
           group_size: convertingWaitlist.groupSize ?? undefined,
           group_seq: seatSeq,
-          // Kids are one shared headcount for the whole group, same as a
-          // public group booking — only ever set on the group's actual
-          // lead row (seat 1), never per-seat, so the DB's auto-pricing
-          // trigger doesn't multiply the charge by group size.
-          kids_count: seatSeq === 1 && form.kids_count !== '' ? form.kids_count : undefined,
         }, { payment_method: form.payment_method || undefined, utr_number: form.payment_utr || undefined });
         await markWaitlistConverted(convertingWaitlist.id, created.id);
         seated++;
@@ -336,11 +331,6 @@ export function useAddEnquiry(params: {
         package_type: form.package_type,
         total_amount: totalAmount,
         amount_paid: amountPaid,
-        // Same lead-row-only rule as the group path above — a solo entry
-        // has no group to worry about, but a single-seat waitlist
-        // conversion can still land on group_seq > 1 if it's finishing
-        // out an earlier partial group, so the same check applies.
-        kids_count: (!convertingWaitlist || convertingWaitlist.groupSeq === 1) && form.kids_count !== '' ? form.kids_count : undefined,
         // Link this seat to the rest of its waitlist group (if any) so it
         // renders grouped in the list below instead of as a standalone
         // enquiry — see the convertingWaitlist state comment above.

@@ -63,7 +63,6 @@ export default function PaymentHistoryList({
               <div className="min-w-0">
                 <p className="text-dark font-medium truncate">
                   {INVOICE_TYPE_LABEL[p.payment_type] || p.payment_type}
-                  {p.for_kids && <span className="text-amber-700 font-normal"> · kids fee</span>}
                   {p.status === 'pending' && <span className="text-amber-600 font-normal"> · pending</span>}
                 </p>
                 <p className="text-dark-muted">

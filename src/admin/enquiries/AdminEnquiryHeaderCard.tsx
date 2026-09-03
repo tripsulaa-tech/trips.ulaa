@@ -3,7 +3,7 @@
 // via the shared pure helpers rather than taking them as props, so the
 // parent doesn't have to thread jb/food/etc. through.
 import {
-  Users, User, Baby, CalendarDot as CalendarClock, XCircle, UserMinus, SignIn as LogIn, Copy, Check,
+  Users, User, CalendarDot as CalendarClock, XCircle, UserMinus, SignIn as LogIn, Copy, Check,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import ActionsMenu from '../../components/ui/ActionsMenu';
@@ -93,14 +93,6 @@ export default function AdminEnquiryHeaderCard({
             <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
               <FoodMark type={foodPreferenceKey(enquiry)} size={10} /> {food.label}
             </span>
-            {/* Kids — a shared headcount for the whole booking, only ever
-                set on the group's lead row (see add_trip_kids_option.sql),
-                so this only shows up on the row it's actually recorded on. */}
-            {!!enquiry.kids_count && (
-              <span title={`${enquiry.kids_count} kid${enquiry.kids_count > 1 ? 's' : ''} coming along — no seat needed`} className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-amber-50 text-amber-700">
-                <Baby size={10} aria-hidden="true" /> {enquiry.kids_count} {enquiry.kids_count > 1 ? 'Kids' : 'Kid'}
-              </span>
-            )}
           </div>
         </div>
         <div className="flex flex-nowrap items-center justify-end gap-1.5 min-w-0 w-full sm:w-auto">

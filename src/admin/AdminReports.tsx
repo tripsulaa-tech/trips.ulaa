@@ -38,8 +38,8 @@ import {
   Compass,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
-import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getAllPayments, getAllKidsFoodPreferences } from '../services/api';
-import type { Enquiry, UpcomingTrip, CompletedTrip, Payment, Kid } from '../types/types-index';
+import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getAllPayments } from '../services/api';
+import type { Enquiry, UpcomingTrip, CompletedTrip, Payment } from '../types/types-index';
 import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
@@ -229,18 +229,16 @@ export default function AdminReports() {
   const [upcomingTrips, setUpcomingTrips] = useState<UpcomingTrip[]>([]);
   const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [kidsFoodPrefs, setKidsFoodPrefs] = useState<Pick<Kid, 'enquiry_id' | 'food_preference'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('all');
 
   useEffect(() => {
-    Promise.all([getEnquiries(), getAllUpcomingTripsAdmin(), getAllCompletedTripsAdmin(), getAllPayments(), getAllKidsFoodPreferences()])
-      .then(([allEnquiries, upcoming, completed, allPayments, allKidsFoodPrefs]) => {
+    Promise.all([getEnquiries(), getAllUpcomingTripsAdmin(), getAllCompletedTripsAdmin(), getAllPayments()])
+      .then(([allEnquiries, upcoming, completed, allPayments]) => {
         setEnquiries(allEnquiries);
         setUpcomingTrips(upcoming);
         setCompletedTrips(completed);
         setPayments(allPayments);
-        setKidsFoodPrefs(allKidsFoodPrefs);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -285,24 +283,15 @@ export default function AdminReports() {
   }), [scoped]);
 
   const financial = useMemo(() => {
-    // Kids-fee money (enquiries.kids_amount / kids_amount_paid) is tracked
-    // as its own bucket per enquiry, separate from amount_paid/total_amount
-    // — see add_kids_payment_tracking.sql — but it's already sitting right
-    // on the same Enquiry rows `scoped` is built from (getEnquiries() is
-    // already fetched above), so folding it in needs no extra query,
-    // unlike the per-kid food_preference breakdown above which lives in
-    // its own kids table.
     const revenue = scoped.reduce(
-      (sum, e) => sum + (e.amount_paid || 0) - (e.refund_amount || 0) + (e.kids_amount_paid || 0),
+      (sum, e) => sum + (e.amount_paid || 0) - (e.refund_amount || 0),
       0
     );
     const refundAmount = scoped.reduce((sum, e) => sum + (e.refund_amount || 0), 0);
     const outstandingBalance = scoped
-      .filter(e => isBooked(e) && (e.total_amount || e.kids_amount))
+      .filter(e => isBooked(e) && e.total_amount)
       .reduce((sum, e) => {
-        const adultDue = e.total_amount ? Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)) : 0;
-        const kidsDue = Math.max(0, (e.kids_amount || 0) - (e.kids_amount_paid || 0));
-        return sum + adultDue + kidsDue;
+        return sum + (e.total_amount ? Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)) : 0);
       }, 0);
     const bookedWithPrice = scoped.filter(e => isBooked(e) && e.total_amount);
     const avgBookingValue = bookedWithPrice.length
@@ -317,20 +306,9 @@ export default function AdminReports() {
     const nonVegAdults = bookedList.filter(e => e.food_preference === 'non_veg').length;
     const notSetAdults = bookedList.length - vegAdults - nonVegAdults;
 
-    // Fold in each booked enquiry's kids too — a kid needs a veg/non-veg
-    // meal at the destination just like an adult does, so leaving them out
-    // of this headcount would understate what catering actually needs.
-    // Scoped the same way bookedList is (booked + within the selected
-    // period), matched back to their parent enquiry by id.
-    const bookedIds = new Set(bookedList.map(e => e.id));
-    const bookedKids = kidsFoodPrefs.filter(k => bookedIds.has(k.enquiry_id));
-    const vegKids = bookedKids.filter(k => k.food_preference === 'veg').length;
-    const nonVegKids = bookedKids.filter(k => k.food_preference === 'non_veg').length;
-    const notSetKids = bookedKids.length - vegKids - nonVegKids;
-
-    const veg = vegAdults + vegKids;
-    const nonVeg = nonVegAdults + nonVegKids;
-    const notSet = notSetAdults + notSetKids;
+    const veg = vegAdults;
+    const nonVeg = nonVegAdults;
+    const notSet = notSetAdults;
 
     // "Ever became a booking" (booking_id assigned) is the denominator for
     // Cancellation % — a lead that never paid anything was never at risk of
@@ -380,7 +358,7 @@ export default function AdminReports() {
       totalSeats, seatsBooked,
       topDestinations,
     };
-  }, [scoped, enquiries, upcomingTrips, destinationById, kidsFoodPrefs]);
+  }, [scoped, enquiries, upcomingTrips, destinationById]);
 
   // Paid ledger rows within the selected period — the source for both the
   // trend chart and the payment-method breakdown below. Filtered on
@@ -506,22 +484,20 @@ export default function AdminReports() {
 
   const financeMarginPct = pct(Math.max(0, financeTotals.netProfit), financeTotals.totalRevenue);
 
-  // Same isBooked + total/kids-fee scoping as the Outstanding Balance card
-  // itself (total + kids fee together), so the two can never disagree —
-  // this is that number broken out person-by-person instead of just the
-  // business-wide total.
+  // Same isBooked + total scoping as the Outstanding Balance card itself,
+  // so the two can never disagree — this is that number broken out
+  // person-by-person instead of just the business-wide total.
   const outstandingByPerson = useMemo(() => {
     return scoped
-      .filter(e => isBooked(e) && (e.total_amount || e.kids_amount))
+      .filter(e => isBooked(e) && e.total_amount)
       .map(e => {
-        const adultDue = e.total_amount ? Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)) : 0;
-        const kidsDue = Math.max(0, (e.kids_amount || 0) - (e.kids_amount_paid || 0));
+        const balance = e.total_amount ? Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)) : 0;
         return {
           name: e.full_name,
           trip: (e.trip_id && destinationById.get(e.trip_id)) || e.trip_title || 'Unknown',
-          total: (e.total_amount || 0) + (e.kids_amount || 0),
-          paid: (e.amount_paid || 0) + (e.kids_amount_paid || 0),
-          balance: adultDue + kidsDue,
+          total: e.total_amount || 0,
+          paid: e.amount_paid || 0,
+          balance,
         };
       })
       .filter(row => row.balance > 0)
@@ -683,9 +659,9 @@ export default function AdminReports() {
             {/* ---- Financial Reports ---- */}
             <ReportSection title="Financial Reports" subtitle="Net of refunds">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <StatCard label="Revenue" value={formatPrice(financial.revenue)} sub="Incl. kids fee" icon={IndianRupee} />
+                <StatCard label="Revenue" value={formatPrice(financial.revenue)} icon={IndianRupee} />
                 <StatCard label="Refund Amount" value={formatPrice(financial.refundAmount)} icon={Undo2} />
-                <StatCard label="Outstanding Balance" value={formatPrice(financial.outstandingBalance)} sub="Active bookings, incl. kids fee" icon={Wallet} />
+                <StatCard label="Outstanding Balance" value={formatPrice(financial.outstandingBalance)} sub="Active bookings" icon={Wallet} />
                 <StatCard label="Avg. Booking Value" value={formatPrice(Math.round(financial.avgBookingValue))} icon={Wallet2} />
               </div>
 
@@ -778,7 +754,7 @@ export default function AdminReports() {
                 <StatCard label="Occupancy" value={`${operational.occupancyPct}%`} sub={`${operational.seatsBooked} of ${operational.totalSeats} seats · upcoming trips`} icon={PieChart} />
                 <StatCard label="Cancellation Rate" value={`${operational.cancellationPct}%`} sub={`${operational.cancelledOfBooked} of ${operational.everBookedCount} bookings`} icon={XCircle} />
                 <StatCard label="No-Show Rate" value={`${operational.noShowPct}%`} sub={`${operational.noShowCount} of ${operational.attendanceRecordedCount} arrivals tracked`} icon={UserX} />
-                <StatCard label="Food Preference" value={`${operational.veg}V / ${operational.nonVeg}NV`} sub={operational.notSet ? `${operational.notSet} not set` : 'Travellers & kids'} icon={UtensilsCrossed} />
+                <StatCard label="Food Preference" value={`${operational.veg}V / ${operational.nonVeg}NV`} sub={operational.notSet ? `${operational.notSet} not set` : 'Travellers'} icon={UtensilsCrossed} />
               </div>
 
               {operational.topDestinations.length > 0 && (

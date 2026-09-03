@@ -17,7 +17,7 @@ import type { WaitlistSortKey } from './useWaitlistFilters';
 import { foodBadge, foodBreakdown, messageWithoutFoodBreakdown, hasSeatOpen, canConvert } from './waitlistShared';
 import {
   QueueRankBadge, ConvertedProgressBadge, SeatAvailabilityBadges,
-  ConvertedStatusBadges, ConvertedBookingLinks, WaitlistStatusControl, KidsBadge,
+  ConvertedStatusBadges, ConvertedBookingLinks, WaitlistStatusControl,
 } from './WaitlistRowBits';
 
 interface AdminWaitlistDesktopTableProps {
@@ -129,7 +129,6 @@ export default function AdminWaitlistDesktopTable({
                         <UserPlus size={12} className="shrink-0" aria-hidden="true" /> Solo
                       </span>
                     )}
-                    <KidsBadge entry={e} className="text-xs px-2 py-1 rounded-md" />
                   </div>
                 </td>
                 <td className="px-2 py-4 whitespace-nowrap">

@@ -8,7 +8,6 @@ import {
   CurrencyInr as IndianRupee,
   Users,
   User,
-  Baby,
   ForkKnife as Utensils,
   CalendarDot as CalendarClock,
   Briefcase,
@@ -186,29 +185,17 @@ export default function AdminEnquiriesMobileCards({
                   </span>
                   {e.group_size && e.group_size > 1 ? (
                     <span
-                      title={`${groupLabel(e)} — part of a group booking of ${e.group_size}${e.kids_count ? `, plus ${e.kids_count} kid${e.kids_count > 1 ? 's' : ''} (no seat needed)` : ''}`}
+                      title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
                       className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                     >
                       <Users size={9}  aria-hidden="true" /> {groupLabel(e).replace(/^Group /, '')} · {e.group_seq}/{e.group_size}
-                      {!!e.kids_count && (
-                        <>
-                          <span className="opacity-50">+</span>
-                          <Baby size={9} aria-hidden="true" /> {e.kids_count} {e.kids_count > 1 ? 'Kids' : 'Kid'}
-                        </>
-                      )}
                     </span>
                   ) : (
                     <span
-                      title={`Booked individually, not part of a group${e.kids_count ? `, plus ${e.kids_count} kid${e.kids_count > 1 ? 's' : ''} (no seat needed)` : ''}`}
+                      title="Booked individually, not part of a group"
                       className="inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
                     >
                       <User size={9}  aria-hidden="true" /> Solo
-                      {!!e.kids_count && (
-                        <>
-                          <span className="opacity-50">+</span>
-                          <Baby size={9} aria-hidden="true" /> {e.kids_count} {e.kids_count > 1 ? 'Kids' : 'Kid'}
-                        </>
-                      )}
                     </span>
                   )}
                 </div>

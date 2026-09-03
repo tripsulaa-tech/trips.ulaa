@@ -18,7 +18,7 @@ import type { PaymentForm } from './AdminEnquiryCommon';
 import PaymentHistoryList from './PaymentHistoryList';
 
 export type PaymentErrors = Partial<Record<
-  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr' | 'kids_amount_paid',
+  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr',
   string
 >>;
 

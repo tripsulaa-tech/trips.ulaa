@@ -7,7 +7,6 @@ import {
   Plus,
   Users,
   User,
-  Baby,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -77,14 +76,6 @@ export default function DetailsModal({
               <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
                 <FoodMark type={foodPreferenceKey(detailsTarget)} size={10} aria-hidden="true" /> {food.label}
               </span>
-              {!!detailsTarget.kids_count && (
-                <span
-                  title={`${detailsTarget.kids_count} kid${detailsTarget.kids_count > 1 ? 's' : ''} coming along — no seat needed`}
-                  className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-amber-50 text-amber-700"
-                >
-                  <Baby size={10} aria-hidden="true" /> {detailsTarget.kids_count} {detailsTarget.kids_count > 1 ? 'Kids' : 'Kid'}
-                </span>
-              )}
             </div>
             {detailsTarget.booking_id && (
               <div className="flex items-center justify-between bg-background-warm rounded-md px-3 py-2">
@@ -130,28 +121,6 @@ export default function DetailsModal({
                     </p>
                   </div>
                 </div>
-
-                {/* Kids fee — independent Total/Paid/Pending, tracked
-                    separately from the adult booking above. See
-                    add_kids_payment_tracking.sql. */}
-                {detailsTarget.kids_count > 0 && (
-                  <div className="grid grid-cols-3 gap-2 bg-amber-50/60 rounded-md px-3 py-2.5">
-                    <div>
-                      <p className="text-amber-800 text-[11px]">Kids Total</p>
-                      <p className="text-dark text-sm font-semibold">{formatPrice(detailsTarget.kids_amount || 0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-amber-800 text-[11px]">Kids Paid</p>
-                      <p className="text-green-700 text-sm font-semibold">{formatPrice(detailsTarget.kids_amount_paid || 0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-amber-800 text-[11px]">Kids Pending</p>
-                      <p className="text-amber-600 text-sm font-semibold">
-                        {formatPrice(Math.max(0, (detailsTarget.kids_amount || 0) - (detailsTarget.kids_amount_paid || 0)))}
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {detailsTarget.discount_amount > 0 && (
                   <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">

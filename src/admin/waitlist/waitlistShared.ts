@@ -52,16 +52,12 @@ export type WaitlistForm = {
   trip_id: string;
   food_preference: 'veg' | 'non_veg' | '';
   group_size: number | '';
-  // How many kids — purely informational here, same as WaitlistEntry.
-  // kids_count (the waitlist holds no pricing data at all). See
-  // add_trip_kids_option.sql.
-  kids_count: number | '';
   message: string;
 };
 
 export const emptyWaitlistForm: WaitlistForm = {
   full_name: '', phone: '', email: '', age: '', city: '', emergency_contact: '',
-  trip_id: '', food_preference: '', group_size: '', kids_count: '', message: '',
+  trip_id: '', food_preference: '', group_size: '', message: '',
 };
 
 // Renders the "Offer expires in Xh" / "Offer expired Xh ago" line under a
