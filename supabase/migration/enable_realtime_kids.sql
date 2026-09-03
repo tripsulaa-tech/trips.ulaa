@@ -1,3 +1,5 @@
+-- NOTE: the Kids feature (and this table) was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
 -- ============================================================================
 -- Enable Realtime on kids
 --

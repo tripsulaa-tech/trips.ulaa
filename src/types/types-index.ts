@@ -145,14 +145,6 @@ export interface UpcomingTrip {
   // falls back to the old seats-availability badge. See
   // add_trip_advance_amount.sql.
   advance_amount?: number | null;
-  // Optional fixed per-kid price (₹), set via Admin → Add/Edit Trip →
-  // Pricing & Availability. Kids never occupy a seat or count towards
-  // total_seats/seats_booked/age eligibility — they're a separate headcount
-  // collected on the booking form (see Enquiry.kids_count/kids_amount and
-  // BookingFormData.kids_count below). Left unset (null), the booking form
-  // treats bringing kids along as free/no-charge. See
-  // add_trip_kids_option.sql.
-  child_price?: number | null;
   // Optional fixed marketing tags (up to 4) shown in the icon row on the
   // public Trip Card, e.g. "Girls-Only" / "Safe & fun". Left unset, the
   // card falls back to auto-generated tags from real trip data (travelers,
@@ -405,22 +397,6 @@ export interface Enquiry {
   group_id?: string | null;
   group_size?: number | null;
   group_seq: number;
-  // How many kids are travelling along with this booking — no seat, no age
-  // collected, just a headcount (kids never count towards seats/capacity).
-  // For a group booking this is only ever meaningful on the group_seq = 1
-  // row. Defaults to 0. See add_trip_kids_option.sql.
-  kids_count: number;
-  // child_price × kids_count for this booking — auto-computed once by a DB
-  // trigger the same way total_amount is (never trusted from the client).
-  // Defaults to 0. See add_trip_kids_option.sql.
-  kids_amount: number;
-  // Running total of `paid` kids-fee ledger rows (payments.for_kids = true)
-  // for this booking — tracked independently of amount_paid, its own
-  // Paid/Pending against kids_amount rather than folded into the adult
-  // total. Kept in sync by the same trigger as amount_paid/refund_amount.
-  // Only ever meaningful on the group_seq = 1 row, same convention as
-  // kids_count/kids_amount. Defaults to 0. See add_kids_payment_tracking.sql.
-  kids_amount_paid: number;
   // Dietary preference for meals on the trip. Optional/nullable so existing
   // rows (created before this field existed) and admin-logged enquiries
   // where it wasn't asked don't break — the public booking form itself
@@ -486,66 +462,6 @@ export interface Enquiry {
   booking_follow_up_notes?: string | null;
 }
 
-// =============================================
-// Kids (CRM tracking — see add_kids_table.sql)
-// =============================================
-// This kid's own trackable state, independent of the parent enquiry's
-// status/journey_stage. See add_kids_table.sql for what each value means.
-// 'not_interested' (see add_kids_not_interested_status.sql) covers the same
-// "this one kid isn't coming" outcome as 'cancelled' — kept as its own
-// value rather than folded into 'cancelled' so the Kids card can show which
-// of the two actually happened (a booked kid backing out vs. a kid that was
-// never going to come in the first place), same distinction the adult side
-// draws between journey_stage 'cancelled' and 'not_interested'. No seat or
-// pricing logic keys off either value — kids never occupy a seat or count
-// toward total_seats, so this is purely a status label.
-export type KidStatus = 'pending' | 'contacted' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled' | 'not_interested';
-
-// One row per individual kid travelling on a booking — its own genuine
-// record (name, status, follow-up), not just a unit counted in the parent
-// enquiry's kids_count. Only ever attached to a group's lead row
-// (enquiry.group_seq === 1), same convention kids_count/kids_amount
-// already follow. See add_kids_table.sql.
-export interface Kid {
-  id: string;
-  enquiry_id: string;
-  // Optional — the public booking form may submit a bare headcount with no
-  // names typed in. Falls back to "Kid N" (by created_at order) in the UI
-  // when blank, never stored as a literal placeholder string.
-  name?: string | null;
-  // Optional, admin-entered only — never collected on the public booking
-  // form (kids remain age-free for pricing/eligibility purposes).
-  age?: number | null;
-  // Optional, admin-entered only — same rule as age above. Independent of
-  // the adults' single Enquiry.food_preference, so a group of kids can
-  // split veg/non-veg. See add_kids_food_preference.sql.
-  food_preference?: 'veg' | 'non_veg' | null;
-  status: KidStatus;
-  // Independent attendance flag, same idea as Enquiry.is_no_show — a kid
-  // can be marked a no-show without touching status itself. See
-  // add_kids_completed_no_show.sql.
-  is_no_show: boolean;
-  // Why this kid was marked not_interested — only meaningful alongside
-  // status === 'not_interested'; null/undefined for a kid closed out
-  // before this column existed or via a path with no reason picker (the
-  // plain Status dropdown, a bulk action). Same relationship
-  // Enquiry.closed_reason has with status === 'closed'. See
-  // add_kid_not_interested_reason.sql.
-  not_interested_reason?: ClosedReason | null;
-  // Reminder for this one kid's record — same idea as
-  // Enquiry.follow_up_at but scoped to the kid, only meaningful while
-  // status === 'pending'.
-  follow_up_at?: string | null;
-  follow_up_notes?: string | null;
-  // This kid's own total price and running total collected — independent
-  // of every other kid on the same booking and of the adult booking's own
-  // total_amount/amount_paid. See add_kid_individual_payments.sql.
-  amount: number;
-  amount_paid: number;
-  created_at: string;
-  updated_at: string;
-}
-
 // One row per individual payment, refund, or raised-but-uncollected invoice
 // against an enquiry. This is the source of truth for enquiries.amount_paid
 // / refund_amount, which are kept in sync via a DB trigger (only rows with
@@ -573,19 +489,6 @@ export interface Payment {
   created_at: string;
   invoice_number?: string | null;
   status: 'paid' | 'pending';
-  // Marks this row as money moving against the kids fee (kids_amount)
-  // rather than the adult booking (total_amount) — sync_enquiry_amount_paid
-  // sums the two into separate running totals (amount_paid vs
-  // kids_amount_paid) so they can be tracked as independent Paid/Pending
-  // lines. Defaults to false — every payment predating this concept was,
-  // and still counts as, an adult-booking payment. See
-  // add_kids_payment_tracking.sql.
-  for_kids?: boolean;
-  // Scopes this row to one specific kid's own payment record rather than
-  // the adult booking or the older combined kids bucket for_kids alone
-  // used to mean. Null for every payment that isn't a kid's own — see
-  // add_kid_individual_payments.sql.
-  kid_id?: string | null;
 }
 
 // =============================================
@@ -602,11 +505,6 @@ export interface Payment {
 export interface ActivityLogEntry {
   id: string;
   enquiry_id: string;
-  // Nullable, additive scoping on top of enquiry_id (see
-  // add_kid_activity_log_scope.sql) — set only on entries logged against one
-  // specific kid (AdminKidDetail's own Activity Timeline), null for every
-  // adult-booking action and for older rows predating this column.
-  kid_id?: string | null;
   action: string;
   details?: string | null;
   created_at: string;
@@ -697,17 +595,6 @@ export interface BookingFormData {
   trip_title?: string;
   terms_accepted: boolean;
   food_preference: 'veg' | 'non_veg';
-  // How many kids (no seat, no age) are coming along — shared across the
-  // whole booking (solo or group), not per-seat. See
-  // Enquiry.kids_count/kids_amount above.
-  kids_count: number;
-  // Optional per-kid names typed into the booking form, one per kid
-  // (index-aligned, length up to kids_count — a kid left blank just has
-  // no name yet). NOT a column on `enquiries` — submitEnquiry/
-  // submitGroupEnquiry strip this out before inserting the enquiry row
-  // and use it to seed that kid's own record in the separate `kids`
-  // table instead. See Kid below and add_kids_table.sql.
-  kid_names?: string[];
 }
 
 // Not part of BookingFormData itself (that's the react-hook-form-managed
@@ -735,13 +622,6 @@ export interface BookingFormDraft {
   emergency_contact: string;
   message: string;
   terms_accepted: boolean;
-  // Plain string, matching age/groupSize above — parsed to a number on
-  // submit. '' displays as blank rather than a literal 0.
-  kidsCount: string;
-  // One entry per kid currently on the form (length tracks kidsCount,
-  // reconciled the same way groupVegCount tracks groupSize) — see
-  // BookingFormData.kid_names above.
-  kidNames: string[];
 }
 
 // =============================================
@@ -783,9 +663,6 @@ export interface WaitlistEntry {
   // seats — a group entry only counts as "ready to convert" once at least
   // this many seats are free, not the moment any single seat opens up.
   group_size?: number | null;
-  // How many kids are coming along — purely informational (the waitlist
-  // holds no pricing/payment data). See add_trip_kids_option.sql.
-  kids_count?: number | null;
 }
 
 export interface WaitlistFormData {
@@ -800,7 +677,6 @@ export interface WaitlistFormData {
   trip_id: string;
   trip_title?: string;
   group_size?: number | null;
-  kids_count?: number | null;
 }
 
 // =============================================

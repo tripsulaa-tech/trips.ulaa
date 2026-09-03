@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getPaymentsForEnquiry } from '../../services/api';
-import { getPaymentsForKid } from '../../services/api/enquiries/kids';
-import type { Enquiry, Kid, Payment } from '../../types/types-index';
+import type { Enquiry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatPrice } from '../../utils/utils-index';
 import { useAlert } from '../../components/ui/useAlert';
-import { kidAsInvoiceEnquiry } from './AdminEnquiryCommon';
 
 /** Owns the desktop "View Details" popup — its target, the per-payment
  *  invoice list lazy-loaded for whichever enquiry is open (same on-demand
@@ -114,64 +112,6 @@ export function useEnquiryDetailsModal() {
     }
   };
 
-  // Kid-scoped counterparts to the two handlers above — same PDF pipeline
-  // (downloadInvoicePdf/invoiceAsFile), just fed the kid's own payment
-  // ledger (getPaymentsForKid, filtered by kid_id — see
-  // add_kid_individual_payments.sql) and a synthetic Enquiry built by
-  // kidAsInvoiceEnquiry() so the invoice shows the kid's own name/price
-  // instead of the parent booking's. Shares `invoiceBusyId` with the adult
-  // handlers above (keyed off kid.id instead of enquiry.id, so only ever
-  // one of them is busy at a time and each row's own button is the one
-  // that disables).
-  const handleDownloadKidInvoice = async (kid: Kid, enquiry: Enquiry, kidLabel: string) => {
-    setInvoiceBusyId(kid.id);
-    try {
-      const payments = await getPaymentsForKid(kid.id);
-      await downloadInvoicePdf(kidAsInvoiceEnquiry(kid, enquiry, kidLabel), payments);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to generate invoice.');
-    } finally {
-      setInvoiceBusyId(null);
-    }
-  };
-
-  const handleShareKidInvoice = async (kid: Kid, enquiry: Enquiry, kidLabel: string) => {
-    setInvoiceBusyId(kid.id);
-    try {
-      const payments = await getPaymentsForKid(kid.id);
-      const kidEnquiry = kidAsInvoiceEnquiry(kid, enquiry, kidLabel);
-      const file = await invoiceAsFile(kidEnquiry, payments);
-      const canShareFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
-      if (canShareFile) {
-        await navigator.share({
-          files: [file],
-          title: `ULAA Invoice — ${kidEnquiry.booking_id || ''}`,
-          text: `Invoice for ${kidLabel} (${enquiry.trip_title || 'ULAA trip'})`,
-        });
-      } else {
-        await downloadInvoicePdf(kidEnquiry, payments);
-        const text = encodeURIComponent(
-          `Hi ${enquiry.full_name}, here's ${kidLabel}'s ULAA booking summary:\n` +
-          `Booking ID: ${kidEnquiry.booking_id || '—'}\n` +
-          `Trip: ${enquiry.trip_title || '—'}\n` +
-          `Amount paid: ${formatPrice(kid.amount_paid || 0)}${kid.amount ? ` of ${formatPrice(kid.amount)}` : ''}\n` +
-          `The invoice PDF has been downloaded — please attach it to this chat.`
-        );
-        const digits = (enquiry.phone || '').replace(/\D/g, '');
-        window.open(`https://wa.me/${digits}?text=${text}`, '_blank', 'noopener,noreferrer');
-      }
-    } catch (err) {
-      // AbortError just means the admin cancelled the native share sheet —
-      // not a real failure, so don't show an error toast for it.
-      if (err instanceof Error && err.name === 'AbortError') return;
-      console.error(err);
-      alert('Failed to share invoice.');
-    } finally {
-      setInvoiceBusyId(null);
-    }
-  };
-
   return {
     detailsTarget, setDetailsTarget,
     detailsInvoices, setDetailsInvoices,
@@ -179,7 +119,5 @@ export function useEnquiryDetailsModal() {
     invoiceBusyId,
     handleDownloadInvoice,
     handleShareInvoice,
-    handleDownloadKidInvoice,
-    handleShareKidInvoice,
   };
 }

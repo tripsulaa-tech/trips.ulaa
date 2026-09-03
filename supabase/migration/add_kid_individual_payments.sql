@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Gives each kid row (add_kids_table.sql) its own genuinely independent
 -- payment record — its own Total/Paid, its own ledger rows — instead of

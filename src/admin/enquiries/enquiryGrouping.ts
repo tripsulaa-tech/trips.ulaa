@@ -53,25 +53,6 @@ export const buildGroupColorMap = (sortedScoped: Enquiry[]): Map<string, number>
 export const groupColorFor = (e: Enquiry, groupColorMap: Map<string, number>): typeof GROUP_COLOR_PALETTE[number] | null =>
   e.group_id ? GROUP_COLOR_PALETTE[groupColorMap.get(e.group_id)!] : null;
 
-// Kids never get their own enquiry row in the database — kids_count is
-// just a headcount on the parent booking (no name, no individual food/
-// payment/status; see Enquiry.kids_count/kids_amount) — but on screen we
-// still want a booking's row count to reflect real headcount, the same
-// way a solo booking already shows one row per person. This derives the
-// placeholder rows to render directly under a parent enquiry: one per
-// kid, carrying just enough (a stable id + 1-based index/total) for the
-// table to label them "Kid 1 of 2" etc. Every column that would need
-// real per-kid data renders as "—" for these rows.
-export interface KidDisplayRow {
-  id: string;
-  index: number;
-  total: number;
-}
-export const kidDisplayRows = (e: Enquiry): KidDisplayRow[] => {
-  const total = e.kids_count || 0;
-  return Array.from({ length: total }, (_, i) => ({ id: `${e.id}-kid-${i + 1}`, index: i + 1, total }));
-};
-
 export const paymentTotals = (list: Enquiry[]) => ({
   collected: list.reduce((sum, e) => sum + (e.amount_paid || 0), 0),
   pending: list.reduce((sum, e) => {

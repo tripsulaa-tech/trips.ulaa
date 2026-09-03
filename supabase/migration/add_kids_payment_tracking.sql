@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Tracks the kids fee (enquiries.kids_amount, from add_trip_kids_option.sql)
 -- as its own independent Paid/Pending line, separate from the adult

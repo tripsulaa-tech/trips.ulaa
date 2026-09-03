@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Adds 'contacted' as a valid kids.status value, between 'pending' and
 -- 'confirmed' — the kid-scoped equivalent of the adult journey's

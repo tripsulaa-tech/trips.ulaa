@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Adds a veg/non-veg food preference to each kid's own record, same shape
 -- as enquiries.food_preference (see schema.sql) but scoped per kid instead

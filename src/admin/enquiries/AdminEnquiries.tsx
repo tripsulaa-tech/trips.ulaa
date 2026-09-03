@@ -21,11 +21,8 @@ import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import { getPaymentsForEnquiry, getKidsForEnquiries, updateKid, updateKidStatus, recordKidContactOutcome, deleteKid } from '../../services/api';
-import { logKidActivity, setKidFollowUp, updateKidNoShow } from '../../services/api/enquiries/kids';
-import { subscribeToTable } from '../../services/realtime';
-import { useConfirm } from '../../components/ui/useConfirm';
-import type { ClosedReason, Enquiry, Kid, KidStatus, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
+import { getPaymentsForEnquiry } from '../../services/api';
+import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
 import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
 import {
@@ -41,7 +38,6 @@ import { useEnquirySelection } from './useEnquirySelection';
 import { useEnquiryLifecycle } from './useEnquiryLifecycle';
 import { useAddEnquiry } from './useAddEnquiry';
 import { useEnquiryPayment } from './useEnquiryPayment';
-import { useKidPayment } from './useKidPayment';
 import { useEnquiryDetailsModal } from './useEnquiryDetailsModal';
 import { useEnquiryStatusActions } from './useEnquiryStatusActions';
 import { useBulkEdit } from './useBulkEdit';
@@ -59,15 +55,10 @@ import {
 import FilterDropdown from './AdminFilterDropdown';
 import { KpiCards, KpiCarousel } from '../../components/ui/KpiCards';
 import AddEnquiryModal from './AdminAddEnquiryModal';
-import AdminKidPaymentModal from './AdminKidPaymentModal';
 import DetailsModal from './AdminDetailsModal';
 import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
 import MarkPaidModal from './AdminMarkPaidModal';
 import NotInterestedModal from './AdminNotInterestedModal';
-import AdminKidNotInterestedModal from './AdminKidNotInterestedModal';
-import AdminKidEditModal, { kidEditFormFromKid, type KidEditForm } from './AdminKidEditModal';
-import AdminKidContactOutcomeModal from './AdminKidContactOutcomeModal';
-import type { KidContactOutcomeTarget, KidContactOutcomeResult } from './AdminKidContactOutcomeModal';
 import FollowUpModal from './AdminFollowUpModal';
 import BookingFollowUpModal from './AdminBookingFollowUpModal';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
@@ -79,7 +70,6 @@ import AdminEnquiriesMobileCards from './AdminEnquiriesMobileCards';
 export default function AdminEnquiries() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const confirm = useConfirm();
   const { enquiries, trips, completedTrips, loading, load, setTrips } = useEnquiryData();
   // Restores scroll position when the admin comes back to this list — e.g.
   // expand a card, tap "View Full CRM", then go back — instead of always
@@ -116,8 +106,6 @@ export default function AdminEnquiries() {
     invoiceBusyId,
     handleDownloadInvoice,
     handleShareInvoice,
-    handleDownloadKidInvoice,
-    handleShareKidInvoice,
   } = useEnquiryDetailsModal();
   // Which mobile card is expanded — restored from sessionStorage on mount so
   // that expanding a card, tapping "View Full CRM" to drill into the detail
@@ -173,260 +161,6 @@ export default function AdminEnquiries() {
     setPaymentForm,
   } = useEnquiryPayment({ setTrips, load, getTripPrice, getTripChildPrice });
   const openPayment = (enquiry: Enquiry) => navigate(`/admin/enquiries/${enquiry.id}`);
-  // Real per-kid rows for whichever enquiries are on the current page —
-  // bulk-loaded in one round trip (see getKidsForEnquiries) rather than
-  // one request per booking, keyed by enquiry_id so the table/card rows
-  // below can look a kid's own record up instead of falling back to the
-  // placeholder "Kid N" rows built purely from kids_count. Populated by
-  // an effect further down, once paginatedEnquiries is known.
-  const [kidsByEnquiry, setKidsByEnquiry] = useState<Record<string, Kid[]>>({});
-  // Owns the per-kid Payment modal (AdminKidPaymentModal) — same hook the
-  // enquiry detail page's Kids card uses, so the list and the detail page
-  // can never drift on what counts as a valid kid payment.
-  const {
-    kidPaymentTarget, setKidPaymentTarget,
-    kidPaymentForm, setKidPaymentForm,
-    kidPaymentChildPrice,
-    savingKidPayment,
-    kidPaymentHistory, kidPaymentHistoryLoading,
-    openKidPayment,
-    handleSaveKidPayment,
-  } = useKidPayment({
-    onSaved: updated => {
-      setKidsByEnquiry(prev => {
-        const list = prev[updated.enquiry_id];
-        if (!list) return prev;
-        return { ...prev, [updated.enquiry_id]: list.map(k => (k.id === updated.id ? updated : k)) };
-      });
-    },
-    getTripChildPrice,
-  });
-  const kidRowLabel = (kid: Kid, fallbackIndex: number) => kid.name?.trim() || `Kid ${fallbackIndex + 1}`;
-  // Not Interested reason picker for a single kid, right from its own row
-  // in the list (table + mobile cards) — the same action AdminEnquiryKidsCard
-  // already offers on the detail page, just reachable without opening the
-  // full CRM page first. Opens AdminKidNotInterestedModal instead of
-  // flipping status instantly (mirrors handleMarkNotInterested/
-  // handleConfirmNotInterested for the adult side in
-  // useEnquiryStatusActions.ts), so the reason gets captured the same way
-  // regardless of where the action is triggered from. Updates
-  // kidsByEnquiry locally afterwards so the row's status badge/action
-  // reflect the change immediately, without waiting on the next full page
-  // reload.
-  const [kidNotInterestedTarget, setKidNotInterestedTarget] = useState<Kid | null>(null);
-  const [kidClosedReason, setKidClosedReason] = useState<ClosedReason>('no_response');
-  const handleMarkKidNotInterested = (kid: Kid) => {
-    setKidClosedReason('no_response');
-    setKidNotInterestedTarget(kid);
-  };
-  const handleConfirmKidNotInterested = async () => {
-    if (!kidNotInterestedTarget) return;
-    const kid = kidNotInterestedTarget;
-    setUpdating(kid.id);
-    try {
-      await updateKidStatus(kid.id, 'not_interested', kidClosedReason);
-      await logKidActivity(kid.enquiry_id, 'Kid marked not interested', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
-      setKidsByEnquiry(prev => {
-        const list = prev[kid.enquiry_id];
-        if (!list) return prev;
-        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, status: 'not_interested', not_interested_reason: kidClosedReason } : k)) };
-      });
-      setKidNotInterestedTarget(null);
-    } finally {
-      setUpdating(null);
-    }
-  };
-  // Counterpart to the above — one-click "Reopen" for a kid already marked
-  // not_interested, mirroring the adult side's Reopen Enquiry (no reason
-  // capture needed either direction — see handleReopenEnquiry in
-  // useEnquiryStatusActions.ts). Same local-state update afterwards.
-  const handleReopenKid = async (kid: Kid) => {
-    setUpdating(kid.id);
-    try {
-      await updateKidStatus(kid.id, 'pending');
-      await logKidActivity(kid.enquiry_id, 'Kid reopened', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
-      setKidsByEnquiry(prev => {
-        const list = prev[kid.enquiry_id];
-        if (!list) return prev;
-        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, status: 'pending', not_interested_reason: null } : k)) };
-      });
-    } finally {
-      setUpdating(null);
-    }
-  };
-  // General-purpose status jump for a single kid, right from its own row's
-  // kebab menu (see AdminEnquiriesDesktopTable/AdminEnquiriesMobileCards'
-  // ActionsMenu) — covers the statuses handleMarkKidNotInterested/
-  // handleReopenKid don't (Confirmed/Checked In/Cancelled/back to
-  // Pending), the same set AdminEnquiryKidsCard's own kebab offers on the
-  // detail page, so a kid's status is reachable the same way regardless
-  // of which screen the admin is on.
-  const handleUpdateKidStatus = async (kid: Kid, status: KidStatus) => {
-    setUpdating(kid.id);
-    try {
-      await updateKidStatus(kid.id, status);
-      await logKidActivity(kid.enquiry_id, `Kid marked ${status.replace('_', ' ')}`, kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
-      setKidsByEnquiry(prev => {
-        const list = prev[kid.enquiry_id];
-        if (!list) return prev;
-        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, status, ...(status !== 'not_interested' ? { not_interested_reason: null } : {}) } : k)) };
-      });
-    } finally {
-      setUpdating(null);
-    }
-  };
-  // Log Call Outcome for a kid — the kid-scoped equivalent of
-  // handleAdvance/handleSaveContactOutcome in useEnquiryStatusActions.ts.
-  // Replaces the old direct "Mark Contacted" status flip for a kid's own
-  // *first* contact only (status still starts at 'pending'): status never
-  // becomes 'contacted' until this popup is saved. Every later nma step
-  // for the kid (Mark Confirmed, Mark Checked In, ...) stays a direct
-  // handleUpdateKidStatus call via handleAdvanceKid below — there's no
-  // "next call" concept for those the way there is for the first contact.
-  // See AdminKidContactOutcomeModal.tsx and recordKidContactOutcome() in
-  // services/api/enquiries/kids.ts.
-  const [kidContactOutcomeTarget, setKidContactOutcomeTarget] = useState<KidContactOutcomeTarget | null>(null);
-  const [savingKidContactOutcome, setSavingKidContactOutcome] = useState(false);
-  const handleSaveKidContactOutcome = async (result: KidContactOutcomeResult) => {
-    if (!kidContactOutcomeTarget) return;
-    const { kid, tripId } = kidContactOutcomeTarget;
-    setSavingKidContactOutcome(true);
-    try {
-      const updated = await recordKidContactOutcome(kid.id, {
-        outcome: result.outcome,
-        notes: result.notes,
-        followUpAt: result.followUpAt || null,
-        closedReason: result.closedReason,
-      });
-      setKidsByEnquiry(prev => {
-        const list = prev[kid.enquiry_id];
-        if (!list) return prev;
-        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? updated : k)) };
-      });
-      setKidContactOutcomeTarget(null);
-      // Interested is the one outcome that moves towards a booking — open
-      // this kid's own Payment modal right away, same as the adult side's
-      // auto-open-on-Contacted behaviour, so the admin can record the
-      // advance in one flow.
-      if (result.outcome === 'interested') {
-        openKidPayment(updated, tripId);
-      }
-    } finally {
-      setSavingKidContactOutcome(false);
-    }
-  };
-  // Single entry point for a kid row's "next step" chip — dispatches to
-  // the Log Call Outcome popup for the kid's first contact (pending ->
-  // contacted), same as handleAdvance does for the adult side, or applies
-  // every later status jump (Confirmed/Checked In/Completed) directly,
-  // same as before. `status` is nextKidManualAction(kid)'s own suggested
-  // next status, passed in from the row rather than recomputed here so
-  // this stays a plain dispatcher.
-  const handleAdvanceKid = (kid: Kid, status: KidStatus, label: string, enquiry: Enquiry) => {
-    if (kid.status === 'pending' && status === 'contacted') {
-      setKidContactOutcomeTarget({ kid, label, parentName: enquiry.full_name, tripTitle: enquiry.trip_title, tripId: enquiry.trip_id });
-      return;
-    }
-    handleUpdateKidStatus(kid, status);
-  };
-  // Toggles a kid's independent is_no_show flag, right from its own row —
-  // same idea as handleUpdateKidStatus just above but for the separate
-  // attendance axis (kids.is_no_show), mirroring useEnquiryLifecycle's own
-  // handleToggleNoShow for the adult booking. See canMarkKidNoShow /
-  // add_kids_completed_no_show.sql.
-  const handleToggleKidNoShow = async (kid: Kid, isNoShow: boolean) => {
-    setUpdating(kid.id);
-    try {
-      await updateKidNoShow(kid.id, isNoShow);
-      await logKidActivity(
-        kid.enquiry_id,
-        isNoShow ? 'Kid marked no-show' : 'Kid no-show undone',
-        kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)),
-        kid.id
-      );
-      setKidsByEnquiry(prev => {
-        const list = prev[kid.enquiry_id];
-        if (!list) return prev;
-        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, is_no_show: isNoShow } : k)) };
-      });
-    } finally {
-      setUpdating(null);
-    }
-  };
-  // Permanently removes one kid's record, right from the list — mirrors
-  // useKidsForEnquiry's handleDelete on the detail page (same confirm
-  // dialog, same "cannot be undone" copy), just updating kidsByEnquiry's
-  // local cache afterwards instead of a hook-owned kids array.
-  const handleDeleteKid = async (kid: Kid) => {
-    const ok = await confirm({
-      title: 'Delete this kid?',
-      message: `This permanently removes ${kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid))}'s record and payment history. This cannot be undone.`,
-      confirmLabel: 'Delete',
-    });
-    if (!ok) return;
-    setUpdating(kid.id);
-    try {
-      await deleteKid(kid.id);
-      await logKidActivity(kid.enquiry_id, 'Kid record removed', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
-      setKidsByEnquiry(prev => {
-        const list = prev[kid.enquiry_id];
-        if (!list) return prev;
-        return { ...prev, [kid.enquiry_id]: list.filter(k => k.id !== kid.id) };
-      });
-    } finally {
-      setUpdating(null);
-    }
-  };
-  const handleSetKidFollowUp = async (kid: Kid, followUpAt: string | null, notes?: string | null) => {
-    setUpdating(kid.id);
-    try {
-      await setKidFollowUp(kid.id, followUpAt, notes);
-      await logKidActivity(kid.enquiry_id, followUpAt ? 'Kid follow-up set' : 'Kid follow-up cleared', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
-      setKidsByEnquiry(prev => {
-        const list = prev[kid.enquiry_id];
-        if (!list) return prev;
-        return { ...prev, [kid.enquiry_id]: list.map(k => (k.id === kid.id ? { ...k, follow_up_at: followUpAt, follow_up_notes: notes ?? null } : k)) };
-      });
-    } finally {
-      setUpdating(null);
-    }
-  };
-  // Clear Follow-up counterpart for a kid's own reminder — same "Clear"-
-  // only kebab entry the adult row offers (setting/editing stays on the
-  // row's own "Set Follow-up" chip), just reusing handleSetKidFollowUp
-  // with a null date/notes.
-  const handleClearKidFollowUp = (kid: Kid) => handleSetKidFollowUp(kid, null, null);
-  // Edit Details modal for a kid, right from the list — mirrors
-  // AdminEnquiryKidsCard's own kidEditTarget/kidEditForm wiring, just
-  // updating kidsByEnquiry's local cache afterwards instead of a
-  // hook-owned kids array (same pattern handleDeleteKid/handleToggleKidNoShow
-  // already follow above). See AdminKidEditModal.tsx.
-  const [kidEditTarget, setKidEditTarget] = useState<Kid | null>(null);
-  const [kidEditForm, setKidEditForm] = useState<KidEditForm>({ name: '', age: '', food_preference: '' });
-  const openKidEditModal = (kid: Kid) => {
-    setKidEditForm(kidEditFormFromKid(kid));
-    setKidEditTarget(kid);
-  };
-  const handleSaveKidEdit = async () => {
-    if (!kidEditTarget) return;
-    const patch = {
-      name: kidEditForm.name.trim() || null,
-      age: kidEditForm.age === '' ? null : kidEditForm.age,
-      food_preference: kidEditForm.food_preference || null,
-    };
-    setUpdating(kidEditTarget.id);
-    try {
-      await updateKid(kidEditTarget.id, patch);
-      setKidsByEnquiry(prev => {
-        const list = prev[kidEditTarget.enquiry_id];
-        if (!list) return prev;
-        return { ...prev, [kidEditTarget.enquiry_id]: list.map(k => (k.id === kidEditTarget.id ? { ...k, ...patch } : k)) };
-      });
-      setKidEditTarget(null);
-    } finally {
-      setUpdating(null);
-    }
-  };
   const {
     cancelTarget, setCancelTarget,
     cancelCharges, setCancelCharges,
@@ -829,57 +563,6 @@ export default function AdminEnquiries() {
     rangeStart: enquiriesRangeStart,
     rangeEnd: enquiriesRangeEnd,
   } = paginate(sortedFiltered, currentPage, ENQUIRIES_PAGE_SIZE);
-
-  // Bulk-loads real kid rows for whichever enquiries are on the current
-  // page (see kidsByEnquiry above) — re-runs only when the actual set of
-  // page ids changes, not on every paginatedEnquiries array reference.
-  useEffect(() => {
-    const idsWithKids = paginatedEnquiries.filter(e => e.kids_count > 0).map(e => e.id);
-    if (idsWithKids.length === 0) return;
-    let cancelled = false;
-    getKidsForEnquiries(idsWithKids)
-      .then(rows => {
-        if (cancelled) return;
-        const grouped: Record<string, Kid[]> = {};
-        for (const kid of rows) {
-          (grouped[kid.enquiry_id] ??= []).push(kid);
-        }
-        setKidsByEnquiry(grouped);
-      })
-      .catch(err => console.error('Failed to load kids for enquiries list:', err));
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed to the page's set of enquiry ids, not the paginatedEnquiries array reference
-  }, [paginatedEnquiries.map(e => e.id).join(',')]);
-
-  // Live updates — patches kidsByEnquiry in place the instant a kid row
-  // for a currently-visible enquiry changes, so e.g.
-  // kids_price_sync_on_trip_update bulk-repricing every unpaid kid the
-  // moment an admin edits a trip's Child Fee shows up here without a
-  // reload. No `filter` here (unlike useKidsForEnquiry's single-enquiry
-  // version) since this page spans many enquiries at once — membership is
-  // checked client-side against the current page's id set instead.
-  // Requires enable_realtime_kids.sql to have been run — see that file.
-  useEffect(() => {
-    const idsWithKids = new Set(paginatedEnquiries.filter(e => e.kids_count > 0).map(e => e.id));
-    if (idsWithKids.size === 0) return;
-    const unsubscribe = subscribeToTable('kids', payload => {
-      const row = (payload.eventType === 'DELETE' ? payload.old : payload.new) as unknown as Kid | undefined;
-      if (!row?.enquiry_id || !idsWithKids.has(row.enquiry_id)) return;
-      setKidsByEnquiry(prev => {
-        const list = prev[row.enquiry_id] || [];
-        if (payload.eventType === 'DELETE') {
-          return { ...prev, [row.enquiry_id]: list.filter(k => k.id !== row.id) };
-        }
-        const idx = list.findIndex(k => k.id === row.id);
-        const nextList = idx === -1
-          ? [...list, row].sort((a, b) => a.created_at.localeCompare(b.created_at))
-          : list.map(k => (k.id === row.id ? row : k));
-        return { ...prev, [row.enquiry_id]: nextList };
-      });
-    });
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed to the page's set of enquiry ids, same reasoning as the fetch effect above
-  }, [paginatedEnquiries.map(e => e.id).join(',')]);
 
   const counts = {
     all: scopedEnquiries.length,
@@ -1565,27 +1248,7 @@ export default function AdminEnquiries() {
               setBookingFollowUpTarget={setBookingFollowUpTarget}
               handleAdvance={handleAdvance}
               buildRowActions={buildRowActions}
-              kidsByEnquiry={kidsByEnquiry}
-              kidRowLabel={kidRowLabel}
-              onOpenKidPayment={openKidPayment}
-              onMarkKidNotInterested={handleMarkKidNotInterested}
-              onReopenKid={handleReopenKid}
-              onUpdateKidStatus={handleUpdateKidStatus}
-              onAdvanceKid={handleAdvanceKid}
-              onToggleKidNoShow={handleToggleKidNoShow}
-              onDeleteKid={handleDeleteKid}
-              // Was routing to the kid's parent enquiry page — same page
-              // for every kid on a group booking, so clicking "Aarav" and
-              // "Vaarav" both landed on Kabson's own enquiry with no way
-              // to tell which kid you'd clicked. Kids now have their own
-              // routed page (AdminKidDetail, see AppRouter's /admin/kids/:id)
-              // that shows that one kid's own status/payment/follow-up.
-              onViewKidDetails={kid => navigate(`/admin/kids/${kid.id}`)}
-              onEditKid={openKidEditModal}
               invoiceBusyId={invoiceBusyId}
-              onDownloadKidInvoice={handleDownloadKidInvoice}
-              onShareKidInvoice={handleShareKidInvoice}
-              onClearKidFollowUp={handleClearKidFollowUp}
             />
 
             <AdminEnquiriesMobileCards
@@ -1614,19 +1277,6 @@ export default function AdminEnquiries() {
               setBookingFollowUpTarget={setBookingFollowUpTarget}
               handleAdvance={handleAdvance}
               buildRowActions={buildRowActions}
-              kidsByEnquiry={kidsByEnquiry}
-              kidRowLabel={kidRowLabel}
-              onOpenKidPayment={openKidPayment}
-              onMarkKidNotInterested={handleMarkKidNotInterested}
-              onReopenKid={handleReopenKid}
-              onUpdateKidStatus={handleUpdateKidStatus}
-              onAdvanceKid={handleAdvanceKid}
-              onToggleKidNoShow={handleToggleKidNoShow}
-              onDeleteKid={handleDeleteKid}
-              onEditKid={openKidEditModal}
-              onDownloadKidInvoice={handleDownloadKidInvoice}
-              onShareKidInvoice={handleShareKidInvoice}
-              onClearKidFollowUp={handleClearKidFollowUp}
             />
           </>
         )}
@@ -1645,19 +1295,6 @@ export default function AdminEnquiries() {
         applySuggestedAmount={applySuggestedAmount}
         onSave={handleSave}
         saving={saving}
-      />
-
-      <AdminKidPaymentModal
-        kidPaymentTarget={kidPaymentTarget}
-        fallbackLabel={kidPaymentTarget ? kidRowLabel(kidPaymentTarget, (kidsByEnquiry[kidPaymentTarget.enquiry_id] || []).indexOf(kidPaymentTarget)) : ''}
-        onClose={() => setKidPaymentTarget(null)}
-        kidPaymentForm={kidPaymentForm}
-        setKidPaymentForm={setKidPaymentForm}
-        kidPaymentHistory={kidPaymentHistory}
-        kidPaymentHistoryLoading={kidPaymentHistoryLoading}
-        kidPaymentChildPrice={kidPaymentChildPrice}
-        savingKidPayment={savingKidPayment}
-        onSave={handleSaveKidPayment}
       />
 
       <DetailsModal
@@ -1711,33 +1348,6 @@ export default function AdminEnquiries() {
         setClosedReason={setClosedReason}
         onConfirm={handleConfirmNotInterested}
         updating={updating}
-      />
-
-      <AdminKidNotInterestedModal
-        kidNotInterestedTarget={kidNotInterestedTarget}
-        targetLabel={kidNotInterestedTarget ? kidRowLabel(kidNotInterestedTarget, (kidsByEnquiry[kidNotInterestedTarget.enquiry_id] || []).indexOf(kidNotInterestedTarget)) : ''}
-        onClose={() => setKidNotInterestedTarget(null)}
-        closedReason={kidClosedReason}
-        setClosedReason={setKidClosedReason}
-        onConfirm={handleConfirmKidNotInterested}
-        updating={updating}
-      />
-
-      <AdminKidContactOutcomeModal
-        target={kidContactOutcomeTarget}
-        onClose={() => setKidContactOutcomeTarget(null)}
-        onSave={handleSaveKidContactOutcome}
-        saving={savingKidContactOutcome}
-      />
-
-      <AdminKidEditModal
-        kidEditTarget={kidEditTarget}
-        targetLabel={kidEditTarget ? kidRowLabel(kidEditTarget, (kidsByEnquiry[kidEditTarget.enquiry_id] || []).indexOf(kidEditTarget)) : ''}
-        onClose={() => setKidEditTarget(null)}
-        editForm={kidEditForm}
-        setEditForm={setKidEditForm}
-        onSave={handleSaveKidEdit}
-        saving={!!kidEditTarget && updating === kidEditTarget.id}
       />
 
       <FollowUpModal

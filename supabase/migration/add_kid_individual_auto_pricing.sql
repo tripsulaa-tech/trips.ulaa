@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Auto-quotes each kid's own individual fee (kids.amount, from
 -- add_kid_individual_payments.sql) from the trip's child_price the moment

@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Scopes activity_log entries to an individual kid, on top of the existing
 -- enquiry_id scoping (add_activity_log.sql). Every kid-related action so far

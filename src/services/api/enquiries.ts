@@ -43,7 +43,6 @@ export {
 
 export {
   recordPayment,
-  recordKidsPayment,
   getPaymentsForEnquiry,
   getAllPayments,
 } from './enquiries/payments';
@@ -61,23 +60,3 @@ export {
   uncancelEnquiry,
   recordRefund,
 } from './enquiries/cancellation';
-
-export {
-  getKidsForEnquiry,
-  getKidsForEnquiries,
-  getAllKids,
-  createKidsForEnquiry,
-  updateKid,
-  updateKidStatus,
-  recordKidContactOutcome,
-  bulkUpdateKidsStatus,
-  setKidFollowUp,
-  updateKidNoShow,
-  deleteKid,
-  getAllKidsFoodPreferences,
-  logKidActivity,
-  recordKidPayment,
-  generateKidPendingInvoice,
-  addExtraChargeForKid,
-  getPaymentsForKid,
-} from './enquiries/kids';

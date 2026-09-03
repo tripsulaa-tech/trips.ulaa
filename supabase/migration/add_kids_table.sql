@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Promotes "kids" from a bare headcount on the parent enquiry
 -- (enquiries.kids_count / kids_amount, see add_trip_kids_option.sql) into

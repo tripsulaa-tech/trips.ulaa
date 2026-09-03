@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Adds a `not_interested_reason` column to `kids`, mirroring
 -- `enquiries.closed_reason` (see add_closed_reason.sql) exactly — same

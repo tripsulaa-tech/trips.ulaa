@@ -29,10 +29,9 @@ import {
   MapPin,
   Question as HelpCircle,
   UserMinus,
-  UserMinus as UserX,
   CalendarDot as CalendarClock,
 } from '@phosphor-icons/react';
-import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Kid, KidStatus, Payment, UpcomingTrip } from '../../types/types-index';
+import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { formatDate, getActivePrice } from '../../utils/utils-index';
 import { FOOD_PREFERENCE_OPTIONS, foodPreferenceBadge } from '../../constants/foodPreference';
 
@@ -177,22 +176,6 @@ export type PaymentForm = {
   refund_date: string;
   refund_notes: string;
   food_preference: 'veg' | 'non_veg' | '';
-  // Kids fee's own total — same "list price, admin-adjustable" shape as
-  // total_amount above, but for the kids fee instead of the adult booking.
-  // Prefilled from enquiry.kids_amount (itself auto-computed once from the
-  // trip's child_price × kids_count — see add_trip_kids_option.sql), and
-  // editable here so an admin can correct it (e.g. child_price was added
-  // to the trip after this booking existed) via recordKidsPayment's own
-  // kids_amount override. Only shown/used when the enquiry has
-  // kids_count > 0.
-  kids_amount: number | '';
-  // Kids fee — independent of everything above (see
-  // add_kids_payment_tracking.sql): this transaction's own kids-fee amount,
-  // same "not a running total" convention as amount_paid. Only shown/used
-  // when the enquiry has kids_count > 0. recordKidsPayment does the
-  // delta/running-total math the same way recordPayment does for the adult
-  // amount.
-  kids_amount_paid: number | '';
 };
 
 // Same types Generate Invoice offers, including Extra Charge and the
@@ -256,17 +239,13 @@ export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPai
 // the final save-time gate — one source of truth so the two screens can
 // never drift on what counts as a valid payment.
 type PaymentFormErrors = Partial<Record<
-  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_utr' | 'refund_method' | 'kids_amount_paid',
+  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_utr' | 'refund_method',
   string
 >>;
 
 export function validatePaymentForm(
   paymentForm: PaymentForm,
-  alreadyPaid: number,
-  // Kids fee's own bounds — see add_kids_payment_tracking.sql. Optional so
-  // existing callers keep working unchanged when kids_count is 0 (no kids
-  // section shown, so nothing to validate).
-  kids?: { total: number; alreadyPaid: number }
+  alreadyPaid: number
 ): PaymentFormErrors {
   const errors: PaymentFormErrors = {};
   const totalAmount = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
@@ -307,22 +286,6 @@ export function validatePaymentForm(
   const effectiveAmountPaid = isPending ? alreadyPaid : isExtraCharge ? alreadyPaid + thisPayment : newRunningTotal;
   if (refundAmount > effectiveAmountPaid) {
     errors.refund_amount = "Refund amount can't be more than what was actually paid.";
-  }
-
-  if (kids) {
-    const thisKidsPayment = paymentForm.kids_amount_paid === '' ? 0 : Number(paymentForm.kids_amount_paid);
-    if (thisKidsPayment < 0) {
-      errors.kids_amount_paid = 'Kids amount cannot be negative.';
-    } else if (kids.total > 0 && kids.alreadyPaid + thisKidsPayment > kids.total) {
-      errors.kids_amount_paid = 'This would take the kids fee paid past its total.';
-    } else if (thisKidsPayment > 0 && !paymentForm.payment_method) {
-      // The adult-payment checks above only require a method when
-      // thisPayment > 0 — a kids-only payment (adult amount left blank)
-      // still needs one, since both legs share the same method/UTR fields.
-      errors.payment_method = errors.payment_method || 'Select a payment method.';
-    } else if (thisKidsPayment > 0 && paymentForm.payment_method && paymentForm.payment_method !== 'Cash' && !paymentForm.payment_utr.trim()) {
-      errors.payment_utr = errors.payment_utr || 'Enter a UTR / reference number.';
-    }
   }
 
   return errors;
@@ -479,177 +442,6 @@ export const JOURNEY_STAGE_CONFIG: Record<Enquiry['journey_stage'], { label: str
 
 export function journeyBadge(e: Enquiry) {
   return JOURNEY_STAGE_CONFIG[e.journey_stage] || JOURNEY_STAGE_CONFIG.new_enquiry;
-}
-
-// A kid's own trackable state (see Kid/KidStatus in types-index.ts and
-// add_kids_table.sql / add_kids_not_interested_status.sql) — deliberately
-// its own small config, separate from JOURNEY_STAGE_CONFIG above, since a
-// kid's status is independent of its parent enquiry's journey_stage and
-// has a much smaller set of states (no payment-stage granularity — kids
-// never occupy a seat). Shared by the Enquiries list (table + mobile
-// cards, where each kid now gets its own row/action) and
-// AdminEnquiryKidsCard on the detail page, so the badge/label/action
-// eligibility can't drift between the two views.
-//
-// Label and color for every state a kid shares with the adult journey
-// (pending~new_enquiry, confirmed, checked_in, completed, cancelled,
-// not_interested) are kept identical to JOURNEY_STAGE_CONFIG's matching
-// entry above — same word, same color — so an admin's "Confirmed is teal"
-// mental model from the adult row above carries straight down to the kid
-// rows under it instead of needing a second palette. 'pending' specifically
-// is labelled "New Enquiry": it's the kid's exact equivalent of the adult's
-// first, untouched state, so it gets the adult's own label rather than a
-// differently-worded one for the same thing.
-export const KID_STATUS_CONFIG: Record<KidStatus, { label: string; color: string; icon: typeof Clock }> = {
-  pending: { label: 'New Enquiry', color: 'bg-blue-100 text-blue-700', icon: Clock },
-  contacted: { label: 'Contacted', color: 'bg-amber-100 text-amber-700', icon: RefreshCw },
-  confirmed: { label: 'Confirmed', color: 'bg-teal-100 text-teal-700', icon: CheckCircle2 },
-  checked_in: { label: 'Checked In', color: 'bg-indigo-100 text-indigo-700', icon: LogIn },
-  // Post-trip terminal state, the kid-scoped equivalent of
-  // enquiries.booking_status reaching 'completed' — see
-  // add_kids_completed_no_show.sql.
-  completed: { label: 'Completed', color: 'bg-green-100 text-green-700', icon: PartyPopper },
-  cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', icon: XCircle },
-  not_interested: { label: 'Not Interested', color: 'bg-slate-200 text-dark-muted', icon: UserMinus },
-};
-
-// A kid's independent "No Show" attendance flag (kids.is_no_show) — same
-// idea as attendanceBadge()'s 'No Show' branch for the adult booking
-// (AdminEnquiriesShared.tsx), just a fixed label/color since a kid has no
-// other attendance states to distinguish it from (no "Checked In"/"Not
-// Started" variants layered in here — kid.status already covers that).
-export const KID_NO_SHOW_BADGE = { label: 'No Show', color: 'bg-orange-50 text-orange-700', icon: UserX };
-
-export function kidStatusBadge(kid: Kid) {
-  return KID_STATUS_CONFIG[kid.status] || KID_STATUS_CONFIG.pending;
-}
-
-// Whether the row-level "Not Interested" quick action makes sense for this
-// kid right now — hidden once the kid's already in some closed-out or
-// later state (cancelled/not_interested/checked_in), and, same as
-// canMarkNotInterested's gating on the adult side just above, only while
-// no money has actually come in for this kid: once amount_paid > 0 a
-// dropped kid needs Mark Cancelled instead (which carries the refund
-// conversation Not Interested doesn't), not a one-click close-out that
-// quietly leaves paid money unaccounted for.
-export function canMarkKidNotInterested(kid: Kid): boolean {
-  return (kid.status === 'pending' || kid.status === 'contacted' || kid.status === 'confirmed') && (kid.amount_paid || 0) <= 0;
-}
-
-// Counterpart to canMarkKidNotInterested — whether the row-level "Reopen"
-// quick action makes sense for this kid right now. Mirrors the adult
-// side's Reopen Enquiry (isNotInterested(e) in useRowActions.ts): only
-// offered once a kid's actually been marked not_interested, not from
-// 'cancelled' (a different outcome — see add_kids_not_interested_status.sql
-// — that isn't meant to be "undone" the same casual way a dropped lead is).
-export function canReopenKid(kid: Kid): boolean {
-  return kid.status === 'not_interested';
-}
-
-// Whether "Mark No Show" should be offered for this kid right now —
-// kids.is_no_show equivalent of setEnquiryNoShow's gating, but ungated the
-// same way the rest of kids.status is (see add_kids_completed_no_show.sql):
-// offered once a kid is Confirmed and not already flagged. A checked-in
-// kid needs Undo Check In first (same "reverse the forward step first"
-// rule canCancelKid follows), and cancelled/not_interested/completed kids
-// are already closed out.
-export function canMarkKidNoShow(kid: Kid): boolean {
-  return kid.status === 'confirmed' && !kid.is_no_show;
-}
-
-// Single "obvious next step" for a kid's kebab menu — mirrors
-// nextManualAction's role for the adult row just below (one contextual
-// action instead of every possible status jump listed at once), so the
-// kid menu stays as short as the adult one instead of offering all 5
-// "Mark X" entries every time. The forward progression
-// pending -> confirmed -> checked_in -> completed gets a suggested next
-// step; cancelled/not_interested are terminal here (undone via
-// canReopenKid/Reopen instead) and completed has nowhere further to go.
-export function nextKidManualAction(kid: Kid): { label: string; status: KidStatus; icon: typeof Clock } | null {
-  switch (kid.status) {
-    case 'pending':
-      return { label: 'Mark Contacted', status: 'contacted', icon: RefreshCw };
-    case 'contacted':
-      return { label: 'Mark Confirmed', status: 'confirmed', icon: CheckCircle2 };
-    case 'confirmed':
-      return { label: 'Mark Checked In', status: 'checked_in', icon: LogIn };
-    case 'checked_in':
-      return { label: 'Mark Completed', status: 'completed', icon: PartyPopper };
-    default:
-      return null;
-  }
-}
-
-// A kid's own follow-up reminder chip — mirrors followUpStatus() for the
-// adult side (same escalating overdue/today/upcoming coloring via
-// computeDueStatus), just reading kid.follow_up_at instead of the
-// enquiry's. Kept separate from the parent enquiry's own follow-up so a
-// kid row's Follow-up column reflects that kid's own reminder rather than
-// silently reusing the booking's.
-export function kidFollowUpStatus(kid: Kid): { label: string; color: string; icon: typeof Clock; isDue: boolean; isOverdue: boolean } | null {
-  if (!kid.follow_up_at) return null;
-  const status = computeDueStatus(kid.follow_up_at, {
-    overdue: (dateLabel) => `Overdue · ${dateLabel}`,
-    today: 'Follow up today',
-    upcoming: (dateLabel) => `Follow up ${dateLabel}`,
-  });
-  return { ...status, icon: CalendarClock };
-}
-
-// Whether a follow-up reminder can be set on this kid right now — mirrors
-// canSetFollowUp()'s "only while the lead is still open" window on the
-// adult side, translated to the kid's smaller status set: pending/
-// confirmed are the only states a reminder still makes sense in (once
-// checked in/cancelled/not_interested there's nothing left to follow up
-// on).
-export function canSetKidFollowUp(kid: Kid): boolean {
-  return kid.status === 'pending' || kid.status === 'contacted' || kid.status === 'confirmed';
-}
-
-// The invoice PDF pipeline (src/utils/invoicePdf.ts and pdf/invoice/*)
-// only ever knows how to draw an Enquiry — it was built long before kids
-// had their own payment ledger (see add_kid_individual_payments.sql). This
-// adapts one kid + its parent enquiry into an Enquiry-shaped object that
-// invoice renders correctly, so a kid's Download/Share Invoice action can
-// reuse downloadInvoicePdf()/invoiceAsFile() unchanged. Reuses the parent
-// booking's contact/trip fields (a kid has no phone/email/departure date
-// of its own) but substitutes the kid's own name, price, and a
-// booking-ID suffix so the file/download doesn't collide with the adult's
-// own invoice — see kidRowLabel for where `kidLabel` (the "Kid N"
-// fallback) comes from.
-export function kidAsInvoiceEnquiry(kid: Kid, enquiry: Enquiry, kidLabel: string): Enquiry {
-  return {
-    ...enquiry,
-    id: kid.id,
-    full_name: kid.name || kidLabel,
-    total_amount: kid.amount,
-    amount_paid: kid.amount_paid,
-    // Discounts are tracked per adult booking only — kids have no
-    // discount field of their own (see the Kid interface), so this never
-    // carries one over from the parent enquiry.
-    discount_amount: 0,
-    discount_reason: null,
-    booking_id: enquiry.booking_id ? `${enquiry.booking_id}-${kidLabel.replace(/\s+/g, '').toUpperCase()}` : null,
-    // A kid's fee is never part of a multi-seat group the way the adult
-    // booking can be — always render as a single, standalone line.
-    group_id: null,
-    group_size: null,
-    group_seq: 1,
-  };
-}
-
-// Whether "Mark Cancelled" should be offered for this kid right now —
-// mirrors canCancelBooking()'s "not once checked in" rule on the adult
-// side: a checked-in kid needs Undo Check In first, same as a checked-in
-// booking needs its own Undo Check In before Cancel Booking reappears. A
-// completed kid can't be cancelled either, same "trip already happened"
-// reasoning canCancelBooking applies via journey_stage === 'completed'.
-// Also excludes 'pending' and 'contacted' (the kid's own New Enquiry/
-// Contacted stages), mirroring canCancelBooking's refusal to cancel
-// journey_stage 'new_enquiry'/'contacted' — a lead nobody's agreed to book
-// yet gets closed out via Not Interested, not Cancel.
-export function canCancelKid(kid: Kid): boolean {
-  return kid.status !== 'pending' && kid.status !== 'contacted' && kid.status !== 'cancelled' && kid.status !== 'not_interested' && kid.status !== 'checked_in' && kid.status !== 'completed';
 }
 
 // True when this enquiry was closed out before ever becoming a paying
@@ -928,16 +720,6 @@ export const CONTACT_OUTCOME_OPTIONS: { value: ContactOutcome; label: string }[]
 export function closedReasonLabel(e: Enquiry): string | null {
   if (!isNotInterested(e) || !e.closed_reason) return null;
   return CLOSED_REASON_CONFIG[e.closed_reason]?.label ?? null;
-}
-
-// Human label for why a kid was marked not interested, or null when the
-// kid isn't in that state or predates add_kid_not_interested_reason.sql
-// (marked not interested via a path with no reason picker — the plain
-// Status dropdown, a bulk action). Same idea as closedReasonLabel above,
-// used to enrich the kid status badge's tooltip.
-export function kidNotInterestedReasonLabel(kid: Kid): string | null {
-  if (kid.status !== 'not_interested' || !kid.not_interested_reason) return null;
-  return CLOSED_REASON_CONFIG[kid.not_interested_reason]?.label ?? null;
 }
 
 // Counts closed-without-booking enquiries by reason, for the reporting

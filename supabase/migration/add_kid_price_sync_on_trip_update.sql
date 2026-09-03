@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Keeps kids.amount (add_kid_individual_payments.sql) in sync with the
 -- trip's own child_price after the trip's already been edited — not just

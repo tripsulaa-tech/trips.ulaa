@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Adds 'not_interested' as a valid kids.status value (add_kids_table.sql),
 -- alongside the existing 'cancelled' — covers the same "this one kid isn't

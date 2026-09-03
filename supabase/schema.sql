@@ -174,11 +174,6 @@ create table public.upcoming_trips (
   -- surfaced on the public site. See add_trip_finance.sql and TripFinance
   -- in src/types/types-index.ts.
   trip_finance             jsonb,
-  -- Optional fixed per-kid price (admin-set, Pricing & Availability tab).
-  -- Null means "not set" -- the public booking form then treats kids as
-  -- free/no-charge. Kids never count towards total_seats/seats_booked --
-  -- see enquiries.kids_count below. See add_trip_kids_option.sql.
-  child_price              numeric(10, 2),
   constraint upcoming_trips_pkey primary key (id),
   constraint upcoming_trips_slug_key unique (slug),
   constraint upcoming_trips_status_check
@@ -189,8 +184,6 @@ create table public.upcoming_trips (
     check (strike_through_price is null or strike_through_price >= 0),
   constraint upcoming_trips_advance_amount_check
     check (advance_amount is null or advance_amount >= 0),
-  constraint upcoming_trips_child_price_check
-    check (child_price is null or child_price >= 0),
   constraint upcoming_trips_min_age_check
     check (min_age is null or min_age >= 0),
   constraint upcoming_trips_max_age_check
@@ -278,21 +271,6 @@ create table public.enquiries (
   -- remains the authoritative timestamp, this is a denormalized label kept
   -- in sync with it by on_enquiry_cancelled(). See add_booking_state.sql.
   booking_state             text not null default 'active',
-  -- How many kids are travelling with this booking -- no seat/age
-  -- collected, just a headcount. Doesn't count towards seats/capacity.
-  -- Only meaningful on the group's group_seq = 1 row. See
-  -- add_trip_kids_option.sql.
-  kids_count                integer not null default 0,
-  -- child_price x kids_count for this booking, auto-computed once by
-  -- set_enquiry_active_price() the same way total_amount is -- never
-  -- trusted from the client. See add_trip_kids_option.sql.
-  kids_amount               numeric(10, 2) not null default 0,
-  -- Running total of `paid` kids-fee ledger rows (payments.for_kids =
-  -- true) for this booking -- tracked independently of amount_paid, kept
-  -- in sync by the same trigger (sync_enquiry_amount_paid()). Only ever
-  -- meaningful on the group_seq = 1 row, same convention as kids_count/
-  -- kids_amount. See add_kids_payment_tracking.sql.
-  kids_amount_paid          numeric(10, 2) not null default 0,
   constraint enquiries_pkey primary key (id),
   constraint enquiries_status_check
     check (status = any (array['new'::text, 'contacted'::text, 'closed'::text])),
@@ -320,11 +298,7 @@ create table public.enquiries (
   constraint enquiries_group_seq_check
     check (group_seq >= 1),
   constraint enquiries_booking_state_check
-    check (booking_state = any (array['active'::text, 'cancelled'::text])),
-  constraint enquiries_kids_count_check check (kids_count >= 0),
-  constraint enquiries_kids_amount_check check (kids_amount >= 0),
-  constraint enquiries_kids_amount_paid_check check (kids_amount_paid >= 0),
-  constraint enquiries_kids_amount_paid_bound_check check (kids_amount_paid <= kids_amount)
+    check (booking_state = any (array['active'::text, 'cancelled'::text]))
 );
 
 create index enquiries_is_paid_idx on public.enquiries using btree (is_paid);
@@ -396,13 +370,6 @@ create table public.payments (
   -- historical rows recorded before this existed. See
   -- add_payment_utr_reference.sql.
   utr_number      text,
-  -- Marks this ledger row as money moving against the booking's kids fee
-  -- (enquiries.kids_amount) rather than the adult booking -- kept as its
-  -- own independent Paid/Pending line instead of inflating amount_paid.
-  -- Defaults to false so every pre-existing payment keeps counting towards
-  -- the adult total exactly as it always has. See
-  -- add_kids_payment_tracking.sql.
-  for_kids        boolean not null default false,
   constraint payments_pkey primary key (id),
   constraint payments_enquiry_id_fkey foreign key (enquiry_id)
     references public.enquiries (id) on delete cascade,
@@ -420,77 +387,6 @@ create index payments_paid_at_idx on public.payments using btree (paid_at desc);
 create unique index payments_invoice_number_unique
   on public.payments (invoice_number)
   where (invoice_number is not null);
-
--- ----------------------------------------------------------------------------
--- kids
--- ----------------------------------------------------------------------------
--- One row per kid travelling on a booking — an independently-trackable
--- record (own name/status/follow-up) layered on top of the parent
--- enquiry's kids_count/kids_amount headcount above, which stays the
--- source of truth for pricing. Only ever attached to a group's lead row
--- (group_seq = 1), same convention kids_count/kids_amount already follow.
--- See add_kids_table.sql for full field-by-field rationale.
-create table public.kids (
-  id                uuid not null default uuid_generate_v4(),
-  enquiry_id        uuid not null,
-  name              text,
-  -- Optional, admin-entered only — the public booking form still collects
-  -- no age for kids (see child_price/kids_count above).
-  age               integer,
-  -- Optional, admin-entered only, same rule as age above — 'veg'/'non_veg'
-  -- per kid, independent of the adults' single enquiries.food_preference.
-  -- See add_kids_food_preference.sql.
-  food_preference   text,
-  status            text not null default 'pending',
-  follow_up_at      date,
-  follow_up_notes   text,
-  -- Why a kid was marked 'not_interested' — only meaningful alongside that
-  -- status, same relationship enquiries.closed_reason has with status =
-  -- 'closed'. See add_kid_not_interested_reason.sql.
-  not_interested_reason text,
-  created_at        timestamptz not null default now(),
-  updated_at        timestamptz not null default now(),
-  constraint kids_pkey primary key (id),
-  constraint kids_enquiry_id_fkey foreign key (enquiry_id)
-    references public.enquiries (id) on delete cascade,
-  constraint kids_age_check check (age is null or (age >= 0 and age <= 17)),
-  constraint kids_food_preference_check
-    check (food_preference is null or food_preference = any (array['veg'::text, 'non_veg'::text])),
-  constraint kids_status_check
-    check (status = any (array['pending'::text, 'confirmed'::text, 'checked_in'::text, 'cancelled'::text, 'not_interested'::text])),
-  constraint kids_follow_up_requires_pending_status
-    check (follow_up_at is null or status = 'pending'),
-  constraint kids_not_interested_reason_check
-    check (not_interested_reason is null or not_interested_reason = any (array[
-      'no_response'::text, 'price_too_high'::text, 'date_conflict'::text,
-      'destination_changed'::text, 'booked_elsewhere'::text,
-      'personal_reason'::text, 'wrong_number'::text, 'other'::text
-    ])),
-  constraint kids_not_interested_reason_requires_status
-    check (not_interested_reason is null or status = 'not_interested')
-);
-
-create index kids_enquiry_id_idx on public.kids using btree (enquiry_id);
-create index kids_follow_up_at_idx
-  on public.kids using btree (follow_up_at)
-  where follow_up_at is not null;
-create index kids_not_interested_reason_idx
-  on public.kids using btree (not_interested_reason)
-  where not_interested_reason is not null;
-
-create or replace function public.set_kids_updated_at()
-returns trigger
-language plpgsql
-as $function$
-begin
-  new.updated_at := now();
-  return new;
-end;
-$function$;
-
-create trigger kids_set_updated_at
-  before update on public.kids
-  for each row execute function public.set_kids_updated_at();
 
 -- ----------------------------------------------------------------------------
 -- invoice_number_sequences
@@ -517,20 +413,9 @@ create table public.invoice_number_sequences (
 -- spec section 14). Written by logActivity() in src/services/api.ts from
 -- every state-changing enquiry function; never updated or deleted. See
 -- add_activity_log.sql.
---
--- kid_id is nullable, additive scoping on top of enquiry_id — set only when
--- the action was taken against one specific kid, so AdminKidDetail's own
--- Activity Timeline (getActivityLogForKid) can filter down to just that
--- kid, while the parent enquiry's own timeline (getActivityLog) keeps
--- showing every kid's actions too, unfiltered, same as before this column
--- existed. "on delete set null" (not cascade) so deleting a kid — a plain
--- client-side delete running as the ordinary authenticated role — never
--- has to push a cascade through activity_log's own no-delete-policy RLS.
--- See add_kid_activity_log_scope.sql.
 create table public.activity_log (
   id          uuid not null default uuid_generate_v4(),
   enquiry_id  uuid not null references public.enquiries (id) on delete cascade,
-  kid_id      uuid references public.kids (id) on delete set null,
   action      text not null,
   details     text,
   created_at  timestamptz not null default now(),
@@ -539,7 +424,6 @@ create table public.activity_log (
 
 create index activity_log_enquiry_id_idx on public.activity_log using btree (enquiry_id);
 create index activity_log_created_at_idx on public.activity_log using btree (created_at desc);
-create index activity_log_kid_id_idx on public.activity_log using btree (kid_id);
 
 -- ----------------------------------------------------------------------------
 -- waitlist
@@ -571,18 +455,13 @@ create table public.waitlist (
   -- so this one is safe to enforce. on delete set null so a later manual
   -- delete of the enquiry doesn't block deleting this row.
   converted_enquiry_id  uuid references public.enquiries (id) on delete set null,
-  -- How many kids are travelling with this signup -- purely
-  -- informational (the waitlist holds no pricing/payment data at all).
-  -- See add_trip_kids_option.sql.
-  kids_count            integer not null default 0,
   created_at            timestamptz not null default now(),
   constraint waitlist_pkey primary key (id),
   constraint waitlist_status_check
     check (status = any (array['waiting'::text, 'notified'::text, 'converted'::text, 'declined'::text, 'expired'::text])),
   -- Prevents the same person from spamming the same sold-out trip's
   -- waitlist with repeat submissions.
-  constraint waitlist_trip_email_unique unique (trip_id, email),
-  constraint waitlist_kids_count_check check (kids_count >= 0)
+  constraint waitlist_trip_email_unique unique (trip_id, email)
 );
 
 create index waitlist_trip_id_idx on public.waitlist using btree (trip_id);
@@ -961,24 +840,6 @@ begin
     case when new.source = 'website' then 'Website enquiry submitted' else 'Enquiry logged (' || new.source || ')' end,
     coalesce(new.trip_title, 'No trip selected')
   );
-  return new;
-end;
-$function$;
-
--- Same idea as log_enquiry_created_activity() just above, scoped to one kid
--- row instead of the enquiry — logs "Kid added" (with kid_id set) the
--- moment any kids row is inserted, regardless of whether the caller is an
--- authenticated admin or the anonymous public booking form's
--- createKidsForEnquiry. See add_kid_activity_log_scope.sql.
-create or replace function public.log_kid_created_activity()
-returns trigger
-language plpgsql
-security definer
-set search_path to 'public'
-as $function$
-begin
-  insert into public.activity_log (enquiry_id, kid_id, action, details)
-  values (new.enquiry_id, new.id, 'Kid added', new.name);
   return new;
 end;
 $function$;
@@ -1364,11 +1225,6 @@ $function$;
 -- package and price themselves (total_amount is supplied), so this leaves
 -- those untouched. Mirrors getActivePrice() in src/utils/utils-index.ts
 -- exactly. See add_enquiry_auto_pricing.sql.
---
--- Also auto-prices kids_amount from the trip's child_price x kids_count,
--- the same "fill only if not already supplied" rule, and only on the
--- lead row of a booking (group_seq = 1) so a group's kids charge isn't
--- duplicated across every seat row. See add_trip_kids_option.sql.
 create or replace function public.set_enquiry_active_price()
 returns trigger
 language plpgsql
@@ -1377,7 +1233,6 @@ declare
   found_price               numeric(10, 2);
   found_early_bird_price    numeric(10, 2);
   found_early_bird_deadline date;
-  found_child_price         numeric(10, 2);
 begin
   if new.trip_id is not null and new.total_amount is null then
     select price, early_bird_price, early_bird_deadline
@@ -1391,18 +1246,6 @@ begin
     elsif found_price is not null then
       new.total_amount := found_price;
       new.package_type := 'normal';
-    end if;
-  end if;
-
-  if new.trip_id is not null
-     and coalesce(new.group_seq, 1) = 1
-     and coalesce(new.kids_count, 0) > 0
-     and coalesce(new.kids_amount, 0) = 0 then
-    select child_price into found_child_price
-      from upcoming_trips where id = new.trip_id;
-
-    if found_child_price is not null then
-      new.kids_amount := found_child_price * new.kids_count;
     end if;
   end if;
 
@@ -1469,12 +1312,9 @@ $function$;
 -- Keeps enquiries.amount_paid and enquiries.refund_amount in sync with the
 -- sum of their payments rows, any time a payment is inserted, updated, or
 -- deleted. refund_amount sums 'paid' rows where payment_type = 'refund';
--- amount_paid sums every other 'paid' row -- both scoped to for_kids =
--- false so a kids-fee payment doesn't inflate the adult totals. Rows with
--- status = 'pending' (an invoice raised but not yet collected -- see
--- add_invoice_generation.sql) are excluded from every sum until they're
--- marked paid. kids_amount_paid mirrors amount_paid's own-bucket sum,
--- scoped to for_kids = true instead. See add_kids_payment_tracking.sql.
+-- amount_paid sums every other 'paid' row. Rows with status = 'pending'
+-- (an invoice raised but not yet collected -- see add_invoice_generation.sql)
+-- are excluded from every sum until they're marked paid.
 create or replace function public.sync_enquiry_amount_paid()
 returns trigger
 language plpgsql
@@ -1483,21 +1323,18 @@ declare
   target_enquiry_id uuid;
   new_amount_paid numeric;
   new_refund_amount numeric;
-  new_kids_amount_paid numeric;
 begin
   target_enquiry_id := coalesce(new.enquiry_id, old.enquiry_id);
 
-  select coalesce(sum(amount) filter (where payment_type != 'refund' and status = 'paid' and not for_kids), 0),
-         coalesce(sum(amount) filter (where payment_type = 'refund' and status = 'paid' and not for_kids), 0),
-         coalesce(sum(amount) filter (where payment_type != 'refund' and status = 'paid' and for_kids), 0)
-    into new_amount_paid, new_refund_amount, new_kids_amount_paid
+  select coalesce(sum(amount) filter (where payment_type != 'refund' and status = 'paid'), 0),
+         coalesce(sum(amount) filter (where payment_type = 'refund' and status = 'paid'), 0)
+    into new_amount_paid, new_refund_amount
     from public.payments
    where enquiry_id = target_enquiry_id;
 
   update public.enquiries
      set amount_paid = new_amount_paid,
-         refund_amount = new_refund_amount,
-         kids_amount_paid = new_kids_amount_paid
+         refund_amount = new_refund_amount
    where id = target_enquiry_id;
 
   return null;
@@ -1659,9 +1496,6 @@ create trigger on_enquiry_created
 create trigger on_enquiry_created_log_activity
   after insert on public.enquiries
   for each row execute function public.log_enquiry_created_activity();
-create trigger on_kid_created_log_activity
-  after insert on public.kids
-  for each row execute function public.log_kid_created_activity();
 -- Must run before enquiry_cancelled_trigger/notify_new_enquiry care about
 -- ordering — Postgres fires same-timing triggers alphabetically by name,
 -- and "capacity" < "cancelled_trigger", so this rejects an overbooking
@@ -1770,17 +1604,6 @@ create policy "Admin delete enquiries" on public.enquiries
 -- written by the admin portal, never directly by the public form).
 create policy "Admin all payments" on public.payments
   for all using (auth.role() = 'authenticated');
-
--- kids — same shape as enquiries: public can only insert (submitted
--- alongside the booking form), everything else needs an admin session.
-create policy "Public insert kids" on public.kids
-  for insert with check (true);
-create policy "Admin read kids" on public.kids
-  for select using (auth.role() = 'authenticated');
-create policy "Admin update kids" on public.kids
-  for update using (auth.role() = 'authenticated');
-create policy "Admin delete kids" on public.kids
-  for delete using (auth.role() = 'authenticated');
 
 -- activity_log — admin can read and insert; deliberately no update/delete
 -- policy at all (for anyone, admin included) so a logged row can never be

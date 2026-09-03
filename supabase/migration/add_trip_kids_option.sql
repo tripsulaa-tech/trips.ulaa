@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Adds a "Kids" concept to bookings: parents can bring children along on a
 -- trip without the kid needing (or counting against) a seat.

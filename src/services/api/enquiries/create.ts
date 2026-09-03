@@ -2,7 +2,6 @@ import { supabase } from '../../supabase';
 import type { Enquiry, BookingFormData } from '../../../types/types-index';
 import { getWaitlistReservedCounts } from '../trips';
 import { isAgeNotEligibleError, isSeatsUnavailableError, computeAutoStatus, computeBookingStatus, computeJourneyStage, refreshJourneyStage } from './shared';
-import { createKidsForEnquiry } from './kids';
 
 // =============================================
 // Enquiries — creation / intake
@@ -15,11 +14,7 @@ import { createKidsForEnquiry } from './kids';
 // keyed on all three fields together (not email/phone alone) so a family
 // booking several seats through one shared contact still works fine.
 export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
-  // kid_names isn't a column on `enquiries` — it's the seed data for that
-  // kid's own row in the separate `kids` table (see add_kids_table.sql),
-  // not something to insert directly onto this row.
-  const { kid_names, ...enquiryRow } = enquiry;
-  const { data, error } = await supabase.from('enquiries').insert(enquiryRow).select('id').single();
+  const { error } = await supabase.from('enquiries').insert(enquiry);
   if (error) {
     // Log the raw Postgrest error so the real cause (bad column, NOT NULL
     // violation, check constraint, RLS, etc.) is visible in devtools instead
@@ -38,9 +33,6 @@ export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
     // wrapped so BookingForm's `err instanceof Error` checks don't silently
     // discard error.message on the way to its generic fallback copy.
     throw new Error(error.message || 'ENQUIRY_INSERT_FAILED');
-  }
-  if (enquiry.kids_count > 0 && data) {
-    await createKidsForEnquiry(data.id, enquiry.kids_count, kid_names);
   }
 }
 
@@ -93,22 +85,14 @@ export async function submitContactEnquiry(contact: {
 // as an array of length groupSize, one entry per seat.
 export async function submitGroupEnquiry(enquiry: BookingFormData, groupSize: number, foodPreferences: ('veg' | 'non_veg')[]): Promise<void> {
   const groupId = crypto.randomUUID();
-  // Same reasoning as submitEnquiry above — kid_names seeds the `kids`
-  // table separately, it's never a column on the `enquiries` rows below.
-  const { kid_names, ...enquiryFields } = enquiry;
   const rows = Array.from({ length: groupSize }, (_, i) => ({
-    ...enquiryFields,
+    ...enquiry,
     food_preference: foodPreferences[i],
     group_id: groupId,
     group_size: groupSize,
     group_seq: i + 1,
-    // Kids travelling with the group are a single shared headcount for
-    // the whole booking, not per-seat — only the lead row (group_seq = 1)
-    // carries it, so the DB's auto-pricing trigger (see
-    // add_trip_kids_option.sql) prices it once instead of once per seat.
-    kids_count: i === 0 ? enquiry.kids_count : 0,
   }));
-  const { data, error } = await supabase.from('enquiries').insert(rows).select('id, group_seq');
+  const { error } = await supabase.from('enquiries').insert(rows);
   if (error) {
     if (error.code === '23505') {
       throw new Error('DUPLICATE_ENQUIRY');
@@ -120,12 +104,6 @@ export async function submitGroupEnquiry(enquiry: BookingFormData, groupSize: nu
       throw new Error('SEATS_UNAVAILABLE');
     }
     throw error;
-  }
-  // Same lead-row-only rule as kids_count/kids_amount above — the kid
-  // records live on whichever inserted row actually carries the headcount.
-  const leadRow = data?.find(r => r.group_seq === 1);
-  if (enquiry.kids_count > 0 && leadRow) {
-    await createKidsForEnquiry(leadRow.id, enquiry.kids_count, kid_names);
   }
 }
 
@@ -209,16 +187,6 @@ export async function createManualEnquiry(
       throw new Error('AGE_NOT_ELIGIBLE');
     }
     throw error;
-  }
-
-  // Same lead-row-only rule as the public booking form's group path —
-  // kids_count is only ever meaningful on group_seq 1 (defaults to 1 for
-  // a solo manual entry). No per-name collection in this admin flow yet,
-  // so these seed as nameless rows (same as a pre-add_kids_table.sql
-  // backfilled booking) — an admin can name them from the Kids card
-  // afterwards.
-  if ((enquiry.kids_count || 0) > 0 && (enquiry.group_seq ?? 1) === 1) {
-    await createKidsForEnquiry(data.id, enquiry.kids_count || 0);
   }
 
   if (amountPaid > 0) {

@@ -1,3 +1,6 @@
+-- NOTE: the Kids feature this migration builds on was later removed — see
+-- remove_kids_feature.sql. Kept here only as history of what was applied.
+
 -- ============================================================================
 -- Adds the two kid-side gaps flagged against the adult booking's own
 -- lifecycle (add_booking_state.sql / markEnquiryCompleted / setEnquiryNoShow
