@@ -44,7 +44,7 @@ import {
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
   kidStatusBadge, canMarkKidNotInterested, canReopenKid, kidNotInterestedReasonLabel, nextKidManualAction,
-  kidFollowUpStatus, canSetKidFollowUp, canCancelKid, canMarkKidNoShow, KID_NO_SHOW_BADGE,
+  canSetKidFollowUp, canCancelKid, canMarkKidNoShow, KID_NO_SHOW_BADGE,
 } from './AdminEnquiryCommon';
 import { isGeneralContactMessage, groupColorFor, kidDisplayRows } from './enquiryGrouping';
 import { paymentBalance, paymentFilterKey, refundStatus } from './AdminEnquiriesShared';

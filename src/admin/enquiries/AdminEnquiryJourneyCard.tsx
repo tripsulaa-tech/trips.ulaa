@@ -1,25 +1,42 @@
 // Booking Journey card — split out of AdminEnquiryDetail.tsx. Shows the
-// lifecycle stepper + ledger once a booking exists, or a "no payment yet"
-// prompt with the trip's current live price beforehand.
-import { CheckCircle as CheckCircle2, CurrencyInr as IndianRupee, Bird, Wallet } from '@phosphor-icons/react';
+// lifecycle stepper + ledger once a booking exists, or — before any
+// booking exists — the Track Payment fields themselves, filled in right
+// here on the page rather than behind a popup, since recording the first
+// payment is the very next thing an admin does with a brand-new enquiry.
+import { CheckCircle as CheckCircle2, CurrencyInr as IndianRupee, Wallet } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
-import type { Enquiry } from '../../types/types-index';
-import { formatDate, formatPrice } from '../../utils/utils-index';
+import type { Enquiry, Payment } from '../../types/types-index';
+import { formatPrice } from '../../utils/utils-index';
 import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
-import type { getTripPricingForPackage } from './AdminEnquiryCommon';
-
-type ActivePricing = ReturnType<typeof getTripPricingForPackage>;
+import PaymentFormFields from './PaymentFormFields';
+import type { PaymentErrors } from './PaymentFormFields';
+import type { PaymentForm } from './AdminEnquiryCommon';
 
 interface AdminEnquiryJourneyCardProps {
   enquiry: Enquiry;
-  activePricing: ActivePricing;
   busyAction: boolean;
   onOpenPayment: () => void;
   onMarkCompleted: () => void;
+  // Only needed for the pre-booking "No Payment Yet" state below, where
+  // the Track Payment fields are inline rather than behind onOpenPayment's
+  // modal — same form state/save path AdminEnquiryPaymentModal uses.
+  paymentForm: PaymentForm;
+  setPaymentForm: React.Dispatch<React.SetStateAction<PaymentForm>>;
+  paymentErrors: PaymentErrors;
+  hasPaymentErrors: boolean;
+  savingPayment: boolean;
+  onSavePayment: () => void;
+  payments: Payment[];
+  paymentsLoading: boolean;
+  togglingNoShow: boolean;
+  onToggleNoShow: (isNoShow: boolean) => void;
+  getTripPrice: (tripId: string | undefined, packageType: Enquiry['package_type']) => number | undefined;
 }
 
 export default function AdminEnquiryJourneyCard({
-  enquiry, activePricing, busyAction, onOpenPayment, onMarkCompleted,
+  enquiry, busyAction, onOpenPayment, onMarkCompleted,
+  paymentForm, setPaymentForm, paymentErrors, hasPaymentErrors, savingPayment, onSavePayment,
+  payments, paymentsLoading, togglingNoShow, onToggleNoShow, getTripPrice,
 }: AdminEnquiryJourneyCardProps) {
   if (enquiry.booking_id) {
     return (
@@ -79,37 +96,39 @@ export default function AdminEnquiryJourneyCard({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
+    <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-4">
       <div className="flex items-start gap-3">
         <span className="w-10 h-10 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
           <Wallet size={18} aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1 pt-0.5">
           <p className="text-dark text-sm font-semibold">No Payment Yet</p>
-          <p className="text-dark-muted text-xs mt-0.5">No booking exists on this enquiry yet.</p>
+          <p className="text-dark-muted text-xs mt-0.5">No booking exists on this enquiry yet — fill this in to track the first payment.</p>
         </div>
       </div>
 
-      {activePricing ? (
-        <div className="mt-3 bg-background-warm rounded-md px-3 py-2.5">
-          <p className="text-dark-muted text-[11px] flex items-center gap-1">
-            {activePricing.isEarlyBird && <Bird size={11} className="shrink-0 text-purple-600" aria-hidden="true" />}
-            Current price for this trip
-          </p>
-          <p className="text-dark text-sm font-semibold mt-0.5">
-            {formatPrice(activePricing.amount)}
-            <span className="text-dark-muted text-xs font-normal">
-              {' '}({activePricing.isEarlyBird ? 'Early Bird' : 'Normal'}
-              {activePricing.isEarlyBird && activePricing.deadline ? ` · ends ${formatDate(activePricing.deadline, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''})
-            </span>
-          </p>
-          <p className="text-dark-muted text-[11px] mt-1">Auto-filled when you track payment.</p>
-        </div>
-      ) : enquiry.trip_id && (
-        <p className="text-xs text-dark-muted mt-3">This trip has no price set yet — set one in Admin → Trips first.</p>
-      )}
+      <PaymentFormFields
+        enquiry={enquiry}
+        paymentForm={paymentForm}
+        setPaymentForm={setPaymentForm}
+        paymentErrors={paymentErrors}
+        payments={payments}
+        paymentsLoading={paymentsLoading}
+        togglingNoShow={togglingNoShow}
+        onToggleNoShow={onToggleNoShow}
+        getTripPrice={getTripPrice}
+        idPrefix="jc-pay"
+      />
 
-      <Button variant="primary" size="sm" onClick={onOpenPayment} className="w-full sm:w-auto mt-4">
+      <Button
+        variant="primary"
+        size="sm"
+        onClick={onSavePayment}
+        loading={savingPayment}
+        disabled={hasPaymentErrors}
+        title={hasPaymentErrors ? 'Fix the highlighted fields before saving' : undefined}
+        className="w-full sm:w-auto"
+      >
         <IndianRupee size={13} aria-hidden="true" /> Track Payment
       </Button>
     </div>

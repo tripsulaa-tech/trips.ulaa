@@ -185,7 +185,7 @@ export default function AdminEnquiryDetail() {
   // every render so a bad amount, a missing payment method, etc. show up
   // the moment it's entered/selected, instead of only surfacing behind an
   // alert() after Save. Same shared validator AdminPaymentModal uses.
-  const paymentErrors = paymentOpen
+  const paymentErrors = (paymentOpen || (enquiry && !enquiry.booking_id))
     ? validatePaymentForm(paymentForm, enquiry?.amount_paid || 0, enquiry && enquiry.kids_count > 0
       ? { total: paymentForm.kids_amount === '' ? 0 : Number(paymentForm.kids_amount), alreadyPaid: enquiry.kids_amount_paid || 0 }
       : undefined)
@@ -206,8 +206,8 @@ export default function AdminEnquiryDetail() {
     }
   }, [enquiry, paymentForm]);
 
-  const openPayment = () => {
-    if (!enquiry) return;
+  const buildNewPaymentForm = (): PaymentForm | null => {
+    if (!enquiry) return null;
     // If the enquiry already has a package/total_amount on record, keep it
     // — an admin's already-tracked payment shouldn't silently jump to a
     // different price just because the early-bird window has since closed.
@@ -222,7 +222,7 @@ export default function AdminEnquiryDetail() {
     // the trip's live child_price × kids_count is the right check here.
     const childPrice = getTripChildPrice(enquiry.trip_id);
     const suggestedKidsAmount = enquiry.kids_amount || (childPrice != null ? childPrice * enquiry.kids_count : undefined);
-    setPaymentForm({
+    return {
       package_type: packageType,
       total_amount: suggested ?? '',
       discount_amount: enquiry.discount_amount || '',
@@ -231,8 +231,8 @@ export default function AdminEnquiryDetail() {
       // openPayment: this field is this-payment's-own-amount now, matching
       // Generate Invoice, not a running total to edit down to.
       amount_paid: '',
-      payment_type: 'advance',
-      status: 'paid',
+      payment_type: 'advance' as const,
+      status: 'paid' as const,
       payment_method: '',
       payment_utr: '',
       refund_amount: enquiry.is_no_show ? 0 : enquiry.refund_amount ?? 0,
@@ -243,9 +243,34 @@ export default function AdminEnquiryDetail() {
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
       kids_amount: suggestedKidsAmount ?? '',
       kids_amount_paid: '',
-    });
+    };
+  };
+
+  // Prefills paymentForm for a *new* payment — same suggested price/
+  // package/food-preference logic either way, just two different triggers:
+  // clicking "Payment" once a booking already exists (modal), or landing
+  // on a brand-new enquiry with no booking yet (inline form below, filled
+  // in automatically since there's nothing to preserve yet).
+  const openPayment = () => {
+    const built = buildNewPaymentForm();
+    if (!built) return;
+    setPaymentForm(built);
     setPaymentOpen(true);
   };
+
+  // Prefill the inline "No Payment Yet" form once per enquiry — keyed on
+  // id/booking_id only (not the whole enquiry object) so an unrelated
+  // refresh (e.g. saving a Traveller & Trip edit) doesn't wipe out amounts
+  // the admin has already started typing into this form.
+  useEffect(() => {
+    if (enquiry && !enquiry.booking_id) {
+      const built = buildNewPaymentForm();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- prefilling a form the moment its enquiry (or booking state) becomes known, not reacting to a state change; same pattern as the payment_type correction effect above
+      if (built) setPaymentForm(built);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately re-runs only when the enquiry identity or its booking state changes, not on every field edit elsewhere on the page
+  }, [enquiry?.id, enquiry?.booking_id]);
+
 
   // ---- Edit Details modal (fixing wrong name/contact/trip) --------------
   // Shared with the Enquiries list page — see useEditEnquiry for why the
@@ -813,10 +838,20 @@ export default function AdminEnquiryDetail() {
 
         <AdminEnquiryJourneyCard
           enquiry={enquiry}
-          activePricing={activePricing}
           busyAction={busyAction}
           onOpenPayment={openPayment}
           onMarkCompleted={handleMarkCompleted}
+          paymentForm={paymentForm}
+          setPaymentForm={setPaymentForm}
+          paymentErrors={paymentErrors}
+          hasPaymentErrors={hasPaymentErrors}
+          savingPayment={savingPayment}
+          onSavePayment={handleSavePayment}
+          payments={payments}
+          paymentsLoading={paymentsLoading}
+          togglingNoShow={togglingNoShow}
+          onToggleNoShow={handleToggleNoShow}
+          getTripPrice={getTripPrice}
         />
 
         <AdminEnquiryInvoicesCard
