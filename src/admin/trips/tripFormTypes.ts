@@ -30,11 +30,6 @@ export interface TripForm {
   min_age: number | '';
   max_age: number | '';
   price: number | '';
-  // Optional fixed per-kid price (₹) — kids never occupy a seat or count
-  // towards total_seats/age eligibility. '' means "not set" (stored as
-  // null), which the public booking form treats as free/no-charge. See
-  // add_trip_kids_option.sql.
-  child_price: number | '';
   early_bird_price: number | '';
   early_bird_deadline: string;
   strike_through_price: number | '';
@@ -90,7 +85,7 @@ export const emptyForm: TripForm = {
   description: '', itinerary: [], not_included: [],
   meeting_point: '', meeting_point_map_url: '',
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
-  min_age: '', max_age: '', price: '', child_price: '',
+  min_age: '', max_age: '', price: '',
   early_bird_price: '', early_bird_deadline: '', strike_through_price: '', advance_amount: '', card_feature_tags: [], trip_type: '',
   cover_image: '', cover_image_crop: null, hero_mobile_image: '', terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, status: 'draft',

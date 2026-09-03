@@ -201,22 +201,6 @@ export default function AdminTripFormModal({
               />
             </div>
             <div>
-              <label htmlFor="trip-child-price" className="block text-sm font-medium text-dark mb-1">Child Price (₹)</label>
-              <input
-                id="trip-child-price"
-                type="number"
-                min={0}
-                value={form.child_price}
-                onChange={e => setForm(f => ({ ...f, child_price: e.target.value === '' ? '' : +e.target.value }))}
-                aria-describedby="trip-child-price-hint"
-                className={inputClass}
-                placeholder="e.g. 15999 (optional)"
-              />
-              <p id="trip-child-price-hint" className="text-xs text-dark-muted mt-1">
-                Charged per kid on the booking form. Kids don't need a seat and aren't checked against Min/Max Age. Leave blank to let kids travel free.
-              </p>
-            </div>
-            <div>
               <label htmlFor="trip-strike-price" className="block text-sm font-medium text-dark mb-1">Strikeout Price per person (₹)</label>
               <input
                 id="trip-strike-price"

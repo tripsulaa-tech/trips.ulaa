@@ -65,7 +65,6 @@ export default function TripBookingModal({
         remainingSeats={remaining}
         minAge={trip.min_age}
         maxAge={trip.max_age}
-        childPrice={trip.child_price}
         initialDraft={bookingDraft}
         onDraftChange={onDraftChange}
         onSuccess={() => setTimeout(onClose, 3000)}

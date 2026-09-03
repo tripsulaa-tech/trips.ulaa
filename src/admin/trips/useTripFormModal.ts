@@ -150,7 +150,7 @@ export function useTripFormModal(load: () => void) {
       meeting_details: trip.meeting_details || '',
       faqs: trip.faqs || [], total_seats: trip.total_seats, seats_booked: trip.seats_booked || 0,
       min_age: trip.min_age ?? '', max_age: trip.max_age ?? '',
-      price: trip.price ?? '', child_price: trip.child_price ?? '', early_bird_price: trip.early_bird_price ?? '',
+      price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
       early_bird_deadline: trip.early_bird_deadline || '',
       strike_through_price: trip.strike_through_price ?? '',
       advance_amount: trip.advance_amount ?? '',
@@ -222,7 +222,6 @@ export function useTripFormModal(load: () => void) {
         // rename flow if it ever needs to change deliberately).
         ...(editingTrip ? {} : { slug: slugify(form.title) }),
         price: form.price,
-        child_price: form.child_price === '' ? null : form.child_price,
         early_bird_price: form.early_bird_price === '' ? null : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || null,
         strike_through_price: form.strike_through_price === '' ? null : form.strike_through_price,
