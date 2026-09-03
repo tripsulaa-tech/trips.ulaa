@@ -53,7 +53,7 @@ export function useEditEnquiry(params: {
     try {
       setSavingEdit(true);
       const newTrip = editForm.trip_id ? trips.find(t => t.id === editForm.trip_id) : undefined;
-      await updateEnquiryDetails(editTarget.id, {
+      await updateEnquiryDetails(editTarget.id, editTarget, {
         full_name: editForm.full_name,
         email: editForm.email,
         phone: editForm.phone,

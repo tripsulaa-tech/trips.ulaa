@@ -7,6 +7,8 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
+import { PACKAGE_OPTIONS, SOURCE_OPTIONS_ALL } from './AdminEnquiryCommon';
+import { FOOD_PREFERENCE_OPTIONS } from '../../constants/foodPreference';
 
 export type EditDetailsForm = {
   full_name: string;
@@ -137,6 +139,35 @@ export default function EditDetailsModal({
               Changing the trip doesn't update an already-tracked total amount — open Payment afterwards to re-check the price for the new trip.
             </p>
           )}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="eq-edit-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
+            <Select
+              inputId="eq-edit-food"
+              value={editForm.food_preference}
+              onChange={val => setEditForm(f => ({ ...f, food_preference: val as 'veg' | 'non_veg' | '' }))}
+              options={FOOD_PREFERENCE_OPTIONS}
+            />
+          </div>
+          <div>
+            <label htmlFor="eq-edit-source" className="block text-sm font-medium text-dark mb-1">Source</label>
+            <Select
+              inputId="eq-edit-source"
+              value={editForm.source}
+              onChange={val => setEditForm(f => ({ ...f, source: val as Enquiry['source'] }))}
+              options={SOURCE_OPTIONS_ALL}
+            />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="eq-edit-package" className="block text-sm font-medium text-dark mb-1">Package</label>
+          <Select
+            inputId="eq-edit-package"
+            value={editForm.package_type}
+            onChange={val => setEditForm(f => ({ ...f, package_type: val as 'early_bird' | 'normal' }))}
+            options={PACKAGE_OPTIONS}
+          />
         </div>
         <div className="flex gap-3 pt-2">
           <Button variant="outline" size="md" onClick={onClose}>Cancel</Button>

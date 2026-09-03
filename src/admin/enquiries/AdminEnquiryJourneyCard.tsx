@@ -6,9 +6,9 @@ import Button from '../../components/ui/Button';
 import type { Enquiry } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
 import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
-import type { getTripActivePricing } from './AdminEnquiryCommon';
+import type { getTripPricingForPackage } from './AdminEnquiryCommon';
 
-type ActivePricing = ReturnType<typeof getTripActivePricing>;
+type ActivePricing = ReturnType<typeof getTripPricingForPackage>;
 
 interface AdminEnquiryJourneyCardProps {
   enquiry: Enquiry;

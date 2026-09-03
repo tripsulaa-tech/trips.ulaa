@@ -107,6 +107,7 @@ export async function recordContactOutcome(
 // re-open Track Payment afterwards if the new trip's price differs.
 export async function updateEnquiryDetails(
   id: string,
+  current: Enquiry,
   fields: {
     full_name?: string;
     email?: string;
@@ -126,24 +127,70 @@ export async function updateEnquiryDetails(
   }
 ): Promise<Enquiry> {
   const patch: Record<string, unknown> = {};
+  // Every field that actually changes gets recorded on the Activity
+  // Timeline (CRM spec section 14 — "whatever changed in the Traveller
+  // card should show up there") as one combined entry, rather than one
+  // logActivity call per field, so a single Save doesn't spam the
+  // timeline with five separate rows. Each entry reads "Field: old → new"
+  // so it's clear what actually changed, not just that something did.
+  const changes: string[] = [];
+  const FOOD_LABEL: Record<string, string> = { veg: 'Veg', non_veg: 'Non-veg' };
+  const PACKAGE_LABEL: Record<string, string> = { early_bird: 'Early Bird', normal: 'Normal' };
+  const SOURCE_LABEL: Record<string, string> = {
+    website: 'Website', whatsapp: 'WhatsApp', phone: 'Phone Call', instagram: 'Instagram', walk_in: 'Walk-in', other: 'Other',
+  };
+  const track = (label: string, oldVal: string, newVal: string) => {
+    if (oldVal !== newVal) changes.push(`${label}: ${oldVal || '—'} → ${newVal || '—'}`);
+  };
+
   if (fields.full_name !== undefined) {
     const trimmed = fields.full_name.trim();
     if (!trimmed) throw new Error('Name cannot be empty.');
+    track('Name', current.full_name, trimmed);
     patch.full_name = trimmed;
   }
-  if (fields.email !== undefined) patch.email = fields.email.trim();
+  if (fields.email !== undefined) {
+    const trimmed = fields.email.trim();
+    track('Email', current.email || '', trimmed);
+    patch.email = trimmed;
+  }
   if (fields.phone !== undefined) {
     const trimmed = fields.phone.trim();
     if (!trimmed) throw new Error('Phone cannot be empty.');
+    track('Phone', current.phone, trimmed);
     patch.phone = trimmed;
   }
-  if (fields.city !== undefined) patch.city = fields.city || null;
-  if (fields.age !== undefined) patch.age = fields.age;
-  if (fields.trip_id !== undefined) patch.trip_id = fields.trip_id || null;
+  if (fields.city !== undefined) {
+    const val = fields.city || null;
+    track('City', current.city || '', val || '');
+    patch.city = val;
+  }
+  if (fields.age !== undefined) {
+    track('Age', current.age != null ? String(current.age) : '', fields.age != null ? String(fields.age) : '');
+    patch.age = fields.age;
+  }
+  if (fields.trip_id !== undefined) {
+    const val = fields.trip_id || null;
+    if (val !== (current.trip_id || null)) {
+      changes.push(`Trip: ${current.trip_title || '—'} → ${fields.trip_title || '—'}`);
+    }
+    patch.trip_id = val;
+  }
   if (fields.trip_title !== undefined) patch.trip_title = fields.trip_title || null;
-  if (fields.source !== undefined) patch.source = fields.source;
-  if (fields.food_preference !== undefined) patch.food_preference = fields.food_preference;
-  if (fields.package_type !== undefined) patch.package_type = fields.package_type;
+  if (fields.source !== undefined) {
+    track('Source', SOURCE_LABEL[current.source] || current.source, SOURCE_LABEL[fields.source] || fields.source);
+    patch.source = fields.source;
+  }
+  if (fields.food_preference !== undefined) {
+    const oldLabel = current.food_preference ? (FOOD_LABEL[current.food_preference] || current.food_preference) : '';
+    const newLabel = fields.food_preference ? (FOOD_LABEL[fields.food_preference] || fields.food_preference) : '';
+    track('Food Preference', oldLabel, newLabel);
+    patch.food_preference = fields.food_preference;
+  }
+  if (fields.package_type !== undefined) {
+    track('Package', PACKAGE_LABEL[current.package_type] || current.package_type, PACKAGE_LABEL[fields.package_type] || fields.package_type);
+    patch.package_type = fields.package_type;
+  }
 
   const { data, error } = await supabase
     .from('enquiries')
@@ -160,6 +207,9 @@ export async function updateEnquiryDetails(
       throw new Error('AGE_NOT_ELIGIBLE');
     }
     throw new Error(error.message || 'Failed to update enquiry details.');
+  }
+  if (changes.length > 0) {
+    await logActivity(id, 'Details updated', changes.join('; '));
   }
   return data;
 }

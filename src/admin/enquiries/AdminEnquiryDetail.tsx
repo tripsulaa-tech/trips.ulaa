@@ -37,7 +37,7 @@ import {
 import type { ActivityLogEntry, CancellationReason, ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatPrice } from '../../utils/utils-index';
-import { clearsBalance, getTripActivePricing, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm } from './AdminEnquiryCommon';
+import { clearsBalance, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
@@ -170,12 +170,12 @@ export default function AdminEnquiryDetail() {
     return trip?.child_price ?? undefined;
   };
 
-  // Which price is *currently* live for this enquiry's trip, worked out
-  // from today's date against the trip's early-bird deadline — same rule
-  // the public site uses to decide what a new visitor gets quoted. This is
-  // what a fresh enquiry (no total_amount recorded yet) should default to,
-  // instead of showing "Not set" until someone manually types a number in.
-  const activePricing = enquiry ? getTripActivePricing(trips.find(t => t.id === enquiry.trip_id)) : null;
+  // Which price applies to this enquiry's trip for whichever package is
+  // set on the enquiry itself (Traveller & Trip → Package) — not just
+  // whichever price happens to be live on the trip right now, so editing
+  // Package to Normal (say) shows the Normal price here immediately, even
+  // while the trip's early-bird window is still technically open.
+  const activePricing = enquiry ? getTripPricingForPackage(trips.find(t => t.id === enquiry.trip_id), enquiry.package_type) : null;
 
   // ---- Track Payment modal --------------------------------------------
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -212,8 +212,9 @@ export default function AdminEnquiryDetail() {
     // — an admin's already-tracked payment shouldn't silently jump to a
     // different price just because the early-bird window has since closed.
     // Only a brand-new payment (nothing recorded yet) auto-picks whichever
-    // price is live right now.
-    const packageType = enquiry.package_type || activePricing?.packageType || 'normal';
+    // package is set on the enquiry (package_type always has a value —
+    // 'normal' by default).
+    const packageType = enquiry.package_type;
     const suggested = enquiry.total_amount ?? getTripPrice(enquiry.trip_id, packageType) ?? activePricing?.amount;
     // Same "keep what's already on record, only suggest for a brand-new
     // one" reasoning as the adult total_amount above — but kids_amount

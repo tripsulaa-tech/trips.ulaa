@@ -402,6 +402,28 @@ export function getTripActivePricing(
   };
 }
 
+// Same "which price applies" question, but pinned to whichever package the
+// admin has explicitly set on the enquiry (Traveller & Trip → Package),
+// rather than always following the trip's live early-bird window. This is
+// what the "No Payment Yet" preview and the payment-modal suggestion should
+// use once a package has been chosen for this enquiry — otherwise editing
+// Package to Normal while the trip's early-bird window is still open would
+// silently keep showing the early-bird price. Falls back to the trip's
+// normal price if the requested package has no price set on the trip.
+export function getTripPricingForPackage(
+  trip: UpcomingTrip | undefined,
+  packageType: Enquiry['package_type']
+): { amount: number; isEarlyBird: boolean; deadline?: string | null } | null {
+  if (!trip) return null;
+  if (packageType === 'early_bird' && trip.early_bird_price != null) {
+    return { amount: trip.early_bird_price, isEarlyBird: true, deadline: trip.early_bird_deadline };
+  }
+  if (trip.price != null) {
+    return { amount: trip.price, isEarlyBird: false, deadline: trip.early_bird_deadline };
+  }
+  return null;
+}
+
 // Small inline badge shown next to each enquiry's name — lets an admin spot
 // missing food preferences directly in the list, without opening the row.
 export function foodBadge(e: Enquiry): { label: string; color: string } {
