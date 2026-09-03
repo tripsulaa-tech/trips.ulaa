@@ -19,65 +19,108 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Baby, Phone as PhoneIcon, EnvelopeSimple, Buildings as Building2,
   Briefcase, ForkKnife as Utensils, Cake, CurrencyInr as IndianRupee,
-  CalendarDot as CalendarClock, UserMinus, ArrowsClockwise as RefreshCw,
-  UserCheck, UserMinus as UserX, Trash as Trash2, Pencil,
+  UserMinus, ArrowsClockwise as RefreshCw, CalendarBlank as CalendarDays, Globe,
+  UserCheck, UserMinus as UserX, Trash as Trash2, User, Pencil, Check, X,
 } from '@phosphor-icons/react';
 import AdminLayout from '../AdminLayout';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
-import DatePicker from '../../components/ui/DatePicker';
 import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import { ContactQuickLinks } from '../../components/ui/DataTableChrome';
 import { useKidsData } from './useKidsData';
 import { useKidsActions } from './useKidsActions';
-import AdminKidPaymentModal from '../enquiries/AdminKidPaymentModal';
 import AdminKidNotInterestedModal from '../enquiries/AdminKidNotInterestedModal';
-import type { ClosedReason, KidStatus } from '../../types/types-index';
+import AdminKidContactOutcomeModal from '../enquiries/AdminKidContactOutcomeModal';
+import type { KidContactOutcomeTarget, KidContactOutcomeResult } from '../enquiries/AdminKidContactOutcomeModal';
+import { recordKidContactOutcome } from '../../services/api/enquiries/kids';
+import AdminEnquiryActivityTimeline from '../enquiries/AdminEnquiryActivityTimeline';
+import KidPaymentFormFields from '../enquiries/KidPaymentFormFields';
+import { validateKidPaymentForm } from '../enquiries/useKidPayment';
+import { getActivityLogForKid } from '../../services/api/enquiries/activity';
+import { formatDate, formatTime } from '../../utils/utils-index';
+import type { ActivityLogEntry, ClosedReason } from '../../types/types-index';
 import { FOOD_PREFERENCE_OPTIONS } from '../../constants/foodPreference';
-import { formatPrice } from '../../utils/utils-index';
 import {
   kidStatusBadge, KID_NO_SHOW_BADGE, canMarkKidNotInterested, canReopenKid,
-  canMarkKidNoShow, kidNotInterestedReasonLabel, KID_STATUS_CONFIG,
+  canMarkKidNoShow, kidNotInterestedReasonLabel, SOURCE_CONFIG,
 } from '../enquiries/AdminEnquiryCommon';
-import { kidFoodBadge, kidPaymentBadge } from './kidsShared';
+import { kidFoodBadge, nextKidManualAction } from './kidsShared';
 
-// Labels pulled straight from KID_STATUS_CONFIG (AdminEnquiryCommon.ts) —
-// this used to hardcode its own copy, which is how 'pending' ended up
-// reading "Pending" here while the Enquiries list called the very same
-// state "New Enquiry". One label per status, defined once.
-const STATUS_OPTIONS: { value: KidStatus; label: string }[] = [
-  { value: 'pending', label: KID_STATUS_CONFIG.pending.label },
-  { value: 'contacted', label: KID_STATUS_CONFIG.contacted.label },
-  { value: 'confirmed', label: KID_STATUS_CONFIG.confirmed.label },
-  { value: 'checked_in', label: KID_STATUS_CONFIG.checked_in.label },
-  { value: 'completed', label: KID_STATUS_CONFIG.completed.label },
-  { value: 'cancelled', label: KID_STATUS_CONFIG.cancelled.label },
-  { value: 'not_interested', label: KID_STATUS_CONFIG.not_interested.label },
-];
+// Compact inline-input style — matches AdminEnquiryTravellerCard's own
+// inlineInputClass so the kid page's edit-in-place fields look identical
+// to the adult one, just scoped to the two fields (name/age/food) that
+// actually belong to the kid record rather than the parent enquiry.
+const inlineInputClass =
+  'w-full px-2 py-1 rounded-md border-2 border-background-warm bg-white text-dark text-sm font-semibold focus:border-primary outline-none';
 
 export default function AdminKidDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { kidRows, getTripChildPrice, loading, load } = useKidsData();
+
+  // Own Activity Timeline (see add_kid_activity_log_scope.sql /
+  // getActivityLogForKid) — a separate fetch from kidRows since it's a
+  // different table, so every mutating action below needs to trigger both
+  // reloads. `reloadAll` (passed to useKidsActions in place of the plain
+  // `load`) does that in one place rather than threading a second reload
+  // through every individual handler.
+  const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const loadActivity = async () => {
+    if (!id) return;
+    setActivityLoading(true);
+    try {
+      setActivityLog(await getActivityLogForKid(id));
+    } catch (err) {
+      console.error('Failed to load kid activity log:', err);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadActivity() is an async fetch-on-mount/on-id-change, not a synchronous external-system sync
+    loadActivity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+  const reloadAll = () => { load(); loadActivity(); };
+
   const {
     busy,
-    handleUpdateStatus, handleSetFollowUp, handleToggleNoShow, handleEdit, handleDelete,
+    handleUpdateStatus, handleToggleNoShow, handleEdit, handleDelete,
     kidPaymentTarget, kidPaymentForm, setKidPaymentForm, kidPaymentChildPrice, savingKidPayment,
-    kidPaymentHistory, kidPaymentHistoryLoading, openKidPayment, handleSaveKidPayment, setKidPaymentTarget,
-  } = useKidsActions(kidRows, load, getTripChildPrice);
+    kidPaymentHistory, kidPaymentHistoryLoading, openKidPayment, handleSaveKidPayment,
+  } = useKidsActions(kidRows, reloadAll, getTripChildPrice);
 
   const kid = kidRows.find(k => k.id === id) ?? null;
   const isBusy = !!kid && busy === kid.id;
 
-  // Editable Name/Age/Food fields — same reset-on-open pattern
-  // AdminKidDetailModal used, just keyed off the route's kid loading in
-  // rather than a modal's isOpen/kid props.
+  // Payment — rendered inline on this page instead of behind the popup
+  // (AdminKidPaymentModal) every other kid-payment entry point still
+  // opens, since this whole page is already scoped to one kid and a click
+  // to reveal the fields it's about would be a step with no payoff here.
+  // useKidPayment's kidPaymentTarget doubles as "which kid the form is
+  // showing" even with no modal to open — this effect keeps it pointed at
+  // the route's own kid at all times (on first load, and again right
+  // after a save, when handleSaveKidPayment resets it to null and the
+  // form should refill from the just-saved record rather than stay
+  // cleared).
+  useEffect(() => {
+    if (kid && kidPaymentTarget?.id !== kid.id) openKidPayment(kid, kid.tripId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-open when the loaded kid's identity changes or the form's been reset (kidPaymentTarget cleared after save); openKidPayment/kid.tripId are stable in intent
+  }, [kid?.id, kidPaymentTarget?.id]);
+  const kidErrors = kid ? validateKidPaymentForm(kidPaymentForm, kid.amount_paid || 0) : {};
+  const hasKidErrors = Object.keys(kidErrors).length > 0;
+
+  // Name/Age/Food — edited in place inside the sidebar card, same
+  // pencil-toggle-to-check/x pattern AdminEnquiryTravellerCard uses for
+  // the adult's own fields, just scoped to the two/three fields that
+  // actually belong to the kid record (Phone/Email/Trip/City below are
+  // the parent enquiry's — never editable from here).
+  const [editingDetails, setEditingDetails] = useState(false);
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [foodPreference, setFoodPreference] = useState<'' | 'veg' | 'non_veg'>('');
-  const [followUpDate, setFollowUpDate] = useState('');
-  const [followUpNotes, setFollowUpNotes] = useState('');
 
   useEffect(() => {
     if (!kid) return;
@@ -85,10 +128,60 @@ export default function AdminKidDetail() {
     setName(kid.name ?? '');
     setAge(kid.age != null ? String(kid.age) : '');
     setFoodPreference(kid.food_preference === 'veg' || kid.food_preference === 'non_veg' ? kid.food_preference : '');
-    setFollowUpDate(kid.follow_up_at ?? '');
-    setFollowUpNotes(kid.follow_up_notes ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-sync when the identity of the loaded kid or its own stored values change, not on every kidRows re-render
-  }, [kid?.id, kid?.name, kid?.age, kid?.food_preference, kid?.follow_up_at, kid?.follow_up_notes]);
+  }, [kid?.id, kid?.name, kid?.age, kid?.food_preference]);
+
+  const handleStartEditDetails = () => setEditingDetails(true);
+  const handleCancelEditDetails = () => {
+    if (!kid) return;
+    setName(kid.name ?? '');
+    setAge(kid.age != null ? String(kid.age) : '');
+    setFoodPreference(kid.food_preference === 'veg' || kid.food_preference === 'non_veg' ? kid.food_preference : '');
+    setEditingDetails(false);
+  };
+  const handleSaveDetails = async () => {
+    if (!kid) return;
+    const trimmedName = name.trim();
+    const parsedAge = age.trim() === '' ? null : Math.max(0, Math.min(17, Math.round(Number(age))));
+    await handleEdit(kid, {
+      name: trimmedName || null,
+      age: parsedAge != null && Number.isNaN(parsedAge) ? null : parsedAge,
+      food_preference: foodPreference || null,
+    });
+    setEditingDetails(false);
+  };
+
+  // Log Call Outcome — the kid-scoped equivalent of AdminEnquiries'
+  // handleAdvanceKid, just scoped to this page's one kid. Status never
+  // becomes 'contacted' until this popup is saved (same "Status must
+  // NEVER become Contacted until popup is successfully saved" rule the
+  // adult page follows) — every later nma step (Mark Confirmed, Mark
+  // Checked In, ...) still applies directly via handleUpdateStatus, same
+  // as before. See AdminKidContactOutcomeModal.tsx.
+  const [kidContactOutcomeTarget, setKidContactOutcomeTarget] = useState<KidContactOutcomeTarget | null>(null);
+  const [savingKidContactOutcome, setSavingKidContactOutcome] = useState(false);
+  const handleSaveKidContactOutcome = async (result: KidContactOutcomeResult) => {
+    if (!kidContactOutcomeTarget) return;
+    setSavingKidContactOutcome(true);
+    try {
+      const updated = await recordKidContactOutcome(kidContactOutcomeTarget.kid.id, {
+        outcome: result.outcome,
+        notes: result.notes,
+        followUpAt: result.followUpAt || null,
+        closedReason: result.closedReason,
+      });
+      setKidContactOutcomeTarget(null);
+      reloadAll();
+      // Interested is the one outcome that moves towards a booking — open
+      // this kid's own Payment section right away, same as the adult
+      // side's auto-open-on-Contacted behaviour.
+      if (result.outcome === 'interested') {
+        openKidPayment(updated, kidContactOutcomeTarget.tripId);
+      }
+    } finally {
+      setSavingKidContactOutcome(false);
+    }
+  };
 
   // Not Interested reason picker — same local wiring as
   // AdminEnquiryKidsCard's own kidNotInterestedTarget/kidClosedReason,
@@ -103,22 +196,6 @@ export default function AdminKidDetail() {
     if (!kid) return;
     await handleUpdateStatus(kid, 'not_interested', kidClosedReason);
     setNotInterestedOpen(false);
-  };
-
-  const handleSaveDetails = async () => {
-    if (!kid) return;
-    const trimmedName = name.trim();
-    const parsedAge = age.trim() === '' ? null : Math.max(0, Math.min(17, Math.round(Number(age))));
-    await handleEdit(kid, {
-      name: trimmedName || null,
-      age: parsedAge != null && Number.isNaN(parsedAge) ? null : parsedAge,
-      food_preference: foodPreference || null,
-    });
-  };
-
-  const handleSaveFollowUpClick = async () => {
-    if (!kid) return;
-    await handleSetFollowUp(kid, followUpDate || null, followUpNotes.trim() || null);
   };
 
   const handleDeleteClick = async () => {
@@ -155,26 +232,26 @@ export default function AdminKidDetail() {
 
   const statusBadge = kidStatusBadge(kid);
   const foodBadge = kidFoodBadge(kid);
-  const paymentBadge = kidPaymentBadge(kid);
   const reasonLabel = kidNotInterestedReasonLabel(kid);
+  const srcCfg = SOURCE_CONFIG[kid.enquirySource || 'other'] || SOURCE_CONFIG.other;
+  const nma = nextKidManualAction(kid);
+  const handleAdvance = () => {
+    if (!nma) return;
+    if (kid.status === 'pending' && nma.status === 'contacted') {
+      setKidContactOutcomeTarget({ kid, label: kid.label, parentName: kid.parentName, tripTitle: kid.tripTitle, tripId: kid.tripId });
+      return;
+    }
+    handleUpdateStatus(kid, nma.status);
+  };
 
-  const rowActions: ActionMenuItem[] = [];
-  if (kid.status !== 'confirmed') {
-    rowActions.push({ label: 'Mark Confirmed', icon: kidStatusBadge({ ...kid, status: 'confirmed' }).icon, onClick: () => handleUpdateStatus(kid, 'confirmed') });
-  }
-  if (kid.status !== 'checked_in') {
-    rowActions.push({ label: 'Mark Checked In', icon: kidStatusBadge({ ...kid, status: 'checked_in' }).icon, onClick: () => handleUpdateStatus(kid, 'checked_in') });
-  }
-  if (kid.status !== 'completed') {
-    rowActions.push({ label: 'Mark Completed', icon: kidStatusBadge({ ...kid, status: 'completed' }).icon, onClick: () => handleUpdateStatus(kid, 'completed') });
-  }
-  if (kid.status !== 'pending') {
-    rowActions.push({ label: 'Mark Pending', icon: kidStatusBadge({ ...kid, status: 'pending' }).icon, onClick: () => handleUpdateStatus(kid, 'pending') });
-  }
-  if (kid.status !== 'cancelled') {
-    rowActions.push({ label: 'Mark Cancelled', icon: kidStatusBadge({ ...kid, status: 'cancelled' }).icon, danger: true, onClick: () => handleUpdateStatus(kid, 'cancelled') });
-  }
-  rowActions.push({ label: 'Delete', icon: Trash2, danger: true, onClick: handleDeleteClick });
+  // Kebab menu — just Delete, same as AdminEnquiryDetail's own rowActions.
+  // Every status jump already lives on a dedicated button up in the
+  // header (the nma "Mark X" primary action for forward progress, Not
+  // Interested, Reopen, No Show) — this used to also list every "Mark X"
+  // status directly here, which just duplicated those buttons.
+  const rowActions: ActionMenuItem[] = [
+    { label: 'Delete', icon: Trash2, danger: true, onClick: handleDeleteClick },
+  ];
 
   return (
     <AdminLayout title="Kid Details" subtitle={kid.label}>
@@ -223,6 +300,11 @@ export default function AdminKidDetail() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  {nma && (
+                    <Button variant="primary" size="sm" onClick={handleAdvance} disabled={isBusy}>
+                      <nma.icon size={13} aria-hidden="true" /> {nma.label}
+                    </Button>
+                  )}
                   {canMarkKidNotInterested(kid) && (
                     <Button variant="outline" size="sm" onClick={openNotInterestedModal} disabled={isBusy}>
                       <UserMinus size={13} aria-hidden="true" /> Not Interested
@@ -245,96 +327,51 @@ export default function AdminKidDetail() {
                   <ActionsMenu items={rowActions} />
                 </div>
               </div>
-
-              <p className="text-dark-muted text-xs flex items-center gap-1.5 pt-1 border-t border-background-warm">
-                <Baby size={13} className="shrink-0" aria-hidden="true" /> Kid record — independent of the parent enquiry's own status/follow-up.
-              </p>
             </div>
 
-            {/* Editable details */}
-            <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-4">
-              <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
-                <Pencil size={14} aria-hidden="true" /> Name / Age / Food Preference
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="kid-detail-name" className="block text-sm font-medium text-dark mb-1">Name</label>
-                  <input
-                    id="kid-detail-name"
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Optional"
-                    className="w-full px-3 py-2 rounded-md border border-background-warm focus:border-primary focus:outline-none text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="kid-detail-age" className="block text-sm font-medium text-dark mb-1">Age</label>
-                  <input
-                    id="kid-detail-age"
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={17}
-                    value={age}
-                    onChange={e => setAge(e.target.value)}
-                    placeholder="Optional"
-                    className="w-full px-3 py-2 rounded-md border border-background-warm focus:border-primary focus:outline-none text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="kid-detail-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
-                <Select
-                  inputId="kid-detail-food"
-                  value={foodPreference}
-                  onChange={v => setFoodPreference(v as '' | 'veg' | 'non_veg')}
-                  options={FOOD_PREFERENCE_OPTIONS}
-                  size="md"
+            {/* Payment — same field set the popup (AdminKidPaymentModal)
+                shows everywhere else, rendered inline here via the shared
+                KidPaymentFormFields (see that file's header comment). */}
+            {kidPaymentTarget && (
+              <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-4">
+                {!kid.amount_paid && kidPaymentHistory.length === 0 && !kidPaymentHistoryLoading ? (
+                  <div className="flex items-start gap-3">
+                    <span className="w-10 h-10 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                      <IndianRupee size={18} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="text-dark text-sm font-semibold">No Payment Yet</p>
+                      <p className="text-dark-muted text-xs mt-0.5">No payment recorded for this kid yet — fill this in to track the first payment.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
+                    <IndianRupee size={14} aria-hidden="true" /> Payment
+                  </p>
+                )}
+                <KidPaymentFormFields
+                  kid={kid}
+                  kidPaymentForm={kidPaymentForm}
+                  setKidPaymentForm={setKidPaymentForm}
+                  kidErrors={kidErrors}
+                  kidPaymentChildPrice={kidPaymentChildPrice}
+                  kidPaymentHistory={kidPaymentHistory}
+                  kidPaymentHistoryLoading={kidPaymentHistoryLoading}
+                  idPrefix="kid-detail-pay"
                 />
-              </div>
-              <Button variant="outline" size="sm" onClick={handleSaveDetails} loading={isBusy}>Save Details</Button>
-            </div>
-
-            {/* Status */}
-            <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-3">
-              <label htmlFor="kid-detail-status" className="block text-sm font-medium text-dark">Status</label>
-              <Select
-                inputId="kid-detail-status"
-                value={kid.status}
-                onChange={v => handleUpdateStatus(kid, v as KidStatus)}
-                options={STATUS_OPTIONS}
-                size="md"
-              />
-            </div>
-
-            {/* Follow-up — only meaningful while pending, same gating the
-                modal and Kids card both already follow. */}
-            {kid.status === 'pending' && (
-              <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-3">
-                <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
-                  <CalendarClock size={14} aria-hidden="true" /> Follow-up
-                </p>
-                <div>
-                  <label htmlFor="kid-detail-followup-date" className="block text-sm font-medium text-dark mb-1">Follow-up Date</label>
-                  <DatePicker id="kid-detail-followup-date" value={followUpDate} onChange={setFollowUpDate} />
-                </div>
-                <div>
-                  <label htmlFor="kid-detail-followup-notes" className="block text-sm font-medium text-dark mb-1">Notes (Optional)</label>
-                  <textarea
-                    id="kid-detail-followup-notes"
-                    value={followUpNotes}
-                    onChange={e => setFollowUpNotes(e.target.value)}
-                    rows={2}
-                    placeholder="e.g. need birth certificate copy before departure"
-                    className="w-full px-3 py-2 rounded-md border border-background-warm focus:border-primary focus:outline-none text-sm resize-none"
-                  />
-                </div>
-                <Button variant="outline" size="sm" onClick={handleSaveFollowUpClick} loading={isBusy}>
-                  {followUpDate ? 'Save Follow-up' : 'Clear Follow-up'}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSaveKidPayment}
+                  loading={savingKidPayment}
+                  disabled={hasKidErrors}
+                  title={hasKidErrors ? 'Fix the highlighted fields before saving' : undefined}
+                >
+                  Save Payment
                 </Button>
               </div>
             )}
+
           </div>
 
           {/* Sidebar — parent booking's contact/trip info this kid has no
@@ -342,9 +379,60 @@ export default function AdminKidDetail() {
               kid's own fee. */}
           <div className="lg:col-span-1 space-y-4 min-w-0">
             <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
-              <p className="text-dark text-base font-display font-bold mb-4 flex items-center gap-2">
-                <Baby size={18} className="shrink-0 text-dark-muted" aria-hidden="true" /> Parent Booking &amp; Trip
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-dark text-base font-display font-bold flex items-center gap-2">
+                  <Baby size={18} className="shrink-0 text-dark-muted" aria-hidden="true" /> Parent Booking &amp; Trip
+                </p>
+                {editingDetails ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleCancelEditDetails}
+                      title="Cancel"
+                      className="w-8 h-8 rounded-full inline-flex items-center justify-center text-dark-muted hover:bg-background-warm hover:text-dark transition-colors"
+                    >
+                      <X size={15} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveDetails}
+                      disabled={isBusy}
+                      title="Save changes"
+                      className="w-8 h-8 rounded-full inline-flex items-center justify-center text-white bg-primary hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    >
+                      <Check size={15} aria-hidden="true" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStartEditDetails}
+                    title="Edit this kid's name/age/food preference — doesn't affect the parent enquiry's own details"
+                    className="w-8 h-8 rounded-full inline-flex items-center justify-center text-dark-muted hover:bg-background-warm hover:text-dark transition-colors shrink-0"
+                  >
+                    <Pencil size={15} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+
+              {editingDetails && (
+                <div className="flex items-center gap-2.5 min-w-0 pb-4 mb-1 border-b border-background-warm">
+                  <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                    <User size={15} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <label htmlFor="kid-detail-edit-name" className="text-dark-muted text-xs">Full Name</label>
+                    <input
+                      id="kid-detail-edit-name"
+                      type="text"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className={`${inlineInputClass} mt-0.5`}
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-x-3 gap-y-3 pb-4 border-b border-background-warm">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -365,9 +453,11 @@ export default function AdminKidDetail() {
                     <p className="text-dark text-sm font-semibold truncate">{kid.email}</p>
                   </div>
                 </div>
-                <div className="col-span-2 mt-1">
-                  <ContactQuickLinks phone={kid.phone} email={kid.email} name={kid.parentName} tripTitle={kid.tripTitle} size="md" />
-                </div>
+                {!editingDetails && (
+                  <div className="col-span-2 mt-1">
+                    <ContactQuickLinks phone={kid.phone} email={kid.email} name={kid.parentName} tripTitle={kid.tripTitle} size="md" />
+                  </div>
+                )}
               </div>
 
               <div className="divide-y divide-background-warm">
@@ -385,9 +475,23 @@ export default function AdminKidDetail() {
                     <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
                       <Cake size={15} aria-hidden="true" />
                     </span>
-                    <div className="min-w-0">
-                      <p className="text-dark-muted text-xs">Age</p>
-                      <p className="text-dark text-sm font-semibold truncate">{kid.age ?? '—'}</p>
+                    <div className="min-w-0 flex-1">
+                      <label htmlFor="kid-detail-edit-age" className="text-dark-muted text-xs">Age</label>
+                      {editingDetails ? (
+                        <input
+                          id="kid-detail-edit-age"
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={17}
+                          value={age}
+                          onChange={e => setAge(e.target.value)}
+                          className={`${inlineInputClass} mt-0.5`}
+                          placeholder="Optional"
+                        />
+                      ) : (
+                        <p className="text-dark text-sm font-semibold truncate">{kid.age ?? '—'}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -405,9 +509,48 @@ export default function AdminKidDetail() {
                     <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
                       <Utensils size={15} aria-hidden="true" />
                     </span>
+                    <div className="min-w-0 flex-1">
+                      <label htmlFor="kid-detail-edit-food" className="text-dark-muted text-xs">Food Preference</label>
+                      {editingDetails ? (
+                        <div className="mt-0.5">
+                          <Select
+                            inputId="kid-detail-edit-food"
+                            size="sm"
+                            value={foodPreference}
+                            onChange={v => setFoodPreference(v as '' | 'veg' | 'non_veg')}
+                            options={FOOD_PREFERENCE_OPTIONS}
+                          />
+                        </div>
+                      ) : (
+                        <p className={`text-sm font-semibold truncate ${foodBadge.key === 'veg' ? 'text-green-700' : foodBadge.key === 'non_veg' ? 'text-red-700' : 'text-dark-muted'}`}>{foodBadge.label}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                      <CalendarDays size={15} aria-hidden="true" />
+                    </span>
                     <div className="min-w-0">
-                      <p className="text-dark-muted text-xs">Food Preference</p>
-                      <p className={`text-sm font-semibold truncate ${foodBadge.key === 'veg' ? 'text-green-700' : foodBadge.key === 'non_veg' ? 'text-red-700' : 'text-dark-muted'}`}>{foodBadge.label}</p>
+                      <p className="text-dark-muted text-xs">Date &amp; Time</p>
+                      {kid.enquiryCreatedAt ? (
+                        <>
+                          <p className="text-dark text-sm font-semibold truncate">{formatDate(kid.enquiryCreatedAt, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-dark-muted text-xs truncate">{formatTime(kid.enquiryCreatedAt)}</p>
+                        </>
+                      ) : (
+                        <p className="text-dark text-sm font-semibold truncate">—</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                      <Globe size={15} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-dark-muted text-xs">Source</p>
+                      <p className="text-dark text-sm font-semibold truncate">{srcCfg.label}</p>
                     </div>
                   </div>
                 </div>
@@ -425,44 +568,15 @@ export default function AdminKidDetail() {
               )}
             </div>
 
-            {/* Payment */}
-            <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-3">
-              <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
-                <IndianRupee size={14} aria-hidden="true" /> Payment
-              </p>
-              <button
-                type="button"
-                onClick={() => openKidPayment(kid, kid.tripId)}
-                className="w-full text-left bg-background-warm rounded-md px-3 py-2 flex items-center gap-2.5 hover:opacity-75 transition-opacity"
-              >
-                <IndianRupee size={14} className="text-dark-muted shrink-0" aria-hidden="true" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-dark-muted text-[10px]">This kid's own total / paid — independent of the rest of the booking</p>
-                  <p className="text-dark text-xs truncate">
-                    {kid.amount ? `${formatPrice(kid.amount_paid || 0)} / ${formatPrice(kid.amount)}` : 'No total set yet'}
-                  </p>
-                </div>
-                <span className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${paymentBadge.color}`}>
-                  <paymentBadge.icon size={11} className="shrink-0" aria-hidden="true" /> {paymentBadge.label}
-                </span>
-              </button>
-            </div>
+            {/* Activity Timeline — same card AdminEnquiryDetail shows for
+                the adult booking, reused as-is (it only needs activityLog/
+                loading), just scoped to this one kid via
+                getActivityLogForKid instead of the enquiry-wide
+                getActivityLog. */}
+            <AdminEnquiryActivityTimeline activityLog={activityLog} loading={activityLoading} />
           </div>
         </div>
       </div>
-
-      <AdminKidPaymentModal
-        kidPaymentTarget={kidPaymentTarget}
-        fallbackLabel={kid.label}
-        onClose={() => setKidPaymentTarget(null)}
-        kidPaymentForm={kidPaymentForm}
-        setKidPaymentForm={setKidPaymentForm}
-        kidPaymentChildPrice={kidPaymentChildPrice}
-        kidPaymentHistory={kidPaymentHistory}
-        kidPaymentHistoryLoading={kidPaymentHistoryLoading}
-        savingKidPayment={savingKidPayment}
-        onSave={handleSaveKidPayment}
-      />
 
       <AdminKidNotInterestedModal
         kidNotInterestedTarget={notInterestedOpen ? kid : null}
@@ -472,6 +586,13 @@ export default function AdminKidDetail() {
         setClosedReason={setKidClosedReason}
         onConfirm={handleConfirmNotInterested}
         updating={busy}
+      />
+
+      <AdminKidContactOutcomeModal
+        target={kidContactOutcomeTarget}
+        onClose={() => setKidContactOutcomeTarget(null)}
+        onSave={handleSaveKidContactOutcome}
+        saving={savingKidContactOutcome}
       />
     </AdminLayout>
   );

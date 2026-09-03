@@ -20,7 +20,7 @@ export default function AdminEnquiryActivityTimeline({ activityLog, loading }: A
       {loading ? (
         <p className="text-dark-muted text-xs">Loading…</p>
       ) : activityLog.length === 0 ? (
-        <p className="text-dark-muted text-xs bg-background-warm rounded-md px-3 py-2">No activity logged yet.</p>
+        <p className="text-dark-muted text-sm bg-background-warm border-2 border-background-warm rounded-md px-3 py-2">No activity logged yet.</p>
       ) : (
         <ol className="relative border-l-2 border-[#D9C7AC] pl-4 space-y-4 max-h-[600px] overflow-y-auto">
           {activityLog.map(entry => (

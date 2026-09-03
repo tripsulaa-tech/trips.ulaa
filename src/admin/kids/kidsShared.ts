@@ -62,6 +62,8 @@ export interface KidRow extends Kid {
   /** The parent booking's own reference — lets a row link back to "View booking" the same way a converted waitlist entry does. */
   bookingId?: string | null;
   cancelledAt?: string | null;
+  enquirySource?: Enquiry['source'];
+  enquiryCreatedAt?: string;
 }
 
 // Groups the flat getAllKids() result back by enquiry_id and joins each
@@ -91,6 +93,8 @@ export function buildKidRows(kids: Kid[], enquiriesById: Map<string, Enquiry>): 
       tripTitle: enquiry.trip_title,
       bookingId: enquiry.booking_id,
       cancelledAt: enquiry.cancelled_at,
+      enquirySource: enquiry.source,
+      enquiryCreatedAt: enquiry.created_at,
     });
   }
   return rows;

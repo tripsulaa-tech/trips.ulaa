@@ -1,5 +1,5 @@
 import {
-  Eye, FileText, ShareNetwork as Share2, UserCheck, UserMinus as UserX,
+  FileText, ShareNetwork as Share2, UserCheck, UserMinus as UserX,
   SignIn as LogIn, X, ArrowsClockwise as RefreshCw, UserMinus, XCircle, Trash as Trash2,
 } from '@phosphor-icons/react';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
@@ -8,7 +8,7 @@ import { isNotInterested, canSetFollowUp, canSetBookingFollowUp, canCancelBookin
 
 /** Consolidates every per-row action that used to be a separate icon button
  *  (or, for Cancel/Delete, still is on narrower layouts) into one kebab
- *  menu — Mark/Undo No Show, invoice download/share, View Details, Delete.
+ *  menu — Mark/Undo No Show, invoice download/share, Delete.
  *  (WhatsApp/Call stay out — they're already one tap away via the round
  *  quick-link icons on the row itself, so listing them again here would
  *  just be the same actions twice. "Open Full CRM Page" and setting/editing
@@ -17,7 +17,10 @@ import { isNotInterested, canSetFollowUp, canSetBookingFollowUp, canCancelBookin
  *  only Clear Follow-up stays here since there's no other way to reach it.
  *  Edit Details also stays out — it now lives solely on the "View Full CRM"
  *  detail page, so there's one place to fix a wrong name/contact/trip
- *  instead of two.)
+ *  instead of two. View Details is deliberately NOT in this menu either —
+ *  it's the same quick-summary popup already one click away from clicking
+ *  the row's own name, so having it here too was just the same action
+ *  twice; use "View Full CRM" from here for anything deeper.)
  *
  *  Every handler this menu calls is owned by another hook (useEditEnquiry,
  *  useEnquiryDetailsModal, useEnquiryLifecycle, useEnquiryStatusActions) —
@@ -28,7 +31,6 @@ import { isNotInterested, canSetFollowUp, canSetBookingFollowUp, canCancelBookin
  *  Extracted from AdminEnquiries.tsx (see that file's history for the
  *  original single-component version). */
 export function useRowActions(params: {
-  setDetailsTarget: (enquiry: Enquiry) => void;
   invoiceBusyId: string | null;
   handleDownloadInvoice: (enquiry: Enquiry) => void;
   handleShareInvoice: (enquiry: Enquiry) => void;
@@ -42,7 +44,7 @@ export function useRowActions(params: {
   handleDelete: (enquiry: Enquiry) => void;
 }) {
   const {
-    setDetailsTarget, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
+    invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
     handleToggleNoShow, handleUndoCheckIn, handleClearFollowUp, handleClearBookingFollowUp,
     handleReopenEnquiry, handleMarkNotInterested, handleCancelToggle, handleDelete,
   } = params;
@@ -53,9 +55,7 @@ export function useRowActions(params: {
     // own kebab), so there's one place to fix a wrong name/contact/trip
     // instead of two. `openEdit` is kept as a param for callers that still
     // pass it in, but this menu no longer calls it.
-    const items: ActionMenuItem[] = [
-      { label: 'View Details', icon: Eye, onClick: () => setDetailsTarget(e) },
-    ];
+    const items: ActionMenuItem[] = [];
     if (e.booking_id) {
       items.push(
         { label: 'Download Invoice', icon: FileText, onClick: () => handleDownloadInvoice(e), disabled: invoiceBusyId === e.id },

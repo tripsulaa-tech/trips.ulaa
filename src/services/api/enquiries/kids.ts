@@ -85,8 +85,28 @@ export async function createKidsForEnquiry(enquiryId: string, count: number, nam
 // dedicated helpers below since they carry extra bookkeeping (the
 // pending-only follow-up rule, activity logging).
 export async function updateKid(id: string, patch: Partial<Pick<Kid, 'name' | 'age' | 'food_preference'>>): Promise<void> {
+  // Read the current row first purely to diff for the activity log below —
+  // same "before vs after, one line per changed field" shape as
+  // updateEnquiryDetails (status.ts)'s own 'Details updated' logging, just
+  // scoped to this one kid_id instead of the enquiry.
+  const { data: current, error: fetchError } = await supabase.from('kids').select('*').eq('id', id).single();
+  if (fetchError) throw fetchError;
+
+  const changes: string[] = [];
+  const track = (label: string, oldVal: string, newVal: string) => {
+    if (oldVal !== newVal) changes.push(`${label}: ${oldVal || '—'} → ${newVal || '—'}`);
+  };
+  const foodLabel = (v: Kid['food_preference'] | null | undefined) => (v === 'veg' ? 'Veg' : v === 'non_veg' ? 'Non-Veg' : '');
+  if (patch.name !== undefined) track('Name', current.name || '', patch.name || '');
+  if (patch.age !== undefined) track('Age', current.age != null ? String(current.age) : '', patch.age != null ? String(patch.age) : '');
+  if (patch.food_preference !== undefined) track('Food Preference', foodLabel(current.food_preference), foodLabel(patch.food_preference));
+
   const { error } = await supabase.from('kids').update(patch).eq('id', id);
   if (error) throw error;
+
+  if (changes.length > 0) {
+    await logActivity(current.enquiry_id, 'Kid details updated', changes.join('; '), id);
+  }
 }
 
 // Shared by recordKidPayment/generateKidPendingInvoice below — applies
@@ -216,7 +236,8 @@ export async function recordKidContactOutcome(
   await logActivity(
     data.enquiry_id,
     'Kid contact outcome recorded',
-    [outcomeLabel, args.notes?.trim() || null].filter(Boolean).join(' · ') || null
+    [outcomeLabel, args.notes?.trim() || null].filter(Boolean).join(' · ') || null,
+    id
   );
   return data;
 }
@@ -259,8 +280,15 @@ export async function getAllKidsFoodPreferences(): Promise<Pick<Kid, 'enquiry_id
 // "Kid Aarav marked Checked In" shows up in the same place every other
 // admin action on this booking does, instead of being invisible outside
 // the Kids card. Best-effort, same as logActivity itself.
-export async function logKidActivity(enquiryId: string, action: string, details?: string | null): Promise<void> {
-  await logActivity(enquiryId, action, details);
+//
+// `kidId` additionally scopes the entry to that one kid (see
+// add_kid_activity_log_scope.sql), so it also shows up on
+// AdminKidDetail's own Activity Timeline — every call site already has the
+// Kid/KidRow in hand, so this is always passed now, but stays optional so
+// a future caller without one degrades to the old parent-only behaviour
+// instead of failing to compile.
+export async function logKidActivity(enquiryId: string, action: string, details?: string | null, kidId?: string | null): Promise<void> {
+  await logActivity(enquiryId, action, details, kidId);
 }
 
 // =============================================
@@ -352,7 +380,8 @@ export async function recordKidPayment(
     await logActivity(
       kid.enquiry_id,
       delta > 0 ? `${PAYMENT_TYPE_LOG_LABEL[invoiceType] || invoiceType} received` : 'Payment adjusted',
-      `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(Math.abs(delta))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
+      `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(Math.abs(delta))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`,
+      kid.id
     );
   }
 
@@ -408,7 +437,8 @@ export async function generateKidPendingInvoice(
   await logActivity(
     kid.enquiry_id,
     `Invoice generated · ${PAYMENT_TYPE_LOG_LABEL[type] || type}`,
-    `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(amount)} · pending`
+    `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(amount)} · pending`,
+    kid.id
   );
 
   return refreshed as Kid;
@@ -459,7 +489,8 @@ export async function addExtraChargeForKid(
   await logActivity(
     kid.enquiry_id,
     'Extra charge added',
-    `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(amount)}${options?.collectedNow ? ' · collected' : ' · pending'}`
+    `${kid.name ? `${kid.name} · ` : 'Kid · '}${formatPrice(amount)}${options?.collectedNow ? ' · collected' : ' · pending'}`,
+    kid.id
   );
 
   return data as Kid;

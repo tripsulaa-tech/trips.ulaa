@@ -14,8 +14,6 @@ import {
   Bird,
   ArrowSquareOut,
   Eye,
-  Pencil,
-  CurrencyInr as IndianRupee,
   SignIn as LogIn,
   XCircle,
   Trash as Trash2,
@@ -165,7 +163,7 @@ export default function AdminEnquiriesDesktopTable({
   updating, completingId, setDetailsTarget, openPayment, openFollowUpModal, setBookingFollowUpTarget,
   handleAdvance, buildRowActions,
   kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested, onReopenKid,
-  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onViewKidDetails, onEditKid,
+  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onViewKidDetails,
   invoiceBusyId, onDownloadKidInvoice, onShareKidInvoice, onClearKidFollowUp,
 }: AdminEnquiriesDesktopTableProps) {
   // Only used for the "Open Full CRM Page" link below — the desktop table
@@ -260,14 +258,16 @@ export default function AdminEnquiriesDesktopTable({
               // Cancel action in place of Cancel Booking, then Delete.
               const buildKidActions = (kid: { realKid: Kid | null; onPayment: () => void; label: string }): ActionMenuItem[] => {
                 const rk = kid.realKid;
-                // Real kid -> its parent enquiry page is reachable via the
-                // icon-link next to its name (see the name cell below) —
-                // mirrors the adult row, which likewise keeps that link
-                // out of its own kebab. No record yet -> nothing of its
-                // own to show, falls back to the enquiry page directly.
+                // Real kid -> its own full page (mirrors the adult row's
+                // "View Details" kebab entry, which opens the enquiry's
+                // details popup — the kid equivalent is its dedicated
+                // detail page, same place the name-cell icon-link already
+                // goes via onViewKidDetails). No record yet -> nothing of
+                // its own to view, falls back to the enquiry page.
                 const items: ActionMenuItem[] = [
-                  ...(rk ? [{ label: 'Edit Details', icon: Pencil, onClick: () => onEditKid(rk) }] : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
-                  { label: 'Manage Payment', icon: IndianRupee, onClick: kid.onPayment },
+                  ...(rk
+                    ? [{ label: 'View Details', icon: Eye, onClick: () => onViewKidDetails(rk) }]
+                    : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
                 ];
                 // Download/Share Invoice — full parity with the adult
                 // kebab's own pair (useRowActions.ts), gated on money
@@ -288,7 +288,7 @@ export default function AdminEnquiriesDesktopTable({
                   // duplicated here, mirroring the mobile kid card's own
                   // buildKidActions and the adult row's kebab (neither
                   // repeats their own nma chip either).
-                  if (canMarkKidNotInterested(rk)) items.push({ label: 'Not Interested', icon: UserMinus, onClick: () => onMarkKidNotInterested(rk) });
+                  if (canMarkKidNotInterested(rk)) items.push({ label: 'Not Interested (Close Query)', icon: UserMinus, onClick: () => onMarkKidNotInterested(rk) });
                   if (canReopenKid(rk)) items.push({ label: 'Reopen', icon: RefreshCw, onClick: () => onReopenKid(rk) });
                   // Clear Follow-up — counterpart to the adult kebab's own
                   // entry; setting/editing stays on the row's "Set

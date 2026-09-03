@@ -225,7 +225,7 @@ export default function AdminEnquiries() {
     setUpdating(kid.id);
     try {
       await updateKidStatus(kid.id, 'not_interested', kidClosedReason);
-      await logKidActivity(kid.enquiry_id, 'Kid marked not interested', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      await logKidActivity(kid.enquiry_id, 'Kid marked not interested', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
       setKidsByEnquiry(prev => {
         const list = prev[kid.enquiry_id];
         if (!list) return prev;
@@ -244,7 +244,7 @@ export default function AdminEnquiries() {
     setUpdating(kid.id);
     try {
       await updateKidStatus(kid.id, 'pending');
-      await logKidActivity(kid.enquiry_id, 'Kid reopened', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      await logKidActivity(kid.enquiry_id, 'Kid reopened', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
       setKidsByEnquiry(prev => {
         const list = prev[kid.enquiry_id];
         if (!list) return prev;
@@ -265,7 +265,7 @@ export default function AdminEnquiries() {
     setUpdating(kid.id);
     try {
       await updateKidStatus(kid.id, status);
-      await logKidActivity(kid.enquiry_id, `Kid marked ${status.replace('_', ' ')}`, kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      await logKidActivity(kid.enquiry_id, `Kid marked ${status.replace('_', ' ')}`, kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
       setKidsByEnquiry(prev => {
         const list = prev[kid.enquiry_id];
         if (!list) return prev;
@@ -341,7 +341,8 @@ export default function AdminEnquiries() {
       await logKidActivity(
         kid.enquiry_id,
         isNoShow ? 'Kid marked no-show' : 'Kid no-show undone',
-        kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid))
+        kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)),
+        kid.id
       );
       setKidsByEnquiry(prev => {
         const list = prev[kid.enquiry_id];
@@ -366,7 +367,7 @@ export default function AdminEnquiries() {
     setUpdating(kid.id);
     try {
       await deleteKid(kid.id);
-      await logKidActivity(kid.enquiry_id, 'Kid record removed', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      await logKidActivity(kid.enquiry_id, 'Kid record removed', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
       setKidsByEnquiry(prev => {
         const list = prev[kid.enquiry_id];
         if (!list) return prev;
@@ -380,7 +381,7 @@ export default function AdminEnquiries() {
     setUpdating(kid.id);
     try {
       await setKidFollowUp(kid.id, followUpAt, notes);
-      await logKidActivity(kid.enquiry_id, followUpAt ? 'Kid follow-up set' : 'Kid follow-up cleared', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)));
+      await logKidActivity(kid.enquiry_id, followUpAt ? 'Kid follow-up set' : 'Kid follow-up cleared', kidRowLabel(kid, (kidsByEnquiry[kid.enquiry_id] || []).indexOf(kid)), kid.id);
       setKidsByEnquiry(prev => {
         const list = prev[kid.enquiry_id];
         if (!list) return prev;
@@ -620,12 +621,12 @@ export default function AdminEnquiries() {
     handleReopenEnquiry,
   } = useEnquiryStatusActions({ load, setUpdating, openPayment, handleCheckIn, handleMarkCompleted });
 
-  // Builds the per-row kebab menu (Edit Details, Mark/Undo No Show, invoice
-  // download/share, View Details, Cancel/Reactivate, Delete, etc.) by
+  // Builds the per-row kebab menu (Mark/Undo No Show, invoice
+  // download/share, Cancel/Reactivate, Delete, etc.) by
   // wiring together handlers owned by the hooks above — see
   // useRowActions.ts for what's included/excluded and why.
   const { buildRowActions } = useRowActions({
-    setDetailsTarget, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
+    invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
     handleToggleNoShow, handleUndoCheckIn, handleClearFollowUp, handleClearBookingFollowUp,
     handleReopenEnquiry, handleMarkNotInterested, handleCancelToggle, handleDelete,
   });

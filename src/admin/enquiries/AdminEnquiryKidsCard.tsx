@@ -15,9 +15,10 @@
 // offered unconditionally whenever the kid isn't already in a closed-out
 // state.
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Baby, CheckSquare, Square, CalendarDot as CalendarClock, CurrencyInr as IndianRupee,
-  UserMinus, ArrowsClockwise as RefreshCw, CheckCircle as CheckCircle2, Pencil,
+  UserMinus, ArrowsClockwise as RefreshCw, CheckCircle as CheckCircle2, Eye,
   SignIn as LogIn, Clock, XCircle, Trash as Trash2, Confetti as PartyPopper,
   UserCheck, UserMinus as UserX,
 } from '@phosphor-icons/react';
@@ -57,6 +58,7 @@ interface AdminEnquiryKidsCardProps {
 }
 
 export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: AdminEnquiryKidsCardProps) {
+  const navigate = useNavigate();
   const {
     kids, loading, busy,
     selectedIds, toggleSelectOne, toggleSelectAll,
@@ -113,8 +115,7 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
   // treatment as AdminEnquiriesDesktopTable's row menu.
   const buildKidActions = (kid: Kid): ActionMenuItem[] => {
     const items: ActionMenuItem[] = [
-      { label: 'Edit Details', icon: Pencil, onClick: () => openKidEditModal(kid) },
-      { label: 'Manage Payment', icon: IndianRupee, onClick: () => openKidPayment(kid, enquiry.trip_id) },
+      { label: 'View Details', icon: Eye, onClick: () => navigate(`/admin/kids/${kid.id}`) },
     ];
     if (kid.status !== 'confirmed') {
       items.push({ label: 'Mark Confirmed', icon: CheckCircle2, onClick: () => handleUpdateStatus(kid, 'confirmed') });
@@ -132,7 +133,7 @@ export default function AdminEnquiryKidsCard({ enquiry, getTripChildPrice }: Adm
       items.push({ label: 'Mark Cancelled', icon: XCircle, danger: true, onClick: () => handleUpdateStatus(kid, 'cancelled') });
     }
     if (canMarkKidNotInterested(kid)) {
-      items.push({ label: 'Not Interested', icon: UserMinus, onClick: () => openKidNotInterestedModal(kid) });
+      items.push({ label: 'Not Interested (Close Query)', icon: UserMinus, onClick: () => openKidNotInterestedModal(kid) });
     }
     if (canReopenKid(kid)) {
       items.push({ label: 'Reopen', icon: RefreshCw, onClick: () => handleUpdateStatus(kid, 'pending') });

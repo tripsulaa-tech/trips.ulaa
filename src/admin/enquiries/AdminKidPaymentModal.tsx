@@ -8,18 +8,18 @@
 // by both the Enquiries list table and the enquiry detail page's Kids
 // card, so this component is purely presentational, same pattern as
 // AdminEnquiryPaymentModal relative to useEnquiryPayment.
-import { useEffect, type Dispatch, type SetStateAction } from 'react';
-import { Link } from 'react-router-dom';
+//
+// The field set itself now lives in KidPaymentFormFields (split out so
+// AdminKidDetail can render the exact same fields inline, no popup — see
+// that file's header comment); this component is just the Modal chrome
+// (title, dirty-check confirm-on-close, Save/Cancel) around it.
+import { useEffect } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
-import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
-import MethodReferenceFields from './MethodReferenceFields';
-import PaymentHistoryList from './PaymentHistoryList';
-import { PAYMENT_METHOD_OPTIONS, FOOD_PREFERENCE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS, parseNonNegative } from './AdminEnquiryCommon';
-import { inputClass } from './AdminEnquiriesShared';
+import KidPaymentFormFields from './KidPaymentFormFields';
 import type { Kid, Payment } from '../../types/types-index';
-import { formatPrice } from '../../utils/utils-index';
 import { validateKidPaymentForm, availableKidPaymentTypeOptions } from './useKidPayment';
 import type { KidPaymentForm } from './useKidPayment';
 
@@ -49,7 +49,6 @@ export default function AdminKidPaymentModal({
   onSave: () => void;
 }) {
   const confirm = useConfirm();
-  const errorClass = 'text-red-500 text-xs mt-1';
 
   const kidErrors = kidPaymentTarget
     ? validateKidPaymentForm(kidPaymentForm, kidPaymentTarget.amount_paid || 0)
@@ -62,12 +61,6 @@ export default function AdminKidPaymentModal({
     kidPaymentForm.payment_type !== 'advance' ||
     kidPaymentForm.status !== 'paid' ||
     (kidPaymentForm.food_preference || null) !== (kidPaymentTarget?.food_preference ?? null);
-
-  // Displayed Total — the trip's live fee wins; falls back to whatever
-  // this kid's own record already has (e.g. no trip linked, or the trip
-  // never set a Kids Fee) so an existing kid doesn't suddenly show
-  // "Not set". Never admin-typed — see useKidPayment's openKidPayment.
-  const displayTotal = kidPaymentChildPrice ?? (kidPaymentTarget?.amount || undefined);
 
   // Same steer-away-from-'Balance' idea as AdminPaymentModal's own effect —
   // if the admin picked 'Balance' and then the numbers change so it no
@@ -104,136 +97,15 @@ export default function AdminKidPaymentModal({
             <p className="text-dark-muted text-xs truncate">Own payment record — independent of the rest of this booking.</p>
           </div>
 
-          <div>
-            <label htmlFor="kid-pay-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>
-            <Select
-              inputId="kid-pay-food"
-              value={kidPaymentForm.food_preference}
-              onChange={val => setKidPaymentForm(f => ({ ...f, food_preference: val as KidPaymentForm['food_preference'] }))}
-              options={FOOD_PREFERENCE_OPTIONS}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark mb-1">Total (₹)</label>
-            <div className={`${inputClass} bg-background-warm text-dark-muted`}>
-              {displayTotal != null ? formatPrice(displayTotal) : 'Not set'}
-            </div>
-            <p className="text-[11px] text-dark-muted mt-1">
-              {kidPaymentForm.payment_type === 'extra_charge'
-                ? 'Updates automatically once the extra charge below is saved.'
-                : displayTotal != null
-                ? "Set by this trip's Kids Fee — not editable here."
-                : (
-                  <>
-                    This trip has no Kids Fee set. Add it under{' '}
-                    <Link to="/admin/trips" className="underline font-medium" onClick={onClose}>
-                      Upcoming Trips → edit this trip → Kids Fee
-                    </Link>.
-                  </>
-                )}
-            </p>
-          </div>
-
-          <div>
-            <label htmlFor="kid-pay-amount-paid" className="block text-sm font-medium text-dark mb-1">
-              {kidPaymentForm.payment_type === 'extra_charge'
-                ? 'Extra Charge Amount (₹)'
-                : kidPaymentForm.status === 'pending' ? 'Invoice Amount (₹)' : 'Amount Being Paid Now (₹)'}
-            </label>
-            <input
-              id="kid-pay-amount-paid"
-              type="number"
-              min={0}
-              value={kidPaymentForm.amount_paid}
-              onChange={e => setKidPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
-              aria-invalid={!!kidErrors.amount_paid}
-              aria-describedby={kidErrors.amount_paid ? 'kid-pay-amount-paid-error' : undefined}
-              className={inputClass}
-              placeholder="e.g. 1000"
-            />
-            {kidErrors.amount_paid && <p id="kid-pay-amount-paid-error" role="alert" className={errorClass}>{kidErrors.amount_paid}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="kid-pay-type" className="block text-sm font-medium text-dark mb-1">Payment Type</label>
-            <Select
-              inputId="kid-pay-type"
-              value={kidPaymentForm.payment_type}
-              onChange={val => setKidPaymentForm(f => ({ ...f, payment_type: val as KidPaymentForm['payment_type'] }))}
-              options={availableKidPaymentTypeOptions(kidPaymentForm, kidPaymentTarget.amount_paid || 0)}
-            />
-            {kidPaymentForm.payment_type === 'extra_charge' && (
-              <p className="text-[11px] text-dark-muted mt-1">
-                Adds this amount on top of this kid's total right away — e.g. a costume rental — whether or not it's collected now.
-              </p>
-            )}
-            {kidPaymentForm.payment_type !== 'extra_charge' && !availableKidPaymentTypeOptions(kidPaymentForm, kidPaymentTarget.amount_paid || 0).some(o => o.value === 'balance') && (
-              <p className="text-[11px] text-dark-muted mt-1">
-                'Balance' will appear here once the amount above clears what's still owed.
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="kid-pay-status" className="block text-sm font-medium text-dark mb-1">Status</label>
-            <Select
-              inputId="kid-pay-status"
-              value={kidPaymentForm.status}
-              onChange={val => setKidPaymentForm(f => ({ ...f, status: val as KidPaymentForm['status'] }))}
-              options={GENERATE_INVOICE_STATUS_OPTIONS}
-            />
-          </div>
-
-          {(() => {
-            const alreadyPaid = kidPaymentTarget.amount_paid || 0;
-            const thisPayment = kidPaymentForm.amount_paid === '' ? 0 : Number(kidPaymentForm.amount_paid);
-            const isExtraCharge = kidPaymentForm.payment_type === 'extra_charge';
-            const isPending = kidPaymentForm.status === 'pending';
-            // Extra Charge (collected now) and a normal paid-now payment
-            // both land in amount_paid right away; a Pending invoice —
-            // extra charge or otherwise — doesn't touch it until it's
-            // later marked paid, same as the adult modal's own preview.
-            const projectedTotal = isPending ? alreadyPaid : alreadyPaid + thisPayment;
-            const total = kidPaymentForm.amount === '' ? null : Number(kidPaymentForm.amount);
-            const projectedKidTotal = isExtraCharge && total != null ? total + thisPayment : total;
-            return (
-              <p className="text-sm text-dark-muted">
-                Already paid <span className="font-medium text-dark">{formatPrice(alreadyPaid)}</span>
-                {thisPayment > 0 && !isPending && <> · after this payment: <span className="font-semibold text-dark">{formatPrice(projectedTotal)}</span></>}
-                {thisPayment > 0 && isPending && <> · <span className="font-semibold text-amber-700">{formatPrice(thisPayment)} raised as pending</span>, not yet counted as paid</>}
-                {isExtraCharge && thisPayment > 0 && <> · this kid's total will rise by <span className="font-semibold text-dark">{formatPrice(thisPayment)}</span></>}
-                {projectedKidTotal != null && (
-                  <> · Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, projectedKidTotal - projectedTotal))}</span></>
-                )}
-              </p>
-            );
-          })()}
-
-          {kidPaymentForm.status === 'paid' && (
-            <div className="grid grid-cols-2 gap-3">
-              <MethodReferenceFields
-                idPrefix="kid-pay"
-                methodLabel="Payment Method"
-                value={kidPaymentForm.payment_method}
-                onChange={val => setKidPaymentForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
-                utrValue={kidPaymentForm.payment_utr}
-                onUtrChange={val => setKidPaymentForm(f => ({ ...f, payment_utr: val }))}
-                options={PAYMENT_METHOD_OPTIONS}
-                utrPlaceholderExample="e.g. 426817XXXXXX"
-                inputClassName={inputClass}
-                selectSize="sm"
-                methodError={kidErrors.payment_method}
-                utrError={kidErrors.payment_utr}
-                errorClassName={errorClass}
-              />
-            </div>
-          )}
-
-          <PaymentHistoryList
-            payments={kidPaymentHistory}
-            loading={kidPaymentHistoryLoading}
-            labelId="kid-pay-history-label"
+          <KidPaymentFormFields
+            kid={kidPaymentTarget}
+            kidPaymentForm={kidPaymentForm}
+            setKidPaymentForm={setKidPaymentForm}
+            kidErrors={kidErrors}
+            kidPaymentChildPrice={kidPaymentChildPrice}
+            kidPaymentHistory={kidPaymentHistory}
+            kidPaymentHistoryLoading={kidPaymentHistoryLoading}
+            onNavigateAway={onClose}
           />
 
           <div className="flex gap-3 pt-2">

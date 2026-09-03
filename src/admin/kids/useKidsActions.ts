@@ -51,7 +51,7 @@ export function useKidsActions(kidRows: KidRow[], load: () => void, getTripChild
     setBusy(kid.id);
     try {
       await updateKidStatus(kid.id, status, reason);
-      await logKidActivity(kid.enquiry_id, `Kid marked ${status.replace('_', ' ')}`, kid.label);
+      await logKidActivity(kid.enquiry_id, `Kid marked ${status.replace('_', ' ')}`, kid.label, kid.id);
       load();
     } finally {
       setBusy(null);
@@ -69,7 +69,7 @@ export function useKidsActions(kidRows: KidRow[], load: () => void, getTripChild
       const ids = Array.from(selectedIds);
       const selectedRows = kidRows.filter(k => ids.includes(k.id));
       await bulkUpdateKidsStatus(ids, status);
-      await Promise.all(selectedRows.map(k => logKidActivity(k.enquiry_id, `Kid marked ${status.replace('_', ' ')}`, k.label)));
+      await Promise.all(selectedRows.map(k => logKidActivity(k.enquiry_id, `Kid marked ${status.replace('_', ' ')}`, k.label, k.id)));
       clearSelection();
       load();
     } finally {
@@ -81,7 +81,7 @@ export function useKidsActions(kidRows: KidRow[], load: () => void, getTripChild
     setBusy(kid.id);
     try {
       await setKidFollowUp(kid.id, followUpAt, notes);
-      await logKidActivity(kid.enquiry_id, followUpAt ? 'Kid follow-up set' : 'Kid follow-up cleared', `${kid.label}${followUpAt ? ` — ${followUpAt}` : ''}`);
+      await logKidActivity(kid.enquiry_id, followUpAt ? 'Kid follow-up set' : 'Kid follow-up cleared', `${kid.label}${followUpAt ? ` — ${followUpAt}` : ''}`, kid.id);
       load();
     } finally {
       setBusy(null);
@@ -92,7 +92,7 @@ export function useKidsActions(kidRows: KidRow[], load: () => void, getTripChild
     setBusy(kid.id);
     try {
       await updateKidNoShow(kid.id, isNoShow);
-      await logKidActivity(kid.enquiry_id, isNoShow ? 'Kid marked no-show' : 'Kid no-show undone', kid.label);
+      await logKidActivity(kid.enquiry_id, isNoShow ? 'Kid marked no-show' : 'Kid no-show undone', kid.label, kid.id);
       load();
     } finally {
       setBusy(null);
@@ -119,7 +119,7 @@ export function useKidsActions(kidRows: KidRow[], load: () => void, getTripChild
     setBusy(kid.id);
     try {
       await deleteKid(kid.id);
-      await logKidActivity(kid.enquiry_id, 'Kid record removed', kid.label);
+      await logKidActivity(kid.enquiry_id, 'Kid record removed', kid.label, kid.id);
       setSelectedIds(prev => {
         const next = new Set(prev);
         next.delete(kid.id);

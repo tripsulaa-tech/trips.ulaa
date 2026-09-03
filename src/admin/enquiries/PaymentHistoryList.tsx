@@ -46,7 +46,7 @@ export default function PaymentHistoryList({
       {loading ? (
         <p className="text-xs text-dark-muted">Loading…</p>
       ) : payments.length === 0 && !hasDiscount ? (
-        <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">No payments recorded yet.</p>
+        <p className="text-sm text-dark-muted bg-background-warm border-2 border-background-warm rounded-md px-3 py-2">No payments recorded yet.</p>
       ) : (
         <div className="border border-background-warm rounded-md divide-y divide-background-warm max-h-40 overflow-y-auto">
           {hasDiscount && (

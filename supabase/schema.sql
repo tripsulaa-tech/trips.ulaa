@@ -517,9 +517,20 @@ create table public.invoice_number_sequences (
 -- spec section 14). Written by logActivity() in src/services/api.ts from
 -- every state-changing enquiry function; never updated or deleted. See
 -- add_activity_log.sql.
+--
+-- kid_id is nullable, additive scoping on top of enquiry_id — set only when
+-- the action was taken against one specific kid, so AdminKidDetail's own
+-- Activity Timeline (getActivityLogForKid) can filter down to just that
+-- kid, while the parent enquiry's own timeline (getActivityLog) keeps
+-- showing every kid's actions too, unfiltered, same as before this column
+-- existed. "on delete set null" (not cascade) so deleting a kid — a plain
+-- client-side delete running as the ordinary authenticated role — never
+-- has to push a cascade through activity_log's own no-delete-policy RLS.
+-- See add_kid_activity_log_scope.sql.
 create table public.activity_log (
   id          uuid not null default uuid_generate_v4(),
   enquiry_id  uuid not null references public.enquiries (id) on delete cascade,
+  kid_id      uuid references public.kids (id) on delete set null,
   action      text not null,
   details     text,
   created_at  timestamptz not null default now(),
@@ -528,6 +539,7 @@ create table public.activity_log (
 
 create index activity_log_enquiry_id_idx on public.activity_log using btree (enquiry_id);
 create index activity_log_created_at_idx on public.activity_log using btree (created_at desc);
+create index activity_log_kid_id_idx on public.activity_log using btree (kid_id);
 
 -- ----------------------------------------------------------------------------
 -- waitlist
@@ -949,6 +961,24 @@ begin
     case when new.source = 'website' then 'Website enquiry submitted' else 'Enquiry logged (' || new.source || ')' end,
     coalesce(new.trip_title, 'No trip selected')
   );
+  return new;
+end;
+$function$;
+
+-- Same idea as log_enquiry_created_activity() just above, scoped to one kid
+-- row instead of the enquiry — logs "Kid added" (with kid_id set) the
+-- moment any kids row is inserted, regardless of whether the caller is an
+-- authenticated admin or the anonymous public booking form's
+-- createKidsForEnquiry. See add_kid_activity_log_scope.sql.
+create or replace function public.log_kid_created_activity()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+begin
+  insert into public.activity_log (enquiry_id, kid_id, action, details)
+  values (new.enquiry_id, new.id, 'Kid added', new.name);
   return new;
 end;
 $function$;
@@ -1629,6 +1659,9 @@ create trigger on_enquiry_created
 create trigger on_enquiry_created_log_activity
   after insert on public.enquiries
   for each row execute function public.log_enquiry_created_activity();
+create trigger on_kid_created_log_activity
+  after insert on public.kids
+  for each row execute function public.log_kid_created_activity();
 -- Must run before enquiry_cancelled_trigger/notify_new_enquiry care about
 -- ordering — Postgres fires same-timing triggers alphabetically by name,
 -- and "capacity" < "cancelled_trigger", so this rejects an overbooking

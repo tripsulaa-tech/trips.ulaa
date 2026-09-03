@@ -70,7 +70,7 @@ export function useKidsForEnquiry(enquiryId: string) {
     setBusy(true);
     try {
       await updateKidStatus(kid.id, status, reason);
-      await logKidActivity(enquiryId, `Kid marked ${status.replace('_', ' ')}`, kidLabel(kid, kids.indexOf(kid)));
+      await logKidActivity(enquiryId, `Kid marked ${status.replace('_', ' ')}`, kidLabel(kid, kids.indexOf(kid)), kid.id);
       await load();
     } finally {
       setBusy(false);
@@ -98,7 +98,8 @@ export function useKidsForEnquiry(enquiryId: string) {
       await logKidActivity(
         enquiryId,
         followUpAt ? 'Kid follow-up set' : 'Kid follow-up cleared',
-        `${kidLabel(kid, kids.indexOf(kid))}${followUpAt ? ` — ${followUpAt}` : ''}`
+        `${kidLabel(kid, kids.indexOf(kid))}${followUpAt ? ` — ${followUpAt}` : ''}`,
+        kid.id
       );
       await load();
     } finally {
@@ -113,7 +114,8 @@ export function useKidsForEnquiry(enquiryId: string) {
       await logKidActivity(
         enquiryId,
         isNoShow ? 'Kid marked no-show' : 'Kid no-show undone',
-        kidLabel(kid, kids.indexOf(kid))
+        kidLabel(kid, kids.indexOf(kid)),
+        kid.id
       );
       await load();
     } finally {
@@ -141,7 +143,7 @@ export function useKidsForEnquiry(enquiryId: string) {
     setBusy(true);
     try {
       await deleteKid(kid.id);
-      await logKidActivity(enquiryId, 'Kid record removed', kidLabel(kid, kids.indexOf(kid)));
+      await logKidActivity(enquiryId, 'Kid record removed', kidLabel(kid, kids.indexOf(kid)), kid.id);
       setSelectedIds(prev => {
         const next = new Set(prev);
         next.delete(kid.id);

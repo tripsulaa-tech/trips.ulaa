@@ -594,6 +594,11 @@ export interface Payment {
 export interface ActivityLogEntry {
   id: string;
   enquiry_id: string;
+  // Nullable, additive scoping on top of enquiry_id (see
+  // add_kid_activity_log_scope.sql) — set only on entries logged against one
+  // specific kid (AdminKidDetail's own Activity Timeline), null for every
+  // adult-booking action and for older rows predating this column.
+  kid_id?: string | null;
   action: string;
   details?: string | null;
   created_at: string;

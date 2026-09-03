@@ -80,7 +80,7 @@ export function availableKidPaymentTypeOptions(form: KidPaymentForm, alreadyPaid
     : KID_PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'balance');
 }
 
-type KidPaymentFormErrors = Partial<Record<'amount_paid' | 'payment_method' | 'payment_utr', string>>;
+export type KidPaymentFormErrors = Partial<Record<'amount_paid' | 'payment_method' | 'payment_utr', string>>;
 
 export function validateKidPaymentForm(form: KidPaymentForm, alreadyPaid: number): KidPaymentFormErrors {
   const errors: KidPaymentFormErrors = {};

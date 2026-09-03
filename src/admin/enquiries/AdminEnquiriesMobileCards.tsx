@@ -24,7 +24,6 @@ import {
   UserMinus,
   ArrowsClockwise as RefreshCw,
   Eye,
-  Pencil,
   SignIn as LogIn,
   Trash as Trash2,
   UserCheck,
@@ -134,7 +133,7 @@ export default function AdminEnquiriesMobileCards({
   updating, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
   openPayment, openFollowUpModal, setBookingFollowUpTarget, handleAdvance, buildRowActions,
   kidsByEnquiry, kidRowLabel, onOpenKidPayment, onMarkKidNotInterested, onReopenKid,
-  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid, onEditKid,
+  onUpdateKidStatus, onAdvanceKid, onToggleKidNoShow, onDeleteKid,
   onDownloadKidInvoice, onShareKidInvoice, onClearKidFollowUp,
 }: AdminEnquiriesMobileCardsProps) {
   const navigate = useNavigate();
@@ -166,14 +165,15 @@ export default function AdminEnquiriesMobileCards({
           // buildKidActions for the reasoning.
           const buildKidActions = (kid: { realKid: Kid | null; label: string }): ActionMenuItem[] => {
             const rk = kid.realKid;
-            // Real kid -> Edit Details opens name/age/food right from the
-            // kebab (see AdminKidEditModal.tsx) — mirrors the adult card's
-            // own Edit Details entry. No record yet -> nothing of its own
-            // to edit, falls back to the enquiry page, same as
-            // AdminEnquiriesDesktopTable's matching buildKidActions.
+            // Real kid -> its own full page (mirrors the adult card's
+            // "View Details" kebab entry) plus Edit Details right from the
+            // kebab (see AdminKidEditModal.tsx). No record yet -> nothing
+            // of its own to view/edit, falls back to the enquiry page,
+            // same as AdminEnquiriesDesktopTable's matching buildKidActions.
             const items: ActionMenuItem[] = [
-              ...(rk ? [{ label: 'Edit Details', icon: Pencil, onClick: () => onEditKid(rk) }] : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
-              { label: 'Manage Payment', icon: IndianRupee, onClick: () => (kid.realKid ? onOpenKidPayment(kid.realKid, e.trip_id) : openPayment(e)) },
+              ...(rk
+                ? [{ label: 'View Details', icon: Eye, onClick: () => navigate(`/admin/kids/${rk.id}`) }]
+                : [{ label: 'View Enquiry', icon: Eye, onClick: () => navigate(`/admin/enquiries/${e.id}`) }]),
             ];
             // Download/Share Invoice — see AdminEnquiriesDesktopTable's
             // matching buildKidActions for the reasoning/gating.
@@ -187,7 +187,7 @@ export default function AdminEnquiriesMobileCards({
               // nma shown as its own visible button on the card footer
               // now (mirrors the adult row's nma button) — not
               // duplicated here.
-              if (canMarkKidNotInterested(rk)) items.push({ label: 'Not Interested', icon: UserMinus, onClick: () => onMarkKidNotInterested(rk) });
+              if (canMarkKidNotInterested(rk)) items.push({ label: 'Not Interested (Close Query)', icon: UserMinus, onClick: () => onMarkKidNotInterested(rk) });
               if (canReopenKid(rk)) items.push({ label: 'Reopen', icon: RefreshCw, onClick: () => onReopenKid(rk) });
               // Clear Follow-up — see AdminEnquiriesDesktopTable's matching
               // buildKidActions for the reasoning.
