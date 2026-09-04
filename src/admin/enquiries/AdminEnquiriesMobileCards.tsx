@@ -15,6 +15,7 @@ import {
   Package,
   CalendarBlank as CalendarDays,
   Bird,
+  Baby,
   FileText,
   ShareNetwork as Share2,
   Globe,
@@ -137,6 +138,14 @@ export default function AdminEnquiriesMobileCards({
                         className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 shrink-0"
                       >
                         <Bird size={11}  aria-hidden="true" />
+                      </span>
+                    )}
+                    {e.has_child_addon && (
+                      <span
+                        title="A Child Fare add-on has been added to this booking"
+                        className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
+                      >
+                        <Baby size={11} aria-hidden="true" /> Child
                       </span>
                     )}
                     {e.cancelled_at && (

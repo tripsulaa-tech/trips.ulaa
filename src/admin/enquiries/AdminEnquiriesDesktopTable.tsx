@@ -8,6 +8,7 @@ import {
   CalendarDot as CalendarClock,
   ArrowRight,
   Bird,
+  Baby,
   ArrowSquareOut,
 } from '@phosphor-icons/react';
 import FoodMark from '../../components/ui/FoodMark';
@@ -192,6 +193,14 @@ export default function AdminEnquiriesDesktopTable({
                       >
                         <p className="font-medium text-dark truncate group-hover:text-primary transition-colors flex items-center gap-1.5">
                           {e.full_name}
+                          {e.has_child_addon && (
+                            <span
+                              title="A Child Fare add-on has been added to this booking"
+                              className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
+                            >
+                              <Baby size={9} className="shrink-0" aria-hidden="true" /> Child
+                            </span>
+                          )}
                           {!e.trip_id && !activeGroup && (
                             <span
                               title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}

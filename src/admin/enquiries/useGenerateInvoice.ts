@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { addExtraCharge, generatePendingInvoice, recordTypedPayment } from '../../services/api';
+import { addAddonCharge, generatePendingInvoice, recordTypedPayment } from '../../services/api';
 import type { Enquiry } from '../../types/types-index';
 import { emptyGenerateInvoiceForm, validateGenerateInvoiceForm, type GenerateInvoiceForm } from './AdminEnquiryCommon';
 import { useAlert } from '../../components/ui/useAlert';
 
 // Single source of truth for "Generate Invoice": owns the target/form/saving
-// state and the actual save routing (extra_charge -> addExtraCharge,
+// state and the actual save routing (addon -> addAddonCharge,
 // pending -> generatePendingInvoice, paid -> recordTypedPayment).
 //
 // AdminEnquiries.tsx (list view) and AdminEnquiryDetail.tsx (detail page)
@@ -49,12 +49,17 @@ export function useGenerateInvoice(onSuccess: (updatedEnquiry: Enquiry, target: 
       const utr_number = form.status === 'paid' ? (form.utr_number || undefined) : undefined;
       let updatedEnquiry: Enquiry = target;
 
-      if (form.type === 'extra_charge') {
-        updatedEnquiry = await addExtraCharge(target, amount, {
+      if (form.type === 'addon') {
+        updatedEnquiry = await addAddonCharge(target, amount, {
           collectedNow: form.status === 'paid',
           payment_method,
           utr_number,
           notes,
+          // Drives the Child Fare badge in the Enquiries list/detail —
+          // matches the exact preset text the Child Fare chip in
+          // AdminGenerateInvoiceModal fills in, so an admin manually
+          // typing something else here doesn't get flagged as one.
+          markAsChildAddon: form.notes.trim() === 'Child fare',
         });
       } else if (form.status === 'pending') {
         await generatePendingInvoice(target.id, form.type, amount, notes);

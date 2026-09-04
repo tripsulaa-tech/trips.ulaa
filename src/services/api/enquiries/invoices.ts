@@ -14,7 +14,7 @@ import { logActivity } from './activity';
 // running total, so the admin doesn't have to do the addition themselves
 // when generating e.g. an explicit "Advance" or "Balance" invoice from the
 // Invoices list. Powers the "Generate Invoice" action for every type except
-// extra_charge (see addExtraCharge) and refund (see recordRefund, which
+// addon (see addAddonCharge) and refund (see recordRefund, which
 // already has its own dedicated, cancellation-aware flow).
 export async function recordTypedPayment(
   current: Enquiry,
@@ -102,32 +102,32 @@ export async function generatePendingInvoice(
   return data;
 }
 
-// Adds an extra charge to an existing booking (e.g. a hotel upgrade) — bumps
-// enquiries.total_amount by the charge amount right away, since that's now
-// part of what's owed whether or not it's been collected yet, and logs an
-// 'extra_charge' invoice for it. Pass collectedNow: true if the customer
-// paid on the spot; otherwise the invoice is raised as 'pending' and can be
-// settled later via markInvoicePaid.
-export async function addExtraCharge(
+// Adds an add-on charge to an existing booking (e.g. a hotel upgrade) —
+// bumps enquiries.total_amount by the charge amount right away, since
+// that's now part of what's owed whether or not it's been collected yet,
+// and logs an 'addon' invoice for it. Pass collectedNow: true if the
+// customer paid on the spot; otherwise the invoice is raised as 'pending'
+// and can be settled later via markInvoicePaid.
+export async function addAddonCharge(
   current: Enquiry,
   amount: number,
-  options?: { collectedNow?: boolean; payment_method?: string; utr_number?: string; notes?: string }
+  options?: { collectedNow?: boolean; payment_method?: string; utr_number?: string; notes?: string; markAsChildAddon?: boolean }
 ): Promise<Enquiry> {
   if (amount <= 0) {
-    throw new Error('Extra charge amount must be greater than zero.');
+    throw new Error('Add-on amount must be greater than zero.');
   }
   const newTotal = (current.total_amount || 0) + amount;
 
   const { error: totalError } = await supabase
     .from('enquiries')
-    .update({ total_amount: newTotal })
+    .update(options?.markAsChildAddon ? { total_amount: newTotal, has_child_addon: true } : { total_amount: newTotal })
     .eq('id', current.id);
   if (totalError) throw totalError;
 
   const { error: paymentError } = await supabase.from('payments').insert({
     enquiry_id: current.id,
     amount,
-    payment_type: 'extra_charge',
+    payment_type: 'addon',
     status: options?.collectedNow ? 'paid' : 'pending',
     payment_method: options?.payment_method,
     utr_number: options?.collectedNow ? (options?.utr_number || null) : null,
@@ -138,7 +138,7 @@ export async function addExtraCharge(
   const { data, error } = await supabase.from('enquiries').select('*').eq('id', current.id).single();
   if (error) throw error;
   const updated = await refreshJourneyStage(data.id);
-  await logActivity(current.id, 'Extra charge added', `${formatPrice(amount)}${options?.collectedNow ? ' · collected' : ' · pending'}`);
+  await logActivity(current.id, 'Add-on added', `${formatPrice(amount)}${options?.collectedNow ? ' · collected' : ' · pending'}`);
   return updated;
 }
 

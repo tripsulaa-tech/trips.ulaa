@@ -3,7 +3,7 @@
 // via the shared pure helpers rather than taking them as props, so the
 // parent doesn't have to thread jb/food/etc. through.
 import {
-  Users, User, CalendarDot as CalendarClock, XCircle, UserMinus, SignIn as LogIn, Copy, Check,
+  Users, User, CalendarDot as CalendarClock, XCircle, UserMinus, SignIn as LogIn, Copy, Check, Baby,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import ActionsMenu from '../../components/ui/ActionsMenu';
@@ -69,6 +69,16 @@ export default function AdminEnquiryHeaderCard({
             {isNotInterested(enquiry) && (
               <span title={closedReasonLabel(enquiry) ? `Closed — ${closedReasonLabel(enquiry)}` : 'Closed — this was just a query, no booking followed'} className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-red-50 text-red-600">
                 <UserMinus size={12} className="shrink-0" aria-hidden="true" /> Not Interested{closedReasonLabel(enquiry) ? ` — ${closedReasonLabel(enquiry)}` : ''}
+              </span>
+            )}
+            {/* Set once an Add-on with the "Child fare" preset has
+                been added (see AdminGenerateInvoiceModal's Child Fare
+                chip) — see enquiry.has_child_addon's doc comment. Purely
+                informational; check the Invoices card below for the
+                actual charge. */}
+            {enquiry.has_child_addon && (
+              <span title="A Child Fare add-on has been added to this booking — see Invoices below" className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-amber-50 text-amber-700">
+                <Baby size={12} className="shrink-0" aria-hidden="true" /> Bringing a Child
               </span>
             )}
             {followUpStatus(enquiry) && (

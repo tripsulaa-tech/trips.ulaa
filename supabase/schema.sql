@@ -360,7 +360,7 @@ create table public.payments (
   invoice_number  text,
   -- 'paid' (default — matches every historical row) vs 'pending': an
   -- invoice that's been raised (a balance/installment invoice ahead of
-  -- collection, an extra charge not yet paid) but hasn't been collected
+  -- collection, an add-on not yet paid) but hasn't been collected
   -- yet. Only 'paid' rows count towards enquiries.amount_paid/refund_amount
   -- — see sync_enquiry_amount_paid(). See add_invoice_generation.sql.
   status          text not null default 'paid',
@@ -376,7 +376,7 @@ create table public.payments (
   constraint payments_payment_type_check
     check (payment_type = any (array[
       'booking_amount'::text, 'balance'::text, 'installment'::text, 'refund'::text,
-      'full_payment'::text, 'advance'::text, 'extra_charge'::text
+      'full_payment'::text, 'advance'::text, 'addon'::text
     ])),
   constraint payments_status_check
     check (status = any (array['paid'::text, 'pending'::text]))

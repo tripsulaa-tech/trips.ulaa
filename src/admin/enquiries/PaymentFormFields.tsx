@@ -92,14 +92,14 @@ export default function PaymentFormFields({
               id={`${idPrefix}-discount`}
               type="number"
               min={0}
-              value={paymentForm.payment_type === 'extra_charge' ? '' : paymentForm.discount_amount}
-              disabled={paymentForm.payment_type === 'extra_charge'}
+              value={paymentForm.payment_type === 'addon' ? '' : paymentForm.discount_amount}
+              disabled={paymentForm.payment_type === 'addon'}
               onChange={e => {
                 const discount = parseNonNegative(e.target.value);
                 setPaymentForm(f => ({ ...f, discount_amount: discount, total_amount: computeDiscountedTotal(listPrice, discount) ?? f.total_amount }));
               }}
-              className={`${fieldClass} ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
-              placeholder={paymentForm.payment_type === 'extra_charge' ? 'Updates automatically' : 'e.g. 1000'}
+              className={`${fieldClass} ${paymentForm.payment_type === 'addon' ? 'opacity-60 cursor-not-allowed' : ''}`}
+              placeholder={paymentForm.payment_type === 'addon' ? 'Updates automatically' : 'e.g. 1000'}
             />
           </div>
           <div className="col-span-2">
@@ -108,9 +108,9 @@ export default function PaymentFormFields({
               id={`${idPrefix}-discount-reason`}
               type="text"
               value={paymentForm.discount_reason}
-              disabled={paymentForm.payment_type === 'extra_charge'}
+              disabled={paymentForm.payment_type === 'addon'}
               onChange={e => setPaymentForm(f => ({ ...f, discount_reason: e.target.value }))}
-              className={`${fieldClass} ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
+              className={`${fieldClass} ${paymentForm.payment_type === 'addon' ? 'opacity-60 cursor-not-allowed' : ''}`}
               placeholder="e.g. repeat customer, referral"
             />
           </div>
@@ -127,11 +127,11 @@ export default function PaymentFormFields({
             id={`${idPrefix}-total`}
             type="number"
             min={0}
-            value={paymentForm.payment_type === 'extra_charge' ? '' : paymentForm.total_amount}
-            disabled={paymentForm.payment_type === 'extra_charge'}
+            value={paymentForm.payment_type === 'addon' ? '' : paymentForm.total_amount}
+            disabled={paymentForm.payment_type === 'addon'}
             onChange={e => setPaymentForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
-            className={`${fieldClass} ${paymentForm.payment_type === 'extra_charge' ? 'opacity-60 cursor-not-allowed' : ''}`}
-            placeholder={paymentForm.payment_type === 'extra_charge' ? 'Updates automatically' : 'e.g. 15000'}
+            className={`${fieldClass} ${paymentForm.payment_type === 'addon' ? 'opacity-60 cursor-not-allowed' : ''}`}
+            placeholder={paymentForm.payment_type === 'addon' ? 'Updates automatically' : 'e.g. 15000'}
           />
         </div>
       )}
@@ -139,7 +139,7 @@ export default function PaymentFormFields({
       <div className={pairClass}>
         <div>
           <label htmlFor={`${idPrefix}-amount-paid`} className="block text-sm font-medium text-dark mb-1">
-            {paymentForm.payment_type === 'extra_charge' ? 'Extra Charge Amount (₹)' : 'Amount Being Paid Now (₹)'}
+            {paymentForm.payment_type === 'addon' ? 'Add-on Amount (₹)' : 'Amount Being Paid Now (₹)'}
           </label>
           <input
             id={`${idPrefix}-amount-paid`}
@@ -166,12 +166,12 @@ export default function PaymentFormFields({
             onChange={val => setPaymentForm(f => ({ ...f, payment_type: val as PaymentForm['payment_type'] }))}
             options={availablePaymentTypeOptions(paymentForm, enquiry.amount_paid || 0)}
           />
-          {paymentForm.payment_type === 'extra_charge' && (
+          {paymentForm.payment_type === 'addon' && (
             <p className="text-[11px] text-dark-muted mt-1">
               Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
             </p>
           )}
-          {paymentForm.payment_type !== 'extra_charge' && !clearsBalance(paymentForm, enquiry.amount_paid || 0) && (
+          {paymentForm.payment_type !== 'addon' && !clearsBalance(paymentForm, enquiry.amount_paid || 0) && (
             <p className="text-[11px] text-dark-muted mt-1">
               'Balance' will appear here once the amount above clears what's still owed.
             </p>
@@ -211,7 +211,7 @@ export default function PaymentFormFields({
       {(() => {
         const alreadyPaid = enquiry.amount_paid || 0;
         const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
-        const isExtraCharge = paymentForm.payment_type === 'extra_charge';
+        const isExtraCharge = paymentForm.payment_type === 'addon';
         const isPending = paymentForm.status === 'pending';
         const projectedTotal = isPending ? alreadyPaid : alreadyPaid + thisPayment;
         const projectedBookingTotal = isExtraCharge && paymentForm.total_amount !== ''

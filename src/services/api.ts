@@ -70,7 +70,7 @@ export {
   getAllPayments,
   recordTypedPayment,
   generatePendingInvoice,
-  addExtraCharge,
+  addAddonCharge,
   markInvoicePaid,
   cancelEnquiry,
   setEnquiryNoShow,

@@ -38,7 +38,7 @@ export const PAYMENT_TYPE_LOG_LABEL: Record<string, string> = {
   installment: 'Installment',
   full_payment: 'Full payment',
   booking_amount: 'Booking amount',
-  extra_charge: 'Extra charge',
+  addon: 'Add-on',
   refund: 'Refund',
 };
 

@@ -72,7 +72,7 @@ export const PAYMENT_TYPE_LABEL: Record<Payment['payment_type'], string> = {
   refund: 'Refund',
   full_payment: 'Full Payment',
   advance: 'Advance',
-  extra_charge: 'Extra Charge',
+  addon: 'Add-on',
 };
 
 // A4 in points (72pt/in) — same unit convention as tripItineraryPdf.ts.

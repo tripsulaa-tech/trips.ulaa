@@ -1,4 +1,5 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { Baby } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
@@ -11,8 +12,8 @@ import { inputClass } from './AdminEnquiriesShared';
 import PaymentHistoryList from './PaymentHistoryList';
 
 // Raises one invoice line (Full Payment / Advance / Balance / Installment /
-// Extra Charge) against whichever booking it was opened from. "Paid now"
-// records real money via recordTypedPayment/addExtraCharge; "Pending"
+// Add-on) against whichever booking it was opened from. "Paid now"
+// records real money via recordTypedPayment/addAddonCharge; "Pending"
 // raises the invoice without touching amount_paid, via
 // generatePendingInvoice, for later settlement with the Mark Paid button
 // in the Invoices list.
@@ -110,12 +111,34 @@ export default function GenerateInvoiceModal({
               onChange={val => setGenerateInvoiceForm(f => ({ ...f, type: val }))}
               options={availableInvoiceTypeOptions(generateInvoiceForm, generateInvoiceTarget.total_amount || 0, generateInvoiceTarget.amount_paid || 0)}
             />
-            {generateInvoiceForm.type === 'extra_charge' && (
-              <p className="text-[11px] text-dark-muted mt-1">
-                Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
-              </p>
+            {generateInvoiceForm.type === 'addon' && (
+              <>
+                <p className="text-[11px] text-dark-muted mt-1">
+                  Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
+                </p>
+                {/* Quick preset for the common case: this traveller wants to
+                    bring a child along. ULAA trips aren't built around kids
+                    (no separate child pricing/seat type), so this is just a
+                    one-off add-on against an existing enquiry rather than a
+                    field on the public booking form — same Add-on
+                    mechanism as any other add-on, with the note pre-filled.
+                    Toggles the note text; the amount is still entered below,
+                    since it varies per trip. */}
+                <button
+                  type="button"
+                  onClick={() => setGenerateInvoiceForm(f => ({ ...f, notes: f.notes === 'Child fare' ? '' : 'Child fare' }))}
+                  aria-pressed={generateInvoiceForm.notes === 'Child fare'}
+                  className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors ${
+                    generateInvoiceForm.notes === 'Child fare'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-background-warm text-dark-muted hover:border-primary/40'
+                  }`}
+                >
+                  <Baby size={13} aria-hidden="true" /> Child Fare
+                </button>
+              </>
             )}
-            {generateInvoiceForm.type !== 'extra_charge' && !clearsBalanceForInvoice(generateInvoiceForm, generateInvoiceTarget.total_amount || 0, generateInvoiceTarget.amount_paid || 0) && (
+            {generateInvoiceForm.type !== 'addon' && !clearsBalanceForInvoice(generateInvoiceForm, generateInvoiceTarget.total_amount || 0, generateInvoiceTarget.amount_paid || 0) && (
               <p className="text-[11px] text-dark-muted mt-1">
                 'Balance' will appear here once the amount below clears what's still owed.
               </p>
@@ -152,9 +175,9 @@ export default function GenerateInvoiceModal({
           {(() => {
             const alreadyPaid = generateInvoiceTarget.amount_paid || 0;
             const thisAmount = generateInvoiceForm.amount === '' ? 0 : Number(generateInvoiceForm.amount);
-            const isExtraCharge = generateInvoiceForm.type === 'extra_charge';
+            const isExtraCharge = generateInvoiceForm.type === 'addon';
             const isPending = generateInvoiceForm.status === 'pending';
-            // Extra Charge (collected now) and a normal paid-now invoice both
+            // Add-on (collected now) and a normal paid-now invoice both
             // land in amount_paid right away; a Pending invoice — extra
             // charge or otherwise — doesn't touch it until it's later marked
             // paid, so the preview shouldn't claim it does.

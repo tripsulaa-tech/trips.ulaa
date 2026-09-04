@@ -27,7 +27,7 @@ import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
 import {
   getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin, getActivityLog,
-  recordPayment, generatePendingInvoice, addExtraCharge,
+  recordPayment, generatePendingInvoice, addAddonCharge,
   markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
   recordRefund, deleteEnquiry, setEnquiryFollowUp,
@@ -174,7 +174,7 @@ export default function AdminEnquiryDetail() {
   // Live, field-level errors for the Track Payment modal below — recomputed
   // every render so a bad amount, a missing payment method, etc. show up
   // the moment it's entered/selected, instead of only surfacing behind an
-  // alert() after Save. Same shared validator AdminPaymentModal uses.
+  // alert() after Save. Same shared validator the now-retired AdminPaymentModal used to.
   const paymentErrors = (paymentOpen || (enquiry && !enquiry.booking_id))
     ? validatePaymentForm(paymentForm, enquiry?.amount_paid || 0)
     : {};
@@ -385,8 +385,8 @@ export default function AdminEnquiryDetail() {
     }
   };
 
-  // Extra Charge and Pending both raise their own invoice row via the same
-  // services/api.ts functions Generate Invoice uses (addExtraCharge /
+  // Add-on and Pending both raise their own invoice row via the same
+  // services/api.ts functions Generate Invoice uses (addAddonCharge /
   // generatePendingInvoice) rather than moving amount_paid through
   // recordPayment's running-total math — see the matching handleSavePayment
   // in AdminEnquiries.tsx for the full reasoning; kept in sync with it.
@@ -394,7 +394,7 @@ export default function AdminEnquiryDetail() {
     if (!enquiry) return;
     const totalAmount = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
     const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
-    const isExtraCharge = paymentForm.payment_type === 'extra_charge';
+    const isExtraCharge = paymentForm.payment_type === 'addon';
     const isPending = paymentForm.status === 'pending';
     const newRunningTotal = (enquiry.amount_paid || 0) + thisPayment;
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
@@ -422,7 +422,7 @@ export default function AdminEnquiryDetail() {
           discount_reason: paymentForm.discount_reason || null,
           food_preference: paymentForm.food_preference || null,
         });
-        updated = await addExtraCharge(updated, thisPayment, {
+        updated = await addAddonCharge(updated, thisPayment, {
           collectedNow: !isPending,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
@@ -437,7 +437,7 @@ export default function AdminEnquiryDetail() {
           food_preference: paymentForm.food_preference || null,
         });
         if (thisPayment > 0) {
-          // Not extra_charge in this branch (handled above), so this is
+          // Not addon in this branch (handled above), so this is
           // always one of the four types generatePendingInvoice accepts.
           await generatePendingInvoice(enquiry.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment);
         }
@@ -451,7 +451,7 @@ export default function AdminEnquiryDetail() {
           food_preference: paymentForm.food_preference || null,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
-          // Not extra_charge in this branch (handled above), so this is
+          // Not addon in this branch (handled above), so this is
           // always one of the four types recordPayment's override accepts.
           type: thisPayment > 0 ? (paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment') : undefined,
         });

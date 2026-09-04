@@ -50,7 +50,7 @@ export {
 export {
   recordTypedPayment,
   generatePendingInvoice,
-  addExtraCharge,
+  addAddonCharge,
   markInvoicePaid,
 } from './enquiries/invoices';
 

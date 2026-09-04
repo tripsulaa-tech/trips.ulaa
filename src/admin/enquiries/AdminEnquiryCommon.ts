@@ -80,21 +80,21 @@ export const INVOICE_TYPE_LABEL: Record<Payment['payment_type'], string> = {
   refund: 'Refund',
   full_payment: 'Full Payment',
   advance: 'Advance',
-  extra_charge: 'Extra Charge',
+  addon: 'Add-on',
 };
 
 // Types the admin can pick from the Generate Invoice modal. Refund isn't
 // offered here — it already has its own dedicated flow in the Cancel
 // Booking / Track Payment modal (recordRefund), which accounts for
 // cancellation/no-show rules that this generic modal doesn't know about.
-type GenerateInvoiceType = 'full_payment' | 'advance' | 'balance' | 'installment' | 'extra_charge';
+type GenerateInvoiceType = 'full_payment' | 'advance' | 'balance' | 'installment' | 'addon';
 
 const GENERATE_INVOICE_TYPE_OPTIONS: { value: GenerateInvoiceType; label: string }[] = [
   { value: 'full_payment', label: 'Full Payment' },
   { value: 'advance', label: 'Advance' },
   { value: 'balance', label: 'Balance' },
   { value: 'installment', label: 'Installment' },
-  { value: 'extra_charge', label: 'Extra Charge' },
+  { value: 'addon', label: 'Add-on' },
 ];
 
 export const GENERATE_INVOICE_STATUS_OPTIONS: { value: 'paid' | 'pending'; label: string }[] = [
@@ -142,26 +142,26 @@ export type PaymentForm = {
   // internally (every other caller of it needs that), but the UI here no
   // longer asks the admin to do that addition themselves.
   amount_paid: number | '';
-  // Full Payment / Advance / Balance / Installment / Extra Charge — picked
+  // Full Payment / Advance / Balance / Installment / Add-on — picked
   // manually here, same options and same meaning as Generate Invoice's Type
   // dropdown (see PAYMENT_TYPE_OPTIONS below, which is now literally
   // GENERATE_INVOICE_TYPE_OPTIONS — one shared list, no risk of the two
-  // dropdowns drifting). 'extra_charge' routes through addExtraCharge
+  // dropdowns drifting). 'addon' routes through addAddonCharge
   // instead of recordPayment's `type` override (which still only accepts
   // the original four) — see handleSavePayment for the branch.
   payment_type: GenerateInvoiceType;
   // Paid now vs pending — same meaning and same options
   // (GENERATE_INVOICE_STATUS_OPTIONS) as Generate Invoice's Status dropdown.
   // 'pending' raises an invoice without touching amount_paid (via
-  // generatePendingInvoice, or addExtraCharge's collectedNow: false for the
-  // extra_charge type), for later settlement with the Mark Paid button in
+  // generatePendingInvoice, or addAddonCharge's collectedNow: false for the
+  // addon type), for later settlement with the Mark Paid button in
   // the Invoices list — same as Generate Invoice, Track Payment just also
   // lets that pending invoice ride alongside a total/package/food edit.
   status: 'paid' | 'pending';
   // Payment Method / UTR — CRM spec sections 6/9/47: how this payment leg
   // (the amount_paid change above) was actually settled, and its bank/UPI
   // reference. Optional — only meaningful when status is 'paid' and
-  // amount_paid actually changes; recordPayment/addExtraCharge silently
+  // amount_paid actually changes; recordPayment/addAddonCharge silently
   // ignore them otherwise.
   payment_method: string;
   payment_utr: string;
@@ -178,7 +178,7 @@ export type PaymentForm = {
   food_preference: 'veg' | 'non_veg' | '';
 };
 
-// Same types Generate Invoice offers, including Extra Charge and the
+// Same types Generate Invoice offers, including Add-on and the
 // paid/pending Status (refund is still excluded — it has its own dedicated,
 // cancellation-aware flow here in Track Payment's cancelled-booking
 // section). Literally the same array as GENERATE_INVOICE_TYPE_OPTIONS now —
@@ -219,7 +219,7 @@ function amountClearsBalance(totalAmount: number | '', alreadyPaid: number, this
 }
 
 export function clearsBalance(paymentForm: PaymentForm, alreadyPaid: number): boolean {
-  if (paymentForm.payment_type === 'extra_charge') return false;
+  if (paymentForm.payment_type === 'addon') return false;
   return amountClearsBalance(paymentForm.total_amount, alreadyPaid, paymentForm.amount_paid);
 }
 
@@ -232,9 +232,9 @@ export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPai
   return clearsBalance(paymentForm, alreadyPaid) ? PAYMENT_TYPE_OPTIONS : PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'balance');
 }
 
-// Field-level errors for the Track Payment form (AdminPaymentModal), keyed
-// by the field each message should render under. Shared by the modal
-// (live, as the admin types/selects) and both handleSavePayment call sites
+// Field-level errors for the Track Payment form (formerly AdminPaymentModal,
+// now retired — see AdminEnquiries.tsx), keyed by the field each message
+// should render under. Shared by both handleSavePayment call sites
 // (AdminEnquiries.tsx list view + AdminEnquiryDetail.tsx detail view) as
 // the final save-time gate — one source of truth so the two screens can
 // never drift on what counts as a valid payment.
@@ -250,7 +250,7 @@ export function validatePaymentForm(
   const errors: PaymentFormErrors = {};
   const totalAmount = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
   const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
-  const isExtraCharge = paymentForm.payment_type === 'extra_charge';
+  const isExtraCharge = paymentForm.payment_type === 'addon';
   const isPending = paymentForm.status === 'pending';
   const newRunningTotal = alreadyPaid + thisPayment;
 
@@ -279,7 +279,7 @@ export function validatePaymentForm(
   if (refundAmount > 0 && paymentForm.refund_method && paymentForm.refund_method !== 'Cash' && !paymentForm.refund_utr.trim()) {
     errors.refund_utr = 'Enter a refund UTR / reference number.';
   }
-  // Extra Charge collected now folds straight into amount_paid; Pending
+  // Add-on collected now folds straight into amount_paid; Pending
   // never does, whatever the type — so the refund bound uses what
   // amount_paid will actually become, not the naive "already paid + this
   // payment" that only holds for a normal paid-now payment.
@@ -295,7 +295,7 @@ export function validatePaymentForm(
 // total or already-paid figures — those live on the Enquiry the invoice
 // is being raised against — so callers pass them in separately.
 export function clearsBalanceForInvoice(form: GenerateInvoiceForm, totalAmount: number, alreadyPaid: number): boolean {
-  if (form.type === 'extra_charge') return false;
+  if (form.type === 'addon') return false;
   return amountClearsBalance(totalAmount, alreadyPaid, form.amount);
 }
 

@@ -402,6 +402,11 @@ export interface Enquiry {
   // where it wasn't asked don't break — the public booking form itself
   // requires a choice.
   food_preference?: 'veg' | 'non_veg' | null;
+  // True once a "Child Fare" Add-on (see AdminGenerateInvoiceModal's
+  // Child Fare chip) has been added to this enquiry — lets Admin show a
+  // small badge in the list/detail view without reading payment notes.
+  // See add_enquiry_child_addon_flag.sql.
+  has_child_addon?: boolean;
   // Admin-only escape hatch from enforce_enquiry_capacity_or_waitlist() —
   // always false/omitted on the public booking form. Used when converting a
   // waitlist entry into a booking, since the seat was already accounted for
@@ -478,7 +483,7 @@ export interface Payment {
   id: string;
   enquiry_id: string;
   amount: number;
-  payment_type: 'booking_amount' | 'balance' | 'installment' | 'refund' | 'full_payment' | 'advance' | 'extra_charge';
+  payment_type: 'booking_amount' | 'balance' | 'installment' | 'refund' | 'full_payment' | 'advance' | 'addon';
   payment_method?: string;
   // Bank/UPI transaction reference, manually entered by the admin — N/A for
   // cash. Distinct from invoice_number (ULAA's own auto-assigned per-

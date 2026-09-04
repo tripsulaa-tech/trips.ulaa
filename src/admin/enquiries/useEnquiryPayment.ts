@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   recordPayment, recordRefund, getAllUpcomingTripsAdmin,
-  getPaymentsForEnquiry, generatePendingInvoice, addExtraCharge,
+  getPaymentsForEnquiry, generatePendingInvoice, addAddonCharge,
 } from '../../services/api';
 import type { Enquiry, UpcomingTrip, Payment } from '../../types/types-index';
 import { validatePaymentForm } from './AdminEnquiryCommon';
@@ -94,7 +94,7 @@ export function useEnquiryPayment(params: {
   };
 
   // Saves whatever's in the Track Payment modal. Branches on payment_type:
-  // extra_charge bumps total_amount via addExtraCharge instead of
+  // addon bumps total_amount via addAddonCharge instead of
   // reconciling it directly; pending logs the intent (and, if an amount was
   // entered, a pending invoice) without moving money yet; everything else
   // is a normal collected payment. A cancelled target also gets its refund
@@ -109,7 +109,7 @@ export function useEnquiryPayment(params: {
     // semantics), so the running total recordPayment actually needs is the
     // existing amount_paid plus whatever's being entered here.
     const thisPayment = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
-    const isExtraCharge = paymentForm.payment_type === 'extra_charge';
+    const isExtraCharge = paymentForm.payment_type === 'addon';
     const isPending = paymentForm.status === 'pending';
     const newRunningTotal = (paymentTarget.amount_paid || 0) + thisPayment;
     const refundAmount = paymentForm.refund_amount === '' ? 0 : Number(paymentForm.refund_amount);
@@ -130,7 +130,7 @@ export function useEnquiryPayment(params: {
       let updated: Enquiry = paymentTarget;
 
       if (isExtraCharge) {
-        // Total Amount is disabled in the UI for this type — addExtraCharge
+        // Total Amount is disabled in the UI for this type — addAddonCharge
         // bumps it by thisPayment itself, so there's nothing to reconcile.
         updated = await recordPayment(paymentTarget, {
           amount_paid: paymentTarget.amount_paid || 0,
@@ -139,7 +139,7 @@ export function useEnquiryPayment(params: {
           discount_reason: paymentForm.discount_reason || null,
           food_preference: paymentForm.food_preference || null,
         });
-        updated = await addExtraCharge(updated, thisPayment, {
+        updated = await addAddonCharge(updated, thisPayment, {
           collectedNow: !isPending,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
@@ -154,7 +154,7 @@ export function useEnquiryPayment(params: {
           food_preference: paymentForm.food_preference || null,
         });
         if (thisPayment > 0) {
-          // Not extra_charge in this branch (handled above), so this is
+          // Not addon in this branch (handled above), so this is
           // always one of the four types generatePendingInvoice accepts.
           await generatePendingInvoice(paymentTarget.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment);
         }
@@ -172,7 +172,7 @@ export function useEnquiryPayment(params: {
           // delta !== 0 guard already no-ops the ledger insert otherwise, so
           // there's no case where an unused type value could mislabel a
           // profile-only edit (total/package/food with no payment amount).
-          // Not extra_charge in this branch (handled above), so this is
+          // Not addon in this branch (handled above), so this is
           // always one of the four types recordPayment's override accepts.
           type: thisPayment > 0 ? (paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment') : undefined,
         });
