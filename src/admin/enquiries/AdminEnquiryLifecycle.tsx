@@ -96,13 +96,13 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
   const displayPercent = Math.round(barPercent);
 
   return (
-    <div className="relative bg-gradient-to-br from-white via-white to-background-warm/70 border border-background-warm rounded-xl px-4 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-5 shadow-sm">
+    <div className="relative bg-background-warm/60 border border-background-warm rounded-lg px-4 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-5">
       {/* Faint decorative glow in the corner — purely cosmetic, sits behind
           everything (z-0) so it never interferes with hit targets or
           readability of the steps above it. Clipped in its own layer (not
           the whole card) so it doesn't cut off the progress thumb/callout
           when they sit near the 0%/100% edges. */}
-      <div className="pointer-events-none absolute inset-0 rounded-xl overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 rounded-lg overflow-hidden">
         <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/5 blur-2xl" aria-hidden="true" />
       </div>
       {isCancelled && (

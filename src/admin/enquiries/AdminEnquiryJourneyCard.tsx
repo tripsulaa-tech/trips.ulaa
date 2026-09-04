@@ -3,7 +3,7 @@
 // booking exists — the Track Payment fields themselves, filled in right
 // here on the page rather than behind a popup, since recording the first
 // payment is the very next thing an admin does with a brand-new enquiry.
-import { CheckCircle as CheckCircle2, Clock, CurrencyInr as IndianRupee, Path, Wallet } from '@phosphor-icons/react';
+import { CheckCircle as CheckCircle2, CurrencyInr as IndianRupee, Path, Wallet } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -56,33 +56,18 @@ export default function AdminEnquiryJourneyCard({
           <p className="text-dark-muted text-xs mt-1">Track this booking's stage, payments, and balance.</p>
         </div>
         <BookingLifecycleStepper enquiry={enquiry} />
-        <div className="grid grid-cols-3 gap-2 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-3 divide-x divide-dark/10 shadow-sm">
-          <div className="flex items-center gap-2">
-            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
-              <Wallet size={17} aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-dark-muted text-[11px]">Total</p>
-              <p className="text-dark text-sm font-semibold">{formatPrice(enquiry.total_amount || 0)}</p>
-            </div>
+        <div className="grid grid-cols-3 gap-2 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-3 divide-x divide-dark/10">
+          <div className="min-w-0">
+            <p className="text-dark-muted text-[11px]">Total</p>
+            <p className="text-dark text-sm font-semibold">{formatPrice(enquiry.total_amount || 0)}</p>
           </div>
-          <div className="pl-2 flex items-center gap-2">
-            <span className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white inline-flex items-center justify-center shrink-0 shadow-[0_3px_10px_-2px_rgba(22,163,74,0.5)]">
-              <CheckCircle2 size={17} weight="fill" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-dark-muted text-[11px]">Paid</p>
-              <p className="text-green-700 text-sm font-semibold">{formatPrice(enquiry.amount_paid || 0)}</p>
-            </div>
+          <div className="pl-3 min-w-0">
+            <p className="text-dark-muted text-[11px]">Paid</p>
+            <p className="text-green-700 text-sm font-semibold">{formatPrice(enquiry.amount_paid || 0)}</p>
           </div>
-          <div className="pl-2 flex items-center gap-2">
-            <span className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white inline-flex items-center justify-center shrink-0 shadow-[0_3px_10px_-2px_rgba(245,158,11,0.5)]">
-              <Clock size={17} aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-dark-muted text-[11px]">Pending</p>
-              <p className="text-amber-600 text-sm font-semibold">{formatPrice(pendingAmount)}</p>
-            </div>
+          <div className="pl-3 min-w-0">
+            <p className="text-dark-muted text-[11px]">Pending</p>
+            <p className="text-amber-600 text-sm font-semibold">{formatPrice(pendingAmount)}</p>
           </div>
         </div>
 
