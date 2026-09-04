@@ -28,13 +28,6 @@ export interface TripGalleryItem {
   description: string; // caption / place name
 }
 
-export interface TripFounder {
-  photo: string;
-  name: string;
-  designation?: string;
-  description: string;
-}
-
 export interface TripConfidenceItem {
   icon: string;
   description: string;
@@ -62,7 +55,7 @@ export interface TripEndBanner {
 
 // Internal (admin-only) cost/profit record for a trip — never shown on the
 // public site. Kept as a single JSONB blob (see add_trip_finance.sql)
-// rather than a pile of individual columns, matching trip_founder/
+// rather than a pile of individual columns, matching
 // end_banner/cancellation_policy above. All amounts are in ₹.
 //
 // Shape mirrors how the business actually thinks about a trip's money:
@@ -201,7 +194,20 @@ export interface UpcomingTrip {
   fashion_photos?: string[];                    // Fashion aesthetics inspiration photos
   fashion_description?: string;                 // "Fashion Aesthetics" section intro paragraph
   things_to_carry_items?: TripInclusionItem[];  // Things to Carry with icon (rich variant of things_to_carry)
-  trip_founder?: TripFounder;                   // Per-trip founder block
+  // Reference into the `trip_leaders` directory (see
+  // src/admin/AdminTripLeaders.tsx) — which directory entry is this trip's
+  // assigned Trip Leader. null/undefined means no leader is assigned (the
+  // "Meet Your Trip Leader" section is hidden on the public page and PDF).
+  // The public site and PDF read live from the linked `trip_leaders` row
+  // (see trip_leader below) rather than a per-trip copy, so editing a
+  // leader's directory entry (Admin → Trip Leaders) updates every trip
+  // that references them.
+  trip_leader_id?: string | null;
+  // The joined `trip_leaders` row for trip_leader_id — populated by
+  // getUpcomingTrips/getUpcomingTripBySlug/getAllUpcomingTripsAdmin
+  // (services/api/trips.ts) via a foreign-key select, not a real column on
+  // upcoming_trips. Never write this back to the DB.
+  trip_leader?: TripLeader | null;
   confidence_items?: TripConfidenceItem[];      // "Travel with Confidence" items
   confidence_description?: string;              // "Travel with Confidence" section body
   meeting_address?: string;                     // Street/full address for meeting point
@@ -857,6 +863,28 @@ export interface FounderContent {
   designation: string;
   description: string;
   social_links: AboutFounderSocialLink[];
+}
+
+// =============================================
+// Trip Leaders (editable via their own Admin tab, stored in the
+// `trip_leaders` table). Unlike Founder above — a single shared record
+// under one `site_content` key — Trip Leaders is a directory of multiple
+// people, each with the same shape of details as the founder (photo, name,
+// designation, bio, social links), so an admin can add/edit/remove leaders
+// and later assign one to any individual trip. Same CRUD-list shape as
+// Testimonial (id/is_published/sort_order/created_at) rather than the
+// content-editor shape FounderContent uses.
+// =============================================
+export interface TripLeader {
+  id: string;
+  name: string;
+  photo?: string;
+  designation?: string;
+  description: string;
+  social_links: AboutFounderSocialLink[];
+  is_published: boolean;
+  sort_order: number;
+  created_at: string;
 }
 
 // =============================================

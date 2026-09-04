@@ -93,42 +93,50 @@ export async function getWaitlistReservedCounts(): Promise<Record<string, number
   return map;
 }
 
+// Every upcoming_trips read embeds its linked trip_leaders row (aliased to
+// `trip_leader`, singular, matching the UpcomingTrip.trip_leader field) via
+// the trip_leader_id FK — see add_trip_leader_id_to_trips.sql. This is how
+// the public page/PDF and Admin views all read a trip's leader live from
+// the directory instead of a per-trip copy: trip_leader_id is the only
+// thing stored on the trip row itself.
+const UPCOMING_TRIP_SELECT = '*, trip_leader:trip_leaders(*)';
+
 export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
   const today = new Date().toISOString().slice(0, 10);
   const [{ data, error }, reservedCounts] = await Promise.all([
     supabase
       .from('upcoming_trips')
-      .select('*')
+      .select(UPCOMING_TRIP_SELECT)
       .in('status', ['coming_soon', 'published'])
       .gte('start_date', today)
       .order('start_date', { ascending: true }),
     getWaitlistReservedCounts(),
   ]);
   if (error) throw error;
-  return (data || []).map(trip => ({ ...trip, waitlist_reserved: reservedCounts[trip.id] || 0 }));
+  return (data || []).map(trip => ({ ...trip, waitlist_reserved: reservedCounts[trip.id] || 0 })) as UpcomingTrip[];
 }
 
 export async function getUpcomingTripBySlug(slug: string): Promise<UpcomingTrip | null> {
   const [{ data, error }, reservedCounts] = await Promise.all([
     supabase
       .from('upcoming_trips')
-      .select('*')
+      .select(UPCOMING_TRIP_SELECT)
       .eq('slug', slug)
       .in('status', ['coming_soon', 'published'])
       .single(),
     getWaitlistReservedCounts(),
   ]);
   if (error) return null;
-  return { ...data, waitlist_reserved: reservedCounts[data.id] || 0 };
+  return { ...data, waitlist_reserved: reservedCounts[data.id] || 0 } as UpcomingTrip;
 }
 
 export async function getAllUpcomingTripsAdmin(): Promise<UpcomingTrip[]> {
   const { data, error } = await supabase
     .from('upcoming_trips')
-    .select('*')
+    .select(UPCOMING_TRIP_SELECT)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data || [];
+  return (data || []) as UpcomingTrip[];
 }
 
 export async function createUpcomingTrip(trip: Partial<UpcomingTrip>): Promise<UpcomingTrip> {
@@ -166,10 +174,13 @@ const TRIP_IMAGE_BUCKET = 'ulaa';
 
 // Pulls every image URL referenced anywhere on an upcoming trip (cover,
 // mobile hero, gallery, accommodation/fashion photo galleries, "Places
-// You'll Post" items, itinerary day photos, founder photo, end banner) so
+// You'll Post" items, itinerary day photos, end banner) so
 // deleteUpcomingTripCascade can clean them out of storage instead of
 // leaving orphaned files behind, and getTripDeletionImpact can show an
-// accurate photo count in the pre-delete warning.
+// accurate photo count in the pre-delete warning. Deliberately excludes the
+// linked trip leader's photo (trip.trip_leader) — that photo lives on the
+// shared trip_leaders directory entry, not this trip, and other trips may
+// still reference the same leader.
 function collectTripImageUrls(trip: UpcomingTrip): string[] {
   const urls: string[] = [];
   if (trip.cover_image) urls.push(trip.cover_image);
@@ -179,7 +190,6 @@ function collectTripImageUrls(trip: UpcomingTrip): string[] {
   urls.push(...(trip.fashion_photos || []));
   (trip.gallery_items || []).forEach(item => { if (item.photo) urls.push(item.photo); });
   (trip.itinerary || []).forEach(day => urls.push(...(day.images || [])));
-  if (trip.trip_founder?.photo) urls.push(trip.trip_founder.photo);
   if (trip.end_banner?.image) urls.push(trip.end_banner.image);
   return Array.from(new Set(urls));
 }

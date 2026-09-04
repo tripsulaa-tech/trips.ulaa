@@ -96,6 +96,14 @@ export {
 } from './api/testimonials';
 
 export {
+  getTripLeaders,
+  getAllTripLeadersAdmin,
+  createTripLeader,
+  updateTripLeader,
+  deleteTripLeader,
+} from './api/tripLeaders';
+
+export {
   getSiteContent,
   upsertSiteContent,
 } from './api/siteContent';

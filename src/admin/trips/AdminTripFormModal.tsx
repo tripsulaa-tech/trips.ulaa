@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import {
   Plus,
   Trash as Trash2,
   MagnifyingGlass as Search,
+  MapPin,
   X,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
@@ -18,8 +20,9 @@ import CancellationPolicyEditor from '../../components/ui/CancellationPolicyEdit
 import TermsEditor from '../../components/ui/TermsEditor';
 import DatePicker from '../../components/ui/DatePicker';
 import TripHighlightIconPicker from '../../components/ui/TripHighlightIconPicker';
+import MeetingPointMapPicker from '../../components/ui/MeetingPointMapPicker';
 import { COVER_IMAGE_TARGET_SIZE_BYTES } from '../../services/api';
-import type { UpcomingTrip } from '../../types/types-index';
+import type { UpcomingTrip, TripLeader } from '../../types/types-index';
 import { slugify, formatPrice } from '../../utils/utils-index';
 import { computeTripFinanceSummary } from '../../utils/tripFinance';
 import type { TripRevenue } from './useTripFinanceData';
@@ -45,6 +48,10 @@ interface AdminTripFormModalProps {
   // enquiries up by); the Profit Summary below falls back to the old
   // seats_booked x price estimate in either case.
   actualRevenue?: TripRevenue | null;
+  // The Trip Leaders directory (Admin → Trip Leaders) — see
+  // AdminTripLeaders.tsx — offered as an "assign from directory" picker on
+  // the Trip Leader tab so the admin doesn't have to retype the same bio.
+  tripLeaders: TripLeader[];
 }
 
 /** The Add/Edit Trip modal — every field on the trip form, laid out across
@@ -57,14 +64,18 @@ interface AdminTripFormModalProps {
 export default function AdminTripFormModal({
   modalOpen, closeModal, editingTrip, form, setForm,
   modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef,
-  saving, handleSave, commitGroupBulletDraft, actualRevenue,
+  saving, handleSave, commitGroupBulletDraft, actualRevenue, tripLeaders,
 }: AdminTripFormModalProps) {
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
+
   return (
+    <>
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
         title={editingTrip ? 'Edit Trip' : 'Add Trip'}
         size="xl"
+        bodyRef={modalBodyRef}
         headerContent={
           <div className="relative w-full max-w-xs">
             <label htmlFor="trip-field-search" className="sr-only">Search fields</label>
@@ -91,8 +102,8 @@ export default function AdminTripFormModal({
         {modalSearchNoMatch && (
           <p role="status" className="text-xs text-red-500 -mt-2 mb-3">No matching field found for "{modalSearch}".</p>
         )}
-        <div ref={modalBodyRef}>
-          <Tabs>
+        <div>
+          <Tabs scrollContainerRef={modalBodyRef}>
           <TabPanel label="Basic Info">
             <div className="md:col-span-2">
               <label htmlFor="trip-title" className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
@@ -838,6 +849,14 @@ export default function AdminTripFormModal({
                   className={inputClass}
                   placeholder="e.g. Shimla Bus Stand, Himachal Pradesh — 7:00 AM on Day 1"
                 />
+                <button
+                  type="button"
+                  onClick={() => setMapPickerOpen(true)}
+                  className="shrink-0 flex items-center gap-1.5 px-3 rounded-md border-2 border-primary bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors whitespace-nowrap"
+                  title="Pick this location on a map without leaving the page"
+                >
+                  <MapPin size={16} aria-hidden="true" /> Pick on Map
+                </button>
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.meeting_point || form.destination)}`}
                   target="_blank"
@@ -849,7 +868,7 @@ export default function AdminTripFormModal({
                   Find on Maps <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </div>
-              <p id="trip-meeting-point-hint" className="text-xs text-dark-muted mt-1.5">Shown as plain text on the trip page.</p>
+              <p id="trip-meeting-point-hint" className="text-xs text-dark-muted mt-1.5">Shown as plain text on the trip page. Use "Pick on Map" to search or drop a pin and auto-fill this, the address, and the maps link below — or "Find on Maps" to look it up on Google Maps in a new tab.</p>
             </div>
 
             <div className="md:col-span-2">
@@ -928,51 +947,47 @@ export default function AdminTripFormModal({
               </p>
             </div>
           </TabPanel>
-          <TabPanel label="Founder">
+          <TabPanel label="Trip Leader">
             <div className="md:col-span-2">
-              <ImageUploadField
-                label="Founder Photo"
-                value={form.trip_founder.photo}
-                onChange={url => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, photo: url } }))}
-                bucket="ulaa"
-                pathPrefix="trip-founder"
-                fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
-                maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
-                hint="Square, at least 400×400px, with the face centered — shown as a circular avatar."
-                allowUrl
+              <label htmlFor="trip-leader-select" className="block text-sm font-medium text-dark mb-1">Assign Trip Leader</label>
+              <Select
+                inputId="trip-leader-select"
+                value={form.trip_leader_id}
+                onChange={id => setForm(f => ({ ...f, trip_leader_id: id }))}
+                options={[
+                  { value: '', label: 'Not linked — no trip leader shown' },
+                  ...tripLeaders.map(l => ({ value: l.id, label: l.designation ? `${l.name} — ${l.designation}` : l.name })),
+                ]}
+                placeholder="Select a trip leader..."
               />
+              <p className="text-xs text-dark-muted mt-1.5">
+                Optional. The public trip page and downloadable PDF show this leader's photo/name/designation/bio live from the directory — edit their details in Admin → Trip Leaders and every trip they're assigned to updates automatically.
+              </p>
             </div>
-            <div>
-              <label htmlFor="trip-founder-name" className="block text-sm font-medium text-dark mb-1">Name</label>
-              <input
-                id="trip-founder-name"
-                value={form.trip_founder.name}
-                onChange={e => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, name: e.target.value } }))}
-                className={inputClass}
-                placeholder="e.g. Priya Sharma"
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-founder-designation" className="block text-sm font-medium text-dark mb-1">Designation</label>
-              <input
-                id="trip-founder-designation"
-                value={form.trip_founder.designation ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, designation: e.target.value } }))}
-                className={inputClass}
-                placeholder="e.g. Founder & CEO, ULAA"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label htmlFor="trip-founder-about" className="block text-sm font-medium text-dark mb-1">Description / About</label>
-              <textarea
-                id="trip-founder-about"
-                value={form.trip_founder.description}
-                onChange={e => setForm(f => ({ ...f, trip_founder: { ...f.trip_founder, description: e.target.value } }))}
-                rows={4}
-                className={`${inputClass} resize-none`}
-                placeholder="A short note from the founder about this trip..."
-              />
-            </div>
+            {(() => {
+              const leader = tripLeaders.find(l => l.id === form.trip_leader_id);
+              if (!leader) return null;
+              return (
+                <div className="md:col-span-2">
+                  <div className="flex gap-3 items-start bg-background-warm/60 rounded-md p-3">
+                    {leader.photo ? (
+                      <img src={leader.photo} alt="" className="w-14 h-14 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-primary font-display font-bold">{leader.name.charAt(0)}</span>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-dark">{leader.name}</p>
+                      {leader.designation && <p className="text-primary text-xs font-semibold">{leader.designation}</p>}
+                      {leader.description && (
+                        <p className="text-dark-muted text-xs mt-0.5 whitespace-pre-line line-clamp-3">{leader.description}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </TabPanel>
           <TabPanel label="End Banner">
             <div className="md:col-span-2">
@@ -1082,5 +1097,20 @@ export default function AdminTripFormModal({
         </Tabs>
         </div>
       </Modal>
+
+      <MeetingPointMapPicker
+        isOpen={mapPickerOpen}
+        onClose={() => setMapPickerOpen(false)}
+        initialQuery={form.meeting_point || form.destination}
+        onSelect={({ name, address, mapUrl }) => {
+          setForm(f => ({
+            ...f,
+            meeting_point: name,
+            meeting_address: address || f.meeting_address,
+            meeting_point_map_url: mapUrl,
+          }));
+        }}
+      />
+    </>
   );
 }

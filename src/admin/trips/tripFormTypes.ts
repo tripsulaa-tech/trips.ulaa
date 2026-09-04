@@ -1,7 +1,7 @@
 import type {
   ItineraryDay, FAQ, CancellationPolicy,
   TripHighlightCard, TripInclusionItem, TripIncludedGroup, TripGalleryItem,
-  TripFounder, TripConfidenceItem, TripCardFeatureTag, TripEndBanner, CoverImageCrop,
+  TripConfidenceItem, TripCardFeatureTag, TripEndBanner, CoverImageCrop,
   TripFinance,
 } from '../../types/types-index';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
@@ -67,7 +67,12 @@ export interface TripForm {
   fashion_photos: string[];
   fashion_description: string;
   things_to_carry_items: TripInclusionItem[];
-  trip_founder: TripFounder;
+  // '' means "not linked to a directory entry" (stored as null) — see
+  // TripLeader in types-index.ts and AdminTripLeaders.tsx for the
+  // directory this is assigned from. The public page/PDF render the
+  // linked leader's photo/name/designation/description live — there's no
+  // per-trip override to type here anymore.
+  trip_leader_id: string;
   confidence_items: TripConfidenceItem[];
   confidence_description: string;
   meeting_address: string;
@@ -77,7 +82,6 @@ export interface TripForm {
   trip_finance: TripFinance;
 }
 
-export const emptyFounder: TripFounder = { photo: '', name: '', designation: '', description: '' };
 export const emptyEndBanner: TripEndBanner = { image: '', heading: '', description: '', cta_label: '', cta_url: '' };
 
 export const emptyForm: TripForm = {
@@ -93,7 +97,8 @@ export const emptyForm: TripForm = {
   highlight_cards: [], accommodation_description: '', accommodation_photos: [],
   included_groups: [], gallery_items: [], gallery_description: "Views worth every post. Memories worth even more.",
   fashion_photos: [], fashion_description: 'Styles that speaks, moments that stay.', things_to_carry_items: [],
-  trip_founder: emptyFounder, confidence_items: [], confidence_description: 'We take care of Everything, so you can Enjoy Every Moment!',
+  confidence_items: [], confidence_description: 'We take care of Everything, so you can Enjoy Every Moment!',
+  trip_leader_id: '',
   meeting_address: '', end_banner: emptyEndBanner,
   trip_finance: emptyTripFinance,
 };

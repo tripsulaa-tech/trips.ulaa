@@ -12,9 +12,10 @@ interface TripDetailsSectionProps {
 // anchor since none is substantial enough to warrant its own nav tab.
 export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
   const hasThingsToCarry = (trip.things_to_carry_items?.length ?? 0) > 0;
-  const hasFounder = Boolean(trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo));
+  const leader = trip.trip_leader;
+  const hasLeader = Boolean(leader && (leader.name || leader.photo));
 
-  if (!hasThingsToCarry && !trip.meeting_point && !hasFounder) return null;
+  if (!hasThingsToCarry && !trip.meeting_point && !hasLeader) return null;
 
   return (
     <div id="details" className="scroll-mt-44 space-y-9 sm:space-y-12">
@@ -93,31 +94,31 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
         </section>
       )}
 
-      {/* Founder */}
-      {hasFounder && (
+      {/* Trip Leader */}
+      {hasLeader && (
         <section className="scroll-mt-44 bg-dark rounded-lg p-5 sm:p-8">
           <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4 sm:mb-6 text-center">Meet Your Trip Leader</h2>
           <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-center sm:items-start">
-            {trip.trip_founder!.photo ? (
+            {leader!.photo ? (
               <img
-                src={trip.trip_founder!.photo}
-                alt={trip.trip_founder!.name}
+                src={leader!.photo}
+                alt={leader!.name}
                 className="w-40 h-40 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-primary/30 flex-shrink-0"
               />
             ) : (
               <div className="w-40 h-40 sm:w-44 sm:h-44 rounded-full bg-white/10 border-4 border-primary/30 flex items-center justify-center flex-shrink-0">
-                <span className="text-white/40 text-6xl font-display font-bold">{trip.trip_founder!.name.charAt(0)}</span>
+                <span className="text-white/40 text-6xl font-display font-bold">{leader!.name.charAt(0)}</span>
               </div>
             )}
             <div className="text-center sm:text-left flex-1">
-              {trip.trip_founder!.name && (
-                <h3 className="font-display text-xl font-bold text-white mb-0.5">{trip.trip_founder!.name}</h3>
+              {leader!.name && (
+                <h3 className="font-display text-xl font-bold text-white mb-0.5">{leader!.name}</h3>
               )}
-              {trip.trip_founder!.designation && (
-                <p className="text-primary text-sm font-semibold mb-2">{trip.trip_founder!.designation}</p>
+              {leader!.designation && (
+                <p className="text-primary text-sm font-semibold mb-2">{leader!.designation}</p>
               )}
-              {trip.trip_founder!.description && (
-                <p className="text-white/70 text-sm leading-relaxed whitespace-pre-line">{trip.trip_founder!.description}</p>
+              {leader!.description && (
+                <p className="text-white/70 text-sm leading-relaxed whitespace-pre-line">{leader!.description}</p>
               )}
             </div>
           </div>

@@ -266,17 +266,17 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
               </div>
             ) : null}
 
-            {trip.trip_founder && (trip.trip_founder.name || trip.trip_founder.photo) && (
+            {trip.trip_leader && (trip.trip_leader.name || trip.trip_leader.photo) && (
               <div>
-                <p className="text-xs font-medium text-dark-muted mb-1">Trip Founder</p>
+                <p className="text-xs font-medium text-dark-muted mb-1">Trip Leader</p>
                 <div className="flex gap-3 items-start bg-background-warm/60 rounded-md p-3">
-                  {trip.trip_founder.photo && (
-                    <img src={trip.trip_founder.photo} alt="" className="w-14 h-14 rounded-full object-cover flex-shrink-0" loading="lazy" decoding="async" />
+                  {trip.trip_leader.photo && (
+                    <img src={trip.trip_leader.photo} alt="" className="w-14 h-14 rounded-full object-cover flex-shrink-0" loading="lazy" decoding="async" />
                   )}
                   <div>
-                    {trip.trip_founder.name && <p className="text-sm font-medium text-dark">{trip.trip_founder.name}</p>}
-                    {trip.trip_founder.description && (
-                      <p className="text-dark-muted text-xs mt-0.5 whitespace-pre-line">{trip.trip_founder.description}</p>
+                    {trip.trip_leader.name && <p className="text-sm font-medium text-dark">{trip.trip_leader.name}</p>}
+                    {trip.trip_leader.description && (
+                      <p className="text-dark-muted text-xs mt-0.5 whitespace-pre-line">{trip.trip_leader.description}</p>
                     )}
                   </div>
                 </div>

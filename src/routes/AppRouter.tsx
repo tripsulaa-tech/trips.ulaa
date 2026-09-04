@@ -90,6 +90,7 @@ const AdminHomeHero = lazy(() => import('../admin/AdminHomeHero'));
 const AdminFounder = lazy(() => import('../admin/AdminFounder'));
 const AdminWhyULAA = lazy(() => import('../admin/AdminWhyULAA'));
 const AdminTestimonials = lazy(() => import('../admin/AdminTestimonials'));
+const AdminTripLeaders = lazy(() => import('../admin/AdminTripLeaders'));
 const AdminBottomNav = lazy(() => import('../admin/AdminBottomNav'));
 const AdminButtonLabels = lazy(() => import('../admin/AdminButtonLabels'));
 
@@ -177,6 +178,9 @@ export default function AppRouter() {
             } />
             <Route path="/admin/testimonials" element={
               <ProtectedRoute><AdminTestimonials /></ProtectedRoute>
+            } />
+            <Route path="/admin/trip-leaders" element={
+              <ProtectedRoute><AdminTripLeaders /></ProtectedRoute>
             } />
             <Route path="/admin/bottom-nav" element={
               <ProtectedRoute><AdminBottomNav /></ProtectedRoute>

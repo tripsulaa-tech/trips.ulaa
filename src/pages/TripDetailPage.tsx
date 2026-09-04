@@ -150,25 +150,36 @@ export default function TripDetailPage() {
   }, []);
 
   // Live status — if the admin flips "Coming Soon" (or edits seats, price,
-  // etc.) while someone is already sitting on this trip's page, merge the
-  // change straight in so it reflects immediately. Note: if the admin fully
-  // unpublishes this trip while someone is viewing it, the update won't be
-  // pushed here (an anonymous viewer's Realtime feed can't see a row that
-  // no longer passes the public "is_published = true" policy) — the page
-  // will still show the last-loaded version until they refresh or navigate.
+  // images, etc.) while someone is already sitting on this trip's page,
+  // pull the fresh row so it reflects immediately.
+  //
+  // Deliberately re-fetches via the REST API rather than merging
+  // payload.new straight into state (which is what this used to do): the
+  // Realtime WebSocket payload isn't a reliable source for every column on
+  // a trip with a lot of image/array data (cover/mobile-hero images,
+  // gallery_items, itinerary day photos, accommodation/fashion photos,
+  // highlight_cards, etc.) — large rows can hit Supabase Realtime's
+  // payload-size limit and get silently dropped or truncated, which showed
+  // up as text edits (small payload) going live instantly while image
+  // edits (much bigger payload) didn't. A plain re-fetch has no such limit
+  // and matches the pattern the trips-listing pages already use (see
+  // UpcomingTripsPage.tsx / UpcomingTripsPreview.tsx) — self-correcting on
+  // every event instead of trusting the socket payload's contents.
   useEffect(() => {
-    if (!trip?.id) return;
-    const unsubscribe = subscribeToTable<Partial<UpcomingTrip>>(
+    if (!trip?.id || !slug) return;
+    const unsubscribe = subscribeToTable(
       'upcoming_trips',
       (payload) => {
-        if (payload.eventType === 'UPDATE' && payload.new) {
-          setTrip(t => (t ? { ...t, ...payload.new } : t));
+        if (payload.eventType === 'UPDATE') {
+          getUpcomingTripBySlug(slug)
+            .then(data => { if (data) setTrip(data); })
+            .catch(() => {});
         }
       },
       `id=eq.${trip.id}`
     );
     return unsubscribe;
-  }, [trip?.id]);
+  }, [trip?.id, slug]);
 
   // Deep-link support for "?book=1" (e.g. the downloaded itinerary PDF's
   // "Pack Your Bags" link) — opens the booking modal automatically once
@@ -257,7 +268,7 @@ export default function TripDetailPage() {
   const hasConfidenceItems = (trip.confidence_items?.length ?? 0) > 0;
   const hasDetailsSection = (trip.things_to_carry_items?.length ?? 0) > 0
     || !!trip.meeting_point
-    || !!(trip.trip_founder?.name || trip.trip_founder?.photo);
+    || !!(trip.trip_leader?.name || trip.trip_leader?.photo);
 
   return (
     <Layout>

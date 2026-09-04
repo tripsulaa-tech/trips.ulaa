@@ -54,7 +54,8 @@ import { formatDateRange, formatAgeRange, formatDate, getActivePrice, getStrikeT
     // "Meet Your Trip Leader" side sits directly on the page background now.
     cardShell(rightX, rightW, RIGHT_TOP, RIGHT_BOTTOM);
 
-    // -- Left: Meet Your Trip Leader (from trip.trip_founder) --
+    // -- Left: Meet Your Trip Leader (from trip.trip_leader, joined live
+    //    from the trip_leaders directory — see services/api/trips.ts) --
     // "Meet Your Trip Leader" sits above the name column (not the photo),
     // right-shifted to align with the founder's name/title below it.
     const photoD = 150;
@@ -72,7 +73,7 @@ import { formatDateRange, formatAgeRange, formatDate, getActivePrice, getStrikeT
     doc.setLineWidth(2);
     doc.line(headingX, CARDS_TOP + PAD + 13, headingX + meetW, CARDS_TOP + PAD + 13);
 
-    const founder = trip.trip_founder;
+    const founder = trip.trip_leader;
     if (founder && (founder.name || founder.photo)) {
       let photoDrawn = false;
       if (founder.photo) {
@@ -117,7 +118,7 @@ import { formatDateRange, formatAgeRange, formatDate, getActivePrice, getStrikeT
       setText(COLORS.secondary);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.5);
-      doc.text('Founder & Trip Leader', textX, ny);
+      doc.text(founder.designation || 'Trip Leader', textX, ny);
       ny += 7;
       setDraw(COLORS.grayLineSoft);
       doc.setLineWidth(1);

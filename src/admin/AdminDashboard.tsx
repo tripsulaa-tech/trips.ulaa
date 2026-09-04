@@ -240,7 +240,15 @@ export default function AdminDashboard() {
                   <tbody>
                     {recentEnquiries.map(e => (
                       <tr key={e.id} className="border-b border-background-warm last:border-0">
-                        <td className="py-2 sm:py-3 px-1 font-medium text-dark truncate" title={e.full_name}>{truncateText(e.full_name, 10)}</td>
+                        <td className="py-2 sm:py-3 px-1 font-medium text-dark truncate">
+                          <Link
+                            to={`/admin/enquiries/${e.id}`}
+                            className="hover:text-primary hover:underline transition-colors"
+                            title={e.full_name}
+                          >
+                            {truncateText(e.full_name, 10)}
+                          </Link>
+                        </td>
                         <td className="py-2 sm:py-3 px-1 text-dark-muted truncate" title={e.trip_title || undefined}>{truncateText(e.trip_title || '—', 10)}</td>
                         <td className="py-2 sm:py-3 px-1 text-dark-muted whitespace-nowrap">{formatDate(e.created_at)}</td>
                         <td className="py-2 sm:py-3 px-1 text-right">
@@ -278,6 +286,7 @@ export default function AdminDashboard() {
                     <Link
                       key={trip.id}
                       to="/admin/trips"
+                      state={{ editTripId: trip.id }}
                       className="flex items-start gap-3 sm:gap-4 group"
                     >
                       <div className="w-12 h-12 sm:w-16 sm:h-16 rounded sm:rounded-md overflow-hidden bg-background-warm flex-shrink-0">

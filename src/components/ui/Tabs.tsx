@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, Children, isValidElement } from 'react';
-import type { ReactNode, ReactElement } from 'react';
+import type { ReactNode, ReactElement, RefObject } from 'react';
 
 interface TabPanelProps {
   label: string;
@@ -14,6 +14,19 @@ export function TabPanel({ children }: TabPanelProps) {
 interface TabsProps {
   children: ReactNode;
   defaultIndex?: number;
+  /** The actual scrollable ancestor this tab bar lives in (e.g. Modal's own
+   *  overflow-y-auto body, via its `bodyRef`) — same idea as
+   *  useContentEditorPage's `scrollBodyRef`. When provided, the scroll-spy
+   *  observer is scoped to it and a tab click scrolls its scrollTop
+   *  directly. Without it, a tab click falls back to the target's own
+   *  scrollIntoView(), which walks *every* scrollable ancestor up to
+   *  <body>/<html> — including ones with overflow-hidden (like a Modal
+   *  panel), which still accept a programmatic scrollTop even though the
+   *  user can't scroll them by hand — so the click can silently shift the
+   *  page's own hidden scroll position and surface a stray native
+   *  scrollbar behind the modal. Always pass this when Tabs is used inside
+   *  a Modal. */
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
 /** Pill-style tab bar (matching the public trip page) that acts as
@@ -22,11 +35,12 @@ interface TabsProps {
  *  section, and the active pill updates automatically as the admin
  *  scrolls past each one. Nothing is ever hidden — clicking a tab just
  *  gets you there faster. */
-export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
+export default function Tabs({ children, defaultIndex = 0, scrollContainerRef }: TabsProps) {
   const [active, setActive] = useState(defaultIndex);
   const [showLeftFade, setShowLeftFade] = useState(false);
   const [showRightFade, setShowRightFade] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
+  const stickyBarRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -75,7 +89,24 @@ export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
     bar.scrollTo({ left: target, behavior: 'smooth' });
   };
 
+  // Height of the sticky tab bar below, measured live off the DOM rather
+  // than guessed as a pixel constant — mirrors useContentEditorPage's
+  // stickyOffset(), which does the same for its own sticky search+tab bar.
+  const stickyOffset = () => stickyBarRef.current?.getBoundingClientRect().height ?? 0;
+
+  // Small gap left between the sticky bar and a freshly-scrolled section's
+  // heading, so it doesn't land flush against it — mirrors
+  // useContentEditorPage's SECTION_SCROLL_GAP.
+  const SECTION_SCROLL_GAP = 20;
+
   useEffect(() => {
+    // Scoping the observer's root to the real scroll container (when known)
+    // keeps its geometry — and therefore which section counts as "topmost"
+    // — anchored to the container that's actually scrolling, exactly like
+    // useContentEditorPage's own scroll-spy observer. Falling back to the
+    // viewport (root: null) needs a fixed top rootMargin instead, to roughly
+    // account for whatever sits above Tabs in the viewport.
+    const container = scrollContainerRef?.current;
     const observer = new IntersectionObserver(
       entries => {
         if (suppressObserverRef.current) return;
@@ -89,18 +120,44 @@ export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
           scrollButtonIntoView(idx);
         }
       },
-      { rootMargin: '-88px 0px -65% 0px', threshold: 0 }
+      container
+        ? { root: container, rootMargin: '0px 0px -65% 0px', threshold: 0 }
+        : { rootMargin: '-88px 0px -65% 0px', threshold: 0 }
     );
     sectionRefs.current.forEach(el => el && observer.observe(el));
     return () => observer.disconnect();
-  }, [panels.length]);
+  }, [panels.length, scrollContainerRef]);
+
+  // Scrolls a section into view. With a real scroll container passed in,
+  // this scrolls its scrollTop directly — mirroring
+  // useContentEditorPage's scrollSectionIntoView — instead of calling the
+  // target's own scrollIntoView(), which walks *every* scrollable ancestor
+  // up to <body>/<html>, including ones with overflow-hidden (like a Modal
+  // panel), which still accept a programmatic scrollTop even though the
+  // user can't scroll them by hand. Left unscoped, that silently shifts
+  // the page's own hidden scroll position and can surface a stray native
+  // scrollbar behind the modal — only falling back to scrollIntoView() when
+  // no container was given.
+  const scrollSectionIntoView = (i: number) => {
+    const target = sectionRefs.current[i];
+    if (!target) return;
+    const container = scrollContainerRef?.current;
+    if (!container) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const top = container.scrollTop + (targetRect.top - containerRect.top) - stickyOffset() - SECTION_SCROLL_GAP;
+    container.scrollTo({ top, behavior: 'smooth' });
+  };
 
   const handleSelect = (i: number) => {
     lastActiveRef.current = i;
     setActive(i);
     suppressObserverRef.current = true;
     if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
-    sectionRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollSectionIntoView(i);
     scrollButtonIntoView(i);
     // Smooth scrolls to nearby sections finish quickly; give it generous
     // room for a long jump (e.g. first tab to last) before trusting the
@@ -117,7 +174,7 @@ export default function Tabs({ children, defaultIndex = 0 }: TabsProps) {
           the body's own p-6) and repaints a solid white background over
           that padding area, so nothing scrolled-past can peek through
           above it. */}
-      <div className="sticky -top-6 z-20 bg-white -mx-6 -mt-6 px-6 pt-6 pb-3 mb-2">
+      <div ref={stickyBarRef} data-sticky-toolbar className="sticky -top-6 z-20 bg-white -mx-6 -mt-6 px-6 pt-6 pb-3 mb-2">
         <div className="relative">
           <div ref={barRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
             {panels.map((panel, i) => (

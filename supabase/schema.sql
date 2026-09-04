@@ -145,7 +145,21 @@ create table public.upcoming_trips (
   not_included_items      jsonb default '[]'::jsonb,
   gallery_items           jsonb default '[]'::jsonb,
   fashion_photos          text[] default '{}'::text[],
-  trip_founder            jsonb,
+  trip_founder            jsonb, -- Deprecated: no longer read or written by
+                                  -- the app. The public site/PDF and Admin
+                                  -- now read a trip's leader live from the
+                                  -- trip_leaders directory via
+                                  -- trip_leader_id below. Column kept
+                                  -- as-is (not dropped) so any historical
+                                  -- data isn't destroyed.
+  -- Reference into the trip_leaders directory identifying this trip's
+  -- assigned Trip Leader (see add_trip_leader_id_to_trips.sql). The public
+  -- site/PDF/Admin all read the linked trip_leaders row live (joined at
+  -- fetch time — see services/api/trips.ts), so editing a leader's
+  -- directory entry updates every trip that references them. FK
+  -- constraint is added further below as trip_leaders is defined later in
+  -- this file.
+  trip_leader_id          uuid,
   confidence_items        jsonb default '[]'::jsonb,
   confidence_description  text,
   meeting_address         text,
@@ -519,6 +533,28 @@ create table public.testimonials (
   constraint testimonials_pkey primary key (id),
   constraint testimonials_rating_check check (rating >= 1 and rating <= 5)
 );
+
+-- ----------------------------------------------------------------------------
+-- trip_leaders
+-- ----------------------------------------------------------------------------
+create table public.trip_leaders (
+  id            uuid not null default uuid_generate_v4(),
+  name          text not null,
+  photo         text,
+  designation   text,
+  description   text not null default '',
+  social_links  jsonb not null default '[]'::jsonb,
+  is_published  boolean default true,
+  sort_order    integer default 0,
+  created_at    timestamptz default now(),
+  constraint trip_leaders_pkey primary key (id)
+);
+
+-- upcoming_trips.trip_leader_id's FK, added here (rather than inline on
+-- upcoming_trips above) since trip_leaders must exist first.
+alter table public.upcoming_trips
+  add constraint upcoming_trips_trip_leader_id_fkey
+  foreign key (trip_leader_id) references public.trip_leaders (id) on delete set null;
 
 -- ----------------------------------------------------------------------------
 -- notifications
@@ -1573,6 +1609,7 @@ alter table public.waitlist enable row level security;
 alter table public.gallery enable row level security;
 alter table public.trip_images enable row level security;
 alter table public.testimonials enable row level security;
+alter table public.trip_leaders enable row level security;
 alter table public.notifications enable row level security;
 alter table public.push_subscriptions enable row level security;
 alter table public.site_content enable row level security;
@@ -1640,6 +1677,12 @@ create policy "Public read trip images" on public.trip_images
 create policy "Admin all testimonials" on public.testimonials
   for all using (auth.role() = 'authenticated');
 create policy "Public read testimonials" on public.testimonials
+  for select using (is_published = true);
+
+-- trip_leaders
+create policy "Admin all trip leaders" on public.trip_leaders
+  for all using (auth.role() = 'authenticated');
+create policy "Public read trip leaders" on public.trip_leaders
   for select using (is_published = true);
 
 -- notifications — admin can select/insert/update/delete freely. Inserts in

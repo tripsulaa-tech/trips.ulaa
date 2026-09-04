@@ -1,5 +1,5 @@
 import type { TripForm } from './tripFormTypes';
-import { emptyFounder, emptyEndBanner, emptyForm, computeDuration } from './tripFormTypes';
+import { emptyEndBanner, emptyForm, computeDuration } from './tripFormTypes';
 import { emptyTripFinance } from '../../utils/tripFinance';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
@@ -104,12 +104,10 @@ export const handleExportTemplate = () => {
     things_to_carry_items: [
       { icon: '<Icon-library key, NOT an emoji — e.g. "shirt", "footprints", "hand", "glasses", "pill". See src/constants/tripHighlightIcons.ts>', description: '<Item traveller should pack, e.g. "Warm jacket">' },
     ],
-    trip_founder: {
-      photo: '(leave blank — uploaded manually)',
-      name: '<Founder/host name for this trip>',
-      designation: '<Designation or role, e.g. "Founder & CEO, ULAA" (optional)>',
-      description: '<Short founder bio/description for this trip>',
-    },
+    // Note: trip leader assignment is deliberately left out of this
+    // template — it's a link to the Trip Leaders directory (Admin → Trip
+    // Leaders), not free text, so there'd be nothing meaningful to fill in
+    // here. Assign a trip leader from the Trip Leader tab after importing.
     confidence_items: [
       { icon: '<Icon-library key, NOT an emoji — e.g. "shield-check", "headset", "users". See src/constants/tripHighlightIcons.ts. Include at least 6 items — this section looks sparse with fewer than 6>', description: '<"Travel with Confidence" point, e.g. "24/7 support during the trip">' },
     ],
@@ -220,7 +218,6 @@ const asIconKey = (v: unknown): string => {
 export function parseImportedTripForm(raw: unknown): TripForm {
   const r = asObj(raw);
   const cancellationPolicySrc = asObj(r.cancellation_policy);
-  const tripFounderSrc = asObj(r.trip_founder);
   const endBannerSrc = asObj(r.end_banner);
   const imported: TripForm = {
       title: asStr(r.title),
@@ -292,9 +289,10 @@ export function parseImportedTripForm(raw: unknown): TripForm {
       fashion_photos: asStrArray(r.fashion_photos),
       fashion_description: asStr(r.fashion_description),
       things_to_carry_items: asArr(r.things_to_carry_items).map(c => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) })),
-      trip_founder: r.trip_founder
-        ? { photo: asStr(tripFounderSrc.photo), name: asStr(tripFounderSrc.name), designation: asStr(tripFounderSrc.designation), description: asStr(tripFounderSrc.description) }
-        : emptyFounder,
+      // Templates are plain text/JSON with no knowledge of trip_leaders
+      // directory ids, so an import always starts unlinked — the admin can
+      // assign one afterwards from the Trip Leader tab if they want to.
+      trip_leader_id: '',
       confidence_items: asArr(r.confidence_items).map(c => ({ icon: asIconKey(c?.icon), description: asStr(c?.description) })),
       confidence_description: asStr(r.confidence_description),
       meeting_address: asStr(r.meeting_address),

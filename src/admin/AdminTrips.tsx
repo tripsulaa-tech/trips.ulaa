@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import { useTripsData } from './trips/useTripsData';
 import { useTripActions } from './trips/useTripActions';
@@ -25,6 +26,8 @@ export default function AdminTrips() {
   const { trips, loading, load } = useTripsData();
   const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
   const { revenueByTripId } = useTripFinanceData();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const {
     pdfDownloadingId,
@@ -42,12 +45,32 @@ export default function AdminTrips() {
     commitGroupBulletDraft,
     importInputRef, handleImportInputChange,
     handleExportTemplate,
+    tripLeaders,
   } = useTripFormModal(load);
 
   const openEditFromView = (trip: UpcomingTrip) => {
     setViewingTrip(null);
     openEdit(trip);
   };
+
+  // Supports landing on this page with a request to jump straight into a
+  // specific trip's edit modal — used by the Dashboard's Upcoming Trips
+  // list, which links here with `state: { editTripId }` instead of just
+  // navigating to the (unrelated) trips list view. Waits for the trip data
+  // to finish loading, opens that trip's edit modal once, then clears the
+  // navigation state so refreshing or navigating back doesn't reopen it.
+  const pendingEditIdRef = useRef<string | null>(
+    (location.state as { editTripId?: string } | null)?.editTripId ?? null
+  );
+  useEffect(() => {
+    const pendingId = pendingEditIdRef.current;
+    if (!pendingId || loading) return;
+    pendingEditIdRef.current = null;
+    const trip = trips.find(t => t.id === pendingId);
+    if (trip) openEdit(trip);
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trips, loading]);
 
   return (
     <AdminLayout title="Upcoming Trips">
@@ -82,6 +105,7 @@ export default function AdminTrips() {
         handleSave={handleSave}
         commitGroupBulletDraft={commitGroupBulletDraft}
         actualRevenue={revenueByTripId(editingTrip?.id)}
+        tripLeaders={tripLeaders}
       />
 
       <AdminTripViewModal

@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  createUpcomingTrip, updateUpcomingTrip, getSiteContent, deleteImageByUrl,
+  createUpcomingTrip, updateUpcomingTrip, getAllTripLeadersAdmin, deleteImageByUrl,
 } from '../../services/api';
 import { useAlert } from '../../components/ui/useAlert';
-import type { UpcomingTrip, TripFounder, FounderContent } from '../../types/types-index';
+import type { UpcomingTrip, TripLeader } from '../../types/types-index';
 import { slugify } from '../../utils/utils-index';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
 import { emptyTripFinance } from '../../utils/tripFinance';
-import { emptyFounder, emptyEndBanner, emptyForm, computeDuration, type TripForm } from './tripFormTypes';
+import { emptyEndBanner, emptyForm, computeDuration, type TripForm } from './tripFormTypes';
 import { handleExportTemplate, parseImportedTripForm } from './tripTemplateIO';
 
 export { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
@@ -23,11 +23,23 @@ export function useTripFormModal(load: () => void) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSearch, setModalSearch] = useState('');
   const [modalSearchNoMatch, setModalSearchNoMatch] = useState(false);
+  // The modal's own scrollable body — passed to Modal as `bodyRef` and to
+  // Tabs as `scrollContainerRef` so both the scroll-spy and any
+  // programmatic jump (tab click, field search) scope their scrolling to
+  // this container instead of walking up to <body>/<html>.
   const modalBodyRef = useRef<HTMLDivElement>(null);
   const [editingTrip, setEditingTrip] = useState<UpcomingTrip | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<TripForm>(emptyForm);
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  // The Trip Leaders directory (Admin → Trip Leaders), loaded once so the
+  // Add/Edit Trip modal's Trip Leader tab can offer an "assign from directory"
+  // picker and preview the assigned leader's details live.
+  const [tripLeaders, setTripLeaders] = useState<TripLeader[]>([]);
+  useEffect(() => {
+    getAllTripLeadersAdmin().then(setTripLeaders).catch(() => setTripLeaders([]));
+  }, []);
 
   // Tracks the set of image URLs that were already in the form when the
   // modal opened. Any storage URL in the form at close-time that is NOT in
@@ -42,7 +54,6 @@ export function useTripFormModal(load: () => void) {
     const add = (u?: string) => { if (u) urls.add(u); };
     add(f.cover_image);
     add(f.hero_mobile_image);
-    add(f.trip_founder?.photo);
     add(f.end_banner?.image);
     f.accommodation_photos?.forEach(u => add(u));
     f.fashion_photos?.forEach(u => add(u));
@@ -73,7 +84,16 @@ export function useTripFormModal(load: () => void) {
   // Add/Edit Trip modal (Tabs renders every section in one continuous flow,
   // so everything is always in the DOM) and scrolls the first text match
   // into view with a brief highlight flash — a quick way to jump straight
-  // to a field (e.g. "meeting point", "pricing") without hunting through tabs.
+  // to a field (e.g. "meeting point", "pricing") without hunting through
+  // tabs. `modalBodyRef` is the modal's own scrollable body (see Modal's
+  // `bodyRef`), so scrolling is done by moving its scrollTop directly —
+  // mirroring useContentEditorPage's handlePageSearch — rather than calling
+  // the match's own scrollIntoView(). scrollIntoView() walks every
+  // scrollable ancestor up to <body>/<html>, including the modal panel's
+  // own overflow-hidden wrapper, which still accepts a programmatic
+  // scrollTop even though the user can't scroll it by hand — so it could
+  // silently shift the page's own hidden scroll position and surface a
+  // stray native scrollbar behind the modal.
   const handleModalSearch = () => {
     const query = modalSearch.trim().toLowerCase();
     const container = modalBodyRef.current;
@@ -88,7 +108,17 @@ export function useTripFormModal(load: () => void) {
       return;
     }
     setModalSearchNoMatch(false);
-    match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Centered in whatever room is left below the sticky tab bar (found via
+    // Tabs' own `data-sticky-toolbar` marker), so a match never lands
+    // underneath it.
+    const containerRect = container.getBoundingClientRect();
+    const matchRect = match.getBoundingClientRect();
+    const stickyBar = container.querySelector<HTMLElement>('[data-sticky-toolbar]');
+    const offset = stickyBar ? stickyBar.getBoundingClientRect().height : 0;
+    const visibleHeight = container.clientHeight - offset;
+    const centerOffset = offset + visibleHeight / 2 - match.clientHeight / 2;
+    const top = container.scrollTop + (matchRect.top - containerRect.top) - centerOffset;
+    container.scrollTo({ top, behavior: 'smooth' });
     const previousBackground = match.style.backgroundColor;
     const previousTransition = match.style.transition;
     match.style.transition = 'background-color 0.3s ease';
@@ -111,26 +141,11 @@ export function useTripFormModal(load: () => void) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalSearch, modalOpen]);
 
-  const openCreate = async () => {
+  const openCreate = () => {
     setEditingTrip(null);
     setModalSearch('');
     setModalSearchNoMatch(false);
-    // Pre-fill trip_founder from the shared "Meet the Founder" data (now its
-    // own admin tab/site_content key, see src/admin/AdminFounder.tsx) so the
-    // admin doesn't have to re-enter the same photo/name/bio for every trip.
-    let preFilledFounder: TripFounder = emptyFounder;
-    try {
-      const founder = await getSiteContent<Partial<FounderContent>>('founder');
-      if (founder) {
-        const { photo = '', name = '', designation = '', description = '' } = founder;
-        if (photo || name || description) {
-          preFilledFounder = { photo, name, designation, description };
-        }
-      }
-    } catch {
-      // silently fall back to empty founder
-    }
-    const initialForm = { ...emptyForm, trip_founder: preFilledFounder };
+    const initialForm = emptyForm;
     setForm(initialForm);
     initialModalUrlsRef.current = collectTripFormUrls(initialForm);
     setModalOpen(true);
@@ -172,7 +187,7 @@ export function useTripFormModal(load: () => void) {
       fashion_photos: trip.fashion_photos || [],
       fashion_description: trip.fashion_description || '',
       things_to_carry_items: trip.things_to_carry_items || [],
-      trip_founder: trip.trip_founder || emptyFounder,
+      trip_leader_id: trip.trip_leader_id || '',
       confidence_items: trip.confidence_items || [],
       confidence_description: trip.confidence_description || '',
       meeting_address: trip.meeting_address || '',
@@ -229,6 +244,7 @@ export function useTripFormModal(load: () => void) {
         trip_type: form.trip_type === '' ? null : form.trip_type,
         min_age: form.min_age === '' ? null : form.min_age,
         max_age: form.max_age === '' ? null : form.max_age,
+        trip_leader_id: form.trip_leader_id === '' ? null : form.trip_leader_id,
         seats_booked: Math.max(0, Math.min(form.seats_booked, form.total_seats)),
       };
       if (editingTrip) {
@@ -290,5 +306,6 @@ export function useTripFormModal(load: () => void) {
     commitGroupBulletDraft,
     importInputRef, handleImportInputChange,
     handleExportTemplate,
+    tripLeaders,
   };
 }

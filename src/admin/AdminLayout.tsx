@@ -18,6 +18,7 @@ import {
   CaretDoubleLeft as ChevronsLeft,
   CaretDoubleRight as ChevronsRight,
   UserCircle,
+  Users,
   DotsThreeOutline as PanelBottom,
   DotsSixVertical as GripVertical,
   ChartBar as BarChart3,
@@ -48,6 +49,7 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   'About Page': { to: '/admin/about', icon: FileText },
   'Home Hero': { to: '/admin/home-hero', icon: Images },
   Founder: { to: '/admin/founder', icon: UserCircle },
+  'Trip Leaders': { to: '/admin/trip-leaders', icon: Users },
   'Why ULAA': { to: '/admin/why-us', icon: Sparkles },
   'Bottom Nav Bar': { to: '/admin/bottom-nav', icon: PanelBottom },
   Enquiries: { to: '/admin/enquiries', icon: MessageCircle },
@@ -56,7 +58,7 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
 };
 
 const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'About Page', 'Enquiries', 'Waitlist', 'Reports'];
-const DEFAULT_GROUP_CHILDREN_ORDER = ['Home Hero', 'Instagram Moments', 'Testimonials', 'Bottom Nav Bar', 'Founder', 'Why ULAA'];
+const DEFAULT_GROUP_CHILDREN_ORDER = ['Home Hero', 'Instagram Moments', 'Testimonials', 'Bottom Nav Bar', 'Founder', 'Trip Leaders', 'Why ULAA'];
 
 // "Dashboard" is the one item that renders as an expandable group (it's the
 // only item other tabs can be dropped into) — everything else is a plain

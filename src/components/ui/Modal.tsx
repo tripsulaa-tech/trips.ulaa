@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -17,6 +17,16 @@ interface ModalProps {
   /** Optional content (e.g. a search field) rendered in the header row,
    *  between the title and the close button. Only shown when `title` is set. */
   headerContent?: ReactNode;
+  /** Ref attached to the actual scrollable body div. Hand this to any
+   *  in-modal jump-nav (e.g. Tabs' `scrollContainerRef`) or search feature
+   *  so it can scroll this container's own scrollTop directly instead of
+   *  calling a target's scrollIntoView() — which walks every scrollable
+   *  ancestor up to <body>/<html>, including this panel's own
+   *  overflow-hidden wrapper below, which still accepts a programmatic
+   *  scrollTop even though the user can't scroll it by hand. Left
+   *  unscoped, that silently shifts the page's own hidden scroll position
+   *  and can surface a stray native scrollbar behind the modal. */
+  bodyRef?: RefObject<HTMLDivElement | null>;
 }
 
 const sizes = {
@@ -26,7 +36,7 @@ const sizes = {
   xl: 'max-w-4xl',
 };
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent, bodyRef }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -116,19 +126,21 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
                 shrink it to the remaining space in the flex-col modal and
                 actually scroll, instead of growing to fit all the content
                 and getting clipped by the outer overflow-hidden. */}
-            <div className="app-scroll overflow-y-auto flex-1 min-h-0 p-6">
+            <div ref={bodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0 p-6">
               {children}
-
-              {/* Sticky footer — lives inside the scroll container as its
-                  last child, pinned to the bottom via `position: sticky`.
-                  This keeps Save/Cancel reachable at all times without
-                  relying on fragile height calculations elsewhere. */}
-              {footer && (
-                <div className="sticky -bottom-6 -mx-6 -mb-6 mt-6 px-6 py-4 border-t border-background-warm bg-white rounded-b-md">
-                  {footer}
-                </div>
-              )}
             </div>
+
+            {/* Footer — a real flex item below the scroll area (not a
+                `position: sticky` trick inside it), same pattern as the
+                header above. That means it's always pinned exactly here,
+                full stop — including mid-scroll, mid smooth-scroll (e.g. a
+                tab-bar jump inside the body), on any browser, regardless of
+                how tall the scrollable content is. */}
+            {footer && (
+              <div className="flex-shrink-0 px-6 py-4 border-t border-background-warm bg-white rounded-b-md">
+                {footer}
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}
