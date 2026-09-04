@@ -30,7 +30,7 @@ import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, formatPrice } from '../../utils/utils-index';
 import {
   PACKAGE_CONFIG,
-  foodBadge, foodPreferenceKey, SOURCE_CONFIG,
+  SOURCE_CONFIG,
   journeyBadge, nextManualAction,
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
@@ -129,23 +129,15 @@ export default function AdminEnquiriesMobileCards({
                 className="flex-1 min-w-0 flex flex-col text-left py-2.5 pr-1"
               >
                 <div className="w-full flex items-start justify-between gap-3">
-                  <p className="font-medium text-sm text-dark truncate flex items-center gap-1.5 min-w-0">
+                  <p className="font-medium text-sm text-dark flex items-center gap-1.5 min-w-0">
                     <span className="text-dark-muted text-xs font-normal shrink-0">#{idx + 1}</span>
-                    {e.full_name}
+                    <span className="truncate min-w-0">{e.full_name}</span>
                     {e.package_type === 'early_bird' && (
                       <span
                         title="Early Bird"
                         className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 shrink-0"
                       >
                         <Bird size={11}  aria-hidden="true" />
-                      </span>
-                    )}
-                    {e.has_child_addon && (
-                      <span
-                        title="A Child Fare add-on has been added to this booking"
-                        className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
-                      >
-                        <Baby size={11} aria-hidden="true" /> Child
                       </span>
                     )}
                     {e.cancelled_at && (
@@ -187,11 +179,6 @@ export default function AdminEnquiriesMobileCards({
                       Due {formatPrice(paymentBalance(e)!)}
                     </span>
                   )}
-                  <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold whitespace-nowrap shrink-0 ${
-                    e.food_preference === 'veg' ? 'text-green-700' : e.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark-muted'
-                  }`}>
-                    <FoodMark type={foodPreferenceKey(e)} size={9} /> {foodBadge(e).label}
-                  </span>
                   {e.group_size && e.group_size > 1 ? (
                     <span
                       title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
@@ -205,6 +192,14 @@ export default function AdminEnquiriesMobileCards({
                       className="inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
                     >
                       <User size={9}  aria-hidden="true" /> Solo
+                    </span>
+                  )}
+                  {e.has_child_addon && (
+                    <span
+                      title="A Child Fare add-on has been added to this booking"
+                      className="inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-amber-50 text-amber-700 shrink-0"
+                    >
+                      <Baby size={9} aria-hidden="true" /> Child
                     </span>
                   )}
                 </div>

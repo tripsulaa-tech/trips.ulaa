@@ -191,8 +191,8 @@ export default function AdminEnquiriesDesktopTable({
                         className="text-left min-w-0 flex-1 group"
                         title="Click for a quick summary"
                       >
-                        <p className="font-medium text-dark truncate group-hover:text-primary transition-colors flex items-center gap-1.5">
-                          {e.full_name}
+                        <p className="font-medium text-dark group-hover:text-primary transition-colors flex items-center gap-1.5 min-w-0">
+                          <span className="truncate min-w-0">{e.full_name}</span>
                           {e.has_child_addon && (
                             <span
                               title="A Child Fare add-on has been added to this booking"
