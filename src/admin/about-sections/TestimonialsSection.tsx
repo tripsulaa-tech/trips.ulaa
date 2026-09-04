@@ -15,33 +15,37 @@ export default function TestimonialsSection({
       <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">7 · What Our Girls Say</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="about-testimonials-sub-heading" className={labelClass}>Sub Heading</label>
-          <input
+          <label htmlFor="about-testimonials-sub-heading" className={labelClass}>Eyebrow Text</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
+          <textarea
             id="about-testimonials-sub-heading"
             value={content.sub_heading}
             onChange={e => setTestimonialsContent('sub_heading', e.target.value)}
-            className={inputClass}
+            rows={1}
+            className={`${inputClass} h-16 resize-none`}
             placeholder="Stories That Inspire"
           />
         </div>
         <div>
-          <label htmlFor="about-testimonials-heading" className={labelClass}>Section Heading</label>
+          <label htmlFor="about-testimonials-heading" className={labelClass}>Main Heading</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
           <textarea
             id="about-testimonials-heading"
             value={content.heading}
             onChange={e => setTestimonialsContent('heading', e.target.value)}
             rows={2}
-            className={`${inputClass} resize-none`}
+            className={`${inputClass} h-16 resize-none`}
           />
         </div>
         <div className="sm:col-span-2">
-          <label htmlFor="about-testimonials-subheading" className={labelClass}>Subheading</label>
+          <label htmlFor="about-testimonials-subheading" className={labelClass}>Supporting Text</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
           <textarea
             id="about-testimonials-subheading"
             value={content.subheading}
             onChange={e => setTestimonialsContent('subheading', e.target.value)}
             rows={2}
-            className={`${inputClass} resize-none`}
+            className={`${inputClass} h-16 resize-none`}
             placeholder="Real stories. Real experiences."
           />
         </div>

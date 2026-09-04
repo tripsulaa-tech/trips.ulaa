@@ -76,15 +76,18 @@ export default function ContentEditorShell({
   }
 
   return (
-    <AdminLayout title={title} subtitle={subtitle} hasUnsavedChanges={hasUnsavedChanges}>
+    <AdminLayout title={title} subtitle={subtitle} hasUnsavedChanges={hasUnsavedChanges} fixedHeight>
       {/* Modal-style card: bordered white card with its own scroll area (the
           thicker "app-scroll" scrollbar), a pinned search bar + tab bar up
           top, and a footer that blends into and sticks to the bottom of the
           card while the sections scroll — same skeleton as the Add Trip
-          popup, just without the overlay since this is a full page. */}
-      <div className="w-full bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
+          popup, just without the overlay since this is a full page. Sized
+          via flex-1/min-h-0 against AdminLayout's fixedHeight main (rather
+          than a max-h calc guess) so it always fills exactly the remaining
+          viewport space with zero slack for the page itself to scroll. */}
+      <div className="w-full flex-1 min-h-0 bg-white rounded-md shadow-warm-lg border border-background-warm overflow-hidden flex flex-col">
         <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
-          <div className="sticky top-0 z-10 bg-white p-6 pb-4 border-b border-background-warm space-y-4">
+          <div data-sticky-toolbar className="sticky top-0 z-10 bg-white p-6 pb-4 border-b border-background-warm space-y-4">
             <div className="relative w-full max-w-xs">
               <label htmlFor={searchId} className="sr-only">Search fields</label>
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />

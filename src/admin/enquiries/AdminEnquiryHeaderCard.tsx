@@ -4,6 +4,7 @@
 // parent doesn't have to thread jb/food/etc. through.
 import {
   Users, User, CalendarDot as CalendarClock, XCircle, UserMinus, SignIn as LogIn, Copy, Check, Baby,
+  FileText, ShareNetwork as Share2,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import ActionsMenu from '../../components/ui/ActionsMenu';
@@ -27,11 +28,20 @@ interface AdminEnquiryHeaderCardProps {
   onMarkNotInterested: () => void;
   onOpenFollowUp: () => void;
   rowActions: ActionMenuItem[];
+  // Shown as their own icon buttons next to Set Follow-up/the "⋮" menu
+  // (instead of living only inside that menu) — same treatment as the
+  // Invoices & Payments table's per-row actions, since there's room for
+  // them right here too. Both optional; only relevant once a booking
+  // exists, so callers only need to pass them for that case.
+  onDownloadInvoice?: () => void;
+  onShareInvoice?: () => void;
+  invoiceActionBusy?: boolean;
 }
 
 export default function AdminEnquiryHeaderCard({
   enquiry, busyAction, busyStatus, busyFollowUp, bookingIdCopied, onCopyBookingId,
   onAdvance, onMarkNotInterested, onOpenFollowUp, rowActions,
+  onDownloadInvoice, onShareInvoice, invoiceActionBusy,
 }: AdminEnquiryHeaderCardProps) {
   const jb = journeyBadge(enquiry);
   const nma = nextManualAction(enquiry);
@@ -159,6 +169,30 @@ export default function AdminEnquiryHeaderCard({
               <Button variant="outline" size="sm" onClick={onOpenFollowUp} disabled={busyAction || busyFollowUp} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
                 <CalendarClock size={14} aria-hidden="true" /> Set Follow-up
               </Button>
+            )}
+            {onDownloadInvoice && (
+              <button
+                type="button"
+                onClick={onDownloadInvoice}
+                disabled={invoiceActionBusy}
+                title="Download Invoice"
+                aria-label="Download Invoice"
+                className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-50 transition-colors shrink-0"
+              >
+                <FileText size={15} aria-hidden="true" />
+              </button>
+            )}
+            {onShareInvoice && (
+              <button
+                type="button"
+                onClick={onShareInvoice}
+                disabled={invoiceActionBusy}
+                title="Share Invoice"
+                aria-label="Share Invoice"
+                className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-50 transition-colors shrink-0"
+              >
+                <Share2 size={15} aria-hidden="true" />
+              </button>
             )}
             <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} variant="plain" />
           </div>

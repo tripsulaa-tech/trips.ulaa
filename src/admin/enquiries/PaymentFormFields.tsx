@@ -12,7 +12,7 @@ import { formatPrice } from '../../utils/utils-index';
 import MethodReferenceFields from './MethodReferenceFields';
 import {
   parseNonNegative, PACKAGE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS,
-  availablePaymentTypeOptions, clearsBalance, computeDiscountedTotal,
+  availablePaymentTypeOptions, computeDiscountedTotal,
   REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
 } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
@@ -207,16 +207,6 @@ export default function PaymentFormFields({
                 <Baby size={13} aria-hidden="true" /> Child Fare
               </button>
             </>
-          )}
-          {paymentForm.payment_type !== 'addon' && !clearsBalance(paymentForm, enquiry.amount_paid || 0) && (
-            <p className="text-[11px] text-dark-muted mt-1">
-              'Balance' will appear here once the amount above clears what's still owed.
-            </p>
-          )}
-          {paymentForm.payment_type !== 'addon' && (enquiry.amount_paid || 0) > 0 && (
-            <p className="text-[11px] text-dark-muted mt-1">
-              'Advance' and 'Full Payment' are only offered for the first payment on a booking — this one's already had money in, so use 'Installment' or 'Balance' instead.
-            </p>
           )}
         </div>
       </div>

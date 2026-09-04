@@ -53,7 +53,7 @@ export default function AdminEnquiryPaymentModal({
         />
 
         <div className="flex gap-3 pt-2">
-          <Button variant="outline" size="md" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" size="md" onClick={onClose} className="flex-1">Cancel</Button>
           <Button
             variant="primary"
             size="md"
@@ -61,6 +61,7 @@ export default function AdminEnquiryPaymentModal({
             loading={savingPayment}
             disabled={hasPaymentErrors}
             title={hasPaymentErrors ? 'Fix the highlighted fields before saving' : undefined}
+            className="flex-1"
           >
             Save Payment
           </Button>

@@ -9,8 +9,9 @@ const SHOW_AFTER_PX = 400;
 interface ScrollToTopButtonProps {
   /**
    * Overrides the default `left-6` position — e.g. the admin layout passes
-   * a wider offset on `lg+` so the button clears the fixed sidebar instead
-   * of floating on top of it.
+   * `right-6` to sit clear of the fixed sidebar instead of floating on top
+   * of it (and away from content like the Activity Timeline that lives in
+   * the same lower-left area).
    */
   leftClass?: string;
 }
@@ -38,7 +39,7 @@ export default function ScrollToTopButton({ leftClass = 'left-6' }: ScrollToTopB
           exit={{ opacity: 0, y: 10, scale: 0.9 }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-          className={`fixed bottom-28 lg:bottom-6 ${leftClass} z-40 w-11 h-11 rounded-full bg-white border border-background-warm shadow-warm-lg flex items-center justify-center text-dark-muted hover:text-primary transition-colors`}
+          className={`fixed bottom-28 lg:bottom-6 ${leftClass} z-40 w-11 h-11 rounded-full bg-primary border-2 border-primary shadow-warm-lg flex items-center justify-center text-white hover:bg-primary-dark hover:border-primary-dark transition-colors`}
         >
           <ArrowUp size={18} />
         </motion.button>

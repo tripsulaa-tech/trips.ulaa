@@ -212,6 +212,7 @@ export default function AdminAbout() {
       showLeftFade={showLeftFade}
       showRightFade={showRightFade}
       scrollBodyRef={scrollBodyRef}
+      scrollClassName="scrollbar-hide"
       onSave={handleSave}
       saving={saving}
       saved={saved}

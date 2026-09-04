@@ -23,33 +23,37 @@ export default function WhyDifferentSection({
       <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">4 · Why ULAA is Different</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="about-why-diff-sub-heading" className={labelClass}>Sub Heading</label>
-          <input
+          <label htmlFor="about-why-diff-sub-heading" className={labelClass}>Eyebrow Text</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
+          <textarea
             id="about-why-diff-sub-heading"
             value={content.sub_heading}
             onChange={e => setWHY('sub_heading', e.target.value)}
-            className={inputClass}
+            rows={1}
+            className={`${inputClass} h-16 resize-none`}
             placeholder="Beyond the Ordinary"
           />
         </div>
         <div>
-          <label htmlFor="about-why-diff-heading" className={labelClass}>Section Heading</label>
+          <label htmlFor="about-why-diff-heading" className={labelClass}>Main Heading</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
           <textarea
             id="about-why-diff-heading"
             value={content.heading}
             onChange={e => setWHY('heading', e.target.value)}
             rows={2}
-            className={`${inputClass} resize-none`}
+            className={`${inputClass} h-16 resize-none`}
           />
         </div>
         <div className="sm:col-span-2">
-          <label htmlFor="about-why-diff-subheading" className={labelClass}>Subheading</label>
+          <label htmlFor="about-why-diff-subheading" className={labelClass}>Supporting Text</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
           <textarea
             id="about-why-diff-subheading"
             value={content.subheading}
             onChange={e => setWHY('subheading', e.target.value)}
             rows={2}
-            className={`${inputClass} resize-none`}
+            className={`${inputClass} h-16 resize-none`}
           />
         </div>
       </div>
@@ -85,36 +89,45 @@ export default function WhyDifferentSection({
               </button>
             </div>
             <div>
-              <label htmlFor={`about-why-card-heading-${i}`} className={labelClass}>Heading</label>
-              <textarea
-                id={`about-why-card-heading-${i}`}
-                value={card.heading}
-                onChange={e => updateWhyCard(i, 'heading', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
+              <label className={labelClass}>Card Image (optional)</label>
+              <p className="text-[11px] text-dark-muted leading-snug mb-1.5">
+                Upload a photo, or paste an image URL (e.g. from Unsplash) — it'll show on this card as-is.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+              <div className="space-y-2">
+                <div>
+                  <label htmlFor={`about-why-card-heading-${i}`} className={labelClass}>Heading</label>
+                  <textarea
+                    id={`about-why-card-heading-${i}`}
+                    value={card.heading}
+                    onChange={e => updateWhyCard(i, 'heading', e.target.value)}
+                    rows={2}
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
+                <div>
+                  <label htmlFor={`about-why-card-description-${i}`} className={labelClass}>Description</label>
+                  <textarea
+                    id={`about-why-card-description-${i}`}
+                    value={card.description}
+                    onChange={e => updateWhyCard(i, 'description', e.target.value)}
+                    rows={2}
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
+              </div>
+              <ImageUploadField
+                label=""
+                value={card.image ?? ''}
+                onChange={url => updateWhyCard(i, 'image', url)}
+                bucket="ulaa"
+                pathPrefix={`about/why-different/card-${i + 1}`}
+                fileNamePrefix={`card-${i + 1}`}
+                aspectRatio="16/9"
+                allowUrl
               />
             </div>
-            <div>
-              <label htmlFor={`about-why-card-description-${i}`} className={labelClass}>Description</label>
-              <textarea
-                id={`about-why-card-description-${i}`}
-                value={card.description}
-                onChange={e => updateWhyCard(i, 'description', e.target.value)}
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-            <ImageUploadField
-              label="Card Image (optional)"
-              value={card.image ?? ''}
-              onChange={url => updateWhyCard(i, 'image', url)}
-              bucket="ulaa"
-              pathPrefix="about/why-different"
-              fileNamePrefix={`card-${i + 1}`}
-              hint="Upload a photo, or paste an image URL (e.g. from Unsplash) — it'll show on this card as-is."
-              aspectRatio="16/9"
-              allowUrl
-            />
           </div>
         ))}
       </div>

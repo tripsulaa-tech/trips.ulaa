@@ -100,8 +100,8 @@ export default function ActionsMenu({ items, disabled, label = 'Actions', varian
         // background, so it read as barely there.
         className={
           variant === 'plain'
-            ? 'w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md text-dark-muted hover:bg-background-warm active:bg-background-warm disabled:opacity-50 transition-colors shrink-0'
-            : 'w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-dark/20 text-dark-muted hover:bg-background-warm hover:border-dark/30 active:bg-background-warm disabled:opacity-50 transition-colors shrink-0'
+            ? 'w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md text-primary hover:bg-background-warm active:bg-background-warm disabled:opacity-50 transition-colors shrink-0'
+            : 'w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary active:bg-primary active:text-white disabled:opacity-50 transition-colors shrink-0'
         }
       >
         <MoreVertical size={15} aria-hidden="true" />

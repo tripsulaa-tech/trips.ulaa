@@ -372,7 +372,8 @@ export default function AdminHomeHero() {
                               </div>
                             </div>
                             <div>
-                              <label htmlFor={`home-hero-subheading-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Subheading</label>
+                              <label htmlFor={`home-hero-subheading-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Supporting Text</label>
+                              <p className="text-[11px] text-dark-muted leading-snug mb-1">Paragraph shown below the heading.</p>
                               <textarea
                                 id={`home-hero-subheading-${slide.id}`}
                                 rows={2}

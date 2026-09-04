@@ -164,33 +164,38 @@ export default function AdminTestimonials() {
           <h2 className="font-display text-lg font-bold text-dark">Section Text</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="test-sub-heading" className="block text-sm font-medium text-dark mb-1">Sub Heading</label>
-              <input
+              <label htmlFor="test-sub-heading" className="block text-sm font-medium text-dark mb-1">Eyebrow Text</label>
+              <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
+              <textarea
                 id="test-sub-heading"
                 value={sectionText.sub_heading}
                 onChange={e => setSectionField('sub_heading', e.target.value)}
-                className={inputClass}
+                rows={1}
+                className={`${inputClass} h-16 resize-none`}
                 placeholder="Real Stories"
               />
             </div>
             <div>
-              <label htmlFor="test-heading" className="block text-sm font-medium text-dark mb-1">Section Heading</label>
-              <input
+              <label htmlFor="test-heading" className="block text-sm font-medium text-dark mb-1">Main Heading</label>
+              <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
+              <textarea
                 id="test-heading"
                 value={sectionText.heading}
                 onChange={e => setSectionField('heading', e.target.value)}
-                className={inputClass}
+                rows={1}
+                className={`${inputClass} h-16 resize-none`}
                 placeholder="What our travelers say."
               />
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="test-subheading" className="block text-sm font-medium text-dark mb-1">Subheading</label>
+              <label htmlFor="test-subheading" className="block text-sm font-medium text-dark mb-1">Supporting Text</label>
+              <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
               <textarea
                 id="test-subheading"
                 value={sectionText.subheading}
                 onChange={e => setSectionField('subheading', e.target.value)}
                 rows={2}
-                className={`${inputClass} resize-none`}
+                className={`${inputClass} h-16 resize-none`}
               />
             </div>
           </div>

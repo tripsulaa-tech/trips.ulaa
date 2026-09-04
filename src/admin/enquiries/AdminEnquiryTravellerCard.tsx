@@ -96,7 +96,7 @@ export default function AdminEnquiryTravellerCard({
 
       {editing && (
         <div className="flex items-center gap-2.5 min-w-0 pb-4 mb-1 border-b border-background-warm">
-          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+          <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
             <User size={15} aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
@@ -118,7 +118,7 @@ export default function AdminEnquiryTravellerCard({
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-3 pb-4 border-b border-background-warm">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+          <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
             <PhoneIcon size={15} aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
@@ -143,7 +143,7 @@ export default function AdminEnquiryTravellerCard({
           </div>
         </div>
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+          <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
             <EnvelopeSimple size={15} aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
@@ -172,7 +172,7 @@ export default function AdminEnquiryTravellerCard({
       <div className="divide-y divide-background-warm">
         <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
               <Briefcase size={15} aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
@@ -204,7 +204,7 @@ export default function AdminEnquiryTravellerCard({
             </div>
           </div>
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
               <User size={15} aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
@@ -228,7 +228,7 @@ export default function AdminEnquiryTravellerCard({
 
         <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
               <Building2 size={15} aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
@@ -248,7 +248,7 @@ export default function AdminEnquiryTravellerCard({
             </div>
           </div>
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
               <Utensils size={15} aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
@@ -277,7 +277,7 @@ export default function AdminEnquiryTravellerCard({
 
         <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
               <CalendarDays size={15} aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -287,7 +287,7 @@ export default function AdminEnquiryTravellerCard({
             </div>
           </div>
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
               <Globe size={15} aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
@@ -311,7 +311,7 @@ export default function AdminEnquiryTravellerCard({
 
         <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4 items-center">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
               {enquiry.package_type === 'early_bird' ? <Bird size={15} aria-hidden="true" /> : <Package size={15} aria-hidden="true" />}
             </span>
             <div className="min-w-0 flex-1">

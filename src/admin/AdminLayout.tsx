@@ -126,6 +126,16 @@ interface AdminLayoutProps {
   // covers in-app (SPA) navigation only — see the beforeunload handler
   // below for tab close/refresh/typed-URL navigation.
   hasUnsavedChanges?: () => boolean;
+  // When true, locks the page to exactly the viewport height instead of
+  // letting it grow with content (min-h-screen) — used by single-card
+  // editor pages (About/Founder/Why ULAA via ContentEditorShell) so their
+  // own internal scroll area is the only thing that ever scrolls. A tiny
+  // rounding mismatch between the card's own max-height and the real
+  // header height was otherwise enough to make the whole page scroll by a
+  // few px, dragging a sticky element inside the card out from under the
+  // top nav. Left off (default) for every other admin page, which relies
+  // on ordinary page-level scrolling for content taller than the screen.
+  fixedHeight?: boolean;
 }
 
 interface SidebarContentProps {
@@ -472,7 +482,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';
 
-export default function AdminLayout({ children, title, subtitle, hasUnsavedChanges }: AdminLayoutProps) {
+export default function AdminLayout({ children, title, subtitle, hasUnsavedChanges, fixedHeight = false }: AdminLayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -481,6 +491,31 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
   useEffect(() => {
     if (sidebarOpen) mobileCloseBtnRef.current?.focus();
   }, [sidebarOpen]);
+
+  // Fixed-height editor pages (About/Founder/Why ULAA) already have their
+  // own internal "app-scroll" area for content, and size themselves to
+  // exactly 100vh — but a sub-pixel rounding mismatch between that and the
+  // real viewport height is sometimes enough to give the whole document a
+  // 1px scroll range, which shows up as a stray native scrollbar running
+  // the full height of the page alongside the card's own scrollbar. Since
+  // these pages never intend for the body itself to scroll, force it off
+  // for as long as one of them is mounted, and restore it on the way out
+  // so ordinary (non-fixedHeight) admin pages keep scrolling normally.
+  useEffect(() => {
+    if (!fixedHeight) return;
+    const html = document.documentElement;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    // Some browsers let <body>'s overflow propagate to the viewport
+    // scroller, others treat <html> as the actual scrolling box — lock
+    // down both so neither can pick up the sub-pixel overflow.
+    html.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+    };
+  }, [fixedHeight]);
 
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -551,7 +586,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
   const initial = 'A';
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className={`bg-background flex ${fixedHeight ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       {/* Desktop sidebar — collapses to an icon-only rail via the toggle
           button inside SidebarContent. */}
       <aside
@@ -587,7 +622,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
       )}
 
       {/* Main */}
-      <div className={`flex-1 min-w-0 min-h-screen flex flex-col transition-all duration-200 ${collapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
+      <div className={`flex-1 min-w-0 ${fixedHeight ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col transition-all duration-200 ${collapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
         {/* Top bar */}
         <header className="bg-white border-b border-background-warm px-4 sm:px-6 lg:px-8 py-4 sm:py-6 min-h-[76px] sm:min-h-[92px] flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
@@ -644,12 +679,12 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
           </div>
         </header>
 
-        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-6">
+        <main className={`flex-1 min-w-0 p-4 sm:p-6 lg:p-6 ${fixedHeight ? 'overflow-hidden flex flex-col min-h-0' : ''}`}>
           {children}
         </main>
       </div>
 
-      <ScrollToTopButton leftClass={collapsed ? 'left-6 lg:left-[6.5rem]' : 'left-6 lg:left-[17.5rem]'} />
+      <ScrollToTopButton leftClass="right-6" />
     </div>
   );
 }

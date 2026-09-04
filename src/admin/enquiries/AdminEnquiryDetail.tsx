@@ -10,8 +10,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
-  FileText,
-  ShareNetwork as Share2,
   XCircle,
   UserMinus as UserX,
   UserCheck,
@@ -781,12 +779,10 @@ export default function AdminEnquiryDetail() {
   if (canSetFollowUp(enquiry) && enquiry.follow_up_at) {
     rowActions.push({ label: 'Clear Follow-up', icon: X, onClick: handleClearFollowUp });
   }
-  if (enquiry.booking_id) {
-    rowActions.push(
-      { label: 'Download Invoice', icon: FileText, onClick: handleDownloadInvoice, disabled: invoiceBusy },
-      { label: 'Share Invoice', icon: Share2, onClick: handleShareInvoice, disabled: invoiceBusy },
-    );
-  }
+  // Download Invoice / Share Invoice used to live only in this menu — now
+  // shown as their own icon buttons next to Set Follow-up in
+  // AdminEnquiryHeaderCard (see onDownloadInvoice/onShareInvoice below),
+  // so they're intentionally not duplicated here.
   // WhatsApp/Call are deliberately NOT in this menu — they're already one
   // tap away via the round quick-link icons under Email/Phone below, so
   // listing them again here would just be the same actions twice.
@@ -852,6 +848,9 @@ export default function AdminEnquiryDetail() {
           onMarkNotInterested={handleMarkNotInterested}
           onOpenFollowUp={handleOpenFollowUp}
           rowActions={rowActions}
+          onDownloadInvoice={enquiry.booking_id ? handleDownloadInvoice : undefined}
+          onShareInvoice={enquiry.booking_id ? handleShareInvoice : undefined}
+          invoiceActionBusy={invoiceBusy}
         />
 
         <AdminEnquiryJourneyCard

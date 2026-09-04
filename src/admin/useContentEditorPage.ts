@@ -129,6 +129,17 @@ export function useContentEditorPage<T>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contentKey]);
 
+  // The search bar + tab pills (data-sticky-toolbar in ContentEditorShell)
+  // are sticky *inside* scrollBodyRef, so they stay pinned over whatever
+  // content is scrolled to scrollTop 0 — landing a target flush with
+  // scrollTop 0 tucks it right behind that bar instead of showing it.
+  // Used by both handlePageSearch and scrollSectionIntoView below to land
+  // just clear of it instead.
+  const stickyOffset = () => {
+    const bar = scrollBodyRef.current?.querySelector<HTMLElement>('[data-sticky-toolbar]');
+    return bar ? bar.getBoundingClientRect().height : 0;
+  };
+
   const handlePageSearch = () => {
     const query = pageSearch.trim().toLowerCase();
     const container = scrollBodyRef.current;
@@ -145,7 +156,17 @@ export function useContentEditorPage<T>({
     setPageSearchNoMatch(false);
     const sectionEl = match.closest<HTMLElement>('[data-section]');
     if (sectionEl) setActiveSection(Number(sectionEl.dataset.section) - 1);
-    match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Scroll within `container` only — see scrollSectionIntoView's comment
+    // for why match.scrollIntoView() itself isn't used here. Centered in
+    // whatever room is left below the sticky toolbar, so a match never
+    // lands underneath it.
+    const containerRect = container.getBoundingClientRect();
+    const matchRect = match.getBoundingClientRect();
+    const offset = stickyOffset();
+    const visibleHeight = container.clientHeight - offset;
+    const centerOffset = offset + visibleHeight / 2 - match.clientHeight / 2;
+    const top = container.scrollTop + (matchRect.top - containerRect.top) - centerOffset;
+    container.scrollTo({ top, behavior: 'smooth' });
     const previousBackground = match.style.backgroundColor;
     const previousTransition = match.style.transition;
     match.style.transition = 'background-color 0.3s ease';
@@ -229,6 +250,30 @@ export function useContentEditorPage<T>({
     if (suppressScrollListenerRef.current) scrollBodyRef.current?.removeEventListener('scroll', suppressScrollListenerRef.current);
   }, []);
 
+  // Scrolls a section into view within scrollBodyRef only, mirroring the
+  // scrollTabIntoView approach above. Using the target's own
+  // scrollIntoView() here would walk every scrollable ancestor up to
+  // <body>/<html> — including ones with overflow-hidden, which still
+  // accept a programmatic scrollTop even though the user can't scroll them
+  // by hand — so a tab click could silently shift the page's own (hidden)
+  // scroll position and drag the sticky page header out of view along with
+  // it. Scrolling scrollBodyRef's scrollTop directly touches only the
+  // section list itself. stickyOffset() (defined above) keeps the landed
+  // section's own heading clear of the sticky search/tab bar.
+  // Small visual gap left between the sticky toolbar and a freshly-scrolled
+  // section's heading, so it doesn't land flush against the toolbar.
+  const SECTION_SCROLL_GAP = 20;
+
+  const scrollSectionIntoView = (i: number) => {
+    const container = scrollBodyRef.current;
+    const target = sectionRefs.current[i];
+    if (!container || !target) return;
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const top = container.scrollTop + (targetRect.top - containerRect.top) - stickyOffset() - SECTION_SCROLL_GAP;
+    container.scrollTo({ top, behavior: 'smooth' });
+  };
+
   const handleTabSelect = (i: number) => {
     lastActiveRef.current = i;
     setActiveSection(i);
@@ -239,7 +284,7 @@ export function useContentEditorPage<T>({
       container?.removeEventListener('scroll', suppressScrollListenerRef.current);
       suppressScrollListenerRef.current = null;
     }
-    sectionRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollSectionIntoView(i);
     scrollTabIntoView(i);
     // Re-enable the scroll-spy once scrolling has actually gone idle,
     // rather than after a fixed delay. A fixed delay that's shorter than a

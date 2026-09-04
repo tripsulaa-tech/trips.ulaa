@@ -16,33 +16,37 @@ export default function CommunitySection({
       <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">5 · Our Community</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="about-community-sub-heading" className={labelClass}>Sub Heading</label>
-          <input
+          <label htmlFor="about-community-sub-heading" className={labelClass}>Eyebrow Text</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
+          <textarea
             id="about-community-sub-heading"
             value={content.sub_heading}
             onChange={e => setCommunity('sub_heading', e.target.value)}
-            className={inputClass}
+            rows={1}
+            className={`${inputClass} h-16 resize-none`}
             placeholder="Together We Thrive"
           />
         </div>
         <div>
-          <label htmlFor="about-community-heading" className={labelClass}>Section Heading</label>
+          <label htmlFor="about-community-heading" className={labelClass}>Main Heading</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
           <textarea
             id="about-community-heading"
             value={content.heading}
             onChange={e => setCommunity('heading', e.target.value)}
             rows={2}
-            className={`${inputClass} resize-none`}
+            className={`${inputClass} h-16 resize-none`}
           />
         </div>
         <div className="sm:col-span-2">
-          <label htmlFor="about-community-subheading" className={labelClass}>Subheading</label>
+          <label htmlFor="about-community-subheading" className={labelClass}>Supporting Text</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
           <textarea
             id="about-community-subheading"
             value={content.subheading}
             onChange={e => setCommunity('subheading', e.target.value)}
             rows={2}
-            className={`${inputClass} resize-none`}
+            className={`${inputClass} h-16 resize-none`}
           />
         </div>
       </div>

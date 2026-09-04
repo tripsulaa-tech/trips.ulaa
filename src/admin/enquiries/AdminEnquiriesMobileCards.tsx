@@ -226,7 +226,7 @@ export default function AdminEnquiriesMobileCards({
                         admin happens to be scoped to. */}
                     <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                        <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                           <Briefcase size={15}  aria-hidden="true" />
                         </span>
                         <div className="min-w-0">
@@ -241,7 +241,7 @@ export default function AdminEnquiriesMobileCards({
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                        <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                           <User size={15}  aria-hidden="true" />
                         </span>
                         <div className="min-w-0">
@@ -253,7 +253,7 @@ export default function AdminEnquiriesMobileCards({
 
                     <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                        <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                           <Building2 size={15}  aria-hidden="true" />
                         </span>
                         <div className="min-w-0">
@@ -262,7 +262,7 @@ export default function AdminEnquiriesMobileCards({
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                        <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                           <Utensils size={15}  aria-hidden="true" />
                         </span>
                         <div className="min-w-0">
@@ -279,7 +279,7 @@ export default function AdminEnquiriesMobileCards({
 
                     <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                        <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                           <CalendarDays size={15}  aria-hidden="true" />
                         </span>
                         <div className="min-w-0">
@@ -289,7 +289,7 @@ export default function AdminEnquiriesMobileCards({
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                        <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                           <Globe size={15}  aria-hidden="true" />
                         </span>
                         <div className="min-w-0">
@@ -301,7 +301,7 @@ export default function AdminEnquiriesMobileCards({
 
                     <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-3 items-center">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                        <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                           {e.package_type === 'early_bird' ? <Bird size={15}  aria-hidden="true" /> : <Package size={15}  aria-hidden="true" />}
                         </span>
                         <div className="min-w-0">
@@ -310,7 +310,7 @@ export default function AdminEnquiriesMobileCards({
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                        <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                           <MessageCircle size={15}  aria-hidden="true" />
                         </span>
                         <div className="min-w-0">
@@ -413,7 +413,7 @@ export default function AdminEnquiriesMobileCards({
                     )}
                     {nma && (
                       <Button
-                        variant="secondary"
+                        variant="primary"
                         size="sm"
                         onClick={() => handleAdvance(e)}
                         disabled={updating === e.id}
@@ -424,7 +424,7 @@ export default function AdminEnquiriesMobileCards({
                       </Button>
                     )}
                     <Button
-                      variant="primary"
+                      variant="outline"
                       size="sm"
                       onClick={() => navigate(`/admin/enquiries/${e.id}`)}
                       className="flex-1 min-w-[140px] text-xs !gap-1.5 whitespace-nowrap"

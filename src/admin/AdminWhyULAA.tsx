@@ -90,33 +90,38 @@ export default function AdminWhyULAA() {
           <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">Section Text</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="why-ulaa-sub-heading" className="block text-sm font-medium text-dark mb-1">Sub Heading</label>
-              <input
+              <label htmlFor="why-ulaa-sub-heading" className="block text-sm font-medium text-dark mb-1">Eyebrow Text</label>
+              <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
+              <textarea
                 id="why-ulaa-sub-heading"
                 value={content.sub_heading}
                 onChange={e => setField('sub_heading', e.target.value)}
-                className={inputClass}
+                rows={1}
+                className={`${inputClass} h-16 resize-none`}
                 placeholder="Why Choose Us"
               />
             </div>
             <div>
-              <label htmlFor="why-ulaa-heading" className="block text-sm font-medium text-dark mb-1">Section Heading</label>
-              <input
+              <label htmlFor="why-ulaa-heading" className="block text-sm font-medium text-dark mb-1">Main Heading</label>
+              <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
+              <textarea
                 id="why-ulaa-heading"
                 value={content.heading}
                 onChange={e => setField('heading', e.target.value)}
-                className={inputClass}
+                rows={1}
+                className={`${inputClass} h-16 resize-none`}
                 placeholder="Travel differently."
               />
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="why-ulaa-subheading" className="block text-sm font-medium text-dark mb-1">Subheading</label>
+              <label htmlFor="why-ulaa-subheading" className="block text-sm font-medium text-dark mb-1">Supporting Text</label>
+              <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
               <textarea
                 id="why-ulaa-subheading"
                 value={content.subheading}
                 onChange={e => setField('subheading', e.target.value)}
                 rows={2}
-                className={`${inputClass} resize-none`}
+                className={`${inputClass} h-16 resize-none`}
               />
             </div>
           </div>

@@ -33,7 +33,8 @@ export default function JourneyIntroSection({
       <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">3 · To Unforgettable Journeys</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="about-journey-intro-sub-heading" className={labelClass}>Sub Heading</label>
+          <label htmlFor="about-journey-intro-sub-heading" className={labelClass}>Eyebrow Text</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
           <input
             id="about-journey-intro-sub-heading"
             value={content.sub_heading}
@@ -43,7 +44,8 @@ export default function JourneyIntroSection({
           />
         </div>
         <div>
-          <label htmlFor="about-journey-intro-heading" className={labelClass}>Heading</label>
+          <label htmlFor="about-journey-intro-heading" className={labelClass}>Main Heading</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
           <input
             id="about-journey-intro-heading"
             value={content.heading}
@@ -71,7 +73,8 @@ export default function JourneyIntroSection({
           Have You Ever…
         </h3>
         <div>
-          <label htmlFor="about-hye-heading" className={labelClass}>Section Heading</label>
+          <label htmlFor="about-hye-heading" className={labelClass}>Main Heading</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
           <textarea
             id="about-hye-heading"
             value={content.have_you_ever.heading}
@@ -133,7 +136,8 @@ export default function JourneyIntroSection({
           Welcome to ULAA
         </h3>
         <div>
-          <label htmlFor="about-wtu-heading" className={labelClass}>Section Heading</label>
+          <label htmlFor="about-wtu-heading" className={labelClass}>Main Heading</label>
+          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
           <textarea
             id="about-wtu-heading"
             value={content.welcome_to_ulaa.heading}
