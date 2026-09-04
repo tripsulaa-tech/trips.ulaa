@@ -68,7 +68,7 @@ export default function AdminEnquiryInvoicesCard({
                       <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : 'Paid'}
                     </span>
                     {isPending && (
-                      <Button variant="primary" size="sm" onClick={() => onMarkPaid(inv)} disabled={markPaidBusyId === inv.id}>
+                      <Button variant="outline" size="sm" onClick={() => onMarkPaid(inv)} disabled={markPaidBusyId === inv.id}>
                         Mark Paid
                       </Button>
                     )}

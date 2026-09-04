@@ -39,33 +39,51 @@ export default function AdminEnquiryJourneyCard({
   payments, paymentsLoading, togglingNoShow, onToggleNoShow, getTripPrice,
 }: AdminEnquiryJourneyCardProps) {
   if (enquiry.booking_id) {
+    const pendingAmount = Math.max(0, (enquiry.total_amount || 0) - (enquiry.amount_paid || 0));
+    // Complete Trip only earns primary/solid emphasis once the balance
+    // stepper it sits under actually says "Fully Paid" — otherwise it's
+    // visually competing with (and outranking) the Payment button for an
+    // enquiry that isn't done being paid for yet. Demoted to outline, same
+    // weight as Payment, until pendingAmount clears; onMarkCompleted (see
+    // AdminEnquiryDetail/useEnquiryLifecycle) separately confirms with the
+    // admin before completing while a balance remains.
     return (
       <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-3">
         <p className="text-dark text-sm font-button font-semibold">Booking Journey</p>
         <BookingLifecycleStepper enquiry={enquiry} />
-        <div className="grid grid-cols-3 gap-2 bg-background-warm rounded-md px-3 py-2.5">
+        <div className="grid grid-cols-3 gap-2 bg-background-warm rounded-md px-3 py-2.5 divide-x divide-dark/10">
           <div>
             <p className="text-dark-muted text-[11px]">Total</p>
             <p className="text-dark text-sm font-semibold">{formatPrice(enquiry.total_amount || 0)}</p>
           </div>
-          <div>
+          <div className="pl-2">
             <p className="text-dark-muted text-[11px]">Paid</p>
             <p className="text-green-700 text-sm font-semibold">{formatPrice(enquiry.amount_paid || 0)}</p>
           </div>
-          <div>
+          <div className="pl-2">
             <p className="text-dark-muted text-[11px]">Pending</p>
-            <p className="text-amber-600 text-sm font-semibold">
-              {formatPrice(Math.max(0, (enquiry.total_amount || 0) - (enquiry.amount_paid || 0)))}
-            </p>
+            <p className="text-amber-600 text-sm font-semibold">{formatPrice(pendingAmount)}</p>
           </div>
         </div>
 
         <div className={`grid gap-2 ${enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          <Button variant="outline" size="sm" fullWidth onClick={onOpenPayment}>
+          <Button
+            variant={pendingAmount > 0 ? 'primary' : 'outline'}
+            size="sm"
+            fullWidth
+            onClick={onOpenPayment}
+          >
             <IndianRupee size={13} aria-hidden="true" /> Payment
           </Button>
           {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
-            <Button variant="primary" size="sm" fullWidth onClick={onMarkCompleted} disabled={busyAction}>
+            <Button
+              variant={pendingAmount > 0 ? 'outline' : 'primary'}
+              size="sm"
+              fullWidth
+              onClick={onMarkCompleted}
+              disabled={busyAction}
+              title={pendingAmount > 0 ? `${formatPrice(pendingAmount)} still pending on this booking` : undefined}
+            >
               <CheckCircle2 size={13} aria-hidden="true" /> Complete Trip
             </Button>
           )}

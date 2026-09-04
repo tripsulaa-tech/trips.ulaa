@@ -3,10 +3,8 @@
 // "only exports components" / "only exports non-components" respectively —
 // mixing the two in one file breaks Fast Refresh (react-refresh/only-export-components).
 import {
-  CheckCircle as CheckCircle2,
   Warning as AlertTriangle,
   XCircle,
-  Circle,
   UserMinus,
 } from '@phosphor-icons/react';
 import type { Enquiry } from '../../types/types-index';
@@ -69,22 +67,31 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
         {BOOKING_LIFECYCLE_STEPS.map((step, i) => {
           const isDone = i < activeIndex;
           const isActive = i === activeIndex;
-          const StepIcon = isDone || isActive ? CheckCircle2 : Circle;
           return (
             <div key={step.key} aria-current={isActive ? 'step' : undefined} className="flex items-center flex-1 last:flex-none">
               <div className="flex flex-col items-center gap-1 shrink-0">
-                <StepIcon
-                  size={18}
-                  aria-hidden="true"
-                  className={isDone ? 'text-green-600' : isActive ? 'text-primary' : 'text-background-warm'}
-                  fill={isDone ? 'currentColor' : 'none'}
-                />
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+                    isDone
+                      ? 'bg-green-600'
+                      : isActive
+                        ? 'bg-white border-2 border-primary'
+                        : 'bg-white border-2 border-dark/15'
+                  }`}
+                >
+                  {isDone && (
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M3 8.5L6.2 11.5L13 4.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                  {isActive && <span className="w-2 h-2 rounded-full bg-primary" />}
+                </div>
                 <span className={`text-[10px] font-button font-semibold whitespace-nowrap ${isActive ? 'text-primary' : isDone ? 'text-green-700' : 'text-dark-muted'}`}>
                   {step.label}
                 </span>
               </div>
               {i < BOOKING_LIFECYCLE_STEPS.length - 1 && (
-                <div className={`h-0.5 flex-1 mx-1.5 rounded-full ${i < activeIndex ? 'bg-green-500' : 'bg-background-warm'}`} />
+                <div className={`h-0.5 flex-1 mx-1.5 rounded-full mb-4 ${i < activeIndex ? 'bg-green-500' : 'bg-dark/10'}`} />
               )}
             </div>
           );

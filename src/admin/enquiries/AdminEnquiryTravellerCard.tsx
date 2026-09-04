@@ -158,7 +158,7 @@ export default function AdminEnquiryTravellerCard({
                 placeholder="Optional"
               />
             ) : (
-              <p className="text-dark text-sm font-semibold truncate">{enquiry.email}</p>
+              <p title={enquiry.email} className="text-dark text-sm font-semibold truncate">{enquiry.email}</p>
             )}
           </div>
         </div>
@@ -193,7 +193,7 @@ export default function AdminEnquiryTravellerCard({
                   )}
                 </div>
               ) : (
-                <p className="text-dark text-sm font-semibold truncate">
+                <p title={enquiry.trip_id ? enquiry.trip_title : undefined} className="text-dark text-sm font-semibold truncate">
                   {enquiry.trip_id ? enquiry.trip_title : (
                     <span className="text-dark-muted italic font-normal">
                       {isGeneralContactMessage ? 'None — Contact Us message' : 'None — logged without a trip'}

@@ -358,17 +358,19 @@ export default function AdminEnquiryDetail() {
   // canSetFollowUp/followUpStatus in AdminEnquiryCommon.tsx.
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [followUpDate, setFollowUpDate] = useState('');
+  const [followUpTime, setFollowUpTime] = useState('');
   const [busyFollowUp, setBusyFollowUp] = useState(false);
   const handleOpenFollowUp = () => {
     if (!enquiry) return;
     setFollowUpDate(enquiry.follow_up_at || '');
+    setFollowUpTime(enquiry.follow_up_time || '');
     setFollowUpOpen(true);
   };
   const handleSaveFollowUp = async () => {
     if (!enquiry || !followUpDate) return;
     setBusyFollowUp(true);
     try {
-      await setEnquiryFollowUp(enquiry.id, followUpDate);
+      await setEnquiryFollowUp(enquiry.id, followUpDate, followUpTime || null);
       setFollowUpOpen(false);
       load();
     } catch (err) {
@@ -600,6 +602,16 @@ export default function AdminEnquiryDetail() {
 
   const handleMarkCompleted = async () => {
     if (!enquiry) return;
+    const pendingAmount = Math.max(0, (enquiry.total_amount || 0) - (enquiry.amount_paid || 0));
+    if (pendingAmount > 0) {
+      const ok = await confirm({
+        title: 'Complete with balance pending?',
+        message: `${formatPrice(pendingAmount)} is still unpaid on this booking. Completing it now won't cancel that balance — make sure it's still being chased separately.`,
+        confirmLabel: 'Complete anyway',
+        variant: 'danger',
+      });
+      if (!ok) return;
+    }
     setBusyAction(true);
     try {
       setEnquiry(await markEnquiryCompleted(enquiry.id));
@@ -812,8 +824,8 @@ export default function AdminEnquiryDetail() {
   rowActions.push({ label: 'Delete', icon: Trash2, danger: true, onClick: handleDelete });
 
   return (
-    <AdminLayout title="Enquiry Details" subtitle={enquiry.full_name}>
-      <div className="max-w-7xl mx-auto space-y-4">
+    <AdminLayout title="Enquiry Details">
+      <div className="w-full space-y-4">
         <button
           onClick={() => navigate('/admin/enquiries')}
           className="inline-flex items-center gap-1.5 text-sm font-button font-medium text-dark-muted hover:text-primary transition-colors"
@@ -940,12 +952,13 @@ export default function AdminEnquiryDetail() {
       />
 
       <AdminEnquiryFollowUpModal
-        isOpen={followUpOpen}
+        target={followUpOpen ? enquiry : null}
         onClose={() => setFollowUpOpen(false)}
-        enquiry={enquiry}
         followUpDate={followUpDate}
         setFollowUpDate={setFollowUpDate}
-        busy={busyFollowUp}
+        followUpTime={followUpTime}
+        setFollowUpTime={setFollowUpTime}
+        saving={busyFollowUp}
         onSave={handleSaveFollowUp}
       />
 

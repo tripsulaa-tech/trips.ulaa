@@ -36,7 +36,7 @@ const MENU_MARGIN = 4; // gap between button and menu, and menu and viewport edg
 //
 // Closes on outside click / scroll / resize; each item closes the menu
 // before running its own onClick.
-export default function ActionsMenu({ items, disabled, label = 'Actions' }: { items: ActionMenuItem[]; disabled?: boolean; label?: string }) {
+export default function ActionsMenu({ items, disabled, label = 'Actions', variant = 'default' }: { items: ActionMenuItem[]; disabled?: boolean; label?: string; variant?: 'default' | 'plain' }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number; openUp: boolean } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -98,7 +98,11 @@ export default function ActionsMenu({ items, disabled, label = 'Actions' }: { it
         // buttons onto their own line on narrow screens — previously this
         // was a pale 28px square whose border nearly matched the card
         // background, so it read as barely there.
-        className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-dark/20 text-dark-muted hover:bg-background-warm hover:border-dark/30 active:bg-background-warm disabled:opacity-50 transition-colors shrink-0"
+        className={
+          variant === 'plain'
+            ? 'w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md text-dark-muted hover:bg-background-warm active:bg-background-warm disabled:opacity-50 transition-colors shrink-0'
+            : 'w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-dark/20 text-dark-muted hover:bg-background-warm hover:border-dark/30 active:bg-background-warm disabled:opacity-50 transition-colors shrink-0'
+        }
       >
         <MoreVertical size={15} aria-hidden="true" />
       </button>
@@ -109,22 +113,28 @@ export default function ActionsMenu({ items, disabled, label = 'Actions' }: { it
           style={{ position: 'fixed', top: coords.top, left: coords.left, width: MENU_WIDTH }}
           className="z-50 bg-white rounded-md shadow-lg border border-background-warm py-1"
         >
-          {visibleItems.map((item, i) => (
-            <button
-              key={i}
-              role="menuitem"
-              type="button"
-              title={item.title}
-              onClick={() => { setOpen(false); item.onClick(); }}
-              disabled={item.disabled}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-button font-medium text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                item.danger ? 'text-red-600 hover:bg-red-50' : 'text-dark hover:bg-background-warm/60'
-              }`}
-            >
-              {item.icon && <item.icon size={13} className="shrink-0" aria-hidden="true" />}
-              {item.label}
-            </button>
-          ))}
+          {visibleItems.map((item, i) => {
+            const prevItem = visibleItems[i - 1];
+            const showDivider = item.danger && prevItem && !prevItem.danger;
+            return (
+              <div key={i}>
+                {showDivider && <div role="separator" className="my-1 border-t border-background-warm" />}
+                <button
+                  role="menuitem"
+                  type="button"
+                  title={item.title}
+                  onClick={() => { setOpen(false); item.onClick(); }}
+                  disabled={item.disabled}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-button font-medium text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    item.danger ? 'text-red-600 hover:bg-red-50' : 'text-dark hover:bg-background-warm/60'
+                  }`}
+                >
+                  {item.icon && <item.icon size={13} className="shrink-0" aria-hidden="true" />}
+                  {item.label}
+                </button>
+              </div>
+            );
+          })}
         </div>,
         document.body
       )}

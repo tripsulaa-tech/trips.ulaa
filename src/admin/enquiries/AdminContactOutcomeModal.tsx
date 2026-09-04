@@ -3,6 +3,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import DatePicker from '../../components/ui/DatePicker';
+import TimePicker from '../../components/ui/TimePicker';
 import { useConfirm } from '../../components/ui/useConfirm';
 import {
   CONTACT_OUTCOME_CONFIG, CONTACT_OUTCOME_OPTIONS, NOT_INTERESTED_REASON_OPTIONS,
@@ -130,13 +131,7 @@ export default function ContactOutcomeModal({
               </div>
               <div>
                 <label htmlFor="co-followup-time" className="block text-sm font-medium text-dark mb-1">Follow-up Time</label>
-                <input
-                  id="co-followup-time"
-                  type="time"
-                  value={followUpTime}
-                  onChange={ev => setFollowUpTime(ev.target.value)}
-                  className={inputClass}
-                />
+                <TimePicker id="co-followup-time" value={followUpTime} onChange={setFollowUpTime} />
               </div>
             </div>
           )}

@@ -56,8 +56,7 @@ import AddEnquiryModal from './AdminAddEnquiryModal';
 import DetailsModal from './AdminDetailsModal';
 import MarkPaidModal from './AdminMarkPaidModal';
 import NotInterestedModal from './AdminNotInterestedModal';
-import FollowUpModal from './AdminFollowUpModal';
-import BookingFollowUpModal from './AdminBookingFollowUpModal';
+import FollowUpModal, { BookingFollowUpModal } from './AdminEnquiryFollowUpModal';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import CancelModal from './AdminCancelModal';
 import BulkEditModal from './AdminBulkEditModal';
@@ -328,6 +327,7 @@ export default function AdminEnquiries() {
     handleConfirmNotInterested,
     followUpTarget, setFollowUpTarget,
     followUpDate, setFollowUpDate,
+    followUpTime, setFollowUpTime,
     openFollowUpModal,
     handleSaveFollowUp,
     handleClearFollowUp,
@@ -1321,12 +1321,14 @@ export default function AdminEnquiries() {
       />
 
       <FollowUpModal
-        followUpTarget={followUpTarget}
+        target={followUpTarget}
         onClose={() => setFollowUpTarget(null)}
         followUpDate={followUpDate}
         setFollowUpDate={setFollowUpDate}
+        followUpTime={followUpTime}
+        setFollowUpTime={setFollowUpTime}
         onSave={handleSaveFollowUp}
-        updating={updating}
+        saving={!!followUpTarget && updating === followUpTarget.id}
       />
 
       <BookingFollowUpModal

@@ -235,14 +235,23 @@ export async function updateEnquiryDetails(
 // AdminEnquiryCommon.tsx). The DB check constraint only allows a non-null value
 // while status = 'contacted' — refreshJourneyStage() clears it back to
 // null automatically once the lead moves on, so nothing else needs to.
-export async function setEnquiryFollowUp(id: string, followUpAt: string | null): Promise<void> {
+export async function setEnquiryFollowUp(
+  id: string,
+  followUpAt: string | null,
+  followUpTime?: string | null
+): Promise<void> {
   const { error } = await supabase
     .from('enquiries')
     // Clearing the date must also clear the time (see
-    // enquiries_follow_up_time_requires_date in add_contact_outcome.sql) —
-    // this modal only ever edits the date, so a time set earlier via the
-    // Contact Outcome popup would otherwise be left dangling.
-    .update(followUpAt ? { follow_up_at: followUpAt } : { follow_up_at: null, follow_up_time: null })
+    // enquiries_follow_up_time_requires_date in add_contact_outcome.sql).
+    // followUpTime is optional — undefined leaves whatever time is already
+    // on the row untouched (e.g. a caller that only ever meant to edit the
+    // date), while null explicitly clears it.
+    .update(
+      followUpAt
+        ? { follow_up_at: followUpAt, ...(followUpTime !== undefined ? { follow_up_time: followUpTime || null } : {}) }
+        : { follow_up_at: null, follow_up_time: null }
+    )
     .eq('id', id);
   if (error) throw error;
 }

@@ -11,6 +11,22 @@ interface AdminEnquiryActivityTimelineProps {
   loading: boolean;
 }
 
+// Picks a dot color for a timeline entry based on what kind of event it is —
+// there's no structured "type" column on activity_log (see ActivityLogEntry),
+// just the already-formatted `action`/`details` strings logActivity's
+// call sites pass in, so this reads the same substrings a human would:
+// "· pending" in details, "paid"/"removed"/"cancel" in the action, etc.
+// Falls back to the neutral primary dot for everything else (logged,
+// checked in, details updated, ...).
+function timelineDotClass(entry: ActivityLogEntry): string {
+  const action = entry.action.toLowerCase();
+  const details = (entry.details || '').toLowerCase();
+  if (action.includes('cancel') || action.includes('no show') || action.includes('removed')) return 'bg-red-500';
+  if (details.includes('pending')) return 'bg-amber-500';
+  if (action.includes('paid') || details.includes('collected')) return 'bg-green-600';
+  return 'bg-primary';
+}
+
 export default function AdminEnquiryActivityTimeline({ activityLog, loading }: AdminEnquiryActivityTimelineProps) {
   return (
     <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
@@ -25,7 +41,7 @@ export default function AdminEnquiryActivityTimeline({ activityLog, loading }: A
         <ol className="relative border-l-2 border-[#D9C7AC] pl-4 space-y-4 max-h-[600px] overflow-y-auto">
           {activityLog.map(entry => (
             <li key={entry.id} className="relative">
-              <span className="absolute -left-[21px] top-1 z-10 w-3 h-3 rounded-full bg-primary border-2 border-white shadow-sm" />
+              <span className={`absolute -left-[21px] top-1 z-10 w-3 h-3 rounded-full border-2 border-white shadow-sm ${timelineDotClass(entry)}`} />
               <p className="text-dark text-sm font-medium">{entry.action}</p>
               {entry.details && <p className="text-dark-muted text-xs mt-0.5">{entry.details}</p>}
               <p className="text-dark-muted text-[11px] mt-0.5">

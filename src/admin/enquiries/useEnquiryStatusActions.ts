@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { updateEnquiryStatus, setEnquiryFollowUp, setBookingFollowUp, recordContactOutcome } from '../../services/api';
 import type { ClosedReason, Enquiry } from '../../types/types-index';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
-import type { BookingFollowUpResult } from './AdminBookingFollowUpModal';
+import type { BookingFollowUpResult } from './AdminEnquiryFollowUpModal';
 import { useAlert } from '../../components/ui/useAlert';
 
 /** Owns every small "row status transition" handler that isn't big enough
@@ -123,15 +123,17 @@ export function useEnquiryStatusActions(params: {
   // followUpStatus in AdminEnquiryCommon.tsx and add_enquiry_follow_up.sql.
   const [followUpTarget, setFollowUpTarget] = useState<Enquiry | null>(null);
   const [followUpDate, setFollowUpDate] = useState('');
+  const [followUpTime, setFollowUpTime] = useState('');
   const openFollowUpModal = (enquiry: Enquiry) => {
     setFollowUpDate(enquiry.follow_up_at || '');
+    setFollowUpTime(enquiry.follow_up_time || '');
     setFollowUpTarget(enquiry);
   };
   const handleSaveFollowUp = async () => {
     if (!followUpTarget || !followUpDate) return;
     setUpdating(followUpTarget.id);
     try {
-      await setEnquiryFollowUp(followUpTarget.id, followUpDate);
+      await setEnquiryFollowUp(followUpTarget.id, followUpDate, followUpTime || null);
       setFollowUpTarget(null);
       load();
     } catch (err) {
@@ -211,6 +213,7 @@ export function useEnquiryStatusActions(params: {
     handleConfirmNotInterested,
     followUpTarget, setFollowUpTarget,
     followUpDate, setFollowUpDate,
+    followUpTime, setFollowUpTime,
     openFollowUpModal,
     handleSaveFollowUp,
     handleClearFollowUp,

@@ -7,6 +7,7 @@ import type { CancellationReason, Enquiry, UpcomingTrip } from '../../types/type
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { useAlert } from '../../components/ui/useAlert';
 import { useConfirm } from '../../components/ui/useConfirm';
+import { formatPrice } from '../../utils/utils-index';
 
 /** Owns the booking-lifecycle actions a row's kebab menu / action buttons
  *  trigger — cancel (with its confirmation-modal target/form state),
@@ -157,6 +158,16 @@ export function useEnquiryLifecycle(params: {
   // lifecycle that a payment event can never infer on its own (see
   // markEnquiryCompleted's comment in services/api.ts).
   const handleMarkCompleted = async (enquiry: Enquiry) => {
+    const pendingAmount = Math.max(0, (enquiry.total_amount || 0) - (enquiry.amount_paid || 0));
+    if (pendingAmount > 0) {
+      const ok = await confirm({
+        title: 'Complete with balance pending?',
+        message: `${formatPrice(pendingAmount)} is still unpaid on this booking. Completing it now won't cancel that balance — make sure it's still being chased separately.`,
+        confirmLabel: 'Complete anyway',
+        variant: 'danger',
+      });
+      if (!ok) return;
+    }
     try {
       setCompletingId(enquiry.id);
       const updated = await markEnquiryCompleted(enquiry.id);

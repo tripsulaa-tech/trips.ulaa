@@ -82,53 +82,53 @@ export default function ContentEditorShell({
           top, and a footer that blends into and sticks to the bottom of the
           card while the sections scroll — same skeleton as the Add Trip
           popup, just without the overlay since this is a full page. */}
-      <div className="max-w-4xl bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
-        <div className="p-6 pb-4 border-b border-background-warm flex-shrink-0 space-y-4">
-          <div className="relative w-full max-w-xs">
-            <label htmlFor={searchId} className="sr-only">Search fields</label>
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
-            <input
-              id={searchId}
-              type="text"
-              value={pageSearch}
-              onChange={e => setPageSearch(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-            />
-          </div>
-          {/* Tab bar — jumps to a section rather than hiding the others
-              (everything stays in one continuous scroll below), same
-              behavior as the Add Trip modal's own tab bar. */}
-          <div className="relative">
-            <div ref={tabBarRef} role="tablist" aria-label={tabBarAriaLabel} className="flex gap-2 overflow-x-auto scrollbar-hide">
-              {sectionTitles.map((title, i) => (
-                <button
-                  key={title}
-                  ref={el => { tabButtonRefs.current[i] = el; }}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeSection === i}
-                  onClick={() => handleTabSelect(i)}
-                  className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
-                    activeSection === i
-                      ? 'bg-primary text-white'
-                      : 'bg-background text-dark-muted hover:text-dark'
-                  }`}
-                >
-                  {title.replace(/^\d+ · /, '')}
-                </button>
-              ))}
-            </div>
-            {showLeftFade && (
-              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent" />
-            )}
-            {showRightFade && (
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent" />
-            )}
-          </div>
-        </div>
-
+      <div className="w-full bg-white rounded-md shadow-warm-lg border border-background-warm max-h-[calc(100vh-160px)] overflow-hidden flex flex-col">
         <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
+          <div className="sticky top-0 z-10 bg-white p-6 pb-4 border-b border-background-warm space-y-4">
+            <div className="relative w-full max-w-xs">
+              <label htmlFor={searchId} className="sr-only">Search fields</label>
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
+              <input
+                id={searchId}
+                type="text"
+                value={pageSearch}
+                onChange={e => setPageSearch(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+              />
+            </div>
+            {/* Tab bar — jumps to a section rather than hiding the others
+                (everything stays in one continuous scroll below), same
+                behavior as the Add Trip modal's own tab bar. */}
+            <div className="relative">
+              <div ref={tabBarRef} role="tablist" aria-label={tabBarAriaLabel} className="flex gap-2 overflow-x-auto scrollbar-hide">
+                {sectionTitles.map((title, i) => (
+                  <button
+                    key={title}
+                    ref={el => { tabButtonRefs.current[i] = el; }}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSection === i}
+                    onClick={() => handleTabSelect(i)}
+                    className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
+                      activeSection === i
+                        ? 'bg-primary text-white'
+                        : 'bg-background text-dark-muted hover:text-dark'
+                    }`}
+                  >
+                    {title.replace(/^\d+ · /, '')}
+                  </button>
+                ))}
+              </div>
+              {showLeftFade && (
+                <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent" />
+              )}
+              {showRightFade && (
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent" />
+              )}
+            </div>
+          </div>
+
           {pageSearchNoMatch && (
             <p role="alert" className="text-xs text-red-500 px-6 pt-4">No matching field found for "{pageSearch}".</p>
           )}

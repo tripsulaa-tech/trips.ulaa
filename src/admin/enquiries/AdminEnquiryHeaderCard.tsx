@@ -77,8 +77,8 @@ export default function AdminEnquiryHeaderCard({
                 informational; check the Invoices card below for the
                 actual charge. */}
             {enquiry.has_child_addon && (
-              <span title="A Child Fare add-on has been added to this booking — see Invoices below" className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-amber-50 text-amber-700">
-                <Baby size={12} className="shrink-0" aria-hidden="true" /> Bringing a Child
+              <span title="A Child Fare add-on has been added to this booking — see Invoices below" className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
+                <Baby size={10} aria-hidden="true" /> Bringing a Child
               </span>
             )}
             {followUpStatus(enquiry) && (
@@ -92,7 +92,7 @@ export default function AdminEnquiryHeaderCard({
               </button>
             )}
             {enquiry.group_size && enquiry.group_size > 1 ? (
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
+              <span title={`Part of a group booking of ${enquiry.group_size} — this is traveler #${enquiry.group_seq}`} className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
                 <Users size={10} aria-hidden="true" /> Group of {enquiry.group_size} · seat {enquiry.group_seq}
               </span>
             ) : (
@@ -127,7 +127,7 @@ export default function AdminEnquiryHeaderCard({
                   <CalendarClock size={14} aria-hidden="true" /> Set Follow-up
                 </Button>
               )}
-              <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
+              <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} variant="plain" />
             </>
           )}
         </div>
@@ -154,13 +154,13 @@ export default function AdminEnquiryHeaderCard({
               </button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0">
+          <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
             {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
               <Button variant="outline" size="sm" onClick={onOpenFollowUp} disabled={busyAction || busyFollowUp} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
                 <CalendarClock size={14} aria-hidden="true" /> Set Follow-up
               </Button>
             )}
-            <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} />
+            <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} variant="plain" />
           </div>
         </div>
       )}
