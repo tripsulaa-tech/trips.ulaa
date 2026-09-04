@@ -12,10 +12,10 @@ import { useAlert } from '../../components/ui/useAlert';
  *  and from inside the modal itself.
  *
  *  `setDetailsTarget`/`setDetailsInvoices` are returned directly (not just
- *  via handlers) because useEnquiryLifecycle, useGenerateInvoice, and
- *  useMarkInvoicePaid all also need to update this modal's target/invoice
- *  list from elsewhere in the table — same cross-hook wiring pattern already
- *  used for setPaymentTarget/setPaymentForm in useEnquiryPayment.
+ *  via handlers) because useEnquiryLifecycle and useMarkInvoicePaid also
+ *  need to update this modal's target/invoice list from elsewhere in the
+ *  table — same cross-hook wiring pattern already used for
+ *  setPaymentTarget/setPaymentForm in useEnquiryPayment.
  *
  *  Extracted from AdminEnquiries.tsx (see that file's history for the
  *  original single-component version). */

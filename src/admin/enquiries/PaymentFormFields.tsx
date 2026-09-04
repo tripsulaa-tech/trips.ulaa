@@ -5,6 +5,7 @@
 // state on AdminEnquiryDetail, before any booking exists — no popup needed
 // for the very first payment). Neither caller owns any of this state; it's
 // all still lifted to AdminEnquiryDetail, same as before the split.
+import { Baby } from '@phosphor-icons/react';
 import Select from '../../components/ui/Select';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -163,17 +164,58 @@ export default function PaymentFormFields({
           <Select
             inputId={`${idPrefix}-type`}
             value={paymentForm.payment_type}
-            onChange={val => setPaymentForm(f => ({ ...f, payment_type: val as PaymentForm['payment_type'] }))}
+            onChange={val => {
+              const type = val as PaymentForm['payment_type'];
+              setPaymentForm(f => {
+                // 'Full Payment' means the whole total is being collected
+                // right now — only offered when nothing's been paid yet
+                // (see availablePaymentTypeOptions), so fill in what's
+                // owed automatically instead of making the admin retype
+                // the total they can already see above.
+                if (type === 'full_payment' && f.total_amount !== '') {
+                  const alreadyPaid = enquiry.amount_paid || 0;
+                  return { ...f, payment_type: type, amount_paid: Math.max(0, Number(f.total_amount) - alreadyPaid) };
+                }
+                return { ...f, payment_type: type };
+              });
+            }}
             options={availablePaymentTypeOptions(paymentForm, enquiry.amount_paid || 0)}
           />
           {paymentForm.payment_type === 'addon' && (
-            <p className="text-[11px] text-dark-muted mt-1">
-              Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
-            </p>
+            <>
+              <p className="text-[11px] text-dark-muted mt-1">
+                Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
+              </p>
+              {/* Quick preset for the common case: this traveller wants to
+                  bring a child along. ULAA trips aren't built around kids
+                  (no separate child pricing/seat type), so this is just a
+                  one-off add-on against an existing enquiry rather than a
+                  field on the public booking form — same Add-on mechanism
+                  as any other add-on, with the note pre-filled. Toggles the
+                  note text; the amount is still entered above, since it
+                  varies per trip. */}
+              <button
+                type="button"
+                onClick={() => setPaymentForm(f => ({ ...f, notes: f.notes === 'Child fare' ? '' : 'Child fare' }))}
+                aria-pressed={paymentForm.notes === 'Child fare'}
+                className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors ${
+                  paymentForm.notes === 'Child fare'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-background-warm text-dark-muted hover:border-primary/40'
+                }`}
+              >
+                <Baby size={13} aria-hidden="true" /> Child Fare
+              </button>
+            </>
           )}
           {paymentForm.payment_type !== 'addon' && !clearsBalance(paymentForm, enquiry.amount_paid || 0) && (
             <p className="text-[11px] text-dark-muted mt-1">
               'Balance' will appear here once the amount above clears what's still owed.
+            </p>
+          )}
+          {paymentForm.payment_type !== 'addon' && (enquiry.amount_paid || 0) > 0 && (
+            <p className="text-[11px] text-dark-muted mt-1">
+              'Advance' and 'Full Payment' are only offered for the first payment on a booking — this one's already had money in, so use 'Installment' or 'Balance' instead.
             </p>
           )}
         </div>
@@ -229,6 +271,18 @@ export default function PaymentFormFields({
           </p>
         );
       })()}
+
+      <div>
+        <label htmlFor={`${idPrefix}-notes`} className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
+        <input
+          id={`${idPrefix}-notes`}
+          type="text"
+          value={paymentForm.notes}
+          onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
+          className={fieldClass}
+          placeholder="Any additional context for this payment"
+        />
+      </div>
 
       <PaymentHistoryList
         payments={payments}

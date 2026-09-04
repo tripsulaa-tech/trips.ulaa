@@ -10,7 +10,8 @@ import { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
 // succeeds (refresh a table row's cached invoices/target vs. refresh a
 // single enquiry's payments/enquiry state) — so that part is left to the
 // caller via onSuccess, instead of duplicating the whole handler in both
-// files. Mirrors useGenerateInvoice's split for the same reason.
+// files. Mirrors useEnquiryPayment's cross-page-sharing pattern for the
+// same reason.
 export function useMarkInvoicePaid(onSuccess: (updatedPayment: Payment) => void | Promise<void>) {
   const [target, setTarget] = useState<Payment | null>(null);
   const [form, setForm] = useState<MarkPaidForm>(emptyMarkPaidForm);

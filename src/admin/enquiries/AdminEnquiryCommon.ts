@@ -83,10 +83,10 @@ export const INVOICE_TYPE_LABEL: Record<Payment['payment_type'], string> = {
   addon: 'Add-on',
 };
 
-// Types the admin can pick from the Generate Invoice modal. Refund isn't
-// offered here — it already has its own dedicated flow in the Cancel
-// Booking / Track Payment modal (recordRefund), which accounts for
-// cancellation/no-show rules that this generic modal doesn't know about.
+// Types the admin can pick in the Payment modal's Type dropdown. Refund
+// isn't offered here — it already has its own dedicated flow in the Cancel
+// Booking / Payment modal (recordRefund), which accounts for
+// cancellation/no-show rules that a plain invoice type doesn't know about.
 type GenerateInvoiceType = 'full_payment' | 'advance' | 'balance' | 'installment' | 'addon';
 
 const GENERATE_INVOICE_TYPE_OPTIONS: { value: GenerateInvoiceType; label: string }[] = [
@@ -101,27 +101,6 @@ export const GENERATE_INVOICE_STATUS_OPTIONS: { value: 'paid' | 'pending'; label
   { value: 'paid', label: 'Paid now — money already collected' },
   { value: 'pending', label: 'Pending — invoice only, collect later' },
 ];
-
-export interface GenerateInvoiceForm {
-  type: GenerateInvoiceType;
-  amount: number | '';
-  status: 'paid' | 'pending';
-  // Only meaningful when status is 'paid' — a pending invoice hasn't
-  // actually been settled yet, so there's no method/reference to record
-  // (CRM spec sections 6/46).
-  payment_method: string;
-  utr_number: string;
-  notes: string;
-}
-
-export const emptyGenerateInvoiceForm: GenerateInvoiceForm = {
-  type: 'advance',
-  amount: '',
-  status: 'paid',
-  payment_method: '',
-  utr_number: '',
-  notes: '',
-};
 
 export type PaymentForm = {
   package_type: Enquiry['package_type'];
@@ -176,6 +155,11 @@ export type PaymentForm = {
   refund_date: string;
   refund_notes: string;
   food_preference: 'veg' | 'non_veg' | '';
+  // Free-text note on this transaction — same field/meaning as Generate
+  // Invoice's Notes, now folded into Track Payment now that it's the one
+  // consolidated Payment flow. Also carries the "Child fare" preset (see
+  // the Child Fare chip in PaymentFormFields) that flips has_child_addon.
+  notes: string;
 };
 
 // Same types Generate Invoice offers, including Add-on and the
@@ -200,7 +184,7 @@ const PAYMENT_TYPE_OPTIONS: { value: PaymentForm['payment_type']; label: string 
 // doesn't actually zero out the amount due, leaving the ledger's own
 // labels misleading. Only 'Balance' is gated this way; every other type
 // (including 'Installment') stays freely selectable. Shared by both Track
-// Payment (PaymentForm) and Generate Invoice (GenerateInvoiceForm) below.
+// Shared helpers for the Payment form (PaymentForm) below.
 // List price minus a flat discount, floored at 0 so a discount bigger than
 // the list price never produces a negative total. `listPrice` is undefined
 // when the trip (or its price for this package) isn't set yet — callers
@@ -223,13 +207,21 @@ export function clearsBalance(paymentForm: PaymentForm, alreadyPaid: number): bo
   return amountClearsBalance(paymentForm.total_amount, alreadyPaid, paymentForm.amount_paid);
 }
 
-// Same list as PAYMENT_TYPE_OPTIONS, minus 'Balance' when this payment
-// wouldn't actually clear the amount due — see clearsBalance above. Callers
-// pair this with an effect that steers payment_type off 'balance' the
-// moment it stops qualifying (e.g. the admin lowers the amount after
-// picking it), so the Select's current value always stays in this list.
+// Same list as PAYMENT_TYPE_OPTIONS, minus:
+//  - 'Balance' when this payment wouldn't actually clear the amount due —
+//    see clearsBalance above.
+//  - 'Full Payment' and 'Advance' once anything's already been paid — both
+//    only make sense as the very first money in on a booking; once that's
+//    happened, every further payment is an Installment (or a Balance, once
+//    it clears what's owed), never another "first" payment.
+// Callers pair this with an effect that steers payment_type off whichever
+// of these it no longer qualifies for (e.g. the admin lowers the amount
+// after picking 'Balance', or a second payment still has 'Advance' left
+// over from the form's default), so the Select's current value always
+// stays in this list.
 export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPaid: number): { value: PaymentForm['payment_type']; label: string }[] {
-  return clearsBalance(paymentForm, alreadyPaid) ? PAYMENT_TYPE_OPTIONS : PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'balance');
+  const options = alreadyPaid > 0 ? PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'advance' && o.value !== 'full_payment') : PAYMENT_TYPE_OPTIONS;
+  return clearsBalance(paymentForm, alreadyPaid) ? options : options.filter(o => o.value !== 'balance');
 }
 
 // Field-level errors for the Track Payment form (formerly AdminPaymentModal,
@@ -254,7 +246,12 @@ export function validatePaymentForm(
   const isPending = paymentForm.status === 'pending';
   const newRunningTotal = alreadyPaid + thisPayment;
 
-  if (!isExtraCharge && !isPending && totalAmount != null && thisPayment > 0 && newRunningTotal > totalAmount) {
+  // Installment/Balance/Advance/Full Payment can never push the booking
+  // past its total — Paid-now and Pending alike, since a Pending invoice is
+  // still a claim against the same total, just settled later (see Mark
+  // Paid). Add-on is the one exception: it raises the total itself, so
+  // there's nothing to clear against yet.
+  if (!isExtraCharge && totalAmount != null && thisPayment > 0 && newRunningTotal > totalAmount) {
     errors.amount_paid = 'This would take the amount paid past the total amount.';
   } else if ((isExtraCharge || isPending) && thisPayment <= 0) {
     errors.amount_paid = isExtraCharge
@@ -286,60 +283,6 @@ export function validatePaymentForm(
   const effectiveAmountPaid = isPending ? alreadyPaid : isExtraCharge ? alreadyPaid + thisPayment : newRunningTotal;
   if (refundAmount > effectiveAmountPaid) {
     errors.refund_amount = "Refund amount can't be more than what was actually paid.";
-  }
-
-  return errors;
-}
-
-// Generate Invoice's own amount/type fields don't carry the booking's
-// total or already-paid figures — those live on the Enquiry the invoice
-// is being raised against — so callers pass them in separately.
-export function clearsBalanceForInvoice(form: GenerateInvoiceForm, totalAmount: number, alreadyPaid: number): boolean {
-  if (form.type === 'addon') return false;
-  return amountClearsBalance(totalAmount, alreadyPaid, form.amount);
-}
-
-// Same list as GENERATE_INVOICE_TYPE_OPTIONS, minus 'Balance' unless this
-// invoice's amount actually clears what's owed. Pair with an effect that
-// steers type off 'balance' once it stops qualifying, same as Track
-// Payment above.
-export function availableInvoiceTypeOptions(form: GenerateInvoiceForm, totalAmount: number, alreadyPaid: number): { value: GenerateInvoiceType; label: string }[] {
-  return clearsBalanceForInvoice(form, totalAmount, alreadyPaid) ? GENERATE_INVOICE_TYPE_OPTIONS : GENERATE_INVOICE_TYPE_OPTIONS.filter(o => o.value !== 'balance');
-}
-
-// Field-level errors for the Generate Invoice form (AdminGenerateInvoiceModal)
-// — same shape/spirit as PaymentFormErrors above, and the same three checks
-// useGenerateInvoice's save() used to only enforce after the fact via
-// alert(): amount required, payment method required, UTR required. Shared
-// by the modal (live, as the admin types/selects) and useGenerateInvoice's
-// save() as the final save-time gate, so the two can never drift.
-//
-// Unlike PaymentForm's amount_paid (where 0/'' is a legitimate "not
-// changing the payment right now" state), Generate Invoice always raises a
-// real invoice line, so its amount is required rather than merely bounded.
-// That means the "required" error would fire the instant the modal opens
-// (amount starts at ''), before the admin has even looked at the field —
-// so callers pass amountTouched (true once the Amount field has been
-// blurred, or the save button has actually been clicked) to gate it.
-type GenerateInvoiceFormErrors = Partial<Record<'amount' | 'payment_method' | 'utr_number', string>>;
-
-export function validateGenerateInvoiceForm(form: GenerateInvoiceForm, amountTouched: boolean): GenerateInvoiceFormErrors {
-  const errors: GenerateInvoiceFormErrors = {};
-  const amount = form.amount === '' ? 0 : Number(form.amount);
-
-  if (amountTouched && amount <= 0) {
-    errors.amount = 'Enter an invoice amount greater than zero.';
-  }
-
-  // Payment method/UTR only matter once there's an actual amount to collect
-  // and the invoice is being marked paid now — a pending invoice or a
-  // still-empty amount field has nothing to nag about yet.
-  if (amount > 0 && form.status === 'paid') {
-    if (!form.payment_method) {
-      errors.payment_method = 'Select a payment method.';
-    } else if (form.payment_method !== 'Cash' && !form.utr_number.trim()) {
-      errors.utr_number = 'Enter a UTR / reference number.';
-    }
   }
 
   return errors;

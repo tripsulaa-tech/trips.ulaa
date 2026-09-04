@@ -72,7 +72,7 @@ export default function AdminEnquiryHeaderCard({
               </span>
             )}
             {/* Set once an Add-on with the "Child fare" preset has
-                been added (see AdminGenerateInvoiceModal's Child Fare
+                been added (see PaymentFormFields's Child Fare
                 chip) — see enquiry.has_child_addon's doc comment. Purely
                 informational; check the Invoices card below for the
                 actual charge. */}

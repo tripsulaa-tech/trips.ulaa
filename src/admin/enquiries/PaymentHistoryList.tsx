@@ -2,12 +2,12 @@ import { INVOICE_TYPE_LABEL } from './AdminEnquiryCommon';
 import type { Payment } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
 
-// Read-only payment ledger, shown inside the Payment / Generate Invoice
-// modals and on the enquiry detail page so an admin can see exactly what's
-// already been recorded before changing the running total above it.
-// Extracted from three near-identical copies (AdminPaymentModal,
-// AdminGenerateInvoiceModal, AdminEnquiryDetail) — see those callers for
-// where each is used.
+// Read-only payment ledger, shown inside the Payment modal and on the
+// enquiry detail page so an admin can see exactly what's already been
+// recorded before changing the running total above it. Extracted from
+// near-identical copies (AdminPaymentModal, the former standalone
+// AdminGenerateInvoiceModal, AdminEnquiryDetail) — see the current callers
+// for where it's used today.
 //
 // `labelId` and `showUtrNumber` exist only to preserve two small
 // differences that existed between the original copies: AdminPaymentModal's

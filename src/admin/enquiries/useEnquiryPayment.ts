@@ -36,7 +36,7 @@ export function useEnquiryPayment(params: {
   const alert = useAlert();
 
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
-  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '' });
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '', notes: '' });
   const [savingPayment, setSavingPayment] = useState(false);
   // Read-only ledger shown inline in the Track Payment modal (Phase F) —
   // same on-demand fetch pattern as detailsInvoices in AdminEnquiries.tsx,
@@ -78,7 +78,9 @@ export function useEnquiryPayment(params: {
       // down to. Package/total/food-preference edits below can still be
       // saved with amount_paid left blank; that's a no-op on the ledger.
       amount_paid: '',
-      payment_type: 'advance',
+      // 'Advance' only makes sense as the very first money in — see the
+      // matching default in AdminEnquiryDetail.tsx's buildNewPaymentForm.
+      payment_type: (enquiry.amount_paid || 0) > 0 ? 'installment' : 'advance',
       status: 'paid',
       payment_method: '',
       payment_utr: '',
@@ -90,6 +92,7 @@ export function useEnquiryPayment(params: {
       refund_date: '',
       refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
+      notes: '',
     });
   };
 
@@ -143,6 +146,8 @@ export function useEnquiryPayment(params: {
           collectedNow: !isPending,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
+          notes: paymentForm.notes.trim() || undefined,
+          markAsChildAddon: paymentForm.notes.trim() === 'Child fare',
         });
       } else if (isPending) {
         updated = await recordPayment(paymentTarget, {
@@ -156,7 +161,7 @@ export function useEnquiryPayment(params: {
         if (thisPayment > 0) {
           // Not addon in this branch (handled above), so this is
           // always one of the four types generatePendingInvoice accepts.
-          await generatePendingInvoice(paymentTarget.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment);
+          await generatePendingInvoice(paymentTarget.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment, paymentForm.notes.trim() || undefined);
         }
       } else {
         updated = await recordPayment(paymentTarget, {
@@ -168,6 +173,7 @@ export function useEnquiryPayment(params: {
           food_preference: paymentForm.food_preference || null,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
+          notes: paymentForm.notes.trim() || undefined,
           // Only meaningful when money is actually moving — recordPayment's
           // delta !== 0 guard already no-ops the ledger insert otherwise, so
           // there's no case where an unused type value could mislabel a

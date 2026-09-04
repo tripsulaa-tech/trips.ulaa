@@ -2,8 +2,8 @@
 // row actions and "View Details" popup offer, but with room to actually
 // read it all: traveller/trip info, the Booking Journey stepper, a full
 // payment/invoice ledger, an Activity Timeline (CRM spec section 14), and
-// every mutating action (Track Payment, Generate Invoice, Check In,
-// Cancel/Reactivate, Mark Completed, Delete). Deliberately still does NOT
+// every mutating action (Payment, Check In, Cancel/Reactivate, Mark
+// Completed, Delete). Deliberately still does NOT
 // invent a Documents/Communication-History section — there's no backing
 // data model for either yet, and this file only shows what's real.
 import { useEffect, useState } from 'react';
@@ -36,13 +36,11 @@ import {
 import type { ActivityLogEntry, CancellationReason, ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { formatPrice } from '../../utils/utils-index';
-import { clearsBalance, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, computeDiscountedTotal } from './AdminEnquiryCommon';
+import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, computeDiscountedTotal } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
 import MarkPaidModal from './AdminMarkPaidModal';
-import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
-import { useGenerateInvoice } from './useGenerateInvoice';
 import { useMarkInvoicePaid } from './useMarkInvoicePaid';
 import AdminEnquiryHeaderCard from './AdminEnquiryHeaderCard';
 import AdminEnquiryJourneyCard from './AdminEnquiryJourneyCard';
@@ -57,7 +55,7 @@ import AdminEnquiryFollowUpModal from './AdminEnquiryFollowUpModal';
 
 const emptyPaymentForm: PaymentForm = {
   package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '',
-  refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '',
+  refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '', notes: '',
 };
 
 export default function AdminEnquiryDetail() {
@@ -182,13 +180,17 @@ export default function AdminEnquiryDetail() {
   const [togglingNoShow, setTogglingNoShow] = useState(false);
 
   // 'Balance' is only meant for the payment that actually zeroes out the
-  // amount due — if the admin picked it and then edits the amount (or
-  // total) so it no longer does, drop back to 'Installment' rather than
-  // leaving 'Balance' selected but no longer true. See clearsBalance in
-  // AdminEnquiryCommon.
+  // amount due, and 'Advance'/'Full Payment' only for the very first money
+  // in on a booking — if the admin picks one of these and the form then
+  // stops qualifying (amount/total edited, or a payment lands and this
+  // modal reopens later), drop back to 'Installment' rather than leaving
+  // an invalid type selected. See clearsBalance/availablePaymentTypeOptions
+  // in AdminEnquiryCommon.
   useEffect(() => {
     if (!enquiry) return;
-    if (paymentForm.payment_type === 'balance' && !clearsBalance(paymentForm, enquiry.amount_paid || 0)) {
+    const alreadyPaid = enquiry.amount_paid || 0;
+    const stillValid = availablePaymentTypeOptions(paymentForm, alreadyPaid).some(o => o.value === paymentForm.payment_type);
+    if (!stillValid) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- self-correcting a form field once it stops satisfying an invariant, guarded so it only fires on the actual violating transition
       setPaymentForm(f => ({ ...f, payment_type: 'installment' }));
     }
@@ -225,7 +227,11 @@ export default function AdminEnquiryDetail() {
       // openPayment: this field is this-payment's-own-amount now, matching
       // Generate Invoice, not a running total to edit down to.
       amount_paid: '',
-      payment_type: 'advance' as const,
+      // 'Advance' only makes sense as the very first money in — once
+      // anything's already been paid, default to 'Installment' instead
+      // (matches availablePaymentTypeOptions, which drops 'Advance'/'Full
+      // Payment' from the dropdown the moment amount_paid > 0).
+      payment_type: (enquiry.amount_paid || 0) > 0 ? 'installment' as const : 'advance' as const,
       status: 'paid' as const,
       payment_method: '',
       payment_utr: '',
@@ -235,6 +241,7 @@ export default function AdminEnquiryDetail() {
       refund_date: '',
       refund_notes: '',
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
+      notes: '',
     };
   };
 
@@ -386,10 +393,11 @@ export default function AdminEnquiryDetail() {
   };
 
   // Add-on and Pending both raise their own invoice row via the same
-  // services/api.ts functions Generate Invoice uses (addAddonCharge /
-  // generatePendingInvoice) rather than moving amount_paid through
-  // recordPayment's running-total math — see the matching handleSavePayment
-  // in AdminEnquiries.tsx for the full reasoning; kept in sync with it.
+  // services/api.ts functions the old standalone "Add Invoice" flow used
+  // (addAddonCharge / generatePendingInvoice) rather than moving amount_paid
+  // through recordPayment's running-total math — see useEnquiryPayment.ts's
+  // handleSavePayment for the same branching, kept for the pre-navigation
+  // list-view state sync.
   const handleSavePayment = async () => {
     if (!enquiry) return;
     const totalAmount = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
@@ -426,6 +434,12 @@ export default function AdminEnquiryDetail() {
           collectedNow: !isPending,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
+          notes: paymentForm.notes.trim() || undefined,
+          // Drives the Child Fare badge in the Enquiries list/detail —
+          // matches the exact preset text the Child Fare chip in
+          // PaymentFormFields fills in, so an admin manually typing
+          // something else here doesn't get flagged as one.
+          markAsChildAddon: paymentForm.notes.trim() === 'Child fare',
         });
       } else if (isPending) {
         updated = await recordPayment(enquiry, {
@@ -439,7 +453,7 @@ export default function AdminEnquiryDetail() {
         if (thisPayment > 0) {
           // Not addon in this branch (handled above), so this is
           // always one of the four types generatePendingInvoice accepts.
-          await generatePendingInvoice(enquiry.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment);
+          await generatePendingInvoice(enquiry.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment, paymentForm.notes.trim() || undefined);
         }
       } else {
         updated = await recordPayment(enquiry, {
@@ -451,6 +465,7 @@ export default function AdminEnquiryDetail() {
           food_preference: paymentForm.food_preference || null,
           payment_method: paymentForm.payment_method || undefined,
           utr_number: paymentForm.payment_utr || undefined,
+          notes: paymentForm.notes.trim() || undefined,
           // Not addon in this branch (handled above), so this is
           // always one of the four types recordPayment's override accepts.
           type: thisPayment > 0 ? (paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment') : undefined,
@@ -491,14 +506,6 @@ export default function AdminEnquiryDetail() {
       setTogglingNoShow(false);
     }
   };
-
-  // ---- Generate Invoice modal -------------------------------------------
-  // Shared with the Enquiries list page — see useGenerateInvoice for why
-  // the state/save logic lives there instead of being duplicated here.
-  const generateInvoice = useGenerateInvoice(async updated => {
-    setEnquiry(updated);
-    getPaymentsForEnquiry(updated.id).then(setPayments).catch(console.error);
-  });
 
   // ---- Mark Invoice Paid -------------------------------------------------
   // Shared with the Enquiries list page — see useMarkInvoicePaid for why
@@ -859,7 +866,7 @@ export default function AdminEnquiryDetail() {
           paymentsLoading={paymentsLoading}
           showAllInvoices={showAllInvoices}
           setShowAllInvoices={setShowAllInvoices}
-          onAddInvoice={() => generateInvoice.open(enquiry)}
+          onAddInvoice={openPayment}
           onMarkPaid={inv => markPaid.open(inv)}
           markPaidBusyId={markPaid.busyId}
         />
@@ -904,18 +911,6 @@ export default function AdminEnquiryDetail() {
         togglingNoShow={togglingNoShow}
         onToggleNoShow={handleToggleNoShow}
         getTripPrice={getTripPrice}
-      />
-
-      {/* Generate Invoice modal — same component the Enquiries list uses. */}
-      <GenerateInvoiceModal
-        generateInvoiceTarget={generateInvoice.target}
-        onClose={generateInvoice.close}
-        generateInvoiceForm={generateInvoice.form}
-        setGenerateInvoiceForm={generateInvoice.setForm}
-        onSave={generateInvoice.save}
-        savingInvoice={generateInvoice.saving}
-        paymentHistory={payments}
-        paymentHistoryLoading={paymentsLoading}
       />
 
       {/* Record Contact Outcome — the New -> Contacted entry point. */}

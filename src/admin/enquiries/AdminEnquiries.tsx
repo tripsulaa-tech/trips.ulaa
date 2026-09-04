@@ -21,7 +21,6 @@ import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import { getPaymentsForEnquiry } from '../../services/api';
 import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
 import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
@@ -30,7 +29,6 @@ import {
   closedReasonBreakdown, followUpStatus,
 } from './AdminEnquiryCommon';
 import { JourneyLifecycleLegend } from './AdminEnquiryLifecycle';
-import { useGenerateInvoice } from './useGenerateInvoice';
 import { useMarkInvoicePaid } from './useMarkInvoicePaid';
 import { useEnquiryData } from './useEnquiryData';
 import { useEnquiryFilters, ENQUIRIES_PAGE_SIZE } from './useEnquiryFilters';
@@ -56,7 +54,6 @@ import FilterDropdown from './AdminFilterDropdown';
 import { KpiCards, KpiCarousel } from '../../components/ui/KpiCards';
 import AddEnquiryModal from './AdminAddEnquiryModal';
 import DetailsModal from './AdminDetailsModal';
-import GenerateInvoiceModal from './AdminGenerateInvoiceModal';
 import MarkPaidModal from './AdminMarkPaidModal';
 import NotInterestedModal from './AdminNotInterestedModal';
 import FollowUpModal from './AdminFollowUpModal';
@@ -205,13 +202,6 @@ export default function AdminEnquiries() {
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
-
-  const generateInvoice = useGenerateInvoice(async (updatedEnquiry, target) => {
-    const freshInvoices = await getPaymentsForEnquiry(target.id);
-    setDetailsInvoices(freshInvoices);
-    setDetailsTarget(updatedEnquiry);
-    load();
-  });
 
   const markPaid = useMarkInvoicePaid(updatedPayment => {
     setDetailsInvoices(prev => prev.map(p => (p.id === updatedPayment.id ? updatedPayment : p)));
@@ -1300,20 +1290,9 @@ export default function AdminEnquiries() {
         onMarkCompleted={handleMarkCompleted}
         detailsInvoices={detailsInvoices}
         detailsInvoicesLoading={detailsInvoicesLoading}
-        onOpenGenerateInvoice={generateInvoice.open}
+        onOpenGenerateInvoice={openPayment}
         invoiceRowBusyId={markPaid.busyId}
         onMarkInvoicePaid={markPaid.open}
-      />
-
-      <GenerateInvoiceModal
-        generateInvoiceTarget={generateInvoice.target}
-        onClose={generateInvoice.close}
-        generateInvoiceForm={generateInvoice.form}
-        setGenerateInvoiceForm={generateInvoice.setForm}
-        onSave={generateInvoice.save}
-        savingInvoice={generateInvoice.saving}
-        paymentHistory={detailsInvoices}
-        paymentHistoryLoading={detailsInvoicesLoading}
       />
 
       <MarkPaidModal

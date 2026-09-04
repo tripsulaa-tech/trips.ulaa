@@ -46,6 +46,10 @@ export default function DetailsModal({
   onMarkCompleted: (e: Enquiry) => void;
   detailsInvoices: Payment[];
   detailsInvoicesLoading: boolean;
+  // Opens the single, consolidated Payment flow (kept the
+  // onOpenGenerateInvoice prop name to avoid a churny rename across
+  // callers) — a standalone "Add Invoice" modal no longer exists; this now
+  // matches the enquiry's full CRM page, same as the row's "Payment" action.
   onOpenGenerateInvoice: (e: Enquiry) => void;
   invoiceRowBusyId: string | null;
   onMarkInvoicePaid: (payment: Payment) => void;
@@ -150,7 +154,7 @@ export default function DetailsModal({
                       <Receipt size={13} className="shrink-0" aria-hidden="true" /> Invoices
                     </p>
                     <Button variant="primary" size="sm" className="self-start" onClick={() => onOpenGenerateInvoice(detailsTarget)}>
-                      <Plus size={13} aria-hidden="true" /> Add Invoice
+                      <Plus size={13} aria-hidden="true" /> Payment
                     </Button>
                   </div>
                   {detailsInvoicesLoading ? (

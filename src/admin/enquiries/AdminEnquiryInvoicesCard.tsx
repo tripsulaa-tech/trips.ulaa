@@ -12,6 +12,12 @@ interface AdminEnquiryInvoicesCardProps {
   paymentsLoading: boolean;
   showAllInvoices: boolean;
   setShowAllInvoices: (val: boolean) => void;
+  // Opens the single, consolidated Payment modal (Track Payment + what used
+  // to be the separate "Add Invoice" flow — see AdminEnquiryPaymentModal /
+  // PaymentFormFields, which already cover everything a standalone
+  // Generate Invoice modal did). Kept the onAddInvoice prop name to avoid
+  // a churny rename across callers; only the button label and the action
+  // it triggers changed.
   onAddInvoice: () => void;
   onMarkPaid: (invoice: Payment) => void;
   markPaidBusyId: string | null;
@@ -29,7 +35,7 @@ export default function AdminEnquiryInvoicesCard({
           <FileText size={14} className="shrink-0" aria-hidden="true" /> Invoices &amp; Payments
         </p>
         <Button variant="primary" size="sm" onClick={onAddInvoice}>
-          <Plus size={13} aria-hidden="true" /> Add Invoice
+          <Plus size={13} aria-hidden="true" /> Payment
         </Button>
       </div>
       {paymentsLoading ? (

@@ -402,7 +402,7 @@ export interface Enquiry {
   // where it wasn't asked don't break — the public booking form itself
   // requires a choice.
   food_preference?: 'veg' | 'non_veg' | null;
-  // True once a "Child Fare" Add-on (see AdminGenerateInvoiceModal's
+  // True once a "Child Fare" Add-on (see PaymentFormFields's
   // Child Fare chip) has been added to this enquiry — lets Admin show a
   // small badge in the list/detail view without reading payment notes.
   // See add_enquiry_child_addon_flag.sql.
