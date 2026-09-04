@@ -56,7 +56,7 @@ export default function AdminEnquiryJourneyCard({
           <p className="text-dark-muted text-xs mt-1">Track this booking's stage, payments, and balance.</p>
         </div>
         <BookingLifecycleStepper enquiry={enquiry} />
-        <div className="grid grid-cols-3 gap-2 bg-gradient-to-br from-white via-white to-background-warm/70 border border-background-warm rounded-xl px-3 py-3 divide-x divide-dark/10 shadow-sm">
+        <div className="grid grid-cols-3 gap-2 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-3 divide-x divide-dark/10 shadow-sm">
           <div className="flex items-center gap-2">
             <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
               <Wallet size={17} aria-hidden="true" />
