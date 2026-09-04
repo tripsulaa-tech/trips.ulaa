@@ -50,8 +50,8 @@ export default function AdminEnquiryJourneyCard({
     return (
       <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-3">
         <div>
-          <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
-            <Path size={15} className="text-primary" aria-hidden="true" /> Booking Journey
+          <p className="text-dark text-base font-display font-bold flex items-center gap-2">
+            <Path size={18} className="shrink-0 text-primary" aria-hidden="true" /> Booking Journey
           </p>
           <p className="text-dark-muted text-xs mt-1">Track this booking's stage, payments, and balance.</p>
         </div>
@@ -115,8 +115,8 @@ export default function AdminEnquiryJourneyCard({
   return (
     <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-4">
       <div>
-        <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
-          <Wallet size={14} className="shrink-0 text-primary" aria-hidden="true" /> No Payment Yet
+        <p className="text-dark text-base font-display font-bold flex items-center gap-2">
+          <Wallet size={18} className="shrink-0 text-primary" aria-hidden="true" /> No Payment Yet
         </p>
         <p className="text-dark-muted text-xs mt-1">No booking exists on this enquiry yet — fill this in to track the first payment.</p>
       </div>

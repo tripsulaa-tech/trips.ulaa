@@ -91,8 +91,8 @@ export default function AdminEnquiryActivityTimeline({ activityLog, loading }: A
   return (
     <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
       <div className="mb-3">
-        <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
-          <History size={14} className="shrink-0 text-primary" aria-hidden="true" /> Activity Timeline
+        <p className="text-dark text-base font-display font-bold flex items-center gap-2">
+          <History size={18} className="shrink-0 text-primary" aria-hidden="true" /> Activity Timeline
         </p>
         <p className="text-dark-muted text-xs mt-1">A complete, timestamped record of everything that's happened on this enquiry.</p>
       </div>
