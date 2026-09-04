@@ -13,11 +13,22 @@ import {
 } from '@phosphor-icons/react';
 import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
-import { ContactQuickLinks } from '../../components/ui/DataTableChrome';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
-import { formatDate, formatTime } from '../../utils/utils-index';
+import { formatDate, formatTime, getWhatsAppLink } from '../../utils/utils-index';
 import { PACKAGE_CONFIG, PACKAGE_OPTIONS, SOURCE_CONFIG, SOURCE_OPTIONS_ALL, FOOD_PREFERENCE_OPTIONS } from './AdminEnquiryCommon';
 import type { EditDetailsForm } from './AdminEditDetailsModal';
+
+// Phosphor doesn't ship a real WhatsApp glyph (ChatCircle/ChatsCircle are
+// generic speech-bubble icons, not the recognizable WhatsApp mark) — same
+// path already used by ContactQuickLinks (DataTableChrome) and the
+// Activity Timeline, reused here for the WhatsApp row below.
+function WhatsAppGlyph({ size }: { size: number }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size} aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
 
 interface AdminEnquiryTravellerCardProps {
   enquiry: Enquiry;
@@ -58,10 +69,13 @@ export default function AdminEnquiryTravellerCard({
 
   return (
     <div className="bg-white rounded-lg shadow-card p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-dark text-base font-display font-bold flex items-center gap-2">
-          <User size={18} className="shrink-0 text-dark-muted" aria-hidden="true" /> Traveller &amp; Trip
-        </p>
+      <div className="flex items-start justify-between mb-4">
+        <div className="min-w-0">
+          <p className="text-dark text-base font-display font-bold flex items-center gap-2">
+            <User size={18} className="shrink-0 text-primary" aria-hidden="true" /> Traveller &amp; Trip
+          </p>
+          <p className="text-dark-muted text-xs mt-1">Who this enquiry is for, their trip, and how to reach them.</p>
+        </div>
         {editing ? (
           <div className="flex items-center gap-1 shrink-0">
             <button
@@ -87,7 +101,7 @@ export default function AdminEnquiryTravellerCard({
             type="button"
             onClick={onStartEdit}
             title="Edit these details — fixes who this enquiry is actually about, doesn't affect payments, status, or booking journey"
-            className="w-8 h-8 rounded-full inline-flex items-center justify-center text-dark-muted hover:bg-background-warm hover:text-dark transition-colors shrink-0"
+            className="w-8 h-8 rounded-full bg-primary/10 inline-flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-colors shrink-0"
           >
             <Pencil size={15} aria-hidden="true" />
           </button>
@@ -118,9 +132,20 @@ export default function AdminEnquiryTravellerCard({
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-3 pb-4 border-b border-background-warm">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
-            <PhoneIcon size={15} aria-hidden="true" />
-          </span>
+          {!editing && enquiry.phone ? (
+            <a
+              href={`tel:${enquiry.phone}`}
+              title={`Call ${enquiry.full_name}`}
+              aria-label={`Call ${enquiry.full_name}`}
+              className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0 hover:bg-primary hover:text-white transition-colors"
+            >
+              <PhoneIcon size={15} aria-hidden="true" />
+            </a>
+          ) : (
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
+              <PhoneIcon size={15} aria-hidden="true" />
+            </span>
+          )}
           <div className="min-w-0 flex-1">
             <label htmlFor="eq-detail-edit-phone" className="text-dark-muted text-xs">Phone</label>
             {editing ? (
@@ -143,9 +168,20 @@ export default function AdminEnquiryTravellerCard({
           </div>
         </div>
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
-            <EnvelopeSimple size={15} aria-hidden="true" />
-          </span>
+          {!editing && enquiry.email ? (
+            <a
+              href={`mailto:${enquiry.email}`}
+              title={`Email ${enquiry.full_name}`}
+              aria-label={`Email ${enquiry.full_name}`}
+              className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0 hover:bg-primary hover:text-white transition-colors"
+            >
+              <EnvelopeSimple size={15} aria-hidden="true" />
+            </a>
+          ) : (
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
+              <EnvelopeSimple size={15} aria-hidden="true" />
+            </span>
+          )}
           <div className="min-w-0 flex-1">
             <label htmlFor="eq-detail-edit-email" className="text-dark-muted text-xs">Email</label>
             {editing ? (
@@ -162,11 +198,6 @@ export default function AdminEnquiryTravellerCard({
             )}
           </div>
         </div>
-        {!editing && (
-          <div className="col-span-2 mt-1">
-            <ContactQuickLinks phone={enquiry.phone} email={enquiry.email} name={enquiry.full_name} tripTitle={enquiry.trip_title} size="md" />
-          </div>
-        )}
       </div>
 
       <div className="divide-y divide-background-warm">
@@ -340,6 +371,24 @@ export default function AdminEnquiryTravellerCard({
               )}
             </div>
           </div>
+          {!editing && enquiry.phone && (
+            <div className="flex items-center gap-2.5 min-w-0">
+              <a
+                href={getWhatsAppLink(enquiry.phone, `Hi ${enquiry.full_name.trim().split(/\s+/)[0]}, following up on your ${enquiry.trip_title ? `${enquiry.trip_title} ` : ''}enquiry with ULAA — `)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Message ${enquiry.full_name} on WhatsApp`}
+                aria-label={`Message ${enquiry.full_name} on WhatsApp`}
+                className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0 hover:bg-primary hover:text-white transition-colors"
+              >
+                <WhatsAppGlyph size={15} />
+              </a>
+              <div className="min-w-0 flex-1">
+                <p className="text-dark-muted text-xs">WhatsApp</p>
+                <p className="text-dark text-sm font-semibold truncate">{enquiry.phone}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

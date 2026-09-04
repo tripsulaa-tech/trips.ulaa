@@ -99,8 +99,9 @@ export default function DetailsModal({
             )}
             {detailsTarget.booking_id && (
               <div className="space-y-2.5">
-                {/* Booking lifecycle — Confirmed → Fully Paid → Completed,
-                    with Cancelled as a terminal off-ramp. */}
+                {/* Booking lifecycle — New Enquiry → Contacted → Confirmed
+                    → Fully Paid → Completed, with Cancelled as a terminal
+                    off-ramp. */}
                 <BookingLifecycleStepper enquiry={detailsTarget} />
 
                 {/* Booking Summary — Total / Paid / Pending, mirrors the

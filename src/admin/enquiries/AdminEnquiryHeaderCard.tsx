@@ -133,7 +133,7 @@ export default function AdminEnquiryHeaderCard({
           {!enquiry.booking_id && (
             <>
               {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
-                <Button variant="outline" size="sm" onClick={onOpenFollowUp} disabled={busyAction || busyFollowUp} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
+                <Button variant="primary" size="sm" onClick={onOpenFollowUp} disabled={busyAction || busyFollowUp} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
                   <CalendarClock size={14} aria-hidden="true" /> Set Follow-up
                 </Button>
               )}
@@ -166,7 +166,7 @@ export default function AdminEnquiryHeaderCard({
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
             {canSetFollowUp(enquiry) && !followUpStatus(enquiry) && (
-              <Button variant="outline" size="sm" onClick={onOpenFollowUp} disabled={busyAction || busyFollowUp} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
+              <Button variant="primary" size="sm" onClick={onOpenFollowUp} disabled={busyAction || busyFollowUp} className="!px-3 !gap-1.5 text-xs whitespace-nowrap">
                 <CalendarClock size={14} aria-hidden="true" /> Set Follow-up
               </Button>
             )}

@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Bird,
   Baby,
-  ArrowSquareOut,
 } from '@phosphor-icons/react';
 import FoodMark from '../../components/ui/FoodMark';
 import { TableHeaderBar, TablePagination, SortableTh } from '../../components/ui/DataTableChrome';
@@ -74,7 +73,6 @@ interface AdminEnquiriesDesktopTableProps {
   // Row actions
   updating: string | null;
   completingId: string | null;
-  setDetailsTarget: (e: Enquiry) => void;
   openPayment: (e: Enquiry) => void;
   openFollowUpModal: (e: Enquiry) => void;
   setBookingFollowUpTarget: (e: Enquiry) => void;
@@ -97,7 +95,7 @@ export default function AdminEnquiriesDesktopTable({
   selectedIds, toggleSelectOne, toggleSelectAllFiltered,
   activeGroup, highlightId, groupColor, groupLabel, cardRefs,
   tableScrollRef, dragHandlers, isDragging,
-  updating, completingId, setDetailsTarget, openPayment, openFollowUpModal, setBookingFollowUpTarget,
+  updating, completingId, openPayment, openFollowUpModal, setBookingFollowUpTarget,
   handleAdvance, buildRowActions,
 }: AdminEnquiriesDesktopTableProps) {
   // Only used for the "Open Full CRM Page" link below — the desktop table
@@ -185,43 +183,32 @@ export default function AdminEnquiriesDesktopTable({
                   </td>
                   <td className="px-3 py-4 text-dark-muted hidden md:table-cell whitespace-nowrap">{idx + 1}</td>
                   <td className="px-4 py-4 max-w-[150px] sm:max-w-none">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setDetailsTarget(e)}
-                        className="text-left min-w-0 flex-1 group"
-                        title="Click for a quick summary"
-                      >
-                        <p className="font-medium text-dark group-hover:text-primary transition-colors flex items-center gap-1.5 min-w-0">
-                          <span className="truncate min-w-0">{e.full_name}</span>
-                          {e.has_child_addon && (
-                            <span
-                              title="A Child Fare add-on has been added to this booking"
-                              className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
-                            >
-                              <Baby size={9} className="shrink-0" aria-hidden="true" /> Child
-                            </span>
-                          )}
-                          {!e.trip_id && !activeGroup && (
-                            <span
-                              title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
-                              className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
-                            >
-                              <MessageCircle size={9} className="shrink-0" aria-hidden="true" /> General
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-dark-muted text-xs truncate sm:hidden">{e.email}</p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/admin/enquiries/${e.id}`)}
-                        title="Open Full CRM Page — Activity Timeline, Invoices, and every other detail live here"
-                        aria-label={`Open full CRM page for ${e.full_name}`}
-                        className="shrink-0 text-dark-muted hover:text-primary p-1 -m-1 rounded transition-colors"
-                      >
-                        <ArrowSquareOut size={13} aria-hidden="true" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => navigate(`/admin/enquiries/${e.id}`)}
+                      className="text-left min-w-0 w-full group"
+                      title="Open Full CRM Page"
+                    >
+                      <p className="font-medium text-dark group-hover:text-primary transition-colors flex items-center gap-1.5 min-w-0">
+                        <span className="truncate min-w-0">{e.full_name}</span>
+                        {e.has_child_addon && (
+                          <span
+                            title="A Child Fare add-on has been added to this booking"
+                            className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
+                          >
+                            <Baby size={9} className="shrink-0" aria-hidden="true" /> Child
+                          </span>
+                        )}
+                        {!e.trip_id && !activeGroup && (
+                          <span
+                            title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
+                            className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
+                          >
+                            <MessageCircle size={9} className="shrink-0" aria-hidden="true" /> General
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-dark-muted text-xs truncate sm:hidden">{e.email}</p>
+                    </button>
                   </td>
                   <td className="px-2 py-4 whitespace-nowrap">
                     {e.group_size && e.group_size > 1 ? (
@@ -285,10 +272,10 @@ export default function AdminEnquiriesDesktopTable({
                           <span className="text-amber-600"> · {formatPrice(paymentBalance(e)!)} Due</span>
                         )}
                       </p>
+                      {e.booking_id && (
+                        <span title="Booking ID" className="mt-0.5 block text-[10px] font-mono text-dark-muted truncate">{e.booking_id}</span>
+                      )}
                     </button>
-                    {e.booking_id && (
-                      <span title="Booking ID" className="mt-0.5 block text-[10px] font-mono text-dark-muted truncate">{e.booking_id}</span>
-                    )}
                     {refundStatus(e) && (
                       <p className={`text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
                         {refundStatus(e)!.label}

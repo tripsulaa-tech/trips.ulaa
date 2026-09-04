@@ -59,11 +59,14 @@ export default function AdminEnquiryInvoicesCard({
   return (
     <div className="bg-white rounded-lg shadow-card">
       <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-background-warm">
-        <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
-          <FileText size={14} className="shrink-0" aria-hidden="true" /> Invoices &amp; Payments
-        </p>
-        <Button variant="primary" size="sm" onClick={onAddInvoice}>
-          <Plus size={13} aria-hidden="true" /> Add Payment
+        <div>
+          <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
+            <FileText size={14} className="shrink-0 text-primary" aria-hidden="true" /> Invoices &amp; Payments
+          </p>
+          <p className="text-dark-muted text-xs mt-1">Every invoice raised and payment recorded on this booking.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={onAddInvoice}>
+          <Plus size={13} aria-hidden="true" /> Add
         </Button>
       </div>
       {paymentsLoading ? (

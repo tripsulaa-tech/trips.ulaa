@@ -3,7 +3,7 @@
 // booking exists — the Track Payment fields themselves, filled in right
 // here on the page rather than behind a popup, since recording the first
 // payment is the very next thing an admin does with a brand-new enquiry.
-import { CheckCircle as CheckCircle2, Clock, CurrencyInr as IndianRupee, Wallet } from '@phosphor-icons/react';
+import { CheckCircle as CheckCircle2, Clock, CurrencyInr as IndianRupee, Path, Wallet } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -49,9 +49,14 @@ export default function AdminEnquiryJourneyCard({
     // admin before completing while a balance remains.
     return (
       <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-3">
-        <p className="text-dark text-sm font-button font-semibold">Booking Journey</p>
+        <div>
+          <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
+            <Path size={15} className="text-primary" aria-hidden="true" /> Booking Journey
+          </p>
+          <p className="text-dark-muted text-xs mt-1">Track this booking's stage, payments, and balance.</p>
+        </div>
         <BookingLifecycleStepper enquiry={enquiry} />
-        <div className="grid grid-cols-3 gap-2 bg-[#f2f2f2] rounded-md px-3 py-2.5 divide-x divide-dark/10">
+        <div className="grid grid-cols-3 gap-2 bg-[#f2ebe0] rounded-md px-3 py-2.5 divide-x divide-dark/10">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-dark/5 text-dark-muted inline-flex items-center justify-center shrink-0">
               <Wallet size={19} aria-hidden="true" />
@@ -109,14 +114,11 @@ export default function AdminEnquiryJourneyCard({
 
   return (
     <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-4">
-      <div className="flex items-start gap-3">
-        <span className="w-10 h-10 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
-          <Wallet size={18} aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1 pt-0.5">
-          <p className="text-dark text-sm font-semibold">No Payment Yet</p>
-          <p className="text-dark-muted text-xs mt-0.5">No booking exists on this enquiry yet — fill this in to track the first payment.</p>
-        </div>
+      <div>
+        <p className="text-dark text-sm font-button font-semibold flex items-center gap-1.5">
+          <Wallet size={14} className="shrink-0 text-primary" aria-hidden="true" /> No Payment Yet
+        </p>
+        <p className="text-dark-muted text-xs mt-1">No booking exists on this enquiry yet — fill this in to track the first payment.</p>
       </div>
 
       <PaymentFormFields

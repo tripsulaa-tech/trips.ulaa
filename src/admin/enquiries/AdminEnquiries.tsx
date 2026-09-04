@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowsClockwise as RefreshCw,
@@ -26,7 +26,7 @@ import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap } from '..
 import type { GroupUnit } from '../../utils/utils-index';
 import {
   foodPreferenceKey, SOURCE_CONFIG, JOURNEY_STAGE_CONFIG,
-  closedReasonBreakdown, followUpStatus,
+  closedReasonBreakdown, followUpStatus, validatePaymentForm,
 } from './AdminEnquiryCommon';
 import { JourneyLifecycleLegend } from './AdminEnquiryLifecycle';
 import { useMarkInvoicePaid } from './useMarkInvoicePaid';
@@ -62,9 +62,9 @@ import CancelModal from './AdminCancelModal';
 import BulkEditModal from './AdminBulkEditModal';
 import AdminEnquiriesDesktopTable from './AdminEnquiriesDesktopTable';
 import AdminEnquiriesMobileCards from './AdminEnquiriesMobileCards';
+import AdminEnquiryPaymentModal from './AdminEnquiryPaymentModal';
 
 export default function AdminEnquiries() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { enquiries, trips, completedTrips, loading, load, setTrips } = useEnquiryData();
   // Restores scroll position when the admin comes back to this list — e.g.
@@ -137,18 +137,25 @@ export default function AdminEnquiries() {
     const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
     return price ?? undefined;
   };
-  // The Track Payment modal (AdminPaymentModal) has been retired from the
-  // list view — only setPaymentTarget/setPaymentForm are still needed here,
-  // for useEnquiryLifecycle's handleToggleNoShow to keep in sync. Every
-  // former trigger for that modal (the Payment cell, row-action "Record/
-  // Manage Payment", and the auto-open after marking an enquiry Interested)
-  // now navigates to the enquiry's full CRM page instead, matching the
-  // "View Full CRM" link already used elsewhere in this table.
+  // Payment modal — a click on the Payment cell/"Record Payment"/"Add
+  // Payment" opens this right here on the list (same modal
+  // AdminEnquiryDetail.tsx uses), instead of navigating away to the full
+  // CRM page first. paymentTarget/paymentForm stay owned by
+  // useEnquiryPayment (not local state) since useEnquiryLifecycle's
+  // handleToggleNoShow also needs to keep them in sync from elsewhere in
+  // the table.
   const {
-    setPaymentTarget,
-    setPaymentForm,
+    paymentTarget, setPaymentTarget,
+    paymentForm, setPaymentForm,
+    savingPayment,
+    paymentHistory, paymentHistoryLoading,
+    openPayment,
+    handleSavePayment,
   } = useEnquiryPayment({ setTrips, load, getTripPrice });
-  const openPayment = (enquiry: Enquiry) => navigate(`/admin/enquiries/${enquiry.id}`);
+  // Live, field-level errors for the modal — same shared validator the
+  // detail page's own Track Payment modal uses.
+  const paymentErrors = paymentTarget ? validatePaymentForm(paymentForm, paymentTarget.amount_paid || 0) : {};
+  const hasPaymentErrors = Object.keys(paymentErrors).length > 0;
   const {
     cancelTarget, setCancelTarget,
     cancelCharges, setCancelCharges,
@@ -156,6 +163,7 @@ export default function AdminEnquiries() {
     cancelReason, setCancelReason,
     cancelNotes, setCancelNotes,
     cancelling, completingId,
+    togglingNoShow,
     handleCancelToggle, handleConfirmCancel,
     handleToggleNoShow, handleDelete, handleMarkCompleted,
     handleCheckIn, handleUndoCheckIn,
@@ -1224,7 +1232,6 @@ export default function AdminEnquiries() {
               isDragging={isDragging}
               updating={updating}
               completingId={completingId}
-              setDetailsTarget={setDetailsTarget}
               openPayment={openPayment}
               openFollowUpModal={openFollowUpModal}
               setBookingFollowUpTarget={setBookingFollowUpTarget}
@@ -1294,6 +1301,25 @@ export default function AdminEnquiries() {
         invoiceRowBusyId={markPaid.busyId}
         onMarkInvoicePaid={markPaid.open}
       />
+
+      {paymentTarget && (
+        <AdminEnquiryPaymentModal
+          isOpen={!!paymentTarget}
+          onClose={() => setPaymentTarget(null)}
+          enquiry={paymentTarget}
+          paymentForm={paymentForm}
+          setPaymentForm={setPaymentForm}
+          paymentErrors={paymentErrors}
+          hasPaymentErrors={hasPaymentErrors}
+          savingPayment={savingPayment}
+          onSave={handleSavePayment}
+          payments={paymentHistory}
+          paymentsLoading={paymentHistoryLoading}
+          togglingNoShow={togglingNoShow}
+          onToggleNoShow={(isNoShow) => handleToggleNoShow(paymentTarget, isNoShow)}
+          getTripPrice={getTripPrice}
+        />
+      )}
 
       <MarkPaidModal
         target={markPaid.target}
