@@ -4,8 +4,8 @@
 // activity_log's RLS: no UPDATE/DELETE policy exists at all).
 import type { ReactNode } from 'react';
 import {
-  ClockCounterClockwise as History, CheckCircle, XCircle, Clock,
-  Globe, Phone, Camera, MapPin,
+  ClockCounterClockwise as History, XCircle, Clock,
+  Globe, Phone, Camera, MapPin, Percent, CurrencyInr as IndianRupee,
 } from '@phosphor-icons/react';
 import type { ActivityLogEntry } from '../../types/types-index';
 import { formatDate, formatTime } from '../../utils/utils-index';
@@ -66,14 +66,25 @@ const LOG_SOURCE_ICONS: [needle: string, render: (size: number) => ReactNode][] 
 function timelineMeta(entry: ActivityLogEntry): { render: (size: number) => ReactNode; classes: string } {
   const action = entry.action.toLowerCase();
   const details = (entry.details || '').toLowerCase();
+  // Checked ahead of the generic cancel/removed and paid/received branches
+  // below — "Discount applied"/"Discount removed" would otherwise match
+  // those and show a plain check/X instead of something that actually
+  // reads as "discount" at a glance. Keeps the same green/red semantic
+  // (applied vs. removed) those branches already used, just with the
+  // more specific icon.
+  if (action.includes('discount')) {
+    return action.includes('removed')
+      ? { render: phosphorGlyph(Percent), classes: 'bg-red-50 text-red-600' }
+      : { render: phosphorGlyph(Percent), classes: 'bg-green-50 text-green-600' };
+  }
   if (action.includes('cancel') || action.includes('no show') || action.includes('removed')) {
     return { render: phosphorGlyph(XCircle), classes: 'bg-red-50 text-red-600' };
   }
   if (details.includes('pending')) {
     return { render: phosphorGlyph(Clock), classes: 'bg-amber-50 text-amber-600' };
   }
-  if (action.includes('paid') || action.includes('received') || details.includes('collected') || action.includes('discount applied')) {
-    return { render: phosphorGlyph(CheckCircle), classes: 'bg-green-50 text-green-600' };
+  if (action.includes('paid') || action.includes('received') || details.includes('collected')) {
+    return { render: phosphorGlyph(IndianRupee), classes: 'bg-green-50 text-green-600' };
   }
   // "Enquiry logged (whatsapp)" / "(phone)" / "(website)" etc. (admin-portal
   // entries) and the DB trigger's special-cased "Website enquiry submitted"
