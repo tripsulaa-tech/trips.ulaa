@@ -73,9 +73,11 @@ function timelineMeta(entry: ActivityLogEntry): { render: (size: number) => Reac
   // (applied vs. removed) those branches already used, just with the
   // more specific icon.
   if (action.includes('discount')) {
+    // Outline weight here (not phosphorGlyph's filled weight) to match the
+    // Percent glyph already used in Payment Overview's Discount tile.
     return action.includes('removed')
-      ? { render: phosphorGlyph(Percent), classes: 'bg-red-50 text-red-600' }
-      : { render: phosphorGlyph(Percent), classes: 'bg-green-50 text-green-600' };
+      ? { render: phosphorGlyphRegular(Percent), classes: 'bg-red-50 text-red-600' }
+      : { render: phosphorGlyphRegular(Percent), classes: 'bg-green-50 text-green-600' };
   }
   if (action.includes('cancel') || action.includes('no show') || action.includes('removed')) {
     return { render: phosphorGlyph(XCircle), classes: 'bg-red-50 text-red-600' };

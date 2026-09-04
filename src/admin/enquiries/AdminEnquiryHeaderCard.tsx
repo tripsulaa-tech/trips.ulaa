@@ -11,11 +11,24 @@ import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import FoodMark from '../../components/ui/FoodMark';
 import type { Enquiry } from '../../types/types-index';
+import { formatDate } from '../../utils/utils-index';
 import {
   foodBadge, foodPreferenceKey, journeyBadge, nextManualAction, isNotInterested,
   canMarkNotInterested, closedReasonLabel, canSetFollowUp, followUpStatus,
 } from './AdminEnquiryCommon';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquiriesShared';
+
+// First letter of the first name + first letter of the second "word" in
+// full_name (e.g. "Srivarshini M V" -> "SM") — shown in the avatar circle
+// instead of a generic person icon, so the header reads as "who" at a
+// glance. Falls back to just the first letter when there's only one word.
+function nameInitials(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  const first = parts[0][0] || '';
+  const second = parts.length > 1 ? (parts[1][0] || '') : '';
+  return (first + second).toUpperCase();
+}
 
 interface AdminEnquiryHeaderCardProps {
   enquiry: Enquiry;
@@ -50,9 +63,18 @@ export default function AdminEnquiryHeaderCard({
   return (
     <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-xl font-bold text-dark truncate">{enquiry.full_name}</h2>
-          <div className="flex items-center flex-wrap gap-1.5 mt-1.5">
+        <div className="min-w-0 flex items-start gap-3">
+          {/* Bigger, on-theme avatar circle (primary tint) showing the
+              traveller's initials rather than a generic person icon —
+              sized to sit alongside the full name+badges block, not just
+              the name line — so it reads as "here's who this card is
+              about" rather than a decoration on the first line only. */}
+          <span className="shrink-0 w-16 h-16 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center text-xl font-display font-bold">
+            {nameInitials(enquiry.full_name)}
+          </span>
+          <div className="min-w-0">
+            <h2 className="font-display text-xl font-bold text-dark truncate">{enquiry.full_name}</h2>
+            <div className="flex items-center flex-wrap gap-1.5 mt-1.5">
             <span title={`Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
               <jb.icon size={12} className="shrink-0" aria-hidden="true" /> {jb.label}
             </span>
@@ -113,9 +135,25 @@ export default function AdminEnquiryHeaderCard({
             <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
               <FoodMark type={foodPreferenceKey(enquiry)} size={10} /> {food.label}
             </span>
+            </div>
           </div>
         </div>
-        <div className="flex flex-nowrap items-center justify-end gap-1.5 min-w-0 w-full sm:w-auto">
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          {/* Active/Cancelled + when this enquiry came in — sits above the
+              divider/Booking ID row now (not down alongside it), so it
+              reads together with the name/badges block it's describing
+              rather than getting grouped visually with Set Follow-up and
+              the other action buttons below. */}
+          {enquiry.booking_id && (
+            <div className="text-right">
+              <p className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold ${isCancelled(enquiry) ? 'text-red-600' : 'text-green-600'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCancelled(enquiry) ? 'bg-red-600' : 'bg-green-600'}`} aria-hidden="true" />
+                {isCancelled(enquiry) ? 'Cancelled' : 'Active Enquiry'}
+              </p>
+              <p className="text-dark-muted text-[11px] mt-0.5">Created on {formatDate(enquiry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+            </div>
+          )}
+          <div className="flex flex-nowrap items-center justify-end gap-1.5 min-w-0 w-full sm:w-auto">
           {nma && (
             <Button variant="primary" size="sm" onClick={onAdvance} disabled={busyAction} className="!px-3 !gap-1.5 text-xs whitespace-nowrap flex-1 sm:flex-none">
               <nma.icon size={14} aria-hidden="true" /> {nma.label}
@@ -140,6 +178,7 @@ export default function AdminEnquiryHeaderCard({
               <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} variant="plain" />
             </>
           )}
+          </div>
         </div>
       </div>
 
