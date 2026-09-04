@@ -56,10 +56,10 @@ export default function AdminEnquiryJourneyCard({
           <p className="text-dark-muted text-xs mt-1">Track this booking's stage, payments, and balance.</p>
         </div>
         <BookingLifecycleStepper enquiry={enquiry} />
-        <div className="grid grid-cols-3 gap-2 bg-[#f2ebe0] rounded-md px-3 py-2.5 divide-x divide-dark/10">
+        <div className="grid grid-cols-3 gap-2 bg-gradient-to-br from-white via-white to-background-warm/70 border border-background-warm rounded-xl px-3 py-3 divide-x divide-dark/10 shadow-sm">
           <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-dark/5 text-dark-muted inline-flex items-center justify-center shrink-0">
-              <Wallet size={19} aria-hidden="true" />
+            <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
+              <Wallet size={17} aria-hidden="true" />
             </span>
             <div className="min-w-0">
               <p className="text-dark-muted text-[11px]">Total</p>
@@ -67,8 +67,8 @@ export default function AdminEnquiryJourneyCard({
             </div>
           </div>
           <div className="pl-2 flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-green-100 text-green-600 inline-flex items-center justify-center shrink-0">
-              <CheckCircle2 size={19} weight="fill" aria-hidden="true" />
+            <span className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white inline-flex items-center justify-center shrink-0 shadow-[0_3px_10px_-2px_rgba(22,163,74,0.5)]">
+              <CheckCircle2 size={17} weight="fill" aria-hidden="true" />
             </span>
             <div className="min-w-0">
               <p className="text-dark-muted text-[11px]">Paid</p>
@@ -76,8 +76,8 @@ export default function AdminEnquiryJourneyCard({
             </div>
           </div>
           <div className="pl-2 flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 inline-flex items-center justify-center shrink-0">
-              <Clock size={19} aria-hidden="true" />
+            <span className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white inline-flex items-center justify-center shrink-0 shadow-[0_3px_10px_-2px_rgba(245,158,11,0.5)]">
+              <Clock size={17} aria-hidden="true" />
             </span>
             <div className="min-w-0">
               <p className="text-dark-muted text-[11px]">Pending</p>
