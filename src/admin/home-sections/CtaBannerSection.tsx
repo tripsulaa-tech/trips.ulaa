@@ -1,4 +1,6 @@
+import { ArrowRight } from '@phosphor-icons/react';
 import ImageUploadField from '../../components/ui/ImageUploadField';
+import Button from '../../components/ui/Button';
 import type { CtaBannerContent } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { labelClass } from '../about-sections/shared';
@@ -98,15 +100,35 @@ export default function CtaBannerSection({
           />
         </div>
       </div>
-      {/* Live preview — same classes as the actual banner (see CTASection.tsx). */}
-      <div className="rounded-lg bg-dark px-6 py-8 text-center">
-        <span className="inline-block text-secondary font-script font-medium text-lg mb-2">{content.eyebrow}</span>
-        <p className="font-display text-2xl font-bold leading-tight text-white mb-2">
-          {content.heading_line1}
-          <br />
-          <span className="text-secondary italic">{content.heading_highlight}</span>
-        </p>
-        <p className="text-xs text-white/80 max-w-sm mx-auto">{content.subheading}</p>
+      {/* Live preview — mirrors the actual banner's background image + dark
+          gradient overlay + both buttons (see CTASection.tsx), not just the
+          text, so what's shown here matches the live site. */}
+      <div>
+        <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wide mb-1.5">Live preview</p>
+        <div className="relative rounded-lg overflow-hidden px-6 py-10 text-center bg-dark">
+          {content.image && (
+            <img src={content.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-r from-dark/90 via-dark/70 to-dark/50" />
+          <div className="relative space-y-3">
+            <span className="inline-block text-secondary font-script font-medium text-lg">{content.eyebrow}</span>
+            <p className="font-display text-2xl font-bold leading-tight text-white">
+              {content.heading_line1}
+              <br />
+              <span className="text-secondary italic">{content.heading_highlight}</span>
+            </p>
+            <p className="text-xs text-white/80 max-w-sm mx-auto">{content.subheading}</p>
+            <div className="flex flex-row gap-2.5 justify-center pt-1">
+              <Button variant="primary" size="sm">
+                {content.primary_label}
+                <ArrowRight size={16} aria-hidden="true" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-white border-white/40">
+                {content.secondary_label}
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

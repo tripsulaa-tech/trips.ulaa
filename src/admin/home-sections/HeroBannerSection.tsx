@@ -9,6 +9,7 @@ import {
   Eye,
   EyeSlash as EyeOff,
   Images,
+  DeviceMobile,
 } from '@phosphor-icons/react';
 import ImageUploadField from '../../components/ui/ImageUploadField';
 import { uploadImage, deleteImageByUrl } from '../../services/api';
@@ -159,143 +160,168 @@ export default function HeroBannerSection({
             <span className="text-sm font-medium">Add your first banner photo</span>
           </button>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {content.slides.map((slide, i) => (
               <div
                 key={slide.id}
-                className={`flex gap-3 p-3 rounded-lg border-2 transition-colors ${
-                  slide.active ? 'border-background-warm bg-white' : 'border-background-warm bg-background-warm/50 opacity-60'
+                className={`rounded-xl border-2 overflow-hidden transition-colors ${
+                  slide.active ? 'border-background-warm bg-white' : 'border-background-warm bg-background-warm/50 opacity-70'
                 }`}
               >
-                <div className="w-36 flex-shrink-0">
-                  <ImageUploadField
-                    label=""
-                    value={slide.image}
-                    onChange={url => updateSlide(slide.id, { image: url })}
-                    bucket={STORAGE_BUCKET}
-                    pathPrefix="home-hero"
-                    aspectRatio="3/2"
-                  />
-                </div>
-                <div className="flex-1 min-w-0 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-dark">Slide {i + 1}</span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => moveSlide(slide.id, -1)}
-                        disabled={i === 0}
-                        title="Move up"
-                        aria-label={`Move slide ${i + 1} up`}
-                        className="p-1.5 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        <ChevronUp size={15} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveSlide(slide.id, 1)}
-                        disabled={i === content.slides.length - 1}
-                        title="Move down"
-                        aria-label={`Move slide ${i + 1} down`}
-                        className="p-1.5 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        <ChevronDown size={15} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateSlide(slide.id, { active: !slide.active })}
-                        title={slide.active ? 'Hide from homepage' : 'Show on homepage'}
-                        aria-label={slide.active ? `Hide slide ${i + 1} from homepage` : `Show slide ${i + 1} on homepage`}
-                        aria-pressed={slide.active}
-                        className="p-1.5 rounded text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
-                      >
-                        {slide.active ? <Eye size={15} aria-hidden="true" /> : <EyeOff size={15} aria-hidden="true" />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeSlide(slide.id)}
-                        title="Remove"
-                        aria-label={`Remove slide ${i + 1}`}
-                        className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
-                      >
-                        <Trash2 size={15} aria-hidden="true" />
-                      </button>
-                    </div>
+                {/* Header bar: number + status on the left, reorder/visibility/delete actions on the right.
+                    Kept on its own full-width row (not squeezed next to the thumbnail) so it never wraps
+                    awkwardly on narrow phone screens. */}
+                <div className="flex items-center justify-between gap-2 px-3 py-2 bg-background-warm/40 border-b border-background-warm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[11px] font-bold flex-shrink-0">
+                      {i + 1}
+                    </span>
+                    <span className="text-sm font-semibold text-dark whitespace-nowrap">Slide {i + 1}</span>
+                    {!slide.active && (
+                      <span className="text-[10px] font-medium text-dark-muted bg-background-warm rounded-full px-2 py-0.5 whitespace-nowrap">
+                        Hidden
+                      </span>
+                    )}
                   </div>
-                  <details className="text-xs">
-                    <summary className="cursor-pointer text-dark-muted hover:text-dark select-none">
-                      Optional: different photo for phone screens
-                    </summary>
-                    <div className="mt-2">
-                      <ImageUploadField
-                        label="Mobile Image"
-                        value={slide.mobile_image}
-                        onChange={url => updateSlide(slide.id, { mobile_image: url })}
-                        bucket={STORAGE_BUCKET}
-                        pathPrefix="home-hero-mobile"
-                        hint="Tall portrait, at least 1080×1350px. Falls back to the main photo if left empty."
-                      />
-                    </div>
-                  </details>
+                  <div className="flex items-center gap-0.5 rounded-full bg-white border border-background-warm p-0.5 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => moveSlide(slide.id, -1)}
+                      disabled={i === 0}
+                      title="Move up"
+                      aria-label={`Move slide ${i + 1} up`}
+                      className="p-1.5 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronUp size={15} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveSlide(slide.id, 1)}
+                      disabled={i === content.slides.length - 1}
+                      title="Move down"
+                      aria-label={`Move slide ${i + 1} down`}
+                      className="p-1.5 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronDown size={15} aria-hidden="true" />
+                    </button>
+                    <span className="w-px h-4 bg-background-warm" aria-hidden="true" />
+                    <button
+                      type="button"
+                      onClick={() => updateSlide(slide.id, { active: !slide.active })}
+                      title={slide.active ? 'Hide from homepage' : 'Show on homepage'}
+                      aria-label={slide.active ? `Hide slide ${i + 1} from homepage` : `Show slide ${i + 1} on homepage`}
+                      aria-pressed={slide.active}
+                      className="p-1.5 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+                    >
+                      {slide.active ? <Eye size={15} aria-hidden="true" /> : <EyeOff size={15} aria-hidden="true" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeSlide(slide.id)}
+                      title="Remove"
+                      aria-label={`Remove slide ${i + 1}`}
+                      className="p-1.5 rounded-full text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
 
-                  <details className="text-xs" open>
-                    <summary className="cursor-pointer text-dark-muted hover:text-dark select-none font-medium">
-                      Headline text for this slide
-                    </summary>
-                    <div className="mt-2 space-y-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div>
-                          <label htmlFor={`home-hero-heading-1-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Line 1</label>
-                          <input
-                            id={`home-hero-heading-1-${slide.id}`}
-                            type="text"
-                            value={slide.heading_line1}
-                            onChange={e => updateSlide(slide.id, { heading_line1: e.target.value })}
-                            className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor={`home-hero-heading-highlight-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Highlighted word</label>
-                          <input
-                            id={`home-hero-heading-highlight-${slide.id}`}
-                            type="text"
-                            value={slide.heading_highlight}
-                            onChange={e => updateSlide(slide.id, { heading_highlight: e.target.value })}
-                            className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor={`home-hero-heading-2-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Line 1 continued</label>
-                          <input
-                            id={`home-hero-heading-2-${slide.id}`}
-                            type="text"
-                            value={slide.heading_line2}
-                            onChange={e => updateSlide(slide.id, { heading_line2: e.target.value })}
-                            className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label htmlFor={`home-hero-subheading-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Supporting Text</label>
-                        <p className="text-[11px] text-dark-muted leading-snug mb-1">Paragraph shown below the heading.</p>
-                        <textarea
-                          id={`home-hero-subheading-${slide.id}`}
-                          rows={2}
-                          value={slide.subheading}
-                          onChange={e => updateSlide(slide.id, { subheading: e.target.value })}
-                          className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors resize-none"
+                {/* Body: image stacks above the fields on phones, and sits beside them from sm
+                    upward — avoids the cramped side-by-side squeeze on small screens. */}
+                <div className="p-3 sm:p-4 flex flex-col sm:flex-row gap-4">
+                  <div className="sm:w-40 flex-shrink-0">
+                    <ImageUploadField
+                      label=""
+                      value={slide.image}
+                      onChange={url => updateSlide(slide.id, { image: url })}
+                      bucket={STORAGE_BUCKET}
+                      pathPrefix="home-hero"
+                      aspectRatio="3/2"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-3">
+                    <details className="group text-xs">
+                      <summary className="flex items-center gap-1.5 cursor-pointer text-dark-muted hover:text-dark select-none list-none">
+                        <span className="transition-transform group-open:rotate-90">▶</span>
+                        <DeviceMobile size={13} className="flex-shrink-0" aria-hidden="true" />
+                        Optional: different photo for phone screens
+                      </summary>
+                      <div className="mt-2 pl-4">
+                        <ImageUploadField
+                          label="Mobile Image"
+                          value={slide.mobile_image}
+                          onChange={url => updateSlide(slide.id, { mobile_image: url })}
+                          bucket={STORAGE_BUCKET}
+                          pathPrefix="home-hero-mobile"
+                          hint="Tall portrait, at least 1080×1350px. Falls back to the main photo if left empty."
                         />
                       </div>
-                      <div className="rounded-lg bg-dark px-4 py-4">
-                        <p className="font-display text-base sm:text-lg font-bold leading-[1.15] text-white mb-1.5">
-                          {slide.heading_line1}
-                          <br />
-                          <span className="text-secondary italic">{slide.heading_highlight}</span> {slide.heading_line2}
-                        </p>
-                        <p className="text-[11px] text-white/85">{slide.subheading}</p>
+                    </details>
+
+                    <details className="group text-xs" open>
+                      <summary className="flex items-center gap-1.5 cursor-pointer text-dark-muted hover:text-dark select-none font-medium list-none">
+                        <span className="transition-transform group-open:rotate-90">▶</span>
+                        Headline text for this slide
+                      </summary>
+                      <div className="mt-2 pl-4 space-y-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div>
+                            <label htmlFor={`home-hero-heading-1-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Line 1</label>
+                            <input
+                              id={`home-hero-heading-1-${slide.id}`}
+                              type="text"
+                              value={slide.heading_line1}
+                              onChange={e => updateSlide(slide.id, { heading_line1: e.target.value })}
+                              className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`home-hero-heading-highlight-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Highlighted word</label>
+                            <input
+                              id={`home-hero-heading-highlight-${slide.id}`}
+                              type="text"
+                              value={slide.heading_highlight}
+                              onChange={e => updateSlide(slide.id, { heading_highlight: e.target.value })}
+                              className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`home-hero-heading-2-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Line 1 continued</label>
+                            <input
+                              id={`home-hero-heading-2-${slide.id}`}
+                              type="text"
+                              value={slide.heading_line2}
+                              onChange={e => updateSlide(slide.id, { heading_line2: e.target.value })}
+                              className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label htmlFor={`home-hero-subheading-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Supporting Text</label>
+                          <p className="text-[11px] text-dark-muted leading-snug mb-1">Paragraph shown below the heading.</p>
+                          <textarea
+                            id={`home-hero-subheading-${slide.id}`}
+                            rows={2}
+                            value={slide.subheading}
+                            onChange={e => updateSlide(slide.id, { subheading: e.target.value })}
+                            className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors resize-none"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wide mb-1.5">Live preview</p>
+                          <div className="rounded-lg bg-dark px-4 py-4">
+                            <p className="font-display text-base sm:text-lg font-bold leading-[1.15] text-white mb-1.5">
+                              {slide.heading_line1}
+                              <br />
+                              <span className="text-secondary italic">{slide.heading_highlight}</span> {slide.heading_line2}
+                            </p>
+                            <p className="text-[11px] text-white/85">{slide.subheading}</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </details>
+                    </details>
+                  </div>
                 </div>
               </div>
             ))}

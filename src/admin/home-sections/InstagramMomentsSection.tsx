@@ -121,51 +121,58 @@ export default function InstagramMomentsSection({
                 key={img.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="relative group rounded-lg overflow-hidden aspect-square"
+                className="relative group rounded-lg overflow-hidden aspect-square border border-background-warm"
               >
                 <img src={img.image_url} alt={`Gallery photo ${index + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                <div className="absolute inset-0 bg-dark/50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                {img.is_featured && (
+                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-secondary text-white text-[10px] px-2 py-0.5 rounded-md font-button font-semibold">
+                    <Star size={10} className="fill-white" aria-hidden="true" />
+                    Featured
+                  </div>
+                )}
+                {/* Always-on action bar (not hover-only) so these controls are
+                    actually reachable on touch devices, which is most of this
+                    admin's real-world usage — a hover-reveal overlay is
+                    invisible and effectively unusable on a phone. A subtle
+                    scrim intensifies on hover/focus for desktop pointer users
+                    without hiding the buttons entirely on touch. */}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-dark/85 via-dark/50 to-transparent pt-6 pb-1.5 px-1.5 flex items-center justify-between gap-0.5 opacity-90 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                   <button
                     onClick={() => move(index, -1)}
                     disabled={index === 0}
                     aria-label={`Move photo ${index + 1} earlier`}
-                    className="p-2 rounded bg-white/20 text-white hover:bg-white/40 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    className="p-1.5 rounded-full text-white/90 hover:bg-white/20 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                     title="Move earlier"
                   >
-                    <ChevronLeft size={16} aria-hidden="true" />
+                    <ChevronLeft size={14} aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => toggleFeatured(img)}
                     aria-pressed={img.is_featured}
                     aria-label={img.is_featured ? `Unfeature photo ${index + 1}` : `Feature photo ${index + 1}`}
-                    className={`p-2 rounded transition-colors ${img.is_featured ? 'bg-secondary text-white' : 'bg-white/20 text-white hover:bg-secondary'}`}
+                    className={`p-1.5 rounded-full transition-colors ${img.is_featured ? 'text-secondary' : 'text-white/90 hover:bg-white/20'}`}
                     title="Toggle featured"
                   >
-                    <Star size={16} className={img.is_featured ? 'fill-white' : ''} aria-hidden="true" />
+                    <Star size={14} className={img.is_featured ? 'fill-secondary' : ''} aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => handleDelete(img)}
                     aria-label={`Delete photo ${index + 1}`}
-                    className="p-2 rounded bg-primary text-white hover:bg-primary-dark transition-colors"
+                    className="p-1.5 rounded-full text-white/90 hover:bg-primary/80 transition-colors"
                     title="Delete"
                   >
-                    <Trash2 size={16} aria-hidden="true" />
+                    <Trash2 size={14} aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => move(index, 1)}
                     disabled={index === images.length - 1}
                     aria-label={`Move photo ${index + 1} later`}
-                    className="p-2 rounded bg-white/20 text-white hover:bg-white/40 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    className="p-1.5 rounded-full text-white/90 hover:bg-white/20 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                     title="Move later"
                   >
-                    <ChevronRight size={16} aria-hidden="true" />
+                    <ChevronRight size={14} aria-hidden="true" />
                   </button>
                 </div>
-                {img.is_featured && (
-                  <div className="absolute top-2 left-2 bg-secondary text-white text-xs px-2 py-0.5 rounded-md font-button font-semibold">
-                    Featured
-                  </div>
-                )}
               </motion.div>
             ))}
           </div>

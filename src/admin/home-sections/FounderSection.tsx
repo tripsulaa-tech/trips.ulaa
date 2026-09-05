@@ -93,35 +93,54 @@ export default function FounderSection({
           Full URLs work best, but a bare username (e.g. "justjini_") also works for Instagram, LinkedIn, Facebook, X, YouTube, TikTok, and Pinterest. For WhatsApp, enter a phone number with country code (e.g. "919876543210"). For Mail/Gmail, enter the email address.
         </p>
         {content.social_links.map((link: AboutFounderSocialLink, i: number) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className="w-36 flex-shrink-0">
-              <label htmlFor={`founder-social-platform-${i}`} className="sr-only">Social link {i + 1} platform</label>
-              <input
-                id={`founder-social-platform-${i}`}
-                value={link.platform}
-                onChange={e => updateSocial(i, 'platform', e.target.value)}
-                className={inputClass}
-                placeholder="Instagram"
-              />
+          <div key={i} className="rounded-lg border border-background-warm p-3 space-y-2">
+            {/* Stacked on phones (each field gets full width to type a long
+                URL comfortably) and a single row from sm upward, where
+                there's enough space for platform + URL + delete side by
+                side without cramping either field. */}
+            <div className="flex items-center justify-between gap-2 sm:hidden">
+              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[11px] font-bold flex-shrink-0">
+                {i + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => removeSocial(i)}
+                aria-label={`Remove ${link.platform || `social link ${i + 1}`}`}
+                className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+              >
+                <Trash2 size={14} aria-hidden="true" />
+              </button>
             </div>
-            <div className="flex-1 min-w-0">
-              <label htmlFor={`founder-social-url-${i}`} className="sr-only">{link.platform || `Social link ${i + 1}`} URL or username</label>
-              <input
-                id={`founder-social-url-${i}`}
-                value={link.url}
-                onChange={e => updateSocial(i, 'url', e.target.value)}
-                className={inputClass}
-                placeholder="justjini_ or https://instagram.com/justjini_"
-              />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <div className="w-full sm:w-36 flex-shrink-0">
+                <label htmlFor={`founder-social-platform-${i}`} className="block sm:sr-only text-[11px] font-medium text-dark-muted mb-1 sm:mb-0">Platform</label>
+                <input
+                  id={`founder-social-platform-${i}`}
+                  value={link.platform}
+                  onChange={e => updateSocial(i, 'platform', e.target.value)}
+                  className={inputClass}
+                  placeholder="Instagram"
+                />
+              </div>
+              <div className="flex-1 min-w-0 w-full">
+                <label htmlFor={`founder-social-url-${i}`} className="block sm:sr-only text-[11px] font-medium text-dark-muted mb-1 sm:mb-0">{link.platform || `Social link ${i + 1}`} URL or username</label>
+                <input
+                  id={`founder-social-url-${i}`}
+                  value={link.url}
+                  onChange={e => updateSocial(i, 'url', e.target.value)}
+                  className={inputClass}
+                  placeholder="justjini_ or https://instagram.com/justjini_"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => removeSocial(i)}
+                aria-label={`Remove ${link.platform || `social link ${i + 1}`}`}
+                className="hidden sm:inline-flex p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+              >
+                <Trash2 size={14} aria-hidden="true" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => removeSocial(i)}
-              aria-label={`Remove ${link.platform || `social link ${i + 1}`}`}
-              className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
-            >
-              <Trash2 size={14} aria-hidden="true" />
-            </button>
           </div>
         ))}
       </div>
