@@ -1,6 +1,7 @@
 import type { BottomNavItemConfig } from '../types/types-index';
 
-// Used until an admin saves custom tabs via /admin/bottom-nav (site_content
+// Used until an admin saves custom tabs via the Home Page admin's "Bottom Nav
+// Bar" tab (site_content
 // key "bottom_nav"), and as the fallback if that fetch fails or returns
 // nothing. Icon keys must match an entry in constants/tripHighlightIcons.ts.
 export const DEFAULT_BOTTOM_NAV_ITEMS: BottomNavItemConfig[] = [

@@ -16,7 +16,7 @@ export default function BottomNav() {
 
   // Starts from the defaults (so there's no flash of an empty bar) and
   // swaps in the admin's saved tabs, if any, once the fetch resolves. See
-  // /admin/bottom-nav (AdminBottomNav.tsx) for where these are edited.
+  // the Home Page admin's "Bottom Nav Bar" tab (src/admin/home-sections/BottomNavSection.tsx) for where these are edited.
   const [navItems, setNavItems] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function BottomNav() {
   // <Routes> (see routes/AppRouter.tsx's PersistentBottomNav, which keeps
   // it from remounting on every navigation), so the one-time fetch above
   // only ever runs on the very first page load. Without this subscription,
-  // an admin's icon/label/link edit in AdminBottomNav wouldn't show up
+  // an admin's icon/label/link edit in the Home Page admin wouldn't show up
   // here until the visitor did a full page reload. Re-pulling on every
   // site_content change means it updates live instead, matching how the
   // "Showing N trips" label already does on the trips pages.

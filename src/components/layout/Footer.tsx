@@ -51,7 +51,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   // Mirrors the same admin-configurable tabs used by the mobile BottomNav
-  // (see /admin/bottom-nav, AdminBottomNav.tsx) so the footer's nav links —
+  // (see the Home Page admin's "Bottom Nav Bar" tab) so the footer's nav links —
   // icon and label alike — always stay in sync with the site's bottom nav
   // bar instead of drifting out of consistency with it.
   const [navConfig, setNavConfig] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);

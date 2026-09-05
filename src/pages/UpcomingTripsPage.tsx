@@ -26,7 +26,7 @@ const isComingSoon = (trip: UpcomingTrip) => trip.status === 'coming_soon';
 // This page is the "Upcoming" tab in the bottom nav bar (see
 // constants/bottomNav.ts) — its route below is used to pull that tab's
 // admin-editable label for the "Showing N trips" line, so renaming the tab
-// (e.g. AdminBottomNav) updates this text automatically too.
+// (e.g. via the Home Page admin) updates this text automatically too.
 const NAV_ROUTE = '/trips';
 const DEFAULT_NAV_LABEL = DEFAULT_BOTTOM_NAV_ITEMS.find(i => i.to === NAV_ROUTE)?.label ?? 'Upcoming';
 
@@ -37,7 +37,7 @@ export default function UpcomingTripsPage() {
   const [month, setMonth] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
   // This tab's label in the bottom nav bar (e.g. "Upcoming") — admin-editable
-  // in AdminBottomNav, shown in front of "Showing N trips" below.
+  // in the Home Page admin, shown in front of "Showing N trips" below.
   const navLabel = useLiveNavLabel(NAV_ROUTE, DEFAULT_NAV_LABEL);
 
   useEffect(() => {

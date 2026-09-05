@@ -4,7 +4,6 @@ import {
   House as Home,
   Briefcase,
   BookOpen,
-  Image,
   ChatCircle as MessageCircle,
   SignOut as LogOut,
   List as Menu,
@@ -12,14 +11,10 @@ import {
   CaretDown as ChevronDown,
   ArrowSquareOut as ExternalLink,
   FileText,
-  Star,
-  Sparkle as Sparkles,
   ListChecks,
   CaretDoubleLeft as ChevronsLeft,
   CaretDoubleRight as ChevronsRight,
-  UserCircle,
   Users,
-  DotsThreeOutline as PanelBottom,
   DotsSixVertical as GripVertical,
   ChartBar as BarChart3,
   Images,
@@ -44,21 +39,16 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   Dashboard: { to: '/admin', icon: Home },
   'Upcoming Trips': { to: '/admin/trips', icon: Briefcase },
   'Completed Trips': { to: '/admin/albums', icon: BookOpen },
-  'Instagram Moments': { to: '/admin/instagram-moments', icon: Image },
-  Testimonials: { to: '/admin/testimonials', icon: Star },
+  'Home Page': { to: '/admin/home', icon: Images },
   'About Page': { to: '/admin/about', icon: FileText },
-  'Home Hero': { to: '/admin/home-hero', icon: Images },
-  Founder: { to: '/admin/founder', icon: UserCircle },
   'Trip Leaders': { to: '/admin/trip-leaders', icon: Users },
-  'Why ULAA': { to: '/admin/why-us', icon: Sparkles },
-  'Bottom Nav Bar': { to: '/admin/bottom-nav', icon: PanelBottom },
   Enquiries: { to: '/admin/enquiries', icon: MessageCircle },
   Waitlist: { to: '/admin/waitlist', icon: ListChecks },
   Reports: { to: '/admin/reports', icon: BarChart3 },
 };
 
-const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'About Page', 'Enquiries', 'Waitlist', 'Reports'];
-const DEFAULT_GROUP_CHILDREN_ORDER = ['Home Hero', 'Instagram Moments', 'Testimonials', 'Bottom Nav Bar', 'Founder', 'Trip Leaders', 'Why ULAA'];
+const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'Home Page', 'About Page', 'Enquiries', 'Waitlist', 'Reports'];
+const DEFAULT_GROUP_CHILDREN_ORDER = ['Trip Leaders'];
 
 // "Dashboard" is the one item that renders as an expandable group (it's the
 // only item other tabs can be dropped into) — everything else is a plain

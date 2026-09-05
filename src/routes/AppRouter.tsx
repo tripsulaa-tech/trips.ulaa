@@ -80,19 +80,13 @@ const AdminLogin = lazy(() => import('../admin/AdminLogin'));
 const AdminDashboard = lazy(() => import('../admin/AdminDashboard'));
 const AdminTrips = lazy(() => import('../admin/AdminTrips'));
 const AdminAlbums = lazy(() => import('../admin/AdminAlbums'));
-const AdminGallery = lazy(() => import('../admin/AdminGallery'));
 const AdminEnquiries = lazy(() => import('../admin/enquiries/AdminEnquiries'));
 const AdminEnquiryDetail = lazy(() => import('../admin/enquiries/AdminEnquiryDetail'));
 const AdminWaitlist = lazy(() => import('../admin/AdminWaitlist'));
 const AdminReports = lazy(() => import('../admin/AdminReports'));
 const AdminAbout = lazy(() => import('../admin/AdminAbout'));
-const AdminHomeHero = lazy(() => import('../admin/AdminHomeHero'));
-const AdminFounder = lazy(() => import('../admin/AdminFounder'));
-const AdminWhyULAA = lazy(() => import('../admin/AdminWhyULAA'));
-const AdminTestimonials = lazy(() => import('../admin/AdminTestimonials'));
+const AdminHomePage = lazy(() => import('../admin/AdminHomePage'));
 const AdminTripLeaders = lazy(() => import('../admin/AdminTripLeaders'));
-const AdminBottomNav = lazy(() => import('../admin/AdminBottomNav'));
-const AdminButtonLabels = lazy(() => import('../admin/AdminButtonLabels'));
 
 const PageLoader = () => (
   <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
@@ -149,9 +143,6 @@ export default function AppRouter() {
             <Route path="/admin/albums" element={
               <ProtectedRoute><AdminAlbums /></ProtectedRoute>
             } />
-            <Route path="/admin/instagram-moments" element={
-              <ProtectedRoute><AdminGallery /></ProtectedRoute>
-            } />
             <Route path="/admin/enquiries" element={
               <ProtectedRoute><AdminEnquiries /></ProtectedRoute>
             } />
@@ -167,26 +158,11 @@ export default function AppRouter() {
             <Route path="/admin/about" element={
               <ProtectedRoute><AdminAbout /></ProtectedRoute>
             } />
-            <Route path="/admin/home-hero" element={
-              <ProtectedRoute><AdminHomeHero /></ProtectedRoute>
-            } />
-            <Route path="/admin/founder" element={
-              <ProtectedRoute><AdminFounder /></ProtectedRoute>
-            } />
-            <Route path="/admin/why-us" element={
-              <ProtectedRoute><AdminWhyULAA /></ProtectedRoute>
-            } />
-            <Route path="/admin/testimonials" element={
-              <ProtectedRoute><AdminTestimonials /></ProtectedRoute>
+            <Route path="/admin/home" element={
+              <ProtectedRoute><AdminHomePage /></ProtectedRoute>
             } />
             <Route path="/admin/trip-leaders" element={
               <ProtectedRoute><AdminTripLeaders /></ProtectedRoute>
-            } />
-            <Route path="/admin/bottom-nav" element={
-              <ProtectedRoute><AdminBottomNav /></ProtectedRoute>
-            } />
-            <Route path="/admin/button-labels" element={
-              <ProtectedRoute><AdminButtonLabels /></ProtectedRoute>
             } />
 
             {/* 404 */}

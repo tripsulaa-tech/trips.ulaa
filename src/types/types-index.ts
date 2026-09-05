@@ -913,6 +913,23 @@ export interface TestimonialsSectionContent {
 }
 
 // =============================================
+// Home page bottom "Ready for your next adventure?" banner (editable via
+// Admin, stored under the 'cta_banner' site_content key). Previously
+// hardcoded text/image in CTASection.tsx.
+// =============================================
+export interface CtaBannerContent {
+  image: string;
+  /** Small script tagline above the heading, e.g. "Your Adventure Awaits" */
+  eyebrow: string;
+  heading_line1: string;
+  /** Middle segment rendered in the accent color + italic, e.g. "next adventure?" */
+  heading_highlight: string;
+  subheading: string;
+  primary_label: string;
+  secondary_label: string;
+}
+
+// =============================================
 // Mobile bottom nav bar tabs (editable via Admin)
 // =============================================
 export interface BottomNavItemConfig {
@@ -926,7 +943,7 @@ export interface BottomNavItemConfig {
 }
 
 // =============================================
-// Trip CTA button text (editable via Admin — see AdminButtonLabels.tsx).
+// Trip CTA button text (editable via the Home Page admin's "Button Naming" tab).
 // Drives the main "Pack Your Bags" style buttons on TripDetailPage AND the
 // equivalent CTA button on the generated trip itinerary PDF, so an admin
 // only has to change the wording in one place for it to show everywhere.

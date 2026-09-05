@@ -64,7 +64,7 @@ async function buildTripItineraryPdfDoc(rawTrip: UpcomingTrip): Promise<jsPDF> {
   const doc = new jsPDF({ unit: 'pt', format: [PAGE_W, PAGE_H], orientation: 'landscape' });
 
   // Admin-editable "Pack Your Bags" / "Join Waitlist" button text (see
-  // /admin/button-labels — AdminButtonLabels.tsx). Read once up front so the
+  // the Home Page admin's "Button Naming" tab). Read once up front so the
   // CTA button on the Trip Leader & Booking slide matches whatever the live
   // trip detail page is currently showing. Falls back to the defaults if
   // nothing's been saved yet or the fetch fails.

@@ -122,7 +122,7 @@ export default function TripDetailPage() {
   }, [slug]);
 
   // Admin-editable "Pack Your Bags" / "Join Waitlist" button text (see
-  // /admin/button-labels — AdminButtonLabels.tsx). Starts from the defaults
+  // the Home Page admin's "Button Naming" tab). Starts from the defaults
   // so there's no flash of missing text, then swaps in the saved copy once
   // it loads, and stays live via the same site_content Realtime channel
   // BottomNav.tsx subscribes to for its own admin-edited content.

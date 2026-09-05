@@ -4,7 +4,8 @@ import { subscribeToTable } from '../services/realtime';
 import type { BottomNavItemConfig } from '../types/types-index';
 
 /**
- * Pulls a bottom-nav tab's admin-editable label (see AdminBottomNav) and
+ * Pulls a bottom-nav tab's admin-editable label (see the Home Page admin's
+ * "Bottom Nav Bar" tab) and
  * keeps it live: the instant an admin renames the tab, this re-pulls so
  * any page showing that label (e.g. "Showing N trips") updates without a
  * refresh. Previously each public list page (UpcomingTripsPage,

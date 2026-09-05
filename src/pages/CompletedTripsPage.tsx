@@ -19,7 +19,7 @@ const HERO_IMAGE = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=
 // This page is the "Journey" tab in the bottom nav bar (see
 // constants/bottomNav.ts) — its route below is used to pull that tab's
 // admin-editable label for the "Showing N albums" line, so renaming the
-// tab (e.g. AdminBottomNav) updates this text automatically too.
+// tab (e.g. via the Home Page admin) updates this text automatically too.
 const NAV_ROUTE = '/completed-trips';
 const DEFAULT_NAV_LABEL = DEFAULT_BOTTOM_NAV_ITEMS.find(i => i.to === NAV_ROUTE)?.label ?? 'Journey';
 
@@ -89,7 +89,7 @@ export default function CompletedTripsPage() {
   // The numbers themselves stay derived live from real trips below.
   const [statLabels, setStatLabels] = useState<AboutContent['stats']>(DEFAULT_ABOUT.stats);
   // This tab's label in the bottom nav bar (e.g. "Journey") — admin-editable
-  // in AdminBottomNav, shown in front of "Showing N albums" below.
+  // in the Home Page admin, shown in front of "Showing N albums" below.
   const navLabel = useLiveNavLabel(NAV_ROUTE, DEFAULT_NAV_LABEL);
 
   useEffect(() => {

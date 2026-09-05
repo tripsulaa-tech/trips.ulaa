@@ -109,10 +109,10 @@ export default function AdminDashboard() {
   const quickActions = [
     { label: 'Add New Trip', desc: 'Create and publish a new trip', icon: PlusCircle, color: 'text-primary', to: '/admin/trips' },
     { label: 'Create Album', desc: 'Add a new completed trip album', icon: FolderPlus, color: 'text-primary', to: '/admin/albums' },
-    { label: 'Upload Photos', desc: 'Add photos to Instagram Moments', icon: ImagePlus, color: 'text-primary', to: '/admin/instagram-moments' },
+    { label: 'Upload Photos', desc: 'Add photos to Instagram Moments', icon: ImagePlus, color: 'text-primary', to: '/admin/home' },
     { label: 'View Enquiries', desc: 'Manage booking requests', icon: Users, color: 'text-primary', to: '/admin/enquiries' },
     { label: 'View Waitlist', desc: "See who's waiting for a seat", icon: ListChecks, color: 'text-primary', to: '/admin/waitlist' },
-    { label: 'Button Naming', desc: 'Rename trip booking CTA buttons', icon: Type, color: 'text-primary', to: '/admin/button-labels' },
+    { label: 'Button Naming', desc: 'Rename trip booking CTA buttons', icon: Type, color: 'text-primary', to: '/admin/home' },
   ];
 
   const recentEnquiries = enquiries.slice(0, 5);
