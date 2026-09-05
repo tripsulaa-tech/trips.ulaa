@@ -15,6 +15,7 @@
 // month" is answerable without exporting to a spreadsheet.
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
   Phone,
@@ -163,32 +164,75 @@ function averageResponseTime(list: Enquiry[]): string {
   return `${(avgHours / 24).toFixed(1)} days`;
 }
 
+// Shared semantic color vocabulary for stat card icon badges and section
+// glyphs — lets a metric's color carry meaning (green = good, red = bad,
+// amber = needs attention) instead of every icon defaulting to the same
+// primary orange regardless of what it reports.
+type Tone = 'primary' | 'green' | 'amber' | 'red' | 'blue';
+const TONE_STYLES: Record<Tone, { bg: string; text: string }> = {
+  primary: { bg: 'bg-primary/10', text: 'text-primary' },
+  green: { bg: 'bg-green-100', text: 'text-green-700' },
+  amber: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  red: { bg: 'bg-red-100', text: 'text-red-600' },
+  blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0 },
+};
+
 function StatCard({
-  label, value, sub, icon: Icon,
-}: { label: string; value: string | number; sub?: string; icon: typeof Users }) {
+  label, value, sub, icon: Icon, tone = 'primary',
+}: { label: string; value: string | number; sub?: string; icon: typeof Users; tone?: Tone }) {
+  const t = TONE_STYLES[tone];
   return (
-    <div className="bg-white rounded-lg p-4 shadow-card min-w-0">
-      <div className="flex items-center gap-2">
-        <Icon size={20} className="shrink-0 text-primary" aria-hidden="true" />
-        <p className="font-display text-2xl font-bold text-dark leading-tight truncate">{value}</p>
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="show"
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.25 }}
+      className="bg-white rounded-lg p-4 shadow-card hover:shadow-card-hover transition-shadow min-w-0"
+    >
+      <div className="flex items-center gap-2.5">
+        <span className={`inline-flex items-center justify-center w-9 h-9 rounded-md shrink-0 ${t.bg}`}>
+          <Icon size={18} className={t.text} aria-hidden="true" />
+        </span>
+        <p className="font-display text-xl sm:text-2xl font-bold text-dark leading-tight truncate">{value}</p>
       </div>
-      <p className="text-dark-muted text-xs font-medium truncate mt-1">{label}</p>
+      <p className="text-dark-muted text-xs font-medium truncate mt-2">{label}</p>
       {sub && <p className="text-dark-muted/70 text-[11px] mt-0.5 truncate">{sub}</p>}
-    </div>
+    </motion.div>
   );
 }
 
 function ReportSection({
-  title, subtitle, children,
-}: { title: string; subtitle?: string; children: ReactNode }) {
+  title, subtitle, icon: Icon, tone = 'primary', children,
+}: { title: string; subtitle?: string; icon?: typeof Users; tone?: Tone; children: ReactNode }) {
+  const t = TONE_STYLES[tone];
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.35 }}
+    >
       <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h3 className="font-display text-base sm:text-lg font-bold text-dark">{title}</h3>
+        <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2">
+          {Icon && (
+            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${t.bg}`}>
+              <Icon size={13} className={t.text} aria-hidden="true" />
+            </span>
+          )}
+          {title}
+        </h3>
         {subtitle && <p className="text-dark-muted text-xs">{subtitle}</p>}
       </div>
-      {children}
-    </div>
+      <div className="space-y-3">
+        {children}
+      </div>
+    </motion.div>
   );
 }
 
@@ -196,7 +240,9 @@ function ReportSection({
 // pull one in, and this is the only place that needs one so far. Renders
 // as plain divs (not SVG/canvas) so bar heights, hover tooltips, and text
 // stay simple, accessible, and easy to restyle alongside the rest of the
-// admin's Tailwind-based UI.
+// admin's Tailwind-based UI. Bars animate in from zero height, staggered
+// slightly so a full redraw (e.g. switching the period toggle) reads as a
+// deliberate transition rather than a jump-cut.
 function RevenueTrendChart({ data }: { data: { label: string; amount: number }[] }) {
   if (data.length === 0) {
     return <p className="text-dark-muted text-sm text-center py-8">No collected payments in this range yet.</p>;
@@ -205,20 +251,55 @@ function RevenueTrendChart({ data }: { data: { label: string; amount: number }[]
   // Skip every other label once there are enough bars that every label
   // would overlap its neighbors.
   const labelEvery = data.length > 15 ? Math.ceil(data.length / 15) : 1;
+  // Cap the per-bar stagger so a 31-bar "All Time" view doesn't take
+  // visibly longer to finish drawing than a 7-bar "This Month" one.
+  const staggerStep = Math.min(0.02, 0.4 / data.length);
   return (
-    <div className="flex items-end gap-1 h-40 pt-2">
+    <div className="flex items-end gap-1 h-40 pt-6 border-b border-background-warm">
       {data.map((d, i) => (
         <div key={`${d.label}-${i}`} className="flex-1 min-w-0 h-full flex flex-col items-center justify-end gap-1 group relative">
           <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-dark text-white text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
             {formatPrice(d.amount)}
+            <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-dark" />
           </div>
-          <div
-            className="w-full bg-primary/80 hover:bg-primary rounded-t-sm transition-colors min-h-[2px]"
-            style={{ height: `${Math.max(2, (d.amount / max) * 100)}%` }}
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: `${Math.max(2, (d.amount / max) * 100)}%` }}
+            transition={{ duration: 0.5, delay: i * staggerStep, ease: 'easeOut' }}
+            className="w-full bg-gradient-to-t from-primary to-primary/60 group-hover:to-primary rounded-t-sm min-h-[2px]"
           />
           <span className="text-[9px] text-dark-muted truncate w-full text-center">
             {i % labelEvery === 0 ? d.label : ''}
           </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Placeholder shapes matching the real layout (stat card grid + section
+// header), shown while data loads instead of a bare "Loading…" line — so
+// the page's structure is legible immediately and nothing visually jumps
+// once the real numbers arrive.
+function SkeletonBlock({ className = '' }: { className?: string }) {
+  return <div className={`animate-pulse bg-background-warm rounded ${className}`} />;
+}
+function ReportsSkeleton() {
+  return (
+    <div className="space-y-8" role="status" aria-label="Loading reports">
+      {[0, 1].map(section => (
+        <div key={section} className="space-y-3">
+          <SkeletonBlock className="h-5 w-40" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="bg-white rounded-lg p-4 shadow-card space-y-3">
+                <SkeletonBlock className="w-9 h-9 rounded-md" />
+                <SkeletonBlock className="h-6 w-16" />
+                <SkeletonBlock className="h-3 w-20" />
+              </div>
+            ))}
+          </div>
+          <SkeletonBlock className="h-32 w-full rounded-lg" />
         </div>
       ))}
     </div>
@@ -571,46 +652,60 @@ export default function AdminReports() {
             Business-wide rollups across Lead, Booking, Financial and Operational activity.
           </p>
           <div className="flex gap-2 shrink-0 items-center">
-            {PERIOD_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setPeriod(opt.value)}
-                aria-pressed={period === opt.value}
-                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${
-                  period === opt.value ? 'bg-primary text-white' : 'bg-white text-dark-muted shadow-card hover:text-dark'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            <div className="relative flex gap-1 shrink-0 items-center bg-white rounded-full p-1 shadow-card">
+              {PERIOD_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPeriod(opt.value)}
+                  aria-pressed={period === opt.value}
+                  className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${
+                    period === opt.value ? 'text-white' : 'text-dark-muted hover:text-dark'
+                  }`}
+                >
+                  {period === opt.value && (
+                    <motion.span
+                      layoutId="reports-period-pill"
+                      className="absolute inset-0 bg-primary rounded-full"
+                      transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
+                    />
+                  )}
+                  <span className="relative">{opt.label}</span>
+                </button>
+              ))}
+            </div>
             {!loading && (
-              <button
+              <motion.button
                 type="button"
                 onClick={handleExportCsv}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark transition-colors"
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.96 }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
               >
                 <Download size={14} aria-hidden="true" /> Export CSV
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
 
+        <AnimatePresence mode="wait">
         {loading ? (
-          <p role="status" className="text-dark-muted text-sm py-12 text-center">Loading reports…</p>
+          <motion.div key="skeleton" exit={{ opacity: 0 }}>
+            <ReportsSkeleton />
+          </motion.div>
         ) : (
-          <>
+          <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-6 sm:space-y-8">
             {/* ---- Lead Reports ---- */}
-            <ReportSection title="Lead Reports" subtitle={`${lead.total} lead${lead.total === 1 ? '' : 's'} in range`}>
+            <ReportSection title="Lead Reports" subtitle={`${lead.total} lead${lead.total === 1 ? '' : 's'} in range`} icon={Users} tone="blue">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <StatCard label="Conversion Rate" value={`${lead.conversionPct}%`} sub={`${lead.bookedCount} of ${lead.total} booked`} icon={TrendingUp} />
-                <StatCard label="New" value={lead.newCount} icon={Users} />
-                <StatCard label="Contacted" value={lead.contactedCount} icon={Phone} />
-                <StatCard label="Avg. Response Time" value={lead.avgResponseTime} sub="Enquiry → first contact" icon={Clock} />
+                <StatCard label="Conversion Rate" value={`${lead.conversionPct}%`} sub={`${lead.bookedCount} of ${lead.total} booked`} icon={TrendingUp} tone="green" />
+                <StatCard label="New" value={lead.newCount} icon={Users} tone="blue" />
+                <StatCard label="Contacted" value={lead.contactedCount} icon={Phone} tone="primary" />
+                <StatCard label="Avg. Response Time" value={lead.avgResponseTime} sub="Enquiry → first contact" icon={Clock} tone="amber" />
               </div>
 
               {lead.closedBreakdown.length > 0 && (
-                <div className="bg-white border border-background-warm rounded-lg px-4 py-3 mt-3">
+                <div className="bg-white border border-background-warm rounded-lg px-4 py-3">
                   <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-2">
                     Closed Reasons ({lead.closedCount} closed)
                   </p>
@@ -625,7 +720,7 @@ export default function AdminReports() {
               )}
 
               {sourceBreakdown.length > 0 && (
-                <div className="bg-white rounded-lg shadow-card p-4 mt-3">
+                <div className="bg-white rounded-lg shadow-card p-4">
                   <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-3">
                     Lead Source Breakdown
                   </p>
@@ -636,7 +731,12 @@ export default function AdminReports() {
                         <div key={s.source} className="flex items-center gap-3">
                           <span className="text-sm text-dark font-medium truncate flex-1 min-w-0">{s.label}</span>
                           <div className="hidden sm:block w-28 h-1.5 rounded-full bg-background-warm overflow-hidden shrink-0">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${Math.max(6, (s.total / max) * 100)}%` }} />
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.max(6, (s.total / max) * 100)}%` }}
+                              transition={{ duration: 0.5, ease: 'easeOut' }}
+                              className="h-full bg-primary rounded-full"
+                            />
                           </div>
                           <span className="text-sm font-semibold text-dark w-6 text-right shrink-0">{s.total}</span>
                           <span className="text-xs text-dark-muted w-28 text-right shrink-0">{s.booked} booked ({s.conversionPct}%)</span>
@@ -649,24 +749,24 @@ export default function AdminReports() {
             </ReportSection>
 
             {/* ---- Booking Reports ---- */}
-            <ReportSection title="Booking Reports">
+            <ReportSection title="Booking Reports" icon={BadgeCheck} tone="green">
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                <StatCard label="Confirmed" value={booking.confirmed} sub="Currently at this stage" icon={BadgeCheck} />
-                <StatCard label="Completed" value={booking.completed} icon={PartyPopper} />
-                <StatCard label="Cancelled" value={booking.cancelled} icon={CalendarX2} />
+                <StatCard label="Confirmed" value={booking.confirmed} sub="Currently at this stage" icon={BadgeCheck} tone="blue" />
+                <StatCard label="Completed" value={booking.completed} icon={PartyPopper} tone="green" />
+                <StatCard label="Cancelled" value={booking.cancelled} icon={CalendarX2} tone="red" />
               </div>
             </ReportSection>
 
             {/* ---- Financial Reports ---- */}
-            <ReportSection title="Financial Reports" subtitle="Net of refunds">
+            <ReportSection title="Financial Reports" subtitle="Net of refunds" icon={IndianRupee} tone="green">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <StatCard label="Revenue" value={formatPrice(financial.revenue)} icon={IndianRupee} />
-                <StatCard label="Refund Amount" value={formatPrice(financial.refundAmount)} icon={Undo2} />
-                <StatCard label="Outstanding Balance" value={formatPrice(financial.outstandingBalance)} sub="Active bookings" icon={Wallet} />
-                <StatCard label="Avg. Booking Value" value={formatPrice(Math.round(financial.avgBookingValue))} icon={Wallet2} />
+                <StatCard label="Revenue" value={formatPrice(financial.revenue)} icon={IndianRupee} tone="green" />
+                <StatCard label="Refund Amount" value={formatPrice(financial.refundAmount)} icon={Undo2} tone="red" />
+                <StatCard label="Outstanding Balance" value={formatPrice(financial.outstandingBalance)} sub="Active bookings" icon={Wallet} tone="amber" />
+                <StatCard label="Avg. Booking Value" value={formatPrice(Math.round(financial.avgBookingValue))} icon={Wallet2} tone="primary" />
               </div>
 
-              <div className="bg-white rounded-lg shadow-card p-4 mt-3">
+              <div className="bg-white rounded-lg shadow-card p-4">
                 <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1 flex items-center gap-1.5">
                   <BarChart3 size={13} aria-hidden="true" /> Collected Over Time
                 </p>
@@ -674,7 +774,7 @@ export default function AdminReports() {
               </div>
 
               {paymentMethodBreakdown.length > 0 && (
-                <div className="bg-white rounded-lg shadow-card p-4 mt-3">
+                <div className="bg-white rounded-lg shadow-card p-4">
                   <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-3 flex items-center gap-1.5">
                     <CreditCard size={13} aria-hidden="true" /> Collection by Payment Method
                   </p>
@@ -685,7 +785,12 @@ export default function AdminReports() {
                         <div key={m.method} className="flex items-center gap-3">
                           <span className="text-sm text-dark font-medium truncate flex-1 min-w-0 capitalize">{m.method}</span>
                           <div className="hidden sm:block w-28 h-1.5 rounded-full bg-background-warm overflow-hidden shrink-0">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${Math.max(6, (m.amount / max) * 100)}%` }} />
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.max(6, (m.amount / max) * 100)}%` }}
+                              transition={{ duration: 0.5, ease: 'easeOut' }}
+                              className="h-full bg-primary rounded-full"
+                            />
                           </div>
                           <span className="text-xs text-dark-muted w-10 text-right shrink-0">{m.count}×</span>
                           <span className="text-sm font-semibold text-dark w-24 text-right shrink-0">{formatPrice(m.amount)}</span>
@@ -698,7 +803,7 @@ export default function AdminReports() {
               )}
 
               {outstandingByPerson.length > 0 && (
-                <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto mt-3">
+                <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto">
                   <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide flex items-center gap-1.5 px-4 pt-4">
                     <UserCircle size={13} aria-hidden="true" /> Outstanding Balances by Person ({outstandingByPerson.length})
                   </p>
@@ -714,13 +819,13 @@ export default function AdminReports() {
                     </thead>
                     <tbody>
                       {outstandingByPerson.map((p, i) => (
-                        <tr key={`${p.name}-${i}`} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
+                        <motion.tr key={`${p.name}-${i}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
                           <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[180px]">{p.name}</td>
                           <td className="px-4 py-2.5 text-dark-muted truncate max-w-[180px]">{p.trip}</td>
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{formatPrice(p.total)}</td>
                           <td className="px-4 py-2.5 text-green-700 text-right whitespace-nowrap">{formatPrice(p.paid)}</td>
                           <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(p.balance)}</td>
-                        </tr>
+                        </motion.tr>
                       ))}
                     </tbody>
                   </table>
@@ -733,20 +838,23 @@ export default function AdminReports() {
               <ReportSection
                 title="Trip Finance & Profitability"
                 subtitle="Trips with the Finances tab filled in · all-time"
+                icon={Wallet2}
+                tone="primary"
               >
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  <StatCard label="Total Revenue" value={formatPrice(financeTotals.totalRevenue)} icon={IndianRupee} />
-                  <StatCard label="Total Costs" value={formatPrice(financeTotals.totalCosts)} icon={Wallet} />
+                  <StatCard label="Total Revenue" value={formatPrice(financeTotals.totalRevenue)} icon={IndianRupee} tone="green" />
+                  <StatCard label="Total Costs" value={formatPrice(financeTotals.totalCosts)} icon={Wallet} tone="amber" />
                   <StatCard
                     label="Net Profit"
                     value={formatPrice(financeTotals.netProfit)}
                     sub={financeTotals.netProfit < 0 ? 'Currently a loss' : undefined}
                     icon={Wallet2}
+                    tone={financeTotals.netProfit < 0 ? 'red' : 'green'}
                   />
-                  <StatCard label="Profit Margin" value={`${financeMarginPct}%`} icon={TrendingUp} />
+                  <StatCard label="Profit Margin" value={`${financeMarginPct}%`} icon={TrendingUp} tone="primary" />
                 </div>
 
-                <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto mt-3">
+                <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto">
                   <table className="w-full text-sm min-w-[680px]">
                     <thead>
                       <tr className="border-b border-background-warm text-left">
@@ -762,7 +870,7 @@ export default function AdminReports() {
                     </thead>
                     <tbody>
                       {financeByTrip.map(t => (
-                        <tr key={t.id} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
+                        <motion.tr key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
                           <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[220px]">{t.title}</td>
                           <td className="px-4 py-2.5 text-dark-muted text-right">{t.travelerCount}</td>
                           <td className="px-4 py-2.5 text-dark font-semibold text-right whitespace-nowrap">{formatPrice(t.totalRevenue)}</td>
@@ -771,7 +879,7 @@ export default function AdminReports() {
                             {formatPrice(t.netProfit)}
                           </td>
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{formatPrice(Math.round(t.profitPerPerson))}</td>
-                        </tr>
+                        </motion.tr>
                       ))}
                     </tbody>
                   </table>
@@ -780,16 +888,16 @@ export default function AdminReports() {
             )}
 
             {/* ---- Operational Reports ---- */}
-            <ReportSection title="Operational Reports">
+            <ReportSection title="Operational Reports" icon={PieChart} tone="blue">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <StatCard label="Occupancy" value={`${operational.occupancyPct}%`} sub={`${operational.seatsBooked} of ${operational.totalSeats} seats · upcoming trips`} icon={PieChart} />
-                <StatCard label="Cancellation Rate" value={`${operational.cancellationPct}%`} sub={`${operational.cancelledOfBooked} of ${operational.everBookedCount} bookings`} icon={XCircle} />
-                <StatCard label="No-Show Rate" value={`${operational.noShowPct}%`} sub={`${operational.noShowCount} of ${operational.attendanceRecordedCount} arrivals tracked`} icon={UserX} />
-                <StatCard label="Food Preference" value={`${operational.veg}V / ${operational.nonVeg}NV`} sub={operational.notSet ? `${operational.notSet} not set` : 'Travellers'} icon={UtensilsCrossed} />
+                <StatCard label="Occupancy" value={`${operational.occupancyPct}%`} sub={`${operational.seatsBooked} of ${operational.totalSeats} seats · upcoming trips`} icon={PieChart} tone="blue" />
+                <StatCard label="Cancellation Rate" value={`${operational.cancellationPct}%`} sub={`${operational.cancelledOfBooked} of ${operational.everBookedCount} bookings`} icon={XCircle} tone="red" />
+                <StatCard label="No-Show Rate" value={`${operational.noShowPct}%`} sub={`${operational.noShowCount} of ${operational.attendanceRecordedCount} arrivals tracked`} icon={UserX} tone="amber" />
+                <StatCard label="Food Preference" value={`${operational.veg}V / ${operational.nonVeg}NV`} sub={operational.notSet ? `${operational.notSet} not set` : 'Travellers'} icon={UtensilsCrossed} tone="primary" />
               </div>
 
               {operational.topDestinations.length > 0 && (
-                <div className="bg-white rounded-lg shadow-card p-4 mt-3">
+                <div className="bg-white rounded-lg shadow-card p-4">
                   <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-3">
                     Top Destinations
                   </p>
@@ -802,7 +910,12 @@ export default function AdminReports() {
                           <MapPin size={14} className="text-primary shrink-0" aria-hidden="true" />
                           <span className="text-sm text-dark font-medium truncate flex-1 min-w-0">{d.label}</span>
                           <div className="hidden sm:block w-28 h-1.5 rounded-full bg-background-warm overflow-hidden shrink-0">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${Math.max(6, (d.count / max) * 100)}%` }} />
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.max(6, (d.count / max) * 100)}%` }}
+                              transition={{ duration: 0.5, ease: 'easeOut' }}
+                              className="h-full bg-primary rounded-full"
+                            />
                           </div>
                           <span className="text-sm font-semibold text-dark w-6 text-right shrink-0">{d.count}</span>
                         </div>
@@ -815,7 +928,7 @@ export default function AdminReports() {
 
             {/* ---- Per-Trip Breakdown ---- */}
             {tripBreakdown.length > 0 && (
-              <ReportSection title="Per-Trip Breakdown" subtitle="Upcoming trips · current standing">
+              <ReportSection title="Per-Trip Breakdown" subtitle="Upcoming trips · current standing" icon={Compass} tone="primary">
                 <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto">
                   <table className="w-full text-sm min-w-[560px]">
                     <thead>
@@ -831,21 +944,22 @@ export default function AdminReports() {
                     </thead>
                     <tbody>
                       {tripBreakdown.map(t => (
-                        <tr key={t.id} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
+                        <motion.tr key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
                           <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[220px]">{t.title}</td>
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{t.seatsBooked}/{t.totalSeats}</td>
                           <td className="px-4 py-2.5 text-dark font-semibold text-right">{t.occupancyPct}%</td>
                           <td className="px-4 py-2.5 text-green-700 font-semibold text-right whitespace-nowrap">{formatPrice(t.collected)}</td>
                           <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(t.pending)}</td>
-                        </tr>
+                        </motion.tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               </ReportSection>
             )}
-          </>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
     </AdminLayout>
   );
