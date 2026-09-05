@@ -150,53 +150,122 @@ export default function AdminTripLeaders() {
         ) : items.length === 0 ? (
           <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card">No trip leaders yet.</div>
         ) : (
-          <div className="bg-white rounded-lg shadow-card overflow-hidden">
-            <div className="overflow-x-auto scrollbar-hide">
-              <table className="w-full text-sm">
-                <thead className="bg-background-warm text-dark font-medium">
-                  <tr>
-                    <th className="px-4 py-4 text-left">Trip Leader</th>
-                    <th className="px-4 py-4 text-left hidden md:table-cell">Designation</th>
-                    <th className="px-4 py-4 text-left hidden lg:table-cell">Bio</th>
-                    <th className="px-4 py-4 text-center">Status</th>
-                    <th className="px-4 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-background-warm">
-                  {items.map((t, index) => (
-                    <motion.tr key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-4 font-medium text-dark">
-                        <div className="flex items-center gap-2">
-                          <div className="flex flex-col">
-                            <button onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${t.name} up`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={12} aria-hidden="true" /></button>
-                            <button onClick={() => move(index, 1)} disabled={index === items.length - 1} aria-label={`Move ${t.name} down`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={12} aria-hidden="true" /></button>
-                          </div>
-                          {t.photo && <img src={t.photo} alt={t.name} className="w-8 h-8 rounded-full object-cover" loading="lazy" decoding="async" />}
-                          <span className="truncate max-w-[140px]">{t.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-dark-muted hidden md:table-cell">{t.designation}</td>
-                      <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[280px] truncate">{t.description}</td>
-                      <td className="px-4 py-4 text-center">
-                        <span className={`text-xs font-button font-semibold px-3 py-1 rounded-md ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
-                          {t.is_published ? 'Published' : 'Draft'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => togglePublish(t)} aria-label={t.is_published ? `Unpublish ${t.name}` : `Publish ${t.name}`} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
-                            {t.is_published ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
-                          </button>
-                          <button onClick={() => openEdit(t)} aria-label={`Edit ${t.name}`} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} aria-hidden="true" /></button>
-                          <button onClick={() => handleDelete(t.id)} aria-label={`Delete ${t.name}`} className="p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={16} aria-hidden="true" /></button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
+          <>
+            {/* Mobile (below sm): a card per trip leader — the desktop
+                table's hidden md/lg columns (designation, bio) meant a
+                phone was left with only a cramped name/status/actions row,
+                so this gives every field room to breathe instead. */}
+            <div className="sm:hidden space-y-3">
+              {items.map((t, index) => (
+                <motion.div
+                  key={t.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-white rounded-lg shadow-card p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {t.photo ? (
+                        <img src={t.photo} alt={t.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" loading="lazy" decoding="async" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-background-warm flex-shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-dark truncate">{t.name}</p>
+                        {t.designation && (
+                          <p className="text-xs text-dark-muted truncate">{t.designation}</p>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                      {t.is_published ? 'Published' : 'Draft'}
+                    </span>
+                  </div>
+
+                  {t.description && (
+                    <p className="text-sm text-dark-muted leading-relaxed line-clamp-3">{t.description}</p>
+                  )}
+
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-background-warm">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => move(index, -1)}
+                        disabled={index === 0}
+                        aria-label={`Move ${t.name} up`}
+                        className="p-2 rounded text-dark-muted hover:bg-background disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronUp size={15} aria-hidden="true" />
+                      </button>
+                      <button
+                        onClick={() => move(index, 1)}
+                        disabled={index === items.length - 1}
+                        aria-label={`Move ${t.name} down`}
+                        className="p-2 rounded text-dark-muted hover:bg-background disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronDown size={15} aria-hidden="true" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => togglePublish(t)} aria-label={t.is_published ? `Unpublish ${t.name}` : `Publish ${t.name}`} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                        {t.is_published ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                      </button>
+                      <button onClick={() => openEdit(t)} aria-label={`Edit ${t.name}`} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} aria-hidden="true" /></button>
+                      <button onClick={() => handleDelete(t.id)} aria-label={`Delete ${t.name}`} className="p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={16} aria-hidden="true" /></button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
-          </div>
+
+            {/* Desktop (sm and up): the full table. */}
+            <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
+              <div className="overflow-x-auto scrollbar-hide">
+                <table className="w-full text-sm">
+                  <thead className="bg-background-warm text-dark font-medium">
+                    <tr>
+                      <th className="px-4 py-4 text-left">Trip Leader</th>
+                      <th className="px-4 py-4 text-left hidden md:table-cell">Designation</th>
+                      <th className="px-4 py-4 text-left hidden lg:table-cell">Bio</th>
+                      <th className="px-4 py-4 text-center">Status</th>
+                      <th className="px-4 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-background-warm">
+                    {items.map((t, index) => (
+                      <motion.tr key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
+                        <td className="px-4 py-4 font-medium text-dark">
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-col">
+                              <button onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${t.name} up`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={12} aria-hidden="true" /></button>
+                              <button onClick={() => move(index, 1)} disabled={index === items.length - 1} aria-label={`Move ${t.name} down`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={12} aria-hidden="true" /></button>
+                            </div>
+                            {t.photo && <img src={t.photo} alt={t.name} className="w-8 h-8 rounded-full object-cover" loading="lazy" decoding="async" />}
+                            <span className="truncate max-w-[140px]">{t.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-dark-muted hidden md:table-cell">{t.designation}</td>
+                        <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[280px] truncate">{t.description}</td>
+                        <td className="px-4 py-4 text-center">
+                          <span className={`text-xs font-button font-semibold px-3 py-1 rounded-md ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                            {t.is_published ? 'Published' : 'Draft'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => togglePublish(t)} aria-label={t.is_published ? `Unpublish ${t.name}` : `Publish ${t.name}`} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                              {t.is_published ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                            </button>
+                            <button onClick={() => openEdit(t)} aria-label={`Edit ${t.name}`} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} aria-hidden="true" /></button>
+                            <button onClick={() => handleDelete(t.id)} aria-label={`Delete ${t.name}`} className="p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={16} aria-hidden="true" /></button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </div>
 

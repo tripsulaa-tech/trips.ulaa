@@ -198,69 +198,135 @@ export default function AdminAlbums() {
         {loading ? (
           <div role="status" className="text-center py-16 text-dark-muted">Loading...</div>
         ) : (
-          <div className="bg-white rounded-lg shadow-card overflow-hidden">
-            <div className="overflow-x-auto scrollbar-hide">
-              <table className="w-full text-sm">
-                <thead className="bg-background-warm text-dark font-medium">
-                  <tr>
-                    <th className="px-4 py-4 text-left">Album</th>
-                    <th className="px-4 py-4 text-left hidden md:table-cell">Destination</th>
-                    <th className="px-4 py-4 text-left hidden md:table-cell">Date</th>
-                    <th className="px-4 py-4 text-left hidden lg:table-cell">Participants</th>
-                    <th className="px-4 py-4 text-left hidden lg:table-cell">Photos</th>
-                    <th className="px-2 py-4 text-center whitespace-nowrap">Status</th>
-                    <th className="px-3 py-4 text-right whitespace-nowrap">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-background-warm">
-                  {albums.map(album => (
-                    <motion.tr key={album.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
-                      <td className="px-4 py-4 font-medium text-dark max-w-[150px] sm:max-w-none">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <button
-                            onClick={() => setViewing(album)}
-                            className="truncate text-left hover:text-primary hover:underline underline-offset-2"
-                            aria-label={`View details for ${album.title}`}
-                          >
-                            {album.title}
-                          </button>
-                          {album.batch && (
-                            <span className="shrink-0 text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
-                              <span className="sm:hidden">{formatBatchShortLabel(album.batch)}</span>
-                              <span className="hidden sm:inline">{formatBatchLabel(album.batch)}</span>
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-dark-muted hidden md:table-cell truncate">{album.destination}</td>
-                      <td className="px-4 py-4 text-dark-muted hidden md:table-cell whitespace-nowrap">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</td>
-                      <td className="px-4 py-4 text-dark-muted hidden lg:table-cell">{album.participants}</td>
-                      <td className="px-4 py-4 text-dark-muted hidden lg:table-cell">{album.gallery_images?.length || 0}</td>
-                      <td className="px-2 py-4 text-center">
-                        <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
-                          {album.is_published ? 'Published' : 'Draft'}
-                        </span>
-                      </td>
-                      <td className="pl-4 pr-3 py-4">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => togglePublish(album)}
-                            aria-pressed={album.is_published}
-                            aria-label={album.is_published ? `Unpublish ${album.title}` : `Publish ${album.title}`}
-                            className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"
-                          >
-                            {album.is_published ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
-                          </button>
-                          <button onClick={() => openEdit(album)} aria-label={`Edit ${album.title}`} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={15} aria-hidden="true" /></button>
-                          <button onClick={() => handleDelete(album)} aria-label={`Delete ${album.title}`} className="p-1.5 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={15} aria-hidden="true" /></button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
+          <>
+            {/* Mobile (below sm): a card per album — the desktop table's
+                hidden md/lg columns (destination, date, participants,
+                photos) meant a phone was left with only a cramped
+                title/status/actions row, so this gives every field room to
+                breathe instead. Same pattern as AdminTripLeaders. */}
+            <div className="sm:hidden space-y-3">
+              {albums.map(album => (
+                <motion.div
+                  key={album.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-white rounded-lg shadow-card p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {album.cover_image ? (
+                        <img src={album.cover_image} alt={album.title} className="w-12 h-12 rounded-md object-cover flex-shrink-0" loading="lazy" decoding="async" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-md bg-background-warm flex-shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <button
+                          onClick={() => setViewing(album)}
+                          className="text-sm font-medium text-dark truncate text-left hover:text-primary hover:underline underline-offset-2 block"
+                          aria-label={`View details for ${album.title}`}
+                        >
+                          {album.title}
+                        </button>
+                        <p className="text-xs text-dark-muted truncate">{album.destination}</p>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                      {album.is_published ? 'Published' : 'Draft'}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {album.batch && (
+                      <span className="text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
+                        {formatBatchLabel(album.batch)}
+                      </span>
+                    )}
+                    <span className="text-xs text-dark-muted whitespace-nowrap">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</span>
+                    <span className="text-xs text-dark-muted whitespace-nowrap">{album.participants} participants</span>
+                    <span className="text-xs text-dark-muted whitespace-nowrap">{album.gallery_images?.length || 0} photos</span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1 pt-1 border-t border-background-warm">
+                    <button
+                      onClick={() => togglePublish(album)}
+                      aria-pressed={album.is_published}
+                      aria-label={album.is_published ? `Unpublish ${album.title}` : `Publish ${album.title}`}
+                      className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"
+                    >
+                      {album.is_published ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                    </button>
+                    <button onClick={() => openEdit(album)} aria-label={`Edit ${album.title}`} className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={16} aria-hidden="true" /></button>
+                    <button onClick={() => handleDelete(album)} aria-label={`Delete ${album.title}`} className="p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={16} aria-hidden="true" /></button>
+                  </div>
+                </motion.div>
+              ))}
             </div>
-          </div>
+
+            {/* Desktop (sm and up): the full table. */}
+            <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
+              <div className="overflow-x-auto scrollbar-hide">
+                <table className="w-full text-sm">
+                  <thead className="bg-background-warm text-dark font-medium">
+                    <tr>
+                      <th className="px-4 py-4 text-left">Album</th>
+                      <th className="px-4 py-4 text-left hidden md:table-cell">Destination</th>
+                      <th className="px-4 py-4 text-left hidden md:table-cell">Date</th>
+                      <th className="px-4 py-4 text-left hidden lg:table-cell">Participants</th>
+                      <th className="px-4 py-4 text-left hidden lg:table-cell">Photos</th>
+                      <th className="px-2 py-4 text-center whitespace-nowrap">Status</th>
+                      <th className="px-3 py-4 text-right whitespace-nowrap">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-background-warm">
+                    {albums.map(album => (
+                      <motion.tr key={album.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
+                        <td className="px-4 py-4 font-medium text-dark max-w-[150px] sm:max-w-none">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <button
+                              onClick={() => setViewing(album)}
+                              className="truncate text-left hover:text-primary hover:underline underline-offset-2"
+                              aria-label={`View details for ${album.title}`}
+                            >
+                              {album.title}
+                            </button>
+                            {album.batch && (
+                              <span className="shrink-0 text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
+                                <span className="sm:hidden">{formatBatchShortLabel(album.batch)}</span>
+                                <span className="hidden sm:inline">{formatBatchLabel(album.batch)}</span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-dark-muted hidden md:table-cell truncate">{album.destination}</td>
+                        <td className="px-4 py-4 text-dark-muted hidden md:table-cell whitespace-nowrap">{formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</td>
+                        <td className="px-4 py-4 text-dark-muted hidden lg:table-cell">{album.participants}</td>
+                        <td className="px-4 py-4 text-dark-muted hidden lg:table-cell">{album.gallery_images?.length || 0}</td>
+                        <td className="px-2 py-4 text-center">
+                          <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                            {album.is_published ? 'Published' : 'Draft'}
+                          </span>
+                        </td>
+                        <td className="pl-4 pr-3 py-4">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => togglePublish(album)}
+                              aria-pressed={album.is_published}
+                              aria-label={album.is_published ? `Unpublish ${album.title}` : `Publish ${album.title}`}
+                              className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"
+                            >
+                              {album.is_published ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
+                            </button>
+                            <button onClick={() => openEdit(album)} aria-label={`Edit ${album.title}`} className="p-1.5 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"><Edit2 size={15} aria-hidden="true" /></button>
+                            <button onClick={() => handleDelete(album)} aria-label={`Delete ${album.title}`} className="p-1.5 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors"><Trash2 size={15} aria-hidden="true" /></button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </div>
 

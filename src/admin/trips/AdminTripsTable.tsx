@@ -90,7 +90,95 @@ export default function AdminTripsTable({
           <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onAddTrip}><Plus size={16} aria-hidden="true" /> Add Your First Trip</Button>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-card overflow-hidden">
+        <>
+          {/* Mobile (below sm): a card per trip — the desktop table's hidden
+              md/lg columns (destination, date, seats) plus a 112px-wide
+              Actions column squeezing 6 icon buttons meant a phone was left
+              with a cramped, hard-to-tap row, so this gives every field and
+              action room to breathe instead. Same pattern as AdminAlbums /
+              AdminTripLeaders. */}
+          <div className="sm:hidden space-y-3">
+            {trips.map(trip => {
+              const seatsLeft = Math.max(0, trip.total_seats - trip.seats_booked);
+              return (
+                <motion.div
+                  key={trip.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-white rounded-lg shadow-card p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {trip.cover_image ? (
+                        <img src={trip.cover_image} alt={trip.title} className="w-12 h-12 rounded-md object-cover flex-shrink-0" loading="lazy" decoding="async" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-md bg-background-warm flex-shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <button
+                          onClick={() => onView(trip)}
+                          className="text-sm font-medium text-dark truncate text-left hover:text-primary hover:underline underline-offset-2 block"
+                          aria-label={`View details for ${trip.title}`}
+                        >
+                          {trip.title}
+                        </button>
+                        <p className="text-xs text-dark-muted truncate">{trip.destination}</p>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
+                      trip.status === 'published' ? 'bg-green-100 text-green-700'
+                      : trip.status === 'coming_soon' ? 'bg-amber-100 text-amber-700'
+                      : 'bg-background-warm text-dark-muted'
+                    }`}>
+                      {trip.status === 'published' ? 'Published' : trip.status === 'coming_soon' ? 'Coming Soon' : 'Draft'}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-dark-muted whitespace-nowrap">
+                      {formatDate(trip.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                    <span className="text-xs text-dark-muted whitespace-nowrap">
+                      {trip.seats_booked}/{trip.total_seats} seats ({seatsLeft} left)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-0.5 pt-1 border-t border-background-warm">
+                    <button onClick={() => onToggleComingSoon(trip)} aria-label={trip.status === 'coming_soon' ? `Switch ${trip.title} to fully Published` : `Mark ${trip.title} as Coming Soon`} className={`flex-shrink-0 p-2 rounded hover:bg-background transition-colors ${trip.status === 'coming_soon' ? 'text-amber-600' : 'text-dark-muted hover:text-primary'}`}>
+                      <Hourglass size={16} aria-hidden="true" />
+                    </button>
+                    <button onClick={() => onTogglePublish(trip)} aria-label={trip.status === 'draft' ? `Publish ${trip.title}` : `Unpublish ${trip.title}`} className="flex-shrink-0 p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                      {trip.status === 'draft' ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />}
+                    </button>
+                    <button
+                      onClick={() => onDownloadPdf(trip)}
+                      disabled={pdfDownloadingId === trip.id}
+                      aria-label={`Download itinerary PDF for ${trip.title}`}
+                      className="flex-shrink-0 p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
+                    >
+                      <FileDown size={16} className={pdfDownloadingId === trip.id ? 'animate-pulse' : ''} aria-hidden="true" />
+                    </button>
+                    <button
+                      onClick={() => onToggleHidePdf(trip)}
+                      aria-label={trip.hide_pdf_download ? `Show PDF download for ${trip.title}` : `Hide PDF download for ${trip.title}`}
+                      className={`flex-shrink-0 p-2 rounded hover:bg-background transition-colors ${trip.hide_pdf_download ? 'text-red-600' : 'text-dark-muted hover:text-primary'}`}
+                    >
+                      <FileX size={16} aria-hidden="true" />
+                    </button>
+                    <button onClick={() => onEdit(trip)} aria-label={`Edit ${trip.title}`} className="flex-shrink-0 p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
+                      <Edit2 size={16} aria-hidden="true" />
+                    </button>
+                    <button onClick={() => onDelete(trip)} aria-label={`Delete ${trip.title}`} className="flex-shrink-0 p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors">
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Desktop (sm and up): the full table. */}
+          <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
           <div className="overflow-x-auto scrollbar-hide">
             <table className="w-full text-sm">
               <caption className="sr-only">Trips</caption>
@@ -171,7 +259,8 @@ export default function AdminTripsTable({
               </tbody>
             </table>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

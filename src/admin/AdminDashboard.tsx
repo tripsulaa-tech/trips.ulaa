@@ -11,6 +11,7 @@ import {
   ImageSquare as ImagePlus,
   ListChecks,
   TextT as Type,
+  ChartBar as BarChart3,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import {
@@ -112,6 +113,7 @@ export default function AdminDashboard() {
     { label: 'Upload Photos', desc: 'Add photos to Instagram Moments', icon: ImagePlus, color: 'text-primary', to: '/admin/home' },
     { label: 'View Enquiries', desc: 'Manage booking requests', icon: Users, color: 'text-primary', to: '/admin/enquiries' },
     { label: 'View Waitlist', desc: "See who's waiting for a seat", icon: ListChecks, color: 'text-primary', to: '/admin/waitlist' },
+    { label: 'View Reports', desc: 'Business-wide KPIs and trends', icon: BarChart3, color: 'text-primary', to: '/admin/reports' },
     { label: 'Button Naming', desc: 'Rename trip booking CTA buttons', icon: Type, color: 'text-primary', to: '/admin/home' },
   ];
 

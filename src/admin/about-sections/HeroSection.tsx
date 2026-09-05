@@ -1,6 +1,7 @@
+import { TextAa, TextAlignLeft } from '@phosphor-icons/react';
 import ImageUploadField from '../../components/ui/ImageUploadField';
 import type { AboutContent } from '../../types/types-index';
-import { inputClass, labelClass } from './shared';
+import { inputClass, labelClass, iconLabelClass, helperTextClass, previewLabelClass } from './shared';
 
 export default function HeroSection({
   content,
@@ -13,7 +14,10 @@ export default function HeroSection({
 }) {
   return (
     <div ref={sectionRef} data-section={1} className="scroll-mt-4 space-y-4">
-      <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">1 · Hero Banner</h2>
+      <div className="pb-3 border-b border-background-warm">
+        <h2 className="font-display text-lg font-bold text-dark">1 · Hero Banner</h2>
+        <p className="text-xs text-dark-muted mt-1">The full-bleed banner and headline shown at the very top of the About page.</p>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <ImageUploadField
           label="Banner Image (Desktop)"
@@ -36,8 +40,11 @@ export default function HeroSection({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="about-hero-heading" className={labelClass}>Main Heading</label>
-          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
+          <label htmlFor="about-hero-heading" className={iconLabelClass}>
+            <TextAa size={14} className="text-primary" aria-hidden="true" />
+            Main Heading
+          </label>
+          <p className={helperTextClass}>The big bold heading itself.</p>
           <textarea
             id="about-hero-heading"
             value={content.heading}
@@ -47,8 +54,11 @@ export default function HeroSection({
           />
         </div>
         <div>
-          <label htmlFor="about-hero-subheading" className={labelClass}>Supporting Text</label>
-          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
+          <label htmlFor="about-hero-subheading" className={iconLabelClass}>
+            <TextAlignLeft size={14} className="text-primary" aria-hidden="true" />
+            Supporting Text
+          </label>
+          <p className={helperTextClass}>Paragraph shown below the heading.</p>
           <textarea
             id="about-hero-subheading"
             value={content.subheading}
@@ -78,6 +88,20 @@ export default function HeroSection({
             className={inputClass}
             placeholder="/trips"
           />
+        </div>
+      </div>
+
+      {/* Live preview — mirrors the dark gradient scrim + bottom-anchored
+          text treatment used by the real hero banner in AboutPage.tsx */}
+      <div>
+        <p className={previewLabelClass}>Live preview</p>
+        <div className="rounded-lg bg-dark px-5 py-6 flex flex-col items-start text-left gap-2">
+          <p className="font-display text-lg sm:text-xl font-bold leading-[1.15] text-white whitespace-pre-line">
+            {content.heading || 'Main heading goes here'}
+          </p>
+          <p className="text-xs text-white/85 whitespace-pre-line">
+            {content.subheading || 'Supporting text goes here.'}
+          </p>
         </div>
       </div>
     </div>

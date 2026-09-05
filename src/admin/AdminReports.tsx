@@ -36,6 +36,7 @@ import {
   ChartBar as BarChart3,
   CreditCard,
   Compass,
+  UserCircle,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getAllPayments } from '../services/api';
@@ -693,6 +694,36 @@ export default function AdminReports() {
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {outstandingByPerson.length > 0 && (
+                <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto mt-3">
+                  <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide flex items-center gap-1.5 px-4 pt-4">
+                    <UserCircle size={13} aria-hidden="true" /> Outstanding Balances by Person ({outstandingByPerson.length})
+                  </p>
+                  <table className="w-full text-sm min-w-[520px] mt-2">
+                    <thead>
+                      <tr className="border-b border-background-warm text-left">
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide">Traveler</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide">Trip</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Total</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Paid</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Balance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {outstandingByPerson.map((p, i) => (
+                        <tr key={`${p.name}-${i}`} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
+                          <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[180px]">{p.name}</td>
+                          <td className="px-4 py-2.5 text-dark-muted truncate max-w-[180px]">{p.trip}</td>
+                          <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{formatPrice(p.total)}</td>
+                          <td className="px-4 py-2.5 text-green-700 text-right whitespace-nowrap">{formatPrice(p.paid)}</td>
+                          <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(p.balance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </ReportSection>
