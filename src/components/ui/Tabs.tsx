@@ -1,8 +1,14 @@
 import { useState, useRef, useEffect, Children, isValidElement } from 'react';
 import type { ReactNode, ReactElement, RefObject } from 'react';
+import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import Select from './Select';
 
 interface TabPanelProps {
   label: string;
+  /** Optional icon shown next to the label in both the desktop pill bar
+   *  and the mobile stepper/jump menu. Purely decorative (aria-hidden) —
+   *  omit for a text-only tab. */
+  icon?: ReactNode;
   children: ReactNode;
 }
 
@@ -171,12 +177,62 @@ export default function Tabs({ children, defaultIndex = 0, scrollContainerRef }:
     <div>
       {/* Sticky so the jump-nav stays reachable while scrolling through a
           long section further down. Spans the full modal width (cancelling
-          the body's own p-6) and repaints a solid white background over
-          that padding area, so nothing scrolled-past can peek through
-          above it. */}
-      <div ref={stickyBarRef} data-sticky-toolbar className="sticky -top-6 z-20 bg-white -mx-6 -mt-6 px-6 pt-6 pb-3 mb-2">
-        <div className="relative">
-          <div ref={barRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
+          the body's own padding, which is p-4 on mobile / p-6 from sm up)
+          and repaints a solid white background over that padding area, so
+          nothing scrolled-past can peek through above it. Two completely
+          separate nav layouts share this bar: a compact prev/next stepper
+          with a jump-to dropdown on mobile, and the original scrollable
+          pill row from sm up — each toggled purely with Tailwind
+          responsive classes so there's no layout thrash on resize. */}
+      <div ref={stickyBarRef} data-sticky-toolbar className="sticky -top-4 sm:-top-6 z-20 bg-white -mx-4 -mt-4 px-4 pt-4 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6 pb-2.5 sm:pb-3 mb-2">
+        {/* Mobile: prev/next stepper + jump-to dropdown */}
+        <div className="sm:hidden space-y-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleSelect(Math.max(0, active - 1))}
+              disabled={active === 0}
+              aria-label="Previous section"
+              className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-background text-dark-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors active:bg-background-warm"
+            >
+              <CaretLeft size={16} weight="bold" />
+            </button>
+            <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-primary">
+              {panels[active]?.props.icon && (
+                <span className="shrink-0" aria-hidden="true">{panels[active].props.icon}</span>
+              )}
+              <span className="text-sm font-bold text-dark truncate">{panels[active]?.props.label}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSelect(Math.min(panels.length - 1, active + 1))}
+              disabled={active === panels.length - 1}
+              aria-label="Next section"
+              className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-background text-dark-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors active:bg-background-warm"
+            >
+              <CaretRight size={16} weight="bold" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1 rounded-full bg-background overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-[width]"
+                style={{ width: `${((active + 1) / panels.length) * 100}%` }}
+              />
+            </div>
+            <span className="shrink-0 text-[11px] font-semibold text-dark-muted tabular-nums">{active + 1}/{panels.length}</span>
+          </div>
+          <Select
+            size="sm"
+            value={active}
+            onChange={i => handleSelect(Number(i))}
+            options={panels.map((panel, i) => ({ value: i, label: panel.props.label }))}
+          />
+        </div>
+
+        {/* Desktop / tablet: scrollable pill row */}
+        <div className="hidden sm:block relative">
+          <div ref={barRef} className="flex gap-1.5 overflow-x-auto scrollbar-hide">
             {panels.map((panel, i) => (
               <button
                 key={panel.props.label}
@@ -184,12 +240,13 @@ export default function Tabs({ children, defaultIndex = 0, scrollContainerRef }:
                 type="button"
                 onClick={() => handleSelect(i)}
                 aria-current={active === i ? 'true' : undefined}
-                className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold whitespace-nowrap transition-colors ${
                   active === i
                     ? 'bg-primary text-white'
                     : 'bg-background text-dark-muted hover:text-dark'
                 }`}
               >
+                {panel.props.icon && <span aria-hidden="true">{panel.props.icon}</span>}
                 {panel.props.label}
               </button>
             ))}
@@ -203,17 +260,18 @@ export default function Tabs({ children, defaultIndex = 0, scrollContainerRef }:
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {panels.map((panel, i) => (
           <div
             key={panel.props.label}
             ref={el => { sectionRefs.current[i] = el; }}
             className="scroll-mt-24"
           >
-            <h4 className="text-base font-bold text-dark mb-3 pb-2 border-b border-background-warm">
+            <h4 className="flex items-center gap-1.5 text-sm sm:text-base font-bold text-dark mb-2.5 sm:mb-3 pb-1.5 sm:pb-2 border-b border-background-warm">
+              {panel.props.icon && <span className="text-primary" aria-hidden="true">{panel.props.icon}</span>}
               {panel.props.label}
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               {panel}
             </div>
           </div>

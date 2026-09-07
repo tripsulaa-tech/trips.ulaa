@@ -5,6 +5,19 @@ import {
   MagnifyingGlass as Search,
   MapPin,
   X,
+  IdentificationCard,
+  Tag,
+  ChartLineUp,
+  Images,
+  Path,
+  Backpack,
+  Bed,
+  UserCircle,
+  Image as ImageIcon,
+  FileText,
+  Question,
+  ShieldCheck,
+  RocketLaunch,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
@@ -74,10 +87,12 @@ export default function AdminTripFormModal({
         isOpen={modalOpen}
         onClose={closeModal}
         title={editingTrip ? 'Edit Trip' : 'Add Trip'}
-        size="xl"
+        size="2xl"
         bodyRef={modalBodyRef}
+        mobileFullScreen
+        compactHeader
         headerContent={
-          <div className="relative w-full max-w-xs">
+          <div className="relative w-full sm:max-w-xs">
             <label htmlFor="trip-field-search" className="sr-only">Search fields</label>
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
             <input
@@ -85,7 +100,7 @@ export default function AdminTripFormModal({
               type="text"
               value={modalSearch}
               onChange={e => setModalSearch(e.target.value)}
-              placeholder="Search fields (e.g. meeting point, pricing, media)..."
+              placeholder="Search fields..."
               className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
             />
           </div>
@@ -104,7 +119,7 @@ export default function AdminTripFormModal({
         )}
         <div>
           <Tabs scrollContainerRef={modalBodyRef}>
-          <TabPanel label="Basic Info">
+          <TabPanel label="Basic Info" icon={<IdentificationCard size={15} />}>
             <div className="md:col-span-2">
               <label htmlFor="trip-title" className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
               <input id="trip-title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley Winter Expedition" />
@@ -177,7 +192,7 @@ export default function AdminTripFormModal({
               <textarea id="trip-description" aria-describedby="trip-description-hint" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
             </div>
           </TabPanel>
-          <TabPanel label="Pricing & Availability">
+          <TabPanel label="Pricing & Availability" icon={<Tag size={15} />}>
             <div className="md:col-span-2 grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="trip-total-seats" className="block text-sm font-medium text-dark mb-1">Total Seats</label>
@@ -307,7 +322,7 @@ export default function AdminTripFormModal({
               <p className="text-xs text-dark-muted mt-1">The early-bird price shows automatically until this date, then the page switches to the regular price on its own.</p>
             </div>
           </TabPanel>
-          <TabPanel label="Finances & Profit">
+          <TabPanel label="Finances & Profit" icon={<ChartLineUp size={15} />}>
             <div className="md:col-span-2 bg-amber-50 border border-amber-200 rounded-md p-3">
               <p className="text-xs text-amber-800">
                 Internal record only — none of this is ever shown on the public site. Use it to track what this trip costs to run and what it earns.
@@ -499,7 +514,7 @@ export default function AdminTripFormModal({
               );
             })()}
           </TabPanel>
-          <TabPanel label="Media">
+          <TabPanel label="Media" icon={<Images size={15} />}>
             <div className="md:col-span-2 space-y-3">
               <ImageUploadField
                 label="Cover Image"
@@ -603,7 +618,7 @@ export default function AdminTripFormModal({
               </MultiImageUploadField>
             </div>
           </TabPanel>
-          <TabPanel label="Overview & Itinerary">
+          <TabPanel label="Overview & Itinerary" icon={<Path size={15} />}>
             {/* Rich Highlight Cards */}
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
@@ -658,7 +673,7 @@ export default function AdminTripFormModal({
               />
             </div>
           </TabPanel>
-          <TabPanel label="Inclusions & Prep">
+          <TabPanel label="Inclusions & Prep" icon={<Backpack size={15} />}>
             {/* Grouped What's Included — heading + bulleted sub-items (e.g. "Premium Stay Experience") */}
             <div className="md:col-span-2">
               <div className="flex items-center justify-between mb-2">
@@ -813,7 +828,7 @@ export default function AdminTripFormModal({
               {form.confidence_items.length === 0 && <p className="text-xs text-dark-muted">No confidence items yet.</p>}
             </div>
           </TabPanel>
-          <TabPanel label="Accommodation">
+          <TabPanel label="Accommodation" icon={<Bed size={15} />}>
             <div className="md:col-span-2">
               <label htmlFor="trip-accommodation-description" className="block text-sm font-medium text-dark mb-1">Section Description</label>
               <textarea
@@ -837,7 +852,7 @@ export default function AdminTripFormModal({
               />
             </div>
           </TabPanel>
-          <TabPanel label="Meeting Point">
+          <TabPanel label="Meeting Point" icon={<MapPin size={15} />}>
             <div className="md:col-span-2">
               <label htmlFor="trip-meeting-point" className="block text-sm font-medium text-dark mb-1">Location Name</label>
               <div className="flex gap-2">
@@ -947,7 +962,7 @@ export default function AdminTripFormModal({
               </p>
             </div>
           </TabPanel>
-          <TabPanel label="Trip Leader">
+          <TabPanel label="Trip Leader" icon={<UserCircle size={15} />}>
             <div className="md:col-span-2">
               <label htmlFor="trip-leader-select" className="block text-sm font-medium text-dark mb-1">Assign Trip Leader</label>
               <Select
@@ -989,7 +1004,7 @@ export default function AdminTripFormModal({
               );
             })()}
           </TabPanel>
-          <TabPanel label="End Banner">
+          <TabPanel label="End Banner" icon={<ImageIcon size={15} />}>
             <div className="md:col-span-2">
               <ImageUploadField
                 label="Banner Image"
@@ -1044,7 +1059,7 @@ export default function AdminTripFormModal({
               />
             </div>
           </TabPanel>
-          <TabPanel label="Terms & Conditions">
+          <TabPanel label="Terms & Conditions" icon={<FileText size={15} />}>
             <div className="md:col-span-2">
               <TermsEditor
                 value={form.terms_and_conditions}
@@ -1052,7 +1067,7 @@ export default function AdminTripFormModal({
               />
             </div>
           </TabPanel>
-          <TabPanel label="FAQs">
+          <TabPanel label="FAQs" icon={<Question size={15} />}>
             <div className="md:col-span-2">
               <FAQEditor
                 value={form.faqs}
@@ -1060,7 +1075,7 @@ export default function AdminTripFormModal({
               />
             </div>
           </TabPanel>
-          <TabPanel label="Cancellation Policy">
+          <TabPanel label="Cancellation Policy" icon={<ShieldCheck size={15} />}>
             <div className="md:col-span-2">
               <CancellationPolicyEditor
                 value={form.cancellation_policy}
@@ -1068,7 +1083,7 @@ export default function AdminTripFormModal({
               />
             </div>
           </TabPanel>
-          <TabPanel label="Publish">
+          <TabPanel label="Publish" icon={<RocketLaunch size={15} />}>
             <div className="md:col-span-2 space-y-3">
               <p className="text-sm font-medium text-dark">Status</p>
               <div className="space-y-2">
