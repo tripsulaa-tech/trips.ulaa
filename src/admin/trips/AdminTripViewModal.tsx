@@ -413,12 +413,12 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
               <Button
                 variant="primary"
                 size="md"
-                className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+                className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
                 onClick={() => { onClose(); onEdit(trip); }}
               >
                 Edit Trip
               </Button>
-              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Close</Button>
+              <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Close</Button>
             </div>
           </div>
         )}

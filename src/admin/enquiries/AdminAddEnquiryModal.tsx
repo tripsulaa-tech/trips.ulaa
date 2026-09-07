@@ -421,11 +421,11 @@ export default function AddEnquiryModal({
       )}
 
       <div className="flex gap-3 mt-6">
-        <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Cancel</Button>
+        <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Cancel</Button>
         <Button
           variant="primary"
           size="md"
-          className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+          className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
           onClick={() => {
             if (convertingWaitlist && convertingWaitlist.slots > 1) {
               setTouchedPeople(prev => {

@@ -140,8 +140,8 @@ export default function CancelModal({
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Back</Button>
-            <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onConfirm} loading={cancelling}>Confirm Cancellation</Button>
+            <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onClose}>Back</Button>
+            <Button variant="primary" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onConfirm} loading={cancelling}>Confirm Cancellation</Button>
           </div>
         </div>
       )}

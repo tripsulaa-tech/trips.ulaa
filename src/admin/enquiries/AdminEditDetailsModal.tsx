@@ -170,10 +170,11 @@ export default function EditDetailsModal({
           />
         </div>
         <div className="flex gap-3 pt-2">
-          <Button variant="outline" size="md" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" size="md" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button
             variant="primary"
             size="md"
+            className="flex-1"
             onClick={() => { setEditTouched(new Set(['full_name', 'phone'])); onSave(); }}
             loading={saving}
             disabled={hasEditErrors}

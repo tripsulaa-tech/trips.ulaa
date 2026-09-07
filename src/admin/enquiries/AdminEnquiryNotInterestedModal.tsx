@@ -35,8 +35,8 @@ export default function AdminEnquiryNotInterestedModal({
           />
         </div>
         <div className="flex gap-3 pt-2">
-          <Button variant="outline" size="md" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" size="md" onClick={onConfirm} loading={busy}>Mark Not Interested</Button>
+          <Button variant="outline" size="md" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" size="md" className="flex-1" onClick={onConfirm} loading={busy}>Mark Not Interested</Button>
         </div>
       </div>
     </Modal>

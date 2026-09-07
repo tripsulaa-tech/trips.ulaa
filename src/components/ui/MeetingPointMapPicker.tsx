@@ -235,8 +235,8 @@ export default function MeetingPointMapPicker({ isOpen, onClose, onSelect, initi
       size="lg"
       footer={
         <div className="flex gap-3">
-          <Button variant="outline" size="md" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" size="md" onClick={handleConfirm} disabled={!selected || resolvingPin}>
+          <Button variant="outline" size="md" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" size="md" className="flex-1" onClick={handleConfirm} disabled={!selected || resolvingPin}>
             Use This Location
           </Button>
         </div>

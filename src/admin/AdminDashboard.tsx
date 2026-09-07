@@ -24,9 +24,9 @@ import type { UpcomingTrip, Enquiry } from '../types/types-index';
 import bannerImg from '../assets/hero.webp';
 
 const STATUS_STYLES: Record<Enquiry['status'], string> = {
-  new: 'bg-orange-50 text-primary',
-  contacted: 'bg-blue-50 text-blue-600',
-  closed: 'bg-green-50 text-green-600',
+  new: 'bg-primary/10 text-primary',
+  contacted: 'bg-secondary/15 text-secondary',
+  closed: 'bg-dark-muted/10 text-dark-muted',
 };
 
 const STATUS_LABELS: Record<Enquiry['status'], string> = {
@@ -35,17 +35,13 @@ const STATUS_LABELS: Record<Enquiry['status'], string> = {
   closed: 'Closed',
 };
 
-// Semantic color vocabulary for the icon badges on stat cards and quick
-// actions — a metric or action's color carries meaning (create vs. view,
-// or what kind of number it is) instead of every tile defaulting to the
-// same primary orange. Mirrors the tone system on the Reports page.
-type Tone = 'primary' | 'green' | 'amber' | 'blue';
-const TONE_STYLES: Record<Tone, { bg: string; text: string }> = {
-  primary: { bg: 'bg-primary/10', text: 'text-primary' },
-  green: { bg: 'bg-green-100', text: 'text-green-700' },
-  amber: { bg: 'bg-amber-100', text: 'text-amber-700' },
-  blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
-};
+// Icon badge color for stat cards and quick actions. Earlier iterations
+// tried differentiating tiles by hue (secondary/gold/muted), but the brand
+// palette is tightly clustered — at badge size and opacity every tone
+// rendered as the same pale peach square, so the "meaning" wasn't actually
+// visible. Simplified to one consistent primary-tinted badge everywhere on
+// this page; icon shape + label carry the distinction instead of color.
+const BADGE = { bg: 'bg-primary/10', text: 'text-primary' };
 
 const gridVariants = {
   hidden: {},
@@ -127,20 +123,20 @@ export default function AdminDashboard() {
     return t >= startOfToday && t < startOfTomorrow;
   }).length;
 
-  const statCards: { label: string; value: number; icon: typeof Briefcase; tone: Tone; to: string }[] = [
-    { label: 'Upcoming Trips', value: upcoming.length, icon: Briefcase, tone: 'blue', to: '/admin/trips' },
-    { label: 'Completed Albums', value: completedCount, icon: BookOpen, tone: 'green', to: '/admin/albums' },
-    { label: 'Waiting List', value: waitingCount, icon: ListChecks, tone: 'amber', to: '/admin/waitlist' },
+  const statCards: { label: string; value: number; icon: typeof Briefcase; to: string }[] = [
+    { label: 'Upcoming Trips', value: upcoming.length, icon: Briefcase, to: '/admin/trips' },
+    { label: 'Completed Albums', value: completedCount, icon: BookOpen, to: '/admin/albums' },
+    { label: 'Waiting List', value: waitingCount, icon: ListChecks, to: '/admin/waitlist' },
   ];
 
-  const quickActions: { label: string; desc: string; icon: typeof PlusCircle; tone: Tone; to: string }[] = [
-    { label: 'Add New Trip', desc: 'Create and publish a new trip', icon: PlusCircle, tone: 'primary', to: '/admin/trips' },
-    { label: 'Create Album', desc: 'Add a new completed trip album', icon: FolderPlus, tone: 'primary', to: '/admin/albums' },
-    { label: 'Upload Photos', desc: 'Add photos to Instagram Moments', icon: ImagePlus, tone: 'primary', to: '/admin/home' },
-    { label: 'View Enquiries', desc: 'Manage booking requests', icon: Users, tone: 'blue', to: '/admin/enquiries' },
-    { label: 'View Waitlist', desc: "See who's waiting for a seat", icon: ListChecks, tone: 'blue', to: '/admin/waitlist' },
-    { label: 'View Reports', desc: 'Business-wide KPIs and trends', icon: BarChart3, tone: 'blue', to: '/admin/reports' },
-    { label: 'Button Naming', desc: 'Rename trip booking CTA buttons', icon: Type, tone: 'primary', to: '/admin/home' },
+  const quickActions: { label: string; desc: string; icon: typeof PlusCircle; to: string }[] = [
+    { label: 'Add New Trip', desc: 'Create and publish a new trip', icon: PlusCircle, to: '/admin/trips' },
+    { label: 'Create Album', desc: 'Add a new completed trip album', icon: FolderPlus, to: '/admin/albums' },
+    { label: 'Upload Photos', desc: 'Add photos to Instagram Moments', icon: ImagePlus, to: '/admin/home' },
+    { label: 'View Enquiries', desc: 'Manage booking requests', icon: Users, to: '/admin/enquiries' },
+    { label: 'View Waitlist', desc: "See who's waiting for a seat", icon: ListChecks, to: '/admin/waitlist' },
+    { label: 'View Reports', desc: 'Business-wide KPIs and trends', icon: BarChart3, to: '/admin/reports' },
+    { label: 'Button Naming', desc: 'Rename trip booking CTA buttons', icon: Type, to: '/admin/home' },
   ];
 
   const recentEnquiries = enquiries.slice(0, 5);
@@ -196,8 +192,8 @@ export default function AdminDashboard() {
           animate="show"
           className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 items-stretch"
         >
-          {statCards.map(({ label, value, icon: Icon, tone, to }) => {
-            const t = TONE_STYLES[tone];
+          {statCards.map(({ label, value, icon: Icon, to }) => {
+            const t = BADGE;
             return (
               <motion.div key={label} variants={tileVariants} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
                 <Link
@@ -255,8 +251,8 @@ export default function AdminDashboard() {
             animate="show"
             className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-5"
           >
-            {quickActions.map(({ label, desc, icon: Icon, tone, to }) => {
-              const t = TONE_STYLES[tone];
+            {quickActions.map(({ label, desc, icon: Icon, to }) => {
+              const t = BADGE;
               return (
                 <motion.div key={label} variants={tileVariants} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
                   <Link
@@ -282,8 +278,8 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-md sm:rounded-lg p-3 sm:p-4 shadow-card">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-blue-50">
-                  <Users size={13} className="text-blue-600" aria-hidden="true" />
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-primary/10">
+                  <Users size={13} className="text-primary" aria-hidden="true" />
                 </span>
                 Recent Enquiries
               </h3>

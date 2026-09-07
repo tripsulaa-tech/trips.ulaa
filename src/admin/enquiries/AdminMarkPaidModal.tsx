@@ -66,8 +66,8 @@ export default function MarkPaidModal({
           </div>
 
           <div className="flex gap-3">
-            <Button variant="outline" size="md" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" size="md" onClick={onConfirm} loading={saving}>Mark Paid</Button>
+            <Button variant="outline" size="md" className="flex-1" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" size="md" className="flex-1" onClick={onConfirm} loading={saving}>Mark Paid</Button>
           </div>
         </div>
       )}

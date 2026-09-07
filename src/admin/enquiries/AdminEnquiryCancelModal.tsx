@@ -69,8 +69,8 @@ export default function AdminEnquiryCancelModal({
           />
         </div>
         <div className="flex gap-3 pt-2">
-          <Button variant="outline" size="md" onClick={onClose}>Back</Button>
-          <Button variant="primary" size="md" onClick={onConfirm} loading={cancelling}>Confirm Cancellation</Button>
+          <Button variant="outline" size="md" className="flex-1" onClick={onClose}>Back</Button>
+          <Button variant="primary" size="md" className="flex-1" onClick={onConfirm} loading={cancelling}>Confirm Cancellation</Button>
         </div>
       </div>
     </Modal>

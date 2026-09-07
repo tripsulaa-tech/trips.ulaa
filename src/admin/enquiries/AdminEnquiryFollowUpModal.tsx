@@ -165,10 +165,11 @@ export function BookingFollowUpModal({
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" size="md" onClick={requestClose}>Cancel</Button>
+            <Button variant="outline" size="md" className="flex-1" onClick={requestClose}>Cancel</Button>
             <Button
               variant="primary"
               size="md"
+              className="flex-1"
               disabled={!at}
               loading={saving}
               onClick={() => onSave({ at, time, type, notes })}

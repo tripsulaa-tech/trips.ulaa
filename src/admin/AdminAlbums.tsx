@@ -454,11 +454,11 @@ export default function AdminAlbums() {
           </div>
         </div>
         <div className="flex gap-3 mt-6">
-          <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeModal}>Cancel</Button>
+          <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeModal}>Cancel</Button>
           <Button
             variant="primary"
             size="md"
-            className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+            className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
             onClick={handleSave}
             loading={saving}
             disabled={!!duplicateAlbum}
@@ -600,12 +600,12 @@ export default function AdminAlbums() {
               <Button
                 variant="primary"
                 size="md"
-                className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
+                className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]"
                 onClick={() => { const a = viewing; setViewing(null); openEdit(a); }}
               >
                 Edit Album
               </Button>
-              <Button variant="outline" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setViewing(null)}>Close</Button>
+              <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setViewing(null)}>Close</Button>
             </div>
           </div>
         )}

@@ -18,6 +18,7 @@ import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
+  UserPlus,
   Phone,
   XCircle,
   TrendUp as TrendingUp,
@@ -25,7 +26,15 @@ import {
   CurrencyInr as IndianRupee,
   Wallet,
   ArrowUUpLeft as Undo2,
-  Wallet as Wallet2,
+  Ticket,
+  ChartLineUp,
+  PiggyBank,
+  Receipt,
+  Coins,
+  Bank,
+  Percent,
+  UsersThree,
+  CheckCircle,
   SealCheck as BadgeCheck,
   Confetti as PartyPopper,
   CalendarX as CalendarX2,
@@ -164,17 +173,19 @@ function averageResponseTime(list: Enquiry[]): string {
   return `${(avgHours / 24).toFixed(1)} days`;
 }
 
-// Shared semantic color vocabulary for stat card icon badges and section
-// glyphs — lets a metric's color carry meaning (green = good, red = bad,
-// amber = needs attention) instead of every icon defaulting to the same
-// primary orange regardless of what it reports.
-type Tone = 'primary' | 'green' | 'amber' | 'red' | 'blue';
+// Shared color for stat card icon badges and section glyphs. green/red are
+// kept as universal profit-vs-loss / success-vs-failure signals on
+// financial and operational figures. For everything else, badge color was
+// previously varied (secondary vs. primary) to signal "view" vs "create"
+// tiles, but the brand palette is tightly clustered — at badge size every
+// non-green/red tone rendered as the same pale peach, so that distinction
+// wasn't actually visible. Simplified to a single primary-tinted badge for
+// all non-financial tiles; matches the Dashboard page.
+type Tone = 'primary' | 'green' | 'red';
 const TONE_STYLES: Record<Tone, { bg: string; text: string }> = {
   primary: { bg: 'bg-primary/10', text: 'text-primary' },
   green: { bg: 'bg-green-100', text: 'text-green-700' },
-  amber: { bg: 'bg-amber-100', text: 'text-amber-700' },
   red: { bg: 'bg-red-100', text: 'text-red-600' },
-  blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
 };
 
 const cardVariants = {
@@ -714,12 +725,12 @@ export default function AdminReports() {
         ) : (
           <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-6 sm:space-y-8">
             {/* ---- Lead Reports ---- */}
-            <ReportSection title="Lead Reports" subtitle={`${lead.total} lead${lead.total === 1 ? '' : 's'} in range`} icon={Users} tone="blue">
+            <ReportSection title="Lead Reports" subtitle={`${lead.total} lead${lead.total === 1 ? '' : 's'} in range`} icon={Users} tone="primary">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard label="Conversion Rate" value={`${lead.conversionPct}%`} sub={`${lead.bookedCount} of ${lead.total} booked`} icon={TrendingUp} tone="green" />
-                <StatCard label="New" value={lead.newCount} icon={Users} tone="blue" />
+                <StatCard label="New" value={lead.newCount} icon={UserPlus} tone="primary" />
                 <StatCard label="Contacted" value={lead.contactedCount} icon={Phone} tone="primary" />
-                <StatCard label="Avg. Response Time" value={lead.avgResponseTime} sub="Enquiry → first contact" icon={Clock} tone="amber" />
+                <StatCard label="Avg. Response Time" value={lead.avgResponseTime} sub="Enquiry → first contact" icon={Clock} tone="primary" />
               </div>
 
               {lead.closedBreakdown.length > 0 && (
@@ -767,21 +778,21 @@ export default function AdminReports() {
             </ReportSection>
 
             {/* ---- Booking Reports ---- */}
-            <ReportSection title="Booking Reports" icon={BadgeCheck} tone="green">
+            <ReportSection title="Booking Reports" icon={BadgeCheck} tone="primary">
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                <StatCard label="Confirmed" value={booking.confirmed} sub="Currently at this stage" icon={BadgeCheck} tone="blue" />
+                <StatCard label="Confirmed" value={booking.confirmed} sub="Currently at this stage" icon={CheckCircle} tone="primary" />
                 <StatCard label="Completed" value={booking.completed} icon={PartyPopper} tone="green" />
                 <StatCard label="Cancelled" value={booking.cancelled} icon={CalendarX2} tone="red" />
               </div>
             </ReportSection>
 
             {/* ---- Financial Reports ---- */}
-            <ReportSection title="Financial Reports" subtitle="Net of refunds" icon={IndianRupee} tone="green">
+            <ReportSection title="Financial Reports" subtitle="Net of refunds" icon={IndianRupee} tone="primary">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <StatCard label="Revenue" value={formatPrice(financial.revenue)} icon={IndianRupee} tone="green" />
+                <StatCard label="Revenue" value={formatPrice(financial.revenue)} icon={Coins} tone="green" />
                 <StatCard label="Refund Amount" value={formatPrice(financial.refundAmount)} icon={Undo2} tone="red" />
-                <StatCard label="Outstanding Balance" value={formatPrice(financial.outstandingBalance)} sub="Active bookings" icon={Wallet} tone="amber" />
-                <StatCard label="Avg. Booking Value" value={formatPrice(Math.round(financial.avgBookingValue))} icon={Wallet2} tone="primary" />
+                <StatCard label="Outstanding Balance" value={formatPrice(financial.outstandingBalance)} sub="Active bookings" icon={Wallet} tone="primary" />
+                <StatCard label="Avg. Booking Value" value={formatPrice(Math.round(financial.avgBookingValue))} icon={Ticket} tone="primary" />
               </div>
 
               <div className="bg-white rounded-lg shadow-card p-4">
@@ -842,7 +853,7 @@ export default function AdminReports() {
                           <td className="px-4 py-2.5 text-dark-muted truncate max-w-[180px]">{p.trip}</td>
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{formatPrice(p.total)}</td>
                           <td className="px-4 py-2.5 text-green-700 text-right whitespace-nowrap">{formatPrice(p.paid)}</td>
-                          <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(p.balance)}</td>
+                          <td className="px-4 py-2.5 text-primary font-semibold text-right whitespace-nowrap">{formatPrice(p.balance)}</td>
                         </motion.tr>
                       ))}
                     </tbody>
@@ -856,20 +867,20 @@ export default function AdminReports() {
               <ReportSection
                 title="Trip Finance & Profitability"
                 subtitle="Trips with the Finances tab filled in · all-time"
-                icon={Wallet2}
+                icon={ChartLineUp}
                 tone="primary"
               >
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  <StatCard label="Total Revenue" value={formatPrice(financeTotals.totalRevenue)} icon={IndianRupee} tone="green" />
-                  <StatCard label="Total Costs" value={formatPrice(financeTotals.totalCosts)} icon={Wallet} tone="amber" />
+                  <StatCard label="Total Revenue" value={formatPrice(financeTotals.totalRevenue)} icon={Bank} tone="green" />
+                  <StatCard label="Total Costs" value={formatPrice(financeTotals.totalCosts)} icon={Receipt} tone="primary" />
                   <StatCard
                     label="Net Profit"
                     value={formatPrice(financeTotals.netProfit)}
                     sub={financeTotals.netProfit < 0 ? 'Currently a loss' : undefined}
-                    icon={Wallet2}
+                    icon={PiggyBank}
                     tone={financeTotals.netProfit < 0 ? 'red' : 'green'}
                   />
-                  <StatCard label="Profit Margin" value={`${financeMarginPct}%`} icon={TrendingUp} tone="primary" />
+                  <StatCard label="Profit Margin" value={`${financeMarginPct}%`} icon={Percent} tone="primary" />
                 </div>
 
                 <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto">
@@ -892,7 +903,7 @@ export default function AdminReports() {
                           <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[220px]">{t.title}</td>
                           <td className="px-4 py-2.5 text-dark-muted text-right">{t.travelerCount}</td>
                           <td className="px-4 py-2.5 text-dark font-semibold text-right whitespace-nowrap">{formatPrice(t.totalRevenue)}</td>
-                          <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(t.totalCosts)}</td>
+                          <td className="px-4 py-2.5 text-primary font-semibold text-right whitespace-nowrap">{formatPrice(t.totalCosts)}</td>
                           <td className={`px-4 py-2.5 font-semibold text-right whitespace-nowrap ${t.netProfit < 0 ? 'text-red-600' : 'text-green-700'}`}>
                             {formatPrice(t.netProfit)}
                           </td>
@@ -906,11 +917,11 @@ export default function AdminReports() {
             )}
 
             {/* ---- Operational Reports ---- */}
-            <ReportSection title="Operational Reports" icon={PieChart} tone="blue">
+            <ReportSection title="Operational Reports" icon={PieChart} tone="primary">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <StatCard label="Occupancy" value={`${operational.occupancyPct}%`} sub={`${operational.seatsBooked} of ${operational.totalSeats} seats · upcoming trips`} icon={PieChart} tone="blue" />
+                <StatCard label="Occupancy" value={`${operational.occupancyPct}%`} sub={`${operational.seatsBooked} of ${operational.totalSeats} seats · upcoming trips`} icon={UsersThree} tone="primary" />
                 <StatCard label="Cancellation Rate" value={`${operational.cancellationPct}%`} sub={`${operational.cancelledOfBooked} of ${operational.everBookedCount} bookings`} icon={XCircle} tone="red" />
-                <StatCard label="No-Show Rate" value={`${operational.noShowPct}%`} sub={`${operational.noShowCount} of ${operational.attendanceRecordedCount} arrivals tracked`} icon={UserX} tone="amber" />
+                <StatCard label="No-Show Rate" value={`${operational.noShowPct}%`} sub={`${operational.noShowCount} of ${operational.attendanceRecordedCount} arrivals tracked`} icon={UserX} tone="primary" />
                 <StatCard label="Food Preference" value={`${operational.veg}V / ${operational.nonVeg}NV`} sub={operational.notSet ? `${operational.notSet} not set` : 'Travellers'} icon={UtensilsCrossed} tone="primary" />
               </div>
 
@@ -967,7 +978,7 @@ export default function AdminReports() {
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{t.seatsBooked}/{t.totalSeats}</td>
                           <td className="px-4 py-2.5 text-dark font-semibold text-right">{t.occupancyPct}%</td>
                           <td className="px-4 py-2.5 text-green-700 font-semibold text-right whitespace-nowrap">{formatPrice(t.collected)}</td>
-                          <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(t.pending)}</td>
+                          <td className="px-4 py-2.5 text-primary font-semibold text-right whitespace-nowrap">{formatPrice(t.pending)}</td>
                         </motion.tr>
                       ))}
                     </tbody>

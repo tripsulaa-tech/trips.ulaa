@@ -137,10 +137,11 @@ export default function ContactOutcomeModal({
           )}
 
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" size="md" onClick={requestClose}>Cancel</Button>
+            <Button variant="outline" size="md" className="flex-1" onClick={requestClose}>Cancel</Button>
             <Button
               variant="primary"
               size="md"
+              className="flex-1"
               disabled={!canSave}
               loading={saving}
               onClick={() => onSave({ outcome, notes, followUpAt, followUpTime, closedReason })}
