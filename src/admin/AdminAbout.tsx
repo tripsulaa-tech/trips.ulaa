@@ -212,7 +212,7 @@ export default function AdminAbout() {
       showLeftFade={showLeftFade}
       showRightFade={showRightFade}
       scrollBodyRef={scrollBodyRef}
-      bodyClassName="p-6 space-y-10"
+      bodyClassName="p-4 sm:p-6 space-y-8 sm:space-y-10"
       onSave={handleSave}
       saving={saving}
       saved={saved}
