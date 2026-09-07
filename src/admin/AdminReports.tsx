@@ -64,10 +64,10 @@ const SOURCE_LABELS: Record<Enquiry['source'], string> = {
 
 type Period = 'all' | 'month' | '30d';
 
-const PERIOD_OPTIONS: { value: Period; label: string }[] = [
-  { value: 'all', label: 'All Time' },
-  { value: 'month', label: 'This Month' },
-  { value: '30d', label: 'Last 30 Days' },
+const PERIOD_OPTIONS: { value: Period; label: string; shortLabel: string }[] = [
+  { value: 'all', label: 'All Time', shortLabel: 'All' },
+  { value: 'month', label: 'This Month', shortLabel: 'Month' },
+  { value: '30d', label: 'Last 30 Days', shortLabel: '30D' },
 ];
 
 function withinPeriod(dateStr: string, period: Period): boolean {
@@ -218,7 +218,7 @@ function ReportSection({
       viewport={{ once: true, margin: '-40px' }}
       transition={{ duration: 0.35 }}
     >
-      <div className="flex items-baseline justify-between gap-3 mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-3 mb-3">
         <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2">
           {Icon && (
             <span className={`inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${t.bg}`}>
@@ -244,6 +244,12 @@ function ReportSection({
 // slightly so a full redraw (e.g. switching the period toggle) reads as a
 // deliberate transition rather than a jump-cut.
 function RevenueTrendChart({ data }: { data: { label: string; amount: number }[] }) {
+  // :hover has no equivalent on touch — a phone tapping a bar needs the
+  // amount to actually show, not just flash on the release-tap that also
+  // fires the browser's synthetic hover. Tracked explicitly and toggled
+  // via onClick so it works the same on mobile as the group-hover does on
+  // desktop.
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   if (data.length === 0) {
     return <p className="text-dark-muted text-sm text-center py-8">No collected payments in this range yet.</p>;
   }
@@ -257,8 +263,15 @@ function RevenueTrendChart({ data }: { data: { label: string; amount: number }[]
   return (
     <div className="flex items-end gap-1 h-40 pt-6 border-b border-background-warm">
       {data.map((d, i) => (
-        <div key={`${d.label}-${i}`} className="flex-1 min-w-0 h-full flex flex-col items-center justify-end gap-1 group relative">
-          <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-dark text-white text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+        <div
+          key={`${d.label}-${i}`}
+          className="flex-1 min-w-0 h-full flex flex-col items-center justify-end gap-1 group relative"
+          onClick={() => setActiveIndex(cur => (cur === i ? null : i))}
+          onMouseLeave={() => setActiveIndex(cur => (cur === i ? null : cur))}
+        >
+          <div className={`absolute -top-7 left-1/2 -translate-x-1/2 bg-dark text-white text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap transition-opacity pointer-events-none z-10 ${
+            activeIndex === i ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          }`}>
             {formatPrice(d.amount)}
             <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-dark" />
           </div>
@@ -266,7 +279,7 @@ function RevenueTrendChart({ data }: { data: { label: string; amount: number }[]
             initial={{ height: 0 }}
             animate={{ height: `${Math.max(2, (d.amount / max) * 100)}%` }}
             transition={{ duration: 0.5, delay: i * staggerStep, ease: 'easeOut' }}
-            className="w-full bg-gradient-to-t from-primary to-primary/60 group-hover:to-primary rounded-t-sm min-h-[2px]"
+            className={`w-full bg-gradient-to-t from-primary rounded-t-sm min-h-[2px] cursor-pointer ${activeIndex === i ? 'to-primary' : 'to-primary/60 group-hover:to-primary'}`}
           />
           <span className="text-[9px] text-dark-muted truncate w-full text-center">
             {i % labelEvery === 0 ? d.label : ''}
@@ -651,7 +664,7 @@ export default function AdminReports() {
           <p className="text-dark-muted text-sm">
             Business-wide rollups across Lead, Booking, Financial and Operational activity.
           </p>
-          <div className="flex gap-2 shrink-0 items-center">
+          <div className="flex flex-wrap gap-2 shrink-0 items-center">
             <div className="relative flex gap-1 shrink-0 items-center bg-white rounded-full p-1 shadow-card">
               {PERIOD_OPTIONS.map(opt => (
                 <button
@@ -659,7 +672,7 @@ export default function AdminReports() {
                   type="button"
                   onClick={() => setPeriod(opt.value)}
                   aria-pressed={period === opt.value}
-                  className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${
+                  className={`relative px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${
                     period === opt.value ? 'text-white' : 'text-dark-muted hover:text-dark'
                   }`}
                 >
@@ -670,7 +683,10 @@ export default function AdminReports() {
                       transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                     />
                   )}
-                  <span className="relative">{opt.label}</span>
+                  <span className="relative">
+                    <span className="sm:hidden">{opt.shortLabel}</span>
+                    <span className="hidden sm:inline">{opt.label}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -680,9 +696,11 @@ export default function AdminReports() {
                 onClick={handleExportCsv}
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.96 }}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
+                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
               >
-                <Download size={14} aria-hidden="true" /> Export CSV
+                <Download size={14} aria-hidden="true" />
+                <span className="sm:hidden">Export</span>
+                <span className="hidden sm:inline">Export CSV</span>
               </motion.button>
             )}
           </div>
