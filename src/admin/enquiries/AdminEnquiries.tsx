@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowsClockwise as RefreshCw,
   Plus,
+  UsersThree,
   CheckCircle as CheckCircle2,
   ChatCircle as MessageCircle,
   CaretDown as ChevronDown,
@@ -35,6 +36,7 @@ import { useEnquiryFilters, ENQUIRIES_PAGE_SIZE } from './useEnquiryFilters';
 import { useEnquirySelection } from './useEnquirySelection';
 import { useEnquiryLifecycle } from './useEnquiryLifecycle';
 import { useAddEnquiry } from './useAddEnquiry';
+import { useBulkEnquiry } from './useBulkEnquiry';
 import { useEnquiryPayment } from './useEnquiryPayment';
 import { useEnquiryDetailsModal } from './useEnquiryDetailsModal';
 import { useEnquiryStatusActions } from './useEnquiryStatusActions';
@@ -53,6 +55,7 @@ import {
 import FilterDropdown from './AdminFilterDropdown';
 import { KpiCards, KpiCarousel } from '../../components/ui/KpiCards';
 import AddEnquiryModal from './AdminAddEnquiryModal';
+import BulkEnquiryModal from './AdminBulkEnquiryModal';
 import DetailsModal from './AdminDetailsModal';
 import MarkPaidModal from './AdminMarkPaidModal';
 import NotInterestedModal from './AdminNotInterestedModal';
@@ -266,6 +269,19 @@ export default function AdminEnquiries() {
     applySuggestedAmount,
     handleSave,
   } = useAddEnquiry({ trips, enquiries, setTrips, load, loadWaitlistCounts, showToast, getTripPrice });
+
+  // Owns the "Bulk Enquiry" modal — batch-logging a list of manually-sourced
+  // leads (WhatsApp/Instagram/walk-in names) against one trip/source at once.
+  const {
+    modalOpen: bulkEnquiryModalOpen,
+    form: bulkEnquiryForm, setForm: setBulkEnquiryForm,
+    saving: bulkEnquirySaving,
+    activeTrips: bulkEnquiryActiveTrips,
+    names: bulkEnquiryNames,
+    openBulkAdd: openBulkEnquiry,
+    closeBulkModal: closeBulkEnquiryModal,
+    handleBulkSave: handleBulkEnquirySave,
+  } = useBulkEnquiry({ trips, setTrips, load, showToast });
 
   // Keep sessionStorage in sync so a later mount (e.g. coming back from the
   // full CRM detail page) can restore this exact card as expanded.
@@ -633,9 +649,14 @@ export default function AdminEnquiries() {
 
         <div className="flex justify-between items-center gap-3">
           <p className="text-dark-muted text-sm hidden sm:block">Log a WhatsApp, phone, or walk-in enquiry that didn't come through the website.</p>
-          <Button variant="primary" size="sm" onClick={openAdd} className="ml-auto">
-            <Plus size={16} aria-hidden="true" /> Add Enquiry
-          </Button>
+          <div className="flex items-center gap-2 ml-auto">
+            <Button variant="outline" size="sm" onClick={openBulkEnquiry}>
+              <UsersThree size={16} aria-hidden="true" /> Bulk Enquiry
+            </Button>
+            <Button variant="primary" size="sm" onClick={openAdd}>
+              <Plus size={16} aria-hidden="true" /> Add Enquiry
+            </Button>
+          </div>
         </div>
 
         {/* KPI summary — desktop grid + mobile carousel, both scoped to
@@ -1283,6 +1304,17 @@ export default function AdminEnquiries() {
         applySuggestedAmount={applySuggestedAmount}
         onSave={handleSave}
         saving={saving}
+      />
+
+      <BulkEnquiryModal
+        isOpen={bulkEnquiryModalOpen}
+        onClose={closeBulkEnquiryModal}
+        form={bulkEnquiryForm}
+        setForm={setBulkEnquiryForm}
+        activeTrips={bulkEnquiryActiveTrips}
+        names={bulkEnquiryNames}
+        onSave={handleBulkEnquirySave}
+        saving={bulkEnquirySaving}
       />
 
       <DetailsModal

@@ -15,6 +15,7 @@ import {
   CaretDoubleLeft as ChevronsLeft,
   CaretDoubleRight as ChevronsRight,
   Users,
+  AddressBook,
   DotsSixVertical as GripVertical,
   ChartBar as BarChart3,
   Images,
@@ -44,10 +45,11 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   'Trip Leaders': { to: '/admin/trip-leaders', icon: Users },
   Enquiries: { to: '/admin/enquiries', icon: MessageCircle },
   Waitlist: { to: '/admin/waitlist', icon: ListChecks },
+  Travellers: { to: '/admin/travellers', icon: AddressBook },
   Reports: { to: '/admin/reports', icon: BarChart3 },
 };
 
-const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'Home Page', 'About Page', 'Enquiries', 'Waitlist', 'Reports'];
+const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'Home Page', 'About Page', 'Enquiries', 'Waitlist', 'Travellers', 'Reports'];
 const DEFAULT_GROUP_CHILDREN_ORDER = ['Trip Leaders'];
 
 // "Dashboard" is the one item that renders as an expandable group (it's the
