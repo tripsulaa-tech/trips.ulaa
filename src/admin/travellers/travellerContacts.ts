@@ -1,8 +1,8 @@
 import type { Enquiry } from '../../types/types-index';
 import { phoneSignature, emailSignature } from '../enquiries/AdminEnquiriesShared';
 
-// One trip this traveller has booked (or is booked on) — collapsed from
-// however many raw enquiry rows share the same trip, since a "Group"
+// One trip (or trip-less enquiry) grouped under a contact — collapsed
+// from however many raw enquiry rows share the same trip, since a "Group"
 // booking inserts one row per seat (see submitGroupEnquiry in
 // services/api/enquiries/create.ts), all carrying the same
 // name/phone/email. Without this collapse, a family of 4 booked on one
@@ -25,8 +25,10 @@ export type TravellerTripGroup = {
 };
 
 // One contact card — everyone whose (fuzzy-matched) phone/email/name
-// resolves to the same person, with every trip they've ever booked with
-// Ulaa grouped underneath.
+// resolves to the same person, with every trip/enquiry they've ever
+// logged with Ulaa grouped underneath. This is a contact book, not a
+// payments ledger — no lifetime-paid total is tracked here; open the
+// trip itself (or Enquiries) for money details.
 export type TravellerContact = {
   key: string;
   fullName: string;
@@ -37,19 +39,31 @@ export type TravellerContact = {
   foodPreference?: 'veg' | 'non_veg' | null;
   trips: TravellerTripGroup[];
   tripCount: number;
-  totalPaidLifetime: number;
-  // Most recent created_at across every row for this contact — drives the
-  // default "most recently active first" sort.
+  // Earliest created_at across every row for this contact — the date they
+  // first became a contact (their very first enquiry), regardless of
+  // which trip it was for. Drives the Contact Book's "1, 2, 3..." serial
+  // numbering (oldest registered first) — see AdminTravellers.tsx.
+  registeredAt: string;
+  // Most recent created_at across every row for this contact — kept
+  // around for anything that still wants "most recently active" info,
+  // though the list itself now sorts by registeredAt.
   lastActivityAt: string;
+  // Every raw enquiry row collapsed into this contact (across every trip,
+  // however many seats/rows each one contributed) — a contact card isn't
+  // its own database record, so Edit/Delete act on this underlying row
+  // set: Edit patches the identity fields on each one via
+  // updateEnquiryDetails, Delete removes each one via deleteEnquiry. See
+  // AdminTravellerCard.tsx / useTravellers.ts.
+  rows: Enquiry[];
 };
 
 // Same fuzzy identity used by the possible-duplicate warning in
 // AdminAddEnquiryModal (see phoneSignature/emailSignature) — groups rows
 // primarily by phone (digits-only, last 10), falling back to email, then
-// to the trimmed/lowercased name. Since createManualEnquiry/BookingForm
-// both require a phone for anyone who's actually paid something, the
-// name-only fallback is rare in practice — mainly a safety net so no paid
-// row is ever silently dropped from the book.
+// to the trimmed/lowercased name. Every row reaching this function already
+// has a non-blank phone (see buildTravellerContacts' filter below), so the
+// email/name fallbacks mainly guard against a phone too short/malformed
+// for phoneSignature to normalize.
 function contactKey(e: Enquiry): string {
   const p = phoneSignature(e.phone);
   if (p) return `phone:${p}`;
@@ -90,18 +104,18 @@ function pickBestEmail(rows: Enquiry[]): string {
   return (withValue[0]?.email || '').trim();
 }
 
-/** Collapses every enquiry row that ever had money on it into one contact
- *  card per traveller, each with their full trip history grouped
- *  underneath. "Traveller" here means anyone who ever paid/booked
- *  (amount_paid > 0 at some point) — including a trip that hasn't happened
- *  yet, or a booking that was later cancelled — not just people who've
- *  actually completed a trip. A plain unpaid lead that never converted
- *  isn't a traveller yet, so it's excluded. */
+/** Collapses every enquiry row we've ever saved a phone number for into
+ *  one contact card per person, each with their full trip/enquiry history
+ *  grouped underneath. This is a contact book, not a bookings list — a
+ *  contact shows up whether they went on to book and pay for a trip or
+ *  never converted past a first enquiry, as long as a phone number was
+ *  captured. Rows with no phone on file (e.g. an anonymous "Contact Us"
+ *  message) have nothing to look someone up by, so they're excluded. */
 export function buildTravellerContacts(enquiries: Enquiry[]): TravellerContact[] {
-  const bookedRows = enquiries.filter(e => (e.amount_paid || 0) > 0);
+  const contactRows = enquiries.filter(e => (e.phone || '').trim() !== '');
 
   const byContact = new Map<string, Enquiry[]>();
-  for (const row of bookedRows) {
+  for (const row of contactRows) {
     const key = contactKey(row);
     const list = byContact.get(key);
     if (list) list.push(row);
@@ -139,6 +153,7 @@ export function buildTravellerContacts(enquiries: Enquiry[]): TravellerContact[]
       .sort((a, b) => (b.departureDate || b.latestCreatedAt).localeCompare(a.departureDate || a.latestCreatedAt));
 
     const lastActivityAt = rows.reduce((latest, r) => (r.created_at > latest ? r.created_at : latest), rows[0].created_at);
+    const registeredAt = rows.reduce((earliest, r) => (r.created_at < earliest ? r.created_at : earliest), rows[0].created_at);
 
     contacts.push({
       key,
@@ -150,12 +165,16 @@ export function buildTravellerContacts(enquiries: Enquiry[]): TravellerContact[]
       foodPreference: rows.find(r => r.food_preference)?.food_preference || null,
       trips,
       tripCount: trips.length,
-      totalPaidLifetime: rows.reduce((sum, r) => sum + (r.amount_paid || 0), 0),
+      registeredAt,
       lastActivityAt,
+      rows,
     });
   }
 
-  return contacts.sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
+  // Serial-numbered 1, 2, 3... in the admin UI by registration order —
+  // whoever's first enquiry came in earliest is #1, regardless of who's
+  // been active most recently.
+  return contacts.sort((a, b) => a.registeredAt.localeCompare(b.registeredAt));
 }
 
 export function contactMatchesQuery(c: TravellerContact, query: string): boolean {

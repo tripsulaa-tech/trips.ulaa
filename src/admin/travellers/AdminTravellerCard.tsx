@@ -1,84 +1,169 @@
-import { Phone, Envelope as Mail, MapPin, Repeat } from '@phosphor-icons/react';
-import { formatDate, formatPrice, getWhatsAppLink } from '../../utils/utils-index';
+import { useState } from 'react';
+import {
+  Phone, Envelope as Mail, MapPin, Repeat,
+  PencilSimple as Edit2, Trash as Trash2,
+  CaretUp as ChevronUp, CaretDown as ChevronDown,
+} from '@phosphor-icons/react';
+import { formatDate, getWhatsAppLink } from '../../utils/utils-index';
 import { journeyBadge } from '../enquiries/AdminEnquiryCommon';
 import type { TravellerContact } from './travellerContacts';
 
-export default function AdminTravellerCard({ contact }: { contact: TravellerContact }) {
+// Initials avatar — travellers don't have a photo the way Trip Leaders do,
+// so this fills the same visual slot the Trip Leader card gives its
+// circular photo.
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+}
+
+// Same card shell/layout as the Trip Leaders directory (see
+// AdminTripLeaders.tsx's mobile card and the reference screenshot): avatar
+// + name/subtitle on the left, a status pill top-right, a description
+// line, then a divider with a left-side toggle and right-side action
+// icons. Trip Leaders' up/down pair reorders a fixed list; travellers
+// aren't reorderable, so that slot becomes a single expand/collapse
+// chevron for this contact's trip history instead. There's no
+// publish/unpublish concept for a traveller, so only Edit and Delete
+// appear on the right.
+//
+// This is a contact book, not a payments ledger — no lifetime-paid or
+// per-trip amount figures are shown here; that lives on the trip/
+// Enquiries side. Position in the list (sorted by registration date, see
+// buildTravellerContacts' final sort) is conveyed via pagination alone —
+// no per-row serial number.
+export default function AdminTravellerCard({
+  contact,
+  onEdit,
+  onDelete,
+  deleting,
+}: {
+  contact: TravellerContact;
+  onEdit: () => void;
+  onDelete: () => void;
+  deleting: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const latestTrip = contact.trips[0];
+  const badge = latestTrip ? journeyBadge(latestTrip.representative) : undefined;
+
   return (
-    <div className="p-4 sm:p-5 border-b border-background-warm last:border-b-0">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-display font-bold text-dark truncate">{contact.fullName}</h3>
-            {contact.tripCount > 1 && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                <Repeat size={10} aria-hidden="true" /> Repeat &middot; {contact.tripCount} trips
-              </span>
-            )}
+    <div className="bg-white rounded-lg shadow-card p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-sm flex-shrink-0">
+            {initials(contact.fullName)}
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-dark-muted">
-            {contact.phone ? (
-              <a
-                href={getWhatsAppLink(contact.phone)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 hover:text-primary transition-colors"
-              >
-                <Phone size={12} aria-hidden="true" /> {contact.phone}
-              </a>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-dark-muted/60">
-                <Phone size={12} aria-hidden="true" /> No phone on file
-              </span>
-            )}
-            {contact.email && (
-              <span className="inline-flex items-center gap-1">
-                <Mail size={12} aria-hidden="true" /> {contact.email}
-              </span>
-            )}
-            {contact.city && (
-              <span className="inline-flex items-center gap-1">
-                <MapPin size={12} aria-hidden="true" /> {contact.city}
-              </span>
-            )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="text-sm font-medium text-dark truncate">{contact.fullName}</p>
+              {contact.tripCount > 1 && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
+                  <Repeat size={9} aria-hidden="true" /> {contact.tripCount} trips
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-dark-muted truncate">
+              {latestTrip ? latestTrip.tripTitle : 'No trip on file'} &middot; Registered {formatDate(contact.registeredAt)}
+            </p>
           </div>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide">Lifetime Paid</p>
-          <p className="font-display font-bold text-dark">{formatPrice(contact.totalPaidLifetime)}</p>
-        </div>
+        {badge && (
+          <span className={`shrink-0 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${badge.color}`}>
+            {badge.label}
+          </span>
+        )}
       </div>
 
-      <div className="space-y-1.5">
-        {contact.trips.map(trip => {
-          const badge = journeyBadge(trip.representative);
-          return (
-            <div
-              key={trip.key}
-              className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-background-warm/50 rounded-md px-3 py-2"
-            >
-              <div className="min-w-0 flex items-center gap-2 flex-wrap">
-                <span className="font-button font-semibold text-sm text-dark truncate">{trip.tripTitle}</span>
-                {trip.seatCount > 1 && (
-                  <span className="text-[10px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-200 text-dark-muted">
-                    Group of {trip.seatCount}
-                  </span>
-                )}
-                {trip.departureDate && (
-                  <span className="text-xs text-dark-muted">{formatDate(trip.departureDate)}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-dark-muted">
-                  {formatPrice(trip.totalPaid)}{trip.totalAmount > 0 ? ` / ${formatPrice(trip.totalAmount)}` : ''}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-dark-muted leading-relaxed">
+        {contact.phone ? (
+          <a
+            href={getWhatsAppLink(contact.phone)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+          >
+            <Phone size={12} aria-hidden="true" /> {contact.phone}
+          </a>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-dark-muted/60">
+            <Phone size={12} aria-hidden="true" /> No phone on file
+          </span>
+        )}
+        {contact.email && (
+          <span className="inline-flex items-center gap-1 truncate">
+            <Mail size={12} aria-hidden="true" /> {contact.email}
+          </span>
+        )}
+        {contact.city && (
+          <span className="inline-flex items-center gap-1">
+            <MapPin size={12} aria-hidden="true" /> {contact.city}
+          </span>
+        )}
+      </div>
+
+      {expanded && (
+        <div className="space-y-1.5 pt-1">
+          {contact.trips.map(trip => {
+            const tripBadge = journeyBadge(trip.representative);
+            return (
+              <div
+                key={trip.key}
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-background-warm/50 rounded-md px-2.5 py-1.5"
+              >
+                <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                  <span className="font-button font-semibold text-xs text-dark truncate">{trip.tripTitle}</span>
+                  {trip.seatCount > 1 && (
+                    <span className="text-[9px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-200 text-dark-muted">
+                      Group of {trip.seatCount}
+                    </span>
+                  )}
+                  {trip.departureDate && (
+                    <span className="text-[11px] text-dark-muted">{formatDate(trip.departureDate)}</span>
+                  )}
+                </div>
+                <span className={`text-[9px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 ${tripBadge.color}`}>
+                  {tripBadge.label}
                 </span>
-                <span className={`text-[10px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${badge.color}`}>
-                  {badge.label}
-                </span>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 pt-1 border-t border-background-warm">
+        {contact.trips.length > 1 ? (
+          <button
+            type="button"
+            onClick={() => setExpanded(v => !v)}
+            aria-expanded={expanded}
+            aria-label={expanded ? `Hide ${contact.fullName}'s trips` : `Show all of ${contact.fullName}'s trips`}
+            className="inline-flex items-center gap-1 p-2 rounded text-dark-muted hover:bg-background transition-colors"
+          >
+            {expanded ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
+          </button>
+        ) : (
+          <span />
+        )}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={`Edit ${contact.fullName}`}
+            className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"
+          >
+            <Edit2 size={16} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            aria-label={`Delete ${contact.fullName}`}
+            className="p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
+          >
+            <Trash2 size={16} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );

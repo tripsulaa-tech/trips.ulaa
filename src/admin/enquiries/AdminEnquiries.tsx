@@ -22,8 +22,8 @@ import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import { useScrollRestoration } from '../../hooks/useScrollRestoration';
-import type { Enquiry, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
-import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap } from '../../utils/utils-index';
+import type { CompletedTrip, Enquiry, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
+import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap, formatBatchLabel, formatDate } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
 import {
   foodPreferenceKey, SOURCE_CONFIG, JOURNEY_STAGE_CONFIG,
@@ -277,11 +277,12 @@ export default function AdminEnquiries() {
     form: bulkEnquiryForm, setForm: setBulkEnquiryForm,
     saving: bulkEnquirySaving,
     activeTrips: bulkEnquiryActiveTrips,
-    names: bulkEnquiryNames,
+    pastTrips: bulkEnquiryPastTrips,
+    entries: bulkEnquiryEntries,
     openBulkAdd: openBulkEnquiry,
     closeBulkModal: closeBulkEnquiryModal,
     handleBulkSave: handleBulkEnquirySave,
-  } = useBulkEnquiry({ trips, setTrips, load, showToast });
+  } = useBulkEnquiry({ trips, completedTrips, setTrips, load, showToast });
 
   // Keep sessionStorage in sync so a later mount (e.g. coming back from the
   // full CRM detail page) can restore this exact card as expanded.
@@ -417,6 +418,20 @@ export default function AdminEnquiries() {
   // hi" messages could otherwise sink to the bottom of a long, busy-season
   // trip list and never get noticed.
   const UNLINKED_GROUP_KEY = 'unlinked';
+
+  // The same trip can run more than once (e.g. same title as a Batch 1
+  // and Batch 2 completed_trips row) — the Trip filter groups by trip_id
+  // so they're already separate entries, but without this they'd carry
+  // the exact same visible label and be indistinguishable in the list.
+  // Append the batch when set; if it isn't (or two rows still share the
+  // same title+batch), fall back to the trip date instead.
+  const completedTripGroupTitle = (ct: CompletedTrip): string => {
+    if (ct.batch?.trim()) return `${ct.title} \u2014 ${formatBatchLabel(ct.batch)}`;
+    const sameTitle = completedTrips.filter(t => t.title === ct.title);
+    if (sameTitle.length > 1) return `${ct.title} \u2014 ${formatDate(ct.trip_date, { month: 'short' })}`;
+    return ct.title;
+  };
+
   const tripGroups: TripGroup[] = (() => {
     const map = new Map<string, TripGroup>();
     enquiries.forEach(e => {
@@ -431,7 +446,10 @@ export default function AdminEnquiries() {
         const linkedCompletedTrip = e.trip_id ? completedTrips.find(t => t.id === e.trip_id) : undefined;
         const isDeletedTrip = !!e.trip_id && !linkedTrip && !linkedCompletedTrip;
         const isCompletedTrip = !!linkedCompletedTrip;
-        const title = linkedTrip?.title || linkedCompletedTrip?.title || e.trip_title || 'General Enquiries (No Trip)';
+        const title = linkedTrip?.title
+          || (linkedCompletedTrip ? completedTripGroupTitle(linkedCompletedTrip) : undefined)
+          || e.trip_title
+          || 'General Enquiries (No Trip)';
         map.set(key, {
           key,
           title,
@@ -1312,7 +1330,8 @@ export default function AdminEnquiries() {
         form={bulkEnquiryForm}
         setForm={setBulkEnquiryForm}
         activeTrips={bulkEnquiryActiveTrips}
-        names={bulkEnquiryNames}
+        pastTrips={bulkEnquiryPastTrips}
+        entries={bulkEnquiryEntries}
         onSave={handleBulkEnquirySave}
         saving={bulkEnquirySaving}
       />
