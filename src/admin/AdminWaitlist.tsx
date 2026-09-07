@@ -97,7 +97,7 @@ export default function AdminWaitlist() {
         )}
 
         {/* KPI summary — desktop grid + mobile carousel, same style as the Enquiries page */}
-        <KpiCards cards={KPI_CARDS} />
+        <KpiCards cards={KPI_CARDS} columns={6} />
         <KpiCarousel cards={KPI_CARDS} />
 
         <AdminWaitlistFilterBar

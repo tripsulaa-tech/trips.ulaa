@@ -38,7 +38,7 @@ import {
   canSetBookingFollowUp, bookingFollowUpStatus,
 } from './AdminEnquiryCommon';
 import { isGeneralContactMessage, groupColorFor } from './enquiryGrouping';
-import { paymentBalance, paymentFilterKey, refundStatus } from './AdminEnquiriesShared';
+import { paymentStatus, paymentBalance, paymentFilterKey, refundStatus } from './AdminEnquiriesShared';
 
 // Phosphor doesn't ship a real WhatsApp glyph (ChatCircle/ChatsCircle are
 // generic speech-bubble icons, not the recognizable WhatsApp mark) — same
@@ -379,6 +379,28 @@ export default function AdminEnquiriesMobileCards({
                       )}
                     </div>
                   </div>
+
+                  {/* Payment summary — desktop's table has a whole clickable
+                      Payment column (amount paid / total + status label);
+                      mobile only ever showed a "Due ₹X" chip for the partial
+                      case specifically, so a fully paid, unpaid, or
+                      not-yet-priced booking showed no payment info at all
+                      here. This mirrors the desktop cell and opens the same
+                      payment modal on tap. */}
+                  <button
+                    onClick={() => openPayment(e)}
+                    className="w-full text-left bg-background-warm/50 hover:bg-background-warm rounded-md px-3 py-2.5 transition-colors flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-dark-muted text-xs">Payment</p>
+                      <p className="text-dark text-sm font-medium truncate">
+                        {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${paymentStatus(e).color}`}>
+                      {paymentStatus(e).label}
+                    </span>
+                  </button>
 
                   {e.message && (
                     <div>

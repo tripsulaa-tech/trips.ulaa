@@ -7,13 +7,27 @@ interface KpiCardData {
   icon: Icon;
 }
 
+// Explicit lookup rather than a template literal (`lg:grid-cols-${n}`) so
+// Tailwind's JIT compiler sees each class name as a literal it can find in
+// the source and doesn't purge it from the build.
+const LG_COLS: Record<number, string> = {
+  3: 'lg:grid-cols-3',
+  4: 'lg:grid-cols-4',
+  5: 'lg:grid-cols-5',
+  6: 'lg:grid-cols-6',
+};
+
 // Desktop grid of KPI summary cards, e.g. the "Total / Open / Booked /
 // Cancelled" row at the top of Enquiries and Waitlist. Icon style matches
 // the Dashboard's KPI cards: no background circle, every icon in the same
-// brand color.
-export function KpiCards({ cards }: { cards: readonly KpiCardData[] }) {
+// brand color. `columns` should match however many cards the caller passes
+// (defaults to 5, Enquiries' count) — otherwise a caller with a different
+// count than the grid's column count gets a lone card orphaned on its own
+// row at the lg breakpoint, as Waitlist's 6th card did against a
+// hardcoded 5-column grid.
+export function KpiCards({ cards, columns = 5 }: { cards: readonly KpiCardData[]; columns?: 3 | 4 | 5 | 6 }) {
   return (
-    <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+    <div className={`hidden sm:grid sm:grid-cols-3 ${LG_COLS[columns]} gap-3 sm:gap-4`}>
       {cards.map(card => {
         const Icon = card.icon;
         return (
