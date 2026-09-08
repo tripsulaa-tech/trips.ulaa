@@ -42,7 +42,7 @@ function bookingEmailFields(enquiry: Enquiry): BookingEmailFields {
   const advance = formatPrice(enquiry.booking_amount || enquiry.amount_paid || 0);
   const balance = remainingBalance(enquiry);
   const balanceText = balance != null ? formatPrice(balance) : '—';
-  const deadlineText = enquiry.balance_due_date ? formatDate(enquiry.balance_due_date) : 'TBD';
+  const deadlineText = enquiry.balance_due_date ? formatDate(enquiry.balance_due_date, { month: 'short' }) : 'TBD';
   return {
     to: enquiry.email || '',
     subject: `Booking Confirmed - ${tripName}`,
@@ -218,16 +218,7 @@ ${bookingIdRow}
                 <tr>
                   <td class="mobile-padding" style="padding: 0 40px 8px;">
                     <p style="margin: 0 0 14px; font-family: Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8A7864;">Trip Details</p>
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                      <tr>
-                        <td width="20" valign="top" style="padding-top: 1px;">
-                          <span style="font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #8A7864;">&#128196;</span>
-                        </td>
-                        <td style="padding-left: 8px;">
-                          <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #6B5744;">For complete details regarding our Terms &amp; Conditions, Cancellation Policy, and Trip Policies, please refer to the <a href="${tripLinkHref}" style="color: ${BRAND_COLOR}; text-decoration: underline;">${trip} trip page</a>.</p>
-                        </td>
-                      </tr>
-                    </table>
+                    <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #6B5744;">For complete details regarding our Terms &amp; Conditions, Cancellation Policy, and Trip Policies, please refer to the <a href="${tripLinkHref}" style="color: ${BRAND_COLOR}; text-decoration: underline;">${trip} trip page</a>.</p>
                   </td>
                 </tr>
 
