@@ -62,15 +62,6 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;');
 }
 
-// Decorative footer banner (dunes/palm/birds illustration + the
-// "WOMEN · EXPLORE · BELONG" tagline baked into the artwork). Lives in
-// public/email-assets/ and deploys to the site's root alongside
-// ULAA-logo.png. Resized to 1200px wide (2x for a 600px-wide email) and
-// palette-quantized down from the original ~2170px export, since this is
-// flat illustration art rather than a photo — same visual result at
-// roughly a fifth of the file size.
-const FOOTER_BANNER_URL = 'https://www.ulaatrips.com/email-assets/footer-banner-light.png';
-
 // Brand palette, kept in sync with the `@theme` block in
 // src/styles/globals.css (--color-primary, --color-dark, etc.) so the email
 // reads as the same brand family as the site and the invoice PDF. Email
@@ -243,18 +234,6 @@ ${bookingIdRow}
                   </td>
                 </tr>
 
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td align="center" style="padding: 28px 0 0; color: #8A7864;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                <tr>
-                  <td style="font-size: 0; line-height: 0;">
-                    <img src="${FOOTER_BANNER_URL}" width="600" alt="" style="display: block; width: 100%; max-width: 600px; height: auto;">
-                  </td>
-                </tr>
               </table>
             </td>
           </tr>
