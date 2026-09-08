@@ -113,17 +113,17 @@ export function useEnquiryDetailsModal() {
     }
   };
 
-  // Downloads a ready-to-open .eml file for this booking — see
-  // src/utils/bookingEmail.ts for why a .eml (not mailto:) is what gets the
-  // formatted body and the invoice attached with no manual paste/attach
-  // step. Opening the downloaded file in Outlook is the one remaining
-  // manual action; a browser can't launch a desktop app on its own.
+  // Downloads the invoice and opens Gmail with the booking confirmation
+  // prefilled — see src/utils/bookingEmail.ts for why Gmail's compose link
+  // (not a .eml file) is what actually opens the Gmail app automatically,
+  // and why the invoice still needs one manual "attach" tap once Gmail is
+  // open (a browser can't attach a file into another app for you).
   const handleSendBookingEmail = async (e: Enquiry) => {
     setInvoiceBusyId(e.id);
     try {
       const payments = await getPaymentsForEnquiry(e.id);
       await sendBookingEmail(e, payments);
-      alert('Email file downloaded — open it to launch Outlook with the booking confirmation and invoice already attached, ready to send.');
+      alert('Invoice downloaded and Gmail opened with the booking confirmation ready — attach the downloaded invoice, then send.');
     } catch (err) {
       console.error(err);
       alert('Failed to prepare booking email.');
