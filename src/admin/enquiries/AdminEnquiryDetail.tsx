@@ -718,21 +718,20 @@ export default function AdminEnquiryDetail() {
     }
   };
 
-  // Downloads the invoice and opens Gmail with the booking confirmation
-  // prefilled — see src/utils/bookingEmail.ts for why Gmail's compose link
-  // (not a .eml file) is what actually opens the Gmail app automatically,
-  // and why the invoice still needs one manual "attach" tap once Gmail is
-  // open (a browser can't attach a file into another app for you).
+  // Actually sends the booking confirmation — see
+  // src/utils/bookingEmail.ts / supabase/functions/send-booking-email for
+  // how this goes out for real via Resend, with the invoice attached and
+  // no manual step for the admin.
   const handleSendBookingEmail = async () => {
     if (!enquiry) return;
     setInvoiceBusy(true);
     try {
       const rows = await getPaymentsForEnquiry(enquiry.id);
       await sendBookingEmail(enquiry, rows);
-      alert('Invoice downloaded and Gmail opened with the booking confirmation ready — attach the downloaded invoice, then send.');
+      alert('Booking confirmation email sent.');
     } catch (err) {
       console.error(err);
-      alert('Failed to prepare booking email.');
+      alert('Failed to send booking email.');
     } finally {
       setInvoiceBusy(false);
     }
