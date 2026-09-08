@@ -64,7 +64,7 @@ export default function AdminTravellerCard({
               )}
             </div>
             <p className="text-xs text-dark-muted truncate">
-              {latestTrip ? latestTrip.tripTitle : 'No trip on file'} &middot; Registered {formatDate(contact.registeredAt)}
+              Registered {formatDate(contact.registeredAt)}
             </p>
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function AdminTravellerCard({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-dark-muted leading-relaxed">
+      <div className="flex flex-col gap-1 text-sm text-dark-muted leading-relaxed">
         {contact.phone ? (
           <a
             href={getWhatsAppLink(contact.phone)}
