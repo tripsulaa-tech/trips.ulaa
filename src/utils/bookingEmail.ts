@@ -91,20 +91,27 @@ function buildBookingEmailPlainText(enquiry: Enquiry): string {
 // reliably hand off to the Gmail app from inside that kind of standalone
 // context — it's built to open a browser tab first. So instead this goes
 // straight at the app itself:
-//   - Android: an explicit `intent:` URL naming Gmail's package
-//     (com.google.android.gm) directly, resolved by Android's intent
-//     system rather than a browser tab.
 //   - iOS: Gmail's own registered `googlegmail://co` URL scheme for
-//     composing, handled by iOS itself the same way.
+//     composing, handled by iOS itself, independent of the container.
+//   - Android: a plain `mailto:` link. Gmail for Android doesn't have a
+//     separate compose deep link the way iOS does — it registers itself
+//     as the handler for the standard mailto:/SENDTO intent instead, so a
+//     `mailto:` link is what actually reaches it directly, with Android's
+//     own intent resolution (not a browser) doing the hand-off. (An
+//     earlier version of this tried an explicit `intent://...package=
+//     com.google.android.gm` URL instead — that's the wrong intent shape
+//     for Gmail's registered filters, so when it failed to resolve,
+//     Chrome's built-in fallback for an unresolved package kicked in and
+//     opened the Play Store listing instead of Gmail.)
 // Neither falls back to Gmail on the web — if Gmail isn't installed,
 // nothing happens, which is fine since Gmail is the only mail app in use
 // here.
 //
 // Two hard limits stay true regardless, both on Google's/the OS's side
 // rather than something this code can work around:
-//   - no HTML param on either scheme — the body is always plain text, so
-//     the rich table/colour layout an actual sent email would use isn't
-//     available here;
+//   - no HTML param on either mechanism — the body is always plain text,
+//     so the rich table/colour layout an actual sent email would use
+//     isn't available here;
 //   - no attachment param — a web page can't reach into the Gmail app and
 //     attach a file for the admin. So the invoice PDF is downloaded first,
 //     and attaching it in Gmail's compose screen (tap the paperclip, pick
@@ -128,17 +135,6 @@ export async function sendBookingEmail(enquiry: Enquiry, payments: Payment[]): P
 
   const platform = detectMobilePlatform();
 
-  if (platform === 'android') {
-    const intentUrl =
-      `intent://mail.google.com/mail/?view=cm&fs=1` +
-      `&to=${encodeURIComponent(to)}` +
-      `&su=${encodeURIComponent(subject)}` +
-      `&body=${encodeURIComponent(body)}` +
-      `#Intent;scheme=https;package=com.google.android.gm;end`;
-    window.location.href = intentUrl;
-    return;
-  }
-
   if (platform === 'ios') {
     const iosUrl =
       `googlegmail://co?to=${encodeURIComponent(to)}` +
@@ -148,8 +144,12 @@ export async function sendBookingEmail(enquiry: Enquiry, payments: Payment[]): P
     return;
   }
 
-  // Not a phone (desktop admin use, if it ever happens): the Gmail app
-  // schemes above don't apply here, so this is the one remaining case
-  // that opens a plain `mailto:` — the OS/browser's default mail handler.
+  // Android (and desktop, if this is ever opened there): a plain
+  // `mailto:` link. Unlike the `googlegmail://` scheme above, Gmail for
+  // Android doesn't register its own separate deep link for composing —
+  // it registers itself as a handler for the standard `mailto:`/SENDTO
+  // intent instead, so this is what actually reaches it directly. Since
+  // Gmail is the only/default mail app here, Android hands this straight
+  // to Gmail with no chooser and no Play Store detour.
   window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
