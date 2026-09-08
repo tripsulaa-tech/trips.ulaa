@@ -54,9 +54,9 @@ function bookingEmailFields(enquiry: Enquiry): BookingEmailFields {
   };
 }
 
-// Plain-text body — Gmail's "compose by URL" endpoint (used below) only
-// accepts a plain `body` param, so this intentionally mirrors the old rich
-// HTML email's content (greeting, payment summary, deadline, trip link)
+// Plain-text body — the Gmail app-open mechanisms below only accept a
+// plain `body` param, so this intentionally mirrors the old rich HTML
+// email's content (greeting, payment summary, deadline, trip link)
 // without any of its formatting.
 function buildBookingEmailPlainText(enquiry: Enquiry): string {
   const f = bookingEmailFields(enquiry);
@@ -83,32 +83,26 @@ function buildBookingEmailPlainText(enquiry: Enquiry): string {
 }
 
 // -----------------------------------------------------------------------
-// Getting to the Gmail *app* specifically, not just "whatever handles
-// email" or "Gmail in a browser tab".
+// Getting to the Gmail *app* — directly, no web fallback.
 //
 // The admin panel itself runs as an installed home-screen PWA (see
-// admin.html's manifest-admin.json / apple-mobile-web-app-capable), and a
-// plain `https://mail.google.com/mail/?view=cm&...` link — Google's own
-// "compose by URL" format — doesn't reliably hand off to the Gmail app
-// from inside that kind of standalone/embedded context the way it does
-// from a normal Chrome or Safari tab. So each platform gets its more
-// direct mechanism, with the plain Gmail-web link kept only as the final
-// fallback:
+// admin.html's manifest-admin.json / apple-mobile-web-app-capable). Google's
+// `https://mail.google.com/mail/?view=cm&...` "compose by URL" link doesn't
+// reliably hand off to the Gmail app from inside that kind of standalone
+// context — it's built to open a browser tab first. So instead this goes
+// straight at the app itself:
 //   - Android: an explicit `intent:` URL naming Gmail's package
-//     (com.google.android.gm) directly. This goes straight through
-//     Android's intent-resolution system rather than depending on
-//     mail.google.com's "verified app link" status, which is the part
-//     that standalone/embedded contexts tend to skip.
+//     (com.google.android.gm) directly, resolved by Android's intent
+//     system rather than a browser tab.
 //   - iOS: Gmail's own registered `googlegmail://co` URL scheme for
-//     composing. Same idea — a custom scheme is handled by iOS itself,
-//     independent of whatever container the page is running in.
-// Both still carry the Gmail-web link as a fallback (via
-// `browser_fallback_url` on Android, a short timer on iOS) for the case
-// where Gmail isn't installed at all.
+//     composing, handled by iOS itself the same way.
+// Neither falls back to Gmail on the web — if Gmail isn't installed,
+// nothing happens, which is fine since Gmail is the only mail app in use
+// here.
 //
-// Two hard limits stay true no matter which of these fires, both on
-// Google's/the OS's side rather than something this code can work around:
-//   - no HTML param on any of these — the body is always plain text, so
+// Two hard limits stay true regardless, both on Google's/the OS's side
+// rather than something this code can work around:
+//   - no HTML param on either scheme — the body is always plain text, so
 //     the rich table/colour layout an actual sent email would use isn't
 //     available here;
 //   - no attachment param — a web page can't reach into the Gmail app and
@@ -124,20 +118,13 @@ function detectMobilePlatform(): 'android' | 'ios' | 'other' {
   return 'other';
 }
 
-/** Downloads the invoice PDF, then jumps straight to the Gmail app (with a
- *  Gmail-on-the-web fallback if it's not installed) with the booking
- *  confirmation's To/Subject/Body prefilled and ready to send — the admin
- *  just attaches the downloaded invoice. */
+/** Downloads the invoice PDF, then jumps straight to the Gmail app with the
+ *  booking confirmation's To/Subject/Body prefilled and ready to send —
+ *  the admin just attaches the downloaded invoice. */
 export async function sendBookingEmail(enquiry: Enquiry, payments: Payment[]): Promise<void> {
   const { to, subject } = bookingEmailFields(enquiry);
   await downloadInvoicePdf(enquiry, payments);
   const body = buildBookingEmailPlainText(enquiry);
-
-  const webUrl =
-    `https://mail.google.com/mail/?view=cm&fs=1` +
-    `&to=${encodeURIComponent(to)}` +
-    `&su=${encodeURIComponent(subject)}` +
-    `&body=${encodeURIComponent(body)}`;
 
   const platform = detectMobilePlatform();
 
@@ -147,7 +134,7 @@ export async function sendBookingEmail(enquiry: Enquiry, payments: Payment[]): P
       `&to=${encodeURIComponent(to)}` +
       `&su=${encodeURIComponent(subject)}` +
       `&body=${encodeURIComponent(body)}` +
-      `#Intent;scheme=https;package=com.google.android.gm;S.browser_fallback_url=${encodeURIComponent(webUrl)};end`;
+      `#Intent;scheme=https;package=com.google.android.gm;end`;
     window.location.href = intentUrl;
     return;
   }
@@ -157,18 +144,12 @@ export async function sendBookingEmail(enquiry: Enquiry, payments: Payment[]): P
       `googlegmail://co?to=${encodeURIComponent(to)}` +
       `&subject=${encodeURIComponent(subject)}` +
       `&body=${encodeURIComponent(body)}`;
-    // If the Gmail app opens, this page gets backgrounded and the timer
-    // below never gets to run (browsers pause/throttle timers once a page
-    // is hidden). If nothing happens — Gmail isn't installed — the page
-    // stays in the foreground and the fallback fires as normal.
-    const fallbackTimer = window.setTimeout(() => {
-      window.location.href = webUrl;
-    }, 1200);
-    window.addEventListener('pagehide', () => window.clearTimeout(fallbackTimer), { once: true });
     window.location.href = iosUrl;
     return;
   }
 
-  // Desktop / anything else: Gmail on the web, same as before.
-  window.open(webUrl, '_blank', 'noopener,noreferrer');
+  // Not a phone (desktop admin use, if it ever happens): the Gmail app
+  // schemes above don't apply here, so this is the one remaining case
+  // that opens a plain `mailto:` — the OS/browser's default mail handler.
+  window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
