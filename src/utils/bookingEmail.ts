@@ -62,13 +62,6 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;');
 }
 
-// Hosted logo asset — same file the public site's navbar and the invoice
-// PDF already use (see Navbar.tsx / pdf/invoice/shared.ts loadLogo()), so
-// the email stays in sync with the brand asset automatically rather than
-// carrying its own copy. Needs an absolute URL: mail clients load images
-// over the network, they can't resolve a root-relative site path.
-const LOGO_URL = 'https://www.ulaatrips.com/ULAA-logo.png';
-
 // Decorative footer banner (dunes/palm/birds illustration + the
 // "WOMEN · EXPLORE · BELONG" tagline baked into the artwork). Lives in
 // public/email-assets/ and deploys to the site's root alongside
@@ -84,12 +77,6 @@ const FOOTER_BANNER_URL = 'https://www.ulaatrips.com/email-assets/footer-banner-
 // clients can't read CSS custom properties reliably, so these are the same
 // values inlined directly instead of referenced as variables.
 const BRAND_COLOR = '#A85A2A'; // --color-primary
-
-// Confirmed, real brand handle (see BRAND_BASE in pdf/shared.ts, also used
-// on the invoice PDF footer) — the only social account verified for Ulaa,
-// so it's the only one linked here rather than guessing at other platforms.
-const INSTAGRAM_HANDLE = '@ulaa.trips';
-const INSTAGRAM_URL = 'https://instagram.com/ulaa.trips';
 
 /** Rich, production-ready HTML email — table-based layout, inline styles,
  *  and a bulletproof VML button for Outlook. One fixed light-mode design
@@ -162,19 +149,8 @@ function buildBookingEmailHtml(enquiry: Enquiry): string {
 
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="email-container" style="width: 600px; max-width: 600px;">
           <tr>
-            <td class="mobile-padding" align="left" style="padding: 0 4px 14px;">
-              <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #8A7864;">Your next adventure is waiting</p>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding-bottom: 20px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="background-color: #FFFFFF; border-radius: 10px; padding: 10px 20px;">
-                    <img src="${LOGO_URL}" width="120" alt="Ulaa" style="display: block; width: 120px; max-width: 120px; height: auto;">
-                  </td>
-                </tr>
-              </table>
+            <td align="center" style="padding: 4px 4px 26px;">
+              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 16px; letter-spacing: 0.01em; color: #8A7864;">Your next adventure is waiting</p>
             </td>
           </tr>
 
@@ -282,12 +258,6 @@ ${bookingIdRow}
 
           <tr>
             <td align="center" style="padding: 28px 0 0; color: #8A7864;">
-              <p style="margin: 0 0 4px; font-family: Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #8A7864;">ULAA</p>
-              <p style="margin: 0 0 24px; font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #A5947F;">
-                <a href="https://www.ulaatrips.com" style="color: #A5947F; text-decoration: underline;">www.ulaatrips.com</a>
-                &nbsp;&middot;&nbsp;
-                <a href="${INSTAGRAM_URL}" style="color: #A5947F; text-decoration: underline;">${INSTAGRAM_HANDLE}</a>
-              </p>
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td style="font-size: 0; line-height: 0;">
