@@ -4,7 +4,7 @@
 // parent doesn't have to thread jb/food/etc. through.
 import {
   Users, User, CalendarDot as CalendarClock, XCircle, UserMinus, SignIn as LogIn, Copy, Check, Baby,
-  FileText, ShareNetwork as Share2,
+  FileText, ShareNetwork as Share2, EnvelopeSimple,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import ActionsMenu from '../../components/ui/ActionsMenu';
@@ -48,13 +48,18 @@ interface AdminEnquiryHeaderCardProps {
   // exists, so callers only need to pass them for that case.
   onDownloadInvoice?: () => void;
   onShareInvoice?: () => void;
+  // Opens a pre-filled booking-confirmation email in the admin's own mail
+  // client (mailto:) — see src/utils/bookingEmail.ts. Only meaningful once
+  // there's a booking (same gate as Download/Share above) and an email
+  // address on file, so callers only pass it when both hold.
+  onEmailBooking?: () => void;
   invoiceActionBusy?: boolean;
 }
 
 export default function AdminEnquiryHeaderCard({
   enquiry, busyAction, busyStatus, busyFollowUp, bookingIdCopied, onCopyBookingId,
   onAdvance, onMarkNotInterested, onOpenFollowUp, rowActions,
-  onDownloadInvoice, onShareInvoice, invoiceActionBusy,
+  onDownloadInvoice, onShareInvoice, onEmailBooking, invoiceActionBusy,
 }: AdminEnquiryHeaderCardProps) {
   const jb = journeyBadge(enquiry);
   const nma = nextManualAction(enquiry);
@@ -231,6 +236,18 @@ export default function AdminEnquiryHeaderCard({
                 className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-50 transition-colors shrink-0"
               >
                 <Share2 size={15} aria-hidden="true" />
+              </button>
+            )}
+            {onEmailBooking && (
+              <button
+                type="button"
+                onClick={onEmailBooking}
+                disabled={invoiceActionBusy}
+                title="Email Booking Confirmation"
+                aria-label="Email Booking Confirmation"
+                className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-50 transition-colors shrink-0"
+              >
+                <EnvelopeSimple size={15} aria-hidden="true" />
               </button>
             )}
             <ActionsMenu items={rowActions} disabled={busyAction || busyStatus} variant="plain" />

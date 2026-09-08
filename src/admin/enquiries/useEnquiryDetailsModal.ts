@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getPaymentsForEnquiry } from '../../services/api';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
+import { sendBookingEmail } from '../../utils/bookingEmail';
 import { formatPrice } from '../../utils/utils-index';
 import { useAlert } from '../../components/ui/useAlert';
 
@@ -112,6 +113,25 @@ export function useEnquiryDetailsModal() {
     }
   };
 
+  // Downloads a ready-to-open .eml file for this booking — see
+  // src/utils/bookingEmail.ts for why a .eml (not mailto:) is what gets the
+  // formatted body and the invoice attached with no manual paste/attach
+  // step. Opening the downloaded file in Outlook is the one remaining
+  // manual action; a browser can't launch a desktop app on its own.
+  const handleSendBookingEmail = async (e: Enquiry) => {
+    setInvoiceBusyId(e.id);
+    try {
+      const payments = await getPaymentsForEnquiry(e.id);
+      await sendBookingEmail(e, payments);
+      alert('Email file downloaded — open it to launch Outlook with the booking confirmation and invoice already attached, ready to send.');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to prepare booking email.');
+    } finally {
+      setInvoiceBusyId(null);
+    }
+  };
+
   return {
     detailsTarget, setDetailsTarget,
     detailsInvoices, setDetailsInvoices,
@@ -119,5 +139,6 @@ export function useEnquiryDetailsModal() {
     invoiceBusyId,
     handleDownloadInvoice,
     handleShareInvoice,
+    handleSendBookingEmail,
   };
 }

@@ -83,6 +83,7 @@ interface AdminEnquiriesMobileCardsProps {
   invoiceBusyId: string | null;
   handleDownloadInvoice: (e: Enquiry) => void;
   handleShareInvoice: (e: Enquiry) => void;
+  handleSendBookingEmail: (e: Enquiry) => void;
   openPayment: (e: Enquiry) => void;
   openFollowUpModal: (e: Enquiry) => void;
   setBookingFollowUpTarget: (e: Enquiry) => void;
@@ -102,7 +103,7 @@ export default function AdminEnquiriesMobileCards({
   expandedId, setExpandedId,
   selectedIds, toggleSelectOne,
   activeGroup, highlightId, groupColor, groupLabel, cardRefs,
-  updating, invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
+  updating, invoiceBusyId, handleDownloadInvoice, handleShareInvoice, handleSendBookingEmail,
   openPayment, openFollowUpModal, setBookingFollowUpTarget, handleAdvance, buildRowActions,
 }: AdminEnquiriesMobileCardsProps) {
   const navigate = useNavigate();
@@ -446,6 +447,17 @@ export default function AdminEnquiriesMobileCards({
                         >
                           <Share2 size={16}  aria-hidden="true" />
                         </button>
+                        {e.email && (
+                          <button
+                            onClick={() => handleSendBookingEmail(e)}
+                            disabled={invoiceBusyId === e.id}
+                            title="Email booking confirmation"
+                            aria-label="Email booking confirmation"
+                            className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
+                          >
+                            <EnvelopeSimple size={16}  aria-hidden="true" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

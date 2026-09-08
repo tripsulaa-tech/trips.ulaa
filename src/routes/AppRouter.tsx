@@ -88,6 +88,7 @@ const AdminReports = lazy(() => import('../admin/AdminReports'));
 const AdminAbout = lazy(() => import('../admin/AdminAbout'));
 const AdminHomePage = lazy(() => import('../admin/AdminHomePage'));
 const AdminTripLeaders = lazy(() => import('../admin/AdminTripLeaders'));
+const AdminCreatorRateCalculator = lazy(() => import('../admin/AdminCreatorRateCalculator'));
 
 const PageLoader = () => (
   <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
@@ -167,6 +168,9 @@ export default function AppRouter() {
             } />
             <Route path="/admin/trip-leaders" element={
               <ProtectedRoute><AdminTripLeaders /></ProtectedRoute>
+            } />
+            <Route path="/admin/creator-rate-calculator" element={
+              <ProtectedRoute><AdminCreatorRateCalculator /></ProtectedRoute>
             } />
 
             {/* 404 */}

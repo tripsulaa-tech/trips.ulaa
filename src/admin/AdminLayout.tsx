@@ -19,6 +19,7 @@ import {
   DotsSixVertical as GripVertical,
   ChartBar as BarChart3,
   Images,
+  Calculator,
 } from '@phosphor-icons/react';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/useAuth';
@@ -47,9 +48,10 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   Waitlist: { to: '/admin/waitlist', icon: ListChecks },
   Travellers: { to: '/admin/travellers', icon: AddressBook },
   Reports: { to: '/admin/reports', icon: BarChart3 },
+  'Rate Calculator': { to: '/admin/creator-rate-calculator', icon: Calculator },
 };
 
-const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'Home Page', 'About Page', 'Enquiries', 'Waitlist', 'Travellers', 'Reports'];
+const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'Home Page', 'About Page', 'Enquiries', 'Waitlist', 'Travellers', 'Reports', 'Rate Calculator'];
 const DEFAULT_GROUP_CHILDREN_ORDER = ['Trip Leaders'];
 
 // "Dashboard" is the one item that renders as an expandable group (it's the

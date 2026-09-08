@@ -114,3 +114,9 @@ export {
   markNotificationRead,
   markAllNotificationsRead,
 } from './api/notifications';
+
+export {
+  getCreatorRateCalculations,
+  saveCreatorRateCalculation,
+  deleteCreatorRateCalculation,
+} from './api/creatorRateCalculator';

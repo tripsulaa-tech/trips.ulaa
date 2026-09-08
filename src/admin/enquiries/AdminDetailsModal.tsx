@@ -2,6 +2,7 @@ import {
   CheckCircle as CheckCircle2,
   FileText,
   ShareNetwork as Share2,
+  EnvelopeSimple,
   Receipt,
   SealCheck as BadgeCheck,
   Plus,
@@ -27,6 +28,7 @@ export default function DetailsModal({
   invoiceBusyId,
   onDownloadInvoice,
   onShareInvoice,
+  onSendBookingEmail,
   completingId,
   onMarkCompleted,
   detailsInvoices,
@@ -42,6 +44,7 @@ export default function DetailsModal({
   invoiceBusyId: string | null;
   onDownloadInvoice: (e: Enquiry) => void;
   onShareInvoice: (e: Enquiry) => void;
+  onSendBookingEmail: (e: Enquiry) => void;
   completingId: string | null;
   onMarkCompleted: (e: Enquiry) => void;
   detailsInvoices: Payment[];
@@ -94,6 +97,11 @@ export default function DetailsModal({
                   <Button variant="outline" size="sm" onClick={() => onShareInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
                     <Share2 size={14} aria-hidden="true" /> Share
                   </Button>
+                  {detailsTarget.email && (
+                    <Button variant="outline" size="sm" onClick={() => onSendBookingEmail(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
+                      <EnvelopeSimple size={14} aria-hidden="true" /> Email
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

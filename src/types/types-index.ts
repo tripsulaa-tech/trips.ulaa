@@ -954,3 +954,42 @@ export interface ButtonLabelsConfig {
   /** Shown on the same CTA once the trip is full, e.g. "Join Waitlist". */
   waitlistCta: string;
 }
+
+// =============================================
+// Creator Rate Calculator (Admin tool)
+// =============================================
+/** One row of the "Final Commercials" table produced by the calculator —
+ *  Non-Collab Reel / Collab Tag Reel / Feed Post / Story / Ad Rights. */
+export interface CreatorRateAsset {
+  asset: string;
+  min: number;
+  max: number;
+  pricing_logic: string;
+}
+
+/** A saved run of the Creator Rate Calculator — both the raw inputs and
+ *  every derived output, so a past quote is fully reproducible even if the
+ *  underlying niche benchmarks or multiplier tiers change later. */
+export interface CreatorRateCalculation {
+  id: string;
+  creator_name?: string | null;
+  instagram_handle?: string | null;
+  phone?: string | null;
+  follower_count: number;
+  reel_views: number[];
+  niche: string;
+  avg_views: number;
+  view_follower_ratio: number;
+  niche_cpv: number;
+  quality_multiplier: number;
+  base_rate: number;
+  min_reel_rate: number;
+  max_reel_rate: number;
+  final_commercials: CreatorRateAsset[];
+  notes?: string | null;
+  created_at: string;
+}
+
+/** Shape needed to save a new calculation — everything except id/created_at,
+ *  which the database assigns. */
+export type CreatorRateCalculationInput = Omit<CreatorRateCalculation, 'id' | 'created_at'>;

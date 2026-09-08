@@ -33,6 +33,7 @@ import {
 } from '../../services/api';
 import type { ActivityLogEntry, CancellationReason, ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
+import { sendBookingEmail } from '../../utils/bookingEmail';
 import { formatPrice } from '../../utils/utils-index';
 import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, computeDiscountedTotal } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
@@ -717,6 +718,26 @@ export default function AdminEnquiryDetail() {
     }
   };
 
+  // Downloads a ready-to-open .eml file for this booking — see
+  // src/utils/bookingEmail.ts for why a .eml (not mailto:) is what gets the
+  // formatted body and the invoice attached with no manual paste/attach
+  // step. Opening the downloaded file in Outlook is the one remaining
+  // manual action; a browser can't launch a desktop app on its own.
+  const handleSendBookingEmail = async () => {
+    if (!enquiry) return;
+    setInvoiceBusy(true);
+    try {
+      const rows = await getPaymentsForEnquiry(enquiry.id);
+      await sendBookingEmail(enquiry, rows);
+      alert('Email file downloaded — open it to launch Outlook with the booking confirmation and invoice already attached, ready to send.');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to prepare booking email.');
+    } finally {
+      setInvoiceBusy(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!enquiry) return;
     const ok = await confirm({
@@ -850,6 +871,7 @@ export default function AdminEnquiryDetail() {
           rowActions={rowActions}
           onDownloadInvoice={enquiry.booking_id ? handleDownloadInvoice : undefined}
           onShareInvoice={enquiry.booking_id ? handleShareInvoice : undefined}
+          onEmailBooking={enquiry.booking_id && enquiry.email ? handleSendBookingEmail : undefined}
           invoiceActionBusy={invoiceBusy}
         />
 

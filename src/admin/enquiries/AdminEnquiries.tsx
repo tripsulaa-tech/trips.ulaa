@@ -105,6 +105,7 @@ export default function AdminEnquiries() {
     invoiceBusyId,
     handleDownloadInvoice,
     handleShareInvoice,
+    handleSendBookingEmail,
   } = useEnquiryDetailsModal();
   // Which mobile card is expanded — restored from sessionStorage on mount so
   // that expanding a card, tapping "View Full CRM" to drill into the detail
@@ -367,7 +368,7 @@ export default function AdminEnquiries() {
   // wiring together handlers owned by the hooks above — see
   // useRowActions.ts for what's included/excluded and why.
   const { buildRowActions } = useRowActions({
-    invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
+    invoiceBusyId, handleDownloadInvoice, handleShareInvoice, handleSendBookingEmail,
     handleToggleNoShow, handleUndoCheckIn, handleClearFollowUp, handleClearBookingFollowUp,
     handleReopenEnquiry, handleMarkNotInterested, handleCancelToggle, handleDelete,
   });
@@ -1299,6 +1300,7 @@ export default function AdminEnquiries() {
               invoiceBusyId={invoiceBusyId}
               handleDownloadInvoice={handleDownloadInvoice}
               handleShareInvoice={handleShareInvoice}
+              handleSendBookingEmail={handleSendBookingEmail}
               openPayment={openPayment}
               openFollowUpModal={openFollowUpModal}
               setBookingFollowUpTarget={setBookingFollowUpTarget}
@@ -1344,6 +1346,7 @@ export default function AdminEnquiries() {
         invoiceBusyId={invoiceBusyId}
         onDownloadInvoice={handleDownloadInvoice}
         onShareInvoice={handleShareInvoice}
+        onSendBookingEmail={handleSendBookingEmail}
         completingId={completingId}
         onMarkCompleted={handleMarkCompleted}
         detailsInvoices={detailsInvoices}

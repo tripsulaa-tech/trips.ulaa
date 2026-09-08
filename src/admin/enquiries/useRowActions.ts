@@ -1,5 +1,5 @@
 import {
-  FileText, ShareNetwork as Share2, UserCheck, UserMinus as UserX,
+  FileText, ShareNetwork as Share2, EnvelopeSimple, UserCheck, UserMinus as UserX,
   SignIn as LogIn, X, ArrowsClockwise as RefreshCw, UserMinus, XCircle, Trash as Trash2,
 } from '@phosphor-icons/react';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
@@ -34,6 +34,7 @@ export function useRowActions(params: {
   invoiceBusyId: string | null;
   handleDownloadInvoice: (enquiry: Enquiry) => void;
   handleShareInvoice: (enquiry: Enquiry) => void;
+  handleSendBookingEmail: (enquiry: Enquiry) => void;
   handleToggleNoShow: (enquiry: Enquiry, isNoShow: boolean) => void;
   handleUndoCheckIn: (enquiry: Enquiry) => void;
   handleClearFollowUp: (enquiry: Enquiry) => void;
@@ -44,7 +45,7 @@ export function useRowActions(params: {
   handleDelete: (enquiry: Enquiry) => void;
 }) {
   const {
-    invoiceBusyId, handleDownloadInvoice, handleShareInvoice,
+    invoiceBusyId, handleDownloadInvoice, handleShareInvoice, handleSendBookingEmail,
     handleToggleNoShow, handleUndoCheckIn, handleClearFollowUp, handleClearBookingFollowUp,
     handleReopenEnquiry, handleMarkNotInterested, handleCancelToggle, handleDelete,
   } = params;
@@ -61,6 +62,12 @@ export function useRowActions(params: {
         { label: 'Download Invoice', icon: FileText, onClick: () => handleDownloadInvoice(e), disabled: invoiceBusyId === e.id },
         { label: 'Share Invoice', icon: Share2, onClick: () => handleShareInvoice(e), disabled: invoiceBusyId === e.id },
       );
+      // Only offered once there's an email address to send the confirmation
+      // to — same "don't show an action that would fail" reasoning as the
+      // rest of this menu.
+      if (e.email) {
+        items.push({ label: 'Email Booking Confirmation', icon: EnvelopeSimple, onClick: () => handleSendBookingEmail(e), disabled: invoiceBusyId === e.id });
+      }
     }
     // WhatsApp/Call are deliberately NOT in this menu — they're already
     // one tap away via the round quick-link icons on the row itself, so
