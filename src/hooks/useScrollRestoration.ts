@@ -24,7 +24,10 @@ import { scrollToInstant } from '../utils/scroll';
  *   height immediately via skeletons/defaults) can just pass `true`.
  */
 export function useScrollRestoration(pathname: string, ready: boolean) {
-  // Keep track of how far down this page the user has scrolled.
+  // Keep track of how far down this page the user has scrolled. This is a
+  // best-effort running record (see the layout effect below for the
+  // authoritative, guaranteed-accurate capture taken right at the moment
+  // the page actually leaves).
   useEffect(() => {
     const handleScroll = () => {
       sessionStorage.setItem(`ulaa:scrollY:${pathname}`, String(window.scrollY));
@@ -34,9 +37,27 @@ export function useScrollRestoration(pathname: string, ready: boolean) {
   }, [pathname]);
 
   // Flag this page for scroll restoration on the way OUT, whenever it
-  // unmounts — for any reason, not just via a specific back-link.
-  useEffect(() => {
+  // unmounts — for any reason, not just via a specific back-link — and
+  // capture its exact final scroll position right then and there.
+  //
+  // This has to be a LAYOUT effect's cleanup, not a plain effect's. Plain
+  // (passive) effect cleanups for an unmounting subtree are flushed on
+  // React's own schedule, which can land AFTER the page being navigated TO
+  // has already run its own layout effects — including ScrollToTop and
+  // this very hook's restore step below, for whichever page the admin
+  // lands back on next. If that happens, the restore flag/position for
+  // THIS page wouldn't be written yet when a later visit checks for it,
+  // so restoration would silently be skipped (or restore to a stale
+  // position) — exactly the "I scrolled down, came back, and it landed
+  // somewhere else" symptom this hook exists to prevent. A layout effect's
+  // cleanup always runs synchronously, in the same commit as the unmount,
+  // so it's guaranteed to be written before anything downstream can read
+  // it. Reading window.scrollY directly here (rather than trusting only
+  // the running record above) also sidesteps any risk of the last 'scroll'
+  // event's handler not having flushed yet.
+  useLayoutEffect(() => {
     return () => {
+      sessionStorage.setItem(`ulaa:scrollY:${pathname}`, String(window.scrollY));
       sessionStorage.setItem(`ulaa:restoreScroll:${pathname}`, '1');
     };
   }, [pathname]);
