@@ -53,6 +53,7 @@ interface BookingEmailFields {
   subject: string;
   tripName: string;
   rows: PaymentRow[];
+  totalPaidText: string;
   balance: number | null;
   balanceText: string;
   isFullyPaid: boolean;
@@ -69,9 +70,10 @@ function bookingEmailFields(enquiry: Enquiry, payments: Payment[]): BookingEmail
   const deadlineText = enquiry.balance_due_date ? formatDate(enquiry.balance_due_date, { month: 'short' }) : 'TBD';
   return {
     to: enquiry.email || '',
-    subject: `Booking Confirmed - ${tripName}`,
+    subject: `${isFullyPaid ? 'Full Payment Received' : 'Booking Confirmed'} - ${tripName}`,
     tripName,
     rows: paymentRows(payments),
+    totalPaidText: formatPrice(enquiry.amount_paid || 0),
     balance,
     balanceText,
     isFullyPaid,
@@ -147,10 +149,22 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[]): string {
                         <td align="right" style="padding: 10px 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: #2D2118; border-bottom: 1px solid #F0E9DC;">${row.amount}</td>
                       </tr>`).join('');
 
-  // Only shown while money is still owed — once the balance hits zero the
-  // booking is fully paid, so a "Remaining Balance ₹0" row (and the
-  // deadline under it) would be confusing rather than informative.
-  const balanceRowHtml = f.isFullyPaid ? '' : `
+  // Total-paid summary row, styled two ways: once the balance hits zero it
+  // takes over the highlighted slot the "Remaining Balance" row used to
+  // occupy (with an explicit "Full Payment" tag, since that's the one thing
+  // the itemized rows above don't spell out on their own — three
+  // installments summing to the total isn't obviously "done" at a glance).
+  // While balance remains, it's a plain running-total row sitting above the
+  // still-highlighted Remaining Balance/deadline rows.
+  const summaryRowsHtml = f.isFullyPaid ? `
+                      <tr>
+                        <td style="padding: 10px 12px; font-family: Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: ${BRAND_COLOR}; background-color: #FAF1E4;">Total Paid &mdash; Full Payment&nbsp;&#10003;</td>
+                        <td align="right" style="padding: 10px 12px; font-family: Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: ${BRAND_COLOR}; background-color: #FAF1E4;">${f.totalPaidText}</td>
+                      </tr>` : `
+                      <tr>
+                        <td style="padding: 10px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 700; color: #2D2118; border-bottom: 1px solid #F0E9DC;">Total Paid So Far</td>
+                        <td align="right" style="padding: 10px 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 700; color: #2D2118; border-bottom: 1px solid #F0E9DC;">${f.totalPaidText}</td>
+                      </tr>
                       <tr>
                         <td style="padding: 10px 12px; font-family: Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: ${BRAND_COLOR}; background-color: #FAF1E4; border-bottom: 1px solid #F0E9DC;">Remaining Balance</td>
                         <td align="right" style="padding: 10px 12px; font-family: Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: ${BRAND_COLOR}; background-color: #FAF1E4; border-bottom: 1px solid #F0E9DC;">${f.balanceText}</td>
@@ -160,8 +174,9 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[]): string {
                         <td align="right" style="padding: 10px 0 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 700; color: #2D2118;">${f.deadlineText}</td>
                       </tr>`;
 
+  const paymentInfoLabel = f.isFullyPaid ? 'Payment Complete' : 'Payment Information';
   const paymentInfoText = f.isFullyPaid
-    ? `Payment for this booking has been received in full. Thank you!`
+    ? `Payment for this booking has been received in full &mdash; <strong>${f.totalPaidText}</strong> paid in total. Thank you!`
     : `Please note that advance/installment payments are non-refundable, as they are used to confirm your booking. The remaining balance of <strong>${f.balanceText}</strong> must be paid on or before <strong>${f.deadlineText}</strong>.`;
 
   return `<!DOCTYPE html>
@@ -252,7 +267,7 @@ ${bookingIdRow}
                         <td style="padding: 0 0 10px; font-family: Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #8A7864; border-bottom: 1px solid #EEE6D8;">Description</td>
                         <td align="right" style="padding: 0 0 10px; font-family: Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #8A7864; border-bottom: 1px solid #EEE6D8;">Amount</td>
                       </tr>
-${paymentRowsHtml}${balanceRowHtml}
+${paymentRowsHtml}${summaryRowsHtml}
                     </table>
                   </td>
                 </tr>
@@ -265,7 +280,7 @@ ${paymentRowsHtml}${balanceRowHtml}
                           <span style="font-family: Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: ${BRAND_COLOR};">&#9432;</span>
                         </td>
                         <td style="padding: 18px 20px 18px 8px;">
-                          <p style="margin: 0 0 8px; font-family: Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${BRAND_COLOR};">Payment Information</p>
+                          <p style="margin: 0 0 8px; font-family: Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${BRAND_COLOR};">${paymentInfoLabel}</p>
                           <p style="margin: 0 0 8px; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #4A3728;">${paymentInfoText}</p>
                         </td>
                       </tr>
