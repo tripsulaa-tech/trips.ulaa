@@ -268,6 +268,7 @@ export default function AdminEnquiries() {
     possibleDuplicates,
     openAdd, closeAddModal, updateWaitlistPerson,
     applySuggestedAmount,
+    applyDuplicate,
     handleSave,
   } = useAddEnquiry({ trips, enquiries, setTrips, load, loadWaitlistCounts, showToast, getTripPrice });
 
@@ -1322,6 +1323,7 @@ export default function AdminEnquiries() {
         updateWaitlistPerson={updateWaitlistPerson}
         possibleDuplicates={possibleDuplicates}
         applySuggestedAmount={applySuggestedAmount}
+        applyDuplicate={applyDuplicate}
         onSave={handleSave}
         saving={saving}
       />

@@ -27,6 +27,7 @@ export default function AddEnquiryModal({
   updateWaitlistPerson,
   possibleDuplicates,
   applySuggestedAmount,
+  applyDuplicate,
   onSave,
   saving,
 }: {
@@ -40,6 +41,7 @@ export default function AddEnquiryModal({
   updateWaitlistPerson: (index: number, patch: Partial<WaitlistPersonForm>) => void;
   possibleDuplicates: Enquiry[];
   applySuggestedAmount: (tripId: string, packageType: Enquiry['package_type']) => void;
+  applyDuplicate: (dup: Enquiry) => void;
   onSave: () => void;
   saving: boolean;
 }) {
@@ -294,27 +296,38 @@ export default function AddEnquiryModal({
               match against every enquiry already in the system, not just
               this trip. Advisory only; doesn't block Save. */}
           {possibleDuplicates.length > 0 && (
-            <div className="md:col-span-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2.5 text-amber-800">
-              <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">
-                  Possible duplicate{possibleDuplicates.length > 1 ? 's' : ''} — {possibleDuplicates.length === 1 ? 'someone' : `${possibleDuplicates.length} people`} already in the system {possibleDuplicates.length === 1 ? 'shares' : 'share'} this phone or email
-                </p>
-                <p className="text-xs mt-0.5 text-amber-700">Double-check this isn't the same traveler before saving a new entry.</p>
-                <ul className="mt-1.5 space-y-1">
-                  {possibleDuplicates.slice(0, 5).map(d => (
-                    <li key={d.id} className="text-xs flex items-center gap-1 flex-wrap">
-                      <span className="font-medium">{d.full_name}</span>
-                      <span className="text-amber-700/80">
-                        — {d.trip_title || 'No trip linked'} · {d.status}{d.cancelled_at ? ' · cancelled' : ''}
-                      </span>
-                    </li>
-                  ))}
-                  {possibleDuplicates.length > 5 && (
-                    <li className="text-xs text-amber-700/80">+ {possibleDuplicates.length - 5} more</li>
-                  )}
-                </ul>
+            <div className="md:col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-900">
+              <div className="flex items-start gap-2">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-amber-600" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">
+                    Possible duplicate{possibleDuplicates.length > 1 ? 's' : ''} — matches this phone or email
+                  </p>
+                  <p className="text-xs text-amber-700/80">Double-check this isn't the same traveler.</p>
+                </div>
               </div>
+              <ul className="mt-2 border-t border-amber-200/70 divide-y divide-amber-200/70">
+                {possibleDuplicates.slice(0, 5).map(d => (
+                  <li key={d.id} className="flex items-center justify-between gap-3 py-1.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{d.full_name}</p>
+                      <p className="text-xs text-amber-700/80 truncate">
+                        {d.trip_title || 'No trip linked'} · {d.status}{d.cancelled_at ? ' · cancelled' : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => applyDuplicate(d)}
+                      className="shrink-0 text-xs font-medium text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                    >
+                      Use details
+                    </button>
+                  </li>
+                ))}
+                {possibleDuplicates.length > 5 && (
+                  <li className="py-1.5 text-xs text-amber-700/80">+ {possibleDuplicates.length - 5} more</li>
+                )}
+              </ul>
             </div>
           )}
 

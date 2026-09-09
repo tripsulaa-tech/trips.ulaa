@@ -201,6 +201,27 @@ export function useAddEnquiry(params: {
     );
   })();
 
+  // "Use these details" on a possible-duplicate match — this genuinely is
+  // the same traveler, so pull their identity fields from that existing
+  // enquiry instead of the admin retyping them. Only identity fields:
+  // trip, package, and payment are deliberately left alone since this is
+  // still a fresh enquiry (a new trip, a repeat booking, whatever brought
+  // them back) and those are the "remaining things admin adds" for it.
+  // 'not-provided@ulaa.local' is createManualEnquiry's own placeholder for
+  // "no email given" (see handleSave below) — copying that over would look
+  // like a real address, so it's treated the same as blank here.
+  const applyDuplicate = (dup: Enquiry) => {
+    setForm(f => ({
+      ...f,
+      full_name: dup.full_name,
+      phone: dup.phone,
+      email: dup.email && dup.email !== 'not-provided@ulaa.local' ? dup.email : f.email,
+      age: dup.age ?? f.age,
+      city: dup.city || f.city,
+      food_preference: dup.food_preference || f.food_preference,
+    }));
+  };
+
   // Seats every person entered for this pass in one click — up to
   // convertingWaitlist.slots people (never more than the seats that were
   // actually free when this flow started). Each becomes its own enquiry,
@@ -380,6 +401,7 @@ export function useAddEnquiry(params: {
     possibleDuplicates,
     openAdd, closeAddModal, updateWaitlistPerson,
     applySuggestedAmount,
+    applyDuplicate,
     handleSave,
   };
 }
