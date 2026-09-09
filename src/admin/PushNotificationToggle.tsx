@@ -16,7 +16,35 @@ export default function PushNotificationToggle() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    getPushSubscriptionStatus().then(setStatus).catch(() => setStatus('unsupported'));
+    let mounted = true;
+
+    getPushSubscriptionStatus()
+      .then(async (current) => {
+        if (!mounted) return;
+
+        // Push notifications should be on by default for admins — if the
+        // browser supports it and the admin hasn't explicitly denied
+        // permission, opt them in automatically instead of waiting for a
+        // manual toggle click.
+        if (current === 'not-subscribed') {
+          try {
+            await subscribeToPush();
+            if (mounted) setStatus('subscribed');
+            return;
+          } catch (err) {
+            console.error('Failed to auto-enable push notifications:', err);
+          }
+        }
+
+        if (mounted) setStatus(current);
+      })
+      .catch(() => {
+        if (mounted) setStatus('unsupported');
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (status === 'unsupported' || status === 'loading') return null;
