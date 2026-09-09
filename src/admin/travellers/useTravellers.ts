@@ -6,6 +6,7 @@ import type { TravellerContact } from './travellerContacts';
 import type { TravellerEditForm } from './AdminEditTravellerModal';
 import { useAlert } from '../../components/ui/useAlert';
 import { useConfirm } from '../../components/ui/useConfirm';
+import { validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity } from '../../utils/formValidation';
 
 export const TRAVELLERS_PAGE_SIZE = 10;
 
@@ -92,6 +93,27 @@ export function useTravellers() {
   // not a row of its own, so there's nothing else to update.
   const handleSaveEdit = async (form: TravellerEditForm) => {
     if (!editTarget) return;
+    // Same shared validators the modal shows live, field-by-field — this
+    // is just the defense-in-depth save-time gate, matching the pattern
+    // used by the enquiry-side admin forms (useAddEnquiry/useEditEnquiry).
+    if (!form.full_name.trim()) {
+      await alert('Full name is required.');
+      return;
+    }
+    if (!form.phone.trim()) {
+      await alert('Phone number is required.');
+      return;
+    }
+    const firstError = [
+      validateFullName(form.full_name),
+      validatePhone(form.phone),
+      validateOptionalEmail(form.email),
+      validateOptionalCity(form.city),
+    ].find(r => r !== true);
+    if (firstError) {
+      await alert(firstError as string);
+      return;
+    }
     setSavingEdit(true);
     try {
       await Promise.all(editTarget.rows.map(row => updateEnquiryDetails(row.id, row, {

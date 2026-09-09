@@ -4,6 +4,9 @@ import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { emptyEditDetailsForm, type EditDetailsForm } from './AdminEditDetailsModal';
 import { computeDiscountedTotal } from './AdminEnquiryCommon';
 import { useAlert } from '../../components/ui/useAlert';
+import {
+  validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity, validateOptionalAge,
+} from '../../utils/formValidation';
 
 /** Owns the Edit Details modal — same fields/behaviour as the one on the
  *  single-enquiry detail page, reached from this row's kebab menu instead.
@@ -55,13 +58,31 @@ export function useEditEnquiry(params: {
 
   const handleSaveEdit = async () => {
     if (!editTarget) return;
-    if (!editForm.full_name.trim() || !editForm.phone.trim()) {
-      alert(!editForm.full_name.trim() ? 'Full name is required.' : 'Phone number is required.');
+    // Same shared validators as the modal shows live, field-by-field — this
+    // is just the defense-in-depth save-time gate, matching how
+    // AdminAddEnquiryModal/useAddEnquiry.ts gate their own save.
+    if (!editForm.full_name.trim()) {
+      alert('Full name is required.');
+      return;
+    }
+    if (!editForm.phone.trim()) {
+      alert('Phone number is required.');
+      return;
+    }
+    const newTrip = editForm.trip_id ? trips.find(t => t.id === editForm.trip_id) : undefined;
+    const firstError = [
+      validateFullName(editForm.full_name),
+      validatePhone(editForm.phone),
+      validateOptionalEmail(editForm.email),
+      validateOptionalCity(editForm.city),
+      validateOptionalAge(editForm.age, newTrip?.min_age, newTrip?.max_age),
+    ].find(r => r !== true);
+    if (firstError) {
+      alert(firstError as string);
       return;
     }
     try {
       setSavingEdit(true);
-      const newTrip = editForm.trip_id ? trips.find(t => t.id === editForm.trip_id) : undefined;
       // Package is only ever editable here before a booking exists (see
       // AdminEnquiryTravellerCard) — once it changes, refresh total_amount
       // to that package's list price so the two fields can't drift apart.

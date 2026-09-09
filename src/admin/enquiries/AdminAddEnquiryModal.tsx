@@ -11,9 +11,42 @@ import { useConfirm } from '../../components/ui/useConfirm';
 import MethodReferenceFields from './MethodReferenceFields';
 import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, journeyBadge } from './AdminEnquiryCommon';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
-import { inputClass, validateEnquiryForm, validateWaitlistPersonForm, type EnquiryForm, type WaitlistPersonForm } from './AdminEnquiriesShared';
+import {
+  inputClass, validateEnquiryForm, validateWaitlistPersonForm, getCitySuggestions, getEmailSuggestions,
+  type EnquiryForm, type WaitlistPersonForm,
+} from './AdminEnquiriesShared';
 import { SOURCE_OPTIONS } from './AdminEnquiriesShared';
+import { DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
 import type { TravellerContact } from '../travellers/travellerContacts';
+
+// Small shared dropdown for the City / Email-domain quick-help below —
+// same look and mousedown-before-blur trick as BookingForm's own
+// SuggestionDropdown (public enquiry form), just themed for the admin
+// panel's plainer inputs instead of the public site's rounded-2xl style.
+function SuggestionDropdown({ items, onSelect }: { items: string[]; onSelect: (value: string) => void }) {
+  return (
+    <ul
+      role="listbox"
+      className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded-md border-2 border-background-warm bg-white shadow-lg py-1"
+    >
+      {items.map(item => (
+        <li key={item} role="option">
+          <button
+            type="button"
+            // onMouseDown (not onClick) fires before the input's onBlur, and
+            // preventDefault stops that blur from firing at all — so picking
+            // a suggestion never races with the dropdown closing itself out
+            // from under the click.
+            onMouseDown={e => { e.preventDefault(); onSelect(item); }}
+            className="w-full px-3 py-1.5 text-sm text-left text-dark hover:bg-background-warm transition-colors"
+          >
+            {item}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 type ConvertingWaitlist = { id: string; name: string; groupId: string | null; groupSize: number | null; groupSeq: number; slots: number };
 
@@ -50,6 +83,71 @@ export default function AddEnquiryModal({
   const errorClass = 'text-red-500 text-xs mt-1';
   const isDirty = form.full_name.trim() !== '' || form.phone.trim() !== '' || (form.amount_paid !== '' && Number(form.amount_paid) > 0);
 
+  // Trip-specific age eligibility for whichever trip is currently picked —
+  // same fallback-to-app-default behaviour as the public BookingForm (see
+  // its minAge/maxAge props), just resolved here from the trip list
+  // instead of being passed in as a prop, since this modal (unlike
+  // BookingForm) picks its own trip via the Trip select below.
+  const selectedTrip = trips.find(t => t.id === form.trip_id);
+  const effectiveMinAge = selectedTrip?.min_age ?? DEFAULT_MIN_AGE;
+  const effectiveMaxAge = selectedTrip?.max_age ?? DEFAULT_MAX_AGE;
+
+  // City / email-domain suggestion dropdown state for the solo form —
+  // same purpose as BookingForm's own citySuggestions*/emailSuggestions*
+  // state, just local to this modal instead of the public form.
+  const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [emailSuggestionsOpen, setEmailSuggestionsOpen] = useState(false);
+  const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
+  const handleCityInput = (value: string) => {
+    const matches = getCitySuggestions(value);
+    setCitySuggestions(matches);
+    setCitySuggestionsOpen(matches.length > 0);
+  };
+  const selectCitySuggestion = (city: string) => {
+    setForm(f => ({ ...f, city }));
+    setCitySuggestionsOpen(false);
+    touch('city');
+  };
+  const handleEmailInput = (value: string) => {
+    const matches = getEmailSuggestions(value);
+    setEmailSuggestions(matches);
+    setEmailSuggestionsOpen(matches.length > 0);
+  };
+  const selectEmailSuggestion = (email: string) => {
+    setForm(f => ({ ...f, email }));
+    setEmailSuggestionsOpen(false);
+    touch('email');
+  };
+
+  // Same idea, per row, for the group (multi-seat waitlist conversion)
+  // form — only one row's dropdown is ever open at a time, so a single
+  // "which row" index is enough rather than per-row state.
+  const [personCitySuggestFor, setPersonCitySuggestFor] = useState<number | null>(null);
+  const [personCitySuggestions, setPersonCitySuggestions] = useState<string[]>([]);
+  const [personEmailSuggestFor, setPersonEmailSuggestFor] = useState<number | null>(null);
+  const [personEmailSuggestions, setPersonEmailSuggestions] = useState<string[]>([]);
+  const handlePersonCityInput = (i: number, value: string) => {
+    const matches = getCitySuggestions(value);
+    setPersonCitySuggestions(matches);
+    setPersonCitySuggestFor(matches.length > 0 ? i : null);
+  };
+  const selectPersonCitySuggestion = (i: number, city: string) => {
+    updateWaitlistPerson(i, { city });
+    setPersonCitySuggestFor(null);
+    touchPerson(i, 'city');
+  };
+  const handlePersonEmailInput = (i: number, value: string) => {
+    const matches = getEmailSuggestions(value);
+    setPersonEmailSuggestions(matches);
+    setPersonEmailSuggestFor(matches.length > 0 ? i : null);
+  };
+  const selectPersonEmailSuggestion = (i: number, email: string) => {
+    updateWaitlistPerson(i, { email });
+    setPersonEmailSuggestFor(null);
+    touchPerson(i, 'email');
+  };
+
   // Which fields have been blurred yet — required-field errors (name,
   // phone, and the "advance required to convert" amount check) would
   // otherwise fire the instant the modal opens, since these all start
@@ -72,16 +170,19 @@ export default function AddEnquiryModal({
   // render so a missing name/phone or an amount that doesn't qualify for
   // a waitlist conversion show up as the admin fills the form, instead of
   // only surfacing behind an alert() after Save.
-  const soloErrors = validateEnquiryForm(form, !!convertingWaitlist);
+  const soloErrors = validateEnquiryForm(form, !!convertingWaitlist, selectedTrip?.min_age, selectedTrip?.max_age);
   const soloErrorsVisible = {
     full_name: touched.has('full_name') ? soloErrors.full_name : undefined,
     phone: touched.has('phone') ? soloErrors.phone : undefined,
+    email: touched.has('email') ? soloErrors.email : undefined,
+    city: touched.has('city') ? soloErrors.city : undefined,
+    age: touched.has('age') ? soloErrors.age : undefined,
     amount_paid: touched.has('amount_paid') ? soloErrors.amount_paid : undefined,
   };
   const hasSoloErrors = Object.keys(soloErrors).length > 0;
 
   // Same, per row, for the group (multi-seat waitlist conversion) form.
-  const groupErrors = waitlistPeople.map(p => validateWaitlistPersonForm(p, form.total_amount));
+  const groupErrors = waitlistPeople.map(p => validateWaitlistPersonForm(p, form.total_amount, selectedTrip?.min_age, selectedTrip?.max_age));
   const hasGroupErrors = groupErrors.some(e => Object.keys(e).length > 0);
 
   const requestClose = async () => {
@@ -218,13 +319,52 @@ export default function AddEnquiryModal({
                     />
                     {touchedPeople.has(`${i}:phone`) && groupErrors[i].phone && <p id={`ge-p-phone-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].phone}</p>}
                   </div>
-                  <div>
+                  <div className="relative">
                     <label htmlFor={`ge-p-email-${i}`} className="block text-xs font-medium text-dark mb-1">Email</label>
-                    <input id={`ge-p-email-${i}`} value={p.email} onChange={e => updateWaitlistPerson(i, { email: e.target.value })} className={inputClass} placeholder="Optional" />
+                    <input
+                      id={`ge-p-email-${i}`}
+                      type="email"
+                      value={p.email}
+                      onChange={e => { updateWaitlistPerson(i, { email: e.target.value }); handlePersonEmailInput(i, e.target.value); }}
+                      onBlur={() => { touchPerson(i, 'email'); setPersonEmailSuggestFor(null); }}
+                      aria-describedby={touchedPeople.has(`${i}:email`) && groupErrors[i].email ? `ge-p-email-${i}-error` : undefined}
+                      className={inputClass}
+                      placeholder="Optional"
+                    />
+                    {touchedPeople.has(`${i}:email`) && groupErrors[i].email && <p id={`ge-p-email-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].email}</p>}
+                    {personEmailSuggestFor === i && <SuggestionDropdown items={personEmailSuggestions} onSelect={email => selectPersonEmailSuggestion(i, email)} />}
                   </div>
                   <div>
                     <label htmlFor={`ge-p-age-${i}`} className="block text-xs font-medium text-dark mb-1">Age</label>
-                    <input id={`ge-p-age-${i}`} type="number" min={0} value={p.age} onChange={e => updateWaitlistPerson(i, { age: e.target.value === '' ? '' : +e.target.value })} className={inputClass} placeholder="Optional" />
+                    <input
+                      id={`ge-p-age-${i}`}
+                      type="number"
+                      min={0}
+                      value={p.age}
+                      onChange={e => updateWaitlistPerson(i, { age: e.target.value === '' ? '' : +e.target.value })}
+                      onBlur={() => touchPerson(i, 'age')}
+                      aria-describedby={touchedPeople.has(`${i}:age`) && groupErrors[i].age ? `ge-p-age-${i}-error` : `ge-p-age-${i}-hint`}
+                      className={inputClass}
+                      placeholder="Optional"
+                    />
+                    {!(touchedPeople.has(`${i}:age`) && groupErrors[i].age) && form.trip_id && (
+                      <p id={`ge-p-age-${i}-hint`} className="text-[11px] text-dark-muted mt-1">Ages {effectiveMinAge}–{effectiveMaxAge}.</p>
+                    )}
+                    {touchedPeople.has(`${i}:age`) && groupErrors[i].age && <p id={`ge-p-age-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].age}</p>}
+                  </div>
+                  <div className="relative">
+                    <label htmlFor={`ge-p-city-${i}`} className="block text-xs font-medium text-dark mb-1">City</label>
+                    <input
+                      id={`ge-p-city-${i}`}
+                      value={p.city}
+                      onChange={e => { updateWaitlistPerson(i, { city: e.target.value }); handlePersonCityInput(i, e.target.value); }}
+                      onBlur={() => { touchPerson(i, 'city'); setPersonCitySuggestFor(null); }}
+                      aria-describedby={touchedPeople.has(`${i}:city`) && groupErrors[i].city ? `ge-p-city-${i}-error` : undefined}
+                      className={inputClass}
+                      placeholder="Optional"
+                    />
+                    {touchedPeople.has(`${i}:city`) && groupErrors[i].city && <p id={`ge-p-city-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].city}</p>}
+                    {personCitySuggestFor === i && <SuggestionDropdown items={personCitySuggestions} onSelect={city => selectPersonCitySuggestion(i, city)} />}
                   </div>
                   <div>
                     <label htmlFor={`ge-p-food-${i}`} className="block text-xs font-medium text-dark mb-1">Food Preference</label>
@@ -288,9 +428,20 @@ export default function AddEnquiryModal({
             />
             {soloErrorsVisible.phone && <p id="ge-phone-error" role="alert" className={errorClass}>{soloErrorsVisible.phone}</p>}
           </div>
-          <div>
+          <div className="relative">
             <label htmlFor="ge-email" className="block text-sm font-medium text-dark mb-1">Email</label>
-            <input id="ge-email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="Optional" />
+            <input
+              id="ge-email"
+              type="email"
+              value={form.email}
+              onChange={e => { setForm(f => ({ ...f, email: e.target.value })); handleEmailInput(e.target.value); }}
+              onBlur={() => { touch('email'); setEmailSuggestionsOpen(false); }}
+              aria-describedby={soloErrorsVisible.email ? 'ge-email-error' : undefined}
+              className={inputClass}
+              placeholder="Optional"
+            />
+            {soloErrorsVisible.email && <p id="ge-email-error" role="alert" className={errorClass}>{soloErrorsVisible.email}</p>}
+            {emailSuggestionsOpen && <SuggestionDropdown items={emailSuggestions} onSelect={selectEmailSuggestion} />}
           </div>
 
           {/* Possible-duplicate soft warning (3.5) — fuzzy phone/email
@@ -343,11 +494,35 @@ export default function AddEnquiryModal({
 
           <div>
             <label htmlFor="ge-age" className="block text-sm font-medium text-dark mb-1">Age</label>
-            <input id="ge-age" type="number" min={0} value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))} className={inputClass} placeholder="Optional" />
+            <input
+              id="ge-age"
+              type="number"
+              min={0}
+              value={form.age}
+              onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))}
+              onBlur={() => touch('age')}
+              aria-describedby={soloErrorsVisible.age ? 'ge-age-error' : 'ge-age-hint'}
+              className={inputClass}
+              placeholder="Optional"
+            />
+            {!soloErrorsVisible.age && form.trip_id && (
+              <p id="ge-age-hint" className="text-[11px] text-dark-muted mt-1">This trip is open to ages {effectiveMinAge}–{effectiveMaxAge}.</p>
+            )}
+            {soloErrorsVisible.age && <p id="ge-age-error" role="alert" className={errorClass}>{soloErrorsVisible.age}</p>}
           </div>
-          <div>
+          <div className="relative">
             <label htmlFor="ge-city" className="block text-sm font-medium text-dark mb-1">City</label>
-            <input id="ge-city" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputClass} placeholder="Optional" />
+            <input
+              id="ge-city"
+              value={form.city}
+              onChange={e => { setForm(f => ({ ...f, city: e.target.value })); handleCityInput(e.target.value); }}
+              onBlur={() => { touch('city'); setCitySuggestionsOpen(false); }}
+              aria-describedby={soloErrorsVisible.city ? 'ge-city-error' : undefined}
+              className={inputClass}
+              placeholder="Optional"
+            />
+            {soloErrorsVisible.city && <p id="ge-city-error" role="alert" className={errorClass}>{soloErrorsVisible.city}</p>}
+            {citySuggestionsOpen && <SuggestionDropdown items={citySuggestions} onSelect={selectCitySuggestion} />}
           </div>
           <div>
             <label htmlFor="ge-source" className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
@@ -453,11 +628,14 @@ export default function AddEnquiryModal({
             if (convertingWaitlist && convertingWaitlist.slots > 1) {
               setTouchedPeople(prev => {
                 const next = new Set(prev);
-                waitlistPeople.forEach((_, i) => { next.add(`${i}:full_name`); next.add(`${i}:phone`); next.add(`${i}:amount_paid`); });
+                waitlistPeople.forEach((_, i) => {
+                  next.add(`${i}:full_name`); next.add(`${i}:phone`); next.add(`${i}:email`);
+                  next.add(`${i}:city`); next.add(`${i}:age`); next.add(`${i}:amount_paid`);
+                });
                 return next;
               });
             } else {
-              setTouched(new Set(['full_name', 'phone', 'amount_paid']));
+              setTouched(new Set(['full_name', 'phone', 'email', 'city', 'age', 'amount_paid']));
             }
             onSave();
           }}

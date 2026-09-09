@@ -5,7 +5,7 @@
 // modal (useEditEnquiry / AdminEditDetailsModal's field set), just edited
 // in place instead of in a popup. Food Preference, Date & Time, Source, and
 // Package stay read-only — they're not part of that field set.
-import type { Dispatch, SetStateAction } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import {
   User, Briefcase, Buildings as Building2, ForkKnife as Utensils,
   CalendarBlank as CalendarDays, Globe, Package, Bird,
@@ -17,6 +17,36 @@ import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, getWhatsAppLink } from '../../utils/utils-index';
 import { PACKAGE_CONFIG, PACKAGE_OPTIONS, SOURCE_CONFIG, SOURCE_OPTIONS_ALL, FOOD_PREFERENCE_OPTIONS } from './AdminEnquiryCommon';
 import type { EditDetailsForm } from './AdminEditDetailsModal';
+import {
+  validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity, validateOptionalAge,
+  DEFAULT_MIN_AGE, DEFAULT_MAX_AGE,
+} from '../../utils/formValidation';
+import { getCitySuggestions, getEmailSuggestions } from './AdminEnquiriesShared';
+
+// Same quick-help dropdown as AdminAddEnquiryModal / AdminEditDetailsModal
+// — duplicated locally rather than shared since this card has its own
+// compact `inlineInputClass` styling that a shared component would need
+// to accept as a prop for no real benefit at this size.
+function SuggestionDropdown({ items, onSelect }: { items: string[]; onSelect: (value: string) => void }) {
+  return (
+    <ul
+      role="listbox"
+      className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded-md border-2 border-background-warm bg-white shadow-lg py-1"
+    >
+      {items.map(item => (
+        <li key={item} role="option">
+          <button
+            type="button"
+            onMouseDown={e => { e.preventDefault(); onSelect(item); }}
+            className="w-full px-3 py-1.5 text-sm text-left text-dark hover:bg-background-warm transition-colors"
+          >
+            {item}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 // Phosphor doesn't ship a real WhatsApp glyph (ChatCircle/ChatsCircle are
 // generic speech-bubble icons, not the recognizable WhatsApp mark) — same
@@ -57,13 +87,58 @@ export default function AdminEnquiryTravellerCard({
 }: AdminEnquiryTravellerCardProps) {
   const srcCfg = SOURCE_CONFIG[enquiry.source] || SOURCE_CONFIG.other;
 
-  const editErrors: { full_name?: string; phone?: string } = {};
+  // Same validators (and error copy) as the public BookingForm — see
+  // src/utils/formValidation.ts — with email/city/age kept optional here,
+  // same reasoning as AdminAddEnquiryModal's validateEnquiryForm.
+  const selectedTrip = editForm.trip_id ? trips.find(t => t.id === editForm.trip_id) : undefined;
+  const effectiveMinAge = selectedTrip?.min_age ?? DEFAULT_MIN_AGE;
+  const effectiveMaxAge = selectedTrip?.max_age ?? DEFAULT_MAX_AGE;
+  const editErrors: { full_name?: string; phone?: string; email?: string; city?: string; age?: string } = {};
   if (!editForm.full_name.trim()) editErrors.full_name = 'Full name is required.';
+  else {
+    const nameError = validateFullName(editForm.full_name);
+    if (nameError !== true) editErrors.full_name = nameError;
+  }
   if (!editForm.phone.trim()) editErrors.phone = 'Phone number is required.';
-  const hasEditErrors = !!(editErrors.full_name || editErrors.phone);
+  else {
+    const phoneError = validatePhone(editForm.phone);
+    if (phoneError !== true) editErrors.phone = phoneError;
+  }
+  const emailError = validateOptionalEmail(editForm.email);
+  if (emailError !== true) editErrors.email = emailError;
+  const cityError = validateOptionalCity(editForm.city);
+  if (cityError !== true) editErrors.city = cityError;
+  const ageError = validateOptionalAge(editForm.age, selectedTrip?.min_age, selectedTrip?.max_age);
+  if (ageError !== true) editErrors.age = ageError;
+  const hasEditErrors = !!(editErrors.full_name || editErrors.phone || editErrors.email || editErrors.city || editErrors.age);
+
+  const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [emailSuggestionsOpen, setEmailSuggestionsOpen] = useState(false);
+  const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
+  const handleCityInput = (value: string) => {
+    const matches = getCitySuggestions(value);
+    setCitySuggestions(matches);
+    setCitySuggestionsOpen(matches.length > 0);
+  };
+  const selectCitySuggestion = (city: string) => {
+    setEditForm(f => ({ ...f, city }));
+    setCitySuggestionsOpen(false);
+    setEditTouched(prev => new Set(prev).add('city'));
+  };
+  const handleEmailInput = (value: string) => {
+    const matches = getEmailSuggestions(value);
+    setEmailSuggestions(matches);
+    setEmailSuggestionsOpen(matches.length > 0);
+  };
+  const selectEmailSuggestion = (email: string) => {
+    setEditForm(f => ({ ...f, email }));
+    setEmailSuggestionsOpen(false);
+    setEditTouched(prev => new Set(prev).add('email'));
+  };
 
   const handleSaveClick = () => {
-    setEditTouched(new Set(['full_name', 'phone']));
+    setEditTouched(new Set(['full_name', 'phone', 'email', 'city', 'age']));
     if (!hasEditErrors) onSaveEdit();
   };
 
@@ -182,17 +257,23 @@ export default function AdminEnquiryTravellerCard({
               <EnvelopeSimple size={15} aria-hidden="true" />
             </span>
           )}
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 relative">
             <label htmlFor="eq-detail-edit-email" className="text-dark-muted text-xs">Email</label>
             {editing ? (
-              <input
-                id="eq-detail-edit-email"
-                type="email"
-                value={editForm.email}
-                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
-                className={`${inlineInputClass} mt-0.5`}
-                placeholder="Optional"
-              />
+              <>
+                <input
+                  id="eq-detail-edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={e => { setEditForm(f => ({ ...f, email: e.target.value })); handleEmailInput(e.target.value); }}
+                  onBlur={() => { setEditTouched(prev => new Set(prev).add('email')); setEmailSuggestionsOpen(false); }}
+                  aria-describedby={editTouched.has('email') && editErrors.email ? 'eq-detail-edit-email-error' : undefined}
+                  className={`${inlineInputClass} mt-0.5`}
+                  placeholder="Optional"
+                />
+                {editTouched.has('email') && editErrors.email && <p id="eq-detail-edit-email-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.email}</p>}
+                {emailSuggestionsOpen && <SuggestionDropdown items={emailSuggestions} onSelect={selectEmailSuggestion} />}
+              </>
             ) : (
               <p title={enquiry.email} className="text-dark text-sm font-semibold truncate">{enquiry.email}</p>
             )}
@@ -241,15 +322,23 @@ export default function AdminEnquiryTravellerCard({
             <div className="min-w-0 flex-1">
               <label htmlFor="eq-detail-edit-age" className="text-dark-muted text-xs">Age</label>
               {editing ? (
-                <input
-                  id="eq-detail-edit-age"
-                  type="number"
-                  min={0}
-                  value={editForm.age}
-                  onChange={e => setEditForm(f => ({ ...f, age: e.target.value === '' ? '' : Number(e.target.value) }))}
-                  className={`${inlineInputClass} mt-0.5`}
-                  placeholder="Optional"
-                />
+                <>
+                  <input
+                    id="eq-detail-edit-age"
+                    type="number"
+                    min={0}
+                    value={editForm.age}
+                    onChange={e => setEditForm(f => ({ ...f, age: e.target.value === '' ? '' : Number(e.target.value) }))}
+                    onBlur={() => setEditTouched(prev => new Set(prev).add('age'))}
+                    aria-describedby={editTouched.has('age') && editErrors.age ? 'eq-detail-edit-age-error' : 'eq-detail-edit-age-hint'}
+                    className={`${inlineInputClass} mt-0.5`}
+                    placeholder="Optional"
+                  />
+                  {!(editTouched.has('age') && editErrors.age) && editForm.trip_id && (
+                    <p id="eq-detail-edit-age-hint" className="text-[11px] text-dark-muted mt-1">Ages {effectiveMinAge}–{effectiveMaxAge}.</p>
+                  )}
+                  {editTouched.has('age') && editErrors.age && <p id="eq-detail-edit-age-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.age}</p>}
+                </>
               ) : (
                 <p className="text-dark text-sm font-semibold truncate">{enquiry.age ?? '—'}</p>
               )}
@@ -262,17 +351,23 @@ export default function AdminEnquiryTravellerCard({
             <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
               <Building2 size={15} aria-hidden="true" />
             </span>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 relative">
               <label htmlFor="eq-detail-edit-city" className="text-dark-muted text-xs">City</label>
               {editing ? (
-                <input
-                  id="eq-detail-edit-city"
-                  type="text"
-                  value={editForm.city}
-                  onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))}
-                  className={`${inlineInputClass} mt-0.5`}
-                  placeholder="Optional"
-                />
+                <>
+                  <input
+                    id="eq-detail-edit-city"
+                    type="text"
+                    value={editForm.city}
+                    onChange={e => { setEditForm(f => ({ ...f, city: e.target.value })); handleCityInput(e.target.value); }}
+                    onBlur={() => { setEditTouched(prev => new Set(prev).add('city')); setCitySuggestionsOpen(false); }}
+                    aria-describedby={editTouched.has('city') && editErrors.city ? 'eq-detail-edit-city-error' : undefined}
+                    className={`${inlineInputClass} mt-0.5`}
+                    placeholder="Optional"
+                  />
+                  {editTouched.has('city') && editErrors.city && <p id="eq-detail-edit-city-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.city}</p>}
+                  {citySuggestionsOpen && <SuggestionDropdown items={citySuggestions} onSelect={selectCitySuggestion} />}
+                </>
               ) : (
                 <p className="text-dark text-sm font-semibold truncate">{enquiry.city || '—'}</p>
               )}

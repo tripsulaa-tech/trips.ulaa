@@ -252,9 +252,10 @@ export function useAddEnquiry(params: {
     // is the defense-in-depth save-time gate, checked here up front so a
     // bad row partway through the batch doesn't fail after some people are
     // already seated.
+    const trip = trips.find(t => t.id === form.trip_id);
     for (const p of waitlistPeople) {
-      const errors = validateWaitlistPersonForm(p, totalAmount ?? '');
-      const firstError = errors.full_name || errors.phone || errors.amount_paid;
+      const errors = validateWaitlistPersonForm(p, totalAmount ?? '', trip?.min_age, trip?.max_age);
+      const firstError = errors.full_name || errors.phone || errors.email || errors.city || errors.age || errors.amount_paid;
       if (firstError) {
         const name = p.full_name.trim() || 'One person';
         alert(errors.full_name || errors.phone ? 'Every person needs at least a name and phone number.' : `${name}: ${firstError}`);
@@ -263,7 +264,6 @@ export function useAddEnquiry(params: {
     }
 
     setSaving(true);
-    const trip = trips.find(t => t.id === form.trip_id);
     let seated = 0;
     try {
       for (let i = 0; i < waitlistPeople.length; i++) {
@@ -336,8 +336,9 @@ export function useAddEnquiry(params: {
     // validator as AdminAddEnquiryModal.tsx, so the rules can't drift
     // between "what the admin sees live" and "what actually blocks the
     // save".
-    const formErrors = validateEnquiryForm(form, !!convertingWaitlist);
-    const firstError = formErrors.full_name || formErrors.phone || formErrors.amount_paid;
+    const trip = trips.find(t => t.id === form.trip_id);
+    const formErrors = validateEnquiryForm(form, !!convertingWaitlist, trip?.min_age, trip?.max_age);
+    const firstError = formErrors.full_name || formErrors.phone || formErrors.email || formErrors.city || formErrors.age || formErrors.amount_paid;
     if (firstError) {
       alert(firstError);
       return;
@@ -346,7 +347,6 @@ export function useAddEnquiry(params: {
     const amountPaid = form.amount_paid === '' ? 0 : Number(form.amount_paid);
     try {
       setSaving(true);
-      const trip = trips.find(t => t.id === form.trip_id);
       const created = await createManualEnquiry({
         full_name: form.full_name.trim(),
         phone: form.phone.trim(),

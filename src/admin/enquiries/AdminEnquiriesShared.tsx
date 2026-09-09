@@ -14,6 +14,47 @@ import {
 import type { Enquiry } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
 import { PACKAGE_OPTIONS } from './AdminEnquiryCommon';
+import {
+  validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity, validateOptionalAge,
+} from '../../utils/formValidation';
+import { INDIAN_CITIES } from '../../constants/indianCities';
+import { COMMON_EMAIL_DOMAINS } from '../../constants/emailDomains';
+
+// Same rows-shown cap the public BookingForm uses for its City / Email-
+// domain suggestion dropdowns (see MAX_SUGGESTIONS there) — kept in sync
+// here so the admin's "Log an Enquiry" form offers the same-shaped list.
+export const MAX_SUGGESTIONS = 6;
+
+// Pure (no state) version of BookingForm's handleCityInput — returns the
+// up-to-MAX_SUGGESTIONS Indian cities whose name starts with what's been
+// typed so far, or [] once nothing matches (at which point validateCity/
+// validateOptionalCity falls back to plain free text). Kept here rather
+// than duplicated inside AdminAddEnquiryModal so the admin form's
+// suggestion list can never drift from the list validateOptionalCity
+// itself checks against.
+export function getCitySuggestions(value: string): string[] {
+  const trimmed = value.trim().toLowerCase();
+  if (trimmed.length === 0) return [];
+  return INDIAN_CITIES.filter(c => c.toLowerCase().startsWith(trimmed)).slice(0, MAX_SUGGESTIONS);
+}
+
+// Pure version of BookingForm's handleEmailInput — once the admin's typed
+// "@", returns up to MAX_SUGGESTIONS full "local@domain" suggestions built
+// from COMMON_EMAIL_DOMAINS, filtered to whatever's been typed after the
+// "@" so far. Returns [] before an "@" is typed, once the domain already
+// matches a known one exactly, or once nothing in the list matches.
+export function getEmailSuggestions(value: string): string[] {
+  const atIndex = value.indexOf('@');
+  if (atIndex === -1) return [];
+  const localPart = value.slice(0, atIndex);
+  const domainPart = value.slice(atIndex + 1).toLowerCase();
+  if (!localPart || COMMON_EMAIL_DOMAINS.includes(domainPart)) return [];
+  const matches = (domainPart === ''
+    ? COMMON_EMAIL_DOMAINS
+    : COMMON_EMAIL_DOMAINS.filter(d => d.startsWith(domainPart))
+  ).slice(0, MAX_SUGGESTIONS);
+  return matches.map(d => `${localPart}@${d}`);
+}
 
 // Digits-only phone "signature" used for fuzzy duplicate matching (3.5).
 // The DB's own duplicate guard only catches an *exact* string match on
@@ -333,18 +374,55 @@ export const emptyWaitlistPerson: WaitlistPersonForm = {
 };
 
 // Field-level errors for the solo "Log an Enquiry" / single-seat "Convert
-// Waitlist Signup" form (AddEnquiryModal). Same three checks handleSave
-// used to only enforce after the fact via alert(): name & phone required,
-// amount paid can't exceed the total, and (only when converting a
-// waitlist entry) an advance is required to actually seat the booking.
+// Waitlist Signup" form (AddEnquiryModal). Name/phone/email/city/age use
+// the exact same validators (and error copy) as the public-facing
+// BookingForm — see src/utils/formValidation.ts — so an admin fat-
+// fingering a phone number or typing a nonsense city gets caught here the
+// same way a traveller would be caught on the public form, instead of
+// silently saving bad data because "it's just the admin panel". Unlike
+// BookingForm, email/city/age stay optional here (admins often only have
+// a name and phone to go on when logging a WhatsApp/phone enquiry) — see
+// validateOptional{Email,City,Age} for the "blank passes, filled-in-wrong
+// doesn't" behaviour that gives. Amount paid can't exceed the total, and
+// (only when converting a waitlist entry) an advance is required to
+// actually seat the booking — unchanged from before.
 // Shared by the modal (live, as the admin types) and handleSave as the
 // final save-time gate, so the two can never drift.
-type EnquiryFormErrors = Partial<Record<'full_name' | 'phone' | 'amount_paid', string>>;
+// minAge/maxAge mirror BookingForm's own props of the same name — the
+// selected trip's age-eligibility range (either side may be unset), used
+// to validate the Age field against the same bounds the public form
+// would enforce for that trip. Omitted (e.g. no trip picked yet) falls
+// back to the app default 18-65 range, same as validateOptionalAge itself.
+type EnquiryFormErrors = Partial<Record<'full_name' | 'phone' | 'email' | 'city' | 'age' | 'amount_paid', string>>;
 
-export function validateEnquiryForm(form: EnquiryForm, isConvertingWaitlist: boolean): EnquiryFormErrors {
+export function validateEnquiryForm(
+  form: EnquiryForm,
+  isConvertingWaitlist: boolean,
+  minAge?: number | null,
+  maxAge?: number | null
+): EnquiryFormErrors {
   const errors: EnquiryFormErrors = {};
+  // required-ness stays a plain empty check (same copy as before this
+  // change) rather than falling through to validateFullName's own "Enter
+  // your full name" — matches how BookingForm itself layers a `required`
+  // message ahead of `validate` for the exact same field. Once something's
+  // actually been typed, the format check is identical to the public form.
   if (!form.full_name.trim()) errors.full_name = 'Full name is required.';
+  else {
+    const nameError = validateFullName(form.full_name);
+    if (nameError !== true) errors.full_name = nameError;
+  }
   if (!form.phone.trim()) errors.phone = 'Phone number is required.';
+  else {
+    const phoneError = validatePhone(form.phone);
+    if (phoneError !== true) errors.phone = phoneError;
+  }
+  const emailError = validateOptionalEmail(form.email);
+  if (emailError !== true) errors.email = emailError;
+  const cityError = validateOptionalCity(form.city);
+  if (cityError !== true) errors.city = cityError;
+  const ageError = validateOptionalAge(form.age, minAge, maxAge);
+  if (ageError !== true) errors.age = ageError;
 
   const totalAmount = form.total_amount === '' ? null : Number(form.total_amount);
   const amountPaid = form.amount_paid === '' ? 0 : Number(form.amount_paid);
@@ -358,15 +436,38 @@ export function validateEnquiryForm(form: EnquiryForm, isConvertingWaitlist: boo
 }
 
 // Same shape as EnquiryFormErrors, for one row of the bulk waitlist-group
-// conversion form — every seat in the group needs its own name/phone and
-// its own qualifying advance (the shared per-person total_amount is passed
-// in separately since it lives on the parent `form`, not each person).
-type WaitlistPersonFormErrors = Partial<Record<'full_name' | 'phone' | 'amount_paid', string>>;
+// conversion form — every seat in the group needs its own name/phone
+// (checked with the same validators as the solo form above) and its own
+// qualifying advance (the shared per-person total_amount is passed in
+// separately since it lives on the parent `form`, not each person).
+// Email/city/age are optional per-seat, same as the solo form. minAge/
+// maxAge are the shared trip's age range (same for every seat, since
+// they're all booking the same trip) — see validateEnquiryForm above.
+type WaitlistPersonFormErrors = Partial<Record<'full_name' | 'phone' | 'email' | 'city' | 'age' | 'amount_paid', string>>;
 
-export function validateWaitlistPersonForm(p: WaitlistPersonForm, totalAmount: number | ''): WaitlistPersonFormErrors {
+export function validateWaitlistPersonForm(
+  p: WaitlistPersonForm,
+  totalAmount: number | '',
+  minAge?: number | null,
+  maxAge?: number | null
+): WaitlistPersonFormErrors {
   const errors: WaitlistPersonFormErrors = {};
   if (!p.full_name.trim()) errors.full_name = 'Full name is required.';
+  else {
+    const nameError = validateFullName(p.full_name);
+    if (nameError !== true) errors.full_name = nameError;
+  }
   if (!p.phone.trim()) errors.phone = 'Phone number is required.';
+  else {
+    const phoneError = validatePhone(p.phone);
+    if (phoneError !== true) errors.phone = phoneError;
+  }
+  const emailError = validateOptionalEmail(p.email);
+  if (emailError !== true) errors.email = emailError;
+  const cityError = validateOptionalCity(p.city);
+  if (cityError !== true) errors.city = cityError;
+  const ageError = validateOptionalAge(p.age, minAge, maxAge);
+  if (ageError !== true) errors.age = ageError;
 
   const amountPaid = p.amount_paid === '' ? 0 : Number(p.amount_paid);
   const total = totalAmount === '' ? null : Number(totalAmount);

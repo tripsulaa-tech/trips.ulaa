@@ -60,6 +60,17 @@ export function validateOptionalPhone(value: string): true | string {
   return validatePhone(value);
 }
 
+/** Same as validateCity but for fields where city itself is optional (e.g.
+ * admin-side enquiry forms, which don't require it the way the public
+ * booking form does) — an empty value passes, but whatever *is* typed
+ * still has to satisfy the same letters-only + INDIAN_CITIES cross-check
+ * as the required version, so the rules can't quietly drift between the
+ * two forms. */
+export function validateOptionalCity(value: string): true | string {
+  if (!value || value.trim().length === 0) return true;
+  return validateCity(value);
+}
+
 /** Standard local@domain.tld shape, plus a minimum of 2 characters before
  * the "@" — blocks throwaway-looking addresses like "k@gmail.com" while
  * still allowing any real domain the user finishes typing themselves. */
@@ -71,6 +82,15 @@ export function validateEmail(value: string): true | string {
   if (localPart.length < 2) return 'Email must have at least 2 characters before the @';
   if (!/^\S+@\S+\.\S+$/.test(trimmed)) return 'Invalid email address';
   return true;
+}
+
+/** Same as validateEmail but for fields where email itself is optional
+ * (e.g. admin-side enquiry forms) — an empty value passes, but a
+ * partially/incorrectly typed one still gets caught by the same check the
+ * public booking form uses. */
+export function validateOptionalEmail(value: string): true | string {
+  if (!value || value.trim().length === 0) return true;
+  return validateEmail(value);
 }
 
 // Fallback range used whenever a trip doesn't set its own min/max age —
@@ -95,4 +115,19 @@ export function validateAge(
   if (n < minAge) return `Must be ${minAge} or older`;
   if (n > maxAge) return `Age must be ${maxAge} or under`;
   return true;
+}
+
+/** Same as validateAge but for fields where age itself is optional (e.g.
+ * admin-side enquiry forms) — an empty value passes, but whatever *is*
+ * entered still has to be a whole number within range. minAge/maxAge
+ * accept null (as stored on a trip's row, unset) as well as undefined —
+ * both fall back to the app default, same as validateAge itself. */
+export function validateOptionalAge(
+  value: string | number,
+  minAge?: number | null,
+  maxAge?: number | null
+): true | string {
+  const raw = String(value).trim();
+  if (raw.length === 0) return true;
+  return validateAge(value, minAge ?? DEFAULT_MIN_AGE, maxAge ?? DEFAULT_MAX_AGE);
 }
