@@ -154,8 +154,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // and hooks can't be called conditionally after that.
   const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [citySuggestionIndex, setCitySuggestionIndex] = useState(-1);
   const [emailSuggestionsOpen, setEmailSuggestionsOpen] = useState(false);
   const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
+  const [emailSuggestionIndex, setEmailSuggestionIndex] = useState(-1);
 
   // Highlight whichever chip's section is currently at the top of the
   // modal's own scroll box (not the page) — same live-highlight behavior
@@ -489,12 +491,14 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       .filter(c => c.toLowerCase().startsWith(trimmed))
       .slice(0, MAX_SUGGESTIONS);
     setCitySuggestions(matches);
+    setCitySuggestionIndex(-1);
     setCitySuggestionsOpen(matches.length > 0);
   };
 
   const selectCitySuggestion = (city: string) => {
     setValue('city', city, { shouldValidate: true, shouldDirty: true });
     setCitySuggestionsOpen(false);
+    setCitySuggestionIndex(-1);
   };
 
   // Email domain suggestions — once the user's typed "@", offers the
@@ -526,25 +530,59 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       : COMMON_EMAIL_DOMAINS.filter(d => d.startsWith(domainPart))
     ).slice(0, MAX_SUGGESTIONS);
     setEmailSuggestions(matches.map(d => `${localPart}@${d}`));
+    setEmailSuggestionIndex(-1);
     setEmailSuggestionsOpen(matches.length > 0);
   };
 
   const selectEmailSuggestion = (email: string) => {
     setValue('email', email, { shouldValidate: true, shouldDirty: true });
     setEmailSuggestionsOpen(false);
+    setEmailSuggestionIndex(-1);
+  };
+
+  // Shared arrow-key/Enter/Escape handling for both suggestion dropdowns —
+  // Down/Up move a highlighted row (wrapping at either end), Enter picks
+  // whichever row is highlighted, and Escape dismisses the list without
+  // changing the field. Left as a no-op whenever the dropdown in question
+  // isn't open, so it never interferes with normal typing or the form's
+  // own Enter-to-submit behavior.
+  const handleSuggestionKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    items: string[],
+    isOpen: boolean,
+    activeIndex: number,
+    setActiveIndex: (index: number) => void,
+    onSelect: (value: string) => void,
+    setOpen: (open: boolean) => void
+  ) => {
+    if (!isOpen || items.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((activeIndex + 1) % items.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(activeIndex <= 0 ? items.length - 1 : activeIndex - 1);
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0) {
+        e.preventDefault();
+        onSelect(items[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+    }
   };
 
   // Small shared dropdown used by both suggestion lists above. Positioned
   // relative to the input's own wrapping div (see the `relative` wrapper
   // around each field below) rather than portalled, since it only ever
   // needs to sit right under a short, single-line input.
-  const SuggestionDropdown = ({ items, onSelect }: { items: string[]; onSelect: (value: string) => void }) => (
+  const SuggestionDropdown = ({ items, activeIndex, onSelect }: { items: string[]; activeIndex: number; onSelect: (value: string) => void }) => (
     <ul
       role="listbox"
       className="absolute z-20 left-0 right-0 mt-1 max-h-56 overflow-auto app-scroll rounded-lg border-2 border-background-warm bg-white shadow-warm-lg py-1"
     >
-      {items.map(item => (
-        <li key={item} role="option">
+      {items.map((item, idx) => (
+        <li key={item} role="option" aria-selected={idx === activeIndex}>
           <button
             type="button"
             // onMouseDown (not onClick) fires before the input's onBlur,
@@ -552,7 +590,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             // picking a suggestion never races with the dropdown closing
             // itself out from under the click.
             onMouseDown={e => { e.preventDefault(); onSelect(item); }}
-            className="w-full px-4 py-2 text-sm text-left font-body text-dark hover:bg-background-warm transition-colors"
+            className={`w-full px-4 py-2 text-sm text-left font-body text-dark transition-colors ${idx === activeIndex ? 'bg-background-warm' : 'hover:bg-background-warm'}`}
           >
             {item}
           </button>
@@ -731,6 +769,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             {...emailReg}
             onChange={e => { emailReg.onChange(e); handleEmailInput(e.target.value); }}
             onBlur={e => { emailReg.onBlur(e); setEmailSuggestionsOpen(false); }}
+            onKeyDown={e => handleSuggestionKeyDown(e, emailSuggestions, emailSuggestionsOpen, emailSuggestionIndex, setEmailSuggestionIndex, selectEmailSuggestion, setEmailSuggestionsOpen)}
             placeholder="you@example.com"
             autoComplete="email"
             aria-invalid={!!errors.email}
@@ -738,7 +777,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             className={inputClass}
           />
           {errors.email && <p id={`${ids.email}-error`} role="alert" className={errorClass}>{errors.email.message}</p>}
-          {emailSuggestionsOpen && <SuggestionDropdown items={emailSuggestions} onSelect={selectEmailSuggestion} />}
+          {emailSuggestionsOpen && <SuggestionDropdown items={emailSuggestions} activeIndex={emailSuggestionIndex} onSelect={selectEmailSuggestion} />}
         </div>
 
         {/* City */}
@@ -749,6 +788,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             {...cityReg}
             onChange={e => { cityReg.onChange(e); handleCityInput(e.target.value); }}
             onBlur={e => { cityReg.onBlur(e); setCitySuggestionsOpen(false); }}
+            onKeyDown={e => handleSuggestionKeyDown(e, citySuggestions, citySuggestionsOpen, citySuggestionIndex, setCitySuggestionIndex, selectCitySuggestion, setCitySuggestionsOpen)}
             placeholder="Your city"
             autoComplete="address-level2"
             aria-invalid={!!errors.city}
@@ -756,7 +796,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             className={inputClass}
           />
           {errors.city && <p id={`${ids.city}-error`} role="alert" className={errorClass}>{errors.city.message}</p>}
-          {citySuggestionsOpen && <SuggestionDropdown items={citySuggestions} onSelect={selectCitySuggestion} />}
+          {citySuggestionsOpen && <SuggestionDropdown items={citySuggestions} activeIndex={citySuggestionIndex} onSelect={selectCitySuggestion} />}
         </div>
 
         {/* Emergency Contact */}

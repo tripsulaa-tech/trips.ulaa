@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/useAuth';
 import Button from '../components/ui/Button';
+import { COMMON_EMAIL_DOMAINS } from '../constants/emailDomains';
 import {
   WarningCircle as AlertCircle,
 } from '@phosphor-icons/react';
+
+// How many rows to show at once in the email-domain suggestion dropdown.
+const MAX_EMAIL_SUGGESTIONS = 6;
 
 export default function AdminLogin() {
   const { signIn } = useAuth();
@@ -12,6 +16,72 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Email-domain suggestions — once the admin's typed "@", offer the
+  // common domains (Gmail first) that match whatever's typed after it,
+  // so "admin@gm" can become "admin@gmail.com" in one tap/Enter instead
+  // of typing the rest out. Purely a convenience for the domain half;
+  // any domain can still be typed out in full.
+  const [emailSuggestionsOpen, setEmailSuggestionsOpen] = useState(false);
+  const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
+  const [emailSuggestionIndex, setEmailSuggestionIndex] = useState(-1);
+
+  const handleEmailInput = (value: string) => {
+    setEmail(value);
+
+    const atIndex = value.indexOf('@');
+    if (atIndex === -1) {
+      setEmailSuggestionsOpen(false);
+      return;
+    }
+    const localPart = value.slice(0, atIndex);
+    const domainPart = value.slice(atIndex + 1).toLowerCase();
+    if (!localPart) {
+      setEmailSuggestionsOpen(false);
+      return;
+    }
+    // Already a complete, exact match (typed or pasted in full) — nothing
+    // left to suggest.
+    if (COMMON_EMAIL_DOMAINS.includes(domainPart)) {
+      setEmailSuggestionsOpen(false);
+      return;
+    }
+    const matches = (domainPart === ''
+      ? COMMON_EMAIL_DOMAINS
+      : COMMON_EMAIL_DOMAINS.filter(d => d.startsWith(domainPart))
+    ).slice(0, MAX_EMAIL_SUGGESTIONS);
+    setEmailSuggestions(matches.map(d => `${localPart}@${d}`));
+    setEmailSuggestionIndex(-1);
+    setEmailSuggestionsOpen(matches.length > 0);
+  };
+
+  const selectEmailSuggestion = (suggestion: string) => {
+    setEmail(suggestion);
+    setEmailSuggestionsOpen(false);
+    setEmailSuggestionIndex(-1);
+  };
+
+  // Down/Up move a highlighted row (wrapping at either end), Enter picks
+  // whichever row is highlighted, and Escape dismisses the list without
+  // changing the field. A no-op whenever the dropdown isn't open, so it
+  // never interferes with normal typing or submitting the form.
+  const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!emailSuggestionsOpen || emailSuggestions.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setEmailSuggestionIndex((emailSuggestionIndex + 1) % emailSuggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setEmailSuggestionIndex(emailSuggestionIndex <= 0 ? emailSuggestions.length - 1 : emailSuggestionIndex - 1);
+    } else if (e.key === 'Enter') {
+      if (emailSuggestionIndex >= 0) {
+        e.preventDefault();
+        selectEmailSuggestion(emailSuggestions[emailSuggestionIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setEmailSuggestionsOpen(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,19 +113,44 @@ export default function AdminLogin() {
 
         <div className="bg-white rounded-lg shadow-warm-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
+            <div className="relative">
               <label htmlFor="admin-email" className="block text-sm font-medium text-dark mb-1">Email</label>
               <input
                 id="admin-email"
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => handleEmailInput(e.target.value)}
+                onKeyDown={handleEmailKeyDown}
+                onBlur={() => setEmailSuggestionsOpen(false)}
                 required
                 placeholder="admin@ulaa.travel"
                 className={inputClass}
                 autoComplete="email"
                 aria-invalid={!!error}
               />
+              {emailSuggestionsOpen && (
+                <ul
+                  role="listbox"
+                  className="absolute z-20 left-0 right-0 mt-1 max-h-56 overflow-auto app-scroll rounded-lg border-2 border-background-warm bg-white shadow-warm-lg py-1"
+                >
+                  {emailSuggestions.map((suggestion, idx) => (
+                    <li key={suggestion} role="option" aria-selected={idx === emailSuggestionIndex}>
+                      <button
+                        type="button"
+                        // onMouseDown (not onClick) fires before the input's
+                        // onBlur, and preventDefault stops that blur from
+                        // firing at all — so picking a suggestion never
+                        // races with the dropdown closing itself out from
+                        // under the click.
+                        onMouseDown={e => { e.preventDefault(); selectEmailSuggestion(suggestion); }}
+                        className={`w-full px-4 py-2 text-sm text-left font-body text-dark transition-colors ${idx === emailSuggestionIndex ? 'bg-background-warm' : 'hover:bg-background-warm'}`}
+                      >
+                        {suggestion}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div>
               <label htmlFor="admin-password" className="block text-sm font-medium text-dark mb-1">Password</label>
