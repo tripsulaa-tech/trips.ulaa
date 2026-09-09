@@ -106,7 +106,7 @@ export type PaymentForm = {
   package_type: Enquiry['package_type'];
   // Kept as the actual amount owed (list price - discount_amount, or the
   // free-typed value on a no-trip enquiry) — every existing consumer below
-  // (clearsBalance, availablePaymentTypeOptions, validatePaymentForm) reads
+  // (outstandingBalance, availablePaymentTypeOptions, validatePaymentForm) reads
   // this unchanged. The modal computes it from discount_amount whenever the
   // enquiry has a trip; see computeDiscountedTotal.
   total_amount: number | '';
@@ -170,20 +170,6 @@ export type PaymentForm = {
 // so wording can never drift between the two dropdowns.
 const PAYMENT_TYPE_OPTIONS: { value: PaymentForm['payment_type']; label: string }[] = GENERATE_INVOICE_TYPE_OPTIONS;
 
-// 'Balance' is meant for the payment that clears whatever's left owing —
-// unlike 'Installment', which is any partial payment with more expected
-// after it. Nothing else in the data model enforces that distinction, so
-// without this check an admin could pick 'Balance' on a payment that
-// doesn't actually zero out the amount due, leaving the ledger's own
-// labels misleading. Only 'Balance' is gated this way; every other type
-// (including 'Installment') stays freely selectable.
-// 'Balance' is meant for the payment that clears whatever's left owing —
-// unlike 'Installment', which is any partial payment with more expected
-// after it. Nothing else in the data model enforces that distinction, so
-// without this check an admin could pick 'Balance' on a payment that
-// doesn't actually zero out the amount due, leaving the ledger's own
-// labels misleading. Only 'Balance' is gated this way; every other type
-// (including 'Installment') stays freely selectable. Shared by both Track
 // Shared helpers for the Payment form (PaymentForm) below.
 // List price minus a flat discount, floored at 0 so a discount bigger than
 // the list price never produces a negative total. `listPrice` is undefined
@@ -195,33 +181,47 @@ export function computeDiscountedTotal(listPrice: number | undefined, discountAm
   return Math.max(0, listPrice - discount);
 }
 
-function amountClearsBalance(totalAmount: number | '', alreadyPaid: number, thisAmount: number | ''): boolean {
-  if (totalAmount === '') return false;
-  const amt = thisAmount === '' ? 0 : Number(thisAmount);
-  if (amt <= 0) return false;
-  return Number(totalAmount) - alreadyPaid - amt <= 0;
-}
-
-export function clearsBalance(paymentForm: PaymentForm, alreadyPaid: number): boolean {
-  if (paymentForm.payment_type === 'addon') return false;
-  return amountClearsBalance(paymentForm.total_amount, alreadyPaid, paymentForm.amount_paid);
+// What's left owing on the booking's total, before this transaction — null
+// when there's no total_amount set yet to owe anything against. Used both
+// to decide whether 'Balance' should even be offered as a Payment Type
+// (only makes sense once something is actually still owed), and to
+// auto-fill Amount Being Paid Now the moment it's picked — see the Payment
+// Type onChange in PaymentFormFields, which mirrors 'Full Payment's
+// existing auto-fill the same way.
+export function outstandingBalance(totalAmount: number | '', alreadyPaid: number): number | null {
+  if (totalAmount === '') return null;
+  return Math.max(0, Number(totalAmount) - alreadyPaid);
 }
 
 // Same list as PAYMENT_TYPE_OPTIONS, minus:
-//  - 'Balance' when this payment wouldn't actually clear the amount due —
-//    see clearsBalance above.
+//  - 'Balance' when nothing is actually still owed on the total — see
+//    outstandingBalance above. Once offered, picking it auto-fills Amount
+//    Being Paid Now with that exact outstanding amount (PaymentFormFields'
+//    onChange), so admins no longer need to already know/type the figure
+//    for it to appear.
 //  - 'Full Payment' and 'Advance' once anything's already been paid — both
 //    only make sense as the very first money in on a booking; once that's
 //    happened, every further payment is an Installment (or a Balance, once
-//    it clears what's owed), never another "first" payment.
+//    something's still owed), never another "first" payment.
 // Callers pair this with an effect that steers payment_type off whichever
-// of these it no longer qualifies for (e.g. the admin lowers the amount
-// after picking 'Balance', or a second payment still has 'Advance' left
-// over from the form's default), so the Select's current value always
+// of these it no longer qualifies for (e.g. a second payment still has
+// 'Advance' left over from the form's default, or the total/discount is
+// edited after 'Balance' was picked), so the Select's current value always
 // stays in this list.
 export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPaid: number): { value: PaymentForm['payment_type']; label: string }[] {
   const options = alreadyPaid > 0 ? PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'advance' && o.value !== 'full_payment') : PAYMENT_TYPE_OPTIONS;
-  return clearsBalance(paymentForm, alreadyPaid) ? options : options.filter(o => o.value !== 'balance');
+  const owed = outstandingBalance(paymentForm.total_amount, alreadyPaid);
+  if (owed != null && owed > 0) return options;
+  if (owed === 0) {
+    // Nothing left on the current total, so 'Installment' makes no more
+    // sense than 'Balance' does — both imply paying toward an amount still
+    // owed. Only 'Add-on' (which raises the total, creating a fresh
+    // balance) still applies once the booking is fully paid.
+    return options.filter(o => o.value !== 'balance' && o.value !== 'installment');
+  }
+  // owed === null: total_amount isn't filled in yet, so there's nothing to
+  // judge Installment/Balance against — leave the full set on offer.
+  return options.filter(o => o.value !== 'balance');
 }
 
 // Field-level errors for the Track Payment form (formerly AdminPaymentModal,

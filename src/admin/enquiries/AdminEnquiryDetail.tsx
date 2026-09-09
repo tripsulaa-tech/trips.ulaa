@@ -178,20 +178,25 @@ export default function AdminEnquiryDetail() {
   const hasPaymentErrors = Object.keys(paymentErrors).length > 0;
   const [togglingNoShow, setTogglingNoShow] = useState(false);
 
-  // 'Balance' is only meant for the payment that actually zeroes out the
-  // amount due, and 'Advance'/'Full Payment' only for the very first money
-  // in on a booking — if the admin picks one of these and the form then
-  // stops qualifying (amount/total edited, or a payment lands and this
-  // modal reopens later), drop back to 'Installment' rather than leaving
-  // an invalid type selected. See clearsBalance/availablePaymentTypeOptions
-  // in AdminEnquiryCommon.
+  // 'Balance' is only offered while something is actually still owed, and
+  // 'Advance'/'Full Payment' only for the very first money in on a booking
+  // — if the admin picks one of these and the form then stops qualifying
+  // (total/discount edited, or a payment lands and this modal reopens
+  // later), drop back to 'Installment' rather than leaving an invalid type
+  // selected. See outstandingBalance/availablePaymentTypeOptions in
+  // AdminEnquiryCommon.
   useEffect(() => {
     if (!enquiry) return;
     const alreadyPaid = enquiry.amount_paid || 0;
-    const stillValid = availablePaymentTypeOptions(paymentForm, alreadyPaid).some(o => o.value === paymentForm.payment_type);
-    if (!stillValid) {
+    const options = availablePaymentTypeOptions(paymentForm, alreadyPaid);
+    const stillValid = options.some(o => o.value === paymentForm.payment_type);
+    if (!stillValid && options.length > 0) {
+      // Fall back to whatever IS still on offer — 'Installment' itself is
+      // excluded once the booking is fully paid (see
+      // availablePaymentTypeOptions), so hardcoding it here would just
+      // reintroduce the invalid selection this effect exists to correct.
       // eslint-disable-next-line react-hooks/set-state-in-effect -- self-correcting a form field once it stops satisfying an invariant, guarded so it only fires on the actual violating transition
-      setPaymentForm(f => ({ ...f, payment_type: 'installment' }));
+      setPaymentForm(f => ({ ...f, payment_type: options[0].value }));
     }
   }, [enquiry, paymentForm]);
 

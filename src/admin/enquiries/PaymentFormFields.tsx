@@ -169,10 +169,12 @@ export default function PaymentFormFields({
               setPaymentForm(f => {
                 // 'Full Payment' means the whole total is being collected
                 // right now — only offered when nothing's been paid yet
-                // (see availablePaymentTypeOptions), so fill in what's
-                // owed automatically instead of making the admin retype
-                // the total they can already see above.
-                if (type === 'full_payment' && f.total_amount !== '') {
+                // (see availablePaymentTypeOptions) — and 'Balance' means
+                // whatever's still owed is being collected right now — only
+                // offered once something is — so both fill in what's owed
+                // automatically instead of making the admin look up or
+                // retype a number they can already see above/below.
+                if ((type === 'full_payment' || type === 'balance') && f.total_amount !== '') {
                   const alreadyPaid = enquiry.amount_paid || 0;
                   return { ...f, payment_type: type, amount_paid: Math.max(0, Number(f.total_amount) - alreadyPaid) };
                 }

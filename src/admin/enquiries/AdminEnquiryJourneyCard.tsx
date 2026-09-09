@@ -173,7 +173,7 @@ export default function AdminEnquiryJourneyCard({
               fullWidth
               onClick={onOpenPayment}
             >
-              <IndianRupee size={13} aria-hidden="true" /> Add Payment
+              <IndianRupee size={13} aria-hidden="true" /> {pendingAmount > 0 ? 'Add Payment' : 'Add Charge'}
             </Button>
             {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
               <Button
