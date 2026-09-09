@@ -72,10 +72,52 @@ export function useScrollRestoration(pathname: string, ready: boolean) {
   useLayoutEffect(() => {
     if (!ready) return;
     const shouldRestore = sessionStorage.getItem(`ulaa:restoreScroll:${pathname}`);
-    if (shouldRestore) {
-      sessionStorage.removeItem(`ulaa:restoreScroll:${pathname}`);
-      const savedY = Number(sessionStorage.getItem(`ulaa:scrollY:${pathname}`) || 0);
-      scrollToInstant(savedY);
-    }
+    if (!shouldRestore) return;
+    sessionStorage.removeItem(`ulaa:restoreScroll:${pathname}`);
+    const savedY = Number(sessionStorage.getItem(`ulaa:scrollY:${pathname}`) || 0);
+    scrollToInstant(savedY);
+
+    // `ready` only tracks THIS hook's own notion of "loaded" (usually just
+    // the page's main list/data fetch) — but plenty of pages keep growing
+    // after that: web fonts swapping in and reflowing text, a secondary
+    // fetch that isn't gated by `ready` (e.g. a KPI/summary card, a banner
+    // that only shows once its own data arrives), images without a
+    // reserved size, etc. If the document is still shorter than `savedY`
+    // at the exact instant we jump, the browser silently clamps the scroll
+    // toward the top — and since nothing re-checks it, the page is left
+    // sitting there even once it's grown tall enough to reach the real
+    // target a moment later. That's the "I scrolled down, came back, and
+    // it landed somewhere else (often right back at the top)" symptom.
+    //
+    // Re-assert the target position for a short window after the jump,
+    // but only once the page has actually grown enough to reach it —
+    // never yank the admin somewhere they haven't scrolled-content for
+    // yet. Stops the moment the admin scrolls by hand (a deliberate
+    // override) or once the window elapses.
+    let cancelled = false;
+    let rafId = 0;
+    const deadline = performance.now() + 1500;
+    const reassert = () => {
+      if (cancelled) return;
+      const maxScrollable = document.documentElement.scrollHeight - window.innerHeight;
+      if (Math.abs(window.scrollY - savedY) > 2 && maxScrollable >= savedY) {
+        scrollToInstant(savedY);
+      }
+      if (performance.now() < deadline) {
+        rafId = requestAnimationFrame(reassert);
+      }
+    };
+    rafId = requestAnimationFrame(reassert);
+
+    const stopOnUserScroll = () => { cancelled = true; };
+    window.addEventListener('wheel', stopOnUserScroll, { passive: true, once: true });
+    window.addEventListener('touchmove', stopOnUserScroll, { passive: true, once: true });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('wheel', stopOnUserScroll);
+      window.removeEventListener('touchmove', stopOnUserScroll);
+    };
   }, [ready, pathname]);
 }
