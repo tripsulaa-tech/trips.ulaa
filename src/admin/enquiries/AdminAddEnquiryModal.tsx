@@ -9,10 +9,11 @@ import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import { useConfirm } from '../../components/ui/useConfirm';
 import MethodReferenceFields from './MethodReferenceFields';
-import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS } from './AdminEnquiryCommon';
+import { parseNonNegative, PACKAGE_OPTIONS, FOOD_PREFERENCE_OPTIONS, PAYMENT_METHOD_OPTIONS, journeyBadge } from './AdminEnquiryCommon';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { inputClass, validateEnquiryForm, validateWaitlistPersonForm, type EnquiryForm, type WaitlistPersonForm } from './AdminEnquiriesShared';
 import { SOURCE_OPTIONS } from './AdminEnquiriesShared';
+import type { TravellerContact } from '../travellers/travellerContacts';
 
 type ConvertingWaitlist = { id: string; name: string; groupId: string | null; groupSize: number | null; groupSeq: number; slots: number };
 
@@ -39,9 +40,9 @@ export default function AddEnquiryModal({
   trips: UpcomingTrip[];
   waitlistPeople: WaitlistPersonForm[];
   updateWaitlistPerson: (index: number, patch: Partial<WaitlistPersonForm>) => void;
-  possibleDuplicates: Enquiry[];
+  possibleDuplicates: TravellerContact[];
   applySuggestedAmount: (tripId: string, packageType: Enquiry['package_type']) => void;
-  applyDuplicate: (dup: Enquiry) => void;
+  applyDuplicate: (contact: TravellerContact) => void;
   onSave: () => void;
   saving: boolean;
 }) {
@@ -294,7 +295,12 @@ export default function AddEnquiryModal({
 
           {/* Possible-duplicate soft warning (3.5) — fuzzy phone/email
               match against every enquiry already in the system, not just
-              this trip. Advisory only; doesn't block Save. */}
+              this trip. Advisory only; doesn't block Save. Grouped one
+              entry per matched *person* (via buildTravellerContacts, same
+              as the Contact Book), with their trip history listed
+              underneath — not one line per raw enquiry row or even per
+              trip, so a repeat traveller doesn't show up several times
+              over. */}
           {possibleDuplicates.length > 0 && (
             <div className="md:col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-900">
               <div className="flex items-start gap-2">
@@ -307,21 +313,25 @@ export default function AddEnquiryModal({
                 </div>
               </div>
               <ul className="mt-2 border-t border-amber-200/70 divide-y divide-amber-200/70">
-                {possibleDuplicates.slice(0, 5).map(d => (
-                  <li key={d.id} className="flex items-center justify-between gap-3 py-1.5">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{d.full_name}</p>
-                      <p className="text-xs text-amber-700/80 truncate">
-                        {d.trip_title || 'No trip linked'} · {d.status}{d.cancelled_at ? ' · cancelled' : ''}
-                      </p>
+                {possibleDuplicates.slice(0, 5).map(contact => (
+                  <li key={contact.key} className="py-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium truncate">{contact.fullName}</p>
+                      <button
+                        type="button"
+                        onClick={() => applyDuplicate(contact)}
+                        className="shrink-0 text-xs font-medium text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                      >
+                        Use details
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => applyDuplicate(d)}
-                      className="shrink-0 text-xs font-medium text-amber-900 underline underline-offset-2 hover:text-amber-950"
-                    >
-                      Use details
-                    </button>
+                    <ul className="mt-0.5 space-y-0.5">
+                      {contact.trips.map(trip => (
+                        <li key={trip.key} className="text-xs text-amber-700/80 truncate">
+                          {trip.tripTitle} · {journeyBadge(trip.representative).label}{trip.seatCount > 1 ? ` · ${trip.seatCount} seats` : ''}
+                        </li>
+                      ))}
+                    </ul>
                   </li>
                 ))}
                 {possibleDuplicates.length > 5 && (

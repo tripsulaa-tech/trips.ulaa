@@ -123,7 +123,14 @@ export default function AdminEnquiriesDesktopTable({
       <div
         ref={tableScrollRef}
         {...dragHandlers}
-        className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-md border border-background-warm ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+        // No cursor-grab/cursor-grabbing hand icon here — native
+        // overflow-x-auto/overflow-y-auto already gives the browser's own
+        // scrollbar + wheel/trackpad scrolling in both directions, and the
+        // click-and-drag handlers below (dragHandlers) still work under
+        // the ordinary cursor, so the drag-to-scroll gesture isn't lost,
+        // just no longer signposted with a hand. select-none stays while
+        // actually dragging, so a drag-scroll doesn't also select cell text.
+        className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-md border border-background-warm ${isDragging ? 'select-none' : ''}`}
       >
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">

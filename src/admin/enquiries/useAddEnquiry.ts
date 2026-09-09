@@ -7,6 +7,8 @@ import {
   validateEnquiryForm, validateWaitlistPersonForm,
 } from './AdminEnquiriesShared';
 import type { EnquiryForm, WaitlistPersonForm } from './AdminEnquiriesShared';
+import { buildTravellerContacts } from '../travellers/travellerContacts';
+import type { TravellerContact } from '../travellers/travellerContacts';
 import { useAlert } from '../../components/ui/useAlert';
 
 /** Owns the "Log an Enquiry" modal — its form state, the waitlist-conversion
@@ -189,36 +191,44 @@ export function useAddEnquiry(params: {
 
   // Being typed into the manual "Log an Enquiry" form against every
   // existing enquiry, so the admin can catch an accidental re-entry before
-  // saving instead of after.
-  const possibleDuplicates = (() => {
+  // saving instead of after. Collapsed through the same
+  // buildTravellerContacts() the Contact Book uses — one entry per matched
+  // *person* (not per raw row or even per trip), so a repeat traveller
+  // with several past trips shows up once, with their trip history listed
+  // underneath, instead of once per enquiry row.
+  const possibleDuplicates: TravellerContact[] = (() => {
     if (convertingWaitlist) return []; // this flow is already tied to one specific waitlist signup
     const phoneSig = phoneSignature(form.phone);
     const emailSig = emailSignature(form.email);
     if (!phoneSig && !emailSig) return [];
-    return enquiries.filter(e =>
+    const matchingRows = enquiries.filter(e =>
       (phoneSig && phoneSignature(e.phone) === phoneSig) ||
       (emailSig && emailSignature(e.email) === emailSig)
     );
+    return buildTravellerContacts(matchingRows);
   })();
 
   // "Use these details" on a possible-duplicate match — this genuinely is
   // the same traveler, so pull their identity fields from that existing
-  // enquiry instead of the admin retyping them. Only identity fields:
-  // trip, package, and payment are deliberately left alone since this is
-  // still a fresh enquiry (a new trip, a repeat booking, whatever brought
-  // them back) and those are the "remaining things admin adds" for it.
-  // 'not-provided@ulaa.local' is createManualEnquiry's own placeholder for
-  // "no email given" (see handleSave below) — copying that over would look
-  // like a real address, so it's treated the same as blank here.
-  const applyDuplicate = (dup: Enquiry) => {
+  // contact instead of the admin retyping them. Uses the same
+  // most-recent-non-blank field picks the Contact Book itself shows
+  // (contact.fullName/phone/email/city/foodPreference already reflect
+  // that), plus the most recent non-blank age across their rows since age
+  // isn't tracked on the contact directly. Only identity fields: trip,
+  // package, and payment are deliberately left alone since this is still a
+  // fresh enquiry (a new trip, a repeat booking, whatever brought them
+  // back) and those are the "remaining things admin adds" for it.
+  const applyDuplicate = (contact: TravellerContact) => {
+    const rowsByRecency = [...contact.rows].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    const bestAge = rowsByRecency.find(r => r.age != null)?.age;
     setForm(f => ({
       ...f,
-      full_name: dup.full_name,
-      phone: dup.phone,
-      email: dup.email && dup.email !== 'not-provided@ulaa.local' ? dup.email : f.email,
-      age: dup.age ?? f.age,
-      city: dup.city || f.city,
-      food_preference: dup.food_preference || f.food_preference,
+      full_name: contact.fullName,
+      phone: contact.phone,
+      email: contact.email || f.email,
+      age: bestAge ?? f.age,
+      city: contact.city || f.city,
+      food_preference: contact.foodPreference || f.food_preference,
     }));
   };
 
