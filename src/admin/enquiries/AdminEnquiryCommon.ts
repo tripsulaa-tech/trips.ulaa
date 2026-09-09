@@ -194,22 +194,30 @@ export function outstandingBalance(totalAmount: number | '', alreadyPaid: number
 }
 
 // Same list as PAYMENT_TYPE_OPTIONS, minus:
-//  - 'Balance' when nothing is actually still owed on the total — see
-//    outstandingBalance above. Once offered, picking it auto-fills Amount
-//    Being Paid Now with that exact outstanding amount (PaymentFormFields'
-//    onChange), so admins no longer need to already know/type the figure
-//    for it to appear.
 //  - 'Full Payment' and 'Advance' once anything's already been paid — both
 //    only make sense as the very first money in on a booking; once that's
 //    happened, every further payment is an Installment (or a Balance, once
 //    something's still owed), never another "first" payment.
+//  - 'Balance', 'Installment', and 'Add-on' on that very first payment
+//    (nothing paid yet) — the reverse of the rule above. 'Balance'/
+//    'Installment' both imply money's already gone in toward the total,
+//    and 'Add-on' implies a booking already exists to add a fresh charge
+//    onto; none of that is true before the first rupee lands.
+//  - 'Balance' specifically, whenever nothing is actually still owed on
+//    the total — see outstandingBalance above. Once offered, picking it
+//    auto-fills Amount Being Paid Now with that exact outstanding amount
+//    (PaymentFormFields' onChange), so admins no longer need to already
+//    know/type the figure for it to appear.
 // Callers pair this with an effect that steers payment_type off whichever
 // of these it no longer qualifies for (e.g. a second payment still has
 // 'Advance' left over from the form's default, or the total/discount is
 // edited after 'Balance' was picked), so the Select's current value always
 // stays in this list.
 export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPaid: number): { value: PaymentForm['payment_type']; label: string }[] {
-  const options = alreadyPaid > 0 ? PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'advance' && o.value !== 'full_payment') : PAYMENT_TYPE_OPTIONS;
+  if (alreadyPaid <= 0) {
+    return PAYMENT_TYPE_OPTIONS.filter(o => o.value === 'full_payment' || o.value === 'advance');
+  }
+  const options = PAYMENT_TYPE_OPTIONS.filter(o => o.value !== 'advance' && o.value !== 'full_payment');
   const owed = outstandingBalance(paymentForm.total_amount, alreadyPaid);
   if (owed != null && owed > 0) return options;
   if (owed === 0) {
@@ -506,6 +514,22 @@ export const BOOKING_FOLLOW_UP_TYPE_CONFIG: Record<BookingFollowUpType, { label:
   final_itinerary: { label: 'Final Itinerary Reminder' },
   other: { label: 'Other' },
 };
+
+// Which Booking Follow-up types make sense for THIS booking right now —
+// not every type in BOOKING_FOLLOW_UP_TYPE_CONFIG applies at every
+// journey_stage. Balance Payment Reminder only makes sense while there's
+// still a balance to chase; once it's cleared (fully_paid/checked_in)
+// offering it is misleading, same reasoning as the "Add Charge" vs "Add
+// Payment" relabel on the detail page. The rest (document/passport/
+// medical declaration/final itinerary/other) aren't tied to payment
+// state, so they stay available for the whole active-booking window that
+// canSetBookingFollowUp() already gates — no per-stage filtering needed
+// there.
+export function availableBookingFollowUpTypes(e: Enquiry): BookingFollowUpType[] {
+  const balanceCleared = e.journey_stage === 'fully_paid' || e.journey_stage === 'checked_in';
+  return (Object.keys(BOOKING_FOLLOW_UP_TYPE_CONFIG) as BookingFollowUpType[])
+    .filter(t => t !== 'balance_payment' || !balanceCleared);
+}
 
 // Booking Follow-up reminder chip — same escalating urgency treatment as
 // followUpStatus() above (overdue/today/upcoming), but labelled with what

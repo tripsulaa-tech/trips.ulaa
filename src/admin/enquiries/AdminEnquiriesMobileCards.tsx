@@ -528,7 +528,28 @@ export default function AdminEnquiriesMobileCards({
                       <ActionsMenu
                         disabled={updating === e.id}
                         items={[
-                          { label: 'Record Payment', icon: IndianRupee, onClick: () => openPayment(e) },
+                          // Hidden entirely on a fresh New Enquiry row —
+                          // recording a payment here was a silent bypass
+                          // around the Contact Outcome step (no notes, no
+                          // "why they're interested" captured), even
+                          // though the visible "Mark Contacted" chip
+                          // already owns that leg. Once contacted (or
+                          // later), the item comes back so an admin who
+                          // already logged the outcome can still add a
+                          // payment from the kebab instead of opening the
+                          // full CRM page.
+                          ...(e.journey_stage === 'new_enquiry' ? [] : [{
+                            // Labelled the same as the equivalent button on
+                            // the enquiry detail page (AdminEnquiryJourneyCard):
+                            // 'Add Payment' implies a balance still owed,
+                            // 'Add Charge' once the booking's Paid in full,
+                            // where this same action only ever adds a fresh
+                            // charge (a hotel upgrade, etc), never fills a
+                            // balance.
+                            label: paymentFilterKey(e) === 'paid' ? 'Add Charge' : 'Add Payment',
+                            icon: IndianRupee,
+                            onClick: () => openPayment(e),
+                          }]),
                           ...buildRowActions(e),
                         ]}
                       />

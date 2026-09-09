@@ -18,14 +18,14 @@
 // a bare date. Same "discard unsaved changes?" protection as every
 // other business-data modal (spec's Unsaved Changes Protection
 // section) — nothing saves until Save is explicitly pressed.
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
 import DatePicker from '../../components/ui/DatePicker';
 import TimePicker from '../../components/ui/TimePicker';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { BOOKING_FOLLOW_UP_TYPE_CONFIG } from './AdminEnquiryCommon';
+import { BOOKING_FOLLOW_UP_TYPE_CONFIG, availableBookingFollowUpTypes } from './AdminEnquiryCommon';
 import type { BookingFollowUpType, Enquiry } from '../../types/types-index';
 import { inputClass } from './AdminEnquiriesShared';
 
@@ -77,9 +77,6 @@ export interface BookingFollowUpResult {
   notes: string;
 }
 
-const BOOKING_FOLLOW_UP_TYPE_OPTIONS = (Object.keys(BOOKING_FOLLOW_UP_TYPE_CONFIG) as BookingFollowUpType[])
-  .map(value => ({ value, label: BOOKING_FOLLOW_UP_TYPE_CONFIG[value].label }));
-
 export function BookingFollowUpModal({
   target,
   onClose,
@@ -92,17 +89,33 @@ export function BookingFollowUpModal({
   saving: boolean;
 }) {
   const confirm = useConfirm();
-  const [type, setType] = useState<BookingFollowUpType>('balance_payment');
+  const [type, setType] = useState<BookingFollowUpType>('other');
   const [at, setAt] = useState('');
   const [time, setTime] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Which reminder types make sense for THIS booking right now — e.g.
+  // Balance Payment Reminder drops off once the balance's cleared. If the
+  // booking already has a reminder saved of a type that's since fallen out
+  // of that set (set back when there was still a balance due, booking's
+  // since gone fully_paid), keep showing it here so the dropdown reflects
+  // what's actually saved rather than silently swapping it out from under
+  // the admin — it just won't be offered for a fresh pick.
+  const typeOptions = useMemo(() => {
+    if (!target) return [];
+    const available = availableBookingFollowUpTypes(target);
+    const types = target.booking_follow_up_type && !available.includes(target.booking_follow_up_type)
+      ? [target.booking_follow_up_type, ...available]
+      : available;
+    return types.map(value => ({ value, label: BOOKING_FOLLOW_UP_TYPE_CONFIG[value].label }));
+  }, [target]);
 
   // Pre-fill from any existing reminder when reopening this booking, blank
   // slate otherwise — never carry over a previous target's half-filled form.
   useEffect(() => {
     if (!target) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local form state to match a newly-opened target, not syncing an external system
-    setType(target.booking_follow_up_type || 'balance_payment');
+    setType(target.booking_follow_up_type || availableBookingFollowUpTypes(target)[0] || 'other');
     setAt(target.booking_follow_up_at || '');
     setTime(target.booking_follow_up_time || '');
     setNotes(target.booking_follow_up_notes || '');
@@ -110,7 +123,7 @@ export function BookingFollowUpModal({
 
   const isDirty = at !== (target?.booking_follow_up_at || '')
     || time !== (target?.booking_follow_up_time || '')
-    || type !== (target?.booking_follow_up_type || 'balance_payment')
+    || type !== (target?.booking_follow_up_type || (target ? availableBookingFollowUpTypes(target)[0] : undefined) || 'other')
     || notes !== (target?.booking_follow_up_notes || '');
 
   const requestClose = async () => {
@@ -138,7 +151,7 @@ export function BookingFollowUpModal({
 
           <div>
             <label htmlFor="bfu-type" className="block text-sm font-medium text-dark mb-1">Reminder Type</label>
-            <Select inputId="bfu-type" value={type} onChange={val => setType(val as BookingFollowUpType)} options={BOOKING_FOLLOW_UP_TYPE_OPTIONS} />
+            <Select inputId="bfu-type" value={type} onChange={val => setType(val as BookingFollowUpType)} options={typeOptions} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

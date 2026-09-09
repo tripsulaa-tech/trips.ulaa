@@ -5,7 +5,8 @@
 // state on AdminEnquiryDetail, before any booking exists — no popup needed
 // for the very first payment). Neither caller owns any of this state; it's
 // all still lifted to AdminEnquiryDetail, same as before the split.
-import { Baby } from '@phosphor-icons/react';
+import { useState } from 'react';
+import { Baby, LockSimple, LockSimpleOpen } from '@phosphor-icons/react';
 import Select from '../../components/ui/Select';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -55,14 +56,36 @@ export default function PaymentFormFields({
   // for these two fields; grid+gap-4 in compact mode sits them side by side.
   const pairClass = compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-4';
 
+  // Once money has actually been collected, Package/Discount silently
+  // recalculating total_amount is dangerous — it rewrites the price basis
+  // of a payment that's already been reconciled. Lock these fields behind
+  // an explicit "I understand, let me edit" unlock once amount_paid > 0,
+  // rather than letting them stay quietly editable forever.
+  const hasPayment = (enquiry.amount_paid || 0) > 0;
+  const [pricingUnlocked, setPricingUnlocked] = useState(false);
+  const pricingLocked = hasPayment && !pricingUnlocked;
+
   return (
     <div className="space-y-4">
       {!compact && (
         <div>
-          <label htmlFor={`${idPrefix}-package`} className="block text-sm font-medium text-dark mb-1">Package</label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor={`${idPrefix}-package`} className="block text-sm font-medium text-dark">Package</label>
+            {hasPayment && (
+              <button
+                type="button"
+                onClick={() => setPricingUnlocked(u => !u)}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+              >
+                {pricingLocked ? <LockSimple size={12} /> : <LockSimpleOpen size={12} />}
+                {pricingLocked ? 'Unlock to edit' : 'Lock'}
+              </button>
+            )}
+          </div>
           <Select
             inputId={`${idPrefix}-package`}
             value={paymentForm.package_type}
+            disabled={pricingLocked}
             onChange={val => {
               const packageType = val as Enquiry['package_type'];
               const suggested = getTripPrice(enquiry.trip_id, packageType);
@@ -76,6 +99,11 @@ export default function PaymentFormFields({
             }}
             options={PACKAGE_OPTIONS}
           />
+          {hasPayment && pricingLocked && (
+            <p className="text-[11px] text-dark-muted mt-1">
+              Already paid {formatPrice(enquiry.amount_paid || 0)} against the current total — unlock to recalculate.
+            </p>
+          )}
         </div>
       )}
       {enquiry.trip_id ? (
@@ -94,12 +122,12 @@ export default function PaymentFormFields({
               type="number"
               min={0}
               value={paymentForm.payment_type === 'addon' ? '' : paymentForm.discount_amount}
-              disabled={paymentForm.payment_type === 'addon'}
+              disabled={paymentForm.payment_type === 'addon' || pricingLocked}
               onChange={e => {
                 const discount = parseNonNegative(e.target.value);
                 setPaymentForm(f => ({ ...f, discount_amount: discount, total_amount: computeDiscountedTotal(listPrice, discount) ?? f.total_amount }));
               }}
-              className={`${fieldClass} ${paymentForm.payment_type === 'addon' ? 'opacity-60 cursor-not-allowed' : ''}`}
+              className={`${fieldClass} ${(paymentForm.payment_type === 'addon' || pricingLocked) ? 'opacity-60 cursor-not-allowed' : ''}`}
               placeholder={paymentForm.payment_type === 'addon' ? 'Updates automatically' : 'e.g. 1000'}
             />
           </div>
@@ -109,12 +137,19 @@ export default function PaymentFormFields({
               id={`${idPrefix}-discount-reason`}
               type="text"
               value={paymentForm.discount_reason}
-              disabled={paymentForm.payment_type === 'addon'}
+              disabled={paymentForm.payment_type === 'addon' || pricingLocked}
               onChange={e => setPaymentForm(f => ({ ...f, discount_reason: e.target.value }))}
-              className={`${fieldClass} ${paymentForm.payment_type === 'addon' ? 'opacity-60 cursor-not-allowed' : ''}`}
+              className={`${fieldClass} ${(paymentForm.payment_type === 'addon' || pricingLocked) ? 'opacity-60 cursor-not-allowed' : ''}`}
               placeholder="e.g. repeat customer, referral"
             />
           </div>
+          {hasPayment && pricingLocked && (
+            <div className="col-span-2">
+              <p className="text-[11px] text-dark-muted -mt-2">
+                Already paid {formatPrice(enquiry.amount_paid || 0)} against the current total — recalculating will change the balance/refund position. Use the "Unlock to edit" link above Package to proceed.
+              </p>
+            </div>
+          )}
           <div className="col-span-2">
             <p className="text-sm text-dark-muted">
               Total Amount: <span className="font-semibold text-dark">{paymentForm.total_amount === '' ? 'Not set' : formatPrice(Number(paymentForm.total_amount))}</span>
@@ -251,14 +286,19 @@ export default function PaymentFormFields({
         const projectedBookingTotal = isExtraCharge && paymentForm.total_amount !== ''
           ? Number(paymentForm.total_amount) + thisPayment
           : paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
+        const balance = projectedBookingTotal != null ? projectedBookingTotal - projectedTotal : null;
+        const isOverpaid = balance != null && balance < 0;
         return (
           <p className="text-sm text-dark-muted">
             Already paid <span className="font-medium text-dark">{formatPrice(alreadyPaid)}</span>
             {thisPayment > 0 && !isPending && <> · after this payment: <span className="font-semibold text-dark">{formatPrice(projectedTotal)}</span></>}
             {thisPayment > 0 && isPending && <> · <span className="font-semibold text-amber-700">{formatPrice(thisPayment)} raised as pending</span>, not yet counted as paid</>}
             {isExtraCharge && thisPayment > 0 && <> · booking total will rise by <span className="font-semibold text-dark">{formatPrice(thisPayment)}</span></>}
-            {projectedBookingTotal != null && (
-              <> · Balance due: <span className="font-semibold text-dark">{formatPrice(Math.max(0, projectedBookingTotal - projectedTotal))}</span></>
+            {balance != null && !isOverpaid && (
+              <> · Balance due: <span className="font-semibold text-dark">{formatPrice(balance)}</span></>
+            )}
+            {isOverpaid && (
+              <> · <span className="font-semibold text-red-600">Overpaid by {formatPrice(Math.abs(balance))} — refund needed</span></>
             )}
           </p>
         );

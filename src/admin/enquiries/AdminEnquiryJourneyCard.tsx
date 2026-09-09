@@ -3,7 +3,12 @@
 // booking exists — the Track Payment fields themselves, filled in right
 // here on the page rather than behind a popup, since recording the first
 // payment is the very next thing an admin does with a brand-new enquiry.
-import { CheckCircle as CheckCircle2, Clock, CurrencyInr as IndianRupee, FileText, Path, Wallet, Tag, Suitcase, PlusCircle, Percent } from '@phosphor-icons/react';
+// On a still-uncontacted enquiry, though, the fields stay hidden behind a
+// "mark contacted first" note (see the 'new_enquiry' branch below) — same
+// reasoning as hiding the kebab's Add Payment on a New Enquiry row: money
+// changing hands shouldn't be a silent bypass around logging the Contact
+// Outcome (who was reached, why they're interested, etc).
+import { CheckCircle as CheckCircle2, Clock, CurrencyInr as IndianRupee, FileText, Path, Wallet, Tag, Suitcase, PlusCircle, Percent, ArrowsClockwise as RefreshCw } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
@@ -190,6 +195,33 @@ export default function AdminEnquiryJourneyCard({
           </div>
         </div>
       </>
+    );
+  }
+
+  // A brand-new, uncontacted enquiry: keep the Track Payment fields hidden
+  // behind a note pointing at "Mark Contacted" (the primary CTA already
+  // shown above, in the header card) instead of duplicating that action
+  // here. This is the same gate as the row-level kebab's Add Payment —
+  // once the admin logs a Contact Outcome, journey_stage moves past
+  // 'new_enquiry' and this form opens up as normal. Doesn't block the
+  // walk-in/pre-paid case, since a customer messaging in already having
+  // paid an advance is exactly a "Contact Outcome: Interested" moment —
+  // it just means Mark Contacted gets clicked first, right before Track
+  // Payment, instead of the two being reachable in either order.
+  if (enquiry.journey_stage === 'new_enquiry') {
+    return (
+      <div className="bg-white rounded-lg shadow-card p-4 sm:p-5 space-y-2">
+        <div>
+          <p className="text-dark text-base font-display font-bold flex items-center gap-2">
+            <Wallet size={18} className="shrink-0 text-primary" aria-hidden="true" /> No Payment Yet
+          </p>
+          <p className="text-dark-muted text-xs mt-1">No booking exists on this enquiry yet.</p>
+        </div>
+        <p className="text-dark-muted text-xs flex items-start gap-1.5 bg-cream rounded-md p-2.5">
+          <RefreshCw size={14} className="shrink-0 mt-0.5 text-primary" aria-hidden="true" />
+          Mark this enquiry Contacted first — use the button above. That opens the Contact Outcome popup (even a customer who already paid an advance counts as "Interested"), and Track Payment opens up right after.
+        </p>
+      </div>
     );
   }
 

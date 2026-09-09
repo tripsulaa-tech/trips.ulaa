@@ -256,26 +256,53 @@ export default function AdminEnquiriesDesktopTable({
                     </span>
                   </td>
                   <td className="px-2 py-4 text-left whitespace-nowrap">
-                    <button onClick={() => openPayment(e)} className="text-left hover:opacity-75 transition-opacity">
-                      <p className="text-dark text-xs">
-                        <span className="font-medium">{formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}</span>
-                        <span className="text-dark-muted"> · </span>
-                        <span className={`font-semibold ${
-                          paymentStatus(e).color.includes('green') ? 'text-green-700'
-                            : paymentStatus(e).color.includes('amber') ? 'text-amber-700'
-                            : paymentStatus(e).color.includes('red') ? 'text-red-700'
-                            : 'text-dark-muted'
-                        }`}>
-                          {paymentStatus(e).label}
-                        </span>
-                        {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                          <span className="text-amber-600"> · {formatPrice(paymentBalance(e)!)} Due</span>
+                    {/* Same gate as the kebab's Add Payment / the detail
+                        page's inline Track Payment form — a New Enquiry
+                        hasn't been through Contact Outcome yet, so this
+                        cell shouldn't be a side-door into the payment
+                        modal. Rendered plain (no button, no hover, no
+                        click) with a title nudging toward Mark Contacted
+                        instead of just silently doing nothing on click. */}
+                    {e.journey_stage === 'new_enquiry' ? (
+                      <div title="Mark this enquiry Contacted first to record a payment">
+                        <p className="text-dark text-xs">
+                          <span className="font-medium">{formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}</span>
+                          <span className="text-dark-muted"> · </span>
+                          <span className={`font-semibold ${
+                            paymentStatus(e).color.includes('green') ? 'text-green-700'
+                              : paymentStatus(e).color.includes('amber') ? 'text-amber-700'
+                              : paymentStatus(e).color.includes('red') ? 'text-red-700'
+                              : 'text-dark-muted'
+                          }`}>
+                            {paymentStatus(e).label}
+                          </span>
+                          {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
+                            <span className="text-amber-600"> · {formatPrice(paymentBalance(e)!)} Due</span>
+                          )}
+                        </p>
+                      </div>
+                    ) : (
+                      <button onClick={() => openPayment(e)} className="text-left hover:opacity-75 transition-opacity">
+                        <p className="text-dark text-xs">
+                          <span className="font-medium">{formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}</span>
+                          <span className="text-dark-muted"> · </span>
+                          <span className={`font-semibold ${
+                            paymentStatus(e).color.includes('green') ? 'text-green-700'
+                              : paymentStatus(e).color.includes('amber') ? 'text-amber-700'
+                              : paymentStatus(e).color.includes('red') ? 'text-red-700'
+                              : 'text-dark-muted'
+                          }`}>
+                            {paymentStatus(e).label}
+                          </span>
+                          {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
+                            <span className="text-amber-600"> · {formatPrice(paymentBalance(e)!)} Due</span>
+                          )}
+                        </p>
+                        {e.booking_id && (
+                          <span title="Booking ID" className="mt-0.5 block text-[10px] font-mono text-dark-muted truncate">{e.booking_id}</span>
                         )}
-                      </p>
-                      {e.booking_id && (
-                        <span title="Booking ID" className="mt-0.5 block text-[10px] font-mono text-dark-muted truncate">{e.booking_id}</span>
-                      )}
-                    </button>
+                      </button>
+                    )}
                     {refundStatus(e) && (
                       <p className={`text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
                         {refundStatus(e)!.label}
