@@ -1,7 +1,7 @@
 import { supabase } from '../../supabase';
 import { formatPrice } from '../../../utils/utils-index';
 import type { Enquiry, Payment } from '../../../types/types-index';
-import { PAYMENT_TYPE_LOG_LABEL, computeAutoStatus, computeBookingStatus, refreshJourneyStage } from './shared';
+import { PAYMENT_TYPE_LOG_LABEL, computeAutoStatus, computeBookingStatus, refreshJourneyStage, autoSendBookingEmail } from './shared';
 import { logActivity } from './activity';
 
 // =============================================
@@ -131,6 +131,18 @@ export async function recordPayment(
       delta > 0 ? `${PAYMENT_TYPE_LOG_LABEL[invoiceType] || invoiceType} received` : 'Payment adjusted',
       `${formatPrice(Math.abs(delta))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
     );
+  }
+
+  // Auto-send the booking confirmation email whenever real money actually
+  // comes in — advance, installment, balance, or full payment alike — so
+  // the customer gets an updated receipt (with the fresh payment ledger and
+  // remaining-balance figure baked in) without the admin having to remember
+  // to hit "Send Booking Email" manually every time. Skipped for
+  // delta <= 0 (profile-only edits, negative adjustments) — see
+  // autoSendBookingEmail in shared.ts for the email-on-file check and the
+  // best-effort try/catch (a failed send must never fail the payment save).
+  if (delta > 0) {
+    await autoSendBookingEmail(updated, await getPaymentsForEnquiry(current.id));
   }
 
   // Discount isn't a ledger transaction (nothing moves in `payments`), so
