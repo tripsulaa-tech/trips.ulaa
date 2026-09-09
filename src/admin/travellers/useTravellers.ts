@@ -7,8 +7,21 @@ import type { TravellerEditForm } from './AdminEditTravellerModal';
 import { useAlert } from '../../components/ui/useAlert';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity } from '../../utils/formValidation';
+import { loadPersisted, savePersisted } from '../../utils/sessionState';
 
 export const TRAVELLERS_PAGE_SIZE = 10;
+
+// Persisted the same way as the Enquiries page's filters (see
+// useEnquiryFilters.ts and utils/sessionState.ts) so switching admin tabs
+// and coming back to the Contact Book keeps the same search/"repeat only"/
+// page instead of resetting.
+const FILTERS_STORAGE_KEY = 'ulaa:admin-travellers:filters';
+
+type PersistedTravellersFilters = {
+  searchQuery: string;
+  repeatOnly: boolean;
+  page: number;
+};
 
 /** Owns the Contact Book's data: loads every enquiry once (same source of
  *  truth as Admin Enquiries — see useEnquiryData.ts), collapses it into
@@ -21,9 +34,10 @@ export const TRAVELLERS_PAGE_SIZE = 10;
 export function useTravellers() {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [repeatOnly, setRepeatOnly] = useState(false);
-  const [page, setPage] = useState(1);
+  const [persisted] = useState(() => loadPersisted<PersistedTravellersFilters>(FILTERS_STORAGE_KEY));
+  const [searchQuery, setSearchQuery] = useState(persisted.searchQuery ?? '');
+  const [repeatOnly, setRepeatOnly] = useState(persisted.repeatOnly ?? false);
+  const [page, setPage] = useState(persisted.page ?? 1);
   const alert = useAlert();
   const confirm = useConfirm();
 
@@ -67,6 +81,13 @@ export function useTravellers() {
     setPrevFilterSignature(filterSignature);
     setPage(1);
   }
+
+  // Persist search/"repeat only"/page as one JSON blob whenever any of
+  // them change — see useEnquiryFilters.ts for the fuller version of this
+  // same pattern.
+  useEffect(() => {
+    savePersisted<PersistedTravellersFilters>(FILTERS_STORAGE_KEY, { searchQuery, repeatOnly, page });
+  }, [searchQuery, repeatOnly, page]);
 
   const kpis = useMemo(() => {
     // Distinct trips across every contact — a group booking or several

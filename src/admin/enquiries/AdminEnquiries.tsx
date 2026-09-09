@@ -21,7 +21,6 @@ import AdminLayout from '../AdminLayout';
 import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
-import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import type { CompletedTrip, Enquiry, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
 import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap, formatBatchLabel, formatDate } from '../../utils/utils-index';
 import type { GroupUnit } from '../../utils/utils-index';
@@ -70,11 +69,10 @@ import AdminEnquiryPaymentModal from './AdminEnquiryPaymentModal';
 export default function AdminEnquiries() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { enquiries, trips, completedTrips, loading, load, setTrips } = useEnquiryData();
-  // Restores scroll position when the admin comes back to this list — e.g.
-  // expand a card, tap "View Full CRM", then go back — instead of always
-  // landing back at the top. Waits for `!loading` so it restores against
-  // the page's real height, not the loading skeleton's.
-  useScrollRestoration('/admin/enquiries', !loading);
+  // Scroll restoration for this page (restoring where the admin was after
+  // e.g. expanding a card, tapping "View Full CRM", then coming back) is
+  // now centralized in AdminLayout — see the scrollRestorationReady={!loading}
+  // prop passed to it below.
   const {
     filter, setFilter,
     journeyFilter, setJourneyFilter,
@@ -111,9 +109,10 @@ export default function AdminEnquiries() {
   // that expanding a card, tapping "View Full CRM" to drill into the detail
   // page, then coming back (browser back / in-app back) lands the admin
   // exactly where they left off: same card still expanded, same scroll
-  // position (see useScrollRestoration below). Previously this was plain
-  // local state, so navigating away and back always collapsed everything
-  // and reset the scroll to the top.
+  // position (scroll restoration itself now lives in AdminLayout — see the
+  // scrollRestorationReady prop passed to it below). Previously this was
+  // plain local state, so navigating away and back always collapsed
+  // everything and reset the scroll to the top.
   const [expandedId, setExpandedId] = useState<string | null>(() => {
     try {
       return sessionStorage.getItem('ulaa:admin-enquiries:expandedId');
@@ -123,9 +122,9 @@ export default function AdminEnquiries() {
   });
   // Tracks whether the expandedId above came from a restore (vs. a fresh
   // tap) so the scroll-into-view effect further down can skip its
-  // scroll/animate step just once — useScrollRestoration already puts the
-  // page at the exact saved scrollY, and re-running scrollIntoView on top
-  // of that would fight it and produce a visible jump.
+  // scroll/animate step just once — AdminLayout's scroll restoration
+  // already puts the page at the exact saved scrollY, and re-running
+  // scrollIntoView on top of that would fight it and produce a visible jump.
   const restoredExpandedIdRef = useRef(expandedId !== null);
   // Separate from expandedId: expandedId also drives the mobile
   // expand/collapse toggle and should stay set. highlightId is purely a
@@ -645,7 +644,7 @@ export default function AdminEnquiries() {
   const followUpDueCount = scopedEnquiries.filter(e => !!followUpStatus(e)?.isDue).length;
 
   return (
-    <AdminLayout title="Enquiries">
+    <AdminLayout title="Enquiries" scrollRestorationReady={!loading}>
       <div className="space-y-4 sm:space-y-6">
         <JourneyLifecycleLegend />
 

@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { loadPersisted, savePersisted } from '../utils/sessionState';
 import {
   Users,
   UserPlus,
@@ -72,6 +73,14 @@ const SOURCE_LABELS: Record<Enquiry['source'], string> = {
 };
 
 type Period = 'all' | 'month' | '30d';
+
+// Persisted the same way as the Enquiries page's filters (see
+// useEnquiryFilters.ts and utils/sessionState.ts) so switching admin tabs
+// and coming back to Reports keeps the same period toggle instead of
+// resetting to "All Time".
+const PERIOD_STORAGE_KEY = 'ulaa:admin-reports:filters';
+type PersistedReportsFilters = { period: Period };
+
 
 const PERIOD_OPTIONS: { value: Period; label: string; shortLabel: string }[] = [
   { value: 'all', label: 'All Time', shortLabel: 'All' },
@@ -336,7 +345,12 @@ export default function AdminReports() {
   const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<Period>('all');
+  const [period, setPeriod] = useState<Period>(() => loadPersisted<PersistedReportsFilters>(PERIOD_STORAGE_KEY).period ?? 'all');
+
+  // Persist the period toggle whenever it changes.
+  useEffect(() => {
+    savePersisted<PersistedReportsFilters>(PERIOD_STORAGE_KEY, { period });
+  }, [period]);
 
   useEffect(() => {
     Promise.all([getEnquiries(), getAllUpcomingTripsAdmin(), getAllCompletedTripsAdmin(), getAllPayments()])
@@ -669,7 +683,7 @@ export default function AdminReports() {
   };
 
   return (
-    <AdminLayout title="Reports">
+    <AdminLayout title="Reports" scrollRestorationReady={!loading}>
       <div className="space-y-6 sm:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-dark-muted text-sm">

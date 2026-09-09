@@ -1,10 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { PACKAGE_CONFIG } from './AdminEnquiryCommon';
 import { paymentStatus, isGroupEntry, isBooked } from './AdminEnquiriesShared';
 import { formatDate } from '../../utils/utils-index';
 import { computeTripFinanceSummary } from '../../utils/tripFinance';
+import { loadPersisted, savePersisted } from '../../utils/sessionState';
+
+export type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status' | 'follow_up';
+
+// Every filter/search/sort/page knob this hook owns, persisted as one JSON
+// blob (see utils/sessionState.ts) so leaving this page (switching admin
+// tabs, opening "View Full CRM" and coming back, a hard refresh) and
+// returning lands the admin back on the exact same filtered/sorted/paged
+// view instead of resetting to "all enquiries".
+const FILTERS_STORAGE_KEY = 'ulaa:admin-enquiries:filters';
+
+type PersistedEnquiryFilters = {
+  filter: 'all' | Enquiry['status'];
+  journeyFilter: 'all' | Exclude<Enquiry['journey_stage'], 'cancelled'>;
+  payFilter: 'all' | 'paid' | 'partial' | 'unpaid' | 'not_set';
+  bookedFilter: 'all' | 'booked' | 'not_booked' | 'cancelled';
+  groupFilter: 'all' | 'group' | 'solo';
+  foodFilter: 'all' | 'veg' | 'non_veg' | 'not_set';
+  packageFilter: 'all' | 'early_bird' | 'normal';
+  sourceFilter: 'all' | Enquiry['source'];
+  followUpDueOnly: boolean;
+  searchQuery: string;
+  selectedTripKey: string | null;
+  currentPage: number;
+  sortKey: EnquirySortKey | null;
+  sortDir: SortDirection;
+};
 
 // Local CSV writer, not utils-index's downloadCsv — that helper is
 // fixed-shape (one header row + uniform data rows), which is right for the
@@ -51,7 +78,6 @@ function financeSummaryByTrip(allTrips: UpcomingTrip[], allEnquiries: Enquiry[])
     .sort((a, b) => b.totalRevenue - a.totalRevenue);
 }
 
-export type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status' | 'follow_up';
 type FilterPanelKey = 'trip' | 'query' | 'journey' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null;
 
 // Table pagination — 50 rows per page, matching the reference table design.
@@ -74,7 +100,13 @@ export const ENQUIRIES_PAGE_SIZE = 10;
  *  Extracted from AdminEnquiries.tsx (see that file's history for the
  *  original single-component version). */
 export function useEnquiryFilters() {
-  const [filter, setFilter] = useState<'all' | Enquiry['status']>('all');
+  // Read once per mount (not once per field) so every lazy useState
+  // initializer below agrees on the same saved snapshot — a plain module-
+  // level read would go stale after the first mount, since this hook stays
+  // loaded for the life of the SPA session rather than being re-imported.
+  const [persisted] = useState(() => loadPersisted<PersistedEnquiryFilters>(FILTERS_STORAGE_KEY));
+
+  const [filter, setFilter] = useState<'all' | Enquiry['status']>(persisted.filter ?? 'all');
   // Booking Journey filter — a separate, finer-grained dimension from
   // `filter` above (Lead Status: new/contacted/closed only). Lets an admin
   // isolate a specific stage of the pipeline the Status column already
@@ -83,34 +115,38 @@ export function useEnquiryFilters() {
   // Excludes 'cancelled' — that's Booking State, already covered by the
   // Booking filter's Cancelled option (isCancelled()), not a journey stage
   // going forward (see JOURNEY_STAGE_CONFIG's comment on that legacy value).
-  const [journeyFilter, setJourneyFilter] = useState<'all' | Exclude<Enquiry['journey_stage'], 'cancelled'>>('all');
-  const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>('all');
-  const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked' | 'cancelled'>('all');
-  const [groupFilter, setGroupFilter] = useState<'all' | 'group' | 'solo'>('all');
-  const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>('all');
-  const [packageFilter, setPackageFilter] = useState<'all' | 'early_bird' | 'normal'>('all');
-  const [sourceFilter, setSourceFilter] = useState<'all' | Enquiry['source']>('all');
+  const [journeyFilter, setJourneyFilter] = useState<'all' | Exclude<Enquiry['journey_stage'], 'cancelled'>>(persisted.journeyFilter ?? 'all');
+  const [payFilter, setPayFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid' | 'not_set'>(persisted.payFilter ?? 'all');
+  const [bookedFilter, setBookedFilter] = useState<'all' | 'booked' | 'not_booked' | 'cancelled'>(persisted.bookedFilter ?? 'all');
+  const [groupFilter, setGroupFilter] = useState<'all' | 'group' | 'solo'>(persisted.groupFilter ?? 'all');
+  const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg' | 'not_set'>(persisted.foodFilter ?? 'all');
+  const [packageFilter, setPackageFilter] = useState<'all' | 'early_bird' | 'normal'>(persisted.packageFilter ?? 'all');
+  const [sourceFilter, setSourceFilter] = useState<'all' | Enquiry['source']>(persisted.sourceFilter ?? 'all');
   // Quick toggle for "follow-ups due" — deliberately just a boolean chip
   // (not a full FilterDropdown like Payment/Booking above) since there's
   // only ever one meaningful thing to isolate here: reminders that are due
   // today or overdue. See followUpStatus() in AdminEnquiryCommon.tsx for what
   // counts as "due".
-  const [followUpDueOnly, setFollowUpDueOnly] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [followUpDueOnly, setFollowUpDueOnly] = useState(persisted.followUpDueOnly ?? false);
+  const [searchQuery, setSearchQuery] = useState(persisted.searchQuery ?? '');
   const trimmedSearch = searchQuery.trim().toLowerCase();
-  const [selectedTripKey, setSelectedTripKey] = useState<string | null>(null);
+  const [selectedTripKey, setSelectedTripKey] = useState<string | null>(persisted.selectedTripKey ?? null);
   // Which single filter's dropdown is open — only one at a time. 'more'
   // is the overflow menu for less-frequently-used filters (currently just
-  // Source), keeping the main bar to five compact boxes.
+  // Source), keeping the main bar to five compact boxes. Deliberately NOT
+  // restored from sessionStorage like the fields above — it's a transient
+  // "is this popover open" UI flag, not part of the filtered view itself,
+  // and reopening a dropdown on the admin's behalf on return would be
+  // surprising rather than helpful.
   const [openFilterPanel, setOpenFilterPanel] = useState<FilterPanelKey>(null);
 
   // Table pagination state.
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(persisted.currentPage ?? 1);
 
   // Column sorting — clicking a sortable header sorts the filtered list by
   // that column; clicking the same header again flips the direction.
-  const [sortKey, setSortKey] = useState<EnquirySortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDirection>('asc');
+  const [sortKey, setSortKey] = useState<EnquirySortKey | null>(persisted.sortKey ?? null);
+  const [sortDir, setSortDir] = useState<SortDirection>(persisted.sortDir ?? 'asc');
   const handleSort = (key: EnquirySortKey) => {
     if (sortKey === key) {
       setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
@@ -133,6 +169,28 @@ export function useEnquiryFilters() {
   }
 
   const activeFilterCount = (selectedTripKey !== null ? 1 : 0) + (filter !== 'all' ? 1 : 0) + (journeyFilter !== 'all' ? 1 : 0) + (payFilter !== 'all' ? 1 : 0) + (bookedFilter !== 'all' ? 1 : 0) + (groupFilter !== 'all' ? 1 : 0) + (foodFilter !== 'all' ? 1 : 0) + (packageFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (followUpDueOnly ? 1 : 0) + (trimmedSearch ? 1 : 0);
+
+  // Persist every filter/search/sort/page value as one JSON blob whenever
+  // any of them change, so navigating away from this page (another admin
+  // tab, "View Full CRM" into a single enquiry, a hard refresh) and coming
+  // back restores the exact same view instead of resetting to "all
+  // enquiries" — this is the actual fix for that; useScrollRestoration
+  // separately handles putting the scroll position back once this same
+  // data has re-rendered the list. sessionStorage (not localStorage), same
+  // as the rest of this page's restore-on-return state, so it clears
+  // itself at the end of the browser session rather than sticking around
+  // indefinitely across unrelated visits.
+  useEffect(() => {
+    savePersisted<PersistedEnquiryFilters>(FILTERS_STORAGE_KEY, {
+      filter, journeyFilter, payFilter, bookedFilter, groupFilter, foodFilter,
+      packageFilter, sourceFilter, followUpDueOnly, searchQuery, selectedTripKey,
+      currentPage, sortKey, sortDir,
+    });
+  }, [
+    filter, journeyFilter, payFilter, bookedFilter, groupFilter, foodFilter,
+    packageFilter, sourceFilter, followUpDueOnly, searchQuery, selectedTripKey,
+    currentPage, sortKey, sortDir,
+  ]);
 
   // Drives the "Clear all" action in the filter bar below.
   const clearAllFilters = () => {

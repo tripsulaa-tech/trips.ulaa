@@ -5,11 +5,27 @@ import { paginate } from '../../components/ui/dataTableUtils';
 import { formatDate, downloadCsv } from '../../utils/utils-index';
 import type { WaitlistEntry, CompletedTrip } from '../../types/types-index';
 import { foodBadge, hasSeatOpen, messageWithoutFoodBreakdown, seatsNeeded, convertedCount } from './waitlistShared';
+import { loadPersisted, savePersisted } from '../../utils/sessionState';
 
 export type WaitlistSortKey = 'name' | 'group' | 'food' | 'trip' | 'joined' | 'status';
 
 // Table pagination — 10 rows per page.
 const WAITLIST_PAGE_SIZE = 10;
+
+// Persisted the same way as the Enquiries page's filters (see
+// useEnquiryFilters.ts and utils/sessionState.ts) so switching admin tabs
+// and coming back to Waitlist keeps the same status/trip/search/sort/page
+// instead of resetting.
+const FILTERS_STORAGE_KEY = 'ulaa:admin-waitlist:filters';
+
+type PersistedWaitlistFilters = {
+  statusFilter: 'all' | WaitlistEntry['status'];
+  tripFilter: string;
+  searchQuery: string;
+  currentPage: number;
+  sortKey: WaitlistSortKey | null;
+  sortDir: SortDirection;
+};
 
 /** Owns every filter/search/sort/pagination knob for the waitlist list —
  *  Status, Trip, search text, column sort, and current page — plus the
@@ -30,18 +46,24 @@ export function useWaitlistFilters(
   groupLabel: (e: WaitlistEntry) => string
 ) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [statusFilter, setStatusFilter] = useState<'all' | WaitlistEntry['status']>('all');
-  const [tripFilter, setTripFilter] = useState<string>(searchParams.get('trip') || 'all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [persisted] = useState(() => loadPersisted<PersistedWaitlistFilters>(FILTERS_STORAGE_KEY));
+  const [statusFilter, setStatusFilter] = useState<'all' | WaitlistEntry['status']>(persisted.statusFilter ?? 'all');
+  // ?trip= (an explicit incoming link, e.g. from the Dashboard) wins over a
+  // restored session value, which in turn wins over the plain default.
+  const [tripFilter, setTripFilter] = useState<string>(searchParams.get('trip') || persisted.tripFilter || 'all');
+  const [searchQuery, setSearchQuery] = useState(persisted.searchQuery ?? '');
   // Which single filter's dropdown is open — only one at a time, same
-  // pattern as the Enquiries page's filter bar.
+  // pattern as the Enquiries page's filter bar. Not persisted — a
+  // transient "is this popover open" UI flag, not part of the filtered
+  // view itself.
   const [openFilterPanel, setOpenFilterPanel] = useState<'status' | 'trip' | null>(null);
   // Mobile only: filter panel collapsed by default, opened via the toggle
-  // in the Filters header — same pattern as the Enquiries page.
+  // in the Filters header — same pattern as the Enquiries page. Also not
+  // persisted, for the same reason as openFilterPanel above.
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortKey, setSortKey] = useState<WaitlistSortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDirection>('asc');
+  const [currentPage, setCurrentPage] = useState(persisted.currentPage ?? 1);
+  const [sortKey, setSortKey] = useState<WaitlistSortKey | null>(persisted.sortKey ?? null);
+  const [sortDir, setSortDir] = useState<SortDirection>(persisted.sortDir ?? 'asc');
   const handleSort = (key: WaitlistSortKey) => {
     if (sortKey === key) {
       setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
@@ -50,6 +72,15 @@ export function useWaitlistFilters(
       setSortDir('asc');
     }
   };
+
+  // Persist status/trip/search/sort/page as one JSON blob whenever any of
+  // them change — see useEnquiryFilters.ts for the fuller version of this
+  // same pattern.
+  useEffect(() => {
+    savePersisted<PersistedWaitlistFilters>(FILTERS_STORAGE_KEY, {
+      statusFilter, tripFilter, searchQuery, currentPage, sortKey, sortDir,
+    });
+  }, [statusFilter, tripFilter, searchQuery, currentPage, sortKey, sortDir]);
 
   // Clear the ?trip= param from the URL once we've picked it up, so it
   // doesn't stick around after the admin changes the filter manually.

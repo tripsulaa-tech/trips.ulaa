@@ -26,6 +26,7 @@ import { useAuth } from '../context/useAuth';
 import NotificationsPanel from './NotificationsPanel';
 import PushNotificationToggle from './PushNotificationToggle';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import type { TripHighlightIconType } from '../constants/tripHighlightIcons';
 
 interface AdminNavItemDef {
@@ -122,7 +123,7 @@ interface AdminLayoutProps {
   // covers in-app (SPA) navigation only — see the beforeunload handler
   // below for tab close/refresh/typed-URL navigation.
   hasUnsavedChanges?: () => boolean;
-  // When true, locks the page to exactly the viewport height instead of
+  // Locks the page to exactly the viewport height instead of
   // letting it grow with content (min-h-screen) — used by single-card
   // editor pages (About/Founder/Why ULAA via ContentEditorShell) so their
   // own internal scroll area is the only thing that ever scrolls. A tiny
@@ -132,6 +133,13 @@ interface AdminLayoutProps {
   // top nav. Left off (default) for every other admin page, which relies
   // on ordinary page-level scrolling for content taller than the screen.
   fixedHeight?: boolean;
+  // Whether this page's content has finished loading, for the scroll
+  // restoration below — pass the page's own `!loading` (or similar) if it
+  // renders a shorter loading/skeleton state before its real content;
+  // restoring against that shorter height would land short of the saved
+  // position. Defaults to true for pages that render at full height
+  // immediately (most editor/list pages with no async loading step).
+  scrollRestorationReady?: boolean;
 }
 
 interface SidebarContentProps {
@@ -478,9 +486,19 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';
 
-export default function AdminLayout({ children, title, subtitle, hasUnsavedChanges, fixedHeight = false }: AdminLayoutProps) {
+export default function AdminLayout({ children, title, subtitle, hasUnsavedChanges, fixedHeight = false, scrollRestorationReady = true }: AdminLayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Restores scroll position whenever the admin comes back to a page they'd
+  // scrolled down on — e.g. drilling into a detail view/modal and going
+  // back, switching sidebar tabs and returning, or a hard refresh —
+  // instead of always landing back at the top. Centralized here (rather
+  // than each page wiring it up individually) so every admin page gets it
+  // automatically; a page with its own async loading step should pass
+  // `scrollRestorationReady={!loading}` so this waits for the page's real
+  // height before restoring, not a shorter loading skeleton's.
+  useScrollRestoration(location.pathname, scrollRestorationReady);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const mobileCloseBtnRef = useRef<HTMLButtonElement>(null);
 

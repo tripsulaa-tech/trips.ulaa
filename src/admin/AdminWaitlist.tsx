@@ -71,7 +71,7 @@ export default function AdminWaitlist() {
   ] as const;
 
   return (
-    <AdminLayout title="Waitlist" subtitle="Everyone who signed up to be notified when a sold-out trip frees a seat.">
+    <AdminLayout title="Waitlist" subtitle="Everyone who signed up to be notified when a sold-out trip frees a seat." scrollRestorationReady={!loading}>
       <div className="space-y-6">
         <div className="flex justify-end">
           <Button variant="primary" size="sm" onClick={addModal.openAdd}>

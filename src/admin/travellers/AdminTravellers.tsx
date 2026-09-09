@@ -61,7 +61,7 @@ export default function AdminTravellers() {
   ] as const;
 
   return (
-    <AdminLayout title="Travellers" subtitle="Every contact you've saved a phone number for — whether they've booked a trip yet or not.">
+    <AdminLayout title="Travellers" subtitle="Every contact you've saved a phone number for — whether they've booked a trip yet or not." scrollRestorationReady={!loading}>
       <div className="space-y-4 sm:space-y-6">
         <KpiCards cards={KPI_CARDS} columns={4} />
         <KpiCarousel cards={KPI_CARDS} />
