@@ -12,7 +12,7 @@
 // is closed. Both the raw inputs and every derived output are stored
 // together, so a saved row stays an accurate record of what was actually
 // quoted even if the niche benchmarks or multiplier tiers are tuned later.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calculator,
@@ -29,6 +29,7 @@ import {
   CaretUp as ChevronUp,
   InstagramLogo as Instagram,
   Phone,
+  ClipboardText,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
@@ -58,6 +59,35 @@ const NICHE_OPTIONS = NICHE_CPV_BENCHMARKS.map(n => ({ value: n.niche, label: n.
 
 const REEL_COUNT = 10;
 
+// Default identity fields, so the common case (quoting the same test/house
+// creator) doesn't need retyping every time — still fully editable, and
+// Reset restores these rather than blanking them out.
+const DEFAULT_CREATOR_NAME = 'Jini';
+const DEFAULT_INSTAGRAM_HANDLE = '@justjini_';
+const DEFAULT_PHONE = '6383336772';
+
+// Pulls every view-count-looking token out of pasted text, so a Reel field
+// can accept a whole column copied from Instagram Insights or a
+// spreadsheet (one value per line, comma/tab separated, etc.) instead of
+// forcing the admin to enter all 10 values one at a time. Handles thousand
+// separators ("12,345") and shorthand suffixes ("12.3k", "1.1M").
+function extractViewNumbers(text: string): number[] {
+  const matches = text.match(/-?\d[\d,]*(?:\.\d+)?\s*[kKmM]?/g) || [];
+  return matches
+    .map(raw => {
+      const cleaned = raw.replace(/,/g, '').trim();
+      const m = cleaned.match(/^(-?\d+(?:\.\d+)?)\s*([kKmM])?$/);
+      if (!m) return null;
+      let value = parseFloat(m[1]);
+      if (Number.isNaN(value)) return null;
+      const suffix = m[2]?.toLowerCase();
+      if (suffix === 'k') value *= 1_000;
+      if (suffix === 'm') value *= 1_000_000;
+      return Math.round(value);
+    })
+    .filter((n): n is number => n !== null);
+}
+
 // Rate Calculator!H8 — tiered View/Follower Ratio → Quality Multiplier,
 // straight from the nested IF in that cell (equivalent to the lookup table
 // on Model Settings!D:E).
@@ -86,15 +116,16 @@ export default function AdminCreatorRateCalculator() {
   const confirm = useConfirm();
 
   // ---- Identity (saved alongside the calculation, optional) ----
-  const [creatorName, setCreatorName] = useState('');
-  const [instagramHandle, setInstagramHandle] = useState('');
-  const [phone, setPhone] = useState('');
+  const [creatorName, setCreatorName] = useState(DEFAULT_CREATOR_NAME);
+  const [instagramHandle, setInstagramHandle] = useState(DEFAULT_INSTAGRAM_HANDLE);
+  const [phone, setPhone] = useState(DEFAULT_PHONE);
   const [notes, setNotes] = useState('');
 
   // ---- Calculator inputs ----
   const [followerCount, setFollowerCount] = useState<string>('');
   const [reelViews, setReelViews] = useState<string[]>(Array(REEL_COUNT).fill(''));
   const [niche, setNiche] = useState<string>(NICHE_OPTIONS[0].value);
+  const reelInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const followers = Number(followerCount) || 0;
   const views = reelViews.map(v => Number(v) || 0);
@@ -131,13 +162,76 @@ export default function AdminCreatorRateCalculator() {
   const hasInputs = followers > 0 && reelsEntered > 0;
 
   const handleReset = () => {
-    setCreatorName('');
-    setInstagramHandle('');
-    setPhone('');
+    setCreatorName(DEFAULT_CREATOR_NAME);
+    setInstagramHandle(DEFAULT_INSTAGRAM_HANDLE);
+    setPhone(DEFAULT_PHONE);
     setNotes('');
     setFollowerCount('');
     setReelViews(Array(REEL_COUNT).fill(''));
     setNiche(NICHE_OPTIONS[0].value);
+  };
+
+  // ---- Reel views entry helpers ----
+  // Filling in 10 values one field at a time is tedious, so a paste into
+  // any Reel field that contains more than one number (a column copied
+  // from Instagram Insights, Notes, or a spreadsheet) fans out across the
+  // remaining fields starting at that box, instead of dumping everything
+  // into one input.
+  const fillReelViewsFrom = (startIndex: number, parsed: number[]) => {
+    if (parsed.length === 0) return;
+    setReelViews(prev => {
+      const next = [...prev];
+      parsed.forEach((val, offset) => {
+        const target = startIndex + offset;
+        if (target < REEL_COUNT) next[target] = String(val);
+      });
+      return next;
+    });
+    const focusIndex = Math.min(startIndex + parsed.length, REEL_COUNT - 1);
+    requestAnimationFrame(() => reelInputRefs.current[focusIndex]?.focus());
+  };
+
+  const handleReelPaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
+    const parsed = extractViewNumbers(e.clipboardData.getData('text'));
+    if (parsed.length === 0) return; // let the browser handle a plain/empty paste as usual
+    e.preventDefault();
+    fillReelViewsFrom(index, parsed);
+  };
+
+  // Spreadsheet-style keyboard navigation between the 10 boxes: Enter (or
+  // the mobile keyboard's "Next"/"Go" action) moves to the next Reel,
+  // Up/Down jumps a row (5 columns on desktop) so the whole set can be
+  // filled without reaching for the mouse.
+  const handleReelKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (index + 1 < REEL_COUNT) reelInputRefs.current[index + 1]?.focus();
+      else e.currentTarget.blur();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      reelInputRefs.current[Math.min(index + 5, REEL_COUNT - 1)]?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      reelInputRefs.current[Math.max(index - 5, 0)]?.focus();
+    }
+  };
+
+  // One-tap fill for the whole set: read the clipboard directly (no click
+  // into a specific box needed) and distribute every number found, in
+  // order, into Reels 1–10.
+  const handlePasteAllViews = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const parsed = extractViewNumbers(text);
+      if (parsed.length === 0) {
+        await alert("Couldn't find any numbers on your clipboard. Copy the 10 view counts first, then try again.");
+        return;
+      }
+      fillReelViewsFrom(0, parsed);
+    } catch (err) {
+      console.error(err);
+      await alert("Couldn't read your clipboard — paste directly into a Reel field instead.");
+    }
   };
 
   // ---- Save ----
@@ -298,22 +392,38 @@ export default function AdminCreatorRateCalculator() {
             </div>
           </div>
 
-          <p className="text-sm font-medium text-dark mb-2">Average Views — Last 10 Reels *</p>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="text-sm font-medium text-dark">Average Views — Last 10 Reels *</p>
+            <button
+              type="button"
+              onClick={handlePasteAllViews}
+              className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-primary hover:text-primary-dark transition-colors shrink-0"
+            >
+              <ClipboardText size={14} aria-hidden="true" /> Paste all 10
+            </button>
+          </div>
+          <p className="text-[11px] text-dark-muted mb-2">
+            Tip: copy the 10 view counts (one per line, from Insights or a spreadsheet) and hit "Paste all 10", or paste into any box below and press Enter to move to the next.
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
             {reelViews.map((val, i) => (
               <div key={i}>
                 <label htmlFor={`cr-reel-${i}`} className="block text-[11px] text-dark-muted mb-1">Reel {i + 1}</label>
                 <input
                   id={`cr-reel-${i}`}
+                  ref={el => { reelInputRefs.current[i] = el; }}
                   type="number"
                   min={0}
                   inputMode="numeric"
+                  enterKeyHint={i + 1 < REEL_COUNT ? 'next' : 'done'}
                   value={val}
                   onChange={e => {
                     const next = [...reelViews];
                     next[i] = e.target.value;
                     setReelViews(next);
                   }}
+                  onPaste={e => handleReelPaste(e, i)}
+                  onKeyDown={e => handleReelKeyDown(e, i)}
                   className={inputClass}
                   placeholder="0"
                 />
