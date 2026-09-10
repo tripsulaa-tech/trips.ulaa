@@ -122,15 +122,18 @@ export default function TripCountdownCard({
             <TripOrbitScene urgent={urgent} />
           </Suspense>
 
+          {/* Mobile/tablet: small badge pinned to the corner, same spot as
+              before — there's no CTA column next to it yet at this width
+              (everything stacks), so the corner is the only sensible home. */}
           {(isAlmostFull || isFull) && (
-            <span className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10 inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-[10px] font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
+            <span className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10 lg:hidden inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-[10px] font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
               <Flame size={11} className="text-amber-300" />
               {isFull ? 'Sold out' : `${remainingSeats} seats left`}
             </span>
           )}
 
           <div className="relative flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
-            <div className="flex flex-col items-center lg:items-start gap-1.5 lg:w-56 lg:shrink-0">
+            <div className="flex flex-col items-center lg:items-start gap-1.5 lg:flex-1 lg:min-w-0">
               <p
                 className={`flex items-center gap-2 text-[11px] lg:text-xs font-button font-bold uppercase tracking-[0.25em] whitespace-nowrap bg-clip-text text-transparent ${
                   urgent ? 'bg-gradient-to-r from-orange-300 to-amber-200' : 'bg-gradient-to-r from-primary-light to-gold'
@@ -190,9 +193,17 @@ export default function TripCountdownCard({
               ))}
             </div>
 
-            <div className="flex flex-col items-center lg:items-end gap-2 lg:w-56 lg:shrink-0">
+            <div className="flex flex-col items-center lg:items-end gap-2 lg:flex-1 lg:min-w-0">
+              {/* Desktop: grouped with the CTA it describes instead of
+                  floating alone up in the card's corner. */}
+              {(isAlmostFull || isFull) && (
+                <span className="hidden lg:inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-[10px] font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
+                  <Flame size={11} className="text-amber-300" />
+                  {isFull ? 'Sold out' : `${remainingSeats} seats left`}
+                </span>
+              )}
               <span
-                className={`hidden lg:inline-flex items-center gap-2 font-button font-bold text-sm px-5 py-2.5 rounded-full transition-colors ${
+                className={`hidden lg:inline-flex items-center gap-2 font-button font-bold text-sm px-5 py-2.5 rounded-full whitespace-nowrap transition-colors ${
                   urgent
                     ? 'bg-gradient-to-r from-orange-400/20 to-amber-300/10 border border-orange-300/30 text-orange-200 group-hover/btn:from-orange-400/30 group-hover/btn:to-amber-300/20'
                     : 'bg-gradient-to-r from-primary-light/20 to-gold/10 border border-primary-light/30 text-primary-light group-hover/btn:from-primary-light/30 group-hover/btn:to-gold/20'
@@ -205,7 +216,7 @@ export default function TripCountdownCard({
                 Don't miss out — tap to {ctaLabel}
                 <ArrowRight size={12} className={`transition-transform group-hover/btn:translate-x-1 ${urgent ? 'text-orange-300' : 'text-primary-light'}`} />
               </p>
-              <p className="hidden lg:block text-white/65 text-xs">
+              <p className="hidden lg:block text-white/65 text-xs whitespace-nowrap">
                 Don't miss out — tap to {ctaLabel}
               </p>
             </div>

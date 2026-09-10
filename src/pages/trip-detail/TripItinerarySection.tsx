@@ -61,7 +61,7 @@ export default function TripItinerarySection({
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <p className="text-dark-muted text-sm leading-relaxed">{day.description}</p>
+                      <p className="text-dark-muted text-sm leading-relaxed text-left">{day.description}</p>
                       {(day.bullets?.length ?? 0) > 0 && (
                         <ul className="text-left space-y-1 mt-2">
                           {day.bullets!.map((bullet, bi) => (
