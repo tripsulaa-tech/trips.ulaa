@@ -30,13 +30,16 @@ import {
   InstagramLogo as Instagram,
   Phone,
   ClipboardText,
+  Copy,
+  WhatsappLogo,
+  Check,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import { useAlert } from '../components/ui/useAlert';
 import { useConfirm } from '../components/ui/useConfirm';
-import { formatPrice, formatDate } from '../utils/utils-index';
+import { formatPrice, formatDate, getWhatsAppLink } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { getCreatorRateCalculations, saveCreatorRateCalculation, deleteCreatorRateCalculation } from '../services/api';
 import type { CreatorRateCalculation, CreatorRateAsset } from '../types/types-index';
@@ -109,6 +112,23 @@ function floorTo50(x: number): number {
 }
 function ceilTo50(x: number): number {
   return Math.ceil(x / 50) * 50;
+}
+
+// Turns a saved calculation into a ready-to-send message — this is the
+// piece the admin actually hands to the creator (via Copy or WhatsApp
+// Share on each saved row), so it stays plain text/emoji only, no app
+// jargon like "CPV" or "quality multiplier".
+function formatCalculationMessage(h: CreatorRateCalculation): string {
+  const greeting = h.creator_name ? `Hi ${h.creator_name.trim().split(/\s+/)[0]}! 👋` : 'Hi! 👋';
+  const lines = h.final_commercials.map(row => `• ${row.asset}: ${formatPrice(row.min)} – ${formatPrice(row.max)}`);
+  return [
+    `${greeting} Here's the commercial rate card for your ${h.niche} content (${h.follower_count.toLocaleString('en-IN')} followers):`,
+    '',
+    ...lines,
+    '',
+    'These are our suggested ranges — happy to discuss and finalise. Let us know your thoughts!',
+    '— Team ULAA',
+  ].join('\n');
 }
 
 export default function AdminCreatorRateCalculator() {
@@ -272,6 +292,7 @@ export default function AdminCreatorRateCalculator() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -300,6 +321,39 @@ export default function AdminCreatorRateCalculator() {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  // ---- Send to creator: Copy (works with any app) + Share (opens
+  // WhatsApp pre-filled to the creator's saved number, since that's how
+  // these quotes are actually sent out). ----
+  const handleCopyCalculation = async (h: CreatorRateCalculation) => {
+    try {
+      await navigator.clipboard.writeText(formatCalculationMessage(h));
+      setCopiedId(h.id);
+      window.setTimeout(() => setCopiedId(prev => (prev === h.id ? null : prev)), 2000);
+    } catch (err) {
+      console.error(err);
+      await alert("Couldn't copy to clipboard. Please try again.");
+    }
+  };
+
+  const handleShareCalculation = async (h: CreatorRateCalculation) => {
+    const message = formatCalculationMessage(h);
+    if (h.phone) {
+      window.open(getWhatsAppLink(h.phone, message), '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: message });
+      } catch {
+        // user cancelled the share sheet — nothing to do
+      }
+      return;
+    }
+    // No saved phone and no native share sheet — fall back to copying.
+    await handleCopyCalculation(h);
+    await alert('No phone number saved for this creator, so the message was copied instead — paste it into WhatsApp, Instagram DM, or email.');
   };
 
   return (
@@ -609,7 +663,29 @@ export default function AdminCreatorRateCalculator() {
 
                             {h.notes && <p className="text-xs text-dark-muted italic">"{h.notes}"</p>}
 
-                            <div className="flex justify-end">
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                              <div className="flex items-center gap-4">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyCalculation(h)}
+                                  className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
+                                >
+                                  {copiedId === h.id ? (
+                                    <Check size={13} className="text-green-600" aria-hidden="true" />
+                                  ) : (
+                                    <Copy size={13} aria-hidden="true" />
+                                  )}
+                                  {copiedId === h.id ? 'Copied' : 'Copy'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleShareCalculation(h)}
+                                  className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
+                                  title={h.phone ? `Share via WhatsApp to ${h.phone}` : 'Share'}
+                                >
+                                  <WhatsappLogo size={13} aria-hidden="true" /> Share
+                                </button>
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => handleDelete(h.id)}
