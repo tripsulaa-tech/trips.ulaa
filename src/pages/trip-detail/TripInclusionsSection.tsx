@@ -27,9 +27,15 @@ export default function TripInclusionsSection({
           <div>
             <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
             {(trip.included_groups?.length ?? 0) > 0 ? (
-              <div className="grid sm:grid-cols-2 gap-4">
+              // Masonry (CSS columns) instead of a row-locked grid: a
+              // grid would stretch every card in a row to match the
+              // tallest one, so a 5-bullet card next to a 17-bullet card
+              // ends up with a huge dead whitespace block. Columns let
+              // each card size to its own content and stack tightly
+              // underneath whatever's above it in that column instead.
+              <div className="columns-1 sm:columns-2 gap-4 [column-fill:_balance]">
                 {trip.included_groups!.map((group, gi) => (
-                  <div key={gi} className="group relative bg-background-warm rounded-lg p-6">
+                  <div key={gi} className="group relative bg-background-warm rounded-lg p-6 mb-4 break-inside-avoid">
                     {/* Full-card tap target on mobile so the fill animation triggers
                         from anywhere on the card; on desktop it's inert (pointer-events-none)
                         so the existing hover-fill on the card keeps working as before. */}

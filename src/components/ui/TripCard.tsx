@@ -51,25 +51,23 @@ function ReserveShieldIcon({ className }: { className?: string }) {
 // and can pick a loosely-related icon (e.g. "heart" for "Girls-Only")
 // instead of the more literal one (the venus/female symbol). Falls through
 // to the generic suggestion, then to nothing, so a tag never renders a
-// broken icon. Returns the "fill" weight (solid) plus a per-icon color —
-// the venus symbol renders in rose/pink like the reference design, while
-// everything else stays in the brand primary color.
-function resolveFeatureTagIcon(label: string, iconKey: string): { Icon: TripHighlightIconType; colorClass: string; weight: 'fill' | 'regular' } | undefined {
+// broken icon. Returns a per-icon color — the venus symbol renders in
+// rose/pink like the reference design, while everything else stays in the
+// brand primary color. Always outline weight: a solid-filled glyph next to
+// small 12px text reads heavy/clip-arty at this size, and outline keeps
+// the row visually quiet next to the bolder Early Bird/Reserve badges
+// above it.
+function resolveFeatureTagIcon(label: string, iconKey: string): { Icon: TripHighlightIconType; colorClass: string } | undefined {
   const stored = getTripHighlightIcon(iconKey);
   if (stored) {
-    // The venus/female symbol always gets its rose outline treatment,
-    // even when it comes from an admin-set icon key rather than the
-    // label-based fallback below.
-    if (stored.key === 'venus') return { Icon: stored.Icon, colorClass: 'text-rose-400', weight: 'regular' };
-    return { Icon: stored.Icon, colorClass: 'text-primary', weight: 'fill' };
+    if (stored.key === 'venus') return { Icon: stored.Icon, colorClass: 'text-rose-400' };
+    return { Icon: stored.Icon, colorClass: 'text-primary' };
   }
 
   const l = label.toLowerCase();
   if (/girl|women|ladies|female/.test(l)) {
     const venus = getTripHighlightIcon('venus');
-    // Kept as an outline (not "fill") — the venus glyph reads as a hollow
-    // circle-and-cross in the reference design, not a solid disc.
-    if (venus) return { Icon: venus.Icon, colorClass: 'text-rose-400', weight: 'regular' };
+    if (venus) return { Icon: venus.Icon, colorClass: 'text-rose-400' };
   }
   const explicitKey =
     /luxury|premium|5-star|five-star|deluxe/.test(l) ? 'crown' :
@@ -79,10 +77,10 @@ function resolveFeatureTagIcon(label: string, iconKey: string): { Icon: TripHigh
     /place|destination|stop/.test(l) ? 'map-pin' :
     null;
   const explicit = explicitKey ? getTripHighlightIcon(explicitKey) : undefined;
-  if (explicit) return { Icon: explicit.Icon, colorClass: 'text-primary', weight: 'fill' };
+  if (explicit) return { Icon: explicit.Icon, colorClass: 'text-primary' };
 
   const suggestion = suggestTripHighlightIcons(label, 1)[0];
-  return suggestion ? { Icon: suggestion.Icon, colorClass: 'text-primary', weight: 'fill' } : undefined;
+  return suggestion ? { Icon: suggestion.Icon, colorClass: 'text-primary' } : undefined;
 }
 
 export default function TripCard({ trip, index = 0 }: TripCardProps) {
@@ -270,7 +268,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 )}
               </div>
               {trip.advance_amount != null && (
-                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2">
+                <Link
+                  to={isFull ? `/trips/${trip.slug}` : `/trips/${trip.slug}?book=1`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2 hover:bg-green-100 hover:border-green-300 transition-colors"
+                >
                   <ReserveShieldIcon className="w-[26px] h-[26px] text-green-700 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-green-700 text-xs font-button font-semibold leading-tight">
@@ -281,7 +283,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                     </p>
                   </div>
                   <CaretRight size={16} className="text-green-700 shrink-0" />
-                </div>
+                </Link>
               )}
             </div>
           )}
@@ -291,23 +293,27 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               see featureTags above. When a tag has no valid stored icon key
               (or one no longer in the library), suggestTripHighlightIcons
               infers a sensible icon from the label text itself so the row
-              never renders without icons. Divided into evenly-spaced
-              columns with vertical separators between tags. */}
-          <div className="grid grid-cols-3 divide-x divide-background-warm mb-3">
+              never renders without icons. Each tag sits in its own tinted
+              chip with the icon in a small white "badge" square — the same
+              boxed-icon-on-tint pattern as the Reserve-your-spot strip
+              above, rather than a bare column grid with divider rules, so
+              the two rows read as one consistent card language instead of
+              two different UI kits stacked on top of each other. */}
+          <div className="flex items-stretch gap-1.5 mb-3">
             {featureTags.slice(0, 3).map((tag, i) => {
               const resolved = resolveFeatureTagIcon(tag.label, tag.icon);
               const TagIcon = resolved?.Icon;
               return (
-                <div key={i} className="flex items-center justify-center gap-1.5 min-w-0 px-2 first:pl-0 last:pr-0">
+                <div
+                  key={i}
+                  className="flex-1 min-w-0 flex items-center gap-1.5 bg-background-warm/70 rounded-lg px-2 py-1.5"
+                >
                   {TagIcon && (
-                    <TagIcon
-                      size={20}
-                      weight={resolved.weight}
-                      className={`${resolved.colorClass} shrink-0`}
-                      aria-hidden="true"
-                    />
+                    <span className={`shrink-0 inline-flex items-center justify-center w-6 h-6 ${resolved.colorClass}`}>
+                      <TagIcon size={13} weight="regular" aria-hidden="true" />
+                    </span>
                   )}
-                  <span className="text-xs font-semibold text-dark whitespace-nowrap truncate">{tag.label}</span>
+                  <span className="text-[11px] font-semibold text-dark leading-tight truncate">{tag.label}</span>
                 </div>
               );
             })}

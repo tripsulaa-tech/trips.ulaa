@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation, Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import TripCountdownCard from '../components/ui/TripCountdownCard';
 import type { PagedCarouselHandle } from '../components/ui/PagedCarousel';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { getUpcomingTripBySlug, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
@@ -31,6 +32,7 @@ import { useIsDesktop } from './trip-detail/tripDetailUtils';
 export default function TripDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [buttonLabels, setButtonLabels] = useState<ButtonLabelsConfig>(DEFAULT_BUTTON_LABELS);
@@ -52,6 +54,11 @@ export default function TripDetailPage() {
   // reason cards are expanded in one go.
   const [heartLoved, setHeartLoved] = useState(false);
   const isDesktop = useIsDesktop();
+  // Keyed by pathname (not just '/trips/:slug') so each trip's own scroll
+  // position is remembered separately. `!loading` gates the restore until
+  // the real trip content (and therefore the page's real height) has
+  // rendered — see useScrollRestoration's `ready` param.
+  useScrollRestoration(location.pathname, !loading);
   const toggleHighlight = (i: number) => {
     setExpandedHighlights(prev => {
       const next = new Set(prev);
