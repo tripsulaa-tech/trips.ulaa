@@ -5,6 +5,7 @@ import {
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import type { Enquiry } from '../../types/types-index';
 import { isNotInterested, canSetFollowUp, canSetBookingFollowUp, canCancelBooking } from './AdminEnquiryCommon';
+import type { InvoiceAction } from './AdminEnquiryCommon';
 
 /** Consolidates every per-row action that used to be a separate icon button
  *  (or, for Cancel/Delete, still is on narrower layouts) into one kebab
@@ -31,7 +32,7 @@ import { isNotInterested, canSetFollowUp, canSetBookingFollowUp, canCancelBookin
  *  Extracted from AdminEnquiries.tsx (see that file's history for the
  *  original single-component version). */
 export function useRowActions(params: {
-  invoiceBusyId: string | null;
+  invoiceBusy: { id: string; action: InvoiceAction } | null;
   handleDownloadInvoice: (enquiry: Enquiry) => void;
   handleShareInvoice: (enquiry: Enquiry) => void;
   handleSendBookingEmail: (enquiry: Enquiry) => void;
@@ -45,7 +46,7 @@ export function useRowActions(params: {
   handleDelete: (enquiry: Enquiry) => void;
 }) {
   const {
-    invoiceBusyId, handleDownloadInvoice, handleShareInvoice, handleSendBookingEmail,
+    invoiceBusy, handleDownloadInvoice, handleShareInvoice, handleSendBookingEmail,
     handleToggleNoShow, handleUndoCheckIn, handleClearFollowUp, handleClearBookingFollowUp,
     handleReopenEnquiry, handleMarkNotInterested, handleCancelToggle, handleDelete,
   } = params;
@@ -58,15 +59,18 @@ export function useRowActions(params: {
     // pass it in, but this menu no longer calls it.
     const items: ActionMenuItem[] = [];
     if (e.booking_id) {
+      // Each of the three checks below is scoped to its own action — a
+      // Download in flight only disables "Download Invoice" here, not
+      // "Share Invoice" or "Email Booking Confirmation" on the same row.
       items.push(
-        { label: 'Download Invoice', icon: FileText, onClick: () => handleDownloadInvoice(e), disabled: invoiceBusyId === e.id },
-        { label: 'Share Invoice', icon: Share2, onClick: () => handleShareInvoice(e), disabled: invoiceBusyId === e.id },
+        { label: 'Download Invoice', icon: FileText, onClick: () => handleDownloadInvoice(e), disabled: invoiceBusy?.id === e.id && invoiceBusy.action === 'download' },
+        { label: 'Share Invoice', icon: Share2, onClick: () => handleShareInvoice(e), disabled: invoiceBusy?.id === e.id && invoiceBusy.action === 'share' },
       );
       // Only offered once there's an email address to send the confirmation
       // to — same "don't show an action that would fail" reasoning as the
       // rest of this menu.
       if (e.email) {
-        items.push({ label: 'Email Booking Confirmation', icon: EnvelopeSimple, onClick: () => handleSendBookingEmail(e), disabled: invoiceBusyId === e.id });
+        items.push({ label: 'Email Booking Confirmation', icon: EnvelopeSimple, onClick: () => handleSendBookingEmail(e), disabled: invoiceBusy?.id === e.id && invoiceBusy.action === 'email' });
       }
     }
     // WhatsApp/Call are deliberately NOT in this menu — they're already

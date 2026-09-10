@@ -78,8 +78,6 @@ export async function renderHeader(
   setText(COLORS.primaryDark);
   doc.text(bookingIdText, PAGE_W - MARGIN - bidW / 2, headerTop + 62, { align: 'center' });
 
-  setFill(COLORS.secondary);
-  doc.circle(PAGE_W - MARGIN - bidW - 84, headerTop + 82, 2, 'F');
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   setText(COLORS.darkMuted);

@@ -5,6 +5,7 @@ import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { sendBookingEmail } from '../../utils/bookingEmail';
 import { formatPrice } from '../../utils/utils-index';
 import { useAlert } from '../../components/ui/useAlert';
+import type { InvoiceAction } from './AdminEnquiryCommon';
 
 /** Owns the desktop "View Details" popup — its target, the per-payment
  *  invoice list lazy-loaded for whichever enquiry is open (same on-demand
@@ -29,10 +30,12 @@ export function useEnquiryDetailsModal() {
   // pattern as handleDownloadInvoice already used for the cumulative PDF.
   const [detailsInvoices, setDetailsInvoices] = useState<Payment[]>([]);
   const [detailsInvoicesLoading, setDetailsInvoicesLoading] = useState(false);
-  // Enquiry id currently generating/sharing its invoice PDF — disables the
-  // invoice buttons on that one row only while the payments ledger fetch +
-  // PDF build (or the native share sheet) is in flight.
-  const [invoiceBusyId, setInvoiceBusyId] = useState<string | null>(null);
+  // Which enquiry row + which one of its three invoice buttons (Download/
+  // Share/Email) is currently generating/sharing its invoice PDF — disables
+  // only that one button while the payments ledger fetch + PDF build (or
+  // the native share sheet) is in flight, leaving the other two on the same
+  // row clickable.
+  const [invoiceBusy, setInvoiceBusy] = useState<{ id: string; action: InvoiceAction } | null>(null);
 
   // Loads the per-payment invoice list whenever the Enquiry Details modal is
   // opened for a different (or no) enquiry — same on-demand fetch pattern as
@@ -61,7 +64,7 @@ export function useEnquiryDetailsModal() {
   // the same test isBooked() uses, so the button is only shown/enabled for
   // rows that are actually booked.
   const handleDownloadInvoice = async (e: Enquiry) => {
-    setInvoiceBusyId(e.id);
+    setInvoiceBusy({ id: e.id, action: 'download' });
     try {
       const payments = await getPaymentsForEnquiry(e.id);
       await downloadInvoicePdf(e, payments);
@@ -69,7 +72,7 @@ export function useEnquiryDetailsModal() {
       console.error(err);
       alert('Failed to generate invoice.');
     } finally {
-      setInvoiceBusyId(null);
+      setInvoiceBusy(null);
     }
   };
 
@@ -79,7 +82,7 @@ export function useEnquiryDetailsModal() {
   // to opening a wa.me chat with a text summary instead — the admin can
   // then attach the file they just downloaded manually.
   const handleShareInvoice = async (e: Enquiry) => {
-    setInvoiceBusyId(e.id);
+    setInvoiceBusy({ id: e.id, action: 'share' });
     try {
       const payments = await getPaymentsForEnquiry(e.id);
       const file = await invoiceAsFile(e, payments);
@@ -109,7 +112,7 @@ export function useEnquiryDetailsModal() {
       console.error(err);
       alert('Failed to share invoice.');
     } finally {
-      setInvoiceBusyId(null);
+      setInvoiceBusy(null);
     }
   };
 
@@ -118,7 +121,7 @@ export function useEnquiryDetailsModal() {
   // how this goes out for real via Resend, with the invoice attached and
   // no manual step for the admin.
   const handleSendBookingEmail = async (e: Enquiry) => {
-    setInvoiceBusyId(e.id);
+    setInvoiceBusy({ id: e.id, action: 'email' });
     try {
       const payments = await getPaymentsForEnquiry(e.id);
       await sendBookingEmail(e, payments);
@@ -127,7 +130,7 @@ export function useEnquiryDetailsModal() {
       console.error(err);
       alert('Failed to send booking email.');
     } finally {
-      setInvoiceBusyId(null);
+      setInvoiceBusy(null);
     }
   };
 
@@ -135,7 +138,7 @@ export function useEnquiryDetailsModal() {
     detailsTarget, setDetailsTarget,
     detailsInvoices, setDetailsInvoices,
     detailsInvoicesLoading,
-    invoiceBusyId,
+    invoiceBusy,
     handleDownloadInvoice,
     handleShareInvoice,
     handleSendBookingEmail,

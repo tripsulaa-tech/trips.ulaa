@@ -18,6 +18,7 @@ import {
 } from './AdminEnquiryCommon';
 import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
 import type { Enquiry, Payment } from '../../types/types-index';
+import type { InvoiceAction } from './AdminEnquiryCommon';
 import { formatDate, formatPrice, formatTime } from '../../utils/utils-index';
 
 export default function DetailsModal({
@@ -25,7 +26,7 @@ export default function DetailsModal({
   onClose,
   groupLabel,
   isGeneralContactMessage,
-  invoiceBusyId,
+  invoiceBusy,
   onDownloadInvoice,
   onShareInvoice,
   onSendBookingEmail,
@@ -41,7 +42,7 @@ export default function DetailsModal({
   onClose: () => void;
   groupLabel: (e: Enquiry) => string;
   isGeneralContactMessage: (e: Enquiry) => boolean;
-  invoiceBusyId: string | null;
+  invoiceBusy: { id: string; action: InvoiceAction } | null;
   onDownloadInvoice: (e: Enquiry) => void;
   onShareInvoice: (e: Enquiry) => void;
   onSendBookingEmail: (e: Enquiry) => void;
@@ -91,14 +92,14 @@ export default function DetailsModal({
                   <p className="text-dark text-sm font-mono truncate">{detailsTarget.booking_id}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Button variant="outline" size="sm" onClick={() => onDownloadInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
+                  <Button variant="outline" size="sm" onClick={() => onDownloadInvoice(detailsTarget)} disabled={invoiceBusy?.id === detailsTarget.id && invoiceBusy.action === 'download'}>
                     <FileText size={14} aria-hidden="true" /> Invoice
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => onShareInvoice(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
+                  <Button variant="outline" size="sm" onClick={() => onShareInvoice(detailsTarget)} disabled={invoiceBusy?.id === detailsTarget.id && invoiceBusy.action === 'share'}>
                     <Share2 size={14} aria-hidden="true" /> Share
                   </Button>
                   {detailsTarget.email && (
-                    <Button variant="outline" size="sm" onClick={() => onSendBookingEmail(detailsTarget)} disabled={invoiceBusyId === detailsTarget.id}>
+                    <Button variant="outline" size="sm" onClick={() => onSendBookingEmail(detailsTarget)} disabled={invoiceBusy?.id === detailsTarget.id && invoiceBusy.action === 'email'}>
                       <EnvelopeSimple size={14} aria-hidden="true" /> Email
                     </Button>
                   )}

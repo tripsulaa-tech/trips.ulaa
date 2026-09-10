@@ -102,6 +102,13 @@ export const GENERATE_INVOICE_STATUS_OPTIONS: { value: 'paid' | 'pending'; label
   { value: 'pending', label: 'Pending — invoice only, collect later' },
 ];
 
+// Which one of the three invoice buttons (Download / Share / Email) is
+// currently in flight. Tracked per-action rather than as a single shared
+// boolean/id so clicking one doesn't grey out the other two — each does
+// its own independent payments-ledger fetch, so there's no reason a
+// Download in progress should block Share or Email on the same row.
+export type InvoiceAction = 'download' | 'share' | 'email';
+
 export type PaymentForm = {
   package_type: Enquiry['package_type'];
   // Kept as the actual amount owed (list price - discount_amount, or the

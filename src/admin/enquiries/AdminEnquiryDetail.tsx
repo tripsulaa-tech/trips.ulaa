@@ -36,7 +36,7 @@ import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { sendBookingEmail } from '../../utils/bookingEmail';
 import { formatPrice } from '../../utils/utils-index';
 import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, computeDiscountedTotal } from './AdminEnquiryCommon';
-import type { PaymentForm } from './AdminEnquiryCommon';
+import type { PaymentForm, InvoiceAction } from './AdminEnquiryCommon';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
 import MarkPaidModal from './AdminMarkPaidModal';
@@ -75,7 +75,10 @@ export default function AdminEnquiryDetail() {
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
   const [activityLogLoading, setActivityLogLoading] = useState(false);
   const [busyAction, setBusyAction] = useState(false);
-  const [invoiceBusy, setInvoiceBusy] = useState(false);
+  // Which one of the three invoice buttons (Download/Share/Email) is
+  // currently in flight — tracked per-action, not a single shared flag, so
+  // clicking one doesn't disable the other two.
+  const [invoiceBusyAction, setInvoiceBusyAction] = useState<InvoiceAction | null>(null);
   // Brief "Copied" checkmark swap after tapping the Booking ID's copy icon —
   // resets itself after 1.5s, no toast/alert needed for something this minor.
   const [bookingIdCopied, setBookingIdCopied] = useState(false);
@@ -677,7 +680,7 @@ export default function AdminEnquiryDetail() {
   // ---- Invoice PDF actions -----------------------------------------------
   const handleDownloadInvoice = async () => {
     if (!enquiry) return;
-    setInvoiceBusy(true);
+    setInvoiceBusyAction('download');
     try {
       const rows = await getPaymentsForEnquiry(enquiry.id);
       await downloadInvoicePdf(enquiry, rows);
@@ -685,13 +688,13 @@ export default function AdminEnquiryDetail() {
       console.error(err);
       alert('Failed to generate invoice.');
     } finally {
-      setInvoiceBusy(false);
+      setInvoiceBusyAction(null);
     }
   };
 
   const handleShareInvoice = async () => {
     if (!enquiry) return;
-    setInvoiceBusy(true);
+    setInvoiceBusyAction('share');
     try {
       const rows = await getPaymentsForEnquiry(enquiry.id);
       const file = await invoiceAsFile(enquiry, rows);
@@ -719,7 +722,7 @@ export default function AdminEnquiryDetail() {
       console.error(err);
       alert('Failed to share invoice.');
     } finally {
-      setInvoiceBusy(false);
+      setInvoiceBusyAction(null);
     }
   };
 
@@ -729,7 +732,7 @@ export default function AdminEnquiryDetail() {
   // no manual step for the admin.
   const handleSendBookingEmail = async () => {
     if (!enquiry) return;
-    setInvoiceBusy(true);
+    setInvoiceBusyAction('email');
     try {
       const rows = await getPaymentsForEnquiry(enquiry.id);
       await sendBookingEmail(enquiry, rows);
@@ -738,7 +741,7 @@ export default function AdminEnquiryDetail() {
       console.error(err);
       alert('Failed to send booking email.');
     } finally {
-      setInvoiceBusy(false);
+      setInvoiceBusyAction(null);
     }
   };
 
@@ -876,7 +879,7 @@ export default function AdminEnquiryDetail() {
           onDownloadInvoice={enquiry.booking_id ? handleDownloadInvoice : undefined}
           onShareInvoice={enquiry.booking_id ? handleShareInvoice : undefined}
           onEmailBooking={enquiry.booking_id && enquiry.email ? handleSendBookingEmail : undefined}
-          invoiceActionBusy={invoiceBusy}
+          invoiceBusyAction={invoiceBusyAction}
         />
 
         <AdminEnquiryJourneyCard

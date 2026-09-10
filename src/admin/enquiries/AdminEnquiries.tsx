@@ -100,7 +100,7 @@ export default function AdminEnquiries() {
     detailsTarget, setDetailsTarget,
     detailsInvoices, setDetailsInvoices,
     detailsInvoicesLoading,
-    invoiceBusyId,
+    invoiceBusy,
     handleDownloadInvoice,
     handleShareInvoice,
     handleSendBookingEmail,
@@ -368,7 +368,7 @@ export default function AdminEnquiries() {
   // wiring together handlers owned by the hooks above — see
   // useRowActions.ts for what's included/excluded and why.
   const { buildRowActions } = useRowActions({
-    invoiceBusyId, handleDownloadInvoice, handleShareInvoice, handleSendBookingEmail,
+    invoiceBusy, handleDownloadInvoice, handleShareInvoice, handleSendBookingEmail,
     handleToggleNoShow, handleUndoCheckIn, handleClearFollowUp, handleClearBookingFollowUp,
     handleReopenEnquiry, handleMarkNotInterested, handleCancelToggle, handleDelete,
   });
@@ -1297,7 +1297,7 @@ export default function AdminEnquiries() {
               groupLabel={groupLabel}
               cardRefs={cardRefs}
               updating={updating}
-              invoiceBusyId={invoiceBusyId}
+              invoiceBusy={invoiceBusy}
               handleDownloadInvoice={handleDownloadInvoice}
               handleShareInvoice={handleShareInvoice}
               handleSendBookingEmail={handleSendBookingEmail}
@@ -1344,7 +1344,7 @@ export default function AdminEnquiries() {
         onClose={() => setDetailsTarget(null)}
         groupLabel={groupLabel}
         isGeneralContactMessage={isGeneralContactMessage}
-        invoiceBusyId={invoiceBusyId}
+        invoiceBusy={invoiceBusy}
         onDownloadInvoice={handleDownloadInvoice}
         onShareInvoice={handleShareInvoice}
         onSendBookingEmail={handleSendBookingEmail}

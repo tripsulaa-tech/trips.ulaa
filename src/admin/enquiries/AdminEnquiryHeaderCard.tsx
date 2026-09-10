@@ -16,6 +16,7 @@ import {
   foodBadge, foodPreferenceKey, journeyBadge, nextManualAction, isNotInterested,
   canMarkNotInterested, closedReasonLabel, canSetFollowUp, followUpStatus,
 } from './AdminEnquiryCommon';
+import type { InvoiceAction } from './AdminEnquiryCommon';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquiriesShared';
 
 // First letter of the first name + first letter of the second "word" in
@@ -53,13 +54,15 @@ interface AdminEnquiryHeaderCardProps {
   // there's a booking (same gate as Download/Share above) and an email
   // address on file, so callers only pass it when both hold.
   onEmailBooking?: () => void;
-  invoiceActionBusy?: boolean;
+  // Which one of Download/Share/Email is currently in flight — only that
+  // one button disables; the other two stay clickable on the same row.
+  invoiceBusyAction?: InvoiceAction | null;
 }
 
 export default function AdminEnquiryHeaderCard({
   enquiry, busyAction, busyStatus, busyFollowUp, bookingIdCopied, onCopyBookingId,
   onAdvance, onMarkNotInterested, onOpenFollowUp, rowActions,
-  onDownloadInvoice, onShareInvoice, onEmailBooking, invoiceActionBusy,
+  onDownloadInvoice, onShareInvoice, onEmailBooking, invoiceBusyAction,
 }: AdminEnquiryHeaderCardProps) {
   const jb = journeyBadge(enquiry);
   const nma = nextManualAction(enquiry);
@@ -218,7 +221,7 @@ export default function AdminEnquiryHeaderCard({
               <button
                 type="button"
                 onClick={onDownloadInvoice}
-                disabled={invoiceActionBusy}
+                disabled={invoiceBusyAction === 'download'}
                 title="Download Invoice"
                 aria-label="Download Invoice"
                 className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-50 transition-colors shrink-0"
@@ -230,7 +233,7 @@ export default function AdminEnquiryHeaderCard({
               <button
                 type="button"
                 onClick={onShareInvoice}
-                disabled={invoiceActionBusy}
+                disabled={invoiceBusyAction === 'share'}
                 title="Share Invoice"
                 aria-label="Share Invoice"
                 className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-50 transition-colors shrink-0"
@@ -242,7 +245,7 @@ export default function AdminEnquiryHeaderCard({
               <button
                 type="button"
                 onClick={onEmailBooking}
-                disabled={invoiceActionBusy}
+                disabled={invoiceBusyAction === 'email'}
                 title="Email Booking Confirmation"
                 aria-label="Email Booking Confirmation"
                 className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-50 transition-colors shrink-0"

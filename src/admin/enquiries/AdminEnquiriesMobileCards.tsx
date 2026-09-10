@@ -37,6 +37,7 @@ import {
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
 } from './AdminEnquiryCommon';
+import type { InvoiceAction } from './AdminEnquiryCommon';
 import { isGeneralContactMessage, groupColorFor } from './enquiryGrouping';
 import { paymentStatus, paymentBalance, paymentFilterKey, refundStatus } from './AdminEnquiriesShared';
 
@@ -80,7 +81,7 @@ interface AdminEnquiriesMobileCardsProps {
 
   // Row actions
   updating: string | null;
-  invoiceBusyId: string | null;
+  invoiceBusy: { id: string; action: InvoiceAction } | null;
   handleDownloadInvoice: (e: Enquiry) => void;
   handleShareInvoice: (e: Enquiry) => void;
   handleSendBookingEmail: (e: Enquiry) => void;
@@ -103,7 +104,7 @@ export default function AdminEnquiriesMobileCards({
   expandedId, setExpandedId,
   selectedIds, toggleSelectOne,
   activeGroup, highlightId, groupColor, groupLabel, cardRefs,
-  updating, invoiceBusyId, handleDownloadInvoice, handleShareInvoice, handleSendBookingEmail,
+  updating, invoiceBusy, handleDownloadInvoice, handleShareInvoice, handleSendBookingEmail,
   openPayment, openFollowUpModal, setBookingFollowUpTarget, handleAdvance, buildRowActions,
 }: AdminEnquiriesMobileCardsProps) {
   const navigate = useNavigate();
@@ -451,10 +452,14 @@ export default function AdminEnquiriesMobileCards({
                         <p className="text-dark-muted text-[10px]">Booking ID</p>
                         <p className="text-dark text-xs font-mono truncate">{e.booking_id}</p>
                       </div>
+                      {/* Each button's disabled check is scoped to its own
+                          action — downloading shouldn't grey out Share or
+                          Email on the same row, since each does its own
+                          independent payments-ledger fetch. */}
                       <div className="flex items-center gap-3 shrink-0">
                         <button
                           onClick={() => handleDownloadInvoice(e)}
-                          disabled={invoiceBusyId === e.id}
+                          disabled={invoiceBusy?.id === e.id && invoiceBusy.action === 'download'}
                           title="Download invoice"
                           aria-label="Download invoice"
                           className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
@@ -463,7 +468,7 @@ export default function AdminEnquiriesMobileCards({
                         </button>
                         <button
                           onClick={() => handleShareInvoice(e)}
-                          disabled={invoiceBusyId === e.id}
+                          disabled={invoiceBusy?.id === e.id && invoiceBusy.action === 'share'}
                           title="Share invoice"
                           aria-label="Share invoice"
                           className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
@@ -473,7 +478,7 @@ export default function AdminEnquiriesMobileCards({
                         {e.email && (
                           <button
                             onClick={() => handleSendBookingEmail(e)}
-                            disabled={invoiceBusyId === e.id}
+                            disabled={invoiceBusy?.id === e.id && invoiceBusy.action === 'email'}
                             title="Email booking confirmation"
                             aria-label="Email booking confirmation"
                             className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
