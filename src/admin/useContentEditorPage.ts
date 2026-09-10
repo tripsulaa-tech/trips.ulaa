@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Dispatch, SetStateAction, RefObject } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
 import { collectStorageUrls } from '../utils/utils-index';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 
 // Shared by every "single site_content record, edited on its own admin
 // page" screen (About, Founder, Why ULAA, ...): load-on-mount with a
@@ -101,6 +103,21 @@ export function useContentEditorPage<T>({
   const [pageSearch, setPageSearch] = useState('');
   const [pageSearchNoMatch, setPageSearchNoMatch] = useState(false);
   const scrollBodyRef = useRef<HTMLDivElement>(null);
+
+  // These pages (About, Home Page, ...) render inside ContentEditorShell's
+  // `fixedHeight` AdminLayout, which locks the document/window from
+  // scrolling at all and does its own scrolling inside `scrollBodyRef`
+  // (see AdminLayout's fixedHeight effect and ContentEditorShell's
+  // "app-scroll" div). AdminLayout's own useScrollRestoration call is
+  // window-scoped, so on these pages it's watching a scroll position that
+  // never moves — restoration needs to target `scrollBodyRef` itself
+  // instead, which is what this does. Keyed with a distinct '#editor-body'
+  // suffix (rather than reusing the bare route pathname AdminLayout already
+  // uses) so the two restorations never read/clear the same flag out from
+  // under each other regardless of which of their layout effects happens
+  // to run first.
+  const { pathname } = useLocation();
+  useScrollRestoration(`${pathname}#editor-body`, !loading, scrollBodyRef);
 
   // Snapshot of every storage URL present in `content` as of the last
   // successful load or save. Compared against the live set on save (to

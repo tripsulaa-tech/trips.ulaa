@@ -209,7 +209,7 @@ export default function AdminCreatorRateCalculator() {
   };
 
   return (
-    <AdminLayout title="Creator Rate Calculator" subtitle="Work out a fair commercial rate from a creator's followers, average views, and niche">
+    <AdminLayout title="Creator Rate Calculator" subtitle="Work out a fair commercial rate from a creator's followers, average views, and niche" scrollRestorationReady={!historyLoading}>
       <div className="space-y-6 max-w-5xl">
         {/* ---- Inputs ---- */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">

@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import {
   getSiteContent, upsertSiteContent, deleteImageByUrl, getStoragePathFromUrl, deleteImage,
   getGalleryImages, addGalleryImage, deleteGalleryImage, updateGalleryFeatured, updateGalleryOrder,
@@ -339,6 +341,19 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   const [pageSearch, setPageSearch] = useState('');
   const [pageSearchNoMatch, setPageSearchNoMatch] = useState(false);
   const scrollBodyRef = useRef<HTMLDivElement>(null);
+
+  // This page renders inside ContentEditorShell's `fixedHeight` AdminLayout,
+  // which locks the document/window from scrolling at all and scrolls
+  // `scrollBodyRef` internally instead (see AdminLayout's fixedHeight
+  // effect). AdminLayout's own useScrollRestoration call is window-scoped,
+  // so on this page it's watching a position that never moves — same
+  // scaffolding as useContentEditorPage.useScrollRestoration, since this
+  // hook duplicates that file's chrome rather than reusing it (see the
+  // module doc above). Keyed with a distinct '#editor-body' suffix so this
+  // restoration and AdminLayout's never read/clear the same flag out from
+  // under each other regardless of which of their layout effects runs first.
+  const { pathname } = useLocation();
+  useScrollRestoration(`${pathname}#editor-body`, !loading, scrollBodyRef);
 
   const stickyOffset = () => {
     const bar = scrollBodyRef.current?.querySelector<HTMLElement>('[data-sticky-toolbar]');

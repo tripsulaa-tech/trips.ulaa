@@ -1,32 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import type { RefObject } from 'react';
 import { scrollToInstant } from '../utils/scroll';
-
-/**
- * Captures the current scroll position for `pathname` and flags it for
- * restoration the next time that page is visited. Call this synchronously
- * from whatever actually triggers navigation away — a sidebar link's
- * onClick, a "sign out" button's onClick — BEFORE the navigation itself
- * runs, rather than relying solely on this hook's own unmount-cleanup
- * capture below.
- *
- * Why this exists in addition to that cleanup: by the time a layout
- * effect's cleanup fires for the page being left, React may already be
- * partway through tearing down that page's DOM as part of the very same
- * commit that mounts the destination page. If the page being left was
- * scrolled further down than the document is tall once its content is
- * removed, the browser clamps window.scrollY back toward 0 the instant
- * that happens — so reading window.scrollY inside the cleanup can already
- * be reading a clamped, wrong value (0, or close to it), no matter how
- * carefully the cleanup itself is written. Capturing here, at the moment
- * of the click, sidesteps that race entirely: nothing has been torn down
- * yet, so window.scrollY is still exactly where the admin left it. This is
- * what actually fixes "scrolled down, switched pages, came back, and it's
- * back at the top" — the unmount cleanup alone could never fully solve it.
- */
-export function captureScrollForRestore(pathname: string) {
-  sessionStorage.setItem(`ulaa:scrollY:${pathname}`, String(window.scrollY));
-  sessionStorage.setItem(`ulaa:restoreScroll:${pathname}`, '1');
-}
 
 /**
  * Remembers how far down a page the user scrolled and smoothly restores it
@@ -35,12 +9,25 @@ export function captureScrollForRestore(pathname: string) {
  * bottom nav and coming back, using the browser's back button, etc.
  *
  * Previously each list page wired this up by hand, and only flagged
- * "restore" from one specific back-link's onClick. That meant leaving via
- * the bottom nav (e.g. Upcoming -> Completed -> Upcoming) always reset the
- * scroll to the top instead of remembering where the user was. Centralizing
- * the logic here — and flagging for restoration on unmount, for ANY reason
- * the page goes away — fixes that everywhere at once, and keeps every page
- * that adopts it behaving identically.
+ * "restore" from one specific back-link's onClick (e.g. TripHero's "All
+ * Trips" link setting `ulaa:restoreScroll:/trips` itself). That meant
+ * leaving via any OTHER route back to the page — the bottom nav, say —
+ * always reset the scroll to the top instead of remembering where the user
+ * was. Centralizing the "flag this page on the way out" part here, so it
+ * happens automatically on unmount regardless of which link the user
+ * actually clicked, fixes that everywhere at once, and keeps every page
+ * that adopts it behaving identically without needing its own hand-wired
+ * back-link — see the layout effect below.
+ *
+ * Most pages scroll the WINDOW itself, which is what this restores by
+ * default. A few admin editor screens (About Page, Home Page — anything
+ * built on ContentEditorShell) are laid out at a fixed 100vh and scroll an
+ * inner "app-scroll" div instead, with the document/window locked from
+ * scrolling at all (see AdminLayout's fixedHeight effect). For those, pass
+ * `containerRef` pointing at that inner scrollable element — every read,
+ * write, and listener below then targets the container's own scrollTop
+ * instead of window.scrollY, since window never moves on those pages and
+ * restoring against it would silently do nothing.
  *
  * @param pathname key this scroll position is stored under, e.g. '/trips'.
  *   Pass the route's own path (not the live URL) so it stays stable.
@@ -49,53 +36,67 @@ export function captureScrollForRestore(pathname: string) {
  *   therefore not yet tall enough) page can't actually reach. Pages with no
  *   async loading step (static content, or content that renders at full
  *   height immediately via skeletons/defaults) can just pass `true`.
+ * @param containerRef optional ref to the element that actually scrolls,
+ *   for pages that scroll an inner container rather than the window.
+ *   Leave unset for ordinary window-scrolling pages.
  */
-export function useScrollRestoration(pathname: string, ready: boolean) {
-  // Keep track of how far down this page the user has scrolled. This is
-  // the main source of truth for ulaa:scrollY — see captureScrollForRestore
-  // above for the more precise, click-time capture, and the layout effect
-  // below for the unmount-time fallback (which deliberately does NOT
-  // re-capture scrollY, since that can already be a clamped value by then).
+export function useScrollRestoration(pathname: string, ready: boolean, containerRef?: RefObject<HTMLElement | null>) {
+  // Resolves to the actual scrolling box every time it's called, rather
+  // than being captured once — a `containerRef`'s element only exists once
+  // its page has finished loading (ContentEditorShell doesn't render the
+  // "app-scroll" div at all while `loading`), so effects below re-read this
+  // fresh instead of caching a `null` from before it mounted.
+  const getScrollTop = () => (containerRef ? containerRef.current?.scrollTop ?? 0 : window.scrollY);
+
+  // The single source of truth for how far down this page the user has
+  // scrolled. Written continuously, live, during ordinary scrolling — which
+  // is what makes it safe to read from anywhere, including during a later
+  // unmount: it was never captured AT the moment of leaving, so it's never
+  // at risk of reading a value after this page's DOM has already started
+  // being torn down (see the layout effect below for why that specifically
+  // matters).
   useEffect(() => {
+    const target: EventTarget | null = containerRef ? containerRef.current : window;
+    if (!target) return;
     const handleScroll = () => {
-      sessionStorage.setItem(`ulaa:scrollY:${pathname}`, String(window.scrollY));
+      sessionStorage.setItem(`ulaa:scrollY:${pathname}`, String(getScrollTop()));
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [pathname]);
+    target.addEventListener('scroll', handleScroll, { passive: true });
+    return () => target.removeEventListener('scroll', handleScroll);
+    // `ready` is included so a `containerRef`'s element — which doesn't
+    // exist until its page is done loading — gets this listener attached
+    // the moment it actually mounts, instead of the effect having run once
+    // already against a `null` container and never re-checking.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, ready, containerRef]);
 
   // Flag this page for scroll restoration on the way OUT, whenever it
-  // unmounts — for any reason, not just via a specific back-link — and
-  // capture its exact final scroll position right then and there.
+  // unmounts — for any reason, not just via a specific back-link. This is
+  // the one piece a page would otherwise have to wire up by hand (as the
+  // public trip/album pages' back-links do, one at a time, per known
+  // return path) — doing it here on unmount instead means it happens for
+  // every possible exit automatically, with no per-page wiring needed.
   //
   // This has to be a LAYOUT effect's cleanup, not a plain effect's. Plain
   // (passive) effect cleanups for an unmounting subtree are flushed on
   // React's own schedule, which can land AFTER the page being navigated TO
   // has already run its own layout effects — including ScrollToTop and
   // this very hook's restore step below, for whichever page the admin
-  // lands back on next. If that happens, the restore flag/position for
-  // THIS page wouldn't be written yet when a later visit checks for it,
-  // so restoration would silently be skipped (or restore to a stale
-  // position) — exactly the "I scrolled down, came back, and it landed
-  // somewhere else" symptom this hook exists to prevent. A layout effect's
-  // cleanup always runs synchronously, in the same commit as the unmount,
-  // so it's guaranteed to be written before anything downstream can read
-  // it. Reading window.scrollY directly here (rather than trusting only
-  // the running record above) also sidesteps any risk of the last 'scroll'
-  // event's handler not having flushed yet.
+  // lands back on next. If that happens, the restore flag for THIS page
+  // wouldn't be set yet when a later visit checks for it, so restoration
+  // would silently be skipped — exactly the "I scrolled down, came back,
+  // and it landed somewhere else" symptom this hook exists to prevent. A
+  // layout effect's cleanup always runs synchronously, in the same commit
+  // as the unmount, so it's guaranteed to be set before anything
+  // downstream can read it.
   //
   // In dev, React 18's <StrictMode> deliberately double-invokes every
   // effect on initial mount — setup, then IMMEDIATELY its own cleanup, then
   // setup again — to surface effects with missing cleanup. The component
   // never actually leaves the screen for that phantom cycle, but this
-  // cleanup doesn't know that: it would fire anyway, at a moment when
-  // window.scrollY is still whatever the PREVIOUS page happened to be
-  // scrolled to (ScrollToTop deliberately hasn't reset it yet — see below),
-  // and stomp the real saved position this page's previous, genuine visit
-  // left behind with that leftover value. The next visit would then
-  // "restore" to that garbage instead of where the admin actually was —
-  // in practice this reliably reproduces as "came back and it's at the
-  // top", every single time, in dev. `justMountedRef` distinguishes that
+  // cleanup doesn't know that: it would fire anyway and mark THIS page
+  // (which hasn't gone anywhere) as flagged for restoration, purely as a
+  // side effect of mounting. `justMountedRef` distinguishes that
   // synchronous phantom cleanup (fired in the same tick as setup, before
   // the setTimeout below has had a chance to run) from a real unmount
   // (which only ever happens much later, well after the timeout has
@@ -107,18 +108,18 @@ export function useScrollRestoration(pathname: string, ready: boolean) {
     return () => {
       clearTimeout(clearFlag);
       if (justMountedRef.current) return;
-      // Fallback only, for whatever navigation away WASN'T already captured
-      // by captureScrollForRestore() at click-time (e.g. the browser's own
-      // back/forward buttons, which fire no click handler of ours).
-      // Deliberately does NOT (re)write ulaa:scrollY here — by the time
-      // this cleanup runs, React may have already started removing this
-      // page's DOM as part of the same commit, and reading window.scrollY
-      // after a tall page's content is torn down can return an
-      // already-clamped value (see captureScrollForRestore's docs above).
-      // The passive 'scroll' listener above keeps ulaa:scrollY reasonably
-      // fresh on its own, and any click-time capture already wrote the
-      // exact value — this only needs to guarantee the restore flag itself
-      // ends up set.
+      // Flags this page for restoration on whatever visit comes next — the
+      // one thing this needs to do, since ulaa:scrollY is already being
+      // kept fresh by the passive 'scroll' listener above, live, the whole
+      // time this page was on screen. Deliberately does NOT (re)read the
+      // scroll position here to write it — by the time this cleanup runs,
+      // React may have already started removing this page's DOM as part of
+      // the same commit that mounts wherever the admin is headed next, and
+      // reading the scroll position after a tall page's content is torn
+      // down can return an already-clamped value (0, or close to it)
+      // rather than the real position. The passive listener was never at
+      // risk of that, since it only ever captures during ordinary,
+      // mid-scroll use.
       sessionStorage.setItem(`ulaa:restoreScroll:${pathname}`, '1');
     };
   }, [pathname]);
@@ -132,11 +133,13 @@ export function useScrollRestoration(pathname: string, ready: boolean) {
   // fresh visit still starts at the top.
   useLayoutEffect(() => {
     if (!ready) return;
+    const container = containerRef?.current ?? null;
+    if (containerRef && !container) return; // container-mode page not mounted yet
     const shouldRestore = sessionStorage.getItem(`ulaa:restoreScroll:${pathname}`);
     if (!shouldRestore) return;
     sessionStorage.removeItem(`ulaa:restoreScroll:${pathname}`);
     const savedY = Number(sessionStorage.getItem(`ulaa:scrollY:${pathname}`) || 0);
-    scrollToInstant(savedY);
+    scrollToInstant(savedY, container);
 
     // `ready` only tracks THIS hook's own notion of "loaded" (usually just
     // the page's main list/data fetch) — but plenty of pages keep growing
@@ -160,9 +163,12 @@ export function useScrollRestoration(pathname: string, ready: boolean) {
     const deadline = performance.now() + 1500;
     const reassert = () => {
       if (cancelled) return;
-      const maxScrollable = document.documentElement.scrollHeight - window.innerHeight;
-      if (Math.abs(window.scrollY - savedY) > 2 && maxScrollable >= savedY) {
-        scrollToInstant(savedY);
+      const currentY = getScrollTop();
+      const maxScrollable = container
+        ? container.scrollHeight - container.clientHeight
+        : document.documentElement.scrollHeight - window.innerHeight;
+      if (Math.abs(currentY - savedY) > 2 && maxScrollable >= savedY) {
+        scrollToInstant(savedY, container);
       }
       if (performance.now() < deadline) {
         rafId = requestAnimationFrame(reassert);
@@ -171,6 +177,10 @@ export function useScrollRestoration(pathname: string, ready: boolean) {
     rafId = requestAnimationFrame(reassert);
 
     const stopOnUserScroll = () => { cancelled = true; };
+    // Listening on window (rather than the container) covers both modes at
+    // once: a 'wheel'/'touchmove' dispatched on an inner scroll container
+    // still bubbles up to window by default, so this still sees it even
+    // when `containerRef` is set.
     window.addEventListener('wheel', stopOnUserScroll, { passive: true, once: true });
     window.addEventListener('touchmove', stopOnUserScroll, { passive: true, once: true });
 
@@ -180,5 +190,6 @@ export function useScrollRestoration(pathname: string, ready: boolean) {
       window.removeEventListener('wheel', stopOnUserScroll);
       window.removeEventListener('touchmove', stopOnUserScroll);
     };
-  }, [ready, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, pathname, containerRef]);
 }

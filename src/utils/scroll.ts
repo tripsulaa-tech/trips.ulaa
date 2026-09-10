@@ -15,7 +15,16 @@
  * own fade-in, means the position is corrected before anything is shown —
  * the fade is the only motion the user actually sees.
  */
-export function scrollToInstant(top: number) {
+export function scrollToInstant(top: number, container?: HTMLElement | null) {
+  // A specific scroll container (e.g. an admin editor page's own internal
+  // "app-scroll" area) never inherits the <html> element's global
+  // `scroll-behavior: smooth` — that CSS property only ever governs the
+  // element it's set on, not other scrollers nested inside it — so there's
+  // nothing to bypass here; setting scrollTop directly is already instant.
+  if (container) {
+    container.scrollTop = top;
+    return;
+  }
   const root = document.documentElement;
   const previous = root.style.scrollBehavior;
   root.style.scrollBehavior = 'auto';

@@ -26,7 +26,7 @@ import { useAuth } from '../context/useAuth';
 import NotificationsPanel from './NotificationsPanel';
 import PushNotificationToggle from './PushNotificationToggle';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
-import { useScrollRestoration, captureScrollForRestore } from '../hooks/useScrollRestoration';
+import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import type { TripHighlightIconType } from '../constants/tripHighlightIcons';
 
 interface AdminNavItemDef {
@@ -39,7 +39,7 @@ interface AdminNavItemDef {
 // below (NAV_ORDER_STORAGE_KEY) so the admin can drag any item — including
 // "Dashboard" itself — anywhere they like.
 const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
-  Dashboard: { to: '/admin', icon: Home },
+  Dashboard: { to: '/admin/dashboard', icon: Home },
   'Upcoming Trips': { to: '/admin/trips', icon: Briefcase },
   'Completed Trips': { to: '/admin/albums', icon: BookOpen },
   'Home Page': { to: '/admin/home', icon: Images },
@@ -393,7 +393,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
 
           if (label !== GROUP_LABEL) {
             return (
-              <TopNavRow key={to} label={label} to={to} end={to === '/admin'} Icon={Icon} activePadding="px-3" />
+              <TopNavRow key={to} label={label} to={to} Icon={Icon} activePadding="px-3" />
             );
           }
 
@@ -583,26 +583,16 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
   // lightweight substitute for a React Router data-router useBlocker
   // (which isn't available under the plain BrowserRouter this app uses).
   const guardNavigate = (e: React.MouseEvent) => {
-    if (hasUnsavedChanges?.()) {
-      if (!window.confirm('You have unsaved changes that will be lost. Leave this page anyway?')) {
-        e.preventDefault();
-        return;
-      }
+    if (!hasUnsavedChanges || !hasUnsavedChanges()) return;
+    if (!window.confirm('You have unsaved changes that will be lost. Leave this page anyway?')) {
+      e.preventDefault();
     }
-    // The click itself is the last point at which window.scrollY is
-    // guaranteed to still reflect THIS page — every in-app link in the
-    // sidebar (top-level items, grouped children, the logo, "View Site")
-    // routes through this handler, so capturing here covers all of them.
-    // See captureScrollForRestore's docs for why this can't just be left
-    // to this hook's own unmount cleanup.
-    captureScrollForRestore(location.pathname);
   };
 
   const handleSignOut = async () => {
     if (hasUnsavedChanges?.() && !window.confirm('You have unsaved changes that will be lost. Sign out anyway?')) {
       return;
     }
-    captureScrollForRestore(location.pathname);
     await signOut();
     navigate('/admin');
   };
