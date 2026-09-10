@@ -138,7 +138,7 @@ export default function AdminTripLeaders() {
     setForm(f => ({ ...f, social_links: f.social_links.filter((_, idx) => idx !== i) }));
 
   return (
-    <AdminLayout title="Trip Leaders" subtitle="Manage the directory of trip leaders that can be assigned to individual trips.">
+    <AdminLayout title="Trip Leaders" subtitle="Manage the directory of trip leaders that can be assigned to individual trips." scrollRestorationReady={!loading}>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <p className="text-dark-muted">{items.length} trip leaders</p>

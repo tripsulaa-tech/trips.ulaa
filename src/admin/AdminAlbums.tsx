@@ -188,7 +188,7 @@ export default function AdminAlbums() {
   const duplicateAlbum = findDuplicateAlbum(form, albums, editing?.id);
 
   return (
-    <AdminLayout title="Completed Trips">
+    <AdminLayout title="Completed Trips" scrollRestorationReady={!loading}>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <p className="text-dark-muted">{albums.length} albums</p>

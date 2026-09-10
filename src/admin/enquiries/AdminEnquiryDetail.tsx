@@ -763,7 +763,7 @@ export default function AdminEnquiryDetail() {
 
   if (loading) {
     return (
-      <AdminLayout title="Enquiry Details">
+      <AdminLayout title="Enquiry Details" scrollRestorationReady={false}>
         <div className="p-6 text-dark-muted text-sm">Loading…</div>
       </AdminLayout>
     );
@@ -771,7 +771,7 @@ export default function AdminEnquiryDetail() {
 
   if (notFound || !enquiry) {
     return (
-      <AdminLayout title="Enquiry Details">
+      <AdminLayout title="Enquiry Details" scrollRestorationReady>
         <div className="p-6 space-y-3">
           <p className="text-dark-muted text-sm">This enquiry couldn't be found — it may have been deleted.</p>
           <Button variant="primary" size="sm" onClick={() => navigate('/admin/enquiries')}>
@@ -845,7 +845,7 @@ export default function AdminEnquiryDetail() {
   rowActions.push({ label: 'Delete', icon: Trash2, danger: true, onClick: handleDelete });
 
   return (
-    <AdminLayout title="Enquiry Details">
+    <AdminLayout title="Enquiry Details" scrollRestorationReady>
       <div className="w-full space-y-4">
         <button
           onClick={() => navigate('/admin/enquiries')}

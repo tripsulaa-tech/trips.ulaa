@@ -73,7 +73,7 @@ export default function AdminTrips() {
   }, [trips, loading]);
 
   return (
-    <AdminLayout title="Upcoming Trips">
+    <AdminLayout title="Upcoming Trips" scrollRestorationReady={!loading}>
       <AdminTripsTable
         trips={trips}
         loading={loading}

@@ -145,7 +145,7 @@ export default function AdminDashboard() {
     .slice(0, 3);
 
   return (
-    <AdminLayout title="Dashboard">
+    <AdminLayout title="Dashboard" scrollRestorationReady={!loading}>
       <div className="space-y-5 sm:space-y-8">
         {/* Welcome banner */}
         <motion.div

@@ -15,7 +15,7 @@
 // month" is answerable without exporting to a spreadsheet.
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { loadPersisted, savePersisted } from '../utils/sessionState';
 import {
   Users,
@@ -731,13 +731,10 @@ export default function AdminReports() {
           </div>
         </div>
 
-        <AnimatePresence mode="wait">
         {loading ? (
-          <motion.div key="skeleton" exit={{ opacity: 0 }}>
-            <ReportsSkeleton />
-          </motion.div>
+          <ReportsSkeleton />
         ) : (
-          <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-6 sm:space-y-8">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-6 sm:space-y-8">
             {/* ---- Lead Reports ---- */}
             <ReportSection title="Lead Reports" subtitle={`${lead.total} lead${lead.total === 1 ? '' : 's'} in range`} icon={Users} tone="primary">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -1002,7 +999,6 @@ export default function AdminReports() {
             )}
           </motion.div>
         )}
-        </AnimatePresence>
       </div>
     </AdminLayout>
   );
