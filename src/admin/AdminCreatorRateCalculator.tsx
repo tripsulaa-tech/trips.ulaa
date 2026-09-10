@@ -663,36 +663,40 @@ export default function AdminCreatorRateCalculator() {
 
                             {h.notes && <p className="text-xs text-dark-muted italic">"{h.notes}"</p>}
 
-                            <div className="flex items-center justify-between gap-3 flex-wrap">
-                              <div className="flex items-center gap-4">
+                            <div className="flex items-center justify-between gap-3 flex-wrap pt-3 mt-1 border-t border-background-warm">
+                              <div className="flex items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={() => handleCopyCalculation(h)}
-                                  className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
+                                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-button font-semibold transition-colors ${
+                                    copiedId === h.id
+                                      ? 'bg-green-50 border-green-200 text-green-700'
+                                      : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/20'
+                                  }`}
                                 >
                                   {copiedId === h.id ? (
-                                    <Check size={13} className="text-green-600" aria-hidden="true" />
+                                    <Check size={14} weight="bold" aria-hidden="true" />
                                   ) : (
-                                    <Copy size={13} aria-hidden="true" />
+                                    <Copy size={14} weight="bold" aria-hidden="true" />
                                   )}
                                   {copiedId === h.id ? 'Copied' : 'Copy'}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleShareCalculation(h)}
-                                  className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
+                                  className="inline-flex items-center gap-1.5 rounded-full border bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300 px-3 py-1.5 text-xs font-button font-semibold transition-colors"
                                   title={h.phone ? `Share via WhatsApp to ${h.phone}` : 'Share'}
                                 >
-                                  <WhatsappLogo size={13} aria-hidden="true" /> Share
+                                  <WhatsappLogo size={14} weight="fill" aria-hidden="true" /> Share
                                 </button>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => handleDelete(h.id)}
                                 disabled={deletingId === h.id}
-                                className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 rounded-full border border-transparent hover:border-red-200 hover:bg-red-50 px-3 py-1.5 text-xs font-button font-semibold text-dark-muted hover:text-red-600 transition-colors disabled:opacity-50"
                               >
-                                <Trash2 size={13} aria-hidden="true" /> Delete
+                                <Trash2 size={14} aria-hidden="true" /> Delete
                               </button>
                             </div>
                           </div>
