@@ -387,21 +387,44 @@ export default function AdminEnquiriesMobileCards({
                       case specifically, so a fully paid, unpaid, or
                       not-yet-priced booking showed no payment info at all
                       here. This mirrors the desktop cell and opens the same
-                      payment modal on tap. */}
-                  <button
-                    onClick={() => openPayment(e)}
-                    className="w-full text-left bg-background-warm/50 hover:bg-background-warm rounded-md px-3 py-2.5 transition-colors flex items-center justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-dark-muted text-xs">Payment</p>
-                      <p className="text-dark text-sm font-medium truncate">
-                        {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}
-                      </p>
+                      payment modal on tap — except on a brand-new,
+                      uncontacted enquiry, where it mirrors the desktop
+                      cell's other branch instead: no button, no click,
+                      just a title nudging toward Mark Contacted, so this
+                      tile can't silently bypass the Contact Outcome step
+                      the kebab's "Add Payment" item already guards against
+                      just below. */}
+                  {e.journey_stage === 'new_enquiry' ? (
+                    <div
+                      title="Mark this enquiry Contacted first to record a payment"
+                      className="w-full bg-background-warm/50 rounded-md px-3 py-2.5 flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-dark-muted text-xs">Payment</p>
+                        <p className="text-dark text-sm font-medium truncate">
+                          {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${paymentStatus(e).color}`}>
+                        {paymentStatus(e).label}
+                      </span>
                     </div>
-                    <span className={`shrink-0 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${paymentStatus(e).color}`}>
-                      {paymentStatus(e).label}
-                    </span>
-                  </button>
+                  ) : (
+                    <button
+                      onClick={() => openPayment(e)}
+                      className="w-full text-left bg-background-warm/50 hover:bg-background-warm rounded-md px-3 py-2.5 transition-colors flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-dark-muted text-xs">Payment</p>
+                        <p className="text-dark text-sm font-medium truncate">
+                          {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${paymentStatus(e).color}`}>
+                        {paymentStatus(e).label}
+                      </span>
+                    </button>
+                  )}
 
                   {e.message && (
                     <div>
