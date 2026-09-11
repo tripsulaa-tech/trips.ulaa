@@ -477,11 +477,16 @@ export default function AdminReports() {
     // same real amount_paid/cancelled_at fields already trusted everywhere
     // else on this page) means Occupancy can't silently disagree with
     // Cancellation Rate or Revenue just because someone edited a trip.
-    // Deliberately NOT scoped to `scoped`/period — like the trip's real
+    // Deliberately NOT scoped to the period toggle — like the trip's real
     // seat count, this is "how full are trips right now", not "how many
-    // people booked in the selected window".
-    const totalSeats = upcomingTrips.reduce((sum, t) => sum + (t.total_seats || 0), 0);
-    const seatsBooked = enquiries.filter(e => isBooked(e) && e.trip_id && upcomingTripIds.has(e.trip_id)).length;
+    // people booked in the selected window". It IS scoped to the Trip
+    // dropdown though — with a specific trip picked, every card on this
+    // page (including this one) should reflect just that trip.
+    const relevantUpcomingTrips = tripId === ALL_TRIPS ? upcomingTrips : upcomingTrips.filter(t => t.id === tripId);
+    const totalSeats = relevantUpcomingTrips.reduce((sum, t) => sum + (t.total_seats || 0), 0);
+    const seatsBooked = enquiries.filter(e =>
+      isBooked(e) && e.trip_id && upcomingTripIds.has(e.trip_id) && (tripId === ALL_TRIPS || e.trip_id === tripId)
+    ).length;
 
     const destCounts = new Map<string, number>();
     bookedList.forEach(e => {
@@ -503,7 +508,7 @@ export default function AdminReports() {
       totalSeats, seatsBooked,
       topDestinations,
     };
-  }, [scoped, enquiries, upcomingTrips, destinationById]);
+  }, [scoped, enquiries, upcomingTrips, upcomingTripIds, tripId, destinationById]);
 
   // Paid ledger rows within the selected period — the source for both the
   // trend chart and the payment-method breakdown below. Filtered on
@@ -563,11 +568,14 @@ export default function AdminReports() {
   // Per-trip rollup — same real-booking derivation as Occupancy above
   // (isBooked, not trip.seats_booked), so this table and the top-level
   // Occupancy card can never disagree about how full a given trip is.
-  // Deliberately business-wide (all enquiries), not `scoped` — a trip's
-  // collected/pending/occupancy is its current standing regardless of when
-  // each individual booking came in, same reasoning as Occupancy itself.
+  // Deliberately business-wide re: the period toggle (all enquiries, not
+  // `scoped`) — a trip's collected/pending/occupancy is its current
+  // standing regardless of when each individual booking came in, same
+  // reasoning as Occupancy itself. It IS scoped to the Trip dropdown,
+  // though — down to a single row when a specific trip is selected.
   const tripBreakdown = useMemo(() => {
-    return upcomingTrips
+    const relevantTrips = tripId === ALL_TRIPS ? upcomingTrips : upcomingTrips.filter(t => t.id === tripId);
+    return relevantTrips
       .map(t => {
         const tripEnquiries = enquiries.filter(e => e.trip_id === t.id && isBooked(e));
         const collected = tripEnquiries.reduce((sum, e) => sum + (e.amount_paid || 0), 0);
@@ -586,21 +594,23 @@ export default function AdminReports() {
         };
       })
       .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
-  }, [upcomingTrips, enquiries]);
+  }, [upcomingTrips, enquiries, tripId]);
 
   // Internal cost/profit rollup — pulls the "Finances & Profit" tab data
   // entered on each trip (Add/Edit Trip, see utils/tripFinance.ts) and
   // rolls it up against real bookings, the same way AdminTripViewModal's
-  // read-only summary does for a single trip. Business-wide (all
-  // enquiries, not `scoped`) for the same reason tripBreakdown/Occupancy
-  // are: a trip's cost structure and current fill are its current
-  // standing, not something that resets with the period toggle. Only
+  // read-only summary does for a single trip. Business-wide re: the period
+  // toggle (all enquiries, not `scoped`) for the same reason
+  // tripBreakdown/Occupancy are: a trip's cost structure and current fill
+  // are its current standing, not something that resets with the period
+  // toggle. Scoped to the Trip dropdown, same as tripBreakdown above. Only
   // trips where an admin has actually filled in the Finances tab are
   // included — a trip with no finance data entered has nothing real to
   // roll up (emptyTripFinance would just report 100% margin, which is
   // wrong, not "no data").
   const financeByTrip = useMemo(() => {
-    return upcomingTrips
+    const relevantTrips = tripId === ALL_TRIPS ? upcomingTrips : upcomingTrips.filter(t => t.id === tripId);
+    return relevantTrips
       .filter(t => !!t.trip_finance)
       .map(t => {
         // Real revenue for this trip: sum of what each booked enquiry was
@@ -622,7 +632,7 @@ export default function AdminReports() {
         };
       })
       .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
-  }, [upcomingTrips, enquiries]);
+  }, [upcomingTrips, enquiries, tripId]);
 
   const financeTotals = useMemo(() => {
     return financeByTrip.reduce(
@@ -749,7 +759,7 @@ export default function AdminReports() {
                 </button>
               ))}
             </div>
-            <div className="w-40 shrink-0">
+            <div className="w-36 sm:w-48 shrink-0">
               <label htmlFor="reports-trip-filter" className="sr-only">Filter by trip</label>
               <Select
                 inputId="reports-trip-filter"
@@ -757,6 +767,7 @@ export default function AdminReports() {
                 onChange={setTripId}
                 options={tripOptions}
                 size="sm"
+                variant="pill"
               />
             </div>
             {!loading && (

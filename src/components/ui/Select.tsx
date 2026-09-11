@@ -21,6 +21,11 @@ interface SelectProps<T extends string | number = string> {
   className?: string;
   disabled?: boolean;
   inputId?: string;
+  // 'default' is the boxy bordered look used in forms throughout the
+  // admin. 'pill' matches the rounded-full, shadow-card chip styling used
+  // in filter bars (e.g. Reports' period toggle and Export button) — for
+  // a Select that sits alongside those chips instead of inside a form.
+  variant?: 'default' | 'pill';
 }
 
 export default function Select<T extends string | number = string>({
@@ -32,6 +37,7 @@ export default function Select<T extends string | number = string>({
   className = '',
   disabled = false,
   inputId,
+  variant = 'default',
 }: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -43,6 +49,10 @@ export default function Select<T extends string | number = string>({
   const sizeClasses = size === 'sm'
     ? 'px-3 py-1.5 text-xs'
     : 'px-3 py-2 text-sm';
+
+  const variantClasses = variant === 'pill'
+    ? `rounded-full border-2 bg-white shadow-card font-button font-semibold ${isOpen ? 'border-primary/40' : 'border-transparent hover:shadow-card-hover'}`
+    : `rounded-md border-2 border-background-warm bg-background font-body ${isOpen ? 'border-primary' : 'hover:border-primary/50'}`;
 
   useCloseOnOutsideClick(isOpen, [triggerRef, listRef], () => setIsOpen(false), { escape: true });
 
@@ -57,9 +67,9 @@ export default function Select<T extends string | number = string>({
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className={`w-full flex items-center justify-between gap-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-left outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'border-primary' : 'hover:border-primary/50'} ${sizeClasses} ${className}`}
+        className={`w-full flex items-center justify-between gap-2 text-dark text-left outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses} ${sizeClasses} ${className}`}
       >
-        <span className={selected ? '' : 'text-dark-muted'}>
+        <span className={`flex-1 min-w-0 truncate ${selected ? '' : 'text-dark-muted'}`}>
           {selected ? selected.label : placeholder}
         </span>
         <ChevronDown size={16} className={`shrink-0 text-dark-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
