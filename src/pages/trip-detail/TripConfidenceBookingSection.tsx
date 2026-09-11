@@ -17,6 +17,7 @@ import {
   SealCheck as BadgeCheck,
   ShieldCheck,
   Sparkle,
+  Gift,
 } from '@phosphor-icons/react';
 
 interface TripConfidenceBookingSectionProps {
@@ -63,6 +64,20 @@ export default function TripConfidenceBookingSection({
   onBook,
 }: TripConfidenceBookingSectionProps) {
   const hasConfidenceItems = (confidenceItems?.length ?? 0) > 0;
+  // Save = strikeThroughPrice - activePrice (marketing "was ₹X" price vs
+  // what they pay). PLUS OFFER = trip.price - activePrice (actual regular
+  // price vs what they pay) — same formula and gating as TripCard/
+  // SpecialOfferPopupCard/TripStickyBookingBar: only shown for a live,
+  // non-hidden special offer, and only when it says something the green
+  // badge doesn't.
+  const showSpecialOfferPromo = isSpecialOffer && !trip.hide_special_offer_promo;
+  const saveAmount = strikeThroughPrice != null && activePrice != null
+    ? strikeThroughPrice - activePrice
+    : null;
+  const plusOfferAmount = trip.price != null && activePrice != null
+    ? trip.price - activePrice
+    : null;
+  const showPlusOffer = showSpecialOfferPromo && plusOfferAmount != null && plusOfferAmount > 0 && plusOfferAmount !== saveAmount;
 
   return (
     /* Pack Your Bags — sits directly below Fashion Aesthetics / Gallery, matching the quick-jump nav order.
@@ -108,8 +123,14 @@ export default function TripConfidenceBookingSection({
 
                   <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
                     <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-button font-medium px-2.5 py-1 rounded-md">
-                      Save {formatPrice(strikeThroughPrice - activePrice)}
+                      Save {formatPrice(saveAmount as number)}
                     </span>
+                    {showPlusOffer && (
+                      <span className="inline-flex items-center gap-1.5 bg-pink-50 border border-pink-200 text-pink-600 text-xs font-button font-bold px-2.5 py-1 rounded-md">
+                        <Gift size={12} weight="fill" className="shrink-0" />
+                        PLUS {formatPrice(plusOfferAmount as number)} OFFER
+                      </span>
+                    )}
                     {isSpecialOffer && trip.special_offer_name ? (
                       <span className="offer-badge-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold px-2.5 py-1 rounded-md">
                         <Sparkle size={12} weight="fill" />
