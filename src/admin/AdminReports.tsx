@@ -52,12 +52,13 @@ import {
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getAllPayments } from '../services/api';
-import type { Enquiry, UpcomingTrip, CompletedTrip, Payment } from '../types/types-index';
+import type { Enquiry, UpcomingTrip, CompletedTrip, Payment, TripFinance } from '../types/types-index';
 import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
 import { computeTripFinanceSummary } from '../utils/tripFinance';
-import { downloadTripExcelReport, downloadAllTripsExcelReport } from '../utils/tripExcelReport';
+import { downloadExcelReport } from '../utils/tripExcelReport';
+import type { ExcelReportSummary } from '../utils/tripExcelReport';
 
 // Real, human-readable label for every value enquiries.source can actually
 // hold. Deliberately not reusing enquiries/AdminEnquiriesShared's
@@ -630,6 +631,13 @@ export default function AdminReports() {
           id: t.id,
           title: t.title || t.destination,
           startDate: t.start_date,
+          // Raw Finances-tab record, kept alongside the rolled-up summary
+          // fields so the Excel export can itemize ulaaCosts/organiserCosts
+          // (ad spend, agency payment, organiser's own entry ticket, etc.)
+          // instead of only showing the two totals. Non-null: this map only
+          // runs over trips the `.filter(t => !!t.trip_finance)` above
+          // already kept.
+          finance: t.trip_finance as TripFinance,
           ...summary,
         };
       })
@@ -670,9 +678,13 @@ export default function AdminReports() {
   }, [scoped, destinationById]);
 
   // Assembles one trip's row for the styled Excel export (tripExcelReport.ts)
-  // out of financeByTrip's already-computed cost/profit summary plus two
-  // things that summary doesn't carry: a food-preference split and a
-  // per-person outstanding-balance list. Both are deliberately read straight
+  // out of financeByTrip's already-computed cost/profit summary plus three
+  // things that summary doesn't carry on its own: a food-preference split,
+  // a per-person outstanding-balance list, and the itemized line items
+  // behind the ulaaCosts/organiserCosts totals (read from the trip's raw
+  // `finance` record — see the TripFinance import above — since
+  // computeTripFinanceSummary only returns already-summed totals for most
+  // of these). Both the food/balance figures are deliberately read straight
   // from `enquiries` (not `scoped`) and scoped only by trip id — same
   // "current standing, not period-windowed" reasoning financeByTrip and
   // Occupancy already use elsewhere on this page, so the Excel export can't
@@ -693,6 +705,46 @@ export default function AdminReports() {
       }))
       .filter(row => row.balance > 0)
       .sort((a, b) => b.balance - a.balance);
+
+    const f = t.finance;
+
+    // ULAA Costs breakdown — mirrors computeTripFinanceSummary's own
+    // ulaaCosts formula (ad spend + per-traveler costs + agency + child
+    // fare costs) line by line, using the already-computed per-traveler
+    // and agency figures from `t` (entryTicketCosts, kitCosts, agencyCost,
+    // ...) plus the one raw field that summary doesn't expose on its own:
+    // ad_spend. Child Fare lines are only included when this trip actually
+    // has Child Fare bookings — otherwise they're three zero rows that add
+    // nothing.
+    const ulaaCostBreakdown: { label: string; amount: number }[] = [
+      { label: 'Ad Spend', amount: f.ad_spend || 0 },
+      { label: 'Entry Ticket Costs (Adults)', amount: t.entryTicketCosts },
+      { label: 'Kit Costs (Adults)', amount: t.kitCosts },
+      {
+        label: f.agency_name
+          ? `Agency Payment — ${f.agency_name}${f.agency_amount_type === 'per_traveler' ? ' (per traveler)' : ''}`
+          : `Agency Payment${f.agency_amount_type === 'per_traveler' ? ' (per traveler)' : ''}`,
+        amount: t.agencyCost,
+      },
+    ];
+    if (t.childFareCount > 0) {
+      ulaaCostBreakdown.push(
+        { label: `Child Fare — Vendor Cost (×${t.childFareCount})`, amount: t.childFareVendorCost },
+        { label: `Child Fare — Entry Ticket (×${t.childFareCount})`, amount: t.childFareEntryTicketCost },
+        { label: `Child Fare — Kit Cost (×${t.childFareCount})`, amount: t.childFareKitCost },
+      );
+    }
+
+    // Organiser Costs breakdown — these four raw fields are simply summed
+    // into organiserCosts (no per-traveler math involved), so they're read
+    // straight off the trip's finance record.
+    const organiserCostBreakdown: { label: string; amount: number }[] = [
+      { label: f.organiser_name ? `Organiser Travel Cost — ${f.organiser_name}` : 'Organiser Travel Cost', amount: f.organiser_travel_cost || 0 },
+      { label: 'Organiser Agency Payment', amount: f.organiser_agency_payment || 0 },
+      { label: 'Organiser Misc Expense', amount: f.organiser_misc_expense || 0 },
+      { label: "Organiser's Own Entry Ticket", amount: f.organiser_own_entry_ticket || 0 },
+    ];
+
     return {
       tripTitle: t.title,
       travelerCount: t.travelerCount,
@@ -705,22 +757,62 @@ export default function AdminReports() {
       netProfit: t.netProfit,
       profitPerPerson: t.profitPerPerson,
       outstandingByPerson: outstanding,
+      ulaaCostBreakdown,
+      organiserCostBreakdown,
     };
   };
 
-  // Only trips with a Finances tab filled in have anything to put in the
-  // cost/profit half of the sheet (see financeByTrip above), so this export
-  // is scoped to those same trips — same reasoning, not a separate rule.
-  // A specific trip picked in the Trip dropdown exports as one sheet; "All
-  // Trips" exports one sheet per trip so nothing gets flattened away.
+  // Builds the full workbook: a "Summary" sheet carrying every section the
+  // CSV export has (handleExportCsv below — same data, same order, so the
+  // two exports never drift out of sync), plus one detail sheet per trip
+  // that has a Finances tab filled in. Both halves are already scoped to
+  // whichever period/trip the admin has picked, via `scoped`/`financeByTrip`
+  // above, so this function just assembles what's already computed.
   const handleExportExcel = async () => {
-    if (financeByTrip.length === 0) return;
-    const rows = financeByTrip.map(buildExcelRowForTrip);
-    if (tripId === ALL_TRIPS) {
-      await downloadAllTripsExcelReport(rows);
-    } else {
-      await downloadTripExcelReport(rows[0]);
-    }
+    const tripRows = financeByTrip.map(buildExcelRowForTrip);
+    const summary: ExcelReportSummary = {
+      periodSlug: period,
+      periodLabel: PERIOD_OPTIONS.find(p => p.value === period)?.label || period,
+      tripLabel: tripOptions.find(t => t.value === tripId)?.label || 'All Trips',
+      lead: {
+        total: lead.total,
+        conversionPct: lead.conversionPct,
+        newCount: lead.newCount,
+        contactedCount: lead.contactedCount,
+        avgResponseTime: lead.avgResponseTime,
+      },
+      booking,
+      financial: {
+        revenue: financial.revenue,
+        refundAmount: financial.refundAmount,
+        outstandingBalance: financial.outstandingBalance,
+        avgBookingValue: Math.round(financial.avgBookingValue),
+      },
+      financeTotals,
+      financeMarginPct,
+      financeByTrip: financeByTrip.map(t => ({
+        title: t.title,
+        travelerCount: t.travelerCount,
+        totalRevenue: t.totalRevenue,
+        ulaaCosts: t.ulaaCosts,
+        organiserCosts: t.organiserCosts,
+        totalCosts: t.totalCosts,
+        netProfit: t.netProfit,
+        profitPerPerson: t.profitPerPerson,
+      })),
+      operational: {
+        occupancyPct: operational.occupancyPct,
+        seatsBooked: operational.seatsBooked,
+        totalSeats: operational.totalSeats,
+        cancellationPct: operational.cancellationPct,
+        noShowPct: operational.noShowPct,
+      },
+      sourceBreakdown,
+      paymentMethodBreakdown,
+      tripBreakdown,
+      outstandingByPerson,
+    };
+    await downloadExcelReport(summary, tripRows);
   };
 
   const handleExportCsv = () => {
@@ -839,13 +931,13 @@ export default function AdminReports() {
                 <span className="hidden sm:inline">Export CSV</span>
               </motion.button>
             )}
-            {!loading && financeByTrip.length > 0 && (
+            {!loading && (
               <motion.button
                 type="button"
                 onClick={handleExportExcel}
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.96 }}
-                title="Download a formatted per-trip Excel report (finance summary + outstanding balances)"
+                title="Download a formatted Excel report — Summary sheet with every report section, plus one detail sheet per trip"
                 className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
               >
                 <Download size={14} aria-hidden="true" />
