@@ -34,6 +34,10 @@ interface PaymentFormFieldsProps {
   togglingNoShow: boolean;
   onToggleNoShow: (isNoShow: boolean) => void;
   getTripPrice: (tripId: string | undefined, packageType: Enquiry['package_type']) => number | undefined;
+  // This trip's configured Child Fare Amount (Add/Edit Trip → Finances &
+  // Profit) — drives the auto-fill/hard-lock below. Returns undefined for
+  // a no-trip (general) enquiry or a trip with no Child Fare Amount set.
+  getTripChildFareAmount: (tripId: string | undefined) => number | undefined;
   idPrefix?: string;
   // Pairs up fields that are otherwise single, full-width rows (Food
   // Preference/Package, Amount Being Paid Now/Payment Type) into a 2-col
@@ -45,13 +49,17 @@ interface PaymentFormFieldsProps {
 
 export default function PaymentFormFields({
   enquiry, paymentForm, setPaymentForm, paymentErrors, payments, paymentsLoading,
-  togglingNoShow, onToggleNoShow, getTripPrice, idPrefix = 'ed-pay', compact = false,
+  togglingNoShow, onToggleNoShow, getTripPrice, getTripChildFareAmount, idPrefix = 'ed-pay', compact = false,
 }: PaymentFormFieldsProps) {
   const paymentErrorClass = 'text-red-500 text-xs mt-1';
   const fieldClass = 'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none';
   // Only meaningful when a trip is linked — no-trip (general) enquiries
   // have no list price, so they keep the old free-typed Total Amount field.
   const listPrice = enquiry.trip_id ? getTripPrice(enquiry.trip_id, paymentForm.package_type) : undefined;
+  // Child Fare is priced off this trip's configured rate, not a no-trip
+  // (general) enquiry — see getTripChildFareAmount's doc comment.
+  const tripChildFareAmount = enquiry.trip_id ? getTripChildFareAmount(enquiry.trip_id) : undefined;
+  const isChildFare = paymentForm.payment_type === 'addon' && paymentForm.notes === 'Child fare';
   // space-y-4 in non-compact mode reproduces the original stacked spacing
   // for these two fields; grid+gap-4 in compact mode sits them side by side.
   const pairClass = compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-4';
@@ -182,12 +190,18 @@ export default function PaymentFormFields({
             type="number"
             min={0}
             value={paymentForm.amount_paid}
+            disabled={isChildFare}
             onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
             aria-invalid={!!paymentErrors.amount_paid}
-            aria-describedby={paymentErrors.amount_paid ? `${idPrefix}-amount-paid-error` : undefined}
-            className={fieldClass}
+            aria-describedby={paymentErrors.amount_paid ? `${idPrefix}-amount-paid-error` : (isChildFare ? `${idPrefix}-amount-paid-childfare-hint` : undefined)}
+            className={`${fieldClass} ${isChildFare ? 'opacity-60 cursor-not-allowed' : ''}`}
             placeholder="e.g. 5000"
           />
+          {isChildFare && (
+            <p id={`${idPrefix}-amount-paid-childfare-hint`} className="text-[11px] text-dark-muted mt-1">
+              Locked to this trip's configured Child Fare Amount — set it under Add/Edit Trip → Finances & Profit to change it.
+            </p>
+          )}
           {paymentErrors.amount_paid && <p id={`${idPrefix}-amount-paid-error`} role="alert" className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
         </div>
 
@@ -228,21 +242,40 @@ export default function PaymentFormFields({
                   (no separate child pricing/seat type), so this is just a
                   one-off add-on against an existing enquiry rather than a
                   field on the public booking form — same Add-on mechanism
-                  as any other add-on, with the note pre-filled. Toggles the
-                  note text; the amount is still entered above, since it
-                  varies per trip. */}
+                  as any other add-on, with the note pre-filled. Unlike
+                  every other add-on, the amount here is NOT freely typed —
+                  it hard-locks to this trip's configured Child Fare Amount
+                  (Add/Edit Trip → Finances & Profit) the moment it's
+                  toggled on, with no per-child override, so a Child Fare
+                  add-on can never drift from the trip's real vendor/entry-
+                  ticket/kit costs feeding the Profit Summary. Disabled
+                  entirely until that rate is actually configured. */}
               <button
                 type="button"
-                onClick={() => setPaymentForm(f => ({ ...f, notes: f.notes === 'Child fare' ? '' : 'Child fare' }))}
-                aria-pressed={paymentForm.notes === 'Child fare'}
+                disabled={!tripChildFareAmount}
+                title={!tripChildFareAmount ? "Set this trip's Child Fare Amount under Add/Edit Trip → Finances & Profit first" : undefined}
+                onClick={() => setPaymentForm(f => {
+                  const turningOn = f.notes !== 'Child fare';
+                  return {
+                    ...f,
+                    notes: turningOn ? 'Child fare' : '',
+                    amount_paid: turningOn ? (tripChildFareAmount ?? f.amount_paid) : f.amount_paid,
+                  };
+                })}
+                aria-pressed={isChildFare}
                 className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors ${
-                  paymentForm.notes === 'Child fare'
+                  isChildFare
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-background-warm text-dark-muted hover:border-primary/40'
-                }`}
+                } ${!tripChildFareAmount ? 'opacity-50 cursor-not-allowed hover:border-background-warm' : ''}`}
               >
                 <Baby size={13} aria-hidden="true" /> Child Fare
               </button>
+              {!tripChildFareAmount && (
+                <p className="text-[11px] text-dark-muted mt-1">
+                  {enquiry.trip_id ? "Set this trip's Child Fare Amount under Add/Edit Trip → Finances & Profit to enable this." : 'No trip linked to this enquiry, so there\u2019s no configured Child Fare rate to use.'}
+                </p>
+              )}
             </>
           )}
         </div>

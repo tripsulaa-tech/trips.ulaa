@@ -141,6 +141,14 @@ export default function AdminEnquiries() {
     const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
     return price ?? undefined;
   };
+  // This trip's configured Child Fare Amount (Add/Edit Trip → Finances &
+  // Profit), used to auto-fill and lock the Add-on Amount field once the
+  // Child Fare chip is picked in PaymentFormFields — see that component
+  // for why it's a hard lock with no per-child override.
+  const getTripChildFareAmount = (tripId: string | undefined): number | undefined => {
+    const trip = trips.find(t => t.id === tripId);
+    return trip?.trip_finance?.child_fare_amount ?? undefined;
+  };
   // Payment modal — a click on the Payment cell/"Record Payment"/"Add
   // Payment" opens this right here on the list (same modal
   // AdminEnquiryDetail.tsx uses), instead of navigating away to the full
@@ -1387,6 +1395,7 @@ export default function AdminEnquiries() {
           togglingNoShow={togglingNoShow}
           onToggleNoShow={(isNoShow) => handleToggleNoShow(paymentTarget, isNoShow)}
           getTripPrice={getTripPrice}
+          getTripChildFareAmount={getTripChildFareAmount}
         />
       )}
 

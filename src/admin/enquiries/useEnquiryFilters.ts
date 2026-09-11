@@ -72,7 +72,8 @@ function financeSummaryByTrip(allTrips: UpcomingTrip[], allEnquiries: Enquiry[])
     .map(t => {
       const tripBookings = allEnquiries.filter(e => e.trip_id === t.id && isBooked(e));
       const totalRevenue = tripBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0);
-      const summary = computeTripFinanceSummary(t.trip_finance, tripBookings.length, totalRevenue);
+      const childFareCount = tripBookings.filter(e => e.has_child_addon).length;
+      const summary = computeTripFinanceSummary(t.trip_finance, tripBookings.length, totalRevenue, childFareCount);
       return { title: t.title || t.destination, ...summary };
     })
     .sort((a, b) => b.totalRevenue - a.totalRevenue);
@@ -243,7 +244,8 @@ export function useEnquiryFilters() {
       ? computeTripFinanceSummary(
           trip.trip_finance,
           scopedBookings.length,
-          scopedBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0)
+          scopedBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0),
+          scopedBookings.filter(e => e.has_child_addon).length
         )
       : null;
 

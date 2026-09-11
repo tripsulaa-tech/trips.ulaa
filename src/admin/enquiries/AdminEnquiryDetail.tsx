@@ -184,6 +184,12 @@ export default function AdminEnquiryDetail() {
     const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
     return price ?? undefined;
   };
+  // This trip's configured Child Fare Amount — see AdminEnquiries.tsx's
+  // identical helper for why PaymentFormFields needs it.
+  const getTripChildFareAmount = (tripId: string | undefined): number | undefined => {
+    const trip = trips.find(t => t.id === tripId);
+    return trip?.trip_finance?.child_fare_amount ?? undefined;
+  };
 
   // Which price applies to this enquiry's trip for whichever package is
   // set on the enquiry itself (Traveller & Trip → Package) — not just
@@ -939,6 +945,7 @@ export default function AdminEnquiryDetail() {
           togglingNoShow={togglingNoShow}
           onToggleNoShow={handleToggleNoShow}
           getTripPrice={getTripPrice}
+          getTripChildFareAmount={getTripChildFareAmount}
         />
 
         <AdminEnquiryInvoicesCard
@@ -992,6 +999,7 @@ export default function AdminEnquiryDetail() {
         togglingNoShow={togglingNoShow}
         onToggleNoShow={handleToggleNoShow}
         getTripPrice={getTripPrice}
+        getTripChildFareAmount={getTripChildFareAmount}
       />
 
       {/* Record Contact Outcome — the New -> Contacted entry point. */}

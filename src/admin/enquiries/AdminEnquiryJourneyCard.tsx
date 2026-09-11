@@ -36,12 +36,13 @@ interface AdminEnquiryJourneyCardProps {
   togglingNoShow: boolean;
   onToggleNoShow: (isNoShow: boolean) => void;
   getTripPrice: (tripId: string | undefined, packageType: Enquiry['package_type']) => number | undefined;
+  getTripChildFareAmount: (tripId: string | undefined) => number | undefined;
 }
 
 export default function AdminEnquiryJourneyCard({
   enquiry, busyAction, onOpenPayment, onMarkCompleted,
   paymentForm, setPaymentForm, paymentErrors, hasPaymentErrors, savingPayment, onSavePayment,
-  payments, paymentsLoading, togglingNoShow, onToggleNoShow, getTripPrice,
+  payments, paymentsLoading, togglingNoShow, onToggleNoShow, getTripPrice, getTripChildFareAmount,
 }: AdminEnquiryJourneyCardProps) {
   if (enquiry.booking_id) {
     const totalAmount = enquiry.total_amount || 0;
@@ -244,6 +245,7 @@ export default function AdminEnquiryJourneyCard({
         togglingNoShow={togglingNoShow}
         onToggleNoShow={onToggleNoShow}
         getTripPrice={getTripPrice}
+        getTripChildFareAmount={getTripChildFareAmount}
         idPrefix="jc-pay"
         compact
       />

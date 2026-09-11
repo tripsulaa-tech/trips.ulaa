@@ -68,6 +68,12 @@ export interface TripEndBanner {
 //     count (e.g. the organiser might pay the agency a flat amount
 //     regardless of how many people showed up) — so these are always
 //     entered as-is, never auto-multiplied.
+//   - Child Fare add-ons (see PaymentFormFields's Child Fare chip) get
+//     their own vendor/entry-ticket/kit rates, since a child costs
+//     ULAA a different (and usually lower) amount on every one of those
+//     lines than an adult traveler does. Charged as one flat rate per
+//     trip — never per-child — and locked from the payment form once set
+//     here, so an add-on can never drift from the trip's configured rate.
 // See src/utils/tripFinance.ts for how these roll up into a profit summary.
 export interface TripFinance {
   ad_spend: number | null;                    // total promotion/ad spend for this trip
@@ -76,10 +82,20 @@ export interface TripFinance {
   agency_name: string;                         // on-ground agency ULAA pays
   agency_amount_type: 'fixed' | 'per_traveler';
   agency_amount: number | null;                // interpreted per agency_amount_type
+  // Single flat rate per trip (same for every Child Fare add-on on this
+  // trip — no per-child override, see PaymentFormFields's Child Fare
+  // chip). Kept as its own set of fields rather than folded into the
+  // adult entry_ticket/kit fields above, since kids can differ from
+  // adults on every one of these numbers.
+  child_fare_amount: number | null;              // what the traveler is charged for a Child Fare add-on
+  child_fare_vendor_amount: number | null;       // what ULAA pays the on-ground agency per child
+  child_fare_entry_ticket_cost: number | null;   // per-child entry ticket cost (can differ from the adult rate above)
+  child_fare_kit_cost: number | null;            // per-child welcome-kit cost (can differ from the adult rate above; not always 0)
   organiser_name: string;                      // person running the trip on-ground
   organiser_travel_cost: number | null;        // organiser's own flight/train/bus tickets
   organiser_agency_payment: number | null;      // amount the organiser separately pays the agency (varies, entered manually)
   organiser_misc_expense: number | null;        // organiser's miscellaneous on-ground spend
+  organiser_own_entry_ticket: number | null;    // the organiser's own personal entry ticket, separate from the per-traveler entry tickets above
   notes: string;                                // free-text notes (payment terms, receipts, etc.)
 }
 

@@ -30,11 +30,12 @@ interface AdminEnquiryPaymentModalProps {
   togglingNoShow: boolean;
   onToggleNoShow: (isNoShow: boolean) => void;
   getTripPrice: (tripId: string | undefined, packageType: Enquiry['package_type']) => number | undefined;
+  getTripChildFareAmount: (tripId: string | undefined) => number | undefined;
 }
 
 export default function AdminEnquiryPaymentModal({
   isOpen, onClose, enquiry, paymentForm, setPaymentForm, paymentErrors, hasPaymentErrors,
-  savingPayment, onSave, payments, paymentsLoading, togglingNoShow, onToggleNoShow, getTripPrice,
+  savingPayment, onSave, payments, paymentsLoading, togglingNoShow, onToggleNoShow, getTripPrice, getTripChildFareAmount,
 }: AdminEnquiryPaymentModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Payment" size="sm">
@@ -49,6 +50,7 @@ export default function AdminEnquiryPaymentModal({
           togglingNoShow={togglingNoShow}
           onToggleNoShow={onToggleNoShow}
           getTripPrice={getTripPrice}
+          getTripChildFareAmount={getTripChildFareAmount}
           idPrefix="ed-pay"
         />
 

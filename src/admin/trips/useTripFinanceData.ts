@@ -6,6 +6,11 @@ import { isBooked } from '../enquiries/AdminEnquiriesShared';
 export interface TripRevenue {
   bookedCount: number;
   totalRevenue: number;
+  // How many of the bookings above also have a Child Fare add-on (see
+  // enquiries.has_child_addon) — feeds computeTripFinanceSummary's
+  // childFareCount so the Child Fare vendor/entry-ticket/kit costs only
+  // apply to travelers that actually have one, not every booking.
+  childFareCount: number;
 }
 
 // Loads every enquiry once (same source AdminEnquiries/AdminReports read)
@@ -36,6 +41,7 @@ export function useTripFinanceData() {
     return {
       bookedCount: bookings.length,
       totalRevenue: bookings.reduce((sum, e) => sum + (e.total_amount || 0), 0),
+      childFareCount: bookings.filter(e => e.has_child_addon).length,
     };
   };
 
