@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkle, ArrowRight, Clock, X, MapPin, Users } from '@phosphor-icons/react';
+import { Sparkle, ArrowRight, Clock, X, MapPin, Users, Heart, CalendarBlank } from '@phosphor-icons/react';
 import {
   formatPrice,
   formatDate,
@@ -7,59 +7,8 @@ import {
   PLACEHOLDER_IMAGE,
   getCoverImageStyle,
 } from '../../utils/utils-index';
+import { addOfferReminderToCalendar } from '../../utils/calendar';
 import type { UpcomingTrip } from '../../types/types-index';
-
-// Escapes the characters that have special meaning inside an .ics
-// TEXT value (RFC 5545 §3.3.11) — commas, semicolons, backslashes, and
-// newlines all need a leading backslash or they'd corrupt the file.
-function escapeIcsText(value: string): string {
-  return value
-    .replace(/\\/g, '\\\\')
-    .replace(/,/g, '\\,')
-    .replace(/;/g, '\\;')
-    .replace(/\n/g, '\\n');
-}
-
-function toIcsDate(date: Date): string {
-  return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-}
-
-// Builds a single-file .ics calendar containing one all-day reminder event
-// on the offer's last day, and hands the browser a Blob URL for it. Tapping
-// the resulting link is what actually surfaces the phone's native "Add to
-// Calendar" flow — this function only prepares the file.
-function buildOfferCalendarUrl(trip: UpcomingTrip, activePrice: number | null | undefined): string | null {
-  const endDateStr = trip.special_offer_end_date || trip.special_offer_date;
-  if (!endDateStr) return null;
-
-  const endDate = new Date(endDateStr);
-  if (Number.isNaN(endDate.getTime())) return null;
-
-  // DTEND for an all-day VEVENT is exclusive, so it needs to land on the
-  // day *after* the offer actually ends.
-  const dtEndExclusive = new Date(endDate);
-  dtEndExclusive.setDate(dtEndExclusive.getDate() + 1);
-
-  const summary = `${trip.special_offer_name || 'Special offer'} ends — ${trip.title}`;
-  const priceLine = activePrice != null ? `Book at ${formatPrice(activePrice)} per person before it's gone.` : `Last day to book this offer.`;
-
-  const ics = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//ULAA//Special Offer Reminder//EN',
-    'BEGIN:VEVENT',
-    `UID:offer-${trip.id}-${toIcsDate(endDate)}@ulaa`,
-    `DTSTAMP:${toIcsDate(new Date())}T000000Z`,
-    `DTSTART;VALUE=DATE:${toIcsDate(endDate)}`,
-    `DTEND;VALUE=DATE:${toIcsDate(dtEndExclusive)}`,
-    `SUMMARY:${escapeIcsText(summary)}`,
-    `DESCRIPTION:${escapeIcsText(priceLine)}`,
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ].join('\r\n');
-
-  return URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
-}
 
 export interface SpecialOfferPopupCardProps {
   visible: boolean;
@@ -97,22 +46,13 @@ export default function SpecialOfferPopupCard({
   onDismiss,
 }: SpecialOfferPopupCardProps) {
   // "Maybe later" both dismisses the popup for this visit and, when the
-  // offer has a known end date, hands the phone a one-event .ics file so
-  // its native "Add to Calendar" prompt comes up as a reminder before the
-  // offer runs out.
+  // offer has a known end date, adds a reminder for the offer's last day —
+  // same device-aware handoff as the "Add to calendar" icon on TripCard:
+  // an .ics download straight into Apple Calendar on iOS/iPadOS/macOS, or
+  // a Google Calendar prefill tab everywhere else, instead of always
+  // forcing an .ics download regardless of platform.
   const handleMaybeLater = () => {
-    const calendarUrl = buildOfferCalendarUrl(trip, activePrice);
-    if (calendarUrl) {
-      const link = document.createElement('a');
-      link.href = calendarUrl;
-      link.download = 'special-offer-reminder.ics';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      // Blob URLs aren't auto-revoked; release it once the browser has had
-      // a moment to actually read the file for the calendar prompt/download.
-      setTimeout(() => URL.revokeObjectURL(calendarUrl), 1000);
-    }
+    addOfferReminderToCalendar(trip, activePrice);
     onDismiss();
   };
 
@@ -157,8 +97,18 @@ export default function SpecialOfferPopupCard({
                   offer-name badge, which doubles as the "why this popup"
                   eyebrow — the trip name itself gets top billing below, on
                   white, where it's actually legible regardless of what's in
-                  the photo. */}
-              <div className="relative h-36 sm:h-44 w-full">
+                  the photo.
+
+                  rounded-t-lg + overflow-hidden are applied directly on this
+                  wrapper (not just inherited from the white panel around it)
+                  because getCoverImageStyle() can put a CSS `transform:
+                  scale()` on the <img> for zoomed crops — and a transformed
+                  child breaks an ancestor's rounded-corner clipping in some
+                  browsers, leaving the top corners looking square while the
+                  untransformed bottom of the card clips correctly. Giving
+                  the image its own clip boundary at the same radius as the
+                  panel keeps all four corners visually consistent. */}
+              <div className="relative h-24 sm:h-32 w-full rounded-t-lg overflow-hidden">
                 <img
                   src={trip.cover_image || PLACEHOLDER_IMAGE}
                   alt=""
@@ -172,12 +122,40 @@ export default function SpecialOfferPopupCard({
                 </span>
               </div>
 
-              <div className="p-5 sm:p-6">
-                <div className="text-center mb-4">
-                  <p className="font-display text-xl sm:text-2xl font-bold text-dark leading-snug">{trip.title}</p>
-                  <p className="flex items-center justify-center gap-1 text-dark-muted text-xs mt-1.5">
+              <div className="p-4 sm:p-5">
+                <div className="text-left mb-2.5">
+                  {/* Font-size scales with viewport (clamp) rather than
+                      jumping between two fixed sizes, and whitespace-nowrap
+                      keeps it on one line the way it's meant to be read.
+                      overflow-hidden + text-ellipsis is just a safety net
+                      for an unusually long title, so it never breaks the
+                      card layout. */}
+                  <p
+                    className="font-display font-bold text-dark leading-snug whitespace-nowrap overflow-hidden text-ellipsis"
+                    style={{ fontSize: 'clamp(0.8rem, 3.6vw, 1.1rem)' }}
+                  >
+                    {trip.title}
+                  </p>
+                  <p className="flex items-center justify-start gap-1 text-dark-muted text-xs mt-1">
                     <MapPin size={12} className="shrink-0" />
                     {formatDestinationDotsCompact(trip.destination)}
+                  </p>
+                  {/* Festive occasion line — echoes whatever offer name the
+                      admin entered (e.g. "Vinayagar Chaturthi") so the popup
+                      reads as a warm, on-brand celebration invite rather than
+                      a generic markdown. Kept short on purpose (vs. the
+                      earlier "This X, treat yourself to a getaway to
+                      remember!") so it reliably fits one line instead of
+                      wrapping; whitespace-nowrap + ellipsis is a safety net
+                      for an unusually long offer name. Heart sits after the
+                      copy, not before it. */}
+                  <p className="flex items-center justify-start gap-1.5 text-primary-dark text-2xs font-semibold mt-1.5">
+                    <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+                      {trip.special_offer_name
+                        ? `Celebrate ${trip.special_offer_name} with a getaway!`
+                        : 'A getaway worth celebrating!'}
+                    </span>
+                    <Heart size={11} weight="fill" className="shrink-0" />
                   </p>
                 </div>
 
@@ -189,26 +167,48 @@ export default function SpecialOfferPopupCard({
                     billing instead of competing for attention equally
                     with "per person"/Save. */}
                 {activePrice != null && (
-                  <div className="bg-background-warm/60 border border-background-warm rounded-lg overflow-hidden mb-3">
+                  <div className="bg-background-warm/60 border border-background-warm rounded-lg overflow-hidden mb-2">
                     {trip.special_offer_date && (
-                      <div className="offer-gradient-shift flex items-center justify-center gap-1.5 text-white py-2 px-3">
-                        <Clock size={15} weight="bold" className="shrink-0" />
-                        <span className="font-display text-sm sm:text-base font-extrabold uppercase tracking-wide text-center">
+                      // rounded-t-lg + overflow-hidden applied directly here
+                      // (matching the parent's own rounded-lg), for the same
+                      // reason as the cover image above: this bar has a
+                      // continuously-running background-position animation
+                      // (offer-gradient-shift), and an infinitely-animating
+                      // child can get promoted to its own compositing layer
+                      // in some browsers — which then ignores the parent's
+                      // rounded overflow-hidden clip and renders square top
+                      // corners instead. Giving it an explicit clip at the
+                      // same radius keeps it visually consistent regardless.
+                      <div className="offer-gradient-shift rounded-t-lg overflow-hidden flex items-center justify-center flex-wrap gap-x-1.5 gap-y-0.5 text-white py-1.5 px-3">
+                        <Clock size={14} weight="bold" className="shrink-0" />
+                        <span className="font-display text-xs sm:text-sm font-extrabold uppercase tracking-wide text-center">
                           {daysLeft <= 1
                             ? "Ends today — grab it before it's gone!"
                             : `Only ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left!`}
                         </span>
-                      </div>
-                    )}
-                    <div className="px-4 pt-4 pb-3.5">
-                      <div className="flex items-center justify-center gap-2">
-                        <span className="font-display text-3xl sm:text-4xl font-bold text-primary">{formatPrice(activePrice)}</span>
-                        {strikeThroughPrice != null && (
-                          <span className="text-dark-muted line-through text-base sm:text-lg">{formatPrice(strikeThroughPrice)}</span>
+                        {/* Small, lighter-weight nudge riding alongside the
+                            bold headline — only added for the "N days left"
+                            case, since the "ends today" copy above already
+                            says "grab it before it's gone" itself. */}
+                        {daysLeft > 1 && (
+                          <span className="text-2xs font-medium normal-case tracking-normal text-white/85">
+                            Grab before it's gone!
+                          </span>
                         )}
                       </div>
-                      <div className="flex items-center justify-center gap-2 mt-1">
+                    )}
+                    <div className="px-4 pt-3 pb-2.5">
+                      {/* Price, "per person", strike-through, and the Save
+                          badge all sit on one row now instead of stacking
+                          across two lines. flex-wrap is just a safety net
+                          for very narrow screens or long formatted prices —
+                          it fits on one line at normal widths. */}
+                      <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-0.5">
+                        <span className="font-display text-2xl sm:text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
                         <span className="text-dark-muted text-2xs">per person</span>
+                        {strikeThroughPrice != null && (
+                          <span className="text-dark-muted line-through text-sm sm:text-base">{formatPrice(strikeThroughPrice)}</span>
+                        )}
                         {strikeThroughPrice != null && (
                           <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-semibold px-2 py-0.5 rounded-md">
                             Save {formatPrice(strikeThroughPrice - activePrice)}
@@ -216,21 +216,42 @@ export default function SpecialOfferPopupCard({
                         )}
                       </div>
 
-                      {trip.special_offer_date && daysLeft > 1 && (
-                        <p className="text-center text-dark-muted text-2xs mt-2.5 pt-2.5 border-t border-dashed border-primary/25">
-                          Ends {formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
+                      {/* "Ends <date>" and "Only N seats left" combined onto
+                          one line, now inside the price box itself with a
+                          divider separating it from the price row above,
+                          instead of living as a separate block underneath
+                          the box. Either half can be absent (no end date, or
+                          plenty of seats left) without leaving a stray
+                          divider behind. */}
+                      {((trip.special_offer_date && daysLeft > 1) || isAlmostFull) && (
+                        <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-2xs mt-2 pt-2 border-t border-dark/10">
+                          {trip.special_offer_date && daysLeft > 1 && (
+                            <span className="flex items-center gap-1 text-primary-dark font-medium">
+                              <CalendarBlank size={12} className="shrink-0" />
+                              Ends {formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                          {trip.special_offer_date && daysLeft > 1 && isAlmostFull && (
+                            <span className="text-primary-dark/40">|</span>
+                          )}
+                          {isAlmostFull && (
+                            <span className="flex items-center gap-1 text-primary-dark font-medium">
+                              <Users size={12} className="shrink-0" />
+                              Only {remaining} {remaining === 1 ? 'seat' : 'seats'} left at this price
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {isAlmostFull && (
-                  <p className="flex items-center justify-center gap-1.5 text-2xs text-primary-dark font-medium mb-4">
-                    <Users size={12} className="shrink-0" />
-                    Only {remaining} {remaining === 1 ? 'seat' : 'seats'} left at this price
-                  </p>
-                )}
+                {/* Short, upbeat reassurance line to close the gap between
+                    "interested" and "tapping the CTA" — sits right above the
+                    button where it's most likely to be read. */}
+                <p className="text-center text-dark-muted text-2xs mb-2">
+                  Handpicked experiences, trusted by fellow travellers
+                </p>
 
                 {/* A brief double-pulse draws the eye to the CTA the moment
                     the popup lands, then settles — a nudge, not a nag.
@@ -247,7 +268,7 @@ export default function SpecialOfferPopupCard({
                   transition={{ duration: 0.7, delay: 0.4, times: [0, 0.5, 1], repeat: 1, repeatDelay: 0.5 }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`cta-shine-sweep group/btn w-full inline-flex items-center justify-center gap-2 bg-primary text-white hover:bg-primary-dark shadow-warm hover:shadow-warm-lg border-2 border-primary rounded-md px-6 py-3 text-sm sm:text-base font-button font-semibold transition-colors min-h-[48px] ${isAlmostFull ? '' : 'mt-1'}`}
+                  className={`cta-shine-sweep group/btn w-full inline-flex items-center justify-center gap-2 bg-primary text-white hover:bg-primary-dark shadow-warm hover:shadow-warm-lg border-2 border-primary rounded-md px-6 py-2.5 text-sm sm:text-base font-button font-semibold transition-colors min-h-[44px]`}
                 >
                   <span className="relative z-10">{ctaLabel}</span>
                   <ArrowRight size={16} className="relative z-10 transition-transform group-hover/btn:translate-x-1" />
