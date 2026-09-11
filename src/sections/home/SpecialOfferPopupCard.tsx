@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkle, ArrowRight, Clock, X, MapPin, Users, Heart, CalendarBlank } from '@phosphor-icons/react';
+import { Sparkle, ArrowRight, Clock, X, MapPin, Users, Heart, CalendarBlank, Tag, Gift } from '@phosphor-icons/react';
 import {
   formatPrice,
   formatDate,
@@ -55,6 +55,19 @@ export default function SpecialOfferPopupCard({
     addOfferReminderToCalendar(trip, activePrice);
     onDismiss();
   };
+
+  // Save = strikeThroughPrice - activePrice (the marketing "was ₹X" price
+  // vs what they pay). PLUS OFFER = trip.price - activePrice (the actual
+  // regular price vs what they pay) — these coincide unless a trip sets an
+  // explicit strike_through_price above its regular price, so the pink
+  // badge only renders when it would say something the green one doesn't.
+  const saveAmount = strikeThroughPrice != null && activePrice != null
+    ? strikeThroughPrice - activePrice
+    : null;
+  const plusOfferAmount = trip.price != null && activePrice != null
+    ? trip.price - activePrice
+    : null;
+  const showPlusOffer = plusOfferAmount != null && plusOfferAmount > 0 && plusOfferAmount !== saveAmount;
 
   return (
     <AnimatePresence>
@@ -198,23 +211,38 @@ export default function SpecialOfferPopupCard({
                       </div>
                     )}
                     <div className="px-4 pt-3 pb-2.5">
-                      {/* Price, "per person", strike-through, and the Save
-                          badge all sit on one row now instead of stacking
-                          across two lines. flex-wrap is just a safety net
-                          for very narrow screens or long formatted prices —
-                          it fits on one line at normal widths. */}
+                      {/* Price, "per person", and strike-through sit on one
+                          row. flex-wrap is just a safety net for very
+                          narrow screens or long formatted prices — it fits
+                          on one line at normal widths. */}
                       <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-0.5">
                         <span className="font-display text-2xl sm:text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
                         <span className="text-dark-muted text-2xs">per person</span>
                         {strikeThroughPrice != null && (
                           <span className="text-dark-muted line-through text-sm sm:text-base">{formatPrice(strikeThroughPrice)}</span>
                         )}
-                        {strikeThroughPrice != null && (
-                          <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-semibold px-2 py-0.5 rounded-md">
-                            Save {formatPrice(strikeThroughPrice - activePrice)}
-                          </span>
-                        )}
                       </div>
+
+                      {/* Save + bonus-offer badges on their own row below
+                          the price, split by a vertical divider — see
+                          saveAmount/plusOfferAmount above. */}
+                      {saveAmount != null && (
+                        <div className="flex items-center justify-center gap-2 mt-2">
+                          <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-semibold px-2.5 py-1 rounded-md">
+                            <Tag size={13} weight="fill" className="shrink-0" />
+                            Save {formatPrice(saveAmount)}
+                          </span>
+                          {showPlusOffer && (
+                            <>
+                              <span className="text-dark/15">|</span>
+                              <span className="inline-flex items-center gap-1 bg-pink-50 border border-pink-200 text-pink-600 text-2xs font-button font-bold px-2.5 py-1 rounded-md">
+                                <Gift size={13} weight="fill" className="shrink-0" />
+                                PLUS {formatPrice(plusOfferAmount as number)} OFFER
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
 
                       {/* "Ends <date>" and "Only N seats left" combined onto
                           one line, now inside the price box itself with a

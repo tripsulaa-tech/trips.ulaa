@@ -10,6 +10,7 @@ import {
   Bird,
   Sparkle,
   CaretRight,
+  Gift,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
@@ -136,11 +137,27 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   const isFull = remaining === 0;
   const { activePrice, isEarlyBird, isSpecialOffer } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
+  // Save = strikeThroughPrice - activePrice (marketing "was ₹X" price vs
+  // what they pay). PLUS OFFER = trip.price - activePrice (actual regular
+  // price vs what they pay) — these coincide unless strike_through_price
+  // was set explicitly above the regular price, so the pink badge only
+  // renders when it says something the green one doesn't. Same logic as
+  // SpecialOfferPopupCard.
+  const saveAmount = strikeThroughPrice != null && activePrice != null
+    ? strikeThroughPrice - activePrice
+    : null;
+  const plusOfferAmount = trip.price != null && activePrice != null
+    ? trip.price - activePrice
+    : null;
   // Admin's "hide special-offer promo" quick action (Admin → Upcoming
   // Trips) silences the border/badges below without touching the price
   // itself — special_offer_price still applies via isSpecialOffer above,
   // it just does so quietly. See add_trip_hide_special_offer_promo.sql.
   const showSpecialOfferPromo = isSpecialOffer && !trip.hide_special_offer_promo;
+  // PLUS OFFER only makes sense as part of a live special offer, so it's
+  // gated on showSpecialOfferPromo too — same on/off switch as the other
+  // special-offer promo elements below.
+  const showPlusOffer = showSpecialOfferPromo && plusOfferAmount != null && plusOfferAmount > 0 && plusOfferAmount !== saveAmount;
   // Days left before the live special offer disappears — powers the
   // urgency line below the price (mirrors the Early Bird countdown), so a
   // shopper sees exactly how much runway they have to book instead of a
@@ -281,14 +298,31 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 <span className="font-display text-2xl font-bold text-primary">{formatPrice(activePrice)}</span>
                 <span className="text-xs font-medium text-dark-muted">/person</span>
                 {strikeThroughPrice != null && (
-                  <>
-                    <span className="text-gray-400 line-through text-sm">{formatPrice(strikeThroughPrice)}</span>
-                    <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
-                      Save {formatPrice(strikeThroughPrice - activePrice)}
-                    </span>
-                  </>
+                  <span className="text-gray-400 line-through text-sm">{formatPrice(strikeThroughPrice)}</span>
+                )}
+                {/* Normal cards (no live PLUS OFFER): Save stays inline on
+                    the price row, same as before. */}
+                {!showPlusOffer && saveAmount != null && (
+                  <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
+                    Save {formatPrice(saveAmount)}
+                  </span>
                 )}
               </div>
+              {/* Only when a PLUS OFFER is live does Save drop to its own
+                  row below, alongside it — the two badges then share a
+                  divider. */}
+              {showPlusOffer && saveAmount != null && (
+                <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                  <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
+                    Save {formatPrice(saveAmount)}
+                  </span>
+                  <span className="text-dark/15">|</span>
+                  <span className="inline-flex items-center gap-1 bg-pink-50 border border-pink-200 text-pink-600 text-2xs font-button font-bold px-2 py-0.5 rounded-md whitespace-nowrap">
+                    <Gift size={12} weight="fill" className="shrink-0" />
+                    PLUS {formatPrice(plusOfferAmount as number)} OFFER
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
