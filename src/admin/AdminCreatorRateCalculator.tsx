@@ -511,7 +511,7 @@ export default function AdminCreatorRateCalculator() {
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
   const templateTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
-  const templateHeaderRef = useRef<HTMLButtonElement | null>(null);
+  const templateHeaderRef = useRef<HTMLDivElement | null>(null);
   const templateScrollCleanupRef = useRef<(() => void) | null>(null);
 
   // Same as the Saved Calculations rows above: the header sits above its
@@ -935,15 +935,24 @@ export default function AdminCreatorRateCalculator() {
               tweak-it-occasionally tool, not something needed on every
               visit to the page. ---- */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">
-          <button
-            type="button"
+          <div
             ref={templateHeaderRef}
+            role="button"
+            tabIndex={0}
             onClick={() => setTemplateExpanded(v => {
               if (v) setTemplateEditing(false);
               return !v;
             })}
+            onKeyDown={e => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              setTemplateExpanded(v => {
+                if (v) setTemplateEditing(false);
+                return !v;
+              });
+            }}
             aria-expanded={templateExpanded}
-            className="w-full flex items-center justify-between gap-3 text-left"
+            className="w-full flex items-center justify-between gap-3 text-left cursor-pointer select-none"
           >
             <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 shrink-0">
@@ -951,8 +960,26 @@ export default function AdminCreatorRateCalculator() {
               </span>
               Message Template
             </h3>
-            {templateExpanded ? <ChevronUp size={18} className="text-dark-muted shrink-0" aria-hidden="true" /> : <ChevronDown size={18} className="text-dark-muted shrink-0" aria-hidden="true" />}
-          </button>
+            <div className="flex items-center gap-1 shrink-0">
+              {templateExpanded && (
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); setTemplateEditing(v => !v); }}
+                  aria-pressed={templateEditing}
+                  title={templateEditing ? 'Done editing' : 'Edit variants'}
+                  aria-label={templateEditing ? 'Done editing' : 'Edit variants'}
+                  className={`inline-flex items-center justify-center w-8 h-8 rounded-md border transition-colors ${
+                    templateEditing
+                      ? 'bg-primary/10 border-primary/30 text-primary'
+                      : 'border-transparent text-dark-muted hover:text-primary hover:bg-primary/5'
+                  }`}
+                >
+                  <EditIcon size={15} aria-hidden="true" />
+                </button>
+              )}
+              {templateExpanded ? <ChevronUp size={18} className="text-dark-muted shrink-0" aria-hidden="true" /> : <ChevronDown size={18} className="text-dark-muted shrink-0" aria-hidden="true" />}
+            </div>
+          </div>
 
           <AnimatePresence initial={false}>
             {templateExpanded && (
@@ -964,39 +991,28 @@ export default function AdminCreatorRateCalculator() {
                 className="overflow-hidden"
               >
                 <div className="pt-3">
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <button
-                      type="button"
-                      onClick={() => setTemplateEditing(v => !v)}
-                      aria-pressed={templateEditing}
-                      className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold transition-colors ${templateEditing ? 'text-primary' : 'text-dark-muted hover:text-primary'}`}
-                    >
-                      <EditIcon size={13} aria-hidden="true" /> {templateEditing ? 'Editing' : 'Edit'}
-                    </button>
-                    {templateEditing && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTemplateVariants(DEFAULT_MESSAGE_TEMPLATE_VARIANTS);
-                          setDefaultVariantId(DEFAULT_VARIANT_ID);
-                        }}
-                        className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
-                      >
-                        <RotateCcw size={13} aria-hidden="true" /> Reset to original wording
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2 gap-3">
                     <span className="text-xs font-button font-bold text-dark-muted">Variants</span>
                     {templateEditing && (
-                      <button
-                        type="button"
-                        onClick={addVariant}
-                        className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
-                      >
-                        <Plus size={14} aria-hidden="true" /> Add Variant
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTemplateVariants(DEFAULT_MESSAGE_TEMPLATE_VARIANTS);
+                            setDefaultVariantId(DEFAULT_VARIANT_ID);
+                          }}
+                          className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
+                        >
+                          <RotateCcw size={13} aria-hidden="true" /> Reset to original wording
+                        </button>
+                        <button
+                          type="button"
+                          onClick={addVariant}
+                          className="inline-flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+                        >
+                          <Plus size={14} aria-hidden="true" /> Add Variant
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -1006,8 +1022,12 @@ export default function AdminCreatorRateCalculator() {
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {variant.id === defaultVariantId ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-button font-bold text-primary shrink-0">
-                                <Star size={12} weight="fill" aria-hidden="true" /> Default
+                              <span
+                                title="Default variant — used for Copy/Share unless overridden per row"
+                                aria-label="Default variant"
+                                className="inline-flex items-center justify-center text-primary shrink-0"
+                              >
+                                <Star size={13} weight="fill" aria-hidden="true" />
                               </span>
                             ) : templateEditing ? (
                               <button
@@ -1015,9 +1035,9 @@ export default function AdminCreatorRateCalculator() {
                                 onClick={() => setDefaultVariantId(variant.id)}
                                 title="Set as default"
                                 aria-label={`Set "${variant.name}" as the default variant`}
-                                className="inline-flex items-center gap-1 text-[11px] font-button font-semibold text-dark-muted hover:text-primary transition-colors shrink-0"
+                                className="inline-flex items-center justify-center text-dark-muted hover:text-primary transition-colors shrink-0"
                               >
-                                <Star size={12} aria-hidden="true" /> Set default
+                                <Star size={13} aria-hidden="true" />
                               </button>
                             ) : null}
                             <label htmlFor={`cr-template-name-${variant.id}`} className="sr-only">Variant name</label>
@@ -1054,48 +1074,46 @@ export default function AdminCreatorRateCalculator() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => applyTemplateFormat(variant.id, '*')}
-                            title="Bold"
-                            aria-label="Bold"
-                            disabled={!templateEditing}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                          >
-                            <BoldIcon size={15} weight="bold" aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => applyTemplateFormat(variant.id, '_')}
-                            title="Italic"
-                            aria-label="Italic"
-                            disabled={!templateEditing}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                          >
-                            <ItalicIcon size={15} aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => applyTemplateFormat(variant.id, '~')}
-                            title="Strikethrough"
-                            aria-label="Strikethrough"
-                            disabled={!templateEditing}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                          >
-                            <StrikethroughIcon size={15} aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => applyTemplateFormat(variant.id, '```')}
-                            title="Monospace"
-                            aria-label="Monospace"
-                            disabled={!templateEditing}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                          >
-                            <MonospaceIcon size={15} aria-hidden="true" />
-                          </button>
-                        </div>
+                        {templateEditing && (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => applyTemplateFormat(variant.id, '*')}
+                              title="Bold"
+                              aria-label="Bold"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                            >
+                              <BoldIcon size={15} weight="bold" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => applyTemplateFormat(variant.id, '_')}
+                              title="Italic"
+                              aria-label="Italic"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                            >
+                              <ItalicIcon size={15} aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => applyTemplateFormat(variant.id, '~')}
+                              title="Strikethrough"
+                              aria-label="Strikethrough"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                            >
+                              <StrikethroughIcon size={15} aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => applyTemplateFormat(variant.id, '```')}
+                              title="Monospace"
+                              aria-label="Monospace"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                            >
+                              <MonospaceIcon size={15} aria-hidden="true" />
+                            </button>
+                          </div>
+                        )}
                         <label htmlFor={`cr-template-body-${variant.id}`} className="sr-only">{`Message body for "${variant.name}"`}</label>
                         <textarea
                           id={`cr-template-body-${variant.id}`}
