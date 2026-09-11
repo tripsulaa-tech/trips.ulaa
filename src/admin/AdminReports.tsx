@@ -57,8 +57,7 @@ import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
 import { computeTripFinanceSummary } from '../utils/tripFinance';
-import { downloadExcelReport } from '../utils/tripExcelReport';
-import type { ExcelReportSummary } from '../utils/tripExcelReport';
+import { downloadTripExcelReport, downloadAllTripsExcelReport } from '../utils/tripExcelReport';
 
 // Real, human-readable label for every value enquiries.source can actually
 // hold. Deliberately not reusing enquiries/AdminEnquiriesShared's
@@ -151,24 +150,6 @@ function buildRevenueTrend(paidRows: Payment[], period: Period): { label: string
   // the most recent 31 buckets rather than rendering an unreadable strip.
   const capped = buckets.slice(-31);
   return capped.map(b => ({ label: labelOf(b.date), amount: sums.get(b.key) || 0 }));
-}
-
-// Minimal dependency-free CSV export — quotes every field and escapes
-// embedded quotes/commas so labels containing them (e.g. a destination
-// name with a comma) don't corrupt column alignment when opened in Excel.
-function toCsvRow(fields: (string | number)[]): string {
-  return fields.map(f => `"${String(f).replace(/"/g, '""')}"`).join(',');
-}
-function downloadCsv(filename: string, rows: string[]): void {
-  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 // Average time between an enquiry landing and an admin actually recording a
@@ -762,116 +743,19 @@ export default function AdminReports() {
     };
   };
 
-  // Builds the full workbook: a "Summary" sheet carrying every section the
-  // CSV export has (handleExportCsv below — same data, same order, so the
-  // two exports never drift out of sync), plus one detail sheet per trip
-  // that has a Finances tab filled in. Both halves are already scoped to
-  // whichever period/trip the admin has picked, via `scoped`/`financeByTrip`
-  // above, so this function just assembles what's already computed.
+  // Only trips with a Finances tab filled in have anything to put in the
+  // cost/profit half of the sheet (see financeByTrip above), so this export
+  // is scoped to those same trips — same reasoning, not a separate rule.
+  // A specific trip picked in the Trip dropdown exports as one sheet; "All
+  // Trips" exports one sheet per trip so nothing gets flattened away.
   const handleExportExcel = async () => {
-    const tripRows = financeByTrip.map(buildExcelRowForTrip);
-    const summary: ExcelReportSummary = {
-      periodSlug: period,
-      periodLabel: PERIOD_OPTIONS.find(p => p.value === period)?.label || period,
-      tripLabel: tripOptions.find(t => t.value === tripId)?.label || 'All Trips',
-      lead: {
-        total: lead.total,
-        conversionPct: lead.conversionPct,
-        newCount: lead.newCount,
-        contactedCount: lead.contactedCount,
-        avgResponseTime: lead.avgResponseTime,
-      },
-      booking,
-      financial: {
-        revenue: financial.revenue,
-        refundAmount: financial.refundAmount,
-        outstandingBalance: financial.outstandingBalance,
-        avgBookingValue: Math.round(financial.avgBookingValue),
-      },
-      financeTotals,
-      financeMarginPct,
-      financeByTrip: financeByTrip.map(t => ({
-        title: t.title,
-        travelerCount: t.travelerCount,
-        totalRevenue: t.totalRevenue,
-        ulaaCosts: t.ulaaCosts,
-        organiserCosts: t.organiserCosts,
-        totalCosts: t.totalCosts,
-        netProfit: t.netProfit,
-        profitPerPerson: t.profitPerPerson,
-      })),
-      operational: {
-        occupancyPct: operational.occupancyPct,
-        seatsBooked: operational.seatsBooked,
-        totalSeats: operational.totalSeats,
-        cancellationPct: operational.cancellationPct,
-        noShowPct: operational.noShowPct,
-      },
-      sourceBreakdown,
-      paymentMethodBreakdown,
-      tripBreakdown,
-      outstandingByPerson,
-    };
-    await downloadExcelReport(summary, tripRows);
-  };
-
-  const handleExportCsv = () => {
-    const rows: string[] = [];
-    const tripLabel = tripOptions.find(t => t.value === tripId)?.label || 'All Trips';
-    rows.push(toCsvRow(['ULAA Reports', PERIOD_OPTIONS.find(p => p.value === period)?.label || period, tripLabel]));
-    rows.push('');
-    rows.push(toCsvRow(['Lead Reports']));
-    rows.push(toCsvRow(['Total Leads', lead.total]));
-    rows.push(toCsvRow(['Conversion Rate %', lead.conversionPct]));
-    rows.push(toCsvRow(['New', lead.newCount]));
-    rows.push(toCsvRow(['Contacted', lead.contactedCount]));
-    rows.push(toCsvRow(['Avg Response Time', lead.avgResponseTime]));
-    rows.push('');
-    rows.push(toCsvRow(['Booking Reports']));
-    rows.push(toCsvRow(['Confirmed', booking.confirmed]));
-    rows.push(toCsvRow(['Completed', booking.completed]));
-    rows.push(toCsvRow(['Cancelled', booking.cancelled]));
-    rows.push('');
-    rows.push(toCsvRow(['Financial Reports (net of refunds)']));
-    rows.push(toCsvRow(['Revenue', financial.revenue]));
-    rows.push(toCsvRow(['Refund Amount', financial.refundAmount]));
-    rows.push(toCsvRow(['Outstanding Balance', financial.outstandingBalance]));
-    rows.push(toCsvRow(['Avg Booking Value', Math.round(financial.avgBookingValue)]));
-    rows.push('');
-    rows.push(toCsvRow(['Trip Finance & Profitability (all trips with Finances tab filled in, all-time)']));
-    rows.push(toCsvRow(['Total Revenue', financeTotals.totalRevenue]));
-    rows.push(toCsvRow(['Total Costs', financeTotals.totalCosts]));
-    rows.push(toCsvRow(['Net Profit', financeTotals.netProfit]));
-    rows.push(toCsvRow(['Profit Margin %', financeMarginPct]));
-    rows.push('');
-    rows.push(toCsvRow(['Trip', 'Travelers', 'Revenue', 'ULAA Costs', 'Organiser Costs', 'Total Costs', 'Net Profit', 'Profit/Person']));
-    financeByTrip.forEach(t => rows.push(toCsvRow([
-      t.title, t.travelerCount, t.totalRevenue, t.ulaaCosts, t.organiserCosts, t.totalCosts, t.netProfit, Math.round(t.profitPerPerson),
-    ])));
-    rows.push('');
-    rows.push(toCsvRow(['Operational Reports']));
-    rows.push(toCsvRow(['Occupancy %', operational.occupancyPct]));
-    rows.push(toCsvRow(['Seats Booked', operational.seatsBooked]));
-    rows.push(toCsvRow(['Total Seats', operational.totalSeats]));
-    rows.push(toCsvRow(['Cancellation Rate %', operational.cancellationPct]));
-    rows.push(toCsvRow(['No-Show Rate %', operational.noShowPct]));
-    rows.push('');
-    rows.push(toCsvRow(['Lead Source Breakdown']));
-    rows.push(toCsvRow(['Source', 'Total Leads', 'Booked', 'Conversion %']));
-    sourceBreakdown.forEach(s => rows.push(toCsvRow([s.label, s.total, s.booked, s.conversionPct])));
-    rows.push('');
-    rows.push(toCsvRow(['Payment Method Breakdown']));
-    rows.push(toCsvRow(['Method', 'Amount', 'Transactions', 'Share %']));
-    paymentMethodBreakdown.forEach(m => rows.push(toCsvRow([m.method, m.amount, m.count, m.sharePct])));
-    rows.push('');
-    rows.push(toCsvRow(['Per-Trip Breakdown']));
-    rows.push(toCsvRow(['Trip', 'Start Date', 'Seats Booked', 'Total Seats', 'Occupancy %', 'Collected', 'Pending']));
-    tripBreakdown.forEach(t => rows.push(toCsvRow([t.title, t.startDate, t.seatsBooked, t.totalSeats, t.occupancyPct, t.collected, t.pending])));
-    rows.push('');
-    rows.push(toCsvRow(['Outstanding Balances by Person']));
-    rows.push(toCsvRow(['Name', 'Trip', 'Total Amount', 'Paid So Far', 'Balance']));
-    outstandingByPerson.forEach(p => rows.push(toCsvRow([p.name, p.trip, p.total, p.paid, p.balance])));
-    downloadCsv(`ulaa-report-${period}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    if (financeByTrip.length === 0) return;
+    const rows = financeByTrip.map(buildExcelRowForTrip);
+    if (tripId === ALL_TRIPS) {
+      await downloadAllTripsExcelReport(rows);
+    } else {
+      await downloadTripExcelReport(rows[0]);
+    }
   };
 
   return (
@@ -918,26 +802,13 @@ export default function AdminReports() {
                 variant="pill"
               />
             </div>
-            {!loading && (
-              <motion.button
-                type="button"
-                onClick={handleExportCsv}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.96 }}
-                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
-              >
-                <Download size={14} aria-hidden="true" />
-                <span className="sm:hidden">Export</span>
-                <span className="hidden sm:inline">Export CSV</span>
-              </motion.button>
-            )}
-            {!loading && (
+            {!loading && financeByTrip.length > 0 && (
               <motion.button
                 type="button"
                 onClick={handleExportExcel}
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.96 }}
-                title="Download a formatted Excel report — Summary sheet with every report section, plus one detail sheet per trip"
+                title="Download a formatted per-trip Excel report (finance summary + outstanding balances)"
                 className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
               >
                 <Download size={14} aria-hidden="true" />
