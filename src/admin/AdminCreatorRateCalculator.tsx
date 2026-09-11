@@ -34,6 +34,7 @@ import {
   WhatsappLogo,
   Check,
   NotePencil as TemplateIcon,
+  PencilSimple as EditIcon,
   TextB as BoldIcon,
   TextItalic as ItalicIcon,
   TextStrikethrough as StrikethroughIcon,
@@ -474,6 +475,7 @@ export default function AdminCreatorRateCalculator() {
   // saved row always renders from whatever's here. ----
   const [messageTemplate, setMessageTemplate] = useState<string>(DEFAULT_MESSAGE_TEMPLATE);
   const [templateExpanded, setTemplateExpanded] = useState(false);
+  const [templateEditing, setTemplateEditing] = useState(false);
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
   const templateTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -485,7 +487,10 @@ export default function AdminCreatorRateCalculator() {
   // scroll and expand can run together as one smooth motion instead of
   // waiting for the animation to finish first.
   useEffect(() => {
-    if (!templateExpanded) return;
+    if (!templateExpanded) {
+      setTemplateEditing(false);
+      return;
+    }
     const frame = requestAnimationFrame(() => {
       const el = templateHeaderRef.current;
       if (!el) return;
@@ -565,6 +570,7 @@ export default function AdminCreatorRateCalculator() {
     try {
       await upsertSiteContent(RATE_MESSAGE_TEMPLATE_KEY, { template: messageTemplate } satisfies CreatorRateMessageTemplateContent);
       setTemplateSaved(true);
+      setTemplateEditing(false);
       window.setTimeout(() => setTemplateSaved(false), 2000);
     } catch (err) {
       console.error(err);
@@ -876,29 +882,37 @@ export default function AdminCreatorRateCalculator() {
                 className="overflow-hidden"
               >
                 <div className="pt-3">
-                  <div className="flex justify-end mb-3">
+                  <div className="flex items-center justify-between gap-3 mb-3">
                     <button
                       type="button"
-                      onClick={() => setMessageTemplate(DEFAULT_MESSAGE_TEMPLATE)}
-                      className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
+                      onClick={() => setTemplateEditing(v => {
+                        const next = !v;
+                        if (next) window.setTimeout(() => templateTextareaRef.current?.focus(), 0);
+                        return next;
+                      })}
+                      aria-pressed={templateEditing}
+                      className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold transition-colors ${templateEditing ? 'text-primary' : 'text-dark-muted hover:text-primary'}`}
                     >
-                      <RotateCcw size={13} aria-hidden="true" /> Reset to original wording
+                      <EditIcon size={13} aria-hidden="true" /> {templateEditing ? 'Editing' : 'Edit'}
                     </button>
+                    {templateEditing && (
+                      <button
+                        type="button"
+                        onClick={() => setMessageTemplate(DEFAULT_MESSAGE_TEMPLATE)}
+                        className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
+                      >
+                        <RotateCcw size={13} aria-hidden="true" /> Reset to original wording
+                      </button>
+                    )}
                   </div>
-                  <p className="text-xs text-dark-muted mb-3">
-                    Sent via Copy and Share for every saved calculation. Edit the wording, then Save.
-                    Use <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{greeting}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{niche}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{followers}}'}</code> and <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{items}}'}</code> as placeholders — each fills in with the creator's actual details.
-                  </p>
-                  <p className="text-[11px] text-dark-muted mb-2">
-                    Select text and tap a style below — WhatsApp shows these as bold/italic/etc. on send (colours aren't supported). Tip: wrap <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{items}}'}</code> in Monospace to line it up as a table.
-                  </p>
                   <div className="flex items-center gap-1.5 mb-2">
                     <button
                       type="button"
                       onClick={() => applyTemplateFormat('*')}
                       title="Bold"
                       aria-label="Bold"
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                      disabled={!templateEditing}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <BoldIcon size={15} weight="bold" aria-hidden="true" />
                     </button>
@@ -907,7 +921,8 @@ export default function AdminCreatorRateCalculator() {
                       onClick={() => applyTemplateFormat('_')}
                       title="Italic"
                       aria-label="Italic"
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                      disabled={!templateEditing}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <ItalicIcon size={15} aria-hidden="true" />
                     </button>
@@ -916,7 +931,8 @@ export default function AdminCreatorRateCalculator() {
                       onClick={() => applyTemplateFormat('~')}
                       title="Strikethrough"
                       aria-label="Strikethrough"
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                      disabled={!templateEditing}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <StrikethroughIcon size={15} aria-hidden="true" />
                     </button>
@@ -925,7 +941,8 @@ export default function AdminCreatorRateCalculator() {
                       onClick={() => applyTemplateFormat('```')}
                       title="Monospace"
                       aria-label="Monospace"
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                      disabled={!templateEditing}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <MonospaceIcon size={15} aria-hidden="true" />
                     </button>
@@ -934,8 +951,9 @@ export default function AdminCreatorRateCalculator() {
                     ref={templateTextareaRef}
                     value={messageTemplate}
                     onChange={e => setMessageTemplate(e.target.value)}
+                    readOnly={!templateEditing}
                     rows={8}
-                    className={`${inputClass} font-mono text-xs resize-y`}
+                    className={`${inputClass} font-mono text-xs resize-y ${!templateEditing ? 'bg-background-warm/40 cursor-default' : ''}`}
                     placeholder="Message template..."
                   />
                   <div className="grid grid-cols-2 gap-2 mt-3">
