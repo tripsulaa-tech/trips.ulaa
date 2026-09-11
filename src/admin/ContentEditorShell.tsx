@@ -138,7 +138,7 @@ export default function ContentEditorShell({
                     style={{ width: `${((activeSection + 1) / sectionTitles.length) * 100}%` }}
                   />
                 </div>
-                <span className="shrink-0 text-[11px] font-semibold text-dark-muted tabular-nums">{activeSection + 1}/{sectionTitles.length}</span>
+                <span className="shrink-0 text-2xs font-semibold text-dark-muted tabular-nums">{activeSection + 1}/{sectionTitles.length}</span>
               </div>
               <Select
                 size="sm"

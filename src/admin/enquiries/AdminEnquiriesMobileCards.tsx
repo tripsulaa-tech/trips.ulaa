@@ -152,20 +152,20 @@ export default function AdminEnquiriesMobileCards({
                     {e.package_type === 'early_bird' && (
                       <span
                         title="Early Bird"
-                        className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 shrink-0"
+                        className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 shrink-0"
                       >
                         <Bird size={11}  aria-hidden="true" />
                       </span>
                     )}
                     {e.cancelled_at && (
-                      <span className={`inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${e.is_no_show ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+                      <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${e.is_no_show ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
                         <XCircle size={9}  aria-hidden="true" /> {e.is_no_show ? 'No Show' : 'Cancelled'}
                       </span>
                     )}
                     {!e.trip_id && !activeGroup && (
                       <span
                         title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
-                        className="inline-flex items-center gap-0.5 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
+                        className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
                       >
                         <MessageCircle size={9}  aria-hidden="true" /> General
                       </span>
@@ -192,21 +192,21 @@ export default function AdminEnquiriesMobileCards({
                 <p className="text-dark-muted text-xs truncate mt-0.5">{e.phone}</p>
                 <div className="w-full flex items-center flex-nowrap gap-1.5 mt-1.5 overflow-x-auto no-scrollbar">
                   {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                    <span className="inline-flex items-center text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-green-100 text-green-700 shrink-0">
+                    <span className="inline-flex items-center text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-green-100 text-green-700 shrink-0">
                       Due {formatPrice(paymentBalance(e)!)}
                     </span>
                   )}
                   {e.group_size && e.group_size > 1 ? (
                     <span
                       title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
-                      className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                      className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                     >
                       <Users size={9}  aria-hidden="true" /> {groupLabel(e).replace(/^Group /, '')} · {e.group_seq}/{e.group_size}
                     </span>
                   ) : (
                     <span
                       title="Booked individually, not part of a group"
-                      className="inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
+                      className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
                     >
                       <User size={9}  aria-hidden="true" /> Solo
                     </span>
@@ -214,7 +214,7 @@ export default function AdminEnquiriesMobileCards({
                   {e.has_child_addon && (
                     <span
                       title="A Child Fare add-on has been added to this booking"
-                      className="inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-amber-50 text-amber-700 shrink-0"
+                      className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-amber-50 text-amber-700 shrink-0"
                     >
                       <Baby size={9} aria-hidden="true" /> Child
                     </span>
@@ -449,7 +449,7 @@ export default function AdminEnquiriesMobileCards({
                   {e.booking_id && (
                     <div className="flex items-center justify-between bg-background-warm rounded-md px-3 py-2">
                       <div className="min-w-0">
-                        <p className="text-dark-muted text-[10px]">Booking ID</p>
+                        <p className="text-dark-muted text-2xs">Booking ID</p>
                         <p className="text-dark text-xs font-mono truncate">{e.booking_id}</p>
                       </div>
                       {/* Each button's disabled check is scoped to its own

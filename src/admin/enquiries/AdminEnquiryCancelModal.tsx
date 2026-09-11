@@ -54,7 +54,7 @@ export default function AdminEnquiryCancelModal({
           <input type="checkbox" checked={cancelIsNoShow} onChange={e => setCancelIsNoShow(e.target.checked)} className="mt-0.5" />
           <span>
             This is a <span className="font-medium">no-show</span>
-            <span className="block text-[11px] text-dark-muted">No refund is given for no-shows, per policy.</span>
+            <span className="block text-2xs text-dark-muted">No refund is given for no-shows, per policy.</span>
           </span>
         </label>
         <div>

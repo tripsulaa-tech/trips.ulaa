@@ -264,6 +264,61 @@ export default function AdminTripFormModal({
                 Shown on the public trip page as "Reserve today with only ₹{form.advance_amount || 'X'}". Leave blank to show the seats-available badge instead.
               </p>
             </div>
+            <div className="md:col-span-2 bg-primary/5 border border-primary/20 rounded-md p-3 space-y-3">
+              <p className="text-xs text-dark-muted">
+                Optional named flash offer (e.g. "Diwali Dhamaka"). Unlike Early-Bird above, this is meant for a short, urgent occasion sale — set Start and End Date to the same day for a one-day flash sale, or a few days apart (e.g. a 3-day window) for a long-weekend sale. It shows automatically on the Trip Card with a live "Offer ends in X days" countdown, and disappears on its own the day after End Date. Leave End Date blank to run it for Start Date only.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="trip-special-offer-name" className="block text-sm font-medium text-dark mb-1">Offer Name</label>
+                  <input
+                    id="trip-special-offer-name"
+                    value={form.special_offer_name}
+                    onChange={e => setForm(f => ({ ...f, special_offer_name: e.target.value }))}
+                    className={inputClass}
+                    placeholder="e.g. Diwali Dhamaka"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="trip-special-offer-price" className="block text-sm font-medium text-dark mb-1">Offer Price per person (₹)</label>
+                  <input
+                    id="trip-special-offer-price"
+                    type="number"
+                    value={form.special_offer_price}
+                    onChange={e => setForm(f => ({ ...f, special_offer_price: e.target.value === '' ? '' : +e.target.value }))}
+                    className={inputClass}
+                    placeholder="e.g. 34999"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="trip-special-offer-date" className="block text-sm font-medium text-dark mb-1">Offer Start Date</label>
+                  <DatePicker
+                    id="trip-special-offer-date"
+                    value={form.special_offer_date}
+                    onChange={special_offer_date => setForm(f => ({
+                      ...f,
+                      special_offer_date,
+                      // Keep a set End Date from silently sitting before the
+                      // new Start Date — nudge it forward instead of leaving
+                      // an invalid range for the admin to notice at save time.
+                      special_offer_end_date: f.special_offer_end_date && f.special_offer_end_date < special_offer_date
+                        ? special_offer_date
+                        : f.special_offer_end_date,
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="trip-special-offer-end-date" className="block text-sm font-medium text-dark mb-1">Offer End Date</label>
+                  <DatePicker
+                    id="trip-special-offer-end-date"
+                    value={form.special_offer_end_date}
+                    onChange={special_offer_end_date => setForm(f => ({ ...f, special_offer_end_date }))}
+                    min={form.special_offer_date || undefined}
+                    placeholder="Same as Start Date"
+                  />
+                </div>
+              </div>
+            </div>
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-semibold text-dark">Trip Card Feature Tags</label>
@@ -822,7 +877,7 @@ export default function AdminTripFormModal({
                         }
                       }}
                     />
-                    <p id={`trip-included-bullets-hint-${gi}`} className="text-[11px] text-dark-muted mt-1">Paste a list — each line or paragraph automatically becomes its own bullet below.</p>
+                    <p id={`trip-included-bullets-hint-${gi}`} className="text-2xs text-dark-muted mt-1">Paste a list — each line or paragraph automatically becomes its own bullet below.</p>
                     {group.bullets.length > 0 && (
                       <ul className="space-y-2 mt-2">
                         {group.bullets.map((bullet, bi) => (

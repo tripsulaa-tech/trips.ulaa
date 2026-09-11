@@ -26,7 +26,7 @@ export default function FilterDropdown<T extends string>({
         return (
           <div key={opt.key}>
             {showSectionHeader && (
-              <div className="px-3 pt-2.5 pb-1 text-[10px] font-button font-bold text-dark-muted/60 uppercase tracking-wide">
+              <div className="px-3 pt-2.5 pb-1 text-2xs font-button font-bold text-dark-muted/60 uppercase tracking-wide">
                 {opt.section}
               </div>
             )}

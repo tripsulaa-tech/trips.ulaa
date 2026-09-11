@@ -82,9 +82,9 @@ export default function AdminWaitlistFilterBar({
           className="w-full flex items-center gap-2 sm:pointer-events-none sm:cursor-default"
         >
           <SlidersHorizontal size={16} className="text-dark shrink-0" aria-hidden="true" />
-          <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1 text-left">Filters</span>
+          <span className="font-button font-bold text-dark text-base whitespace-nowrap flex-1 text-left">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-md bg-primary/10 text-primary text-[11px] font-button font-semibold">
+            <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-md bg-primary/10 text-primary text-2xs font-button font-semibold">
               {activeFilterCount} active
             </span>
           )}
@@ -97,7 +97,7 @@ export default function AdminWaitlistFilterBar({
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2 flex-1 min-w-0">
             {/* Status */}
             <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-              <label htmlFor="waitlist-filter-status" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Status</label>
+              <label htmlFor="waitlist-filter-status" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Status</label>
               <button
                 id="waitlist-filter-status"
                 aria-haspopup="listbox"
@@ -124,7 +124,7 @@ export default function AdminWaitlistFilterBar({
             {/* Trip */}
             {trips.length > 0 && (
               <div className="relative w-full sm:w-auto sm:min-w-[160px]">
-                <label htmlFor="waitlist-filter-trip" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
+                <label htmlFor="waitlist-filter-trip" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                 <button
                   id="waitlist-filter-trip"
                   aria-haspopup="listbox"

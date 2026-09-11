@@ -108,7 +108,7 @@ export default function TripConfidenceBookingSection({
                       Save {formatPrice(strikeThroughPrice - activePrice)}
                     </span>
                     {isEarlyBird && (
-                      <span className="bg-secondary text-white text-xs font-button font-semibold px-2.5 py-1 rounded-md">
+                      <span className="bg-secondary text-dark text-xs font-button font-semibold px-2.5 py-1 rounded-md">
                         Early Bird
                       </span>
                     )}

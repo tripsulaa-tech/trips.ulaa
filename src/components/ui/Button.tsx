@@ -10,7 +10,7 @@ interface ButtonProps extends HTMLMotionProps<'button'> {
 
 const variants = {
   primary: 'bg-primary text-white hover:bg-primary-dark active:bg-primary-dark shadow-warm hover:shadow-warm-lg border-2 border-primary',
-  secondary: 'bg-secondary text-white hover:bg-amber-600 active:bg-amber-600 shadow-warm hover:shadow-warm-lg border-2 border-secondary',
+  secondary: 'bg-secondary text-dark hover:bg-amber-600 active:bg-amber-600 shadow-warm hover:shadow-warm-lg border-2 border-secondary',
   outline: 'bg-transparent text-primary border-2 border-primary hover:bg-primary hover:text-white active:bg-primary active:text-white',
   // Same outline theme as "Not Interested" (border-2, transparent fill,
   // fills solid on hover) but in red — used for urgent/overdue states like

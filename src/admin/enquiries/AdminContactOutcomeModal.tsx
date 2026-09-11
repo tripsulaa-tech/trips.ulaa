@@ -96,7 +96,7 @@ export default function ContactOutcomeModal({
               onChange={val => setOutcome(val as ContactOutcome)}
               options={CONTACT_OUTCOME_OPTIONS}
             />
-            <p className="text-[11px] text-dark-muted mt-1">{config.description}</p>
+            <p className="text-2xs text-dark-muted mt-1">{config.description}</p>
           </div>
 
           {needsClosedReason && (

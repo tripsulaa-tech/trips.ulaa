@@ -70,7 +70,7 @@ export default function AdminWaitlistMobileCards({
                     {e.group_size && e.group_size > 1 && (
                       <span
                         title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
-                        className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
+                        className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
                       >
                         <Users size={9} aria-hidden="true" /> {groupLabel(e)} · {e.group_size}
                       </span>
@@ -81,7 +81,7 @@ export default function AdminWaitlistMobileCards({
                   <p className="text-dark-muted text-xs truncate">{e.trip_title || 'Untitled trip'}</p>
                   <SeatAvailabilityBadges entry={e} seatsAvailable={seatsAvailable} />
                 </div>
-                <span className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
+                <span className={`shrink-0 inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
                   <cfg.icon size={11} className="shrink-0" aria-hidden="true" />
                   {cfg.label}
                 </span>

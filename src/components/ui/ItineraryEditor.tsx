@@ -121,12 +121,12 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                       rows={2}
                       className={`${inputClass} resize-none`}
                     />
-                    <p className="text-[11px] text-dark-muted mt-1">Paste a list — each paragraph (separated by a blank line) automatically becomes its own bullet below.</p>
+                    <p className="text-2xs text-dark-muted mt-1">Paste a list — each paragraph (separated by a blank line) automatically becomes its own bullet below.</p>
                   </div>
                 </div>
               </div>
               {!day.icon && (
-                <p className="text-[11px] text-dark-muted">No icon set — the trip page will just show "Day {day.day}".</p>
+                <p className="text-2xs text-dark-muted">No icon set — the trip page will just show "Day {day.day}".</p>
               )}
 
               {(day.bullets?.length || 0) > 0 && (

@@ -77,7 +77,7 @@ export default function TripHighlightIconPicker({ value, onChange, hintText, id 
 
           {!query && (
             <div className="mb-2">
-              <p className="text-[11px] font-semibold text-dark-muted uppercase tracking-wide mb-1.5">
+              <p className="text-2xs font-semibold text-dark-muted uppercase tracking-wide mb-1.5">
                 Suggested{hintText ? ` for "${hintText}"` : ''}
               </p>
               <div className="grid grid-cols-6 gap-1.5">
@@ -99,7 +99,7 @@ export default function TripHighlightIconPicker({ value, onChange, hintText, id 
           )}
 
           <div>
-            <p className="text-[11px] font-semibold text-dark-muted uppercase tracking-wide mb-1.5">
+            <p className="text-2xs font-semibold text-dark-muted uppercase tracking-wide mb-1.5">
               {query ? 'Results' : 'All Icons'}
             </p>
             <div className="grid grid-cols-6 gap-1.5 max-h-48 overflow-y-auto app-scroll pr-1">

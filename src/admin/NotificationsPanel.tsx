@@ -107,7 +107,7 @@ export default function NotificationsPanel() {
       >
         <Bell size={18} />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-2xs font-bold flex items-center justify-center leading-none">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -148,7 +148,7 @@ export default function NotificationsPanel() {
                     <div className="min-w-0 flex-1">
                       <p className={`text-sm truncate ${n.is_read ? 'text-dark-muted' : 'font-semibold text-dark'}`}>{n.title}</p>
                       {n.body && <p className="text-xs text-dark-muted truncate mt-0.5">{n.body}</p>}
-                      <p className="text-[11px] text-dark-muted/70 mt-1">{timeAgo(n.created_at)}</p>
+                      <p className="text-2xs text-dark-muted/70 mt-1">{timeAgo(n.created_at)}</p>
                     </div>
                   </button>
                 ))

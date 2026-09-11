@@ -154,6 +154,19 @@ export interface UpcomingTrip {
   // falls back to the old seats-availability badge. See
   // add_trip_advance_amount.sql.
   advance_amount?: number | null;
+  // Optional named flash offer (e.g. "Diwali Dhamaka"), distinct from
+  // early_bird above — early_bird is a long-running book-before-deadline
+  // discount, special_offer is a short, named occasion sale. Live from
+  // special_offer_date through special_offer_end_date inclusive (both
+  // dates local, e.g. set a 3-day window for a long-weekend sale); leaving
+  // special_offer_end_date unset runs the offer for special_offer_date
+  // only. See getActivePrice in utils/utils-index.ts for how it takes
+  // precedence over early_bird/regular price while active. See
+  // add_trip_special_offer.sql and add_trip_special_offer_end_date.sql.
+  special_offer_name?: string | null;
+  special_offer_price?: number | null;
+  special_offer_date?: string | null;
+  special_offer_end_date?: string | null;
   // Optional fixed marketing tags (up to 4) shown in the icon row on the
   // public Trip Card, e.g. "Girls-Only" / "Safe & fun". Left unset, the
   // card falls back to auto-generated tags from real trip data (travelers,

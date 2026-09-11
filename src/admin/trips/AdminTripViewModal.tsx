@@ -83,6 +83,7 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
                   {trip.price ? formatPrice(trip.price) : '—'}
                   {trip.early_bird_price ? ` (Early-bird ${formatPrice(trip.early_bird_price)})` : ''}
                   {trip.strike_through_price ? ` — strikeout ${formatPrice(trip.strike_through_price)}` : ''}
+                  {trip.special_offer_name && trip.special_offer_price ? ` — ${trip.special_offer_name}: ${formatPrice(trip.special_offer_price)} ${trip.special_offer_end_date && trip.special_offer_end_date !== trip.special_offer_date ? `from ${trip.special_offer_date} to ${trip.special_offer_end_date}` : `on ${trip.special_offer_date}`}` : ''}
                 </p>
               </div>
               {trip.meeting_point && (

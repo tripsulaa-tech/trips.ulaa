@@ -125,7 +125,7 @@ export default function InstagramMomentsSection({
               >
                 <img src={img.image_url} alt={`Gallery photo ${index + 1}`} className="w-full h-full object-cover" loading="lazy" />
                 {img.is_featured && (
-                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-secondary text-white text-[10px] px-2 py-0.5 rounded-md font-button font-semibold">
+                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-secondary text-dark text-2xs px-2 py-0.5 rounded-md font-button font-semibold">
                     <Star size={10} className="fill-white" aria-hidden="true" />
                     Featured
                   </div>

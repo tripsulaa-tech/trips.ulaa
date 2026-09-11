@@ -126,7 +126,7 @@ export default function TripCountdownCard({
               before — there's no CTA column next to it yet at this width
               (everything stacks), so the corner is the only sensible home. */}
           {(isAlmostFull || isFull) && (
-            <span className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10 lg:hidden inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-[10px] font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
+            <span className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10 lg:hidden inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-2xs font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
               <Flame size={11} className="text-amber-300" />
               {isFull ? 'Sold out' : `${remainingSeats} seats left`}
             </span>
@@ -135,7 +135,7 @@ export default function TripCountdownCard({
           <div className="relative flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
             <div className="flex flex-col items-center lg:items-start gap-1.5 lg:flex-1 lg:min-w-0">
               <p
-                className={`flex items-center gap-2 text-[11px] lg:text-xs font-button font-bold uppercase tracking-[0.25em] whitespace-nowrap bg-clip-text text-transparent ${
+                className={`flex items-center gap-2 text-2xs lg:text-xs font-button font-bold uppercase tracking-[0.25em] whitespace-nowrap bg-clip-text text-transparent ${
                   urgent ? 'bg-gradient-to-r from-orange-300 to-amber-200' : 'bg-gradient-to-r from-primary-light to-gold'
                 }`}
               >
@@ -184,7 +184,7 @@ export default function TripCountdownCard({
                         </motion.div>
                       </AnimatePresence>
                     </div>
-                    <div className="text-white/65 text-[10px] lg:text-xs font-medium uppercase tracking-[0.2em] text-center mt-2">{l}</div>
+                    <div className="text-white/65 text-2xs lg:text-xs font-medium uppercase tracking-[0.2em] text-center mt-2">{l}</div>
                   </div>
                   {i < units.length - 1 && (
                     <span className={`font-display text-xl sm:text-2xl lg:text-3xl font-bold pb-4 sm:pb-5 lg:pb-6 select-none ${urgent ? 'text-orange-300/40' : 'text-primary-light/40'}`}>:</span>
@@ -197,7 +197,7 @@ export default function TripCountdownCard({
               {/* Desktop: grouped with the CTA it describes instead of
                   floating alone up in the card's corner. */}
               {(isAlmostFull || isFull) && (
-                <span className="hidden lg:inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-[10px] font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
+                <span className="hidden lg:inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-2xs font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
                   <Flame size={11} className="text-amber-300" />
                   {isFull ? 'Sold out' : `${remainingSeats} seats left`}
                 </span>
@@ -212,7 +212,7 @@ export default function TripCountdownCard({
                 {ctaLabel}
                 <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
               </span>
-              <p className="flex items-center gap-1.5 text-white/70 text-[11px] font-medium lg:hidden">
+              <p className="flex items-center gap-1.5 text-white/70 text-2xs font-medium lg:hidden">
                 Don't miss out — tap to {ctaLabel}
                 <ArrowRight size={12} className={`transition-transform group-hover/btn:translate-x-1 ${urgent ? 'text-orange-300' : 'text-primary-light'}`} />
               </p>

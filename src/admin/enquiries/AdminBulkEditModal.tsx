@@ -98,12 +98,12 @@ export default function BulkEditModal({
             options={BULK_PACKAGE_OPTIONS}
           />
           {bulkForm.package_type !== BULK_NO_CHANGE && !activeGroupTripId && (
-            <p className="text-amber-600 text-[11px] mt-1">
+            <p className="text-amber-600 text-2xs mt-1">
               These enquiries aren't linked to a trip, so there's no configured price to pull in — enter the amount manually below.
             </p>
           )}
           {bulkForm.package_type !== BULK_NO_CHANGE && activeGroupTripId && getTripPrice(activeGroupTripId, bulkForm.package_type) == null && (
-            <p className="text-amber-600 text-[11px] mt-1">
+            <p className="text-amber-600 text-2xs mt-1">
               This trip's price for this package isn't set yet — enter the amount manually below, or add it under Upcoming Trips first.
             </p>
           )}
@@ -175,7 +175,7 @@ export default function BulkEditModal({
             className={inputClass}
             placeholder="Leave blank to leave unchanged"
           />
-          <p id="bulk-amount-paid-hint" className="text-[11px] text-dark-muted mt-1">
+          <p id="bulk-amount-paid-hint" className="text-2xs text-dark-muted mt-1">
             Sets what's been collected so far for every selected enquiry, as a new total — not added on top of what's already recorded. Leave blank to leave each one's amount paid as-is.
           </p>
           {overpaid && (
@@ -194,7 +194,7 @@ export default function BulkEditModal({
             options={BULK_STATUS_OPTIONS}
           />
           {bulkForm.status === 'contacted' && (
-            <p className="text-[11px] text-dark-muted mt-1">
+            <p className="text-2xs text-dark-muted mt-1">
               The Payment popup only appears for single-record updates, so it won't open here.
             </p>
           )}

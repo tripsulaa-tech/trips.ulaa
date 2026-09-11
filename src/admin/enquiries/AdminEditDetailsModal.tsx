@@ -210,7 +210,7 @@ export default function EditDetailsModal({
               placeholder="Optional"
             />
             {!(editTouched.has('age') && editErrors.age) && editForm.trip_id && (
-              <p id="eq-edit-age-hint" className="text-[11px] text-dark-muted mt-1">Ages {effectiveMinAge}–{effectiveMaxAge}.</p>
+              <p id="eq-edit-age-hint" className="text-2xs text-dark-muted mt-1">Ages {effectiveMinAge}–{effectiveMaxAge}.</p>
             )}
             {editTouched.has('age') && editErrors.age && <p id="eq-edit-age-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.age}</p>}
           </div>
@@ -224,7 +224,7 @@ export default function EditDetailsModal({
             options={[{ value: '', label: '— No trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
           />
           {editTarget && editForm.trip_id !== (editTarget.trip_id || '') && (
-            <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1.5 mt-1.5">
+            <p className="text-2xs text-amber-700 bg-amber-50 rounded px-2 py-1.5 mt-1.5">
               Changing the trip doesn't update an already-tracked total amount — open Payment afterwards to re-check the price for the new trip.
             </p>
           )}

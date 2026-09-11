@@ -194,7 +194,7 @@ export default function TimePicker({
             <button
               type="button"
               onClick={setNow}
-              className="text-[11px] font-body px-2 py-1 rounded-md bg-background-warm/60 text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+              className="text-2xs font-body px-2 py-1 rounded-md bg-background-warm/60 text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
             >
               Now
             </button>

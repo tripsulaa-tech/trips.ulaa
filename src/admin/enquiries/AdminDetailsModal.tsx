@@ -69,19 +69,19 @@ export default function DetailsModal({
               {detailsTarget.group_size && detailsTarget.group_size > 1 ? (
                 <span
                   title={`${groupLabel(detailsTarget)} — part of a group booking of ${detailsTarget.group_size}`}
-                  className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
+                  className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
                 >
                   <Users size={10} aria-hidden="true" /> {groupLabel(detailsTarget)} · {detailsTarget.group_seq}/{detailsTarget.group_size}
                 </span>
               ) : (
                 <span
                   title="Booked individually, not part of a group"
-                  className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
+                  className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
                 >
                   <User size={10} aria-hidden="true" /> Solo
                 </span>
               )}
-              <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
+              <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
                 <FoodMark type={foodPreferenceKey(detailsTarget)} size={10} aria-hidden="true" /> {food.label}
               </span>
             </div>
@@ -121,15 +121,15 @@ export default function DetailsModal({
                     raised an invoice for yet. */}
                 <div className="grid grid-cols-3 gap-2 bg-background-warm rounded-md px-3 py-2.5">
                   <div>
-                    <p className="text-dark-muted text-[11px]">Total</p>
+                    <p className="text-dark-muted text-2xs">Total</p>
                     <p className="text-dark text-sm font-semibold">{formatPrice(detailsTarget.total_amount || 0)}</p>
                   </div>
                   <div>
-                    <p className="text-dark-muted text-[11px]">Paid</p>
+                    <p className="text-dark-muted text-2xs">Paid</p>
                     <p className="text-green-700 text-sm font-semibold">{formatPrice(detailsTarget.amount_paid || 0)}</p>
                   </div>
                   <div>
-                    <p className="text-dark-muted text-[11px]">Pending</p>
+                    <p className="text-dark-muted text-2xs">Pending</p>
                     <p className="text-amber-600 text-sm font-semibold">
                       {formatPrice(Math.max(0, (detailsTarget.total_amount || 0) - (detailsTarget.amount_paid || 0)))}
                     </p>
@@ -180,7 +180,7 @@ export default function DetailsModal({
                           <li key={inv.id} className="flex items-center justify-between gap-2 px-3 py-2">
                             <div className="min-w-0">
                               <p className="text-dark text-xs font-mono truncate">{inv.invoice_number || '—'}</p>
-                              <p className="text-dark-muted text-[11px]">
+                              <p className="text-dark-muted text-2xs">
                                 {INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type} · {formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
                                 {inv.payment_method ? ` · ${inv.payment_method}` : ''}
                                 {inv.utr_number ? ` · UTR ${inv.utr_number}` : ''}
@@ -191,7 +191,7 @@ export default function DetailsModal({
                                 {isRefund ? '\u2212 ' : ''}{formatPrice(Math.abs(inv.amount))}
                               </span>
                               <span
-                                className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
                                   isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
                                 }`}
                               >

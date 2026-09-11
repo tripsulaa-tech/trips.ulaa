@@ -348,7 +348,7 @@ export default function AddEnquiryModal({
                       placeholder="Optional"
                     />
                     {!(touchedPeople.has(`${i}:age`) && groupErrors[i].age) && form.trip_id && (
-                      <p id={`ge-p-age-${i}-hint`} className="text-[11px] text-dark-muted mt-1">Ages {effectiveMinAge}–{effectiveMaxAge}.</p>
+                      <p id={`ge-p-age-${i}-hint`} className="text-2xs text-dark-muted mt-1">Ages {effectiveMinAge}–{effectiveMaxAge}.</p>
                     )}
                     {touchedPeople.has(`${i}:age`) && groupErrors[i].age && <p id={`ge-p-age-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].age}</p>}
                   </div>
@@ -506,7 +506,7 @@ export default function AddEnquiryModal({
               placeholder="Optional"
             />
             {!soloErrorsVisible.age && form.trip_id && (
-              <p id="ge-age-hint" className="text-[11px] text-dark-muted mt-1">This trip is open to ages {effectiveMinAge}–{effectiveMaxAge}.</p>
+              <p id="ge-age-hint" className="text-2xs text-dark-muted mt-1">This trip is open to ages {effectiveMinAge}–{effectiveMaxAge}.</p>
             )}
             {soloErrorsVisible.age && <p id="ge-age-error" role="alert" className={errorClass}>{soloErrorsVisible.age}</p>}
           </div>
@@ -592,7 +592,7 @@ export default function AddEnquiryModal({
               className={inputClass}
               placeholder="e.g. 5000 (advance) — leave blank if unpaid"
             />
-            <p id="ge-amount-paid-hint" className="text-[11px] text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
+            <p id="ge-amount-paid-hint" className="text-2xs text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
             {soloErrorsVisible.amount_paid && <p id="ge-amount-paid-error" role="alert" className={errorClass}>{soloErrorsVisible.amount_paid}</p>}
           </div>
           {(Number(form.amount_paid) || 0) > 0 && (

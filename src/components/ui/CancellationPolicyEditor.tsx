@@ -115,7 +115,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
               </div>
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
-                  <label htmlFor={`cancellation-tier-${index}-from`} className="block text-[11px] text-dark-muted mb-0.5">From (min days before departure)</label>
+                  <label htmlFor={`cancellation-tier-${index}-from`} className="block text-2xs text-dark-muted mb-0.5">From (min days before departure)</label>
                   <input
                     id={`cancellation-tier-${index}-from`}
                     type="number"
@@ -127,7 +127,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
                   />
                 </div>
                 <div className="flex-1">
-                  <label htmlFor={`cancellation-tier-${index}-to`} className="block text-[11px] text-dark-muted mb-0.5">To (max days before departure)</label>
+                  <label htmlFor={`cancellation-tier-${index}-to`} className="block text-2xs text-dark-muted mb-0.5">To (max days before departure)</label>
                   <input
                     id={`cancellation-tier-${index}-to`}
                     type="number"

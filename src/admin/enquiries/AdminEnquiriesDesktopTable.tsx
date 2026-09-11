@@ -200,7 +200,7 @@ export default function AdminEnquiriesDesktopTable({
                         {e.has_child_addon && (
                           <span
                             title="A Child Fare add-on has been added to this booking"
-                            className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
+                            className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
                           >
                             <Baby size={9} className="shrink-0" aria-hidden="true" /> Child
                           </span>
@@ -208,7 +208,7 @@ export default function AdminEnquiriesDesktopTable({
                         {!e.trip_id && !activeGroup && (
                           <span
                             title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
-                            className="inline-flex items-center gap-1 text-[9px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
+                            className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
                           >
                             <MessageCircle size={9} className="shrink-0" aria-hidden="true" /> General
                           </span>
@@ -252,7 +252,7 @@ export default function AdminEnquiriesDesktopTable({
                   </td>
                   <td className="px-4 py-4 text-dark-muted hidden lg:table-cell whitespace-nowrap">
                     <p>{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</p>
-                    <p className="text-[11px] text-dark-muted/80">{formatTime(e.created_at)}</p>
+                    <p className="text-2xs text-dark-muted/80">{formatTime(e.created_at)}</p>
                   </td>
                   <td className="px-2 py-4 text-center">
                     <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
@@ -306,12 +306,12 @@ export default function AdminEnquiriesDesktopTable({
                           )}
                         </p>
                         {e.booking_id && (
-                          <span title="Booking ID" className="mt-0.5 block text-[10px] font-mono text-dark-muted truncate">{e.booking_id}</span>
+                          <span title="Booking ID" className="mt-0.5 block text-2xs font-mono text-dark-muted truncate">{e.booking_id}</span>
                         )}
                       </button>
                     )}
                     {refundStatus(e) && (
-                      <p className={`text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
+                      <p className={`text-2xs font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
                         {refundStatus(e)!.label}
                       </p>
                     )}
@@ -344,7 +344,7 @@ export default function AdminEnquiriesDesktopTable({
                             onClick={() => openFollowUpModal(e)}
                             disabled={updating === e.id}
                             title="Set a follow-up reminder"
-                            className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
                           >
                             <CalendarClock size={12} className="shrink-0" aria-hidden="true" /> Set
                           </button>
@@ -374,7 +374,7 @@ export default function AdminEnquiriesDesktopTable({
                             onClick={() => setBookingFollowUpTarget(e)}
                             disabled={updating === e.id}
                             title="Set a booking follow-up reminder"
-                            className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
                           >
                             <CalendarClock size={12} className="shrink-0" aria-hidden="true" /> Set
                           </button>
@@ -399,7 +399,7 @@ export default function AdminEnquiriesDesktopTable({
                           onClick={() => handleAdvance(e)}
                           disabled={updating === e.id || completingId === e.id}
                           title={nma.label}
-                          className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"
+                          className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1.5 rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"
                         >
                           <nma.icon size={12} className="shrink-0" aria-hidden="true" />
                           {nma.label}
@@ -418,7 +418,7 @@ export default function AdminEnquiriesDesktopTable({
                         onClick={() => navigate(`/admin/enquiries/${e.id}`)}
                         disabled={updating === e.id || completingId === e.id}
                         title="View Full CRM"
-                        className="inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                        className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
                       >
                         View Full CRM <ArrowRight size={12} className="shrink-0" aria-hidden="true" />
                       </button>

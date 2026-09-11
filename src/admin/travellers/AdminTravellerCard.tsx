@@ -58,7 +58,7 @@ export default function AdminTravellerCard({
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className="text-sm font-medium text-dark truncate">{contact.fullName}</p>
               {contact.tripCount > 1 && (
-                <span className="inline-flex items-center gap-1 text-[9px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
+                <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
                   <Repeat size={9} aria-hidden="true" /> {contact.tripCount} trips
                 </span>
               )}
@@ -69,7 +69,7 @@ export default function AdminTravellerCard({
           </div>
         </div>
         {badge && (
-          <span className={`shrink-0 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${badge.color}`}>
+          <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${badge.color}`}>
             {badge.label}
           </span>
         )}
@@ -114,15 +114,15 @@ export default function AdminTravellerCard({
                 <div className="min-w-0 flex items-center gap-2 flex-wrap">
                   <span className="font-button font-semibold text-xs text-dark truncate">{trip.tripTitle}</span>
                   {trip.seatCount > 1 && (
-                    <span className="text-[9px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-200 text-dark-muted">
+                    <span className="text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-200 text-dark-muted">
                       Group of {trip.seatCount}
                     </span>
                   )}
                   {trip.departureDate && (
-                    <span className="text-[11px] text-dark-muted">{formatDate(trip.departureDate)}</span>
+                    <span className="text-2xs text-dark-muted">{formatDate(trip.departureDate)}</span>
                   )}
                 </div>
-                <span className={`text-[9px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 ${tripBadge.color}`}>
+                <span className={`text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 ${tripBadge.color}`}>
                   {tripBadge.label}
                 </span>
               </div>

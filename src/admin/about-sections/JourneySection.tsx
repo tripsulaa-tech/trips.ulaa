@@ -149,7 +149,7 @@ export default function JourneySection({
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label htmlFor={`about-step-heading-${i}`} className="text-sm font-medium text-dark">Heading</label>
-                      <span className={`text-[10px] ${headingOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
+                      <span className={`text-2xs ${headingOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
                         {step.heading.length}/{HEADING_SOFT_LIMIT}
                       </span>
                     </div>
@@ -161,13 +161,13 @@ export default function JourneySection({
                       className={`${inputClass} resize-none`}
                     />
                     {headingOverLimit && (
-                      <p className="text-[10px] text-primary mt-1">May wrap to two lines in the timeline.</p>
+                      <p className="text-2xs text-primary mt-1">May wrap to two lines in the timeline.</p>
                     )}
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label htmlFor={`about-step-description-${i}`} className="text-sm font-medium text-dark">Description</label>
-                      <span className={`text-[10px] ${descriptionOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
+                      <span className={`text-2xs ${descriptionOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
                         {step.description.length}/{DESCRIPTION_SOFT_LIMIT}
                       </span>
                     </div>
@@ -179,7 +179,7 @@ export default function JourneySection({
                       className={`${inputClass} resize-none`}
                     />
                     {descriptionOverLimit && (
-                      <p className="text-[10px] text-primary mt-1">Long copy may get clipped on the narrow step column.</p>
+                      <p className="text-2xs text-primary mt-1">Long copy may get clipped on the narrow step column.</p>
                     )}
                   </div>
                 </div>

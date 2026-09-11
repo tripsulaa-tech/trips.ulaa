@@ -313,7 +313,7 @@ export function getTripActivePricing(
   trip: UpcomingTrip | undefined
 ): { amount: number; packageType: Enquiry['package_type']; isEarlyBird: boolean; deadline?: string | null } | null {
   if (!trip) return null;
-  const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
+  const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
   if (activePrice == null) return null;
   return {
     amount: activePrice,

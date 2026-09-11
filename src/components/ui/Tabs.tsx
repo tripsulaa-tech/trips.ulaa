@@ -220,7 +220,7 @@ export default function Tabs({ children, defaultIndex = 0, scrollContainerRef }:
                 style={{ width: `${((active + 1) / panels.length) * 100}%` }}
               />
             </div>
-            <span className="shrink-0 text-[11px] font-semibold text-dark-muted tabular-nums">{active + 1}/{panels.length}</span>
+            <span className="shrink-0 text-2xs font-semibold text-dark-muted tabular-nums">{active + 1}/{panels.length}</span>
           </div>
           <Select
             size="sm"
@@ -240,7 +240,7 @@ export default function Tabs({ children, defaultIndex = 0, scrollContainerRef }:
                 type="button"
                 onClick={() => handleSelect(i)}
                 aria-current={active === i ? 'true' : undefined}
-                className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
                   active === i
                     ? 'bg-primary text-white'
                     : 'bg-background text-dark-muted hover:text-dark'

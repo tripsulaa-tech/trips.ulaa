@@ -83,7 +83,7 @@ export default function PaymentFormFields({
               <button
                 type="button"
                 onClick={() => setPricingUnlocked(u => !u)}
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                className="inline-flex items-center gap-1 text-2xs font-medium text-primary hover:underline"
               >
                 {pricingLocked ? <LockSimple size={12} /> : <LockSimpleOpen size={12} />}
                 {pricingLocked ? 'Unlock to edit' : 'Lock'}
@@ -108,7 +108,7 @@ export default function PaymentFormFields({
             options={PACKAGE_OPTIONS}
           />
           {hasPayment && pricingLocked && (
-            <p className="text-[11px] text-dark-muted mt-1">
+            <p className="text-2xs text-dark-muted mt-1">
               Already paid {formatPrice(enquiry.amount_paid || 0)} against the current total — unlock to recalculate.
             </p>
           )}
@@ -121,7 +121,7 @@ export default function PaymentFormFields({
             <div className={`${fieldClass} bg-background-warm text-dark-muted`}>
               {listPrice != null ? formatPrice(listPrice) : 'Not set'}
             </div>
-            <p className="text-[11px] text-dark-muted mt-1">Trip's price for this package, before discount</p>
+            <p className="text-2xs text-dark-muted mt-1">Trip's price for this package, before discount</p>
           </div>
           <div>
             <label htmlFor={`${idPrefix}-discount`} className="block text-sm font-medium text-dark mb-1">Discount (₹)</label>
@@ -153,7 +153,7 @@ export default function PaymentFormFields({
           </div>
           {hasPayment && pricingLocked && (
             <div className="col-span-2">
-              <p className="text-[11px] text-dark-muted -mt-2">
+              <p className="text-2xs text-dark-muted -mt-2">
                 Already paid {formatPrice(enquiry.amount_paid || 0)} against the current total — recalculating will change the balance/refund position. Use the "Unlock to edit" link above Package to proceed.
               </p>
             </div>
@@ -198,7 +198,7 @@ export default function PaymentFormFields({
             placeholder="e.g. 5000"
           />
           {isChildFare && (
-            <p id={`${idPrefix}-amount-paid-childfare-hint`} className="text-[11px] text-dark-muted mt-1">
+            <p id={`${idPrefix}-amount-paid-childfare-hint`} className="text-2xs text-dark-muted mt-1">
               Locked to this trip's configured Child Fare Amount — set it under Add/Edit Trip → Finances & Profit to change it.
             </p>
           )}
@@ -234,7 +234,7 @@ export default function PaymentFormFields({
           />
           {paymentForm.payment_type === 'addon' && (
             <>
-              <p className="text-[11px] text-dark-muted mt-1">
+              <p className="text-2xs text-dark-muted mt-1">
                 Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
               </p>
               {/* Quick preset for the common case: this traveller wants to
@@ -272,7 +272,7 @@ export default function PaymentFormFields({
                 <Baby size={13} aria-hidden="true" /> Child Fare
               </button>
               {!tripChildFareAmount && (
-                <p className="text-[11px] text-dark-muted mt-1">
+                <p className="text-2xs text-dark-muted mt-1">
                   {enquiry.trip_id ? "Set this trip's Child Fare Amount under Add/Edit Trip → Finances & Profit to enable this." : 'No trip linked to this enquiry, so there\u2019s no configured Child Fare rate to use.'}
                 </p>
               )}
@@ -370,7 +370,7 @@ export default function PaymentFormFields({
             />
             <span>
               Mark as <span className="font-medium">no-show</span>
-              <span className="block text-[11px] text-dark-muted">No refund is given for no-shows, per policy — this locks the refund amount to ₹0.</span>
+              <span className="block text-2xs text-dark-muted">No refund is given for no-shows, per policy — this locks the refund amount to ₹0.</span>
             </span>
           </label>
           {!enquiry.is_no_show && (

@@ -20,6 +20,9 @@
   --font-button: 'Poppins', system-ui, sans-serif;
   --font-script: 'Parisienne', cursive;
 
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
   --shadow-warm: 0 4px 24px rgba(168, 90, 42, 0.12);
   --shadow-warm-lg: 0 8px 40px rgba(168, 90, 42, 0.18);
   --shadow-card: 0 2px 16px rgba(45, 33, 24, 0.08);

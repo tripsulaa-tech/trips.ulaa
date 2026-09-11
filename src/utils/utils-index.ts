@@ -11,26 +11,49 @@ export function formatPrice(amount: number): string {
 }
 
 /**
- * Given a regular price and an optional early-bird price/deadline, work out
- * which price is currently active. The early-bird price applies up to and
- * including the deadline date; after that it automatically falls back to
- * the regular price.
+ * Given a regular price, an optional early-bird price/deadline, and an
+ * optional named special offer (name/price/date range), work out which
+ * price is currently active.
+ *
+ * Precedence while both could apply on the same day:
+ *   1. special_offer — live from specialOfferDate through
+ *      specialOfferEndDate inclusive (both local dates). Leaving the end
+ *      date unset runs the offer for specialOfferDate only, same as
+ *      before. Named occasion sale (e.g. "Diwali Dhamaka"), takes
+ *      priority over early-bird since it's the more urgent/intentional
+ *      of the two.
+ *   2. early_bird — applies up to and including the deadline date.
+ *   3. regular price — the fallback once neither above is active.
  */
 export function getActivePrice(
   price?: number,
   earlyBirdPrice?: number | null,
-  earlyBirdDeadline?: string | null
-): { activePrice?: number; isEarlyBird: boolean; deadlinePassed: boolean } {
+  earlyBirdDeadline?: string | null,
+  specialOfferPrice?: number | null,
+  specialOfferDate?: string | null,
+  specialOfferEndDate?: string | null
+): { activePrice?: number; isEarlyBird: boolean; deadlinePassed: boolean; isSpecialOffer: boolean } {
+  if (specialOfferPrice && specialOfferDate) {
+    const todayLocal = new Date();
+    const todayStr = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth() + 1).padStart(2, '0')}-${String(todayLocal.getDate()).padStart(2, '0')}`;
+    // YYYY-MM-DD strings compare correctly lexicographically, so this
+    // works as a plain date-range check. No end date set -> single-day
+    // offer, same behaviour as before this field existed.
+    const rangeEnd = specialOfferEndDate || specialOfferDate;
+    if (todayStr >= specialOfferDate && todayStr <= rangeEnd) {
+      return { activePrice: specialOfferPrice, isEarlyBird: false, deadlinePassed: false, isSpecialOffer: true };
+    }
+  }
   if (earlyBirdPrice && earlyBirdDeadline) {
     const deadline = new Date(earlyBirdDeadline);
     deadline.setHours(23, 59, 59, 999);
     const isActive = new Date() <= deadline;
     if (isActive) {
-      return { activePrice: earlyBirdPrice, isEarlyBird: true, deadlinePassed: false };
+      return { activePrice: earlyBirdPrice, isEarlyBird: true, deadlinePassed: false, isSpecialOffer: false };
     }
-    return { activePrice: price, isEarlyBird: false, deadlinePassed: true };
+    return { activePrice: price, isEarlyBird: false, deadlinePassed: true, isSpecialOffer: false };
   }
-  return { activePrice: price, isEarlyBird: false, deadlinePassed: false };
+  return { activePrice: price, isEarlyBird: false, deadlinePassed: false, isSpecialOffer: false };
 }
 
 /** Format a date string to a readable format */
@@ -59,28 +82,30 @@ export function formatTime(dateStr: string): string {
 
 /**
  * Works out what price (if any) should show crossed out next to the active
- * price — regardless of whether the active price is the regular price or
- * the early-bird price.
+ * price — regardless of whether the active price is the regular price, the
+ * early-bird price, or a one-day special offer price.
  *
  * Precedence:
  * 1. An explicit strike_through_price, if it's actually higher than what's
  *    being shown — this is the new, independent "was ₹X" marketing price
- *    and applies the same way whether early-bird is active or not.
- * 2. Otherwise, the old built-in behavior: while early-bird is active,
- *    cross out the regular price (so existing trips that never set a
- *    strike_through_price keep working exactly as before).
+ *    and applies the same way whether early-bird/special-offer is active
+ *    or not.
+ * 2. Otherwise, the old built-in behavior: while early-bird or a special
+ *    offer is active, cross out the regular price (so existing trips that
+ *    never set a strike_through_price keep working exactly as before).
  * 3. Otherwise, nothing is crossed out.
  */
 export function getStrikeThroughPrice(
   activePrice: number | undefined,
   regularPrice: number | undefined,
   isEarlyBird: boolean,
-  strikeThroughPrice?: number | null
+  strikeThroughPrice?: number | null,
+  isSpecialOffer?: boolean
 ): number | undefined {
   if (strikeThroughPrice && activePrice != null && strikeThroughPrice > activePrice) {
     return strikeThroughPrice;
   }
-  if (isEarlyBird && regularPrice) return regularPrice;
+  if ((isEarlyBird || isSpecialOffer) && regularPrice) return regularPrice;
   return undefined;
 }
 
@@ -192,6 +217,18 @@ export function daysUntil(dateStr: string): number {
   const now = new Date();
   const diffMs = deadline.getTime() - now.getTime();
   return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+}
+
+/**
+ * Days remaining before a live special offer disappears, i.e. days until
+ * the end of specialOfferEndDate (falling back to specialOfferDate itself
+ * for offers with no explicit end date — the single-day case). Used to
+ * drive the "Offer ends in X days" urgency messaging on the Trip Card and
+ * the site-wide offer banner, so shoppers see a countdown instead of a
+ * silent offer that could disappear at any moment.
+ */
+export function specialOfferDaysLeft(specialOfferDate: string, specialOfferEndDate?: string | null): number {
+  return daysUntil(specialOfferEndDate || specialOfferDate);
 }
 
 /** Image placeholder */

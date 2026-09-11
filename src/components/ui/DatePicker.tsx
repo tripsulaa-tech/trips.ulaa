@@ -272,7 +272,7 @@ export default function DatePicker({
 
               <div className="grid grid-cols-7 gap-1 mb-1">
                 {WEEKDAYS.map(w => (
-                  <div key={w} className="text-center text-[11px] font-semibold text-dark-muted py-1">
+                  <div key={w} className="text-center text-2xs font-semibold text-dark-muted py-1">
                     {w}
                   </div>
                 ))}
@@ -316,7 +316,7 @@ export default function DatePicker({
                     type="button"
                     disabled={isPresetDisabled(p.date)}
                     onClick={() => selectDate(p.date)}
-                    className="text-[11px] font-body px-2 py-1 rounded-md bg-background-warm/60 text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="text-2xs font-body px-2 py-1 rounded-md bg-background-warm/60 text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     {p.label}
                   </button>

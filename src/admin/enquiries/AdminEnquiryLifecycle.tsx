@@ -106,7 +106,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
         <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/5 blur-2xl" aria-hidden="true" />
       </div>
       {isCancelled && (
-        <div className="relative flex items-center gap-1.5 mb-3 bg-red-50 text-red-700 rounded-md px-2.5 py-1.5 text-[11px] font-button font-semibold">
+        <div className="relative flex items-center gap-1.5 mb-3 bg-red-50 text-red-700 rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold">
           <XCircle size={12} className="shrink-0" aria-hidden="true" /> Cancelled — progress below is where it stood before cancellation
         </div>
       )}
@@ -156,10 +156,10 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
               >
                 <Icon size={15} weight={isDone || isActive ? 'bold' : 'regular'} aria-hidden="true" />
               </span>
-              <span className={`text-[10px] sm:text-[11px] font-button font-bold uppercase tracking-wide text-center leading-tight ${isActive ? 'text-primary' : isDone ? 'text-dark' : 'text-dark-muted/60'}`}>
+              <span className={`text-2xs sm:text-2xs font-button font-bold uppercase tracking-wide text-center leading-tight ${isActive ? 'text-primary' : isDone ? 'text-dark' : 'text-dark-muted/60'}`}>
                 {step.label}
               </span>
-              <span className="text-dark-muted text-[10px] sm:text-[11px] whitespace-nowrap">
+              <span className="text-dark-muted text-2xs sm:text-2xs whitespace-nowrap">
                 {isDone ? 'Done' : isActive ? 'In Progress' : 'Pending'}
               </span>
             </div>
@@ -168,7 +168,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
       </div>
 
       {enquiry.booking_status === 'balance_pending' && !isCancelled && (
-        <div className="relative flex items-center gap-1.5 mt-3 bg-amber-50 text-amber-700 rounded-md px-2.5 py-1.5 text-[11px] font-button font-semibold">
+        <div className="relative flex items-center gap-1.5 mt-3 bg-amber-50 text-amber-700 rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold">
           <AlertTriangle size={12} className="shrink-0" aria-hidden="true" />
           Balance overdue{enquiry.balance_due_date ? ` — due ${formatDate(enquiry.balance_due_date, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
         </div>
@@ -198,14 +198,14 @@ export function JourneyLifecycleLegend() {
   return (
     <div className="bg-white border border-background-warm rounded-lg px-3 py-2.5 overflow-x-auto scrollbar-hide">
       <div className="flex items-center gap-1.5 w-max">
-        <span className="text-[11px] font-button font-semibold text-dark-muted uppercase tracking-wide shrink-0 mr-1">
+        <span className="text-2xs font-button font-semibold text-dark-muted uppercase tracking-wide shrink-0 mr-1">
           Booking Journey
         </span>
         {LIFECYCLE_FLOW_STAGES.map((key, i) => {
           const cfg = JOURNEY_STAGE_CONFIG[key];
           return (
             <div key={key} className="flex items-center gap-1.5 shrink-0">
-              <span className={`inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
+              <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
                 <cfg.icon size={11} className="shrink-0" aria-hidden="true" /> {cfg.label}
               </span>
               {i < LIFECYCLE_FLOW_STAGES.length - 1 && (
@@ -214,11 +214,11 @@ export function JourneyLifecycleLegend() {
             </div>
           );
         })}
-        <span className="text-dark-muted/60 text-[11px] mx-1 shrink-0 whitespace-nowrap">or, at any point —</span>
-        <span className={`inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.not_interested.color}`}>
+        <span className="text-dark-muted/60 text-2xs mx-1 shrink-0 whitespace-nowrap">or, at any point —</span>
+        <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.not_interested.color}`}>
           <UserMinus size={11} className="shrink-0" aria-hidden="true" /> Not Interested
         </span>
-        <span className={`inline-flex items-center gap-1 text-[11px] font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.cancelled.color}`}>
+        <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.cancelled.color}`}>
           <XCircle size={11} className="shrink-0" aria-hidden="true" /> Cancelled
         </span>
       </div>

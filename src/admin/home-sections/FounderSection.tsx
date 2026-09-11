@@ -99,7 +99,7 @@ export default function FounderSection({
                 there's enough space for platform + URL + delete side by
                 side without cramping either field. */}
             <div className="flex items-center justify-between gap-2 sm:hidden">
-              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[11px] font-bold flex-shrink-0">
+              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-2xs font-bold flex-shrink-0">
                 {i + 1}
               </span>
               <button
@@ -113,7 +113,7 @@ export default function FounderSection({
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
               <div className="w-full sm:w-36 flex-shrink-0">
-                <label htmlFor={`founder-social-platform-${i}`} className="block sm:sr-only text-[11px] font-medium text-dark-muted mb-1 sm:mb-0">Platform</label>
+                <label htmlFor={`founder-social-platform-${i}`} className="block sm:sr-only text-2xs font-medium text-dark-muted mb-1 sm:mb-0">Platform</label>
                 <input
                   id={`founder-social-platform-${i}`}
                   value={link.platform}
@@ -123,7 +123,7 @@ export default function FounderSection({
                 />
               </div>
               <div className="flex-1 min-w-0 w-full">
-                <label htmlFor={`founder-social-url-${i}`} className="block sm:sr-only text-[11px] font-medium text-dark-muted mb-1 sm:mb-0">{link.platform || `Social link ${i + 1}`} URL or username</label>
+                <label htmlFor={`founder-social-url-${i}`} className="block sm:sr-only text-2xs font-medium text-dark-muted mb-1 sm:mb-0">{link.platform || `Social link ${i + 1}`} URL or username</label>
                 <input
                   id={`founder-social-url-${i}`}
                   value={link.url}

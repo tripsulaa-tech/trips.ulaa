@@ -151,7 +151,7 @@ export default function AdminTripsTable({
                         <p className="text-xs text-dark-muted truncate">{trip.destination}</p>
                       </div>
                     </div>
-                    <span className={`shrink-0 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
+                    <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
                       trip.status === 'published' ? 'bg-green-100 text-green-700'
                       : trip.status === 'coming_soon' ? 'bg-amber-100 text-amber-700'
                       : 'bg-background-warm text-dark-muted'

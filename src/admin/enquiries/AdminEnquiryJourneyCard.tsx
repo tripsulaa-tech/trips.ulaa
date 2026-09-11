@@ -108,7 +108,7 @@ export default function AdminEnquiryJourneyCard({
           {(discountAmount > 0 || addonsAmount > 0) && (
             <div className="flex flex-wrap items-center gap-2">
               {discountAmount > 0 && enquiry.discount_reason && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-button font-semibold text-green-700 bg-green-50 rounded-full px-2.5 py-1">
+                <span className="inline-flex items-center gap-1 text-2xs font-button font-semibold text-green-700 bg-green-50 rounded-full px-2.5 py-1">
                   <Tag size={11} aria-hidden="true" /> {enquiry.discount_reason}
                 </span>
               )}
@@ -121,7 +121,7 @@ export default function AdminEnquiryJourneyCard({
                 <Suitcase size={17} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-dark-muted text-[11px]">Trip Amount</p>
+                <p className="text-dark-muted text-2xs">Trip Amount</p>
                 <p className="text-dark text-sm font-bold">{formatPrice(tripAmount)}</p>
               </div>
             </div>
@@ -130,7 +130,7 @@ export default function AdminEnquiryJourneyCard({
                 <PlusCircle size={17} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-dark-muted text-[11px]">Addons</p>
+                <p className="text-dark-muted text-2xs">Addons</p>
                 <p className="text-sky-600 text-sm font-bold">{addonsAmount > 0 ? formatPrice(addonsAmount) : '—'}</p>
               </div>
             </div>
@@ -139,7 +139,7 @@ export default function AdminEnquiryJourneyCard({
                 <Percent size={17} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-dark-muted text-[11px]">Discount</p>
+                <p className="text-dark-muted text-2xs">Discount</p>
                 <p className="text-rose-600 text-sm font-bold">{discountAmount > 0 ? `- ${formatPrice(discountAmount)}` : '—'}</p>
               </div>
             </div>
@@ -148,7 +148,7 @@ export default function AdminEnquiryJourneyCard({
                 <FileText size={17} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-dark-muted text-[11px]">Total Amount</p>
+                <p className="text-dark-muted text-2xs">Total Amount</p>
                 <p className="text-dark text-sm font-bold">{formatPrice(totalAmount)}</p>
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function AdminEnquiryJourneyCard({
                 <CheckCircle2 size={17} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-dark-muted text-[11px]">Paid Amount</p>
+                <p className="text-dark-muted text-2xs">Paid Amount</p>
                 <p className="text-green-700 text-sm font-bold">{formatPrice(paidAmount)}</p>
               </div>
             </div>
@@ -166,7 +166,7 @@ export default function AdminEnquiryJourneyCard({
                 <Clock size={17} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-dark-muted text-[11px]">Balance</p>
+                <p className="text-dark-muted text-2xs">Balance</p>
                 <p className="text-amber-600 text-sm font-bold">{formatPrice(pendingAmount)}</p>
               </div>
             </div>

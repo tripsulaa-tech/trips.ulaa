@@ -173,12 +173,12 @@ export default function HeroBannerSection({
                     awkwardly on narrow phone screens. */}
                 <div className="flex items-center justify-between gap-2 px-3 py-2 bg-background-warm/40 border-b border-background-warm">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[11px] font-bold flex-shrink-0">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-2xs font-bold flex-shrink-0">
                       {i + 1}
                     </span>
                     <span className="text-sm font-semibold text-dark whitespace-nowrap">Slide {i + 1}</span>
                     {!slide.active && (
-                      <span className="text-[10px] font-medium text-dark-muted bg-background-warm rounded-full px-2 py-0.5 whitespace-nowrap">
+                      <span className="text-2xs font-medium text-dark-muted bg-background-warm rounded-full px-2 py-0.5 whitespace-nowrap">
                         Hidden
                       </span>
                     )}
@@ -267,7 +267,7 @@ export default function HeroBannerSection({
                       <div className="mt-2 pl-4 space-y-2">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div>
-                            <label htmlFor={`home-hero-heading-1-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Line 1</label>
+                            <label htmlFor={`home-hero-heading-1-${slide.id}`} className="block text-2xs font-medium text-dark mb-1">Line 1</label>
                             <input
                               id={`home-hero-heading-1-${slide.id}`}
                               type="text"
@@ -277,7 +277,7 @@ export default function HeroBannerSection({
                             />
                           </div>
                           <div>
-                            <label htmlFor={`home-hero-heading-highlight-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Highlighted word</label>
+                            <label htmlFor={`home-hero-heading-highlight-${slide.id}`} className="block text-2xs font-medium text-dark mb-1">Highlighted word</label>
                             <input
                               id={`home-hero-heading-highlight-${slide.id}`}
                               type="text"
@@ -287,7 +287,7 @@ export default function HeroBannerSection({
                             />
                           </div>
                           <div>
-                            <label htmlFor={`home-hero-heading-2-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Line 1 continued</label>
+                            <label htmlFor={`home-hero-heading-2-${slide.id}`} className="block text-2xs font-medium text-dark mb-1">Line 1 continued</label>
                             <input
                               id={`home-hero-heading-2-${slide.id}`}
                               type="text"
@@ -298,8 +298,8 @@ export default function HeroBannerSection({
                           </div>
                         </div>
                         <div>
-                          <label htmlFor={`home-hero-subheading-${slide.id}`} className="block text-[11px] font-medium text-dark mb-1">Supporting Text</label>
-                          <p className="text-[11px] text-dark-muted leading-snug mb-1">Paragraph shown below the heading.</p>
+                          <label htmlFor={`home-hero-subheading-${slide.id}`} className="block text-2xs font-medium text-dark mb-1">Supporting Text</label>
+                          <p className="text-2xs text-dark-muted leading-snug mb-1">Paragraph shown below the heading.</p>
                           <textarea
                             id={`home-hero-subheading-${slide.id}`}
                             rows={2}
@@ -309,14 +309,14 @@ export default function HeroBannerSection({
                           />
                         </div>
                         <div>
-                          <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wide mb-1.5">Live preview</p>
+                          <p className="text-2xs font-medium text-dark-muted uppercase tracking-wide mb-1.5">Live preview</p>
                           <div className="rounded-lg bg-dark px-4 py-4">
                             <p className="font-display text-base sm:text-lg font-bold leading-[1.15] text-white mb-1.5">
                               {slide.heading_line1}
                               <br />
                               <span className="text-secondary italic">{slide.heading_highlight}</span> {slide.heading_line2}
                             </p>
-                            <p className="text-[11px] text-white/85">{slide.subheading}</p>
+                            <p className="text-2xs text-white/85">{slide.subheading}</p>
                           </div>
                         </div>
                       </div>

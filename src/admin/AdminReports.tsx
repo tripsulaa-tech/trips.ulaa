@@ -210,7 +210,7 @@ function StatCard({
         <p className="font-display text-xl sm:text-2xl font-bold text-dark leading-tight truncate">{value}</p>
       </div>
       <p className="text-dark-muted text-xs font-medium truncate mt-2">{label}</p>
-      {sub && <p className="text-dark-muted/70 text-[11px] mt-0.5 truncate">{sub}</p>}
+      {sub && <p className="text-dark-muted/70 text-2xs mt-0.5 truncate">{sub}</p>}
     </motion.div>
   );
 }
@@ -277,7 +277,7 @@ function RevenueTrendChart({ data }: { data: { label: string; amount: number }[]
           onClick={() => setActiveIndex(cur => (cur === i ? null : i))}
           onMouseLeave={() => setActiveIndex(cur => (cur === i ? null : cur))}
         >
-          <div className={`absolute -top-7 left-1/2 -translate-x-1/2 bg-dark text-white text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap transition-opacity pointer-events-none z-10 ${
+          <div className={`absolute -top-7 left-1/2 -translate-x-1/2 bg-dark text-white text-2xs font-semibold px-1.5 py-0.5 rounded whitespace-nowrap transition-opacity pointer-events-none z-10 ${
             activeIndex === i ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
           }`}>
             {formatPrice(d.amount)}
@@ -289,7 +289,7 @@ function RevenueTrendChart({ data }: { data: { label: string; amount: number }[]
             transition={{ duration: 0.5, delay: i * staggerStep, ease: 'easeOut' }}
             className={`w-full bg-gradient-to-t from-primary rounded-t-sm min-h-[2px] cursor-pointer ${activeIndex === i ? 'to-primary' : 'to-primary/60 group-hover:to-primary'}`}
           />
-          <span className="text-[9px] text-dark-muted truncate w-full text-center">
+          <span className="text-2xs text-dark-muted truncate w-full text-center">
             {i % labelEvery === 0 ? d.label : ''}
           </span>
         </div>
@@ -834,7 +834,7 @@ export default function AdminReports() {
 
               {lead.closedBreakdown.length > 0 && (
                 <div className="bg-white border border-background-warm rounded-lg px-4 py-3">
-                  <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-2">
+                  <p className="text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-2">
                     Closed Reasons ({lead.closedCount} closed)
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -849,7 +849,7 @@ export default function AdminReports() {
 
               {sourceBreakdown.length > 0 && (
                 <div className="bg-white rounded-lg shadow-card p-4">
-                  <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-3">
+                  <p className="text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-3">
                     Lead Source Breakdown
                   </p>
                   <div className="space-y-2.5">
@@ -895,7 +895,7 @@ export default function AdminReports() {
               </div>
 
               <div className="bg-white rounded-lg shadow-card p-4">
-                <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                <p className="text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1 flex items-center gap-1.5">
                   <BarChart3 size={13} aria-hidden="true" /> Collected Over Time
                 </p>
                 <RevenueTrendChart data={revenueTrend} />
@@ -903,7 +903,7 @@ export default function AdminReports() {
 
               {paymentMethodBreakdown.length > 0 && (
                 <div className="bg-white rounded-lg shadow-card p-4">
-                  <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <p className="text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-3 flex items-center gap-1.5">
                     <CreditCard size={13} aria-hidden="true" /> Collection by Payment Method
                   </p>
                   <div className="space-y-2.5">
@@ -932,7 +932,7 @@ export default function AdminReports() {
 
               {outstandingByPerson.length > 0 && (
                 <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto">
-                  <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide flex items-center gap-1.5 px-4 pt-4">
+                  <p className="text-2xs font-button font-bold text-dark-muted uppercase tracking-wide flex items-center gap-1.5 px-4 pt-4">
                     <UserCircle size={13} aria-hidden="true" /> Outstanding Balances by Person ({outstandingByPerson.length})
                   </p>
                   <table className="w-full text-sm min-w-[520px] mt-2">
@@ -1026,7 +1026,7 @@ export default function AdminReports() {
 
               {operational.topDestinations.length > 0 && (
                 <div className="bg-white rounded-lg shadow-card p-4">
-                  <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-3">
+                  <p className="text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-3">
                     Top Destinations
                   </p>
                   <div className="space-y-2.5">

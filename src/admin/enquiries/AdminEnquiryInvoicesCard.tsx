@@ -41,7 +41,7 @@ interface AdminEnquiryInvoicesCardProps {
 // cards, so status pills can't visually drift between the two layouts.
 function StatusPill({ isPending }: { isPending: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
+    <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
       isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
     }`}>
       <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : 'Paid'}
@@ -98,7 +98,7 @@ export default function AdminEnquiryInvoicesCard({
                       <td className="px-4 py-3 min-w-[140px]">
                         <p className="text-dark text-sm">{INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type}</p>
                         {(inv.payment_method || inv.utr_number) && (
-                          <p className="text-dark-muted text-[11px]">
+                          <p className="text-dark-muted text-2xs">
                             {inv.payment_method || ''}{inv.payment_method && inv.utr_number ? ' · ' : ''}{inv.utr_number ? `UTR ${inv.utr_number}` : ''}
                           </p>
                         )}
@@ -148,7 +148,7 @@ export default function AdminEnquiryInvoicesCard({
               return (
                 <div key={inv.id} className="px-4 py-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-dark-muted text-[11px] font-mono truncate">{inv.invoice_number || '—'}</p>
+                    <p className="text-dark-muted text-2xs font-mono truncate">{inv.invoice_number || '—'}</p>
                     <StatusPill isPending={isPending} />
                   </div>
                   <div className="flex items-center justify-between gap-2">
@@ -163,7 +163,7 @@ export default function AdminEnquiryInvoicesCard({
                     </span>
                   </div>
                   {(inv.payment_method || inv.utr_number) && (
-                    <p className="text-dark-muted text-[11px]">
+                    <p className="text-dark-muted text-2xs">
                       {inv.payment_method || ''}{inv.payment_method && inv.utr_number ? ' · ' : ''}{inv.utr_number ? `UTR ${inv.utr_number}` : ''}
                     </p>
                   )}

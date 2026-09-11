@@ -46,7 +46,7 @@ export default function WhyUlaaSection({
               <Sparkle size={14} className="text-primary" aria-hidden="true" />
               Eyebrow Text
             </label>
-            <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
+            <p className="text-2xs text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
             <textarea
               id="why-ulaa-sub-heading"
               value={content.sub_heading}
@@ -61,7 +61,7 @@ export default function WhyUlaaSection({
               <TextAa size={14} className="text-primary" aria-hidden="true" />
               Main Heading
             </label>
-            <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
+            <p className="text-2xs text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
             <textarea
               id="why-ulaa-heading"
               value={content.heading}
@@ -76,7 +76,7 @@ export default function WhyUlaaSection({
               <TextAlignLeft size={14} className="text-primary" aria-hidden="true" />
               Supporting Text
             </label>
-            <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
+            <p className="text-2xs text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
             <textarea
               id="why-ulaa-subheading"
               value={content.subheading}
@@ -114,7 +114,7 @@ export default function WhyUlaaSection({
                 className="rounded-xl border-2 border-background-warm bg-white overflow-hidden hover:border-primary/30 transition-colors"
               >
                 <div className="flex items-center gap-2 px-4 py-2.5 bg-background-warm/40 border-b border-background-warm">
-                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[11px] font-bold flex-shrink-0">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-2xs font-bold flex-shrink-0">
                     {index + 1}
                   </span>
                   <h3 className="font-display text-sm font-bold text-dark truncate">
@@ -133,7 +133,7 @@ export default function WhyUlaaSection({
                       required
                       aspectRatio="4/3"
                     />
-                    <p className="flex items-center gap-1 text-[10px] text-dark-muted leading-snug">
+                    <p className="flex items-center gap-1 text-2xs text-dark-muted leading-snug">
                       <ImageIcon size={11} className="flex-shrink-0" aria-hidden="true" />
                       4:3 landscape, at least 800×600px
                     </p>
@@ -143,7 +143,7 @@ export default function WhyUlaaSection({
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label htmlFor={`why-ulaa-card-title-${index}`} className="text-sm font-medium text-dark">Title</label>
-                        <span className={`text-[10px] ${titleOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
+                        <span className={`text-2xs ${titleOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
                           {feature.title.length}/{TITLE_SOFT_LIMIT}
                         </span>
                       </div>
@@ -154,13 +154,13 @@ export default function WhyUlaaSection({
                         className={inputClass}
                       />
                       {titleOverLimit && (
-                        <p className="text-[10px] text-primary mt-1">May wrap to two lines on the card.</p>
+                        <p className="text-2xs text-primary mt-1">May wrap to two lines on the card.</p>
                       )}
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label htmlFor={`why-ulaa-card-description-${index}`} className="text-sm font-medium text-dark">Description</label>
-                        <span className={`text-[10px] ${descriptionOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
+                        <span className={`text-2xs ${descriptionOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
                           {feature.description.length}/{DESCRIPTION_SOFT_LIMIT}
                         </span>
                       </div>
@@ -172,7 +172,7 @@ export default function WhyUlaaSection({
                         className={`${inputClass} resize-none`}
                       />
                       {descriptionOverLimit && (
-                        <p className="text-[10px] text-primary mt-1">Long copy may get clipped on smaller screens.</p>
+                        <p className="text-2xs text-primary mt-1">Long copy may get clipped on smaller screens.</p>
                       )}
                     </div>
                   </div>
@@ -180,7 +180,7 @@ export default function WhyUlaaSection({
 
                 {/* Live preview — mirrors the exact card markup from WhyULAA.tsx */}
                 <div className="px-4 pb-4">
-                  <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wide mb-1.5">Live preview</p>
+                  <p className="text-2xs font-medium text-dark-muted uppercase tracking-wide mb-1.5">Live preview</p>
                   <div className="relative w-full max-w-[220px] aspect-[4/3] rounded-lg overflow-hidden border border-background-warm bg-background-warm">
                     {feature.image ? (
                       <img src={feature.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -194,7 +194,7 @@ export default function WhyUlaaSection({
                       <p className="font-display text-sm font-bold text-white mb-0.5 leading-tight">
                         {feature.title || 'Card title'}
                       </p>
-                      <p className="text-white/90 text-[11px] leading-snug line-clamp-2">
+                      <p className="text-white/90 text-2xs leading-snug line-clamp-2">
                         {feature.description || 'Card description goes here.'}
                       </p>
                     </div>

@@ -30,7 +30,7 @@ export function QueueRankBadge({ entry, queueRank }: {
       title={rank!.rank === 1
         ? `First in line for this trip — ${rank!.total} waiting in total`
         : `#${rank!.rank} of ${rank!.total} waiting for this trip — ${rank!.rank - 1} waited longer`}
-      className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${
+      className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${
         rank!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
       }`}
     >
@@ -46,7 +46,7 @@ export function ConvertedProgressBadge({ entry }: { entry: WaitlistEntry }) {
   return (
     <span
       title={`${convertedCount(entry)} of ${seatsNeeded(entry)} in this group converted so far — ${seatsRemaining(entry)} left to go`}
-      className="inline-flex items-center gap-1 text-[10px] font-button font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 whitespace-nowrap"
+      className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 whitespace-nowrap"
     >
       <CheckCircle2 size={9} aria-hidden="true" /> {convertedCount(entry)}/{seatsNeeded(entry)} converted
     </span>
@@ -61,7 +61,7 @@ export function SeatAvailabilityBadges({ entry, seatsAvailable }: {
 }) {
   if (hasSeatOpen(entry, seatsAvailable)) {
     return (
-      <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
+      <span className="mt-1 inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
         <PartyPopper size={10} className="shrink-0" aria-hidden="true" />
         {seatsAvailable[entry.trip_id]} seat{seatsAvailable[entry.trip_id] === 1 ? '' : 's'} open
       </span>
@@ -71,7 +71,7 @@ export function SeatAvailabilityBadges({ entry, seatsAvailable }: {
     return (
       <span
         title={`Needs ${seatsRemaining(entry)} more seats free together — only ${seatsAvailable[entry.trip_id]} open so far`}
-        className="mt-1 inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 whitespace-nowrap"
+        className="mt-1 inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 whitespace-nowrap"
       >
         {seatsAvailable[entry.trip_id]}/{seatsRemaining(entry)} seats open
       </span>
@@ -159,7 +159,7 @@ export function WaitlistStatusControl({ entry, idPrefix, updating, onStatusChang
       />
       {expiry && (
         <span
-          className={`inline-flex items-center gap-1 text-[10px] font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${expiryBadgeClassName} ${
+          className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${expiryBadgeClassName} ${
             expiry.overdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
           }`}
         >

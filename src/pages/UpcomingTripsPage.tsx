@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Sparkle } from '@phosphor-icons/react';
+import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import TripCard from '../components/ui/TripCard';
 import { TripSearchFilterBar } from '../components/ui/TripSearchFilterBar';
@@ -10,6 +12,7 @@ import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { useMonthFilteredTrips } from '../hooks/useMonthFilteredTrips';
 import { useLiveNavLabel } from '../hooks/useLiveNavLabel';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
+import { getActivePrice, specialOfferDaysLeft } from '../utils/utils-index';
 import type { UpcomingTrip } from '../types/types-index';
 
 
@@ -67,6 +70,15 @@ export default function UpcomingTripsPage() {
 
   const { filtered, monthCounts } = useMonthFilteredTrips(trips, search, month, getStartDate, isComingSoon);
 
+  // Trips with a named special offer live right now (e.g. "Diwali
+  // Dhamaka") — drives the banner strip below. Recomputed only when the
+  // trip list changes, not on every render, since "today" only actually
+  // changes once a day.
+  const activeSpecialOfferTrips = useMemo(
+    () => trips.filter(trip => getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date).isSpecialOffer),
+    [trips]
+  );
+
   return (
     <Layout>
       {/* Hero */}
@@ -98,6 +110,50 @@ export default function UpcomingTripsPage() {
           />
         </div>
       </div>
+
+      {/* Live special offer(s) — only rendered when at least one trip has
+          a flash offer live right now; disappears on its own once the
+          offer's end date passes. */}
+      {activeSpecialOfferTrips.length > 0 && (
+        <div className="px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="max-w-[1344px] mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-gradient-to-r from-primary-dark to-primary rounded-xl px-4 sm:px-6 py-4 flex flex-wrap items-center gap-3"
+            >
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/15 text-white shrink-0">
+                <Sparkle size={18} weight="fill" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-button font-bold text-sm sm:text-base leading-tight">
+                  {activeSpecialOfferTrips.length === 1
+                    ? (() => {
+                        const t = activeSpecialOfferTrips[0];
+                        const daysLeft = specialOfferDaysLeft(t.special_offer_date!, t.special_offer_end_date);
+                        return `${t.special_offer_name} — ${daysLeft <= 1 ? 'ends today!' : `ends in ${daysLeft} days!`}`;
+                      })()
+                    : `${activeSpecialOfferTrips.length} special offers live now!`}
+                </p>
+                <p className="text-white/80 text-xs sm:text-sm mt-0.5">
+                  {activeSpecialOfferTrips.length === 1
+                    ? 'Grab this trip at the offer price before it\'s gone.'
+                    : activeSpecialOfferTrips.map(t => t.special_offer_name).join(' · ')}
+                </p>
+              </div>
+              {activeSpecialOfferTrips.length === 1 && (
+                <Link
+                  to={`/trips/${activeSpecialOfferTrips[0].slug}`}
+                  className="shrink-0 bg-white text-primary-dark font-button font-semibold text-xs sm:text-sm px-4 py-2 rounded-md hover:bg-white/90 transition-colors"
+                >
+                  View Trip
+                </Link>
+              )}
+            </motion.div>
+          </div>
+        </div>
+      )}
 
       {/* Trips */}
       <div className="relative isolate px-4 sm:px-6 lg:px-8 py-6 md:py-16">

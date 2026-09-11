@@ -56,6 +56,10 @@ export const handleExportTemplate = () => {
     early_bird_deadline: '<Early bird deadline, format YYYY-MM-DD, or "">',
     strike_through_price: '<Optional "was ₹X" marketing price as a number, or "">',
     advance_amount: '<Optional advance/reservation amount in INR as a number, or "">',
+    special_offer_name: '<Optional flash offer name, e.g. "Diwali Dhamaka", or "">',
+    special_offer_price: '<Optional flash offer price per person in INR as a number, or "">',
+    special_offer_date: '<Optional flash offer start date, format YYYY-MM-DD, or "">',
+    special_offer_end_date: '<Optional flash offer end date (inclusive), format YYYY-MM-DD, e.g. 3 days after special_offer_date for a 3-day sale, or "" to run it for special_offer_date only>',
     card_feature_tags: [
       { icon: '<Icon-library key, NOT an emoji — e.g. "venus", "crown", "map-pinned". See src/constants/tripHighlightIcons.ts.>', label: '<Short bold label, e.g. "Girls-Only">' },
     ],
@@ -252,6 +256,10 @@ export function parseImportedTripForm(raw: unknown): TripForm {
       early_bird_deadline: asStr(r.early_bird_deadline),
       strike_through_price: asNum(r.strike_through_price),
       advance_amount: asNum(r.advance_amount),
+      special_offer_name: asStr(r.special_offer_name),
+      special_offer_price: asNum(r.special_offer_price),
+      special_offer_date: asStr(r.special_offer_date),
+      special_offer_end_date: asStr(r.special_offer_end_date),
       trip_type: r.trip_type === 'domestic' || r.trip_type === 'international' ? r.trip_type : '',
       // Imported the same way itinerary images always were: real URLs
       // (e.g. Wikimedia/Unsplash links an admin filled in) come through

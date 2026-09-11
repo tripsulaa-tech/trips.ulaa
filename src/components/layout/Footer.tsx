@@ -97,7 +97,7 @@ export default function Footer() {
           </Link>
 
           {/* Tagline */}
-          <p className="mt-4 text-[#a89a8a] text-[15px] leading-relaxed">
+          <p className="mt-4 text-[#a89a8a] text-base leading-relaxed">
             Girls-only travel experiences
             <br />
             Discover hidden destinations together.
@@ -138,7 +138,7 @@ export default function Footer() {
               className={`flex flex-col items-center gap-2 px-1 ${i !== 0 ? 'border-l border-white/10' : ''}`}
             >
               <Icon className="w-5 h-5 text-[#efe3cf]" strokeWidth={1.75} />
-              <span className="text-[12px] sm:text-[13px] leading-tight text-[#efe3cf]">
+              <span className="text-xs sm:text-sm leading-tight text-[#efe3cf]">
                 {label.split(' ').map((word, idx) => (
                   <span key={idx} className="block">{word}</span>
                 ))}
@@ -151,7 +151,7 @@ export default function Footer() {
         <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.03] py-3.5 px-3 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
           <a
             href="mailto:trips.ulaa@gmail.com"
-            className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors whitespace-nowrap shrink-0"
+            className="flex items-center gap-1 text-2xs sm:text-2xs text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors whitespace-nowrap shrink-0"
           >
             <Mail className="w-3.5 h-3.5 text-[#e4782f] shrink-0" strokeWidth={1.75} />
             trips.ulaa@gmail.com
@@ -159,23 +159,23 @@ export default function Footer() {
           <span className="h-6 w-px bg-white/10 shrink-0" />
           <a
             href="tel:+916381336772"
-            className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors whitespace-nowrap shrink-0"
+            className="flex items-center gap-1 text-2xs sm:text-2xs text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors whitespace-nowrap shrink-0"
           >
             <Phone className="w-3.5 h-3.5 text-[#e4782f] shrink-0" strokeWidth={1.75} />
             +91 63813 36772
           </a>
           <span className="h-6 w-px bg-white/10 shrink-0" />
-          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#fdfcf6]/95 whitespace-nowrap shrink-0">
+          <div className="flex items-center gap-1 text-2xs sm:text-2xs text-[#fdfcf6]/95 whitespace-nowrap shrink-0">
             <MapPin className="w-3.5 h-3.5 text-[#e4782f] shrink-0" strokeWidth={1.75} />
             India
           </div>
         </div>
 
           {/* Bottom */}
-          <p className="mt-8 text-[13px] text-[#a89a8a] flex items-center justify-center gap-1.5">
+          <p className="mt-8 text-sm text-[#a89a8a] flex items-center justify-center gap-1.5">
             Made with <Heart className="w-3.5 h-3.5 text-[#e4782f] fill-[#e4782f]" /> for the fearless women of India.
           </p>
-          <p className="mt-2 text-[12px] text-[#a89a8a]/80">
+          <p className="mt-2 text-xs text-[#a89a8a]/80">
             © {year} ULAA · <a href="https://www.ulaatrips.com" className="hover:text-[#e4782f] transition-colors">www.ulaatrips.com</a> · All rights reserved.
           </p>
         </div>
@@ -193,7 +193,7 @@ export default function Footer() {
                 className="w-full max-w-[210px] h-auto"
               />
             </Link>
-            <p className="mt-3 text-[#a89a8a] text-[15px] leading-relaxed max-w-sm">
+            <p className="mt-3 text-[#a89a8a] text-base leading-relaxed max-w-sm">
               A girls-only travel community for curated trips to India's most beautiful hidden destinations.
             </p>
           </div>
@@ -209,7 +209,7 @@ export default function Footer() {
                 <li key={to}>
                   <Link
                     to={to}
-                    className="group flex items-center gap-2.5 text-[#fdfcf6]/90 hover:text-[#e4782f] transition-colors text-[15px]"
+                    className="group flex items-center gap-2.5 text-[#fdfcf6]/90 hover:text-[#e4782f] transition-colors text-base"
                   >
                     <Icon className="w-4 h-4 text-[#e4782f] shrink-0" strokeWidth={1.75} />
                     {label}
@@ -229,7 +229,7 @@ export default function Footer() {
               Contact
             </h3>
             <span className="mt-2 block w-8 h-px bg-[#e4782f]" />
-            <ul className="mt-4 space-y-5 text-[15px]">
+            <ul className="mt-4 space-y-5 text-base">
               <li>
                 <a
                   href="mailto:trips.ulaa@gmail.com"
@@ -278,7 +278,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="relative max-w-[1344px] mx-auto mt-8 pt-5 border-t border-white/10 flex items-center justify-center gap-3 text-[13px] text-[#a89a8a]">
+        <div className="relative max-w-[1344px] mx-auto mt-8 pt-5 border-t border-white/10 flex items-center justify-center gap-3 text-sm text-[#a89a8a]">
           <span className="flex items-center gap-1.5">
             Made with <Heart className="w-3.5 h-3.5 text-[#e4782f] fill-[#e4782f]" /> for the fearless women of India.
           </span>

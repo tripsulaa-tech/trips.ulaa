@@ -83,7 +83,7 @@ export default function AdminTravellersDesktopTable({
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="font-medium text-dark truncate max-w-[160px]">{contact.fullName}</p>
                           {contact.tripCount > 1 && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
+                            <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
                               <Repeat size={9} aria-hidden="true" /> {contact.tripCount} trips
                             </span>
                           )}
@@ -133,7 +133,7 @@ export default function AdminTravellersDesktopTable({
                   </td>
                   <td className="px-4 py-4 text-center">
                     {badge && (
-                      <span className={`inline-flex text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${badge.color}`}>
+                      <span className={`inline-flex text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${badge.color}`}>
                         {badge.label}
                       </span>
                     )}

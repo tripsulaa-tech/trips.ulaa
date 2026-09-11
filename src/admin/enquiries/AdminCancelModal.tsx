@@ -109,7 +109,7 @@ export default function CancelModal({
               className={inputClass}
               placeholder="Airline/hotel penalties, if known — optional"
             />
-            <p id="cancel-charges-hint" className="text-[11px] text-dark-muted mt-1">
+            <p id="cancel-charges-hint" className="text-2xs text-dark-muted mt-1">
               Used to compute the suggested refund estimate. You can leave this blank and add it later.
             </p>
           </div>
@@ -123,7 +123,7 @@ export default function CancelModal({
             />
             <span>
               This is a <span className="font-medium">no-show</span> (didn't report at the meeting point/date/time).
-              <span className="block text-[11px] text-dark-muted">Per policy, no-shows forfeit the full amount paid — the refund amount will be locked at ₹0.</span>
+              <span className="block text-2xs text-dark-muted">Per policy, no-shows forfeit the full amount paid — the refund amount will be locked at ₹0.</span>
             </span>
           </label>
 

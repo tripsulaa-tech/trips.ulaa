@@ -122,7 +122,7 @@ export default function AdminEnquiryHeaderCard({
                 informational; check the Invoices card below for the
                 actual charge. */}
             {enquiry.has_child_addon && (
-              <span title="A Child Fare add-on has been added to this booking — see Invoices below" className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
+              <span title="A Child Fare add-on has been added to this booking — see Invoices below" className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
                 <Baby size={10} aria-hidden="true" /> Bringing a Child
               </span>
             )}
@@ -137,15 +137,15 @@ export default function AdminEnquiryHeaderCard({
               </button>
             )}
             {enquiry.group_size && enquiry.group_size > 1 ? (
-              <span title={`Part of a group booking of ${enquiry.group_size} — this is traveler #${enquiry.group_seq}`} className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
+              <span title={`Part of a group booking of ${enquiry.group_size} — this is traveler #${enquiry.group_seq}`} className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
                 <Users size={10} aria-hidden="true" /> Group of {enquiry.group_size} · seat {enquiry.group_seq}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
+              <span className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
                 <User size={10} aria-hidden="true" /> Solo
               </span>
             )}
-            <span className={`inline-flex items-center gap-0.5 text-[11px] font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
+            <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${food.color}`}>
               <FoodMark type={foodPreferenceKey(enquiry)} size={10} /> {food.label}
             </span>
             </div>
@@ -160,7 +160,7 @@ export default function AdminEnquiryHeaderCard({
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCancelled(enquiry) ? 'bg-red-600' : 'bg-green-600'}`} aria-hidden="true" />
                   {isCancelled(enquiry) ? 'Cancelled' : 'Active Enquiry'}
                 </p>
-                <p className="text-dark-muted text-[11px]">· Created on {formatDate(enquiry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                <p className="text-dark-muted text-2xs">· Created on {formatDate(enquiry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
               </div>
             )}
           </div>

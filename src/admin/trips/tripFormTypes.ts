@@ -37,6 +37,15 @@ export interface TripForm {
   // booking panel instead of the "Seats available" badge. '' means "not
   // set" (stored as null) — see add_trip_advance_amount.sql.
   advance_amount: number | '';
+  // Named flash offer (e.g. "Diwali Dhamaka") — distinct from early_bird
+  // above. Runs from special_offer_date through special_offer_end_date
+  // inclusive (e.g. a 3-day sale); leaving special_offer_end_date '' runs
+  // it for special_offer_date only. '' means "not set" (stored as null).
+  // See add_trip_special_offer.sql and add_trip_special_offer_end_date.sql.
+  special_offer_name: string;
+  special_offer_price: number | '';
+  special_offer_date: string;
+  special_offer_end_date: string;
   // Up to 4 fixed marketing tags shown in the icon row on the public Trip
   // Card, e.g. "Girls-Only" / "Safe & fun". Empty array falls back to
   // TripCard's auto-generated tags — see add_trip_card_feature_tags.sql.
@@ -90,7 +99,9 @@ export const emptyForm: TripForm = {
   meeting_point: '', meeting_point_map_url: '',
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
-  early_bird_price: '', early_bird_deadline: '', strike_through_price: '', advance_amount: '', card_feature_tags: [], trip_type: '',
+  early_bird_price: '', early_bird_deadline: '', strike_through_price: '', advance_amount: '',
+  special_offer_name: '', special_offer_price: '', special_offer_date: '', special_offer_end_date: '',
+  card_feature_tags: [], trip_type: '',
   cover_image: '', cover_image_crop: null, hero_mobile_image: '', terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, status: 'draft',
   // Extended

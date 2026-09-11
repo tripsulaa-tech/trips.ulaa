@@ -234,7 +234,7 @@ export default function AdminAlbums() {
                         <p className="text-xs text-dark-muted truncate">{album.destination}</p>
                       </div>
                     </div>
-                    <span className={`shrink-0 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                    <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                       {album.is_published ? 'Published' : 'Draft'}
                     </span>
                   </div>

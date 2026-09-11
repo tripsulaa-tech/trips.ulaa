@@ -103,7 +103,7 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
           <label className="block text-sm font-medium text-dark mb-1 flex items-center gap-1.5">
             <Move size={14} className="text-primary" /> Position &amp; Zoom
           </label>
-          <p className="text-[11px] text-dark-muted leading-snug mb-2 max-w-sm">
+          <p className="text-2xs text-dark-muted leading-snug mb-2 max-w-sm">
             For a sharp, well-framed result in both previews below, upload a
             wide landscape image at least <span className="font-medium text-dark">2400×1029px</span> (a
             21:9 widescreen shape), with the main subject centered — the crop below
@@ -123,7 +123,7 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
             />
             <div className="absolute inset-0 border border-white/20 pointer-events-none" />
             {!dragging && (
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-dark/70 text-white text-[11px] font-medium px-2.5 py-1 rounded-md pointer-events-none">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-dark/70 text-white text-2xs font-medium px-2.5 py-1 rounded-md pointer-events-none">
                 Drag to reposition
               </div>
             )}
@@ -168,8 +168,8 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
                     style={getCoverImageStyle(crop)}
                   />
                 </div>
-                <p className="text-[11px] font-medium text-dark mt-1">{layout.label}</p>
-                <p className="text-[10px] text-dark-muted leading-tight">{layout.sub}</p>
+                <p className="text-2xs font-medium text-dark mt-1">{layout.label}</p>
+                <p className="text-2xs text-dark-muted leading-tight">{layout.sub}</p>
               </div>
             ))}
           </div>

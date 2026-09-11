@@ -8,11 +8,12 @@ import {
   ShareNetwork as Share2,
   Timer,
   Bird,
+  Sparkle,
   CaretRight,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
@@ -133,8 +134,13 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
   const isAlmostFull = remaining <= 5 && remaining > 0;
   const isFull = remaining === 0;
-  const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
-  const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
+  const { activePrice, isEarlyBird, isSpecialOffer } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
+  const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
+  // Days left before the live special offer disappears — powers the
+  // urgency line below the price (mirrors the Early Bird countdown), so a
+  // shopper sees exactly how much runway they have to book instead of a
+  // silent "why is this discounted" offer.
+  const specialOfferDaysRemaining = trip.special_offer_date ? specialOfferDaysLeft(trip.special_offer_date, trip.special_offer_end_date) : 0;
 
   // Admin-set marketing tags (Admin → Add/Edit Trip → Overview & Itinerary)
   // take priority; falling back to tags built from real trip data keeps
@@ -189,7 +195,12 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               Only {remaining} left!
             </span>
           ) : null}
-          {isEarlyBird && (
+          {isSpecialOffer && trip.special_offer_name ? (
+            <span className="inline-flex items-center gap-1.5 bg-primary-dark text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
+              <Sparkle size={14} weight="fill" />
+              {trip.special_offer_name}
+            </span>
+          ) : isEarlyBird && (
             <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-secondary to-primary text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
               <Bird size={14} weight="fill" />
               Early Bird
@@ -258,33 +269,16 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             <div className="mb-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-display text-2xl font-bold text-primary">{formatPrice(activePrice)}</span>
+                <span className="text-xs font-medium text-dark-muted">/person</span>
                 {strikeThroughPrice != null && (
                   <>
                     <span className="text-gray-400 line-through text-sm">{formatPrice(strikeThroughPrice)}</span>
-                    <span className="bg-green-50 border border-green-200 text-green-700 text-[11px] font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
+                    <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
                       Save {formatPrice(strikeThroughPrice - activePrice)}
                     </span>
                   </>
                 )}
               </div>
-              {trip.advance_amount != null && (
-                <Link
-                  to={isFull ? `/trips/${trip.slug}` : `/trips/${trip.slug}?book=1`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2 hover:bg-green-100 hover:border-green-300 transition-colors"
-                >
-                  <ReserveShieldIcon className="w-[26px] h-[26px] text-green-700 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-green-700 text-xs font-button font-semibold leading-tight">
-                      Reserve your spot from {formatPrice(trip.advance_amount)}
-                    </p>
-                    <p className="text-dark text-[10.5px] leading-tight mt-0.5">
-                      Secure your trip with a small advance
-                    </p>
-                  </div>
-                  <CaretRight size={16} className="text-green-700 shrink-0" />
-                </Link>
-              )}
             </div>
           )}
 
@@ -296,7 +290,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               never renders without icons. Each tag sits in its own tinted
               chip with the icon in a small white "badge" square — the same
               boxed-icon-on-tint pattern as the Reserve-your-spot strip
-              above, rather than a bare column grid with divider rules, so
+              below, rather than a bare column grid with divider rules, so
               the two rows read as one consistent card language instead of
               two different UI kits stacked on top of each other. */}
           <div className="flex items-stretch gap-1.5 mb-3">
@@ -313,18 +307,56 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                       <TagIcon size={13} weight="regular" aria-hidden="true" />
                     </span>
                   )}
-                  <span className="text-[11px] font-semibold text-dark leading-tight truncate">{tag.label}</span>
+                  <span className="text-2xs font-semibold text-dark leading-tight truncate">{tag.label}</span>
                 </div>
               );
             })}
           </div>
 
-          {isEarlyBird && trip.early_bird_deadline && (
+          {activePrice != null && trip.advance_amount != null && (
+            <Link
+              to={isFull ? `/trips/${trip.slug}` : `/trips/${trip.slug}?book=1`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3 hover:bg-green-100 hover:border-green-300 transition-colors"
+            >
+              <ReserveShieldIcon className="w-[26px] h-[26px] text-green-700 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-green-700 text-xs font-button font-semibold leading-tight">
+                  Reserve your spot from {formatPrice(trip.advance_amount)}
+                </p>
+                <p className="text-dark text-2xs leading-tight mt-0.5">
+                  Secure your trip with a small advance
+                </p>
+              </div>
+              <CaretRight size={16} className="text-green-700 shrink-0" />
+            </Link>
+          )}
+
+          {isSpecialOffer && trip.special_offer_date ? (
             <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-5">
-              <Timer size={14} className="text-secondary shrink-0" />
-              <p className="text-dark text-[11.5px] leading-tight">
+              <Timer size={14} className="text-primary-dark shrink-0" />
+              <p className="text-dark text-2xs leading-tight">
+                {specialOfferDaysRemaining <= 1 ? (
+                  <>
+                    <span className="text-primary-dark font-bold">Offer ends today</span> — grab it before it's gone!
+                  </>
+                ) : (
+                  <>
+                    Offer ends in{' '}
+                    <span className="text-primary-dark font-bold">
+                      {specialOfferDaysRemaining} days
+                    </span>{' '}
+                    ({formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'short', year: 'numeric' })})
+                  </>
+                )}
+              </p>
+            </div>
+          ) : isEarlyBird && trip.early_bird_deadline && (
+            <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-5">
+              <Timer size={14} className="text-primary-dark shrink-0" />
+              <p className="text-dark text-2xs leading-tight">
                 Early bird ends in{' '}
-                <span className="text-secondary font-bold">
+                <span className="text-primary-dark font-bold">
                   {daysUntil(trip.early_bird_deadline)} {daysUntil(trip.early_bird_deadline) === 1 ? 'day' : 'days'}
                 </span>{' '}
                 ({formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })})

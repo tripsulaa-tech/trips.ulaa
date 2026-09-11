@@ -115,7 +115,7 @@ export default function JourneyIntroSection({
         </h3>
         <div>
           <label htmlFor="about-hye-heading" className={labelClass}>Main Heading</label>
-          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
+          <p className="text-2xs text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
           <textarea
             id="about-hye-heading"
             value={content.have_you_ever.heading}
@@ -186,7 +186,7 @@ export default function JourneyIntroSection({
         </h3>
         <div>
           <label htmlFor="about-wtu-heading" className={labelClass}>Main Heading</label>
-          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
+          <p className="text-2xs text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
           <textarea
             id="about-wtu-heading"
             value={content.welcome_to_ulaa.heading}

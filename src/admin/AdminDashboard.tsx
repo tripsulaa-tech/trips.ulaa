@@ -338,7 +338,7 @@ export default function AdminDashboard() {
                         <td className="py-2 sm:py-3 px-1 text-dark-muted truncate" title={e.trip_title || undefined}>{truncateText(e.trip_title || '—', 10)}</td>
                         <td className="py-2 sm:py-3 px-1 text-dark-muted whitespace-nowrap">{formatDate(e.created_at)}</td>
                         <td className="py-2 sm:py-3 px-1 text-right">
-                          <span className={`inline-block text-[10px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full whitespace-nowrap ${STATUS_STYLES[e.status]}`}>
+                          <span className={`inline-block text-2xs sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full whitespace-nowrap ${STATUS_STYLES[e.status]}`}>
                             {STATUS_LABELS[e.status]}
                           </span>
                         </td>
@@ -404,11 +404,11 @@ export default function AdminDashboard() {
                         <div className="min-w-0 flex-1">
                           <p className="font-semibold text-dark text-sm sm:text-base truncate group-hover:text-primary transition-colors">{trip.title}</p>
                           <div className="flex items-center justify-between gap-2 mt-0.5">
-                            <p className="text-dark-muted text-[11px] sm:text-xs truncate">
+                            <p className="text-dark-muted text-2xs sm:text-xs truncate">
                               {formatDateRange(trip.start_date, trip.end_date)}
                               {trip.duration ? ` • ${trip.duration}` : ''}
                             </p>
-                            <span className="flex-shrink-0 text-[10px] sm:text-xs font-semibold text-primary bg-orange-50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
+                            <span className="flex-shrink-0 text-2xs sm:text-xs font-semibold text-primary bg-orange-50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
                               {seatsLeft} Seats Left
                             </span>
                           </div>

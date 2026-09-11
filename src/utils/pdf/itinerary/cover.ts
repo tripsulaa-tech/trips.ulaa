@@ -94,7 +94,7 @@ export async function renderCover(ctx: PdfCtx, trip: PdfTrip): Promise<void> {
     // Meta row: dates • duration • total seats • age eligibility • early bird.
     // Pills auto-wrap onto a second row if the full set doesn't fit one line
     // (long destinations/durations, or an early-bird pill, can push it over).
-    const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
+    const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
     const metaParts = [
       formatDateRange(trip.start_date, trip.end_date),
       trip.duration,

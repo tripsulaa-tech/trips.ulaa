@@ -149,7 +149,7 @@ export default function TestimonialsSection({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="test-sub-heading" className="block text-sm font-medium text-dark mb-1">Eyebrow Text</label>
-            <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
+            <p className="text-2xs text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
             <textarea
               id="test-sub-heading"
               value={sectionText.sub_heading}
@@ -161,7 +161,7 @@ export default function TestimonialsSection({
           </div>
           <div>
             <label htmlFor="test-heading" className="block text-sm font-medium text-dark mb-1">Main Heading</label>
-            <p className="text-[11px] text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
+            <p className="text-2xs text-dark-muted leading-snug mb-1.5">The big bold heading itself.</p>
             <textarea
               id="test-heading"
               value={sectionText.heading}
@@ -173,7 +173,7 @@ export default function TestimonialsSection({
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="test-subheading" className="block text-sm font-medium text-dark mb-1">Supporting Text</label>
-            <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
+            <p className="text-2xs text-dark-muted leading-snug mb-1.5">Paragraph shown below the heading.</p>
             <textarea
               id="test-subheading"
               value={sectionText.subheading}
@@ -223,7 +223,7 @@ export default function TestimonialsSection({
                       )}
                     </div>
                   </div>
-                  <span className={`shrink-0 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                  <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                     {t.is_published ? 'Published' : 'Draft'}
                   </span>
                 </div>

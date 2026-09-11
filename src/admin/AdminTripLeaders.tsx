@@ -181,7 +181,7 @@ export default function AdminTripLeaders() {
                         )}
                       </div>
                     </div>
-                    <span className={`shrink-0 text-[10px] font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                    <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
                       {t.is_published ? 'Published' : 'Draft'}
                     </span>
                   </div>

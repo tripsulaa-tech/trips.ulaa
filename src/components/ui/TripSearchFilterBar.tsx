@@ -44,7 +44,7 @@ function MonthPills({
                 ? `inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-xs font-semibold ${
                     month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
                   }`
-                : `inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-semibold ${
+                : `inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-2xs font-semibold ${
                     month === m ? 'bg-white/25 text-white' : 'bg-white text-primary'
                   }`
             }

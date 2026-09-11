@@ -662,7 +662,7 @@ export default function AdminEnquiries() {
             are already active so it matches what's in the table below. */}
         {filter === 'closed' && closedReasonBreakdown(scopedEnquiries).length > 0 && (
           <div className="bg-white border border-background-warm rounded-lg px-4 py-3">
-            <p className="text-[11px] font-button font-bold text-dark-muted uppercase tracking-wide mb-2">
+            <p className="text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-2">
               Why these didn't convert
             </p>
             <div className="flex flex-wrap gap-2">
@@ -742,10 +742,10 @@ export default function AdminEnquiries() {
                 <p className="font-display font-bold text-dark truncate flex items-center gap-2">
                   <span className="truncate">{activeGroup ? (activeGroup.title || activeGroup.trip?.title || 'Untitled Trip') : 'All Trips'}</span>
                   {activeGroup?.isCompletedTrip && (
-                    <span className="shrink-0 text-[10px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-background-warm text-dark-muted">Completed</span>
+                    <span className="shrink-0 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-background-warm text-dark-muted">Completed</span>
                   )}
                   {activeGroup?.isDeletedTrip && (
-                    <span className="shrink-0 text-[10px] font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-50 text-red-600">Deleted</span>
+                    <span className="shrink-0 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-50 text-red-600">Deleted</span>
                   )}
                 </p>
                 {activeGroup?.trip?.start_date && activeGroup.trip.end_date && (
@@ -866,9 +866,9 @@ export default function AdminEnquiries() {
                 className="w-full flex items-center gap-2 sm:pointer-events-none sm:cursor-default"
               >
                 <SlidersHorizontal size={16} className="text-dark shrink-0" />
-                <span className="font-button font-bold text-dark text-[15px] whitespace-nowrap flex-1 text-left">Filters</span>
+                <span className="font-button font-bold text-dark text-base whitespace-nowrap flex-1 text-left">Filters</span>
                 {activeFilterCount > 0 && (
-                  <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-md bg-primary/10 text-primary text-[11px] font-button font-semibold">
+                  <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-md bg-primary/10 text-primary text-2xs font-button font-semibold">
                     {activeFilterCount} active
                   </span>
                 )}
@@ -885,7 +885,7 @@ export default function AdminEnquiries() {
                       Trip filter on the Waitlist page. Spans both mobile
                       grid columns since it's the primary/most-used filter. */}
                   <div className="relative col-span-2 sm:col-span-1 w-full sm:w-auto sm:min-w-[150px]">
-                    <label htmlFor="enq-filter-trip" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
+                    <label htmlFor="enq-filter-trip" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
                     <button
                       id="enq-filter-trip"
                       aria-haspopup="listbox"
@@ -935,7 +935,7 @@ export default function AdminEnquiries() {
                     >
                       <MessageCircle size={13} className="shrink-0" aria-hidden="true" />
                       General Enquiries
-                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-[10px] ${
+                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-2xs ${
                         selectedTripKey === UNLINKED_GROUP_KEY ? 'bg-white/20' : 'bg-background-warm'
                       }`}>
                         {enquiries.filter(e => !e.trip_id).length}
@@ -950,7 +950,7 @@ export default function AdminEnquiries() {
                       state alone; this filter only ever reaches the three
                       lead values (see Enquiry.status). */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-query" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Lead Status</label>
+                    <label htmlFor="enq-filter-query" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Lead Status</label>
                     <button
                       id="enq-filter-query"
                       aria-haspopup="listbox"
@@ -981,7 +981,7 @@ export default function AdminEnquiries() {
                       In", which neither Lead Status nor the coarser Booking
                       (booked/not booked/cancelled) filter below can reach. */}
                   <div className="relative w-full sm:w-auto sm:min-w-[160px]">
-                    <label htmlFor="enq-filter-journey" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking Journey</label>
+                    <label htmlFor="enq-filter-journey" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking Journey</label>
                     <button
                       id="enq-filter-journey"
                       aria-haspopup="listbox"
@@ -1010,7 +1010,7 @@ export default function AdminEnquiries() {
 
                   {/* Payment */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-pay" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Payment</label>
+                    <label htmlFor="enq-filter-pay" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Payment</label>
                     <button
                       id="enq-filter-pay"
                       aria-haspopup="listbox"
@@ -1036,7 +1036,7 @@ export default function AdminEnquiries() {
 
                   {/* Booking */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-booked" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking</label>
+                    <label htmlFor="enq-filter-booked" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking</label>
                     <button
                       id="enq-filter-booked"
                       aria-haspopup="listbox"
@@ -1078,7 +1078,7 @@ export default function AdminEnquiries() {
                     >
                       <CalendarClock size={13} className="shrink-0" aria-hidden="true" />
                       Follow-ups Due
-                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-[10px] ${
+                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-2xs ${
                         followUpDueOnly ? 'bg-white/20' : 'bg-background-warm'
                       }`}>
                         {followUpDueCount}
@@ -1088,7 +1088,7 @@ export default function AdminEnquiries() {
 
                   {/* Group / Solo */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-group" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Group / Solo</label>
+                    <label htmlFor="enq-filter-group" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Group / Solo</label>
                     <button
                       id="enq-filter-group"
                       aria-haspopup="listbox"
@@ -1114,7 +1114,7 @@ export default function AdminEnquiries() {
 
                   {/* Food */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-food" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Food</label>
+                    <label htmlFor="enq-filter-food" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Food</label>
                     <button
                       id="enq-filter-food"
                       aria-haspopup="listbox"
@@ -1142,7 +1142,7 @@ export default function AdminEnquiries() {
                       alongside auto-pricing; see add_enquiry_auto_pricing.sql
                       and PACKAGE_FILTER_LABELS). */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-package" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Package</label>
+                    <label htmlFor="enq-filter-package" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Package</label>
                     <button
                       id="enq-filter-package"
                       aria-haspopup="listbox"
@@ -1169,7 +1169,7 @@ export default function AdminEnquiries() {
                   {/* Source — overflow filter, kept in the same
                       label-on-top style as the rest of the row. */}
                   <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-more" className="block text-[10px] font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Source</label>
+                    <label htmlFor="enq-filter-more" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Source</label>
                     <button
                       id="enq-filter-more"
                       aria-haspopup="listbox"

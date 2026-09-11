@@ -915,13 +915,13 @@ export default function AdminCreatorRateCalculator() {
               <ClipboardText size={14} aria-hidden="true" /> Paste all 10
             </button>
           </div>
-          <p className="text-[11px] text-dark-muted mb-2">
+          <p className="text-2xs text-dark-muted mb-2">
             Tip: copy the 10 view counts (one per line, from Insights or a spreadsheet) and hit "Paste all 10", or paste into any box below and press Enter to move to the next.
           </p>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-5">
             {reelViews.map((val, i) => (
               <div key={i}>
-                <label htmlFor={`cr-reel-${i}`} className="block text-[11px] text-dark-muted mb-1">Reel {i + 1}</label>
+                <label htmlFor={`cr-reel-${i}`} className="block text-2xs text-dark-muted mb-1">Reel {i + 1}</label>
                 <input
                   id={`cr-reel-${i}`}
                   ref={el => { reelInputRefs.current[i] = el; }}
@@ -986,7 +986,7 @@ export default function AdminCreatorRateCalculator() {
               transition={{ delay: 0.1 }}
               className="bg-primary/5 border-2 border-primary/20 rounded-lg p-5 sm:p-6 text-center"
             >
-              <p className="text-[11px] font-button font-bold text-primary uppercase tracking-wide mb-1.5">
+              <p className="text-2xs font-button font-bold text-primary uppercase tracking-wide mb-1.5">
                 Suggested 1-Reel Commercial Range
               </p>
               <p className="font-display text-2xl sm:text-3xl font-bold text-dark">

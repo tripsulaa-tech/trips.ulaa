@@ -263,8 +263,8 @@ export default function TripDetailPage() {
   const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
   const isFull = remaining === 0;
   const isAlmostFull = remaining > 0 && remaining <= 5;
-  const { activePrice, isEarlyBird, deadlinePassed } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline);
-  const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price);
+  const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
+  const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
   // Amount still payable before the trip once the advance/reservation
   // amount is paid — powers the "Reserve today with only ₹X" panel below,
   // which replaces the old plain "Seats available" badge when the admin

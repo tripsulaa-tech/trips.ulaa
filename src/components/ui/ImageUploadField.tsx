@@ -110,7 +110,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
           {label}{required && ' *'}
         </label>
       )}
-      {hint && <p className="text-[11px] text-dark-muted leading-snug mb-1.5">{hint}</p>}
+      {hint && <p className="text-2xs text-dark-muted leading-snug mb-1.5">{hint}</p>}
 
       {/* Native file picker: opens gallery/camera on mobile, file browser on desktop */}
       <input

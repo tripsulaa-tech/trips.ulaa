@@ -125,7 +125,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
           )}
         </div>
       </div>
-      {hint && <p className="text-[11px] text-dark-muted leading-snug mb-1.5">{hint}</p>}
+      {hint && <p className="text-2xs text-dark-muted leading-snug mb-1.5">{hint}</p>}
       {children && <div className="mb-3">{children}</div>}
 
       {allowUrl && showUrlInput && (

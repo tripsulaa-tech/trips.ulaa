@@ -169,6 +169,10 @@ export function useTripFormModal(load: () => void) {
       early_bird_deadline: trip.early_bird_deadline || '',
       strike_through_price: trip.strike_through_price ?? '',
       advance_amount: trip.advance_amount ?? '',
+      special_offer_name: trip.special_offer_name || '',
+      special_offer_price: trip.special_offer_price ?? '',
+      special_offer_date: trip.special_offer_date || '',
+      special_offer_end_date: trip.special_offer_end_date || '',
       card_feature_tags: trip.card_feature_tags || [],
       trip_type: trip.trip_type || '',
       cover_image: trip.cover_image || '',
@@ -223,6 +227,13 @@ export function useTripFormModal(load: () => void) {
       });
       return;
     }
+    if (form.special_offer_date && form.special_offer_end_date && form.special_offer_end_date < form.special_offer_date) {
+      await alert({
+        title: 'Invalid offer date range',
+        message: 'Offer End Date cannot be before Offer Start Date.',
+      });
+      return;
+    }
     try {
       setSaving(true);
       const data = {
@@ -241,6 +252,10 @@ export function useTripFormModal(load: () => void) {
         early_bird_deadline: form.early_bird_deadline || null,
         strike_through_price: form.strike_through_price === '' ? null : form.strike_through_price,
         advance_amount: form.advance_amount === '' ? null : form.advance_amount,
+        special_offer_name: form.special_offer_name === '' ? null : form.special_offer_name,
+        special_offer_price: form.special_offer_price === '' ? null : form.special_offer_price,
+        special_offer_date: form.special_offer_date || null,
+        special_offer_end_date: form.special_offer_end_date || null,
         trip_type: form.trip_type === '' ? null : form.trip_type,
         min_age: form.min_age === '' ? null : form.min_age,
         max_age: form.max_age === '' ? null : form.max_age,

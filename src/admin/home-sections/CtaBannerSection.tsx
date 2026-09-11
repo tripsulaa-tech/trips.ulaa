@@ -34,7 +34,7 @@ export default function CtaBannerSection({
       />
       <div>
         <label htmlFor="cta-eyebrow" className={labelClass}>Eyebrow Text</label>
-        <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
+        <p className="text-2xs text-dark-muted leading-snug mb-1.5">Small script tagline shown above the heading.</p>
         <input
           id="cta-eyebrow"
           value={content.eyebrow}
@@ -56,7 +56,7 @@ export default function CtaBannerSection({
         </div>
         <div>
           <label htmlFor="cta-heading-highlight" className={labelClass}>Heading — Highlighted Line</label>
-          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Rendered in the accent color + italic.</p>
+          <p className="text-2xs text-dark-muted leading-snug mb-1.5">Rendered in the accent color + italic.</p>
           <input
             id="cta-heading-highlight"
             value={content.heading_highlight}
@@ -79,7 +79,7 @@ export default function CtaBannerSection({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="cta-primary-label" className={labelClass}>Primary Button Label</label>
-          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Links to /trips.</p>
+          <p className="text-2xs text-dark-muted leading-snug mb-1.5">Links to /trips.</p>
           <input
             id="cta-primary-label"
             value={content.primary_label}
@@ -90,7 +90,7 @@ export default function CtaBannerSection({
         </div>
         <div>
           <label htmlFor="cta-secondary-label" className={labelClass}>Secondary Button Label</label>
-          <p className="text-[11px] text-dark-muted leading-snug mb-1.5">Links to /contact.</p>
+          <p className="text-2xs text-dark-muted leading-snug mb-1.5">Links to /contact.</p>
           <input
             id="cta-secondary-label"
             value={content.secondary_label}
@@ -104,7 +104,7 @@ export default function CtaBannerSection({
           gradient overlay + both buttons (see CTASection.tsx), not just the
           text, so what's shown here matches the live site. */}
       <div>
-        <p className="text-[10px] font-medium text-dark-muted uppercase tracking-wide mb-1.5">Live preview</p>
+        <p className="text-2xs font-medium text-dark-muted uppercase tracking-wide mb-1.5">Live preview</p>
         <div className="relative rounded-lg overflow-hidden px-6 py-10 text-center bg-dark">
           {content.image && (
             <img src={content.image} alt="" className="absolute inset-0 w-full h-full object-cover" />

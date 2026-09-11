@@ -144,7 +144,7 @@ export default function WhyDifferentSection({
                       aspectRatio="4/3"
                       allowUrl
                     />
-                    <p className="flex items-center gap-1 text-[10px] text-dark-muted leading-snug">
+                    <p className="flex items-center gap-1 text-2xs text-dark-muted leading-snug">
                       <ImageIcon size={11} className="flex-shrink-0" aria-hidden="true" />
                       4:3, or paste an image URL (e.g. from Unsplash)
                     </p>
@@ -154,7 +154,7 @@ export default function WhyDifferentSection({
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label htmlFor={`about-why-card-heading-${i}`} className="text-sm font-medium text-dark">Heading</label>
-                        <span className={`text-[10px] ${headingOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
+                        <span className={`text-2xs ${headingOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
                           {card.heading.length}/{HEADING_SOFT_LIMIT}
                         </span>
                       </div>
@@ -166,13 +166,13 @@ export default function WhyDifferentSection({
                         className={`${inputClass} resize-none`}
                       />
                       {headingOverLimit && (
-                        <p className="text-[10px] text-primary mt-1">May wrap to two lines on the card.</p>
+                        <p className="text-2xs text-primary mt-1">May wrap to two lines on the card.</p>
                       )}
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label htmlFor={`about-why-card-description-${i}`} className="text-sm font-medium text-dark">Description</label>
-                        <span className={`text-[10px] ${descriptionOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
+                        <span className={`text-2xs ${descriptionOverLimit ? 'text-primary font-medium' : 'text-dark-muted'}`}>
                           {card.description.length}/{DESCRIPTION_SOFT_LIMIT}
                         </span>
                       </div>
@@ -184,7 +184,7 @@ export default function WhyDifferentSection({
                         className={`${inputClass} resize-none`}
                       />
                       {descriptionOverLimit && (
-                        <p className="text-[10px] text-primary mt-1">Long copy may get clipped on smaller screens.</p>
+                        <p className="text-2xs text-primary mt-1">Long copy may get clipped on smaller screens.</p>
                       )}
                     </div>
                   </div>

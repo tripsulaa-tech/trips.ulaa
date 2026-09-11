@@ -134,7 +134,7 @@ export default function AdminEnquiryActivityTimeline({ activityLog, loading }: A
                 <div className={`min-w-0 flex-1 ${isLast ? 'pb-0' : 'pb-4'}`}>
                   <p className="text-dark text-sm font-medium pt-1">{entry.action}</p>
                   {entry.details && <p className="text-dark-muted text-xs mt-0.5">{entry.details}</p>}
-                  <p className="text-dark-muted text-[11px] mt-0.5">
+                  <p className="text-dark-muted text-2xs mt-0.5">
                     {formatDate(entry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(entry.created_at)}
                   </p>
                 </div>
