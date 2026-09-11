@@ -886,11 +886,11 @@ export default function AdminCreatorRateCalculator() {
                     </button>
                   </div>
                   <p className="text-xs text-dark-muted mb-3">
-                    This is what Copy and Share send for every saved calculation below — tweak the wording, tone, or add a line, then Save.
-                    Use <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{greeting}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{niche}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{followers}}'}</code> and <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{items}}'}</code> wherever those should go — each is swapped for that creator's actual details when a message is sent.
+                    Sent via Copy and Share for every saved calculation. Edit the wording, then Save.
+                    Use <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{greeting}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{niche}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{followers}}'}</code> and <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{items}}'}</code> as placeholders — each fills in with the creator's actual details.
                   </p>
                   <p className="text-[11px] text-dark-muted mb-2">
-                    Select some text and tap a style below — colours can't be sent as a WhatsApp message, so these use WhatsApp's own formatting marks instead, and will show up bold/italic/etc. once the message is actually sent. Tip: wrap <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{items}}'}</code> itself in Monospace to line it up as a table.
+                    Select text and tap a style below — WhatsApp shows these as bold/italic/etc. on send (colours aren't supported). Tip: wrap <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{items}}'}</code> in Monospace to line it up as a table.
                   </p>
                   <div className="flex items-center gap-1.5 mb-2">
                     <button
