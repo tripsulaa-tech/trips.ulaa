@@ -1,6 +1,7 @@
 ﻿import { Suspense, lazy } from 'react';
 import Layout from '../components/layout/Layout';
 import HeroSection from '../sections/home/HeroSection';
+import SpecialOfferPopup from '../sections/home/SpecialOfferPopup';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 
 const WhyULAA = lazy(() => import('../sections/home/WhyULAA'));
@@ -21,6 +22,7 @@ export default function HomePage() {
 
   return (
     <Layout>
+      <SpecialOfferPopup />
       <HeroSection />
       <Suspense fallback={<div className="h-96 bg-background animate-pulse" />}>
         <UpcomingTripsPreview />
