@@ -27,6 +27,7 @@ import TripFaqCancellationSection from './trip-detail/TripFaqCancellationSection
 import TripStickyBookingBar from './trip-detail/TripStickyBookingBar';
 import TripEndBanner from './trip-detail/TripEndBanner';
 import TripBookingModal from './trip-detail/TripBookingModal';
+import TripSpecialOfferPopup from './trip-detail/TripSpecialOfferPopup';
 import { useIsDesktop } from './trip-detail/tripDetailUtils';
 
 export default function TripDetailPage() {
@@ -429,6 +430,16 @@ export default function TripDetailPage() {
         onClose={() => setBookingOpen(false)}
         bookingDraft={bookingDraft}
         onDraftChange={setBookingDraft}
+      />
+
+      <TripSpecialOfferPopup
+        trip={trip}
+        isSpecialOffer={isSpecialOffer}
+        activePrice={activePrice}
+        strikeThroughPrice={strikeThroughPrice}
+        isAlmostFull={isAlmostFull}
+        remaining={remaining}
+        onBook={openBooking}
       />
     </Layout>
   );
