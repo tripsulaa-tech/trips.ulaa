@@ -34,6 +34,10 @@ import {
   WhatsappLogo,
   Check,
   NotePencil as TemplateIcon,
+  TextB as BoldIcon,
+  TextItalic as ItalicIcon,
+  TextStrikethrough as StrikethroughIcon,
+  Code as MonospaceIcon,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
@@ -149,14 +153,53 @@ const DEFAULT_MESSAGE_TEMPLATE = [
 // feed it the in-progress form state without a full saved-row shape.
 type MessageTemplateSource = Pick<CreatorRateCalculation, 'creator_name' | 'niche' | 'follower_count' | 'final_commercials'>;
 
+// A real HTML table can't be sent as a WhatsApp message, but padding each
+// row's asset name out to the same width — inside a monospace block, where
+// every character is the same width — lines the Min/Max columns up into
+// something that reads as a table once WhatsApp renders the monospace
+// formatting. Used whenever {{items}} sits directly inside a ```…``` block
+// (the "Monospace" toolbar button wraps the current selection in exactly
+// that), so wrapping {{items}} in Monospace is what turns it into a table.
+function formatItemsAsTable(assets: CreatorRateAsset[]): string {
+  const nameWidth = Math.max(...assets.map(row => row.asset.length));
+  return assets
+    .map(row => `${row.asset.padEnd(nameWidth)}  ${formatPrice(row.min)} – ${formatPrice(row.max)}`)
+    .join('\n');
+}
+
 function renderMessageTemplate(template: string, h: MessageTemplateSource): string {
   const greeting = h.creator_name ? `Hi ${h.creator_name.trim().split(/\s+/)[0]}!` : 'Hi!';
-  const items = h.final_commercials.map(row => `• ${row.asset}: ${formatPrice(row.min)} – ${formatPrice(row.max)}`).join('\n');
+  const itemsToken = '{{items}}';
+  const tokenIndex = template.indexOf(itemsToken);
+  const isTableWrapped =
+    tokenIndex !== -1 &&
+    template.slice(Math.max(0, tokenIndex - 3), tokenIndex) === '```' &&
+    template.slice(tokenIndex + itemsToken.length, tokenIndex + itemsToken.length + 3) === '```';
+  const items = isTableWrapped
+    ? formatItemsAsTable(h.final_commercials)
+    : h.final_commercials.map(row => `• ${row.asset}: ${formatPrice(row.min)} – ${formatPrice(row.max)}`).join('\n');
   return template
     .replace('{{greeting}}', greeting)
     .replace('{{niche}}', h.niche)
     .replace('{{followers}}', h.follower_count.toLocaleString('en-IN'))
-    .replace('{{items}}', items);
+    .replace(itemsToken, items);
+}
+
+// Renders WhatsApp's own lightweight markup (*bold*, _italic_,
+// ~strikethrough~, ```monospace```) as actual formatting for the Preview
+// popup, so the admin can see how the message will really look once
+// WhatsApp applies that markup on send — the raw asterisks/underscores
+// stay in the underlying template text (and in what Copy puts on the
+// clipboard); this only affects what's displayed inside the popup itself.
+function renderFormattedPreview(text: string): (string | JSX.Element)[] {
+  const parts = text.split(/(\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~|```[^`]+```)/g);
+  return parts.map((part, i) => {
+    if (/^\*[^*\n]+\*$/.test(part)) return <strong key={i}>{part.slice(1, -1)}</strong>;
+    if (/^_[^_\n]+_$/.test(part)) return <em key={i}>{part.slice(1, -1)}</em>;
+    if (/^~[^~\n]+~$/.test(part)) return <span key={i} className="line-through">{part.slice(1, -1)}</span>;
+    if (/^```[^`]+```$/.test(part)) return <code key={i} className="font-mono text-[0.85em] bg-background-warm px-1 py-0.5 rounded">{part.slice(3, -3)}</code>;
+    return part;
+  });
 }
 
 // Sample "Final Commercials" used to fill the {{items}} token in the
@@ -375,6 +418,45 @@ export default function AdminCreatorRateCalculator() {
   const [templateExpanded, setTemplateExpanded] = useState(false);
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
+  const templateTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // ---- Formatting toolbar (Bold / Italic / Strikethrough / Monospace) ----
+  // The template ends up as a plain-text WhatsApp message (via Copy or
+  // Share) — there's no rich-text renderer on the receiving end, so real
+  // bold/italic/colour/table formatting can't actually be sent. WhatsApp
+  // does understand its own lightweight markup though (*bold*, _italic_,
+  // ~strikethrough~, and ```monospace```), and does render it, so these
+  // buttons wrap the current selection in that markup instead. Clicking
+  // again on an already-wrapped selection unwraps it (toggle).
+  const applyTemplateFormat = (marker: string) => {
+    const el = templateTextareaRef.current;
+    if (!el) return;
+    const { selectionStart, selectionEnd, value } = el;
+    const selected = value.slice(selectionStart, selectionEnd);
+    const before = value.slice(0, selectionStart);
+    const after = value.slice(selectionEnd);
+    const alreadyWrapped = before.endsWith(marker) && after.startsWith(marker);
+
+    let next: string;
+    let newStart: number;
+    let newEnd: number;
+    if (alreadyWrapped) {
+      next = before.slice(0, -marker.length) + selected + after.slice(marker.length);
+      newStart = selectionStart - marker.length;
+      newEnd = selectionEnd - marker.length;
+    } else {
+      const content = selected || 'text';
+      next = `${before}${marker}${content}${marker}${after}`;
+      newStart = selectionStart + marker.length;
+      newEnd = newStart + content.length;
+    }
+
+    setMessageTemplate(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(newStart, newEnd);
+    });
+  };
 
   useEffect(() => {
     (async () => {
@@ -729,7 +811,49 @@ export default function AdminCreatorRateCalculator() {
                     This is what Copy and Share send for every saved calculation below — tweak the wording, tone, or add a line, then Save.
                     Use <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{greeting}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{niche}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{followers}}'}</code> and <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{items}}'}</code> wherever those should go — each is swapped for that creator's actual details when a message is sent.
                   </p>
+                  <p className="text-[11px] text-dark-muted mb-2">
+                    Select some text and tap a style below — colours can't be sent as a WhatsApp message, so these use WhatsApp's own formatting marks instead, and will show up bold/italic/etc. once the message is actually sent. Tip: wrap <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{items}}'}</code> itself in Monospace to line it up as a table.
+                  </p>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => applyTemplateFormat('*')}
+                      title="Bold"
+                      aria-label="Bold"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    >
+                      <BoldIcon size={15} weight="bold" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyTemplateFormat('_')}
+                      title="Italic"
+                      aria-label="Italic"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    >
+                      <ItalicIcon size={15} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyTemplateFormat('~')}
+                      title="Strikethrough"
+                      aria-label="Strikethrough"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    >
+                      <StrikethroughIcon size={15} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyTemplateFormat('```')}
+                      title="Monospace"
+                      aria-label="Monospace"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    >
+                      <MonospaceIcon size={15} aria-hidden="true" />
+                    </button>
+                  </div>
                   <textarea
+                    ref={templateTextareaRef}
                     value={messageTemplate}
                     onChange={e => setMessageTemplate(e.target.value)}
                     rows={8}
@@ -773,7 +897,7 @@ export default function AdminCreatorRateCalculator() {
               : `Enter a follower count and Reel views above to preview with a real calculation — showing sample figures for now.`}
           </p>
           <div className="bg-background-warm/40 border border-background-warm rounded-md p-4 whitespace-pre-wrap text-sm text-dark font-sans">
-            {previewMessage}
+            {renderFormattedPreview(previewMessage)}
           </div>
         </Modal>
 
