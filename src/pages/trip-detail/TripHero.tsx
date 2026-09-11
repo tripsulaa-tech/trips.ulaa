@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
 import { PLACEHOLDER_IMAGE, formatDateRange, formatAgeRange, getCoverImageStyle } from '../../utils/utils-index';
-import { ArrowLeft, ArrowRight, MapPin, Calendar, Clock, Users, UserCheck } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, MapPin, Calendar, Clock, Users, UserCheck, Sparkle } from '@phosphor-icons/react';
 
 interface TripHeroProps {
   trip: UpcomingTrip;
@@ -12,6 +12,7 @@ interface TripHeroProps {
   isFull: boolean;
   isAlmostFull: boolean;
   isEarlyBird: boolean;
+  isSpecialOffer: boolean;
   descriptionExpanded: boolean;
   setDescriptionExpanded: React.Dispatch<React.SetStateAction<boolean>>;
   onBook: () => void;
@@ -23,6 +24,7 @@ export default function TripHero({
   isFull,
   isAlmostFull,
   isEarlyBird,
+  isSpecialOffer,
   descriptionExpanded,
   setDescriptionExpanded,
   onBook,
@@ -156,7 +158,12 @@ export default function TripHero({
             {(trip.min_age != null || trip.max_age != null) && (
               <span className="flex items-center gap-2"><UserCheck size={14} /> {formatAgeRange(trip.min_age, trip.max_age)}</span>
             )}
-            {isEarlyBird && (
+            {isSpecialOffer && trip.special_offer_name ? (
+              <span className="hidden sm:flex items-center gap-1.5 bg-primary-dark text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
+                <Sparkle size={14} weight="fill" />
+                {trip.special_offer_name}
+              </span>
+            ) : isEarlyBird && (
               <span className="hidden sm:flex items-center gap-1.5 bg-secondary text-dark text-xs font-button font-semibold px-3 py-1.5 rounded-md">
                 Early Bird
               </span>

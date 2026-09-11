@@ -1,7 +1,7 @@
 import Button from '../../components/ui/Button';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
-import { formatDate, formatPrice } from '../../utils/utils-index';
-import { Clock } from '@phosphor-icons/react';
+import { formatDate, formatPrice, specialOfferDaysLeft } from '../../utils/utils-index';
+import { Clock, Sparkle } from '@phosphor-icons/react';
 
 interface TripStickyBookingBarProps {
   trip: UpcomingTrip;
@@ -9,6 +9,7 @@ interface TripStickyBookingBarProps {
   activePrice: number | null | undefined;
   strikeThroughPrice: number | null | undefined;
   isEarlyBird: boolean;
+  isSpecialOffer: boolean;
   isFull: boolean;
   isAlmostFull: boolean;
   remaining: number;
@@ -21,6 +22,7 @@ export default function TripStickyBookingBar({
   activePrice,
   strikeThroughPrice,
   isEarlyBird,
+  isSpecialOffer,
   isFull,
   isAlmostFull,
   remaining,
@@ -53,8 +55,21 @@ export default function TripStickyBookingBar({
                   )}
                 </div>
 
-                {/* Row 3: Early Bird + Ends date, kept but compact */}
-                {isEarlyBird && (
+                {/* Row 3: Special Offer / Early Bird + Ends date, kept but compact */}
+                {isSpecialOffer ? (
+                  <div className="flex items-center gap-1.5 mt-0.5 overflow-x-auto no-scrollbar">
+                    <span className="inline-flex items-center gap-1 bg-primary-dark text-white text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                      <Sparkle size={9} weight="fill" />
+                      {trip.special_offer_name || 'Special Offer'}
+                    </span>
+                    {trip.special_offer_date && (
+                      <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
+                        <Clock size={9} className="shrink-0" />
+                        Ends {formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'short' })}
+                      </span>
+                    )}
+                  </div>
+                ) : isEarlyBird && (
                   <div className="flex items-center gap-1.5 mt-0.5 overflow-x-auto no-scrollbar">
                     <span className="bg-secondary text-dark text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                       Early Bird
@@ -83,16 +98,35 @@ export default function TripStickyBookingBar({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 overflow-x-auto no-scrollbar">
-                  {isEarlyBird && (
-                    <span className="bg-secondary text-dark text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
-                      Early Bird
-                    </span>
-                  )}
-                  {isEarlyBird && trip.early_bird_deadline && (
-                    <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
-                      <Clock size={10} className="shrink-0" />
-                      Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
+                  {isSpecialOffer ? (
+                    <>
+                      <span className="inline-flex items-center gap-1 bg-primary-dark text-white text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                        <Sparkle size={10} weight="fill" />
+                        {trip.special_offer_name || 'Special Offer'}
+                      </span>
+                      {trip.special_offer_date && (
+                        <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
+                          <Clock size={10} className="shrink-0" />
+                          {specialOfferDaysLeft(trip.special_offer_date, trip.special_offer_end_date) <= 1
+                            ? 'Offer ends today'
+                            : `Offer ends ${formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {isEarlyBird && (
+                        <span className="bg-secondary text-dark text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                          Early Bird
+                        </span>
+                      )}
+                      {isEarlyBird && trip.early_bird_deadline && (
+                        <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
+                          <Clock size={10} className="shrink-0" />
+                          Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               </>

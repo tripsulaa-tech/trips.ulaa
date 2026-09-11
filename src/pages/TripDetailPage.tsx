@@ -285,6 +285,7 @@ export default function TripDetailPage() {
         isFull={isFull}
         isAlmostFull={isAlmostFull}
         isEarlyBird={isEarlyBird}
+        isSpecialOffer={isSpecialOffer}
         descriptionExpanded={descriptionExpanded}
         setDescriptionExpanded={setDescriptionExpanded}
         onBook={openBooking}
@@ -378,6 +379,7 @@ export default function TripDetailPage() {
             activePrice={activePrice}
             strikeThroughPrice={strikeThroughPrice}
             isEarlyBird={isEarlyBird}
+            isSpecialOffer={isSpecialOffer}
             deadlinePassed={deadlinePassed}
             remainingAfterAdvance={remainingAfterAdvance}
             isFull={isFull}
@@ -407,6 +409,7 @@ export default function TripDetailPage() {
         activePrice={activePrice}
         strikeThroughPrice={strikeThroughPrice}
         isEarlyBird={isEarlyBird}
+        isSpecialOffer={isSpecialOffer}
         isFull={isFull}
         isAlmostFull={isAlmostFull}
         remaining={remaining}

@@ -3,7 +3,7 @@ import TripHighlightIconDisplay from '../../components/ui/TripHighlightIconDispl
 import Button from '../../components/ui/Button';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import type { UpcomingTrip, TripConfidenceItem, ButtonLabelsConfig } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, formatAgeRange } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, formatAgeRange, specialOfferDaysLeft } from '../../utils/utils-index';
 import { getGoogleCalendarUrl, downloadTripIcs } from '../../utils/calendar';
 import {
   Calendar,
@@ -16,6 +16,7 @@ import {
   ShareNetwork as Share2,
   SealCheck as BadgeCheck,
   ShieldCheck,
+  Sparkle,
 } from '@phosphor-icons/react';
 
 interface TripConfidenceBookingSectionProps {
@@ -28,6 +29,7 @@ interface TripConfidenceBookingSectionProps {
   activePrice: number | null | undefined;
   strikeThroughPrice: number | null | undefined;
   isEarlyBird: boolean;
+  isSpecialOffer: boolean;
   deadlinePassed: boolean;
   remainingAfterAdvance: number | null;
   isFull: boolean;
@@ -49,6 +51,7 @@ export default function TripConfidenceBookingSection({
   activePrice,
   strikeThroughPrice,
   isEarlyBird,
+  isSpecialOffer,
   deadlinePassed,
   remainingAfterAdvance,
   isFull,
@@ -107,14 +110,26 @@ export default function TripConfidenceBookingSection({
                     <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-button font-medium px-2.5 py-1 rounded-md">
                       Save {formatPrice(strikeThroughPrice - activePrice)}
                     </span>
-                    {isEarlyBird && (
+                    {isSpecialOffer && trip.special_offer_name ? (
+                      <span className="inline-flex items-center gap-1.5 bg-primary-dark text-white text-xs font-button font-bold px-2.5 py-1 rounded-md">
+                        <Sparkle size={12} weight="fill" />
+                        {trip.special_offer_name}
+                      </span>
+                    ) : isEarlyBird && (
                       <span className="bg-secondary text-dark text-xs font-button font-semibold px-2.5 py-1 rounded-md">
                         Early Bird
                       </span>
                     )}
                   </div>
 
-                  {isEarlyBird && trip.early_bird_deadline && (
+                  {isSpecialOffer && trip.special_offer_date ? (
+                    <p className="flex items-center justify-center gap-1 text-orange-600 text-xs font-medium mt-2">
+                      <Clock size={12} className="shrink-0" />
+                      {specialOfferDaysLeft(trip.special_offer_date, trip.special_offer_end_date) <= 1
+                        ? 'Offer ends today'
+                        : `Offer ends ${formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'long', year: 'numeric' })}`}
+                    </p>
+                  ) : isEarlyBird && trip.early_bird_deadline && (
                     <p className="flex items-center justify-center gap-1 text-orange-600 text-xs font-medium mt-2">
                       <Clock size={12} className="shrink-0" />
                       Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}
