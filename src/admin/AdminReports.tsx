@@ -50,6 +50,7 @@ import {
   UserCircle,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
+import Select from '../components/ui/Select';
 import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getAllPayments } from '../services/api';
 import type { Enquiry, UpcomingTrip, CompletedTrip, Payment } from '../types/types-index';
 import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
@@ -76,11 +77,15 @@ type Period = 'all' | 'month' | '30d';
 
 // Persisted the same way as the Enquiries page's filters (see
 // useEnquiryFilters.ts and utils/sessionState.ts) so switching admin tabs
-// and coming back to Reports keeps the same period toggle instead of
-// resetting to "All Time".
+// and coming back to Reports keeps the same period/trip filters instead of
+// resetting to "All Time" / "All Trips".
 const PERIOD_STORAGE_KEY = 'ulaa:admin-reports:filters';
-type PersistedReportsFilters = { period: Period };
+type PersistedReportsFilters = { period: Period; tripId: string };
 
+// Sentinel value for the Trip dropdown's "no trip selected" state — kept
+// out of the real trip id space (trip ids are UUIDs) so it can never
+// collide with an actual trip.
+const ALL_TRIPS = 'all';
 
 const PERIOD_OPTIONS: { value: Period; label: string; shortLabel: string }[] = [
   { value: 'all', label: 'All Time', shortLabel: 'All' },
@@ -346,11 +351,12 @@ export default function AdminReports() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>(() => loadPersisted<PersistedReportsFilters>(PERIOD_STORAGE_KEY).period ?? 'all');
+  const [tripId, setTripId] = useState<string>(() => loadPersisted<PersistedReportsFilters>(PERIOD_STORAGE_KEY).tripId ?? ALL_TRIPS);
 
-  // Persist the period toggle whenever it changes.
+  // Persist the period toggle and trip dropdown whenever either changes.
   useEffect(() => {
-    savePersisted<PersistedReportsFilters>(PERIOD_STORAGE_KEY, { period });
-  }, [period]);
+    savePersisted<PersistedReportsFilters>(PERIOD_STORAGE_KEY, { period, tripId });
+  }, [period, tripId]);
 
   useEffect(() => {
     Promise.all([getEnquiries(), getAllUpcomingTripsAdmin(), getAllCompletedTripsAdmin(), getAllPayments()])
@@ -364,12 +370,32 @@ export default function AdminReports() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Every metric below is derived from this one period-scoped list, so
-  // switching the period toggle re-derives the whole page consistently
-  // instead of some cards silently staying business-wide.
+  // Trip dropdown options — every upcoming + completed trip, deduped by id
+  // (a trip that's since completed would otherwise appear once from each
+  // table) and sorted alphabetically so a long trip list stays scannable.
+  const tripOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    upcomingTrips.forEach(t => byId.set(t.id, t.title));
+    completedTrips.forEach(t => { if (!byId.has(t.id)) byId.set(t.id, t.title); });
+    const sorted = Array.from(byId.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return [{ value: ALL_TRIPS, label: 'All Trips' }, ...sorted];
+  }, [upcomingTrips, completedTrips]);
+
+  // trip_id set for every not-yet-completed trip — used by Occupancy
+  // further down.
+  const upcomingTripIds = useMemo(() => new Set(upcomingTrips.map(t => t.id)), [upcomingTrips]);
+
+  // Every metric below is derived from this one scoped list, so switching
+  // either filter re-derives the whole page consistently instead of some
+  // cards silently staying business-wide. The time window and the trip
+  // dropdown stack (AND together) rather than being mutually exclusive —
+  // e.g. "This Month" + a specific trip shows that trip's leads from this
+  // month only.
   const scoped = useMemo(
-    () => enquiries.filter(e => withinPeriod(e.created_at, period)),
-    [enquiries, period]
+    () => enquiries.filter(e => withinPeriod(e.created_at, period) && (tripId === ALL_TRIPS || e.trip_id === tripId)),
+    [enquiries, period, tripId]
   );
 
   // trip_id -> destination, merged from both trip tables, so bookings on
@@ -454,7 +480,6 @@ export default function AdminReports() {
     // Deliberately NOT scoped to `scoped`/period — like the trip's real
     // seat count, this is "how full are trips right now", not "how many
     // people booked in the selected window".
-    const upcomingTripIds = new Set(upcomingTrips.map(t => t.id));
     const totalSeats = upcomingTrips.reduce((sum, t) => sum + (t.total_seats || 0), 0);
     const seatsBooked = enquiries.filter(e => isBooked(e) && e.trip_id && upcomingTripIds.has(e.trip_id)).length;
 
@@ -482,13 +507,21 @@ export default function AdminReports() {
 
   // Paid ledger rows within the selected period — the source for both the
   // trend chart and the payment-method breakdown below. Filtered on
-  // paid_at (when money actually moved), not the enquiry's created_at, and
+  // paid_at (when money actually moved), not the enquiry's created_at,
   // restricted to status === 'paid' so pending/uncollected invoice rows
   // (see the Payment interface's status field) don't get counted as
-  // revenue before they've actually been collected.
+  // revenue before they've actually been collected — and, when the Trip
+  // dropdown has a specific trip selected, further narrowed to payments
+  // belonging to that trip's enquiries. Payments don't carry trip_id
+  // directly, so that last check goes through the enquiry they belong to.
+  const enquiryTripId = useMemo(() => new Map(enquiries.map(e => [e.id, e.trip_id])), [enquiries]);
   const paidInPeriod = useMemo(
-    () => payments.filter(p => p.status === 'paid' && withinPeriod(p.paid_at, period)),
-    [payments, period]
+    () => payments.filter(p =>
+      p.status === 'paid'
+      && withinPeriod(p.paid_at, period)
+      && (tripId === ALL_TRIPS || enquiryTripId.get(p.enquiry_id) === tripId)
+    ),
+    [payments, period, tripId, enquiryTripId]
   );
 
   const revenueTrend = useMemo(() => buildRevenueTrend(paidInPeriod, period), [paidInPeriod, period]);
@@ -626,7 +659,8 @@ export default function AdminReports() {
 
   const handleExportCsv = () => {
     const rows: string[] = [];
-    rows.push(toCsvRow(['ULAA Reports', PERIOD_OPTIONS.find(p => p.value === period)?.label || period]));
+    const tripLabel = tripOptions.find(t => t.value === tripId)?.label || 'All Trips';
+    rows.push(toCsvRow(['ULAA Reports', PERIOD_OPTIONS.find(p => p.value === period)?.label || period, tripLabel]));
     rows.push('');
     rows.push(toCsvRow(['Lead Reports']));
     rows.push(toCsvRow(['Total Leads', lead.total]));
@@ -715,6 +749,16 @@ export default function AdminReports() {
                 </button>
               ))}
             </div>
+            <div className="w-40 shrink-0">
+              <label htmlFor="reports-trip-filter" className="sr-only">Filter by trip</label>
+              <Select
+                inputId="reports-trip-filter"
+                value={tripId}
+                onChange={setTripId}
+                options={tripOptions}
+                size="sm"
+              />
+            </div>
             {!loading && (
               <motion.button
                 type="button"
@@ -736,7 +780,7 @@ export default function AdminReports() {
         ) : (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-6 sm:space-y-8">
             {/* ---- Lead Reports ---- */}
-            <ReportSection title="Lead Reports" subtitle={`${lead.total} lead${lead.total === 1 ? '' : 's'} in range`} icon={Users} tone="primary">
+            <ReportSection title="Lead Reports" subtitle={`${lead.total} lead${lead.total === 1 ? '' : 's'} in this view`} icon={Users} tone="primary">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard label="Conversion Rate" value={`${lead.conversionPct}%`} sub={`${lead.bookedCount} of ${lead.total} booked`} icon={TrendingUp} tone="green" />
                 <StatCard label="New" value={lead.newCount} icon={UserPlus} tone="primary" />

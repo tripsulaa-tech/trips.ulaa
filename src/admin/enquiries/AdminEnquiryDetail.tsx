@@ -33,7 +33,8 @@ import {
 } from '../../services/api';
 import type { ActivityLogEntry, CancellationReason, ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
-import { sendBookingEmail } from '../../utils/bookingEmail';
+import { sendBookingEmail, bookingEmailPreview } from '../../utils/bookingEmail';
+import Modal from '../../components/ui/Modal';
 import { formatPrice } from '../../utils/utils-index';
 import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, computeDiscountedTotal } from './AdminEnquiryCommon';
 import type { PaymentForm, InvoiceAction } from './AdminEnquiryCommon';
@@ -79,6 +80,30 @@ export default function AdminEnquiryDetail() {
   // currently in flight — tracked per-action, not a single shared flag, so
   // clicking one doesn't disable the other two.
   const [invoiceBusyAction, setInvoiceBusyAction] = useState<InvoiceAction | null>(null);
+  // Read-only "what will actually be sent" preview, opened from the Eye
+  // icon next to Email Booking Confirmation — see handlePreviewEmail below.
+  // null = closed; otherwise holds the same to/subject/html the real send
+  // would use (built via bookingEmailPreview, no network call).
+  const [emailPreview, setEmailPreview] = useState<{ to: string; subject: string; html: string } | null>(null);
+  // Height (px) the preview iframe is sized to, computed from its actual
+  // content in the onLoad handler below — see the Modal at the bottom of
+  // this file for why: letting the iframe grow to its real content height
+  // (instead of a fixed box with its own internal scrollbar) means the one
+  // and only scrollbar the admin sees is the surrounding Modal's own
+  // app-scroll-themed one, not a second, unstyled native one nested inside
+  // the iframe's separate document (which can't see the app's CSS anyway).
+  const [emailPreviewHeight, setEmailPreviewHeight] = useState(400);
+  // Light (default) vs a simulated "auto-dark" rendering — the email
+  // itself is deliberately one fixed light-mode design (see the doc
+  // comment on buildBookingEmailHtml in bookingEmail.ts): a color-scheme
+  // meta tag tells *compliant* dark-mode clients (Apple Mail, Outlook.com)
+  // to keep showing it in light mode. But some clients — Gmail's Android
+  // app among them — ignore that and auto-invert the colors anyway. This
+  // toggle exists so an admin can sanity-check that scenario too, not
+  // because there's a real second template: "Dark" just applies a CSS
+  // invert filter over the same light-mode render as a rough approximation
+  // of that auto-invert behavior.
+  const [emailPreviewMode, setEmailPreviewMode] = useState<'light' | 'dark'>('light');
   // Brief "Copied" checkmark swap after tapping the Booking ID's copy icon —
   // resets itself after 1.5s, no toast/alert needed for something this minor.
   const [bookingIdCopied, setBookingIdCopied] = useState(false);
@@ -745,6 +770,21 @@ export default function AdminEnquiryDetail() {
     }
   };
 
+  // Builds the same to/subject/html handleSendBookingEmail would send and
+  // shows it in a read-only modal — nothing goes out over the network.
+  const handlePreviewEmail = async () => {
+    if (!enquiry) return;
+    try {
+      const rows = await getPaymentsForEnquiry(enquiry.id);
+      setEmailPreviewHeight(400);
+      setEmailPreviewMode('light');
+      setEmailPreview(bookingEmailPreview(enquiry, rows));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to build email preview.');
+    }
+  };
+
   const handleDelete = async () => {
     if (!enquiry) return;
     const ok = await confirm({
@@ -879,6 +919,7 @@ export default function AdminEnquiryDetail() {
           onDownloadInvoice={enquiry.booking_id ? handleDownloadInvoice : undefined}
           onShareInvoice={enquiry.booking_id ? handleShareInvoice : undefined}
           onEmailBooking={enquiry.booking_id && enquiry.email ? handleSendBookingEmail : undefined}
+          onPreviewEmail={enquiry.booking_id && enquiry.email ? handlePreviewEmail : undefined}
           invoiceBusyAction={invoiceBusyAction}
         />
 
@@ -1004,6 +1045,101 @@ export default function AdminEnquiryDetail() {
         cancelling={cancelling}
         onConfirm={handleConfirmCancel}
       />
+
+      {/* Read-only preview of the booking-confirmation email — same
+          to/subject/HTML handleSendBookingEmail would actually send, just
+          rendered here for a look before committing to Email Booking
+          Confirmation. The iframe is sized to its real content height
+          (via onLoad below) rather than given its own fixed height +
+          internal scrollbar: an iframe is a separate document, so it can't
+          see this app's .app-scroll theming (--color-primary etc.) —
+          letting it grow instead means the only scrollbar in play is the
+          Modal body's own, already-themed one, matching every other
+          scrollable modal in the app.
+          sandbox="allow-same-origin" (no allow-scripts) keeps the email
+          HTML fully non-executing while still letting the onLoad handler
+          below read its rendered height — safe here since bookingEmail.ts
+          escapes every enquiry field it interpolates and the markup never
+          includes a <script>. */}
+      <Modal
+        isOpen={!!emailPreview}
+        onClose={() => setEmailPreview(null)}
+        title="Email Preview"
+        size="xl"
+      >
+        {emailPreview && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="text-sm space-y-1 min-w-0">
+                <p><span className="text-dark-muted">To:</span> <span className="text-dark font-medium">{emailPreview.to}</span></p>
+                <p><span className="text-dark-muted">Subject:</span> <span className="text-dark font-medium">{emailPreview.subject}</span></p>
+              </div>
+              {/* Light/Dark toggle — see emailPreviewMode's doc comment
+                  above: "Dark" is a simulated auto-invert, not a real
+                  second template, so it's labelled accordingly rather than
+                  implying the email itself ships two designs. */}
+              <div className="inline-flex items-center rounded-md border border-background-warm p-0.5 shrink-0" role="group" aria-label="Preview color scheme">
+                <button
+                  type="button"
+                  onClick={() => setEmailPreviewMode('light')}
+                  className={`px-3 py-1.5 rounded text-xs font-button font-semibold transition-colors ${emailPreviewMode === 'light' ? 'bg-primary text-white' : 'text-dark-muted hover:text-dark'}`}
+                >
+                  Light
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmailPreviewMode('dark')}
+                  title="Simulates clients that ignore the email's light-mode setting and auto-invert colors (e.g. Gmail's Android app) — not a separate dark template"
+                  className={`px-3 py-1.5 rounded text-xs font-button font-semibold transition-colors ${emailPreviewMode === 'dark' ? 'bg-primary text-white' : 'text-dark-muted hover:text-dark'}`}
+                >
+                  Dark
+                </button>
+              </div>
+            </div>
+            {emailPreviewMode === 'dark' && (
+              <p className="text-dark-muted text-xs">
+                This email is designed as one fixed light-mode template — most clients (including Gmail's web/desktop apps) will show it exactly like the Light tab. This Dark tab simulates the auto-invert some clients (like Gmail's Android app) apply on their own, ignoring that.
+              </p>
+            )}
+            <div className={emailPreviewMode === 'dark' ? 'rounded-md bg-dark p-3' : ''}>
+              <iframe
+                title="Booking confirmation email preview"
+                srcDoc={emailPreview.html}
+                sandbox="allow-same-origin"
+                scrolling="no"
+                style={{ height: `${emailPreviewHeight}px`, filter: emailPreviewMode === 'dark' ? 'invert(1) hue-rotate(180deg)' : undefined }}
+                className="w-full border border-background-warm rounded-md bg-white block"
+                onLoad={(e) => {
+                  const doc = e.currentTarget.contentDocument;
+                  if (!doc) return;
+                  const measure = () => {
+                    const h = doc.documentElement?.scrollHeight || doc.body?.scrollHeight;
+                    if (h) setEmailPreviewHeight(h);
+                  };
+                  measure();
+                  // The iframe's own load event can fire before the two
+                  // external ULAA logo images (one of them the taller
+                  // logo+tagline "footer" variant — see the .logo-dark
+                  // comment in bookingEmail.ts) have actually finished
+                  // decoding, since they're fetched from ulaatrips.com
+                  // rather than bundled. Measuring again once every <img>
+                  // is done catches that late reflow — otherwise the box
+                  // above gets sized for a still-loading image and the
+                  // logo/tagline below it ends up clipped under the
+                  // iframe's fixed height instead of contained inside it.
+                  const imgs = Array.from(doc.querySelectorAll('img'));
+                  Promise.all(imgs.map(img => (
+                    img.complete ? Promise.resolve() : new Promise<void>(resolve => {
+                      img.addEventListener('load', () => resolve(), { once: true });
+                      img.addEventListener('error', () => resolve(), { once: true });
+                    })
+                  ))).then(measure);
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
     </AdminLayout>
   );
 }

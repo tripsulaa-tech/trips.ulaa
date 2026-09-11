@@ -69,7 +69,12 @@ function formatDateRange(start?: string, end?: string) {
   if (Number.isNaN(s.getTime())) return '—';
   const e = end ? new Date(end) : null;
   const sameMonth = e && s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
-  const monthYear = formatDateBase(start, { month: 'short', year: 'numeric' }, 'en-GB');
+  // `day` must be explicitly cleared here — formatDateBase (the shared
+  // formatDate) always defaults day to 'numeric' unless the caller
+  // overrides it, so without this the start day leaked into what's meant
+  // to be a bare "month year" suffix (e.g. "3 - 4 3 Oct 2026" instead of
+  // "3 - 4 Oct 2026").
+  const monthYear = formatDateBase(start, { day: undefined, month: 'short', year: 'numeric' }, 'en-GB');
   if (!e || Number.isNaN(e.getTime())) {
     return formatDate(start);
   }

@@ -11,7 +11,7 @@ import {
 } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import FoodMark from '../../components/ui/FoodMark';
-import { TablePagination, ContactQuickLinks } from '../../components/ui/DataTableChrome';
+import { MobilePaginationFooter, ContactQuickLinks } from '../../components/ui/DataTableChrome';
 import type { WaitlistEntry } from '../../types/types-index';
 import { formatDate } from '../../utils/utils-index';
 import { STATUS_CONFIG, foodBreakdown, messageWithoutFoodBreakdown, hasSeatOpen, canConvert } from './waitlistShared';
@@ -209,16 +209,15 @@ export default function AdminWaitlistMobileCards({
 
       {/* Mobile: same "Showing X–Y of N" + Prev/Next pagination the
           desktop table gets. */}
-      <div className="sm:hidden bg-white rounded-lg shadow-card overflow-hidden">
-        <p className="text-dark-muted text-xs text-center px-4 pt-3">
-          {totalFiltered === 0 ? 'No signups found' : `Showing ${waitlistRangeStart}\u2013${waitlistRangeEnd} of ${totalFiltered} signups`}
-        </p>
-        <TablePagination
-          currentPage={waitlistSafePage}
-          totalPages={waitlistTotalPages}
-          onPageChange={onPageChange}
-        />
-      </div>
+      <MobilePaginationFooter
+        rangeStart={waitlistRangeStart}
+        rangeEnd={waitlistRangeEnd}
+        total={totalFiltered}
+        itemLabel="signups"
+        currentPage={waitlistSafePage}
+        totalPages={waitlistTotalPages}
+        onPageChange={onPageChange}
+      />
     </>
   );
 }

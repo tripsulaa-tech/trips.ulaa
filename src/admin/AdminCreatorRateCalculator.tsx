@@ -79,6 +79,31 @@ const REEL_COUNT = 10;
 // that sticky bar instead of leaving it visible below it.
 const STICKY_HEADER_SCROLL_OFFSET = 100;
 
+// Saved Calculations card/row expand state — kept in sessionStorage (not
+// localStorage) so leaving this page for another admin screen and coming
+// back mid-visit doesn't lose your place, but the card still honours its
+// "collapsed by default" design on a fresh tab/next day rather than
+// permanently remembering whatever was left open.
+const HISTORY_EXPANDED_KEY = 'cr_history_expanded';
+const HISTORY_EXPANDED_ID_KEY = 'cr_history_expanded_id';
+const TEMPLATE_EXPANDED_KEY = 'cr_template_expanded';
+
+function readSessionFlag(key: string): boolean {
+  try {
+    return sessionStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function readSessionString(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 // Scrolls `el` (offset for the sticky top bar) into place, then keeps
 // re-checking its position for a short window instead of trusting a single
 // snapshot-in-time scroll. Right after a click, this page's layout can
@@ -451,7 +476,7 @@ export default function AdminCreatorRateCalculator() {
   // ---- History ----
   const [history, setHistory] = useState<CreatorRateCalculation[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(() => readSessionString(HISTORY_EXPANDED_ID_KEY));
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   // Row header buttons, keyed by calculation id — so that opening a card
@@ -461,6 +486,25 @@ export default function AdminCreatorRateCalculator() {
   // opened.
   const historyRowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const cleanupScrollRef = useRef<(() => void) | null>(null);
+  // Set true only inside an actual row-toggle click/keydown, and consumed
+  // (reset to false) the moment the scroll-into-view effect below acts on
+  // it. This is what stops that effect from also firing when expandedId is
+  // restored from sessionStorage on mount (see HISTORY_EXPANDED_ID_KEY) —
+  // a restore isn't a fresh click, and the page's own scroll-position
+  // restoration (useScrollRestoration, wired up via AdminLayout above)
+  // already puts the admin back exactly where they left off, using the
+  // real saved scrollY rather than a recomputed element position. Letting
+  // both systems try to move the scroll on the same mount raced against
+  // each other and could visibly override one with the other.
+  const rowUserToggledRef = useRef(false);
+  // Whole-section collapse — same pattern as the Message Template card
+  // below (collapsed by default, click the header to expand) instead of
+  // this list always taking up space on the page.
+  const [historyExpanded, setHistoryExpanded] = useState(() => readSessionFlag(HISTORY_EXPANDED_KEY));
+  const historyHeaderRef = useRef<HTMLDivElement | null>(null);
+  const historySectionScrollCleanupRef = useRef<(() => void) | null>(null);
+  // Same purpose as rowUserToggledRef above, for the card's own header.
+  const historyUserToggledRef = useRef(false);
 
   // Whenever a saved calculation is expanded, bring its header up so the
   // newly-revealed details are actually visible instead of the row sitting
@@ -472,6 +516,8 @@ export default function AdminCreatorRateCalculator() {
   // as one smooth motion instead of expand-then-jump.
   useEffect(() => {
     if (!expandedId) return;
+    if (!rowUserToggledRef.current) return;
+    rowUserToggledRef.current = false;
     const frame = requestAnimationFrame(() => {
       const el = historyRowRefs.current[expandedId];
       if (!el) return;
@@ -481,6 +527,17 @@ export default function AdminCreatorRateCalculator() {
       cancelAnimationFrame(frame);
       cleanupScrollRef.current?.();
     };
+  }, [expandedId]);
+
+  // Persist which row (if any) is expanded, so navigating to another admin
+  // page and back mid-visit restores it — see HISTORY_EXPANDED_ID_KEY above.
+  useEffect(() => {
+    try {
+      if (expandedId) sessionStorage.setItem(HISTORY_EXPANDED_ID_KEY, expandedId);
+      else sessionStorage.removeItem(HISTORY_EXPANDED_ID_KEY);
+    } catch {
+      // sessionStorage unavailable (private browsing, etc.) — fine to skip.
+    }
   }, [expandedId]);
 
   useEffect(() => {
@@ -496,6 +553,35 @@ export default function AdminCreatorRateCalculator() {
     })();
   }, []);
 
+  // Same as Message Template below: the header sits above its own
+  // expanding body so its position doesn't shift as that body grows —
+  // scroll and expand can run together as one smooth motion.
+  useEffect(() => {
+    if (!historyExpanded) return;
+    if (!historyUserToggledRef.current) return;
+    historyUserToggledRef.current = false;
+    const frame = requestAnimationFrame(() => {
+      const el = historyHeaderRef.current;
+      if (!el) return;
+      historySectionScrollCleanupRef.current = scrollElementIntoView(el, STICKY_HEADER_SCROLL_OFFSET);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      historySectionScrollCleanupRef.current?.();
+    };
+  }, [historyExpanded]);
+
+  // Persist the Saved Calculations card's own open/closed state the same
+  // way as the row above.
+  useEffect(() => {
+    try {
+      if (historyExpanded) sessionStorage.setItem(HISTORY_EXPANDED_KEY, '1');
+      else sessionStorage.removeItem(HISTORY_EXPANDED_KEY);
+    } catch {
+      // sessionStorage unavailable (private browsing, etc.) — fine to skip.
+    }
+  }, [historyExpanded]);
+
   // ---- Message template variants (site_content row, shared across every
   // admin — see RATE_MESSAGE_TEMPLATE_KEY above). Starts at the factory
   // default variant and is swapped for whatever's saved in the DB as soon
@@ -506,13 +592,18 @@ export default function AdminCreatorRateCalculator() {
   // unless overridden per row. ----
   const [templateVariants, setTemplateVariants] = useState<MessageTemplateVariant[]>(DEFAULT_MESSAGE_TEMPLATE_VARIANTS);
   const [defaultVariantId, setDefaultVariantId] = useState<string>(DEFAULT_VARIANT_ID);
-  const [templateExpanded, setTemplateExpanded] = useState(false);
+  const [templateExpanded, setTemplateExpanded] = useState(() => readSessionFlag(TEMPLATE_EXPANDED_KEY));
   const [templateEditing, setTemplateEditing] = useState(false);
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
   const templateTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const templateHeaderRef = useRef<HTMLDivElement | null>(null);
   const templateScrollCleanupRef = useRef<(() => void) | null>(null);
+  // Same purpose as rowUserToggledRef/historyUserToggledRef above — only
+  // scroll-into-view on an actual click, not when templateExpanded is
+  // restored from sessionStorage on mount (the page's own scrollY
+  // restoration already handles that case).
+  const templateUserToggledRef = useRef(false);
 
   // Same as the Saved Calculations rows above: the header sits above its
   // own expanding body so its position doesn't shift as that body grows —
@@ -520,6 +611,8 @@ export default function AdminCreatorRateCalculator() {
   // waiting for the animation to finish first.
   useEffect(() => {
     if (!templateExpanded) return;
+    if (!templateUserToggledRef.current) return;
+    templateUserToggledRef.current = false;
     const frame = requestAnimationFrame(() => {
       const el = templateHeaderRef.current;
       if (!el) return;
@@ -529,6 +622,19 @@ export default function AdminCreatorRateCalculator() {
       cancelAnimationFrame(frame);
       templateScrollCleanupRef.current?.();
     };
+  }, [templateExpanded]);
+
+  // Persist the Message Template card's open/closed state — same as Saved
+  // Calculations above: restored mid-visit when navigating back to this
+  // page, but not remembered permanently (sessionStorage, not localStorage)
+  // so it still starts collapsed on a fresh tab/next day.
+  useEffect(() => {
+    try {
+      if (templateExpanded) sessionStorage.setItem(TEMPLATE_EXPANDED_KEY, '1');
+      else sessionStorage.removeItem(TEMPLATE_EXPANDED_KEY);
+    } catch {
+      // sessionStorage unavailable (private browsing, etc.) — fine to skip.
+    }
   }, [templateExpanded]);
 
   // ---- Formatting toolbar (Bold / Italic / Strikethrough / Monospace) ----
@@ -939,13 +1045,17 @@ export default function AdminCreatorRateCalculator() {
             ref={templateHeaderRef}
             role="button"
             tabIndex={0}
-            onClick={() => setTemplateExpanded(v => {
-              if (v) setTemplateEditing(false);
-              return !v;
-            })}
+            onClick={() => {
+              templateUserToggledRef.current = true;
+              setTemplateExpanded(v => {
+                if (v) setTemplateEditing(false);
+                return !v;
+              });
+            }}
             onKeyDown={e => {
               if (e.key !== 'Enter' && e.key !== ' ') return;
               e.preventDefault();
+              templateUserToggledRef.current = true;
               setTemplateExpanded(v => {
                 if (v) setTemplateEditing(false);
                 return !v;
@@ -1173,33 +1283,66 @@ export default function AdminCreatorRateCalculator() {
           </div>
         </Modal>
 
-        {/* ---- Saved history ---- */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2 mb-3">
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 shrink-0">
-              <History size={15} className="text-primary" aria-hidden="true" />
-            </span>
-            Saved Calculations
-          </h3>
-
-          {historyLoading ? (
-            <div className="bg-white rounded-lg shadow-card p-6 text-center text-dark-muted text-sm">Loading…</div>
-          ) : history.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-card p-6 text-center text-dark-muted text-sm">
-              No saved calculations yet — save one above to build a history you can look back on.
+        {/* ---- Saved history — collapsed by default, same card/header
+              pattern as Message Template above (click to expand, edit-style
+              affordances live inside once open, header scrolls into view). ---- */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">
+          <div
+            ref={historyHeaderRef}
+            role="button"
+            tabIndex={0}
+            onClick={() => { historyUserToggledRef.current = true; setHistoryExpanded(v => !v); }}
+            onKeyDown={e => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              historyUserToggledRef.current = true;
+              setHistoryExpanded(v => !v);
+            }}
+            aria-expanded={historyExpanded}
+            className="w-full flex items-center justify-between gap-3 text-left cursor-pointer select-none"
+          >
+            <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 shrink-0">
+                <History size={15} className="text-primary" aria-hidden="true" />
+              </span>
+              Saved Calculations
+              {!historyLoading && history.length > 0 && (
+                <span className="text-dark-muted font-normal text-sm">({history.length})</span>
+              )}
+            </h3>
+            <div className="flex items-center gap-1 shrink-0">
+              {historyExpanded ? <ChevronUp size={18} className="text-dark-muted shrink-0" aria-hidden="true" /> : <ChevronDown size={18} className="text-dark-muted shrink-0" aria-hidden="true" />}
             </div>
-          ) : (
-            <div className="space-y-2.5">
-              {history.map(h => {
+          </div>
+
+          <AnimatePresence initial={false}>
+            {historyExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3">
+                  {historyLoading ? (
+                    <div className="text-center text-dark-muted text-sm py-6">Loading…</div>
+                  ) : history.length === 0 ? (
+                    <div className="text-center text-dark-muted text-sm py-6">
+                      No saved calculations yet — save one above to build a history you can look back on.
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {history.map(h => {
                 const isOpen = expandedId === h.id;
                 return (
-                  <div key={h.id} className="bg-white rounded-lg shadow-card overflow-hidden">
+                  <div key={h.id} className="bg-background-warm rounded-lg overflow-hidden">
                     <button
                       type="button"
                       ref={el => { historyRowRefs.current[h.id] = el; }}
-                      onClick={() => setExpandedId(isOpen ? null : h.id)}
+                      onClick={() => { rowUserToggledRef.current = true; setExpandedId(isOpen ? null : h.id); }}
                       aria-expanded={isOpen}
-                      className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-background-warm/30 transition-colors"
+                      className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-white/60 transition-colors"
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-dark truncate">
@@ -1227,7 +1370,7 @@ export default function AdminCreatorRateCalculator() {
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="px-4 pb-4 border-t border-background-warm pt-3 space-y-3">
+                          <div className="mx-3 mb-3 p-3 rounded-md bg-white space-y-3">
                             {(h.instagram_handle || h.phone) && (
                               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-dark-muted">
                                 {h.instagram_handle && (
@@ -1314,9 +1457,13 @@ export default function AdminCreatorRateCalculator() {
                     </AnimatePresence>
                   </div>
                 );
-              })}
-            </div>
-          )}
+                      })}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </AdminLayout>

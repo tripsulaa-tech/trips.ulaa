@@ -296,7 +296,7 @@ export default function AdminEnquiryTravellerCard({
                     size="sm"
                     value={editForm.trip_id}
                     onChange={val => setEditForm(f => ({ ...f, trip_id: val }))}
-                    options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+                    options={[{ value: '', label: '— No trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
                   />
                   {editForm.trip_id !== (enquiry.trip_id || '') && (
                     <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1.5 mt-1.5">

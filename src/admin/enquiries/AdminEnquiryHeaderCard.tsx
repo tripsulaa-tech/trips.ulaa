@@ -4,7 +4,7 @@
 // parent doesn't have to thread jb/food/etc. through.
 import {
   Users, User, CalendarDot as CalendarClock, XCircle, UserMinus, SignIn as LogIn, Copy, Check, Baby,
-  FileText, ShareNetwork as Share2, EnvelopeSimple,
+  FileText, ShareNetwork as Share2, EnvelopeSimple, Eye,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import ActionsMenu from '../../components/ui/ActionsMenu';
@@ -54,6 +54,11 @@ interface AdminEnquiryHeaderCardProps {
   // there's a booking (same gate as Download/Share above) and an email
   // address on file, so callers only pass it when both hold.
   onEmailBooking?: () => void;
+  // Opens a read-only preview of that same booking-confirmation email
+  // (subject/recipient/rendered HTML) without sending anything — lets the
+  // admin check it looks right before using the Email button above. Same
+  // gating as onEmailBooking (booking + email on file).
+  onPreviewEmail?: () => void;
   // Which one of Download/Share/Email is currently in flight — only that
   // one button disables; the other two stay clickable on the same row.
   invoiceBusyAction?: InvoiceAction | null;
@@ -62,7 +67,7 @@ interface AdminEnquiryHeaderCardProps {
 export default function AdminEnquiryHeaderCard({
   enquiry, busyAction, busyStatus, busyFollowUp, bookingIdCopied, onCopyBookingId,
   onAdvance, onMarkNotInterested, onOpenFollowUp, rowActions,
-  onDownloadInvoice, onShareInvoice, onEmailBooking, invoiceBusyAction,
+  onDownloadInvoice, onShareInvoice, onEmailBooking, onPreviewEmail, invoiceBusyAction,
 }: AdminEnquiryHeaderCardProps) {
   const jb = journeyBadge(enquiry);
   const nma = nextManualAction(enquiry);
@@ -144,23 +149,23 @@ export default function AdminEnquiryHeaderCard({
               <FoodMark type={foodPreferenceKey(enquiry)} size={10} /> {food.label}
             </span>
             </div>
+            {/* Active/Cancelled + when this enquiry came in — now sits
+                left-aligned directly under the name/badges block it's
+                describing (previously lived right-aligned in the top-right
+                corner alongside Set Follow-up/the action buttons, which
+                grouped it visually with those instead). */}
+            {enquiry.booking_id && (
+              <div className="mt-1.5 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
+                <p className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold ${isCancelled(enquiry) ? 'text-red-600' : 'text-green-600'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCancelled(enquiry) ? 'bg-red-600' : 'bg-green-600'}`} aria-hidden="true" />
+                  {isCancelled(enquiry) ? 'Cancelled' : 'Active Enquiry'}
+                </p>
+                <p className="text-dark-muted text-[11px]">· Created on {formatDate(enquiry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
-          {/* Active/Cancelled + when this enquiry came in — sits above the
-              divider/Booking ID row now (not down alongside it), so it
-              reads together with the name/badges block it's describing
-              rather than getting grouped visually with Set Follow-up and
-              the other action buttons below. */}
-          {enquiry.booking_id && (
-            <div className="text-right">
-              <p className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold ${isCancelled(enquiry) ? 'text-red-600' : 'text-green-600'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCancelled(enquiry) ? 'bg-red-600' : 'bg-green-600'}`} aria-hidden="true" />
-                {isCancelled(enquiry) ? 'Cancelled' : 'Active Enquiry'}
-              </p>
-              <p className="text-dark-muted text-[11px] mt-0.5">Created on {formatDate(enquiry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-            </div>
-          )}
           <div className="flex flex-nowrap items-center justify-end gap-1.5 min-w-0 w-full sm:w-auto">
           {nma && (
             <Button variant="primary" size="sm" onClick={onAdvance} disabled={busyAction} className="!px-3 !gap-1.5 text-xs whitespace-nowrap flex-1 sm:flex-none">
@@ -239,6 +244,17 @@ export default function AdminEnquiryHeaderCard({
                 className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-50 transition-colors shrink-0"
               >
                 <Share2 size={15} aria-hidden="true" />
+              </button>
+            )}
+            {onPreviewEmail && (
+              <button
+                type="button"
+                onClick={onPreviewEmail}
+                title="Preview Booking Confirmation Email"
+                aria-label="Preview Booking Confirmation Email"
+                className="w-9 h-9 min-h-[36px] flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-50 transition-colors shrink-0"
+              >
+                <Eye size={15} aria-hidden="true" />
               </button>
             )}
             {onEmailBooking && (

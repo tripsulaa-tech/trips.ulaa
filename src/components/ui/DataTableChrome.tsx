@@ -1,8 +1,11 @@
+import { useEffect, useRef, useState } from 'react';
 import {
   MagnifyingGlass as Search,
   X,
   CaretUp as ChevronUp,
   CaretDown as ChevronDown,
+  CaretLeft,
+  CaretRight,
   Phone,
   Envelope as Mail,
   Download,
@@ -91,14 +94,77 @@ export function TableHeaderBar({
   );
 }
 
-// Builds the compact "1 … 4 5 [6] 7 8 … 20" page-number window shown between
-// Prev/Next — always keeps first, last, current, and current's immediate
-// neighbours, collapsing everything else behind an ellipsis.
-function getPageWindow(current: number, total: number): (number | 'ellipsis')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+// Mobile card-list footer: "Showing X–Y of N" summary line + Prev/Next
+// pagination underneath, wrapped in the same white card. Used by both
+// AdminEnquiriesMobileCards and AdminWaitlistMobileCards so their footers
+// stay identical. The summary line gets real breathing room below it
+// (pb-3.5, on top of TablePagination's own top padding) instead of the
+// text nearly touching the border above the buttons, and the actual
+// counts (the range and the total) are set apart from the surrounding
+// "Showing"/"of"/itemLabel words — bolder and darker — so the numbers a
+// person actually scans for are the first thing that stands out.
+interface MobilePaginationFooterProps {
+  rangeStart: number;
+  rangeEnd: number;
+  total: number;
+  itemLabel: string;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+export function MobilePaginationFooter({
+  rangeStart,
+  rangeEnd,
+  total,
+  itemLabel,
+  currentPage,
+  totalPages,
+  onPageChange,
+}: MobilePaginationFooterProps) {
+  return (
+    <div className="sm:hidden bg-white rounded-lg shadow-card overflow-hidden">
+      <p className="text-dark-muted text-xs text-center px-4 pt-3 pb-3.5">
+        {total === 0 ? (
+          `No ${itemLabel} found`
+        ) : (
+          <>
+            Showing{' '}
+            <span className="font-button font-semibold text-dark">
+              {rangeStart}&ndash;{rangeEnd}
+            </span>{' '}
+            of <span className="font-button font-semibold text-dark">{total}</span> {itemLabel}
+          </>
+        )}
+      </p>
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
+    </div>
+  );
+}
+
+// Builds the "1 2 3 … 20" (or, given enough room, the full "1 2 3 4 5 6 7")
+// page-number window shown between Prev/Next — always keeps first, last,
+// current, and current's immediate neighbours, collapsing everything else
+// behind an ellipsis once the list can't fit within `maxVisible` slots.
+// `maxVisible` is computed from the actual available row width (see
+// TablePagination below), so on a wide desktop table this naturally shows
+// every page number, while a narrow phone-width row still collapses down
+// to the compact windowed form instead of forcing Prev/Next off-screen.
+function getPageWindow(current: number, total: number, maxVisible: number): (number | 'ellipsis')[] {
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i + 1);
+
+  // Reserve slots for the first page, the last page, and (worst case) the
+  // two ellipsis markers between them; whatever's left of the budget is
+  // split evenly as "sibling" pages shown on either side of current.
+  const reserved = 4;
+  const siblingBudget = Math.max(1, maxVisible - reserved);
+  const siblingCount = Math.max(1, Math.floor(siblingBudget / 2));
+
   const pages = new Set<number>([1, total, current]);
-  if (current - 1 >= 1) pages.add(current - 1);
-  if (current + 1 <= total) pages.add(current + 1);
+  for (let i = 1; i <= siblingCount; i++) {
+    if (current - i >= 1) pages.add(current - i);
+    if (current + i <= total) pages.add(current + i);
+  }
   const sorted = Array.from(pages).sort((a, b) => a - b);
   const result: (number | 'ellipsis')[] = [];
   sorted.forEach((p, i) => {
@@ -114,47 +180,90 @@ interface TablePaginationProps {
   onPageChange: (page: number) => void;
 }
 
+// Approx width (px) of one page-number pill (min-w-[34px] pill + the row's
+// gap-1.5/gap-2 spacing) — used to work out how many pills the available
+// row width can actually hold before falling back to the collapsed window.
+const PILL_SLOT_PX = 40;
+
+// Prev and Next live outside the scrollable region (shrink-0, never inside
+// the overflow-x-auto strip) so they can never get scrolled out of view or
+// clipped — that was the bug: a flat-out row of page pills + Prev + Next
+// with `justify-end` + `overflow-x-auto` pinned Next fully in view and left
+// Prev hanging off the edge on narrow screens. Now only the page-number
+// pills scroll (and only if the window genuinely can't fit), the active
+// page auto-scrolls into view, and the number of pills shown adapts to
+// whatever room the row actually has (via ResizeObserver below) instead of
+// always collapsing past 5 pages — a wide desktop table shows every page
+// number, a narrow one still collapses down to keep Prev/Next on-screen.
 export function TablePagination({ currentPage, totalPages, onPageChange }: TablePaginationProps) {
+  const activePageRef = useRef<HTMLButtonElement>(null);
+  const pagesContainerRef = useRef<HTMLDivElement>(null);
+  const [maxVisible, setMaxVisible] = useState(5);
+
+  useEffect(() => {
+    const el = pagesContainerRef.current;
+    if (!el) return;
+    const updateMaxVisible = () => setMaxVisible(Math.max(5, Math.floor(el.clientWidth / PILL_SLOT_PX)));
+    updateMaxVisible();
+    const observer = new ResizeObserver(updateMaxVisible);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    activePageRef.current?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [currentPage]);
+
   if (totalPages <= 1) return null;
-  const pages = getPageWindow(currentPage, totalPages);
+  const pages = getPageWindow(currentPage, totalPages, maxVisible);
   return (
-    <nav aria-label="Table pagination" className="flex items-center justify-end flex-wrap gap-1.5 px-4 sm:px-5 py-3.5 border-t border-background-warm">
+    <nav
+      aria-label="Table pagination"
+      className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-3.5 border-t border-background-warm"
+    >
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         aria-label="Previous page"
-        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 h-9 rounded-md border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
+        className="shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold pl-2 pr-2.5 sm:px-3 h-9 rounded-md border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
       >
-        &lsaquo; Prev
+        <CaretLeft size={12} weight="bold" aria-hidden="true" />
+        <span className="hidden sm:inline">Prev</span>
       </button>
-      {pages.map((p, i) =>
-        p === 'ellipsis' ? (
-          <span key={`ellipsis-${i}`} className="px-1.5 text-dark-muted text-xs select-none">
-            &hellip;
-          </span>
-        ) : (
-          <button
-            key={p}
-            onClick={() => onPageChange(p)}
-            aria-current={p === currentPage ? 'page' : undefined}
-            aria-label={`Page ${p}`}
-            className={`min-w-[36px] h-9 px-2 inline-flex items-center justify-center text-xs font-button font-semibold rounded-md border-2 transition-colors ${
-              p === currentPage
-                ? 'bg-primary border-primary text-white'
-                : 'border-background-warm text-dark hover:border-primary/30'
-            }`}
-          >
-            {p}
-          </button>
-        )
-      )}
+
+      <div ref={pagesContainerRef} className="flex-1 min-w-0 flex items-center justify-center gap-1.5 overflow-x-auto scrollbar-hide">
+        {pages.map((p, i) =>
+          p === 'ellipsis' ? (
+            <span key={`ellipsis-${i}`} className="shrink-0 px-0.5 text-dark-muted text-xs select-none">
+              &hellip;
+            </span>
+          ) : (
+            <button
+              key={p}
+              ref={p === currentPage ? activePageRef : undefined}
+              onClick={() => onPageChange(p)}
+              aria-current={p === currentPage ? 'page' : undefined}
+              aria-label={`Page ${p}`}
+              className={`shrink-0 min-w-[34px] h-9 px-2 inline-flex items-center justify-center text-xs font-button font-semibold rounded-md border-2 transition-colors ${
+                p === currentPage
+                  ? 'bg-primary border-primary text-white'
+                  : 'border-background-warm text-dark hover:border-primary/30'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+      </div>
+
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         aria-label="Next page"
-        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 h-9 rounded-md border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
+        className="shrink-0 inline-flex items-center gap-1 text-xs font-button font-semibold pr-2 pl-2.5 sm:px-3 h-9 rounded-md border-2 border-background-warm text-dark hover:border-primary/30 disabled:text-dark-muted/40 disabled:hover:border-background-warm disabled:cursor-default transition-colors"
       >
-        Next &rsaquo;
+        <span className="hidden sm:inline">Next</span>
+        <CaretRight size={12} weight="bold" aria-hidden="true" />
       </button>
     </nav>
   );

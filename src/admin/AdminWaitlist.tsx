@@ -12,6 +12,7 @@ import {
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
+import AddFab from '../components/ui/AddFab';
 import { KpiCards, KpiCarousel } from '../components/ui/KpiCards';
 import { useDragScroll } from '../components/ui/dataTableUtils';
 import { useWaitlistData } from './waitlist/useWaitlistData';
@@ -73,11 +74,12 @@ export default function AdminWaitlist() {
   return (
     <AdminLayout title="Waitlist" subtitle="Everyone who signed up to be notified when a sold-out trip frees a seat." scrollRestorationReady={!loading}>
       <div className="space-y-6">
-        <div className="flex justify-end">
+        <div className="hidden sm:flex justify-end">
           <Button variant="primary" size="sm" onClick={addModal.openAdd}>
             <Plus size={16} aria-hidden="true" /> Add to Waitlist
           </Button>
         </div>
+        <AddFab onClick={addModal.openAdd} label="Add to waitlist" />
 
         {/* Actionable banner — seats open for people still waiting */}
         {seatOpenCount > 0 && (

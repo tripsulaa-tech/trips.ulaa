@@ -13,6 +13,7 @@ import {
   FileX,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
+import AddFab from '../../components/ui/AddFab';
 import type { UpcomingTrip } from '../../types/types-index';
 import { formatDate } from '../../utils/utils-index';
 
@@ -50,35 +51,60 @@ export default function AdminTripsTable({
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <div className="flex justify-end">
+        <div className="hidden sm:flex justify-end">
           <Button variant="primary" size="sm" onClick={onAddTrip}>
             <Plus size={16} aria-hidden="true" /> Add Trip
           </Button>
         </div>
-        <div className="flex items-center">
-          <p className="flex items-center gap-2 text-dark-muted text-sm">
-            <ClipboardList size={20} className="text-primary flex-shrink-0" aria-hidden="true" />
-            <span className="font-semibold text-green-700">{publishedCount}</span> Published
-            <span className="text-dark-muted/50">•</span>
-            <span className="font-semibold text-amber-700">{comingSoonCount}</span> Coming Soon
-            <span className="text-dark-muted/50">•</span>
-            <span className="font-semibold text-dark">{draftCount}</span> Draft
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            ref={importInputRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={onImportInputChange}
-          />
-          <button onClick={() => importInputRef.current?.click()} aria-label="Import Template" className="p-2 rounded-md border-2 border-primary/30 text-primary hover:bg-primary/5 transition-colors" title="Import Template">
-            <Upload size={16} aria-hidden="true" />
-          </button>
-          <button onClick={onExportTemplate} aria-label="Export Template" className="p-2 rounded-md border-2 border-primary/30 text-primary hover:bg-primary/5 transition-colors" title="Export Template">
-            <Download size={16} aria-hidden="true" />
-          </button>
+        <AddFab onClick={onAddTrip} label="Add trip" />
+
+        {/* Status breakdown + template import/export, grouped into one
+            card instead of a bare sentence and two unlabeled icon
+            buttons sitting directly on the page background — that read
+            as leftover debug UI rather than an intentional toolbar.
+            Each status gets its own color-coded pill (scannable at a
+            glance, and wraps cleanly on narrow screens instead of one
+            long sentence breaking mid-phrase); Import/Export get visible
+            text labels instead of relying on a hover-only title. */}
+        <div className="bg-white rounded-lg shadow-card px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <ClipboardList size={18} className="text-primary shrink-0" aria-hidden="true" />
+            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-full bg-green-50 text-green-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" aria-hidden="true" />
+              {publishedCount} Published
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden="true" />
+              {comingSoonCount} Coming Soon
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-full bg-background-warm text-dark-muted">
+              <span className="w-1.5 h-1.5 rounded-full bg-dark-muted shrink-0" aria-hidden="true" />
+              {draftCount} Draft
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={onImportInputChange}
+            />
+            <button
+              onClick={() => importInputRef.current?.click()}
+              title="Import Template"
+              className="inline-flex items-center gap-1.5 text-xs font-button font-semibold px-2.5 py-1.5 rounded-md border-2 border-primary/30 text-primary hover:bg-primary/5 transition-colors"
+            >
+              <Upload size={14} aria-hidden="true" /> Import
+            </button>
+            <button
+              onClick={onExportTemplate}
+              title="Export Template"
+              className="inline-flex items-center gap-1.5 text-xs font-button font-semibold px-2.5 py-1.5 rounded-md border-2 border-primary/30 text-primary hover:bg-primary/5 transition-colors"
+            >
+              <Download size={14} aria-hidden="true" /> Export
+            </button>
+          </div>
         </div>
       </div>
 

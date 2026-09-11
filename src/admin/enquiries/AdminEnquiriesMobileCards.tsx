@@ -25,7 +25,7 @@ import {
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import FoodMark from '../../components/ui/FoodMark';
-import { TablePagination } from '../../components/ui/DataTableChrome';
+import { MobilePaginationFooter } from '../../components/ui/DataTableChrome';
 import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
@@ -595,16 +595,15 @@ export default function AdminEnquiriesMobileCards({
           no way to reach page 2+ at all. Wrapped in its own card so
           it reads as a distinct, easy-to-find control at the end of
           the list rather than bare text. */}
-      <div className="sm:hidden bg-white rounded-lg shadow-card overflow-hidden">
-        <p className="text-dark-muted text-xs text-center px-4 pt-3">
-          {totalFiltered === 0 ? 'No enquiries found' : `Showing ${enquiriesRangeStart}\u2013${enquiriesRangeEnd} of ${totalFiltered} enquiries`}
-        </p>
-        <TablePagination
-          currentPage={enquiriesSafePage}
-          totalPages={enquiriesTotalPages}
-          onPageChange={setCurrentPage}
-        />
-      </div>
+      <MobilePaginationFooter
+        rangeStart={enquiriesRangeStart}
+        rangeEnd={enquiriesRangeEnd}
+        total={totalFiltered}
+        itemLabel="enquiries"
+        currentPage={enquiriesSafePage}
+        totalPages={enquiriesTotalPages}
+        onPageChange={setCurrentPage}
+      />
     </>
   );
 }

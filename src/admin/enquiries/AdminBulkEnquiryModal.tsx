@@ -95,7 +95,7 @@ export default function BulkEnquiryModal({
         )}
 
         <div>
-          <label htmlFor="bulk-source" className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
+          <label htmlFor="bulk-source" className="block text-sm font-medium text-dark mb-1">Source *</label>
           <Select
             inputId="bulk-source"
             value={form.source}

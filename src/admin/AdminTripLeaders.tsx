@@ -11,6 +11,7 @@ import {
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
+import AddFab from '../components/ui/AddFab';
 import Modal from '../components/ui/Modal';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import {
@@ -142,8 +143,11 @@ export default function AdminTripLeaders() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <p className="text-dark-muted">{items.length} trip leaders</p>
-          <Button variant="primary" size="sm" onClick={openCreate}><Plus size={16} aria-hidden="true" /> Add Trip Leader</Button>
+          <div className="hidden sm:block">
+            <Button variant="primary" size="sm" onClick={openCreate}><Plus size={16} aria-hidden="true" /> Add Trip Leader</Button>
+          </div>
         </div>
+        <AddFab onClick={openCreate} label="Add trip leader" />
 
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading...</div>

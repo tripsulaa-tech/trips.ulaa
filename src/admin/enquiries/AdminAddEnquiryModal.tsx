@@ -235,7 +235,7 @@ export default function AddEnquiryModal({
                   setForm(f => ({ ...f, trip_id: val }));
                   applySuggestedAmount(val, form.package_type);
                 }}
-                options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+                options={[{ value: '', label: '— No trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
               />
             </div>
             <div>
@@ -264,7 +264,7 @@ export default function AddEnquiryModal({
               />
             </div>
             <div>
-              <label htmlFor="ge-g-source" className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
+              <label htmlFor="ge-g-source" className="block text-sm font-medium text-dark mb-1">Source *</label>
               <Select
                 inputId="ge-g-source"
                 value={form.source}
@@ -401,8 +401,8 @@ export default function AddEnquiryModal({
           </div>
         </>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="col-span-2">
             <label htmlFor="ge-name" className="block text-sm font-medium text-dark mb-1">Full Name *</label>
             <input
               id="ge-name"
@@ -453,7 +453,7 @@ export default function AddEnquiryModal({
               trip, so a repeat traveller doesn't show up several times
               over. */}
           {possibleDuplicates.length > 0 && (
-            <div className="md:col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-900">
+            <div className="col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-900">
               <div className="flex items-start gap-2">
                 <AlertTriangle size={16} className="shrink-0 mt-0.5 text-amber-600" aria-hidden="true" />
                 <div className="min-w-0">
@@ -525,7 +525,7 @@ export default function AddEnquiryModal({
             {citySuggestionsOpen && <SuggestionDropdown items={citySuggestions} onSelect={selectCitySuggestion} />}
           </div>
           <div>
-            <label htmlFor="ge-source" className="block text-sm font-medium text-dark mb-1">How did they reach out? *</label>
+            <label htmlFor="ge-source" className="block text-sm font-medium text-dark mb-1">Source *</label>
             <Select
               inputId="ge-source"
               value={form.source}
@@ -551,7 +551,7 @@ export default function AddEnquiryModal({
                 setForm(f => ({ ...f, trip_id: val }));
                 applySuggestedAmount(val, form.package_type);
               }}
-              options={[{ value: '', label: '— No specific trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+              options={[{ value: '', label: '— No trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
             />
           </div>
           <div>
@@ -596,7 +596,7 @@ export default function AddEnquiryModal({
             {soloErrorsVisible.amount_paid && <p id="ge-amount-paid-error" role="alert" className={errorClass}>{soloErrorsVisible.amount_paid}</p>}
           </div>
           {(Number(form.amount_paid) || 0) > 0 && (
-            <div className="grid grid-cols-2 gap-4 md:col-span-2">
+            <div className="col-span-2 grid grid-cols-2 gap-4">
               <MethodReferenceFields
                 idPrefix="ge"
                 methodLabel="Payment Method"
@@ -611,7 +611,7 @@ export default function AddEnquiryModal({
               />
             </div>
           )}
-          <div className="md:col-span-2">
+          <div className="col-span-2">
             <label htmlFor="ge-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
             <textarea id="ge-notes" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Anything worth remembering about this enquiry" />
           </div>

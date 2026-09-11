@@ -8,10 +8,7 @@ const SHOW_AFTER_PX = 400;
 
 interface ScrollToTopButtonProps {
   /**
-   * Overrides the default `left-6` position — e.g. the admin layout passes
-   * `right-6` to sit clear of the fixed sidebar instead of floating on top
-   * of it (and away from content like the Activity Timeline that lives in
-   * the same lower-left area).
+   * Overrides the default `left-6` position.
    */
   leftClass?: string;
 }

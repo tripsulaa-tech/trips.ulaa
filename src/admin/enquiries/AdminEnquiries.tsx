@@ -64,6 +64,7 @@ import CancelModal from './AdminCancelModal';
 import BulkEditModal from './AdminBulkEditModal';
 import AdminEnquiriesDesktopTable from './AdminEnquiriesDesktopTable';
 import AdminEnquiriesMobileCards from './AdminEnquiriesMobileCards';
+import AdminEnquiriesFab from './AdminEnquiriesFab';
 import AdminEnquiryPaymentModal from './AdminEnquiryPaymentModal';
 
 export default function AdminEnquiries() {
@@ -668,7 +669,12 @@ export default function AdminEnquiries() {
 
         <div className="flex justify-between items-center gap-3">
           <p className="text-dark-muted text-sm hidden sm:block">Log a WhatsApp, phone, or walk-in enquiry that didn't come through the website.</p>
-          <div className="flex items-center gap-2 ml-auto">
+          {/* Desktop/tablet keeps the inline button pair — plenty of room
+              and it's the expected pattern there. Mobile gets a floating
+              "+" action button instead (rendered further down, fixed to
+              the viewport) so this row doesn't cost mobile a full width
+              of vertical space above the fold. */}
+          <div className="hidden sm:flex items-center gap-2 ml-auto">
             <Button variant="outline" size="sm" onClick={openBulkEnquiry}>
               <UsersThree size={16} aria-hidden="true" /> Bulk Enquiry
             </Button>
@@ -677,6 +683,8 @@ export default function AdminEnquiries() {
             </Button>
           </div>
         </div>
+
+        <AdminEnquiriesFab onAddEnquiry={openAdd} onBulkEnquiry={openBulkEnquiry} />
 
         {/* KPI summary — desktop grid + mobile carousel, both scoped to
             whichever trip is selected in the Trip filter below (or
@@ -738,7 +746,13 @@ export default function AdminEnquiries() {
                   </p>
                 )}
                 {(() => {
-                  const food = foodTotals(scopedEnquiries);
+                  // Only travellers who actually hold a booked seat count
+                  // toward the meal split shown next to "X/Y seats booked"
+                  // — otherwise this silently included every enquiry for
+                  // the trip (new, contacted, cancelled, etc.), so the veg/
+                  // non-veg numbers could add up to well more than the
+                  // seats actually booked.
+                  const food = foodTotals(scopedEnquiries.filter(isBooked));
                   return (
                     <p className="text-dark-muted text-xs flex items-center flex-wrap gap-1.5">
                       {activeGroup?.trip && <span>{activeGroup.trip.seats_booked}/{activeGroup.trip.total_seats} seats booked</span>}

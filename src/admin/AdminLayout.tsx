@@ -698,7 +698,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
         </main>
       </div>
 
-      <ScrollToTopButton leftClass="right-6" />
+      <ScrollToTopButton leftClass="left-6" />
     </div>
   );
 }

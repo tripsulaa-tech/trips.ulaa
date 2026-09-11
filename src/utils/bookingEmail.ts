@@ -310,14 +310,14 @@ ${paymentRowsHtml}${summaryRowsHtml}
                 </tr>
 
                 <tr>
-                  <td class="mobile-padding" style="padding: 24px 40px 36px; border-top: 1px solid #EEE6D8;">
+                  <td class="mobile-padding" style="padding: 24px 40px 16px; border-top: 1px solid #EEE6D8;">
                     <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #2D2118;">We look forward to welcoming you on the trip.</p>
                     <p style="margin: 14px 0 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #2D2118;">Best regards,<br>Team Ulaa</p>
                   </td>
                 </tr>
 
                 <tr>
-                  <td class="mobile-padding" style="padding: 0 40px 32px;">
+                  <td class="mobile-padding" align="left" style="padding: 0 40px 32px; text-align: left;">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td bgcolor="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #EEE6D8; border-radius: 10px; padding: 10px 22px;">
@@ -352,6 +352,15 @@ async function fileToBase64(file: File): Promise<string> {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
   }
   return btoa(binary);
+}
+
+/** Builds the exact subject/recipient/HTML body that `sendBookingEmail`
+ *  below would send, without actually sending anything — for an admin
+ *  "preview before you send" view. Safe to call as often as needed (no
+ *  network/edge-function calls, no invoice PDF generation). */
+export function bookingEmailPreview(enquiry: Enquiry, payments: Payment[]): { to: string; subject: string; html: string } {
+  const { to, subject } = bookingEmailFields(enquiry, payments);
+  return { to, subject, html: buildBookingEmailHtml(enquiry, payments) };
 }
 
 /** Sends the booking confirmation for real, via the `send-booking-email`
