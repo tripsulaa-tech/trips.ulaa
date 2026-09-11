@@ -245,6 +245,19 @@ button, .btn {
   animation: offer-badge-gradient-shift 3s ease-in-out infinite;
 }
 
+/* Special-offer card border (popup card + TripCard outer stroke) — same
+   left-right sweep, but orange-to-brown, kept separate from
+   offer-badge-gradient-shift so the badge pill keeps its own colour. */
+@keyframes offer-border-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.offer-border-gradient-shift {
+  background-image: linear-gradient(90deg, #EA580C 0%, #78350F 50%, #EA580C 100%);
+  background-size: 200% 100%;
+  animation: offer-border-gradient-shift 3s ease-in-out infinite;
+}
+
 /* Loading placeholder sweep shown behind a gallery photo while it loads. */
 @keyframes gallery-shimmer {
   0% { transform: translateX(-100%); }

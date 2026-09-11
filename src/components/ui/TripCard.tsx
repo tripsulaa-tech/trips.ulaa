@@ -157,10 +157,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
     : fallbackFeatureTags;
 
   return (
-    // Special-offer cards get a 5px animated yellow-green stroke around
-    // the whole card (same offer-badge-gradient-shift used on the badge
-    // and offer-ends banner) — early-bird / plain cards are untouched.
-    <div className={isSpecialOffer ? 'offer-badge-gradient-shift rounded-2xl p-[5px] shadow-warm-lg h-full' : 'h-full'}>
+    // Special-offer cards get a 3px animated orange-to-brown stroke around
+    // the whole card (separate offer-border-gradient-shift class, kept
+    // distinct from the offer-badge-gradient-shift badge/banner colour) —
+    // early-bird / plain cards are untouched.
+    <div className={isSpecialOffer ? 'offer-border-gradient-shift rounded-2xl p-[3px] shadow-warm-lg h-full' : 'h-full'}>
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
