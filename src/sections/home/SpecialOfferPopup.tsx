@@ -30,20 +30,15 @@ import type { UpcomingTrip } from '../../types/types-index';
 // random rather than intentional.
 const REVEAL_DELAY_MS = 1800;
 
-// sessionStorage key prefix. Keyed by trip id *and* the offer's end date, so
-// a dismissed popup naturally reappears the next time the admin sets up a
-// fresh offer (different end date = different key = not "seen" yet) without
-// needing any cleanup logic — but won't nag again this session for the
-// same offer once someone's closed it.
-const DISMISS_KEY_PREFIX = 'ulaa_special_offer_dismissed_';
-
 /**
  * A single, tastefully-timed popup that surfaces the best currently-live
- * special offer to homepage visitors and gets them straight to booking it.
- * Shows at most once per browser session per offer (see DISMISS_KEY_PREFIX)
- * and only when a real, currently-active offer exists on a trip that isn't
- * already sold out — so it never nags, and never pitches something the
- * visitor can't actually book.
+ * special offer every time someone lands on the homepage, and gets them
+ * straight to booking it. Dismissing it (X, "Maybe later", or the backdrop)
+ * only closes *this* visit — since HomePage remounts fresh on every
+ * navigation to "/", leaving this page and coming back always shows it
+ * again for as long as a real, currently-active offer exists on a trip
+ * that isn't already sold out. It never pitches something the visitor
+ * can't actually book.
  */
 export default function SpecialOfferPopup() {
   const navigate = useNavigate();
@@ -83,10 +78,7 @@ export default function SpecialOfferPopup() {
           return remaining > 0;
         });
 
-        if (featured) {
-          const dismissKey = `${DISMISS_KEY_PREFIX}${featured.id}_${featured.special_offer_end_date || featured.special_offer_date}`;
-          if (!sessionStorage.getItem(dismissKey)) setTrip(featured);
-        }
+        if (featured) setTrip(featured);
       })
       .catch(() => {})
       .finally(() => {
@@ -117,8 +109,6 @@ export default function SpecialOfferPopup() {
 
   const dismiss = () => {
     setDismissed(true);
-    const dismissKey = `${DISMISS_KEY_PREFIX}${trip.id}_${trip.special_offer_end_date || trip.special_offer_date}`;
-    sessionStorage.setItem(dismissKey, '1');
   };
 
   const handleView = () => {
