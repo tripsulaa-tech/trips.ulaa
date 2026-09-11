@@ -134,10 +134,10 @@ export default function SpecialOfferPopupCard({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="offer-badge-gradient-shift relative w-full max-w-sm sm:max-w-md rounded-xl shadow-warm-lg p-[3px]"
+            className="offer-badge-gradient-shift relative w-full max-w-sm sm:max-w-md rounded-xl shadow-warm-lg p-[5px]"
           >
             {/* Everything actually lives inside this inset white panel — the
-                outer motion.div is just a 3px strip of the animated
+                outer motion.div is just a 5px strip of the animated
                 yellow-green gradient showing through as a border/stroke
                 around the card, rather than filling it. */}
             <div className="relative bg-white rounded-lg overflow-hidden">

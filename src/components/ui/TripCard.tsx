@@ -157,12 +157,16 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
     : fallbackFeatureTags;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="group bg-white rounded-2xl border border-background-warm shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col overflow-hidden"
-    >
+    // Special-offer cards get a 5px animated yellow-green stroke around
+    // the whole card (same offer-badge-gradient-shift used on the badge
+    // and offer-ends banner) — early-bird / plain cards are untouched.
+    <div className={isSpecialOffer ? 'offer-badge-gradient-shift rounded-2xl p-[5px] shadow-warm-lg h-full' : 'h-full'}>
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05, duration: 0.3 }}
+        className={`group bg-white rounded-2xl ${isSpecialOffer ? '' : 'border border-background-warm'} shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col overflow-hidden`}
+      >
       {/* Image */}
       <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden block">
         {/*
@@ -380,6 +384,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           </Button>
         </Link>
       </div>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }
