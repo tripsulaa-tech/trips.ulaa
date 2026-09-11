@@ -57,6 +57,7 @@ import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
 import { computeTripFinanceSummary } from '../utils/tripFinance';
+import { downloadTripExcelReport, downloadAllTripsExcelReport } from '../utils/tripExcelReport';
 
 // Real, human-readable label for every value enquiries.source can actually
 // hold. Deliberately not reusing enquiries/AdminEnquiriesShared's
@@ -668,6 +669,60 @@ export default function AdminReports() {
       .sort((a, b) => b.balance - a.balance);
   }, [scoped, destinationById]);
 
+  // Assembles one trip's row for the styled Excel export (tripExcelReport.ts)
+  // out of financeByTrip's already-computed cost/profit summary plus two
+  // things that summary doesn't carry: a food-preference split and a
+  // per-person outstanding-balance list. Both are deliberately read straight
+  // from `enquiries` (not `scoped`) and scoped only by trip id — same
+  // "current standing, not period-windowed" reasoning financeByTrip and
+  // Occupancy already use elsewhere on this page, so the Excel export can't
+  // show a different profit/outstanding picture for a trip than the rest of
+  // the page depending on which period happens to be selected when it's
+  // clicked.
+  const buildExcelRowForTrip = (t: (typeof financeByTrip)[number]) => {
+    const tripBookings = enquiries.filter(e => e.trip_id === t.id && isBooked(e));
+    const vegCount = tripBookings.filter(e => e.food_preference === 'veg').length;
+    const nonVegCount = tripBookings.filter(e => e.food_preference === 'non_veg').length;
+    const outstanding = tripBookings
+      .filter(e => e.total_amount)
+      .map(e => ({
+        name: e.full_name,
+        total: e.total_amount || 0,
+        paid: e.amount_paid || 0,
+        balance: Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)),
+      }))
+      .filter(row => row.balance > 0)
+      .sort((a, b) => b.balance - a.balance);
+    return {
+      tripTitle: t.title,
+      travelerCount: t.travelerCount,
+      vegCount,
+      nonVegCount,
+      revenue: t.totalRevenue,
+      ulaaCosts: t.ulaaCosts,
+      organiserCosts: t.organiserCosts,
+      totalCosts: t.totalCosts,
+      netProfit: t.netProfit,
+      profitPerPerson: t.profitPerPerson,
+      outstandingByPerson: outstanding,
+    };
+  };
+
+  // Only trips with a Finances tab filled in have anything to put in the
+  // cost/profit half of the sheet (see financeByTrip above), so this export
+  // is scoped to those same trips — same reasoning, not a separate rule.
+  // A specific trip picked in the Trip dropdown exports as one sheet; "All
+  // Trips" exports one sheet per trip so nothing gets flattened away.
+  const handleExportExcel = async () => {
+    if (financeByTrip.length === 0) return;
+    const rows = financeByTrip.map(buildExcelRowForTrip);
+    if (tripId === ALL_TRIPS) {
+      await downloadAllTripsExcelReport(rows);
+    } else {
+      await downloadTripExcelReport(rows[0]);
+    }
+  };
+
   const handleExportCsv = () => {
     const rows: string[] = [];
     const tripLabel = tripOptions.find(t => t.value === tripId)?.label || 'All Trips';
@@ -782,6 +837,20 @@ export default function AdminReports() {
                 <Download size={14} aria-hidden="true" />
                 <span className="sm:hidden">Export</span>
                 <span className="hidden sm:inline">Export CSV</span>
+              </motion.button>
+            )}
+            {!loading && financeByTrip.length > 0 && (
+              <motion.button
+                type="button"
+                onClick={handleExportExcel}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.96 }}
+                title="Download a formatted per-trip Excel report (finance summary + outstanding balances)"
+                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
+              >
+                <Download size={14} aria-hidden="true" />
+                <span className="sm:hidden">Excel</span>
+                <span className="hidden sm:inline">Export Excel</span>
               </motion.button>
             )}
           </div>
