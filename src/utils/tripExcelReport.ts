@@ -428,13 +428,46 @@ function buildSummarySheetRows(summary: ExcelReportSummary): Row[] {
   return rows;
 }
 
-// Single export: a "Summary" sheet covering every business-wide section
-// (see buildSummarySheetRows), followed by one sheet per trip that has a
-// Finances tab filled in (tripRows — see AdminReports.tsx's
-// buildExcelRowForTrip). Works the same whether the Reports page's Trip
-// dropdown has "All Trips" or one specific trip selected — the Summary
-// sheet's own figures and tripRows are already scoped to that selection by
-// the caller, so this module just lays out whatever it's given.
+// Filesystem/sheet-name-safe slug for a trip title, used in the downloaded
+// filename for the single-trip export below.
+function slugifyTripTitle(title: string): string {
+  return title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'trip';
+}
+
+// Single-trip export: just that trip's own sheet (see buildTripSheetRows),
+// no business-wide Summary sheet — used when the Reports page's Trip
+// dropdown has one specific trip selected rather than "All Trips".
+export async function downloadTripExcelReport(trip: TripExcelReportRow): Promise<void> {
+  const sheetName = trip.tripTitle.replace(/[\\/*?:[\]]/g, ' ').slice(0, 31) || 'Trip';
+  await writeXlsxFile([{ data: buildTripSheetRows(trip), sheet: sheetName, columns: TRIP_SHEET_COLUMNS }])
+    .toFile(`ulaa-trip-report-${slugifyTripTitle(trip.tripTitle)}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+// "All Trips" export: one sheet per trip, deduping sheet names the same way
+// downloadExcelReport used to (Excel sheet names are unique and capped at
+// 31 chars) — no Summary sheet, since the Reports page no longer builds an
+// ExcelReportSummary for this button.
+export async function downloadAllTripsExcelReport(trips: TripExcelReportRow[]): Promise<void> {
+  const usedNames = new Set<string>();
+  const sheets = trips.map(trip => {
+    let name = trip.tripTitle.replace(/[\\/*?:[\]]/g, ' ').slice(0, 31) || 'Trip';
+    let suffix = 2;
+    while (usedNames.has(name)) {
+      const base = name.slice(0, 28 - String(suffix).length);
+      name = `${base} (${suffix})`;
+      suffix += 1;
+    }
+    usedNames.add(name);
+    return { data: buildTripSheetRows(trip), sheet: name, columns: TRIP_SHEET_COLUMNS };
+  });
+  await writeXlsxFile(sheets).toFile(`ulaa-all-trips-report-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+// Kept for reference / possible future reuse — no longer called from
+// AdminReports.tsx (its Export Excel button now calls the two functions
+// above directly), but left in place since nothing about the Summary sheet
+// layout itself is wrong, only that the page stopped building the
+// ExcelReportSummary + CSV-export data it needs.
 export async function downloadExcelReport(summary: ExcelReportSummary, tripRows: TripExcelReportRow[]): Promise<void> {
   const usedNames = new Set<string>(['Summary']);
   const tripSheets = tripRows.map(trip => {
