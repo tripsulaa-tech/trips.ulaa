@@ -35,6 +35,9 @@ import {
   Check,
   NotePencil as TemplateIcon,
   PencilSimple as EditIcon,
+  Plus,
+  Star,
+  X,
   TextB as BoldIcon,
   TextItalic as ItalicIcon,
   TextStrikethrough as StrikethroughIcon,
@@ -172,17 +175,28 @@ function ceilTo50(x: number): number {
 // Share on each saved row), so it stays plain text/emoji only, no app
 // jargon like "CPV" or "quality multiplier".
 //
-// The wording itself is a template stored in the site_content table (key
-// RATE_MESSAGE_TEMPLATE_KEY — same generic key/value store the rest of the
-// site's editable copy uses, see supabase/schema.sql), edited directly in
-// the "Message Template" box above the saved-calculations list rather than
-// per saved calculation. Saving it there updates that row, so every admin
-// sees the same reworded default for every calculation (new or old), on
-// any device.
+// The wording itself comes from one or more named variants stored in the
+// site_content table (key RATE_MESSAGE_TEMPLATE_KEY — same generic
+// key/value store the rest of the site's editable copy uses, see
+// supabase/schema.sql), edited directly in the "Message Template" box
+// above the saved-calculations list rather than per saved calculation.
+// Saving it there updates that row, so every admin sees the same variants
+// for every calculation (new or old), on any device. Copy/Share on a saved
+// row use whichever variant is marked default unless the admin picks a
+// different one for that send from the row's own variant picker.
 const RATE_MESSAGE_TEMPLATE_KEY = 'creator_rate_message_template';
 
-interface CreatorRateMessageTemplateContent {
+interface MessageTemplateVariant {
+  id: string;
+  name: string;
   template: string;
+}
+
+interface CreatorRateMessageTemplateContent {
+  variants: MessageTemplateVariant[];
+  defaultVariantId: string;
+  /** @deprecated pre-variants shape, read for backward compatibility only */
+  template?: string;
 }
 
 const DEFAULT_MESSAGE_TEMPLATE = [
@@ -194,23 +208,39 @@ const DEFAULT_MESSAGE_TEMPLATE = [
   '— Team ULAA',
 ].join('\n');
 
+const DEFAULT_VARIANT_ID = 'default';
+
+const DEFAULT_MESSAGE_TEMPLATE_VARIANTS: MessageTemplateVariant[] = [
+  { id: DEFAULT_VARIANT_ID, name: 'Default', template: DEFAULT_MESSAGE_TEMPLATE },
+];
+
 // Fills a template's {{greeting}} / {{niche}} / {{followers}} / {{items}}
 // tokens in with one calculation's actual values. Only needs this sliver of
 // CreatorRateCalculation, so the live "Preview Template" popup below can
 // feed it the in-progress form state without a full saved-row shape.
 type MessageTemplateSource = Pick<CreatorRateCalculation, 'creator_name' | 'niche' | 'follower_count' | 'final_commercials'>;
 
+// The "Final Commercials" asset names carry a leading count for the admin
+// table above (e.g. "1 Non-Collab Reel", so a future "2 Story" scales
+// cleanly) — but reads oddly in the message sent to the creator, so it's
+// stripped here for the {{items}} output only. The table itself keeps
+// the count untouched.
+function stripLeadingCount(assetName: string): string {
+  return assetName.replace(/^1\s+/, '');
+}
+
 // A real HTML table can't be sent as a WhatsApp message, but padding each
 // row's asset name out to the same width — inside a monospace block, where
-// every character is the same width — lines the Min/Max columns up into
+// every character is the same width — lines the Max column up into
 // something that reads as a table once WhatsApp renders the monospace
 // formatting. Used whenever {{items}} sits directly inside a ```…``` block
 // (the "Monospace" toolbar button wraps the current selection in exactly
 // that), so wrapping {{items}} in Monospace is what turns it into a table.
 function formatItemsAsTable(assets: CreatorRateAsset[]): string {
-  const nameWidth = Math.max(...assets.map(row => row.asset.length));
+  const names = assets.map(row => stripLeadingCount(row.asset));
+  const nameWidth = Math.max(...names.map(name => name.length));
   return assets
-    .map(row => `${row.asset.padEnd(nameWidth)}  ${formatPrice(row.min)} – ${formatPrice(row.max)}`)
+    .map((row, i) => `${names[i].padEnd(nameWidth)}  ${formatPrice(row.max)}`)
     .join('\n');
 }
 
@@ -224,7 +254,7 @@ function renderMessageTemplate(template: string, h: MessageTemplateSource): stri
     template.slice(tokenIndex + itemsToken.length, tokenIndex + itemsToken.length + 3) === '```';
   const items = isTableWrapped
     ? formatItemsAsTable(h.final_commercials)
-    : h.final_commercials.map(row => `• ${row.asset}: ${formatPrice(row.min)} – ${formatPrice(row.max)}`).join('\n');
+    : h.final_commercials.map(row => `- ${stripLeadingCount(row.asset)}: *${formatPrice(row.max)}*`).join('\n');
   return template
     .replace('{{greeting}}', greeting)
     .replace('{{niche}}', h.niche)
@@ -466,19 +496,21 @@ export default function AdminCreatorRateCalculator() {
     })();
   }, []);
 
-  // ---- Message template (site_content row, shared across every admin —
-  // see RATE_MESSAGE_TEMPLATE_KEY above). Starts at the factory wording
-  // and is swapped for whatever's saved in the DB as soon as that loads,
-  // so the very first render (before the fetch resolves) still has a
-  // sensible default to work from. Edited directly in the "Message
-  // Template" box above the saved-calculations list — Copy/Share on each
-  // saved row always renders from whatever's here. ----
-  const [messageTemplate, setMessageTemplate] = useState<string>(DEFAULT_MESSAGE_TEMPLATE);
+  // ---- Message template variants (site_content row, shared across every
+  // admin — see RATE_MESSAGE_TEMPLATE_KEY above). Starts at the factory
+  // default variant and is swapped for whatever's saved in the DB as soon
+  // as that loads, so the very first render (before the fetch resolves)
+  // still has a sensible default to work from. Edited directly in the
+  // "Message Template" box above the saved-calculations list — Copy/Share
+  // on each saved row render from whichever variant is marked default,
+  // unless overridden per row. ----
+  const [templateVariants, setTemplateVariants] = useState<MessageTemplateVariant[]>(DEFAULT_MESSAGE_TEMPLATE_VARIANTS);
+  const [defaultVariantId, setDefaultVariantId] = useState<string>(DEFAULT_VARIANT_ID);
   const [templateExpanded, setTemplateExpanded] = useState(false);
   const [templateEditing, setTemplateEditing] = useState(false);
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
-  const templateTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const templateTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const templateHeaderRef = useRef<HTMLButtonElement | null>(null);
   const templateScrollCleanupRef = useRef<(() => void) | null>(null);
 
@@ -487,10 +519,7 @@ export default function AdminCreatorRateCalculator() {
   // scroll and expand can run together as one smooth motion instead of
   // waiting for the animation to finish first.
   useEffect(() => {
-    if (!templateExpanded) {
-      setTemplateEditing(false);
-      return;
-    }
+    if (!templateExpanded) return;
     const frame = requestAnimationFrame(() => {
       const el = templateHeaderRef.current;
       if (!el) return;
@@ -510,8 +539,8 @@ export default function AdminCreatorRateCalculator() {
   // ~strikethrough~, and ```monospace```), and does render it, so these
   // buttons wrap the current selection in that markup instead. Clicking
   // again on an already-wrapped selection unwraps it (toggle).
-  const applyTemplateFormat = (marker: string) => {
-    const el = templateTextareaRef.current;
+  const applyTemplateFormat = (variantId: string, marker: string) => {
+    const el = templateTextareaRefs.current[variantId];
     if (!el) return;
     const { selectionStart, selectionEnd, value } = el;
     const selected = value.slice(selectionStart, selectionEnd);
@@ -533,10 +562,42 @@ export default function AdminCreatorRateCalculator() {
       newEnd = newStart + content.length;
     }
 
-    setMessageTemplate(next);
+    updateVariant(variantId, { template: next });
     requestAnimationFrame(() => {
       el.focus();
       el.setSelectionRange(newStart, newEnd);
+    });
+  };
+
+  // ---- Variant list helpers (add / remove / reorder / rename / edit —
+  // same shape as CancellationPolicyEditor's refund tiers). At least one
+  // variant must always remain, since Copy/Share need something to fall
+  // back to. ----
+  const updateVariant = (variantId: string, patch: Partial<MessageTemplateVariant>) => {
+    setTemplateVariants(prev => prev.map(v => (v.id === variantId ? { ...v, ...patch } : v)));
+  };
+
+  const addVariant = () => {
+    const id = crypto.randomUUID();
+    setTemplateVariants(prev => [...prev, { id, name: `Variant ${prev.length + 1}`, template: DEFAULT_MESSAGE_TEMPLATE }]);
+  };
+
+  const removeVariant = (variantId: string) => {
+    setTemplateVariants(prev => {
+      if (prev.length <= 1) return prev;
+      const next = prev.filter(v => v.id !== variantId);
+      if (defaultVariantId === variantId) setDefaultVariantId(next[0].id);
+      return next;
+    });
+  };
+
+  const moveVariant = (index: number, dir: -1 | 1) => {
+    setTemplateVariants(prev => {
+      const target = index + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const copy = [...prev];
+      [copy[index], copy[target]] = [copy[target], copy[index]];
+      return copy;
     });
   };
 
@@ -544,31 +605,40 @@ export default function AdminCreatorRateCalculator() {
     (async () => {
       try {
         const content = await getSiteContent<CreatorRateMessageTemplateContent>(RATE_MESSAGE_TEMPLATE_KEY);
-        if (content?.template) setMessageTemplate(content.template);
+        if (content?.variants?.length) {
+          setTemplateVariants(content.variants);
+          setDefaultVariantId(content.variants.some(v => v.id === content.defaultVariantId) ? content.defaultVariantId : content.variants[0].id);
+        } else if (content?.template) {
+          // Pre-variants shape — migrate the single saved template into one "Default" variant.
+          setTemplateVariants([{ id: DEFAULT_VARIANT_ID, name: 'Default', template: content.template }]);
+          setDefaultVariantId(DEFAULT_VARIANT_ID);
+        }
       } catch (err) {
         console.error(err);
       }
     })();
   }, []);
 
-  // ---- Preview: shows the template fully filled in, in a popup, so an
-  // admin can check the wording actually reads right before saving it. Uses
+  // ---- Preview: shows a variant fully filled in, in a popup, so an admin
+  // can check the wording actually reads right before saving it. Uses
   // whatever's currently entered in the calculator above (creator name,
   // niche, follower count, computed Final Commercials) when there's enough
   // to work with, otherwise falls back to sample figures so the popup never
   // shows blank tokens. ----
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewVariantId, setPreviewVariantId] = useState<string | null>(null);
   const previewMessage = useMemo(() => {
+    const template = templateVariants.find(v => v.id === previewVariantId)?.template ?? templateVariants[0]?.template ?? '';
     const source: MessageTemplateSource = hasInputs
       ? { creator_name: creatorName.trim() || null, niche, follower_count: followers, final_commercials: result.assets }
       : { creator_name: creatorName.trim() || DEFAULT_CREATOR_NAME, niche, follower_count: 10100, final_commercials: PREVIEW_SAMPLE_ASSETS };
-    return renderMessageTemplate(messageTemplate, source);
-  }, [messageTemplate, hasInputs, creatorName, niche, followers, result.assets]);
+    return renderMessageTemplate(template, source);
+  }, [templateVariants, previewVariantId, hasInputs, creatorName, niche, followers, result.assets]);
 
   const handleSaveMessageTemplate = async () => {
     setTemplateSaving(true);
     try {
-      await upsertSiteContent(RATE_MESSAGE_TEMPLATE_KEY, { template: messageTemplate } satisfies CreatorRateMessageTemplateContent);
+      await upsertSiteContent(RATE_MESSAGE_TEMPLATE_KEY, { variants: templateVariants, defaultVariantId } satisfies CreatorRateMessageTemplateContent);
       setTemplateSaved(true);
       setTemplateEditing(false);
       window.setTimeout(() => setTemplateSaved(false), 2000);
@@ -596,13 +666,22 @@ export default function AdminCreatorRateCalculator() {
     }
   };
 
+  // ---- Per-row variant override: which variant Copy/Share use for a given
+  // saved row, if the admin picked one from that row's variant picker
+  // instead of leaving it on the default. Only shown when there's more
+  // than one variant to choose from. ----
+  const [rowVariantId, setRowVariantId] = useState<Record<string, string>>({});
+  const variantForRow = (h: CreatorRateCalculation): MessageTemplateVariant =>
+    templateVariants.find(v => v.id === (rowVariantId[h.id] ?? defaultVariantId)) ?? templateVariants[0];
+
   // ---- Send to creator: Copy (works with any app) + Share (opens
   // WhatsApp pre-filled to the creator's saved number, since that's how
-  // these quotes are actually sent out). Both render from the shared
-  // messageTemplate above, filled in with this row's own values. ----
+  // these quotes are actually sent out). Both render from this row's
+  // chosen variant (default unless overridden above), filled in with this
+  // row's own values. ----
   const handleCopyCalculation = async (h: CreatorRateCalculation) => {
     try {
-      await navigator.clipboard.writeText(renderMessageTemplate(messageTemplate, h));
+      await navigator.clipboard.writeText(renderMessageTemplate(variantForRow(h).template, h));
       setCopiedId(h.id);
       window.setTimeout(() => setCopiedId(prev => (prev === h.id ? null : prev)), 2000);
     } catch (err) {
@@ -612,7 +691,7 @@ export default function AdminCreatorRateCalculator() {
   };
 
   const handleShareCalculation = async (h: CreatorRateCalculation) => {
-    const message = renderMessageTemplate(messageTemplate, h);
+    const message = renderMessageTemplate(variantForRow(h).template, h);
     if (h.phone) {
       window.open(getWhatsAppLink(h.phone, message), '_blank', 'noopener,noreferrer');
       return;
@@ -859,7 +938,10 @@ export default function AdminCreatorRateCalculator() {
           <button
             type="button"
             ref={templateHeaderRef}
-            onClick={() => setTemplateExpanded(v => !v)}
+            onClick={() => setTemplateExpanded(v => {
+              if (v) setTemplateEditing(false);
+              return !v;
+            })}
             aria-expanded={templateExpanded}
             className="w-full flex items-center justify-between gap-3 text-left"
           >
@@ -885,11 +967,7 @@ export default function AdminCreatorRateCalculator() {
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <button
                       type="button"
-                      onClick={() => setTemplateEditing(v => {
-                        const next = !v;
-                        if (next) window.setTimeout(() => templateTextareaRef.current?.focus(), 0);
-                        return next;
-                      })}
+                      onClick={() => setTemplateEditing(v => !v)}
                       aria-pressed={templateEditing}
                       className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold transition-colors ${templateEditing ? 'text-primary' : 'text-dark-muted hover:text-primary'}`}
                     >
@@ -898,66 +976,143 @@ export default function AdminCreatorRateCalculator() {
                     {templateEditing && (
                       <button
                         type="button"
-                        onClick={() => setMessageTemplate(DEFAULT_MESSAGE_TEMPLATE)}
+                        onClick={() => {
+                          setTemplateVariants(DEFAULT_MESSAGE_TEMPLATE_VARIANTS);
+                          setDefaultVariantId(DEFAULT_VARIANT_ID);
+                        }}
                         className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
                       >
                         <RotateCcw size={13} aria-hidden="true" /> Reset to original wording
                       </button>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <button
-                      type="button"
-                      onClick={() => applyTemplateFormat('*')}
-                      title="Bold"
-                      aria-label="Bold"
-                      disabled={!templateEditing}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                      <BoldIcon size={15} weight="bold" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyTemplateFormat('_')}
-                      title="Italic"
-                      aria-label="Italic"
-                      disabled={!templateEditing}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                      <ItalicIcon size={15} aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyTemplateFormat('~')}
-                      title="Strikethrough"
-                      aria-label="Strikethrough"
-                      disabled={!templateEditing}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                      <StrikethroughIcon size={15} aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyTemplateFormat('```')}
-                      title="Monospace"
-                      aria-label="Monospace"
-                      disabled={!templateEditing}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                      <MonospaceIcon size={15} aria-hidden="true" />
-                    </button>
+
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-button font-bold text-dark-muted">Variants</span>
+                    {templateEditing && (
+                      <button
+                        type="button"
+                        onClick={addVariant}
+                        className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+                      >
+                        <Plus size={14} aria-hidden="true" /> Add Variant
+                      </button>
+                    )}
                   </div>
-                  <textarea
-                    ref={templateTextareaRef}
-                    value={messageTemplate}
-                    onChange={e => setMessageTemplate(e.target.value)}
-                    readOnly={!templateEditing}
-                    rows={8}
-                    className={`${inputClass} font-mono text-xs resize-y ${!templateEditing ? 'bg-background-warm/40 cursor-default' : ''}`}
-                    placeholder="Message template..."
-                  />
+
+                  <div className="space-y-3 mb-3">
+                    {templateVariants.map((variant, index) => (
+                      <div key={variant.id} className="bg-background-warm rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {variant.id === defaultVariantId ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-button font-bold text-primary shrink-0">
+                                <Star size={12} weight="fill" aria-hidden="true" /> Default
+                              </span>
+                            ) : templateEditing ? (
+                              <button
+                                type="button"
+                                onClick={() => setDefaultVariantId(variant.id)}
+                                title="Set as default"
+                                aria-label={`Set "${variant.name}" as the default variant`}
+                                className="inline-flex items-center gap-1 text-[11px] font-button font-semibold text-dark-muted hover:text-primary transition-colors shrink-0"
+                              >
+                                <Star size={12} aria-hidden="true" /> Set default
+                              </button>
+                            ) : null}
+                            <label htmlFor={`cr-template-name-${variant.id}`} className="sr-only">Variant name</label>
+                            <input
+                              id={`cr-template-name-${variant.id}`}
+                              value={variant.name}
+                              onChange={e => updateVariant(variant.id, { name: e.target.value })}
+                              readOnly={!templateEditing}
+                              className={`flex-1 min-w-0 bg-transparent text-xs font-button font-bold text-dark border-0 focus:outline-none focus:ring-0 px-0 ${!templateEditing ? 'cursor-default' : ''}`}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => { setPreviewVariantId(variant.id); setPreviewOpen(true); }}
+                              title="Preview"
+                              aria-label={`Preview "${variant.name}"`}
+                              className="p-1 rounded-md hover:bg-white text-dark-muted hover:text-primary transition-colors"
+                            >
+                              <Eye size={14} aria-hidden="true" />
+                            </button>
+                            {templateEditing && (
+                              <>
+                                <button type="button" onClick={() => moveVariant(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move up" aria-label={`Move "${variant.name}" up`}>
+                                  <ChevronUp size={14} aria-hidden="true" />
+                                </button>
+                                <button type="button" onClick={() => moveVariant(index, 1)} disabled={index === templateVariants.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down" aria-label={`Move "${variant.name}" down`}>
+                                  <ChevronDown size={14} aria-hidden="true" />
+                                </button>
+                                <button type="button" onClick={() => removeVariant(variant.id)} disabled={templateVariants.length <= 1} className="p-1 rounded-md hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent text-dark-muted hover:text-red-600 transition-colors" title="Remove variant" aria-label={`Remove "${variant.name}"`}>
+                                  <X size={14} aria-hidden="true" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => applyTemplateFormat(variant.id, '*')}
+                            title="Bold"
+                            aria-label="Bold"
+                            disabled={!templateEditing}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                          >
+                            <BoldIcon size={15} weight="bold" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyTemplateFormat(variant.id, '_')}
+                            title="Italic"
+                            aria-label="Italic"
+                            disabled={!templateEditing}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                          >
+                            <ItalicIcon size={15} aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyTemplateFormat(variant.id, '~')}
+                            title="Strikethrough"
+                            aria-label="Strikethrough"
+                            disabled={!templateEditing}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                          >
+                            <StrikethroughIcon size={15} aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyTemplateFormat(variant.id, '```')}
+                            title="Monospace"
+                            aria-label="Monospace"
+                            disabled={!templateEditing}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-background-warm bg-white text-dark-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                          >
+                            <MonospaceIcon size={15} aria-hidden="true" />
+                          </button>
+                        </div>
+                        <label htmlFor={`cr-template-body-${variant.id}`} className="sr-only">{`Message body for "${variant.name}"`}</label>
+                        <textarea
+                          id={`cr-template-body-${variant.id}`}
+                          ref={el => { templateTextareaRefs.current[variant.id] = el; }}
+                          value={variant.template}
+                          onChange={e => updateVariant(variant.id, { template: e.target.value })}
+                          readOnly={!templateEditing}
+                          rows={8}
+                          className={`${inputClass} font-mono text-xs resize-y ${!templateEditing ? 'bg-white/60 cursor-default' : 'bg-white'}`}
+                          placeholder="Message template..."
+                        />
+                      </div>
+                    ))}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-2 mt-3">
-                    <Button variant="outline" size="sm" fullWidth onClick={() => setPreviewOpen(true)}>
+                    <Button variant="outline" size="sm" fullWidth onClick={() => { setPreviewVariantId(defaultVariantId); setPreviewOpen(true); }}>
                       <Eye size={15} aria-hidden="true" /> Preview
                     </Button>
                     <Button variant="primary" size="sm" fullWidth onClick={handleSaveMessageTemplate} loading={templateSaving}>
@@ -977,7 +1132,10 @@ export default function AdminCreatorRateCalculator() {
         <Modal
           isOpen={previewOpen}
           onClose={() => setPreviewOpen(false)}
-          title="Template Preview"
+          title={(() => {
+            const name = templateVariants.find(v => v.id === previewVariantId)?.name;
+            return name ? `Preview — ${name}` : 'Template Preview';
+          })()}
           size="sm"
           footer={
             <div className="flex justify-end">
@@ -1088,6 +1246,16 @@ export default function AdminCreatorRateCalculator() {
 
                             <div className="flex items-center justify-between gap-3 flex-wrap pt-3 mt-1 border-t border-background-warm">
                               <div className="flex items-center gap-2 flex-wrap">
+                                {templateVariants.length > 1 && (
+                                  <Select
+                                    inputId={`cr-row-variant-${h.id}`}
+                                    size="sm"
+                                    value={rowVariantId[h.id] ?? defaultVariantId}
+                                    onChange={val => setRowVariantId(prev => ({ ...prev, [h.id]: val }))}
+                                    options={templateVariants.map(v => ({ value: v.id, label: v.name }))}
+                                    className="w-36"
+                                  />
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => handleCopyCalculation(h)}
