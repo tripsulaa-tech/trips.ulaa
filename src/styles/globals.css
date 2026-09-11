@@ -246,16 +246,56 @@ button, .btn {
 }
 
 /* Special-offer card border (popup card + TripCard outer stroke) — same
-   left-right sweep, but orange-to-brown, kept separate from
+   left-right sweep, but green-yellow, kept separate from
    offer-badge-gradient-shift so the badge pill keeps its own colour. */
 @keyframes offer-border-gradient-shift {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
 }
 .offer-border-gradient-shift {
-  background-image: linear-gradient(90deg, #EA580C 0%, #78350F 50%, #EA580C 100%);
+  background-image: linear-gradient(90deg, #CA8A04 0%, #16A34A 50%, #CA8A04 100%);
   background-size: 200% 100%;
   animation: offer-border-gradient-shift 3s ease-in-out infinite;
+}
+
+/* Early Bird badge on TripCard — same left-right sweep as the other
+   offer badges, but keeps the existing secondary->primary brand colours
+   (previously a static bg-gradient-to-r) instead of introducing a new
+   colour pairing. */
+@keyframes early-bird-badge-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.early-bird-badge-gradient-shift {
+  background-image: linear-gradient(90deg, var(--color-secondary) 0%, var(--color-primary) 50%, var(--color-secondary) 100%);
+  background-size: 200% 100%;
+  animation: early-bird-badge-gradient-shift 3s ease-in-out infinite;
+}
+
+/* Popup CTA ("Reserve Now" / "Book This Offer") on both the homepage
+   special-offer popup and the trip-detail-page one — they share the same
+   SpecialOfferPopupCard button, so this one class covers both. A soft
+   translucent highlight glides left-to-right across the button on a loop
+   (with a pause at the end of each pass) to keep drawing the eye to the
+   CTA without changing its actual bg-primary colour. */
+@keyframes cta-shine-sweep {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  45% { transform: translateX(250%) skewX(-20deg); }
+  100% { transform: translateX(250%) skewX(-20deg); }
+}
+.cta-shine-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.cta-shine-sweep::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-150%) skewX(-20deg);
+  animation: cta-shine-sweep 2.6s ease-in-out infinite;
+  pointer-events: none;
 }
 
 /* Loading placeholder sweep shown behind a gallery photo while it loads. */

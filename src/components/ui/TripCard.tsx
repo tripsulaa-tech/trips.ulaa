@@ -162,7 +162,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
     : fallbackFeatureTags;
 
   return (
-    // Special-offer cards get a 3px animated orange-to-brown stroke around
+    // Special-offer cards get a 3px animated green-yellow stroke around
     // the whole card (separate offer-border-gradient-shift class, kept
     // distinct from the offer-badge-gradient-shift badge/banner colour) —
     // early-bird / plain cards are untouched.
@@ -211,7 +211,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               {trip.special_offer_name}
             </span>
           ) : isEarlyBird && (
-            <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-secondary to-primary text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
+            <span className="early-bird-badge-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
               <Bird size={14} weight="fill" />
               Early Bird
             </span>

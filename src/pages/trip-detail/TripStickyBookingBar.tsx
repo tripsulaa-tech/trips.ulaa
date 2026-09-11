@@ -58,7 +58,7 @@ export default function TripStickyBookingBar({
                 {/* Row 3: Special Offer / Early Bird + Ends date, kept but compact */}
                 {isSpecialOffer ? (
                   <div className="flex items-center gap-1.5 mt-0.5 overflow-x-auto no-scrollbar">
-                    <span className="inline-flex items-center gap-1 bg-primary-dark text-white text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                    <span className="offer-badge-gradient-shift inline-flex items-center gap-1 text-white text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                       <Sparkle size={9} weight="fill" />
                       {trip.special_offer_name || 'Special Offer'}
                     </span>
@@ -100,7 +100,7 @@ export default function TripStickyBookingBar({
                 <div className="flex items-center gap-1.5 mt-1 overflow-x-auto no-scrollbar">
                   {isSpecialOffer ? (
                     <>
-                      <span className="inline-flex items-center gap-1 bg-primary-dark text-white text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                      <span className="offer-badge-gradient-shift inline-flex items-center gap-1 text-white text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                         <Sparkle size={10} weight="fill" />
                         {trip.special_offer_name || 'Special Offer'}
                       </span>

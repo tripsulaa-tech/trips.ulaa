@@ -138,7 +138,7 @@ export default function SpecialOfferPopupCard({
           >
             {/* Everything actually lives inside this inset white panel — the
                 outer motion.div is just a 3px strip of the animated
-                orange-to-brown gradient showing through as a border/stroke
+                green-yellow gradient showing through as a border/stroke
                 around the card, rather than filling it. */}
             <div className="relative bg-white rounded-lg overflow-hidden">
               {/* 44x44 tap target (WCAG/Apple minimum), even though the
@@ -228,7 +228,12 @@ export default function SpecialOfferPopupCard({
                 )}
 
                 {/* A brief double-pulse draws the eye to the CTA the moment
-                    the popup lands, then settles — a nudge, not a nag. */}
+                    the popup lands, then settles — a nudge, not a nag.
+                    cta-shine-sweep adds a looping light-glide across the
+                    button afterwards so it keeps drawing the eye even once
+                    the initial pulse has finished. Covers both the
+                    homepage popup and the trip-detail-page one, since both
+                    render this same button. */}
                 <motion.button
                   type="button"
                   onClick={onCtaClick}
@@ -237,10 +242,10 @@ export default function SpecialOfferPopupCard({
                   transition={{ duration: 0.7, delay: 0.4, times: [0, 0.5, 1], repeat: 1, repeatDelay: 0.5 }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`group/btn w-full inline-flex items-center justify-center gap-2 bg-primary text-white hover:bg-primary-dark shadow-warm hover:shadow-warm-lg border-2 border-primary rounded-md px-6 py-3 text-sm sm:text-base font-button font-semibold transition-colors min-h-[48px] ${isAlmostFull ? '' : 'mt-1'}`}
+                  className={`cta-shine-sweep group/btn w-full inline-flex items-center justify-center gap-2 bg-primary text-white hover:bg-primary-dark shadow-warm hover:shadow-warm-lg border-2 border-primary rounded-md px-6 py-3 text-sm sm:text-base font-button font-semibold transition-colors min-h-[48px] ${isAlmostFull ? '' : 'mt-1'}`}
                 >
-                  {ctaLabel}
-                  <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
+                  <span className="relative z-10">{ctaLabel}</span>
+                  <ArrowRight size={16} className="relative z-10 transition-transform group-hover/btn:translate-x-1" />
                 </motion.button>
 
                 {/* Padded to a real 44px tap target even though it reads as a

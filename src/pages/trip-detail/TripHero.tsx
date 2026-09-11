@@ -159,7 +159,7 @@ export default function TripHero({
               <span className="flex items-center gap-2"><UserCheck size={14} /> {formatAgeRange(trip.min_age, trip.max_age)}</span>
             )}
             {isSpecialOffer && trip.special_offer_name ? (
-              <span className="hidden sm:flex items-center gap-1.5 bg-primary-dark text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
+              <span className="hidden sm:flex offer-badge-gradient-shift items-center gap-1.5 text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
                 <Sparkle size={14} weight="fill" />
                 {trip.special_offer_name}
               </span>

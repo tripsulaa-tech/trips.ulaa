@@ -122,18 +122,20 @@ export default function TripCountdownCard({
             <TripOrbitScene urgent={urgent} />
           </Suspense>
 
-          {/* Mobile/tablet: small badge pinned to the corner, same spot as
-              before — there's no CTA column next to it yet at this width
-              (everything stacks), so the corner is the only sensible home. */}
-          {(isAlmostFull || isFull) && (
-            <span className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10 lg:hidden inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-2xs font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
-              <Flame size={11} className="text-amber-300" />
-              {isFull ? 'Sold out' : `${remainingSeats} seats left`}
-            </span>
-          )}
+          {/* Mobile/tablet: seats-left badge now sits stacked above "Trip
+              starts in" (see the flex-col below) instead of floating in
+              the corner — moved in per feedback so it reads as one clear
+              stack of urgency signals instead of two competing focal
+              points. */}
 
           <div className="relative flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
             <div className="flex flex-col items-center lg:items-start gap-1.5 lg:flex-1 lg:min-w-0">
+              {(isAlmostFull || isFull) && (
+                <span className="lg:hidden inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-2xs font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
+                  <Flame size={11} className="text-amber-300" />
+                  {isFull ? 'Sold out' : `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left!`}
+                </span>
+              )}
               <p
                 className={`flex items-center gap-2 text-2xs lg:text-xs font-button font-bold uppercase tracking-[0.25em] whitespace-nowrap bg-clip-text text-transparent ${
                   urgent ? 'bg-gradient-to-r from-orange-300 to-amber-200' : 'bg-gradient-to-r from-primary-light to-gold'
@@ -199,7 +201,7 @@ export default function TripCountdownCard({
               {(isAlmostFull || isFull) && (
                 <span className="hidden lg:inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-2xs font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
                   <Flame size={11} className="text-amber-300" />
-                  {isFull ? 'Sold out' : `${remainingSeats} seats left`}
+                  {isFull ? 'Sold out' : `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left!`}
                 </span>
               )}
               <span

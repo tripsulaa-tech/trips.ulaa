@@ -111,7 +111,7 @@ export default function TripConfidenceBookingSection({
                       Save {formatPrice(strikeThroughPrice - activePrice)}
                     </span>
                     {isSpecialOffer && trip.special_offer_name ? (
-                      <span className="inline-flex items-center gap-1.5 bg-primary-dark text-white text-xs font-button font-bold px-2.5 py-1 rounded-md">
+                      <span className="offer-badge-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold px-2.5 py-1 rounded-md">
                         <Sparkle size={12} weight="fill" />
                         {trip.special_offer_name}
                       </span>
