@@ -5,8 +5,8 @@ import { useConfirm } from '../../components/ui/useConfirm';
 
 /** Row-level quick actions for the Trips table: delete (with a linked-data
  *  impact warning), publish/unpublish, coming-soon toggle, hide-PDF toggle,
- *  reorder, and itinerary PDF download. Each mutating action re-runs
- *  `load()` to refresh the table afterwards. */
+ *  hide-special-offer-promo toggle, reorder, and itinerary PDF download.
+ *  Each mutating action re-runs `load()` to refresh the table afterwards. */
 export function useTripActions(trips: UpcomingTrip[], load: () => void) {
   const confirm = useConfirm();
   const [pdfDownloadingId, setPdfDownloadingId] = useState<string | null>(null);
@@ -64,6 +64,16 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
     load();
   };
 
+  // Toggles whether this trip's special-offer *promotion* (homepage
+  // SpecialOfferPopup + TripCard gradient border/badge) is shown. Doesn't
+  // touch special_offer_price/date — the offer, if still within its date
+  // window, keeps applying, it just stops being advertised. See
+  // add_trip_hide_special_offer_promo.sql.
+  const toggleHideSpecialOfferPromo = async (trip: UpcomingTrip) => {
+    await updateUpcomingTrip(trip.id, { hide_special_offer_promo: !trip.hide_special_offer_promo });
+    load();
+  };
+
   // ↑/↓ quick action: swaps this trip's sort_order with its neighbour in
   // the table (which is itself ordered by sort_order — see
   // getAllUpcomingTripsAdmin), moving its card earlier/later on the public
@@ -103,6 +113,7 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
     togglePublish,
     toggleComingSoon,
     toggleHidePdfDownload,
+    toggleHideSpecialOfferPromo,
     moveTrip,
     handleDownloadTripPdf,
   };

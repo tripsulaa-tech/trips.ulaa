@@ -183,6 +183,11 @@ create table public.upcoming_trips (
   -- When true, hides the "Download itinerary PDF" option from the public
   -- Trip Detail page for this trip. See add_trip_hide_pdf_download.sql.
   hide_pdf_download       boolean not null default false,
+  -- When true, silences the special-offer *promotion* for this trip — the
+  -- homepage SpecialOfferPopup and the TripCard's gradient border/badge —
+  -- without touching special_offer_price/date below. See
+  -- add_trip_hide_special_offer_promo.sql.
+  hide_special_offer_promo boolean not null default false,
   -- Internal (admin-only) cost/profit record — ad spend, per-traveler
   -- entry-ticket/kit cost, agency payment, trip organiser expenses. Never
   -- surfaced on the public site. See add_trip_finance.sql and TripFinance

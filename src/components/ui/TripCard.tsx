@@ -136,6 +136,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   const isFull = remaining === 0;
   const { activePrice, isEarlyBird, isSpecialOffer } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
+  // Admin's "hide special-offer promo" quick action (Admin → Upcoming
+  // Trips) silences the border/badges below without touching the price
+  // itself — special_offer_price still applies via isSpecialOffer above,
+  // it just does so quietly. See add_trip_hide_special_offer_promo.sql.
+  const showSpecialOfferPromo = isSpecialOffer && !trip.hide_special_offer_promo;
   // Days left before the live special offer disappears — powers the
   // urgency line below the price (mirrors the Early Bird countdown), so a
   // shopper sees exactly how much runway they have to book instead of a
@@ -161,12 +166,12 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
     // the whole card (separate offer-border-gradient-shift class, kept
     // distinct from the offer-badge-gradient-shift badge/banner colour) —
     // early-bird / plain cards are untouched.
-    <div className={isSpecialOffer ? 'offer-border-gradient-shift rounded-2xl p-[3px] shadow-warm-lg h-full' : 'h-full'}>
+    <div className={showSpecialOfferPromo ? 'offer-border-gradient-shift rounded-2xl p-[3px] shadow-warm-lg h-full' : 'h-full'}>
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05, duration: 0.3 }}
-        className={`group bg-white rounded-2xl ${isSpecialOffer ? '' : 'border border-background-warm'} shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col overflow-hidden`}
+        className={`group bg-white rounded-2xl ${showSpecialOfferPromo ? '' : 'border border-background-warm'} shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col overflow-hidden`}
       >
       {/* Image */}
       <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden block">
@@ -200,7 +205,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               Only {remaining} left!
             </span>
           ) : null}
-          {isSpecialOffer && trip.special_offer_name ? (
+          {showSpecialOfferPromo && trip.special_offer_name ? (
             <span className="offer-badge-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm-lg ring-1 ring-inset ring-white/15">
               <Sparkle size={14} weight="fill" />
               {trip.special_offer_name}
@@ -337,7 +342,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             </Link>
           )}
 
-          {isSpecialOffer && trip.special_offer_date ? (
+          {showSpecialOfferPromo && trip.special_offer_date ? (
             <div className="offer-badge-gradient-shift flex items-center gap-1.5 rounded-lg px-3 py-2 mb-5 shadow-warm-lg ring-1 ring-inset ring-white/15">
               <Timer size={14} className="text-white shrink-0" />
               <p className="text-white text-2xs leading-tight">

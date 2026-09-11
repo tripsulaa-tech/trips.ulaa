@@ -63,6 +63,10 @@ export default function SpecialOfferPopup() {
         // admin would want featured first — same trip that'd show first in
         // the "Upcoming adventures" preview below.
         const featured = trips.find(t => {
+          // Admin's "hide special-offer promo" quick action opts a trip out
+          // of this popup entirely, even while its special_offer_price/date
+          // is still live — see add_trip_hide_special_offer_promo.sql.
+          if (t.hide_special_offer_promo) return false;
           const { isSpecialOffer } = getActivePrice(
             t.price, t.early_bird_price, t.early_bird_deadline,
             t.special_offer_price, t.special_offer_date, t.special_offer_end_date

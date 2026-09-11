@@ -174,6 +174,12 @@ export interface UpcomingTrip {
   special_offer_price?: number | null;
   special_offer_date?: string | null;
   special_offer_end_date?: string | null;
+  // When true, silences the special-offer *promotion* for this trip — the
+  // homepage SpecialOfferPopup and the TripCard's gradient border/badge —
+  // without touching special_offer_price/date above, so the offer (if
+  // still within its date window) keeps applying quietly. See
+  // add_trip_hide_special_offer_promo.sql.
+  hide_special_offer_promo?: boolean;
   // Optional fixed marketing tags (up to 4) shown in the icon row on the
   // public Trip Card, e.g. "Girls-Only" / "Safe & fun". Left unset, the
   // card falls back to auto-generated tags from real trip data (travelers,

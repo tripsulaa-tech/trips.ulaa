@@ -35,6 +35,7 @@ export default function AdminTrips() {
     togglePublish,
     toggleComingSoon,
     toggleHidePdfDownload,
+    toggleHideSpecialOfferPromo,
     moveTrip,
     handleDownloadTripPdf,
   } = useTripActions(trips, load);
@@ -89,6 +90,7 @@ export default function AdminTrips() {
         onTogglePublish={togglePublish}
         onToggleComingSoon={toggleComingSoon}
         onToggleHidePdf={toggleHidePdfDownload}
+        onToggleSpecialOfferPromo={toggleHideSpecialOfferPromo}
         onMoveTrip={moveTrip}
         onDownloadPdf={handleDownloadTripPdf}
       />

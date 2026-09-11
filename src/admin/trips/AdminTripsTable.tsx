@@ -11,6 +11,7 @@ import {
   Hourglass,
   FileArrowDown as FileDown,
   FileX,
+  Megaphone,
   CaretUp as ChevronUp,
   CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
@@ -33,6 +34,7 @@ interface AdminTripsTableProps {
   onTogglePublish: (trip: UpcomingTrip) => void;
   onToggleComingSoon: (trip: UpcomingTrip) => void;
   onToggleHidePdf: (trip: UpcomingTrip) => void;
+  onToggleSpecialOfferPromo: (trip: UpcomingTrip) => void;
   onMoveTrip: (index: number, dir: -1 | 1) => void;
   onDownloadPdf: (trip: UpcomingTrip) => void;
 }
@@ -45,7 +47,7 @@ export default function AdminTripsTable({
   trips, loading, pdfDownloadingId,
   importInputRef, onImportInputChange, onExportTemplate,
   onAddTrip, onView, onEdit, onDelete,
-  onTogglePublish, onToggleComingSoon, onToggleHidePdf, onMoveTrip, onDownloadPdf,
+  onTogglePublish, onToggleComingSoon, onToggleHidePdf, onToggleSpecialOfferPromo, onMoveTrip, onDownloadPdf,
 }: AdminTripsTableProps) {
   const publishedCount = trips.filter(t => t.status === 'published').length;
   const comingSoonCount = trips.filter(t => t.status === 'coming_soon').length;
@@ -204,6 +206,13 @@ export default function AdminTripsTable({
                     >
                       <FileX size={16} aria-hidden="true" />
                     </button>
+                    <button
+                      onClick={() => onToggleSpecialOfferPromo(trip)}
+                      aria-label={trip.hide_special_offer_promo ? `Show special-offer popup & badge for ${trip.title}` : `Stop special-offer popup & badge for ${trip.title}`}
+                      className={`flex-shrink-0 p-2 rounded hover:bg-background transition-colors ${trip.hide_special_offer_promo ? 'text-red-600' : 'text-dark-muted hover:text-primary'}`}
+                    >
+                      <Megaphone size={16} aria-hidden="true" />
+                    </button>
                     <button onClick={() => onEdit(trip)} aria-label={`Edit ${trip.title}`} className="flex-shrink-0 p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
                       <Edit2 size={16} aria-hidden="true" />
                     </button>
@@ -291,6 +300,14 @@ export default function AdminTripsTable({
                           title={trip.hide_pdf_download ? 'PDF download hidden from users on the trip page — click to show it again' : 'Hide the PDF download option from users on the trip page'}
                         >
                           <FileX size={15} aria-hidden="true" />
+                        </button>
+                        <button
+                          onClick={() => onToggleSpecialOfferPromo(trip)}
+                          aria-label={trip.hide_special_offer_promo ? `Show special-offer popup & badge for ${trip.title}` : `Stop special-offer popup & badge for ${trip.title}`}
+                          className={`flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background transition-colors ${trip.hide_special_offer_promo ? 'text-red-600' : 'text-dark-muted hover:text-primary'}`}
+                          title={trip.hide_special_offer_promo ? 'Special-offer popup & badge stopped for this trip — click to show again' : 'Stop the special-offer popup & badge from showing for this trip'}
+                        >
+                          <Megaphone size={15} aria-hidden="true" />
                         </button>
                         <button onClick={() => onEdit(trip)} aria-label={`Edit ${trip.title}`} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title="Edit">
                           <Edit2 size={15} aria-hidden="true" />
