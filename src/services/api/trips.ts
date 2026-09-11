@@ -109,6 +109,11 @@ export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
       .select(UPCOMING_TRIP_SELECT)
       .in('status', ['coming_soon', 'published'])
       .gte('start_date', today)
+      // Manual admin-controlled order (see add_trip_sort_order.sql and the
+      // ↑/↓ controls in AdminTripsTable.tsx) drives card position on the
+      // homepage preview and the full /trips listing; start_date is only a
+      // tiebreaker for trips that somehow share a sort_order.
+      .order('sort_order', { ascending: true, nullsFirst: false })
       .order('start_date', { ascending: true }),
     getWaitlistReservedCounts(),
   ]);
@@ -134,15 +139,34 @@ export async function getAllUpcomingTripsAdmin(): Promise<UpcomingTrip[]> {
   const { data, error } = await supabase
     .from('upcoming_trips')
     .select(UPCOMING_TRIP_SELECT)
+    // Matches the public ordering (see getUpcomingTrips above) so the
+    // admin table's row order is what the ↑/↓ reorder controls are acting
+    // on — moving a trip up here is what moves its card earlier on the
+    // homepage/listing.
+    .order('sort_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data || []) as UpcomingTrip[];
 }
 
 export async function createUpcomingTrip(trip: Partial<UpcomingTrip>): Promise<UpcomingTrip> {
+  // New trips are appended to the end of the manual display order rather
+  // than defaulting to null/first, so adding a trip never silently jumps
+  // it ahead of an already-arranged homepage lineup. See
+  // add_trip_sort_order.sql.
+  let sort_order = trip.sort_order;
+  if (sort_order == null) {
+    const { data: lastRow } = await supabase
+      .from('upcoming_trips')
+      .select('sort_order')
+      .order('sort_order', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    sort_order = (lastRow?.sort_order ?? -1) + 1;
+  }
   const { data, error } = await supabase
     .from('upcoming_trips')
-    .insert(trip)
+    .insert({ ...trip, sort_order })
     .select()
     .single();
   if (error) throw error;

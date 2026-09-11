@@ -134,6 +134,13 @@ export interface UpcomingTrip {
   faqs: FAQ[];
   total_seats: number;
   seats_booked: number;
+  // Manual display order for trip cards on the public site (homepage
+  // preview + full /trips listing) — lower sorts first. Set/changed via the
+  // ↑/↓ controls in Admin → Upcoming Trips (AdminTripsTable.tsx), not the
+  // Add/Edit Trip form. New trips are appended to the end automatically
+  // (see createUpcomingTrip in services/api/trips.ts). null only
+  // transiently before a trip's first save. See add_trip_sort_order.sql.
+  sort_order?: number | null;
   // Not a DB column — merged in client-side (see getUpcomingTrips /
   // getUpcomingTripBySlug) from get_waitlist_reserved_counts(). Counts
   // people still active on the waitlist (waiting/notified) so the public

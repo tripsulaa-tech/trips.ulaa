@@ -5,9 +5,9 @@ import { useConfirm } from '../../components/ui/useConfirm';
 
 /** Row-level quick actions for the Trips table: delete (with a linked-data
  *  impact warning), publish/unpublish, coming-soon toggle, hide-PDF toggle,
- *  and itinerary PDF download. Each mutating action re-runs `load()` to
- *  refresh the table afterwards. */
-export function useTripActions(load: () => void) {
+ *  reorder, and itinerary PDF download. Each mutating action re-runs
+ *  `load()` to refresh the table afterwards. */
+export function useTripActions(trips: UpcomingTrip[], load: () => void) {
   const confirm = useConfirm();
   const [pdfDownloadingId, setPdfDownloadingId] = useState<string | null>(null);
 
@@ -64,6 +64,24 @@ export function useTripActions(load: () => void) {
     load();
   };
 
+  // ↑/↓ quick action: swaps this trip's sort_order with its neighbour in
+  // the table (which is itself ordered by sort_order — see
+  // getAllUpcomingTripsAdmin), moving its card earlier/later on the public
+  // homepage preview and the full /trips listing. See add_trip_sort_order.sql.
+  const moveTrip = async (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= trips.length) return;
+    const a = trips[index];
+    const b = trips[target];
+    const aOrder = a.sort_order ?? index;
+    const bOrder = b.sort_order ?? target;
+    await Promise.all([
+      updateUpcomingTrip(a.id, { sort_order: bOrder }),
+      updateUpcomingTrip(b.id, { sort_order: aOrder }),
+    ]);
+    load();
+  };
+
   const handleDownloadTripPdf = async (trip: UpcomingTrip) => {
     if (pdfDownloadingId) return;
     setPdfDownloadingId(trip.id);
@@ -85,6 +103,7 @@ export function useTripActions(load: () => void) {
     togglePublish,
     toggleComingSoon,
     toggleHidePdfDownload,
+    moveTrip,
     handleDownloadTripPdf,
   };
 }

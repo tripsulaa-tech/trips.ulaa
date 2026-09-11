@@ -336,6 +336,9 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-5">
               <Timer size={14} className="text-primary-dark shrink-0" />
               <p className="text-dark text-2xs leading-tight">
+                {trip.special_offer_name && (
+                  <span className="font-bold">{trip.special_offer_name} — </span>
+                )}
                 {specialOfferDaysRemaining <= 1 ? (
                   <>
                     <span className="text-primary-dark font-bold">Offer ends today</span> — grab it before it's gone!

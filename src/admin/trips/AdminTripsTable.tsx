@@ -11,6 +11,8 @@ import {
   Hourglass,
   FileArrowDown as FileDown,
   FileX,
+  CaretUp as ChevronUp,
+  CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import AddFab from '../../components/ui/AddFab';
@@ -31,6 +33,7 @@ interface AdminTripsTableProps {
   onTogglePublish: (trip: UpcomingTrip) => void;
   onToggleComingSoon: (trip: UpcomingTrip) => void;
   onToggleHidePdf: (trip: UpcomingTrip) => void;
+  onMoveTrip: (index: number, dir: -1 | 1) => void;
   onDownloadPdf: (trip: UpcomingTrip) => void;
 }
 
@@ -42,7 +45,7 @@ export default function AdminTripsTable({
   trips, loading, pdfDownloadingId,
   importInputRef, onImportInputChange, onExportTemplate,
   onAddTrip, onView, onEdit, onDelete,
-  onTogglePublish, onToggleComingSoon, onToggleHidePdf, onDownloadPdf,
+  onTogglePublish, onToggleComingSoon, onToggleHidePdf, onMoveTrip, onDownloadPdf,
 }: AdminTripsTableProps) {
   const publishedCount = trips.filter(t => t.status === 'published').length;
   const comingSoonCount = trips.filter(t => t.status === 'coming_soon').length;
@@ -106,6 +109,12 @@ export default function AdminTripsTable({
             </button>
           </div>
         </div>
+        {trips.length > 1 && (
+          <p className="text-xs text-dark-muted flex items-center gap-1.5 px-1">
+            <ChevronUp size={12} className="shrink-0" aria-hidden="true" />
+            Use the ↑/↓ arrows next to each trip to set the order cards appear in on the homepage and the full Trips page.
+          </p>
+        )}
       </div>
 
       {loading ? (
@@ -124,7 +133,7 @@ export default function AdminTripsTable({
               action room to breathe instead. Same pattern as AdminAlbums /
               AdminTripLeaders. */}
           <div className="sm:hidden space-y-3">
-            {trips.map(trip => {
+            {trips.map((trip, index) => {
               const seatsLeft = Math.max(0, trip.total_seats - trip.seats_booked);
               return (
                 <motion.div
@@ -135,6 +144,10 @@ export default function AdminTripsTable({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex flex-col shrink-0">
+                        <button onClick={() => onMoveTrip(index, -1)} disabled={index === 0} aria-label={`Move ${trip.title} up`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={14} aria-hidden="true" /></button>
+                        <button onClick={() => onMoveTrip(index, 1)} disabled={index === trips.length - 1} aria-label={`Move ${trip.title} down`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={14} aria-hidden="true" /></button>
+                      </div>
                       {trip.cover_image ? (
                         <img src={trip.cover_image} alt={trip.title} className="w-12 h-12 rounded-md object-cover flex-shrink-0" loading="lazy" decoding="async" />
                       ) : (
@@ -210,6 +223,7 @@ export default function AdminTripsTable({
               <caption className="sr-only">Trips</caption>
               <thead className="bg-background-warm text-dark font-medium">
                 <tr>
+                  <th className="px-2 py-4 text-center w-8"><span className="sr-only">Reorder</span></th>
                   <th className="px-4 py-4 text-left">Trip</th>
                   <th className="px-4 py-4 text-left hidden md:table-cell">Destination</th>
                   <th className="px-4 py-4 text-left hidden lg:table-cell">Date</th>
@@ -219,8 +233,14 @@ export default function AdminTripsTable({
                 </tr>
               </thead>
               <tbody className="divide-y divide-background-warm">
-                {trips.map(trip => (
+                {trips.map((trip, index) => (
                   <motion.tr key={trip.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
+                    <td className="px-2 py-4">
+                      <div className="flex flex-col items-center">
+                        <button onClick={() => onMoveTrip(index, -1)} disabled={index === 0} aria-label={`Move ${trip.title} up`} title="Move up (homepage order)" className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={13} aria-hidden="true" /></button>
+                        <button onClick={() => onMoveTrip(index, 1)} disabled={index === trips.length - 1} aria-label={`Move ${trip.title} down`} title="Move down (homepage order)" className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={13} aria-hidden="true" /></button>
+                      </div>
+                    </td>
                     <td className="px-4 py-4 font-medium text-dark truncate max-w-[150px] sm:max-w-none">
                       <button
                         onClick={() => onView(trip)}

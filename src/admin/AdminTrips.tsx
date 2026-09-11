@@ -35,8 +35,9 @@ export default function AdminTrips() {
     togglePublish,
     toggleComingSoon,
     toggleHidePdfDownload,
+    moveTrip,
     handleDownloadTripPdf,
-  } = useTripActions(load);
+  } = useTripActions(trips, load);
 
   const {
     modalOpen, closeModal, openCreate, openEdit,
@@ -88,6 +89,7 @@ export default function AdminTrips() {
         onTogglePublish={togglePublish}
         onToggleComingSoon={toggleComingSoon}
         onToggleHidePdf={toggleHidePdfDownload}
+        onMoveTrip={moveTrip}
         onDownloadPdf={handleDownloadTripPdf}
       />
 
