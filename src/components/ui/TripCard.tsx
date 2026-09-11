@@ -191,12 +191,12 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               Sold Out
             </span>
           ) : isAlmostFull ? (
-            <span className="bg-amber-500 text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
+            <span className="offer-gradient-shift text-white text-xs font-button font-semibold px-3 py-1 rounded-md shadow-warm-lg ring-1 ring-inset ring-white/15">
               Only {remaining} left!
             </span>
           ) : null}
           {isSpecialOffer && trip.special_offer_name ? (
-            <span className="inline-flex items-center gap-1.5 bg-primary-dark text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
+            <span className="offer-badge-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm-lg ring-1 ring-inset ring-white/15">
               <Sparkle size={14} weight="fill" />
               {trip.special_offer_name}
             </span>
@@ -333,20 +333,20 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           )}
 
           {isSpecialOffer && trip.special_offer_date ? (
-            <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-5">
-              <Timer size={14} className="text-primary-dark shrink-0" />
-              <p className="text-dark text-2xs leading-tight">
+            <div className="offer-badge-gradient-shift flex items-center gap-1.5 rounded-lg px-3 py-2 mb-5 shadow-warm-lg ring-1 ring-inset ring-white/15">
+              <Timer size={14} className="text-white shrink-0" />
+              <p className="text-white text-2xs leading-tight">
                 {trip.special_offer_name && (
                   <span className="font-bold">{trip.special_offer_name} — </span>
                 )}
                 {specialOfferDaysRemaining <= 1 ? (
                   <>
-                    <span className="text-primary-dark font-bold">Offer ends today</span> — grab it before it's gone!
+                    <span className="font-bold">Offer ends today</span> — grab it before it's gone!
                   </>
                 ) : (
                   <>
                     Offer ends in{' '}
-                    <span className="text-primary-dark font-bold">
+                    <span className="font-bold">
                       {specialOfferDaysRemaining} days
                     </span>{' '}
                     ({formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'short', year: 'numeric' })})
@@ -355,11 +355,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               </p>
             </div>
           ) : isEarlyBird && trip.early_bird_deadline && (
-            <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-5">
-              <Timer size={14} className="text-primary-dark shrink-0" />
-              <p className="text-dark text-2xs leading-tight">
+            <div className="offer-gradient-shift flex items-center gap-1.5 rounded-lg px-3 py-2 mb-5 shadow-warm-lg ring-1 ring-inset ring-white/15">
+              <Timer size={14} className="text-white shrink-0" />
+              <p className="text-white text-2xs leading-tight">
                 Early bird ends in{' '}
-                <span className="text-primary-dark font-bold">
+                <span className="font-bold">
                   {daysUntil(trip.early_bird_deadline)} {daysUntil(trip.early_bird_deadline) === 1 ? 'day' : 'days'}
                 </span>{' '}
                 ({formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })})

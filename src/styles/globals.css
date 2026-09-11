@@ -218,6 +218,33 @@ button, .btn {
   animation: tc-gradient 6s ease-in-out infinite;
 }
 
+/* Limited-time-offer / early-bird banner on TripCard — a slow left-right
+   sweep across the red-orange-red gradient so the "offer ends in..." strip
+   reads as live/urgent rather than a static flat badge. */
+@keyframes offer-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.offer-gradient-shift {
+  background-image: linear-gradient(90deg, #DC2626 0%, #EA580C 50%, #DC2626 100%);
+  background-size: 200% 100%;
+  animation: offer-gradient-shift 3s ease-in-out infinite;
+}
+
+/* Special-offer name badge on TripCard ("VINAYAGAR CHATURTHI" etc.) — same
+   left-right sweep as offer-gradient-shift, but yellow-green so it reads
+   as a distinct "named occasion sale" badge next to the red/orange
+   scarcity ones (Only X left!, Offer ends in...). */
+@keyframes offer-badge-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.offer-badge-gradient-shift {
+  background-image: linear-gradient(90deg, #CA8A04 0%, #16A34A 50%, #CA8A04 100%);
+  background-size: 200% 100%;
+  animation: offer-badge-gradient-shift 3s ease-in-out infinite;
+}
+
 /* Loading placeholder sweep shown behind a gallery photo while it loads. */
 @keyframes gallery-shimmer {
   0% { transform: translateX(-100%); }
