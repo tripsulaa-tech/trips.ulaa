@@ -12,7 +12,7 @@
 // is closed. Both the raw inputs and every derived output are stored
 // together, so a saved row stays an accurate record of what was actually
 // quoted even if the niche benchmarks or multiplier tiers are tuned later.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calculator,
@@ -237,7 +237,7 @@ function renderMessageTemplate(template: string, h: MessageTemplateSource): stri
 // WhatsApp applies that markup on send — the raw asterisks/underscores
 // stay in the underlying template text (and in what Copy puts on the
 // clipboard); this only affects what's displayed inside the popup itself.
-function renderFormattedPreview(text: string): (string | JSX.Element)[] {
+function renderFormattedPreview(text: string): (string | ReactNode)[] {
   const parts = text.split(/(\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~|```[^`]+```)/g);
   return parts.map((part, i) => {
     if (/^\*[^*\n]+\*$/.test(part)) return <strong key={i}>{part.slice(1, -1)}</strong>;
