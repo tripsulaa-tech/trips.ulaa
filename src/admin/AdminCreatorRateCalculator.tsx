@@ -727,7 +727,7 @@ export default function AdminCreatorRateCalculator() {
           <p className="text-[11px] text-dark-muted mb-2">
             Tip: copy the 10 view counts (one per line, from Insights or a spreadsheet) and hit "Paste all 10", or paste into any box below and press Enter to move to the next.
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-5">
             {reelViews.map((val, i) => (
               <div key={i}>
                 <label htmlFor={`cr-reel-${i}`} className="block text-[11px] text-dark-muted mb-1">Reel {i + 1}</label>
