@@ -181,42 +181,47 @@ export default function SpecialOfferPopupCard({
                   </p>
                 </div>
 
-                {/* One cohesive "deal card" for price + savings + countdown,
-                    instead of three loose centered lines — groups everything
-                    someone needs to decide into a single scannable chunk, with
-                    a hairline divider separating "what it costs" from "why
-                    now" rather than relying on margin alone. */}
+                {/* Redesigned so the "X days left" urgency line is a bold,
+                    full-width hero banner at the top of the deal card
+                    (not a thin dashed-border footnote) and the price
+                    itself is bumped up a size — these are the two things
+                    that actually move someone to tap, so they get top
+                    billing instead of competing for attention equally
+                    with "per person"/Save. */}
                 {activePrice != null && (
-                  <div className="bg-background-warm/60 border border-background-warm rounded-lg px-4 pt-4 pb-3.5 mb-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="font-display text-2xl sm:text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
-                      {strikeThroughPrice != null && (
-                        <span className="text-dark-muted line-through text-base">{formatPrice(strikeThroughPrice)}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-center gap-2 mt-1">
-                      <span className="text-dark-muted text-2xs">per person</span>
-                      {strikeThroughPrice != null && (
-                        <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-semibold px-2 py-0.5 rounded-md">
-                          Save {formatPrice(strikeThroughPrice - activePrice)}
-                        </span>
-                      )}
-                    </div>
-
+                  <div className="bg-background-warm/60 border border-background-warm rounded-lg overflow-hidden mb-3">
                     {trip.special_offer_date && (
-                      <p className="flex items-center justify-center gap-1 text-primary-dark text-xs font-medium mt-3 pt-3 border-t border-dashed border-primary/25">
-                        <Clock size={13} className="shrink-0" />
-                        {daysLeft <= 1 ? (
-                          <>Ends today — <span className="font-bold">grab it before it's gone!</span></>
-                        ) : (
-                          <>
-                            Ends {formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'short', year: 'numeric' })}
-                            {' — '}
-                            <span className="font-bold">{daysLeft} {daysLeft === 1 ? 'day' : 'days'} left</span>
-                          </>
-                        )}
-                      </p>
+                      <div className="offer-gradient-shift flex items-center justify-center gap-1.5 text-white py-2 px-3">
+                        <Clock size={15} weight="bold" className="shrink-0" />
+                        <span className="font-display text-sm sm:text-base font-extrabold uppercase tracking-wide text-center">
+                          {daysLeft <= 1
+                            ? "Ends today — grab it before it's gone!"
+                            : `Only ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left!`}
+                        </span>
+                      </div>
                     )}
+                    <div className="px-4 pt-4 pb-3.5">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="font-display text-3xl sm:text-4xl font-bold text-primary">{formatPrice(activePrice)}</span>
+                        {strikeThroughPrice != null && (
+                          <span className="text-dark-muted line-through text-base sm:text-lg">{formatPrice(strikeThroughPrice)}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-center gap-2 mt-1">
+                        <span className="text-dark-muted text-2xs">per person</span>
+                        {strikeThroughPrice != null && (
+                          <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-semibold px-2 py-0.5 rounded-md">
+                            Save {formatPrice(strikeThroughPrice - activePrice)}
+                          </span>
+                        )}
+                      </div>
+
+                      {trip.special_offer_date && daysLeft > 1 && (
+                        <p className="text-center text-dark-muted text-2xs mt-2.5 pt-2.5 border-t border-dashed border-primary/25">
+                          Ends {formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 
