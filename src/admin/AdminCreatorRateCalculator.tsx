@@ -33,15 +33,17 @@ import {
   Copy,
   WhatsappLogo,
   Check,
+  NotePencil as TemplateIcon,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
 import { useAlert } from '../components/ui/useAlert';
 import { useConfirm } from '../components/ui/useConfirm';
 import { formatPrice, formatDate, getWhatsAppLink } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
-import { getCreatorRateCalculations, saveCreatorRateCalculation, deleteCreatorRateCalculation } from '../services/api';
+import { getCreatorRateCalculations, saveCreatorRateCalculation, deleteCreatorRateCalculation, getSiteContent, upsertSiteContent } from '../services/api';
 import type { CreatorRateCalculation, CreatorRateAsset } from '../types/types-index';
 
 // ---- Model Settings tab, columns A:B (Niche → CPV Benchmark) ----
@@ -118,18 +120,57 @@ function ceilTo50(x: number): number {
 // piece the admin actually hands to the creator (via Copy or WhatsApp
 // Share on each saved row), so it stays plain text/emoji only, no app
 // jargon like "CPV" or "quality multiplier".
-function formatCalculationMessage(h: CreatorRateCalculation): string {
-  const greeting = h.creator_name ? `Hi ${h.creator_name.trim().split(/\s+/)[0]}! 👋` : 'Hi! 👋';
-  const lines = h.final_commercials.map(row => `• ${row.asset}: ${formatPrice(row.min)} – ${formatPrice(row.max)}`);
-  return [
-    `${greeting} Here's the commercial rate card for your ${h.niche} content (${h.follower_count.toLocaleString('en-IN')} followers):`,
-    '',
-    ...lines,
-    '',
-    'These are our suggested ranges — happy to discuss and finalise. Let us know your thoughts!',
-    '— Team ULAA',
-  ].join('\n');
+//
+// The wording itself is a template stored in the site_content table (key
+// RATE_MESSAGE_TEMPLATE_KEY — same generic key/value store the rest of the
+// site's editable copy uses, see supabase/schema.sql), edited directly in
+// the "Message Template" box above the saved-calculations list rather than
+// per saved calculation. Saving it there updates that row, so every admin
+// sees the same reworded default for every calculation (new or old), on
+// any device.
+const RATE_MESSAGE_TEMPLATE_KEY = 'creator_rate_message_template';
+
+interface CreatorRateMessageTemplateContent {
+  template: string;
 }
+
+const DEFAULT_MESSAGE_TEMPLATE = [
+  "{{greeting}} Here's the commercial rate card for your {{niche}} content ({{followers}} followers):",
+  '',
+  '{{items}}',
+  '',
+  'These are our suggested ranges — happy to discuss and finalise. Let us know your thoughts!',
+  '— Team ULAA',
+].join('\n');
+
+// Fills a template's {{greeting}} / {{niche}} / {{followers}} / {{items}}
+// tokens in with one calculation's actual values. Only needs this sliver of
+// CreatorRateCalculation, so the live "Preview Template" popup below can
+// feed it the in-progress form state without a full saved-row shape.
+type MessageTemplateSource = Pick<CreatorRateCalculation, 'creator_name' | 'niche' | 'follower_count' | 'final_commercials'>;
+
+function renderMessageTemplate(template: string, h: MessageTemplateSource): string {
+  const greeting = h.creator_name ? `Hi ${h.creator_name.trim().split(/\s+/)[0]}!` : 'Hi!';
+  const items = h.final_commercials.map(row => `• ${row.asset}: ${formatPrice(row.min)} – ${formatPrice(row.max)}`).join('\n');
+  return template
+    .replace('{{greeting}}', greeting)
+    .replace('{{niche}}', h.niche)
+    .replace('{{followers}}', h.follower_count.toLocaleString('en-IN'))
+    .replace('{{items}}', items);
+}
+
+// Sample "Final Commercials" used to fill the {{items}} token in the
+// template preview when the calculator above doesn't have a real
+// calculation to preview with yet (no follower count / Reel views entered)
+// — so Preview always has something concrete to show rather than blank
+// placeholders.
+const PREVIEW_SAMPLE_ASSETS: CreatorRateAsset[] = [
+  { asset: '1 Non-Collab Reel', min: 5050, max: 5050, pricing_logic: 'Base Reel Rate' },
+  { asset: '1 Collab Tag Reel', min: 5550, max: 6050, pricing_logic: '1.1–1.2× Non-Collab Reel' },
+  { asset: '1 Feed Post', min: 1500, max: 2000, pricing_logic: '0.3–0.5× Reel' },
+  { asset: '1 Story', min: 1000, max: 2000, pricing_logic: '0.2–0.4× Reel' },
+  { asset: '1 Month Ad Rights', min: 1500, max: 1500, pricing_logic: '0.3× Reel' },
+];
 
 export default function AdminCreatorRateCalculator() {
   const alert = useAlert();
@@ -293,6 +334,22 @@ export default function AdminCreatorRateCalculator() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Row header buttons, keyed by calculation id — so that opening a card
+  // (see effect below) can scroll its header up into view. Without this,
+  // expanding a row near the bottom of a long history list just grows the
+  // page below the fold and the admin has to go hunting for what they just
+  // opened.
+  const historyRowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // Whenever a saved calculation is expanded, bring its header to the top
+  // of the viewport (not just "into view") so the newly-revealed details
+  // are immediately visible instead of only partially on-screen.
+  useEffect(() => {
+    if (!expandedId) return;
+    requestAnimationFrame(() => {
+      historyRowRefs.current[expandedId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [expandedId]);
 
   useEffect(() => {
     (async () => {
@@ -306,6 +363,57 @@ export default function AdminCreatorRateCalculator() {
       }
     })();
   }, []);
+
+  // ---- Message template (site_content row, shared across every admin —
+  // see RATE_MESSAGE_TEMPLATE_KEY above). Starts at the factory wording
+  // and is swapped for whatever's saved in the DB as soon as that loads,
+  // so the very first render (before the fetch resolves) still has a
+  // sensible default to work from. Edited directly in the "Message
+  // Template" box above the saved-calculations list — Copy/Share on each
+  // saved row always renders from whatever's here. ----
+  const [messageTemplate, setMessageTemplate] = useState<string>(DEFAULT_MESSAGE_TEMPLATE);
+  const [templateExpanded, setTemplateExpanded] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateSaved, setTemplateSaved] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const content = await getSiteContent<CreatorRateMessageTemplateContent>(RATE_MESSAGE_TEMPLATE_KEY);
+        if (content?.template) setMessageTemplate(content.template);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, []);
+
+  // ---- Preview: shows the template fully filled in, in a popup, so an
+  // admin can check the wording actually reads right before saving it. Uses
+  // whatever's currently entered in the calculator above (creator name,
+  // niche, follower count, computed Final Commercials) when there's enough
+  // to work with, otherwise falls back to sample figures so the popup never
+  // shows blank tokens. ----
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const previewMessage = useMemo(() => {
+    const source: MessageTemplateSource = hasInputs
+      ? { creator_name: creatorName.trim() || null, niche, follower_count: followers, final_commercials: result.assets }
+      : { creator_name: creatorName.trim() || DEFAULT_CREATOR_NAME, niche, follower_count: 10100, final_commercials: PREVIEW_SAMPLE_ASSETS };
+    return renderMessageTemplate(messageTemplate, source);
+  }, [messageTemplate, hasInputs, creatorName, niche, followers, result.assets]);
+
+  const handleSaveMessageTemplate = async () => {
+    setTemplateSaving(true);
+    try {
+      await upsertSiteContent(RATE_MESSAGE_TEMPLATE_KEY, { template: messageTemplate } satisfies CreatorRateMessageTemplateContent);
+      setTemplateSaved(true);
+      window.setTimeout(() => setTemplateSaved(false), 2000);
+    } catch (err) {
+      console.error(err);
+      await alert("Couldn't save the message template. Please try again.");
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     const ok = await confirm({ message: 'Delete this saved calculation? This cannot be undone.', variant: 'danger' });
@@ -325,10 +433,11 @@ export default function AdminCreatorRateCalculator() {
 
   // ---- Send to creator: Copy (works with any app) + Share (opens
   // WhatsApp pre-filled to the creator's saved number, since that's how
-  // these quotes are actually sent out). ----
+  // these quotes are actually sent out). Both render from the shared
+  // messageTemplate above, filled in with this row's own values. ----
   const handleCopyCalculation = async (h: CreatorRateCalculation) => {
     try {
-      await navigator.clipboard.writeText(formatCalculationMessage(h));
+      await navigator.clipboard.writeText(renderMessageTemplate(messageTemplate, h));
       setCopiedId(h.id);
       window.setTimeout(() => setCopiedId(prev => (prev === h.id ? null : prev)), 2000);
     } catch (err) {
@@ -338,7 +447,7 @@ export default function AdminCreatorRateCalculator() {
   };
 
   const handleShareCalculation = async (h: CreatorRateCalculation) => {
-    const message = formatCalculationMessage(h);
+    const message = renderMessageTemplate(messageTemplate, h);
     if (h.phone) {
       window.open(getWhatsAppLink(h.phone, message), '_blank', 'noopener,noreferrer');
       return;
@@ -384,7 +493,7 @@ export default function AdminCreatorRateCalculator() {
 
           {/* Optional identity — not part of the original spreadsheet, but
               needed to make a saved row identifiable later. */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5 pb-5 border-b border-background-warm">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-5 pb-5 border-b border-background-warm">
             <div>
               <label htmlFor="cr-name" className="block text-sm font-medium text-dark mb-1">Creator Name</label>
               <input
@@ -420,7 +529,7 @@ export default function AdminCreatorRateCalculator() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5">
             <div>
               <label htmlFor="cr-followers" className="block text-sm font-medium text-dark mb-1">Follower Count *</label>
               <input
@@ -575,6 +684,99 @@ export default function AdminCreatorRateCalculator() {
           </>
         )}
 
+        {/* ---- Message template — edited here, not per saved calculation.
+              Copy/Share on every row below (new or old) always sends
+              whatever's currently saved here. Collapsed by default (same
+              pattern as the Saved Calculations rows below) since this is a
+              tweak-it-occasionally tool, not something needed on every
+              visit to the page. ---- */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setTemplateExpanded(v => !v)}
+            aria-expanded={templateExpanded}
+            className="w-full flex items-center justify-between gap-3 text-left"
+          >
+            <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 shrink-0">
+                <TemplateIcon size={15} className="text-primary" aria-hidden="true" />
+              </span>
+              Message Template
+            </h3>
+            {templateExpanded ? <ChevronUp size={18} className="text-dark-muted shrink-0" aria-hidden="true" /> : <ChevronDown size={18} className="text-dark-muted shrink-0" aria-hidden="true" />}
+          </button>
+
+          <AnimatePresence initial={false}>
+            {templateExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3">
+                  <div className="flex justify-end mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setMessageTemplate(DEFAULT_MESSAGE_TEMPLATE)}
+                      className="inline-flex items-center gap-1.5 text-xs font-button font-semibold text-dark-muted hover:text-primary transition-colors"
+                    >
+                      <RotateCcw size={13} aria-hidden="true" /> Reset to original wording
+                    </button>
+                  </div>
+                  <p className="text-xs text-dark-muted mb-3">
+                    This is what Copy and Share send for every saved calculation below — tweak the wording, tone, or add a line, then Save.
+                    Use <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{greeting}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{niche}}'}</code>, <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{followers}}'}</code> and <code className="font-mono text-[11px] bg-background-warm px-1 py-0.5 rounded">{'{{items}}'}</code> wherever those should go — each is swapped for that creator's actual details when a message is sent.
+                  </p>
+                  <textarea
+                    value={messageTemplate}
+                    onChange={e => setMessageTemplate(e.target.value)}
+                    rows={8}
+                    className={`${inputClass} font-mono text-xs resize-y`}
+                    placeholder="Message template..."
+                  />
+                  <div className="grid grid-cols-2 gap-2 mt-3">
+                    <Button variant="outline" size="sm" fullWidth onClick={() => setPreviewOpen(true)}>
+                      <Eye size={15} aria-hidden="true" /> Preview
+                    </Button>
+                    <Button variant="primary" size="sm" fullWidth onClick={handleSaveMessageTemplate} loading={templateSaving}>
+                      {templateSaved ? <Check size={15} weight="bold" aria-hidden="true" /> : <Save size={15} aria-hidden="true" />}
+                      {templateSaved ? 'Saved' : 'Save'}
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* ---- Template preview popup — read-only, shows exactly what
+              Copy/Share would send right now, filled in with either the
+              live calculator inputs above or sample figures. ---- */}
+        <Modal
+          isOpen={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          title="Template Preview"
+          size="sm"
+          footer={
+            <div className="flex justify-end">
+              <Button variant="primary" size="sm" onClick={() => setPreviewOpen(false)}>
+                Close
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-xs text-dark-muted mb-3">
+            {hasInputs
+              ? 'This is how the message looks with the details currently entered above.'
+              : `Enter a follower count and Reel views above to preview with a real calculation — showing sample figures for now.`}
+          </p>
+          <div className="bg-background-warm/40 border border-background-warm rounded-md p-4 whitespace-pre-wrap text-sm text-dark font-sans">
+            {previewMessage}
+          </div>
+        </Modal>
+
         {/* ---- Saved history ---- */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2 mb-3">
@@ -598,6 +800,7 @@ export default function AdminCreatorRateCalculator() {
                   <div key={h.id} className="bg-white rounded-lg shadow-card overflow-hidden">
                     <button
                       type="button"
+                      ref={el => { historyRowRefs.current[h.id] = el; }}
                       onClick={() => setExpandedId(isOpen ? null : h.id)}
                       aria-expanded={isOpen}
                       className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-background-warm/30 transition-colors"
@@ -664,13 +867,13 @@ export default function AdminCreatorRateCalculator() {
                             {h.notes && <p className="text-xs text-dark-muted italic">"{h.notes}"</p>}
 
                             <div className="flex items-center justify-between gap-3 flex-wrap pt-3 mt-1 border-t border-background-warm">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <button
                                   type="button"
                                   onClick={() => handleCopyCalculation(h)}
                                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-button font-semibold transition-colors ${
                                     copiedId === h.id
-                                      ? 'bg-green-50 border-green-200 text-green-700'
+                                      ? 'bg-primary/20 border-primary/40 text-primary-dark'
                                       : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/20'
                                   }`}
                                 >
@@ -684,7 +887,7 @@ export default function AdminCreatorRateCalculator() {
                                 <button
                                   type="button"
                                   onClick={() => handleShareCalculation(h)}
-                                  className="inline-flex items-center gap-1.5 rounded-full border bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300 px-3 py-1.5 text-xs font-button font-semibold transition-colors"
+                                  className="inline-flex items-center gap-1.5 rounded-full border bg-secondary/10 border-secondary/25 text-secondary hover:bg-secondary/20 hover:border-secondary/40 px-3 py-1.5 text-xs font-button font-semibold transition-colors"
                                   title={h.phone ? `Share via WhatsApp to ${h.phone}` : 'Share'}
                                 >
                                   <WhatsappLogo size={14} weight="fill" aria-hidden="true" /> Share
