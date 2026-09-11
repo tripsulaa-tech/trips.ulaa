@@ -68,6 +68,52 @@ const NICHE_OPTIONS = NICHE_CPV_BENCHMARKS.map(n => ({ value: n.niche, label: n.
 
 const REEL_COUNT = 10;
 
+// Height of AdminLayout's sticky top bar (76px mobile / 92px desktop, plus
+// a little breathing room) — used whenever a collapsible section on this
+// page is expanded and scrolled into view, since scrolling its header to
+// the very top of the page would otherwise tuck it directly underneath
+// that sticky bar instead of leaving it visible below it.
+const STICKY_HEADER_SCROLL_OFFSET = 100;
+
+// Scrolls `el` (offset for the sticky top bar) into place, then keeps
+// re-checking its position for a short window instead of trusting a single
+// snapshot-in-time scroll. Right after a click, this page's layout can
+// still be settling — web fonts swapping in, an in-flight fetch resolving
+// — any of which nudges content up/down a beat after we've already
+// scrolled, leaving the target back off-screen even though the scroll
+// "worked". Re-asserts the corrected position on every frame for ~800ms,
+// stopping early the moment the admin scrolls by hand.
+function scrollElementIntoView(el: HTMLElement, offset: number) {
+  let cancelled = false;
+  const deadline = performance.now() + 800;
+  let firstJump = true;
+
+  const step = () => {
+    if (cancelled) return;
+    const target = el.getBoundingClientRect().top + window.scrollY - offset;
+    if (Math.abs(window.scrollY - target) > 2) {
+      // The first jump animates (smooth) so opening the panel reads as one
+      // motion; any later correction (layout having shifted since) snaps
+      // instantly — a second smooth call would just restart the easing
+      // and fight itself into visible jitter instead of settling.
+      window.scrollTo({ top: target, behavior: firstJump ? 'smooth' : 'auto' });
+      firstJump = false;
+    }
+    if (performance.now() < deadline) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+
+  const stop = () => { cancelled = true; };
+  window.addEventListener('wheel', stop, { passive: true, once: true });
+  window.addEventListener('touchmove', stop, { passive: true, once: true });
+
+  return () => {
+    cancelled = true;
+    window.removeEventListener('wheel', stop);
+    window.removeEventListener('touchmove', stop);
+  };
+}
+
 // Default identity fields, so the common case (quoting the same test/house
 // creator) doesn't need retyping every time — still fully editable, and
 // Reset restores these rather than blanking them out.
@@ -383,15 +429,27 @@ export default function AdminCreatorRateCalculator() {
   // page below the fold and the admin has to go hunting for what they just
   // opened.
   const historyRowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const cleanupScrollRef = useRef<(() => void) | null>(null);
 
-  // Whenever a saved calculation is expanded, bring its header to the top
-  // of the viewport (not just "into view") so the newly-revealed details
-  // are immediately visible instead of only partially on-screen.
+  // Whenever a saved calculation is expanded, bring its header up so the
+  // newly-revealed details are actually visible instead of the row sitting
+  // wherever it happened to be in a long list. The button being scrolled
+  // sits above its own expanding body, so its on-screen position doesn't
+  // shift as that body grows — meaning we don't need to wait for the
+  // 0.2s expand animation to finish, just for this render's DOM update to
+  // land (one rAF). That lets the scroll and the expand happen together
+  // as one smooth motion instead of expand-then-jump.
   useEffect(() => {
     if (!expandedId) return;
-    requestAnimationFrame(() => {
-      historyRowRefs.current[expandedId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const frame = requestAnimationFrame(() => {
+      const el = historyRowRefs.current[expandedId];
+      if (!el) return;
+      cleanupScrollRef.current = scrollElementIntoView(el, STICKY_HEADER_SCROLL_OFFSET);
     });
+    return () => {
+      cancelAnimationFrame(frame);
+      cleanupScrollRef.current?.();
+    };
   }, [expandedId]);
 
   useEffect(() => {
@@ -419,6 +477,25 @@ export default function AdminCreatorRateCalculator() {
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
   const templateTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const templateHeaderRef = useRef<HTMLButtonElement | null>(null);
+  const templateScrollCleanupRef = useRef<(() => void) | null>(null);
+
+  // Same as the Saved Calculations rows above: the header sits above its
+  // own expanding body so its position doesn't shift as that body grows —
+  // scroll and expand can run together as one smooth motion instead of
+  // waiting for the animation to finish first.
+  useEffect(() => {
+    if (!templateExpanded) return;
+    const frame = requestAnimationFrame(() => {
+      const el = templateHeaderRef.current;
+      if (!el) return;
+      templateScrollCleanupRef.current = scrollElementIntoView(el, STICKY_HEADER_SCROLL_OFFSET);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      templateScrollCleanupRef.current?.();
+    };
+  }, [templateExpanded]);
 
   // ---- Formatting toolbar (Bold / Italic / Strikethrough / Monospace) ----
   // The template ends up as a plain-text WhatsApp message (via Copy or
@@ -775,6 +852,7 @@ export default function AdminCreatorRateCalculator() {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">
           <button
             type="button"
+            ref={templateHeaderRef}
             onClick={() => setTemplateExpanded(v => !v)}
             aria-expanded={templateExpanded}
             className="w-full flex items-center justify-between gap-3 text-left"
