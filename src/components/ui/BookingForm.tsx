@@ -10,7 +10,7 @@ import {
   ForkKnife as Utensils,
   Clock as Clock3,
 } from '@phosphor-icons/react';
-import type { BookingFormData, BookingMode, BookingFormDraft } from '../../types/types-index';
+import type { BookingFormData, BookingMode, BookingFormDraft, WaitlistFormData } from '../../types/types-index';
 import { submitEnquiry, submitGroupEnquiry, submitWaitlist, getTripSeatSnapshot } from '../../services/api';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
@@ -265,6 +265,36 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingMode, groupSize, groupVegCount, foodPreference, watch]);
 
+  // Shared shape behind both the group and solo submit paths below: try
+  // the real enquiry/booking submission when the live seat count says it
+  // should fit; if the DB's own capacity check disagrees (the hard
+  // backstop behind the earlier live re-check), fall back to a waitlist
+  // signup instead of failing outright. When it doesn't fit live to begin
+  // with, skip straight to the waitlist.
+  const submitWithWaitlistFallback = async (
+    fitsLive: boolean,
+    primarySubmit: () => Promise<void>,
+    waitlistPayload: WaitlistFormData
+  ) => {
+    if (fitsLive) {
+      try {
+        await primarySubmit();
+        setSubmittedAsWaitlist(false);
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {
+          await submitWaitlist(waitlistPayload);
+          setSubmittedAsWaitlist(true);
+          setJustMissedSeats(true);
+          return;
+        }
+        throw err;
+      }
+    }
+    await submitWaitlist(waitlistPayload);
+    setSubmittedAsWaitlist(true);
+  };
+
   const onSubmit = async (data: BookingFormData) => {
     // Trim all text fields to strip accidental leading/trailing whitespace
     // before submission — the DB's unique index already normalises with
@@ -341,26 +371,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           group_size: groupSize,
         };
 
-        if (groupFitsLive) {
-          try {
-            await submitGroupEnquiry({ ...d, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences);
-            setSubmittedAsWaitlist(false);
-          } catch (err) {
-            // The DB's own capacity check — the hard backstop behind the
-            // live re-check above — says these seats are actually gone.
-            // Fall back to the waitlist instead of failing outright.
-            if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {
-              await submitWaitlist(waitlistPayload);
-              setSubmittedAsWaitlist(true);
-              setJustMissedSeats(true);
-            } else {
-              throw err;
-            }
-          }
-        } else {
-          await submitWaitlist(waitlistPayload);
-          setSubmittedAsWaitlist(true);
-        }
+        await submitWithWaitlistFallback(
+          groupFitsLive,
+          () => submitGroupEnquiry({ ...d, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences),
+          waitlistPayload
+        );
         setSuccessCount(groupSize);
       } else {
         const waitlistPayload = {
@@ -377,23 +392,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           group_size: null,
         };
 
-        if (soloFitsLive) {
-          try {
-            await submitEnquiry({ ...d, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle });
-            setSubmittedAsWaitlist(false);
-          } catch (err) {
-            if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {
-              await submitWaitlist(waitlistPayload);
-              setSubmittedAsWaitlist(true);
-              setJustMissedSeats(true);
-            } else {
-              throw err;
-            }
-          }
-        } else {
-          await submitWaitlist(waitlistPayload);
-          setSubmittedAsWaitlist(true);
-        }
+        await submitWithWaitlistFallback(
+          soloFitsLive,
+          () => submitEnquiry({ ...d, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle }),
+          waitlistPayload
+        );
         setSuccessCount(1);
       }
       setStatus('success');
