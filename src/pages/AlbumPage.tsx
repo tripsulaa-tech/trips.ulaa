@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import type { Icon } from '@phosphor-icons/react';
 import {
   MapPin,
   Calendar,
@@ -16,6 +17,7 @@ import { getCompletedTripBySlug, likeCompletedTrip, unlikeCompletedTrip } from '
 import { subscribeToTable } from '../services/realtime';
 import type { CompletedTrip } from '../types/types-index';
 import { formatDate, formatBatchLabel, PLACEHOLDER_IMAGE, getVisitorId } from '../utils/utils-index';
+import { fadeUp } from '../utils/animation';
 
 const DEMO_ALBUM: CompletedTrip = {
   id: '1', title: 'Magical Meghalaya',
@@ -158,123 +160,194 @@ export default function AlbumPage() {
     );
   }
 
+  // The hero's fact row, assembled once so the card below can render it in
+  // a single pass and skip any stat this album doesn't have.
+  const META_STATS: { Icon: Icon; label: string; value: string | null }[] = [
+    { Icon: Calendar, label: 'Trip date', value: formatDate(album.trip_date, { day: 'numeric', month: 'long', year: 'numeric' }) },
+    { Icon: Users, label: 'Travelers', value: album.participants ? `${album.participants}` : null },
+    { Icon: Images, label: 'Photos', value: album.gallery_images.length ? `${album.gallery_images.length}` : null },
+  ];
+
   return (
     <Layout>
-      {/* Hero Banner */}
-      <div className="relative h-[60vh] md:h-[75vh] overflow-hidden">
+      {/* ---------------------------------------------------------------
+          Hero — the cover photo carries the page, so the overlay is kept
+          to a bottom-weighted scrim (title legibility) plus a light top
+          scrim so the sticky navbar doesn't float over a bright sky.
+         --------------------------------------------------------------- */}
+      <section className="relative h-[62vh] min-h-[440px] md:h-[72vh] md:min-h-[560px] overflow-hidden">
         <img
           src={album.cover_image || PLACEHOLDER_IMAGE}
           alt={album.title}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-dark/30 via-dark/20 to-dark/90" />
-        <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-16 max-w-[1344px] mx-auto left-0 right-0">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <Link
-              to="/completed-trips"
-              onClick={() => {
-                // Tell the albums grid to restore the scroll position the
-                // user was at instead of landing back at the top.
-                sessionStorage.setItem('ulaa:restoreScroll:/completed-trips', '1');
-              }}
-              className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-4 transition-colors"
-            >
-              <ArrowLeft size={16} /> All Albums
-            </Link>
-            <a
-              href={album.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(album.destination)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-fit items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-4 py-1.5 rounded-md mb-3 hover:bg-white/25 transition-colors"
-            >
-              <MapPin size={14} /> {album.destination}
-            </a>
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white">{album.title}</h1>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-white/80 text-sm">
-              <span className="flex items-center gap-1.5"><Calendar size={14} /> {formatDate(album.trip_date, { month: 'long', year: 'numeric' })}</span>
-              <span className="w-px h-4 bg-white/30" />
-              <span className="flex items-center gap-1.5"><Users size={14} /> {album.participants} travelers</span>
-              {album.gallery_images.length > 0 && (
-                <>
-                  <span className="w-px h-4 bg-white/30" />
-                  <span className="flex items-center gap-1.5"><Images size={14} /> {album.gallery_images.length} photos</span>
-                </>
-              )}
-              {album.batch && (
-                <>
-                  <span className="w-px h-4 bg-white/30" />
-                  <span className="shrink-0 bg-white/15 backdrop-blur-md border border-white/30 text-white text-sm font-button font-semibold px-3 py-1.5 rounded-md">
+        <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-dark/10 to-dark/85" />
+
+        <div className="absolute inset-x-0 bottom-0">
+          <div className="max-w-[1344px] mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+              <Link
+                to="/completed-trips"
+                onClick={() => {
+                  // Tell the albums grid to restore the scroll position the
+                  // user was at instead of landing back at the top.
+                  sessionStorage.setItem('ulaa:restoreScroll:/completed-trips', '1');
+                }}
+                className="group inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-white/90 hover:text-white hover:bg-white/25 text-xs font-button font-semibold uppercase tracking-[0.15em] px-4 py-2 transition-colors"
+              >
+                <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" /> All Albums
+              </Link>
+
+              <div className="flex flex-wrap items-center gap-2.5 mt-5">
+                <a
+                  href={album.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(album.destination)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary text-white text-xs sm:text-sm font-button font-semibold px-3.5 py-1.5 hover:bg-primary-dark transition-colors"
+                >
+                  <MapPin size={14} weight="fill" /> {album.destination}
+                </a>
+                {album.batch && (
+                  <span className="inline-flex items-center rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white text-xs sm:text-sm font-button font-semibold px-3.5 py-1.5">
                     {formatBatchLabel(album.batch)}
                   </span>
-                </>
-              )}
+                )}
+              </div>
+
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-[1.05] mt-4 max-w-4xl">
+                {album.title}
+              </h1>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Meta bar — lifted out of the hero into a card that straddles the
+          photo's bottom edge, so the trip's facts and the like/share
+          actions sit together in one place instead of being split between
+          the hero and the gallery heading. */}
+      <div className="relative z-10 px-4 sm:px-6 lg:px-8 -mt-9 sm:-mt-11">
+        <div className="max-w-[1344px] mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="rounded-2xl bg-white border border-background-warm shadow-warm-lg px-5 sm:px-8 py-5 flex flex-wrap items-center justify-between gap-x-8 gap-y-5"
+          >
+            <div className="flex flex-wrap items-center gap-x-6 sm:gap-x-10 gap-y-4">
+              {META_STATS.map(({ Icon, label, value }) => value !== null && (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="w-9 h-9 shrink-0 rounded-lg bg-orange-50 text-primary flex items-center justify-center">
+                    <Icon size={18} />
+                  </span>
+                  <span className="leading-tight">
+                    <span className="block text-[11px] font-button font-semibold uppercase tracking-[0.12em] text-dark-muted/60">
+                      {label}
+                    </span>
+                    <span className="block font-semibold text-dark text-sm sm:text-base">{value}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleLike}
+                disabled={likeBusy}
+                aria-label={liked ? 'Unlike this album' : 'Like this album'}
+                className={`inline-flex items-center gap-2 h-10 px-4 rounded-full border text-sm font-button font-semibold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-default ${
+                  liked
+                    ? 'border-red-200 bg-red-50 text-red-500'
+                    : 'border-background-warm text-dark-muted hover:border-red-200 hover:text-red-500'
+                }`}
+              >
+                <Heart size={17} className={liked ? 'fill-red-500' : ''} />
+                {album.likes_count}
+              </button>
+              <button
+                onClick={() => navigator.share?.({ title: album.title, url: window.location.href })}
+                aria-label="Share this album"
+                className="inline-flex items-center gap-2 h-10 px-4 rounded-full border border-background-warm text-dark-muted text-sm font-button font-semibold hover:border-primary hover:text-primary transition-colors cursor-pointer"
+              >
+                <Share2 size={17} />
+                <span className="hidden sm:inline">Share</span>
+              </button>
             </div>
           </motion.div>
         </div>
       </div>
 
-      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-6 sm:py-16">
-        <div className="max-w-[1344px] mx-auto space-y-16">
-        {/* Trip Story */}
-        {album.story && (
-          <section>
-            <h2 className="font-display text-3xl font-bold text-dark mb-8">The Story</h2>
-            <div className="prose max-w-none">
-              {album.story.split('\n\n').map((para, i) => (
-                <motion.p
-                  key={i}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="text-dark-muted text-lg leading-relaxed mb-6 font-body"
-                >
-                  {para}
-                </motion.p>
-              ))}
-            </div>
-          </section>
-        )}
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <div className="max-w-[1344px] mx-auto space-y-16 sm:space-y-20">
 
-        {/* Adventure Recap */}
-        {album.description && (
-          <section>
-            <h2 className="font-display text-3xl font-bold text-dark mb-6">Adventure Recap</h2>
-            <p className="text-dark-muted text-lg leading-relaxed font-body">{album.description}</p>
-          </section>
-        )}
-
-        {/* Gallery */}
-        {album.gallery_images.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-6 sm:mb-8">
-              <h2 className="font-display text-3xl font-bold text-dark">Relive the Journey</h2>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={toggleLike}
-                  disabled={likeBusy}
-                  aria-label={liked ? 'Unlike this album' : 'Like this album'}
-                  className={`flex items-center gap-1.5 h-9 sm:h-8 px-3 rounded-full text-sm transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-default ${
-                    liked ? 'text-red-500' : 'text-primary hover:text-red-500'
-                  }`}
-                >
-                  <Heart size={16} className={`w-5 h-5 sm:w-4 sm:h-4 ${liked ? 'fill-red-500' : ''}`} />
-                  {album.likes_count}
-                </button>
-                <button
-                  onClick={() => navigator.share?.({ title: album.title, url: window.location.href })}
-                  aria-label="Share this album"
-                  className="flex items-center justify-center w-9 h-9 sm:w-auto sm:h-8 sm:px-3 sm:gap-1.5 rounded-full text-primary text-sm hover:text-primary-dark transition-colors cursor-pointer"
-                >
-                  <Share2 size={16} className="w-5 h-5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Share</span>
-                </button>
+          {/* Adventure Recap — heading and copy side by side, so the recap
+              reads as a standfirst rather than another stacked block. */}
+          {album.description && (
+            <motion.section {...fadeUp()} className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10">
+              <div className="md:col-span-4">
+                <p className="font-button text-primary text-[11px] font-semibold uppercase tracking-[0.25em]">
+                  In short
+                </p>
+                <h2 className="font-display text-3xl sm:text-[2rem] font-bold text-dark mt-3">Adventure Recap</h2>
+                <span className="block w-12 h-[3px] rounded-full bg-primary mt-4" aria-hidden="true" />
               </div>
-            </div>
-            <GalleryGrid images={album.gallery_images} fallbackLocation={album.destination} />
-          </section>
-        )}
+              <p className="md:col-span-8 text-dark-muted text-lg sm:text-xl leading-relaxed font-body">
+                {album.description}
+              </p>
+            </motion.section>
+          )}
+
+          {/* The Story — narrow measure, drop cap on the opening paragraph
+              and a hairline rule down the left so a long read stays a read
+              instead of a wall of text. */}
+          {album.story && (
+            <motion.section {...fadeUp()} className="max-w-3xl">
+              <p className="font-button text-primary text-[11px] font-semibold uppercase tracking-[0.25em]">
+                How it went
+              </p>
+              <h2 className="font-display text-3xl sm:text-[2rem] font-bold text-dark mt-3 mb-8">The Story</h2>
+              <div className="border-l-2 border-background-warm pl-6 sm:pl-8 space-y-6">
+                {album.story.split('\n\n').map((para, i) => (
+                  <p
+                    key={i}
+                    className={`text-dark-muted text-lg leading-relaxed font-body ${
+                      i === 0
+                        ? 'first-letter:float-left first-letter:font-display first-letter:font-bold first-letter:text-primary first-letter:text-6xl first-letter:leading-[0.85] first-letter:mr-3 first-letter:mt-1'
+                        : ''
+                    }`}
+                  >
+                    {para}
+                  </p>
+                ))}
+              </div>
+            </motion.section>
+          )}
+
+          {/* Gallery */}
+          {album.gallery_images.length > 0 && (
+            <section>
+              <motion.div {...fadeUp()} className="mb-7 sm:mb-9">
+                <p className="font-button text-primary text-[11px] font-semibold uppercase tracking-[0.25em]">
+                  {album.gallery_images.length} photos
+                </p>
+                <h2 className="font-display text-3xl sm:text-[2rem] font-bold text-dark mt-3">Relive the Journey</h2>
+                <span className="block w-12 h-[3px] rounded-full bg-primary mt-4" aria-hidden="true" />
+              </motion.div>
+              <GalleryGrid images={album.gallery_images} fallbackLocation={album.destination} />
+            </section>
+          )}
+
+          {/* Tail nav — the page used to stop dead at the last photo. */}
+          <div className="pt-2">
+            <Link
+              to="/completed-trips"
+              onClick={() => sessionStorage.setItem('ulaa:restoreScroll:/completed-trips', '1')}
+              className="group inline-flex items-center gap-2 text-primary font-button font-semibold text-sm hover:text-primary-dark transition-colors"
+            >
+              <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+              Back to all albums
+            </Link>
+          </div>
         </div>
       </div>
     </Layout>
