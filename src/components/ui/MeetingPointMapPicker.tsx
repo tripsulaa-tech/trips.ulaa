@@ -40,7 +40,7 @@ interface NominatimResult {
   address?: Record<string, string>;
 }
 
-export interface MeetingPointSelection {
+interface MeetingPointSelection {
   /** Short label for the "Location Name" field — the place's own name if
    *  Nominatim has one, otherwise its street. */
   name: string;

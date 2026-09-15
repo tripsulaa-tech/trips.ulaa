@@ -10,7 +10,7 @@ import {
 import { addOfferReminderToCalendar } from '../../utils/calendar';
 import type { UpcomingTrip } from '../../types/types-index';
 
-export interface SpecialOfferPopupCardProps {
+interface SpecialOfferPopupCardProps {
   visible: boolean;
   trip: UpcomingTrip;
   activePrice: number | null | undefined;

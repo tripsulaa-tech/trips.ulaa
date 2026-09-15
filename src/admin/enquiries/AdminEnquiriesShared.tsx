@@ -23,7 +23,7 @@ import { COMMON_EMAIL_DOMAINS } from '../../constants/emailDomains';
 // Same rows-shown cap the public BookingForm uses for its City / Email-
 // domain suggestion dropdowns (see MAX_SUGGESTIONS there) — kept in sync
 // here so the admin's "Log an Enquiry" form offers the same-shaped list.
-export const MAX_SUGGESTIONS = 6;
+const MAX_SUGGESTIONS = 6;
 
 // Pure (no state) version of BookingForm's handleCityInput — returns the
 // up-to-MAX_SUGGESTIONS Indian cities whose name starts with what's been

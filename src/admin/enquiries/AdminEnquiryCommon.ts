@@ -32,7 +32,7 @@ import {
   CalendarDot as CalendarClock,
 } from '@phosphor-icons/react';
 import type { BookingFollowUpType, CancellationReason, ClosedReason, ContactOutcome, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
-import { formatDate, getActivePrice } from '../../utils/utils-index';
+import { formatDate } from '../../utils/utils-index';
 import { FOOD_PREFERENCE_OPTIONS, foodPreferenceBadge } from '../../constants/foodPreference';
 
 export { FOOD_PREFERENCE_OPTIONS };
@@ -195,7 +195,7 @@ export function computeDiscountedTotal(listPrice: number | undefined, discountAm
 // auto-fill Amount Being Paid Now the moment it's picked — see the Payment
 // Type onChange in PaymentFormFields, which mirrors 'Full Payment's
 // existing auto-fill the same way.
-export function outstandingBalance(totalAmount: number | '', alreadyPaid: number): number | null {
+function outstandingBalance(totalAmount: number | '', alreadyPaid: number): number | null {
   if (totalAmount === '') return null;
   return Math.max(0, Number(totalAmount) - alreadyPaid);
 }
@@ -301,26 +301,6 @@ export function validatePaymentForm(
   }
 
   return errors;
-}
-
-// Works out which price currently applies to a trip an enquiry is linked
-// to — early-bird if that price/deadline are set and today is still on or
-// before the deadline, normal otherwise — using the exact same clock the
-// public site's TripCard/TripDetailPage use (getActivePrice), so what an
-// admin sees here always matches what the traveller was actually quoted.
-// Returns null when there's no trip to price against.
-export function getTripActivePricing(
-  trip: UpcomingTrip | undefined
-): { amount: number; packageType: Enquiry['package_type']; isEarlyBird: boolean; deadline?: string | null } | null {
-  if (!trip) return null;
-  const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
-  if (activePrice == null) return null;
-  return {
-    amount: activePrice,
-    packageType: isEarlyBird ? 'early_bird' : 'normal',
-    isEarlyBird,
-    deadline: trip.early_bird_deadline,
-  };
 }
 
 // Same "which price applies" question, but pinned to whichever package the

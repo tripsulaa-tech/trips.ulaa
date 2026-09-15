@@ -26,7 +26,7 @@ export const emptyTripFinance: TripFinance = {
   notes: '',
 };
 
-export interface TripFinanceSummary {
+interface TripFinanceSummary {
   travelerCount: number;
   revenuePerPerson: number;
   totalRevenue: number;

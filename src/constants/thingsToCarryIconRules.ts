@@ -16,7 +16,7 @@ export type ThingsToCarryIconKey =
   | 'waterBottle' | 'snack' | 'wipe' | 'tissue' | 'photo' | 'visa'
   | 'flight' | 'insurance' | 'card' | 'idProof';
 
-export const THINGS_TO_CARRY_ICON_RULES: [RegExp, ThingsToCarryIconKey][] = [
+const THINGS_TO_CARRY_ICON_RULES: [RegExp, ThingsToCarryIconKey][] = [
   [/jacket|sweater|hoodie|fleece|thermal/i, 'jacket'],
   [/shoe|boot|sandal|footwear|trek/i, 'shoe'],
   [/sunglass|goggle/i, 'sunglasses'],

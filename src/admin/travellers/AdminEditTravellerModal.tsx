@@ -13,31 +13,7 @@ import {
   validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity,
 } from '../../utils/formValidation';
 import { getCitySuggestions, getEmailSuggestions } from '../enquiries/AdminEnquiriesShared';
-
-// Same quick-help dropdown used by the enquiry-side admin forms
-// (AdminAddEnquiryModal, AdminEditDetailsModal, AdminEnquiryTravellerCard)
-// — duplicated locally since travellers/ and enquiries/ don't otherwise
-// share UI components.
-function SuggestionDropdown({ items, onSelect }: { items: string[]; onSelect: (value: string) => void }) {
-  return (
-    <ul
-      role="listbox"
-      className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded-md border-2 border-background-warm bg-white shadow-lg py-1"
-    >
-      {items.map(item => (
-        <li key={item} role="option">
-          <button
-            type="button"
-            onMouseDown={e => { e.preventDefault(); onSelect(item); }}
-            className="w-full px-3 py-1.5 text-sm text-left text-dark hover:bg-background-warm transition-colors"
-          >
-            {item}
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
+import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
 
 export type TravellerEditForm = {
   full_name: string;

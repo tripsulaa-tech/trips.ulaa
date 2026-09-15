@@ -17,7 +17,7 @@ export type BulkEnquiryForm = {
   namesText: string;
 };
 
-export const emptyBulkEnquiryForm: BulkEnquiryForm = {
+const emptyBulkEnquiryForm: BulkEnquiryForm = {
   trip_id: '',
   otherTripTitle: '',
   source: 'whatsapp',
@@ -43,7 +43,7 @@ export type BulkEnquiryEntry = {
 // so a phone number entered here lets the person show up in the Contact
 // Book (Travellers page) immediately, instead of needing it filled in
 // later from their individual enquiry row.
-export function parseBulkEntries(text: string): BulkEnquiryEntry[] {
+function parseBulkEntries(text: string): BulkEnquiryEntry[] {
   const seen = new Set<string>();
   const entries: BulkEnquiryEntry[] = [];
   for (const rawLine of text.split('\n')) {
@@ -62,7 +62,7 @@ export function parseBulkEntries(text: string): BulkEnquiryEntry[] {
   return entries;
 }
 
-export type BulkEnquiryResult = {
+type BulkEnquiryResult = {
   created: number;
   duplicates: string[];
   failed: { name: string; message: string }[];

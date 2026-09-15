@@ -22,31 +22,7 @@ import {
   DEFAULT_MIN_AGE, DEFAULT_MAX_AGE,
 } from '../../utils/formValidation';
 import { getCitySuggestions, getEmailSuggestions } from './AdminEnquiriesShared';
-
-// Same quick-help dropdown as AdminAddEnquiryModal / AdminEditDetailsModal
-// — duplicated locally rather than shared since this card has its own
-// compact `inlineInputClass` styling that a shared component would need
-// to accept as a prop for no real benefit at this size.
-function SuggestionDropdown({ items, onSelect }: { items: string[]; onSelect: (value: string) => void }) {
-  return (
-    <ul
-      role="listbox"
-      className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded-md border-2 border-background-warm bg-white shadow-lg py-1"
-    >
-      {items.map(item => (
-        <li key={item} role="option">
-          <button
-            type="button"
-            onMouseDown={e => { e.preventDefault(); onSelect(item); }}
-            className="w-full px-3 py-1.5 text-sm text-left text-dark hover:bg-background-warm transition-colors"
-          >
-            {item}
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
+import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
 
 // Phosphor doesn't ship a real WhatsApp glyph (ChatCircle/ChatsCircle are
 // generic speech-bubble icons, not the recognizable WhatsApp mark) — same

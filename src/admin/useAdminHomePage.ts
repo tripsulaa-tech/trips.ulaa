@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { useSectionTabChrome } from './useSectionTabChrome';
 import {
   getSiteContent, upsertSiteContent, deleteImageByUrl, getStoragePathFromUrl, deleteImage,
   getGalleryImages, addGalleryImage, deleteGalleryImage, updateGalleryFeatured, updateGalleryOrder,
@@ -49,7 +48,7 @@ export const SECTION_TITLES = [
 // immediately on file select (there's no way to preview a photo otherwise,
 // and this matches how Home Hero photos already work) — only the
 // database row create/update/delete is deferred.
-export interface UseAdminHomePageResult {
+interface UseAdminHomePageResult {
   loading: boolean;
   saving: boolean;
   saved: boolean;
@@ -325,178 +324,15 @@ export function useAdminHomePage(): UseAdminHomePageResult {
     setButtonLabels(clone.buttonLabels);
   };
 
-  // ── Tab bar / scroll-spy chrome — identical approach to
-  // useContentEditorPage, just with a fixed section count. ──────────────
-  const [activeSection, setActiveSection] = useState(0);
-  const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const tabBarRef = useRef<HTMLDivElement>(null);
-  const tabButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const lastActiveRef = useRef(0);
-  const [showLeftFade, setShowLeftFade] = useState(false);
-  const [showRightFade, setShowRightFade] = useState(false);
-  const suppressObserverRef = useRef(false);
-  const suppressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const suppressScrollListenerRef = useRef<(() => void) | null>(null);
-
-  const [pageSearch, setPageSearch] = useState('');
-  const [pageSearchNoMatch, setPageSearchNoMatch] = useState(false);
-  const scrollBodyRef = useRef<HTMLDivElement>(null);
-
-  // This page renders inside ContentEditorShell's `fixedHeight` AdminLayout,
-  // which locks the document/window from scrolling at all and scrolls
-  // `scrollBodyRef` internally instead (see AdminLayout's fixedHeight
-  // effect). AdminLayout's own useScrollRestoration call is window-scoped,
-  // so on this page it's watching a position that never moves — same
-  // scaffolding as useContentEditorPage.useScrollRestoration, since this
-  // hook duplicates that file's chrome rather than reusing it (see the
-  // module doc above). Keyed with a distinct '#editor-body' suffix so this
-  // restoration and AdminLayout's never read/clear the same flag out from
-  // under each other regardless of which of their layout effects runs first.
-  const { pathname } = useLocation();
-  useScrollRestoration(`${pathname}#editor-body`, !loading, scrollBodyRef);
-
-  const stickyOffset = () => {
-    const bar = scrollBodyRef.current?.querySelector<HTMLElement>('[data-sticky-toolbar]');
-    return bar ? bar.getBoundingClientRect().height : 0;
-  };
-
-  const handlePageSearch = () => {
-    const query = pageSearch.trim().toLowerCase();
-    const container = scrollBodyRef.current;
-    if (!query || !container) {
-      setPageSearchNoMatch(false);
-      return;
-    }
-    const candidates = Array.from(container.querySelectorAll<HTMLElement>('label, h2'));
-    const match = candidates.find(el => el.textContent?.toLowerCase().includes(query));
-    if (!match) {
-      setPageSearchNoMatch(true);
-      return;
-    }
-    setPageSearchNoMatch(false);
-    const sectionEl = match.closest<HTMLElement>('[data-section]');
-    if (sectionEl) setActiveSection(Number(sectionEl.dataset.section) - 1);
-    const containerRect = container.getBoundingClientRect();
-    const matchRect = match.getBoundingClientRect();
-    const offset = stickyOffset();
-    const visibleHeight = container.clientHeight - offset;
-    const centerOffset = offset + visibleHeight / 2 - match.clientHeight / 2;
-    const top = container.scrollTop + (matchRect.top - containerRect.top) - centerOffset;
-    container.scrollTo({ top, behavior: 'smooth' });
-    const previousBackground = match.style.backgroundColor;
-    const previousTransition = match.style.transition;
-    match.style.transition = 'background-color 0.3s ease';
-    match.style.backgroundColor = '#FDE9D9';
-    setTimeout(() => {
-      match.style.backgroundColor = previousBackground;
-      match.style.transition = previousTransition;
-    }, 1500);
-  };
-
-  useEffect(() => {
-    const timeout = setTimeout(() => handlePageSearch(), pageSearch.trim() ? 350 : 0);
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageSearch]);
-
-  const scrollTabIntoView = (i: number) => {
-    const bar = tabBarRef.current;
-    const btn = tabButtonRefs.current[i];
-    if (!bar || !btn) return;
-    const target = btn.offsetLeft - bar.clientWidth / 2 + btn.clientWidth / 2;
-    bar.scrollTo({ left: target, behavior: 'smooth' });
-  };
-
-  const updateTabFades = () => {
-    const el = tabBarRef.current;
-    if (!el) return;
-    setShowLeftFade(el.scrollLeft > 4);
-    setShowRightFade(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  };
-
-  useEffect(() => {
-    updateTabFades();
-    const el = tabBarRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', updateTabFades);
-    const resizeObserver = new ResizeObserver(updateTabFades);
-    resizeObserver.observe(el);
-    return () => {
-      el.removeEventListener('scroll', updateTabFades);
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    const container = scrollBodyRef.current;
-    if (!container) return;
-    const observer = new IntersectionObserver(
-      entries => {
-        if (suppressObserverRef.current) return;
-        const visible = entries.filter(e => e.isIntersecting);
-        if (visible.length === 0) return;
-        const topMost = visible.reduce((a, b) => (a.boundingClientRect.top <= b.boundingClientRect.top ? a : b));
-        const idx = sectionRefs.current.indexOf(topMost.target as HTMLDivElement);
-        if (idx !== -1 && idx !== lastActiveRef.current) {
-          lastActiveRef.current = idx;
-          setActiveSection(idx);
-          scrollTabIntoView(idx);
-        }
-      },
-      { root: container, rootMargin: '0px 0px -65% 0px', threshold: 0 }
-    );
-    sectionRefs.current.forEach(el => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, [loading]);
-
-  useEffect(() => () => {
-    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
-    if (suppressScrollListenerRef.current) scrollBodyRef.current?.removeEventListener('scroll', suppressScrollListenerRef.current);
-  }, []);
-
-  const SECTION_SCROLL_GAP = 20;
-
-  const scrollSectionIntoView = (i: number) => {
-    const container = scrollBodyRef.current;
-    const target = sectionRefs.current[i];
-    if (!container || !target) return;
-    const containerRect = container.getBoundingClientRect();
-    const targetRect = target.getBoundingClientRect();
-    const top = container.scrollTop + (targetRect.top - containerRect.top) - stickyOffset() - SECTION_SCROLL_GAP;
-    container.scrollTo({ top, behavior: 'smooth' });
-  };
-
-  const handleTabSelect = (i: number) => {
-    lastActiveRef.current = i;
-    setActiveSection(i);
-    suppressObserverRef.current = true;
-    const container = scrollBodyRef.current;
-    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
-    if (suppressScrollListenerRef.current) {
-      container?.removeEventListener('scroll', suppressScrollListenerRef.current);
-      suppressScrollListenerRef.current = null;
-    }
-    scrollSectionIntoView(i);
-    scrollTabIntoView(i);
-    const clearSuppression = () => {
-      suppressObserverRef.current = false;
-      if (suppressScrollListenerRef.current) {
-        container?.removeEventListener('scroll', suppressScrollListenerRef.current);
-        suppressScrollListenerRef.current = null;
-      }
-    };
-    const onScroll = () => {
-      if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
-      suppressTimeoutRef.current = setTimeout(clearSuppression, 150);
-    };
-    suppressScrollListenerRef.current = onScroll;
-    container?.addEventListener('scroll', onScroll);
-    suppressTimeoutRef.current = setTimeout(clearSuppression, 150);
-  };
-
-  const setSectionRef = (index: number, el: HTMLDivElement | null) => {
-    sectionRefs.current[index] = el;
-  };
+  // Tab bar / scroll-spy / page-search chrome — shared with
+  // useContentEditorPage via useSectionTabChrome (see that file for the
+  // duplication this replaces); fixed section count since this page's
+  // section list never grows/shrinks with the data (unlike Why ULAA's
+  // feature cards).
+  const {
+    activeSection, setSectionRef, tabBarRef, tabButtonRefs, showLeftFade, showRightFade,
+    handleTabSelect, pageSearch, setPageSearch, pageSearchNoMatch, scrollBodyRef,
+  } = useSectionTabChrome(loading, SECTION_TITLES.length);
 
   return {
     loading, saving, saved, hasUnsavedChanges, handleSave, discardChanges,

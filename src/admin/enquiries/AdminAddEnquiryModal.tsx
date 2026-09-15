@@ -18,35 +18,7 @@ import {
 import { SOURCE_OPTIONS } from './AdminEnquiriesShared';
 import { DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
 import type { TravellerContact } from '../travellers/travellerContacts';
-
-// Small shared dropdown for the City / Email-domain quick-help below —
-// same look and mousedown-before-blur trick as BookingForm's own
-// SuggestionDropdown (public enquiry form), just themed for the admin
-// panel's plainer inputs instead of the public site's rounded-2xl style.
-function SuggestionDropdown({ items, onSelect }: { items: string[]; onSelect: (value: string) => void }) {
-  return (
-    <ul
-      role="listbox"
-      className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded-md border-2 border-background-warm bg-white shadow-lg py-1"
-    >
-      {items.map(item => (
-        <li key={item} role="option">
-          <button
-            type="button"
-            // onMouseDown (not onClick) fires before the input's onBlur, and
-            // preventDefault stops that blur from firing at all — so picking
-            // a suggestion never races with the dropdown closing itself out
-            // from under the click.
-            onMouseDown={e => { e.preventDefault(); onSelect(item); }}
-            className="w-full px-3 py-1.5 text-sm text-left text-dark hover:bg-background-warm transition-colors"
-          >
-            {item}
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
+import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
 
 type ConvertingWaitlist = { id: string; name: string; groupId: string | null; groupSize: number | null; groupSeq: number; slots: number };
 
