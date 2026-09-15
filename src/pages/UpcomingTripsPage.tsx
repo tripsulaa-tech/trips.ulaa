@@ -97,7 +97,7 @@ export default function UpcomingTripsPage() {
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-white border-b border-background-warm sticky top-[72px] z-30 px-4 sm:px-6 lg:px-8">
+      <div className="bg-white border-b border-background-warm sticky top-20 z-30 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1344px] mx-auto py-4">
           <TripSearchFilterBar
             search={search}

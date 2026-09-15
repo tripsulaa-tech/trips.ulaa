@@ -54,7 +54,7 @@ export default function Navbar() {
             <img
               src="/ULAA-logo.png"
               alt="ULAA Logo"
-              className="h-24 w-auto transition-transform duration-300 group-hover:scale-105"
+              className="h-14 sm:h-16 w-auto transition-transform duration-300 group-hover:scale-105"
             />
           </Link>
 
