@@ -18,12 +18,15 @@
 import writeXlsxFile from 'write-excel-file/browser';
 import type { Row } from 'write-excel-file/browser';
 
-export interface CostBreakdownItem {
+// Not exported: knip confirms neither type is imported outside this file —
+// AdminReports.tsx (the only other place that shapes this data) builds
+// matching object literals structurally instead of importing these.
+interface CostBreakdownItem {
   label: string;
   amount: number;
 }
 
-export interface TripExcelReportRow {
+interface TripExcelReportRow {
   // The one thing this export needs that the Trip dropdown's UpcomingTrip
   // rows don't carry on their own: a title to put in the sheet header.
   // Passed in separately (rather than requiring a full UpcomingTrip) so

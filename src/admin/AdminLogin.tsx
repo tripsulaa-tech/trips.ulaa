@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/useAuth';
 import Button from '../components/ui/Button';
-import { COMMON_EMAIL_DOMAINS } from '../constants/emailDomains';
+import { getEmailDomainSuggestions } from '../constants/emailDomains';
 import {
   WarningCircle as AlertCircle,
 } from '@phosphor-icons/react';
@@ -29,28 +29,8 @@ export default function AdminLogin() {
   const handleEmailInput = (value: string) => {
     setEmail(value);
 
-    const atIndex = value.indexOf('@');
-    if (atIndex === -1) {
-      setEmailSuggestionsOpen(false);
-      return;
-    }
-    const localPart = value.slice(0, atIndex);
-    const domainPart = value.slice(atIndex + 1).toLowerCase();
-    if (!localPart) {
-      setEmailSuggestionsOpen(false);
-      return;
-    }
-    // Already a complete, exact match (typed or pasted in full) — nothing
-    // left to suggest.
-    if (COMMON_EMAIL_DOMAINS.includes(domainPart)) {
-      setEmailSuggestionsOpen(false);
-      return;
-    }
-    const matches = (domainPart === ''
-      ? COMMON_EMAIL_DOMAINS
-      : COMMON_EMAIL_DOMAINS.filter(d => d.startsWith(domainPart))
-    ).slice(0, MAX_EMAIL_SUGGESTIONS);
-    setEmailSuggestions(matches.map(d => `${localPart}@${d}`));
+    const matches = getEmailDomainSuggestions(value, MAX_EMAIL_SUGGESTIONS);
+    setEmailSuggestions(matches);
     setEmailSuggestionIndex(-1);
     setEmailSuggestionsOpen(matches.length > 0);
   };

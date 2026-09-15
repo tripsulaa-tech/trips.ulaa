@@ -80,6 +80,30 @@ interface AdminEnquiriesDesktopTableProps {
   buildRowActions: (e: Enquiry) => ActionMenuItem[];
 }
 
+/** The "₹paid / ₹total · Status[ · ₹X Due]" line shown in the Payment cell
+ *  — identical in both the non-clickable (`new_enquiry`) and clickable
+ *  variants of that cell below; only the wrapping element and whether the
+ *  booking ID is shown beneath it differ. */
+function PaymentSummaryLine({ e }: { e: Enquiry }) {
+  return (
+    <p className="text-dark text-xs">
+      <span className="font-medium">{formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}</span>
+      <span className="text-dark-muted"> · </span>
+      <span className={`font-semibold ${
+        paymentStatus(e).color.includes('green') ? 'text-green-700'
+          : paymentStatus(e).color.includes('amber') ? 'text-amber-700'
+          : paymentStatus(e).color.includes('red') ? 'text-red-700'
+          : 'text-dark-muted'
+      }`}>
+        {paymentStatus(e).label}
+      </span>
+      {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
+        <span className="text-amber-600"> · {formatPrice(paymentBalance(e)!)} Due</span>
+      )}
+    </p>
+  );
+}
+
 /** Desktop/tablet table view of the enquiries list — extracted from
  *  AdminEnquiries.tsx's JSX return (see that file's history for the
  *  original single-component version). Purely presentational: every piece
@@ -272,39 +296,11 @@ export default function AdminEnquiriesDesktopTable({
                         instead of just silently doing nothing on click. */}
                     {e.journey_stage === 'new_enquiry' ? (
                       <div title="Mark this enquiry Contacted first to record a payment">
-                        <p className="text-dark text-xs">
-                          <span className="font-medium">{formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}</span>
-                          <span className="text-dark-muted"> · </span>
-                          <span className={`font-semibold ${
-                            paymentStatus(e).color.includes('green') ? 'text-green-700'
-                              : paymentStatus(e).color.includes('amber') ? 'text-amber-700'
-                              : paymentStatus(e).color.includes('red') ? 'text-red-700'
-                              : 'text-dark-muted'
-                          }`}>
-                            {paymentStatus(e).label}
-                          </span>
-                          {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                            <span className="text-amber-600"> · {formatPrice(paymentBalance(e)!)} Due</span>
-                          )}
-                        </p>
+                        <PaymentSummaryLine e={e} />
                       </div>
                     ) : (
                       <button onClick={() => openPayment(e)} className="text-left hover:opacity-75 transition-opacity">
-                        <p className="text-dark text-xs">
-                          <span className="font-medium">{formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}</span>
-                          <span className="text-dark-muted"> · </span>
-                          <span className={`font-semibold ${
-                            paymentStatus(e).color.includes('green') ? 'text-green-700'
-                              : paymentStatus(e).color.includes('amber') ? 'text-amber-700'
-                              : paymentStatus(e).color.includes('red') ? 'text-red-700'
-                              : 'text-dark-muted'
-                          }`}>
-                            {paymentStatus(e).label}
-                          </span>
-                          {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                            <span className="text-amber-600"> · {formatPrice(paymentBalance(e)!)} Due</span>
-                          )}
-                        </p>
+                        <PaymentSummaryLine e={e} />
                         {e.booking_id && (
                           <span title="Booking ID" className="mt-0.5 block text-2xs font-mono text-dark-muted truncate">{e.booking_id}</span>
                         )}

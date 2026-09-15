@@ -1,8 +1,9 @@
 import { useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, X } from '@phosphor-icons/react';
+import { Clock } from '@phosphor-icons/react';
 import { useCloseOnOutsideClick } from '../../hooks/useCloseOnOutsideClick';
 import { useDropdownPosition } from '../../hooks/useDropdownPosition';
+import { PickerTrigger } from './PickerTrigger';
 
 interface TimePickerProps {
   value: string; // 'HH:MM' 24-hour, or ''
@@ -95,36 +96,21 @@ export default function TimePicker({
 
   return (
     <>
-      <span
-        onClick={() => !disabled && setIsOpen(o => !o)}
-        className={`relative w-full flex items-center gap-2 rounded-lg border-2 bg-background text-dark cursor-pointer ${isOpen ? 'border-primary' : 'border-background-warm hover:border-primary/50'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${sizeClasses} ${className}`}
-      >
-        <button
-          ref={triggerRef}
-          id={id}
-          type="button"
-          disabled={disabled}
-          onClick={(e) => { e.stopPropagation(); setIsOpen(o => !o); }}
-          aria-haspopup="dialog"
-          aria-expanded={isOpen}
-          className={`flex-1 min-w-0 text-left outline-none disabled:cursor-not-allowed ${value ? '' : 'text-dark-muted'}`}
-        >
-          {value ? formatDisplay(value) : placeholder}
-        </button>
-        <span className="flex items-center gap-1 shrink-0">
-          {value && !disabled && (
-            <button
-              type="button"
-              aria-label="Clear time"
-              onClick={(e) => { e.stopPropagation(); onChange(''); }}
-              className="rounded-full p-0.5 text-dark-muted hover:text-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <X size={14} aria-hidden="true" />
-            </button>
-          )}
-          <Clock size={15} className="text-dark-muted" aria-hidden="true" />
-        </span>
-      </span>
+      <PickerTrigger
+        id={id}
+        disabled={disabled}
+        isOpen={isOpen}
+        onToggle={() => setIsOpen(o => !o)}
+        triggerRef={triggerRef}
+        displayValue={value ? formatDisplay(value) : ''}
+        hasValue={!!value}
+        placeholder={placeholder}
+        onClear={() => onChange('')}
+        clearLabel="Clear time"
+        icon={<Clock size={15} className="text-dark-muted" aria-hidden="true" />}
+        sizeClasses={sizeClasses}
+        className={className}
+      />
 
       {isOpen && createPortal(
         <div

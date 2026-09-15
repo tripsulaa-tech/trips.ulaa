@@ -17,7 +17,7 @@ import { parseTerms } from '../../utils/parseTerms';
 import { validateFullName, validateCity, validateEmail, validatePhone, validateOptionalPhone, validateAge, DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
 import { MIN_GROUP_SIZE, MAX_GROUP_SIZE } from '../../utils/bookingDraft';
 import { INDIAN_CITIES } from '../../constants/indianCities';
-import { COMMON_EMAIL_DOMAINS } from '../../constants/emailDomains';
+import { getEmailDomainSuggestions } from '../../constants/emailDomains';
 import Button from './Button';
 import Modal from './Modal';
 import TermsBlocks from './TermsBlocks';
@@ -508,28 +508,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // field still accepts any domain the user finishes typing themselves —
   // validateEmail only constrains the local part (before the "@").
   const handleEmailInput = (value: string) => {
-    const atIndex = value.indexOf('@');
-    if (atIndex === -1) {
-      setEmailSuggestionsOpen(false);
-      return;
-    }
-    const localPart = value.slice(0, atIndex);
-    const domainPart = value.slice(atIndex + 1).toLowerCase();
-    if (!localPart) {
-      setEmailSuggestionsOpen(false);
-      return;
-    }
-    // Already a complete, exact match (typed or pasted in full) — nothing
-    // left to suggest.
-    if (COMMON_EMAIL_DOMAINS.includes(domainPart)) {
-      setEmailSuggestionsOpen(false);
-      return;
-    }
-    const matches = (domainPart === ''
-      ? COMMON_EMAIL_DOMAINS
-      : COMMON_EMAIL_DOMAINS.filter(d => d.startsWith(domainPart))
-    ).slice(0, MAX_SUGGESTIONS);
-    setEmailSuggestions(matches.map(d => `${localPart}@${d}`));
+    const matches = getEmailDomainSuggestions(value, MAX_SUGGESTIONS);
+    setEmailSuggestions(matches);
     setEmailSuggestionIndex(-1);
     setEmailSuggestionsOpen(matches.length > 0);
   };

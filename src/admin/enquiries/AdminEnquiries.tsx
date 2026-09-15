@@ -27,6 +27,7 @@ import type { GroupUnit } from '../../utils/utils-index';
 import {
   foodPreferenceKey, SOURCE_CONFIG, JOURNEY_STAGE_CONFIG,
   closedReasonBreakdown, followUpStatus, validatePaymentForm,
+  getTripPrice as getTripPriceCommon, getTripChildFareAmount as getTripChildFareAmountCommon,
 } from './AdminEnquiryCommon';
 import { JourneyLifecycleLegend } from './AdminEnquiryLifecycle';
 import { useMarkInvoicePaid } from './useMarkInvoicePaid';
@@ -135,20 +136,14 @@ export default function AdminEnquiries() {
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   // Looks up what a trip actually charges for a given package (early-bird or
   // normal). Returns undefined if the trip or that price isn't set.
-  const getTripPrice = (tripId: string | undefined, packageType: Enquiry['package_type']): number | undefined => {
-    const trip = trips.find(t => t.id === tripId);
-    if (!trip) return undefined;
-    const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
-    return price ?? undefined;
-  };
+  const getTripPrice = (tripId: string | undefined, packageType: Enquiry['package_type']): number | undefined =>
+    getTripPriceCommon(trips, tripId, packageType);
   // This trip's configured Child Fare Amount (Add/Edit Trip → Finances &
   // Profit), used to auto-fill and lock the Add-on Amount field once the
   // Child Fare chip is picked in PaymentFormFields — see that component
   // for why it's a hard lock with no per-child override.
-  const getTripChildFareAmount = (tripId: string | undefined): number | undefined => {
-    const trip = trips.find(t => t.id === tripId);
-    return trip?.trip_finance?.child_fare_amount ?? undefined;
-  };
+  const getTripChildFareAmount = (tripId: string | undefined): number | undefined =>
+    getTripChildFareAmountCommon(trips, tripId);
   // Payment modal — a click on the Payment cell/"Record Payment"/"Add
   // Payment" opens this right here on the list (same modal
   // AdminEnquiryDetail.tsx uses), instead of navigating away to the full

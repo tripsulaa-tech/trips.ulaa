@@ -36,7 +36,7 @@ import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { sendBookingEmail, bookingEmailPreview } from '../../utils/bookingEmail';
 import Modal from '../../components/ui/Modal';
 import { formatPrice } from '../../utils/utils-index';
-import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, computeDiscountedTotal } from './AdminEnquiryCommon';
+import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, computeDiscountedTotal, getTripPrice as getTripPriceCommon, getTripChildFareAmount as getTripChildFareAmountCommon } from './AdminEnquiryCommon';
 import type { PaymentForm, InvoiceAction } from './AdminEnquiryCommon';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
@@ -178,18 +178,12 @@ export default function AdminEnquiryDetail() {
 
   // Fixed lookup for a specific package (used once the admin has picked
   // Early Bird / Normal explicitly in the Track Payment modal).
-  const getTripPrice = (tripId: string | undefined, packageType: Enquiry['package_type']): number | undefined => {
-    const trip = trips.find(t => t.id === tripId);
-    if (!trip) return undefined;
-    const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
-    return price ?? undefined;
-  };
+  const getTripPrice = (tripId: string | undefined, packageType: Enquiry['package_type']): number | undefined =>
+    getTripPriceCommon(trips, tripId, packageType);
   // This trip's configured Child Fare Amount — see AdminEnquiries.tsx's
   // identical helper for why PaymentFormFields needs it.
-  const getTripChildFareAmount = (tripId: string | undefined): number | undefined => {
-    const trip = trips.find(t => t.id === tripId);
-    return trip?.trip_finance?.child_fare_amount ?? undefined;
-  };
+  const getTripChildFareAmount = (tripId: string | undefined): number | undefined =>
+    getTripChildFareAmountCommon(trips, tripId);
 
   // Which price applies to this enquiry's trip for whichever package is
   // set on the enquiry itself (Traveller & Trip → Package) — not just

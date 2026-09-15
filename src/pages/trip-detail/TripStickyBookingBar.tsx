@@ -3,6 +3,36 @@ import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
 import { formatDate, formatPrice, specialOfferDaysLeft } from '../../utils/utils-index';
 import { Clock, Sparkle, Gift } from '@phosphor-icons/react';
 
+/** The "Save ₹X" + "PLUS ₹Y OFFER" badge pair — identical in both the
+ *  advance_amount and no-advance_amount price layouts below, just at a
+ *  different point in each layout's row sequence. */
+function SaveAndPlusOfferBadges({
+  saveAmount,
+  showPlusOffer,
+  plusOfferAmount,
+}: {
+  saveAmount: number | null;
+  showPlusOffer: boolean;
+  plusOfferAmount: number | null;
+}) {
+  if (saveAmount == null && !showPlusOffer) return null;
+  return (
+    <div className="flex items-center gap-1.5 mt-0.5">
+      {saveAmount != null && (
+        <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+          Save {formatPrice(saveAmount)}
+        </span>
+      )}
+      {showPlusOffer && (
+        <span className="inline-flex items-center gap-1 bg-pink-50 border border-pink-200 text-pink-600 text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+          <Gift size={10} weight="fill" className="shrink-0" />
+          PLUS {formatPrice(plusOfferAmount as number)} OFFER
+        </span>
+      )}
+    </div>
+  );
+}
+
 interface TripStickyBookingBarProps {
   trip: UpcomingTrip;
   buttonLabels: ButtonLabelsConfig;
@@ -69,21 +99,7 @@ export default function TripStickyBookingBar({
                     line rather than left to wrap wherever they happen to
                     run out of room — keeps the two badges aligned as a
                     pair instead of splitting across separate lines. */}
-                {(saveAmount != null || showPlusOffer) && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {saveAmount != null && (
-                      <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
-                        Save {formatPrice(saveAmount)}
-                      </span>
-                    )}
-                    {showPlusOffer && (
-                      <span className="inline-flex items-center gap-1 bg-pink-50 border border-pink-200 text-pink-600 text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
-                        <Gift size={10} weight="fill" className="shrink-0" />
-                        PLUS {formatPrice(plusOfferAmount as number)} OFFER
-                      </span>
-                    )}
-                  </div>
-                )}
+                <SaveAndPlusOfferBadges saveAmount={saveAmount} showPlusOffer={showPlusOffer} plusOfferAmount={plusOfferAmount} />
 
                 {/* Row 4: Special Offer / Early Bird + Ends date, its own
                     line for the same reason — a predictable line break
@@ -127,21 +143,7 @@ export default function TripStickyBookingBar({
                     <span className="text-dark-muted line-through text-xs shrink-0">{formatPrice(strikeThroughPrice)}</span>
                   )}
                 </div>
-                {(saveAmount != null || showPlusOffer) && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {saveAmount != null && (
-                      <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
-                        Save {formatPrice(saveAmount)}
-                      </span>
-                    )}
-                    {showPlusOffer && (
-                      <span className="inline-flex items-center gap-1 bg-pink-50 border border-pink-200 text-pink-600 text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
-                        <Gift size={10} weight="fill" className="shrink-0" />
-                        PLUS {formatPrice(plusOfferAmount as number)} OFFER
-                      </span>
-                    )}
-                  </div>
-                )}
+                <SaveAndPlusOfferBadges saveAmount={saveAmount} showPlusOffer={showPlusOffer} plusOfferAmount={plusOfferAmount} />
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   {isSpecialOffer ? (
                     <>

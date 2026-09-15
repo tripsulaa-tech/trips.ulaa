@@ -325,6 +325,30 @@ export function getTripPricingForPackage(
   return null;
 }
 
+// Looks up what a trip actually charges for a given package (early-bird or
+// normal). Returns undefined if the trip or that price isn't set. Shared by
+// AdminEnquiries.tsx and AdminEnquiryDetail.tsx, which previously each had
+// an identical copy of this closed over their own local `trips` state.
+export function getTripPrice(
+  trips: UpcomingTrip[],
+  tripId: string | undefined,
+  packageType: Enquiry['package_type']
+): number | undefined {
+  const trip = trips.find(t => t.id === tripId);
+  if (!trip) return undefined;
+  const price = packageType === 'early_bird' ? trip.early_bird_price : trip.price;
+  return price ?? undefined;
+}
+
+// This trip's configured Child Fare Amount (Add/Edit Trip → Finances &
+// Profit), used to auto-fill and lock the Add-on Amount field once the
+// Child Fare chip is picked in PaymentFormFields — see that component
+// for why it's a hard lock with no per-child override.
+export function getTripChildFareAmount(trips: UpcomingTrip[], tripId: string | undefined): number | undefined {
+  const trip = trips.find(t => t.id === tripId);
+  return trip?.trip_finance?.child_fare_amount ?? undefined;
+}
+
 // Small inline badge shown next to each enquiry's name — lets an admin spot
 // missing food preferences directly in the list, without opening the row.
 export function foodBadge(e: Enquiry): { label: string; color: string } {
