@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useSearchParams, useLocation, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
-import Button from '../components/ui/Button';
+import NotFoundState from '../components/ui/NotFoundState';
 import { TripDetailSkeleton } from '../components/ui/Skeletons';
 import TripCountdownCard from '../components/ui/TripCountdownCard';
 import type { PagedCarouselHandle } from '../components/ui/PagedCarousel';
@@ -31,6 +31,7 @@ import TripEndBanner from './trip-detail/TripEndBanner';
 import TripBookingModal from './trip-detail/TripBookingModal';
 import TripSpecialOfferPopup from './trip-detail/TripSpecialOfferPopup';
 import { useIsDesktop } from './trip-detail/tripDetailUtils';
+import { Compass } from '@phosphor-icons/react';
 
 export default function TripDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -260,10 +261,13 @@ export default function TripDetailPage() {
   if (!trip) {
     return (
       <Layout>
-        <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
-          <h1 className="font-display text-4xl font-bold text-dark mb-4">Trip not found</h1>
-          <Link to="/trips"><Button variant="primary">View All Trips</Button></Link>
-        </div>
+        <NotFoundState
+          icon={<Compass size={28} />}
+          title="Trip not found"
+          message="This trip may have been removed or the link is out of date. Check out our other upcoming adventures instead."
+          actionLabel="View All Trips"
+          actionTo="/trips"
+        />
       </Layout>
     );
   }

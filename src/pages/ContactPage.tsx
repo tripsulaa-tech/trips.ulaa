@@ -23,6 +23,7 @@ import {
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
+import SectionTitle from '../components/ui/SectionTitle';
 import { WhatsAppIcon } from '../components/icons/WhatsAppIcon';
 import { submitContactEnquiry } from '../services/api';
 import { getWhatsAppLink } from '../utils/utils-index';
@@ -249,11 +250,18 @@ export default function ContactPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12">
             {/* Channels */}
             <motion.div {...fadeUp()}>
-              <h2 className="font-display text-3xl sm:text-[2rem] font-bold text-dark">Reach us your way</h2>
-              <p className="text-dark-muted mt-2 leading-relaxed">
-                Choose the channel you're most comfortable with.<br className="hidden sm:block" />
-                We're always happy to help!
-              </p>
+              <SectionTitle
+                variant="plain"
+                align="left"
+                size="lg"
+                title="Reach us your way"
+                subtitle={
+                  <>
+                    Choose the channel you're most comfortable with.<br className="hidden sm:block" />
+                    We're always happy to help!
+                  </>
+                }
+              />
 
               <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* WhatsApp */}
@@ -410,11 +418,16 @@ export default function ContactPage() {
                   </motion.div>
                 ) : (
                   <div className="relative">
-                    <span className="block w-12 h-[3px] rounded-full bg-primary" aria-hidden="true" />
-                    <h3 className="font-display text-3xl sm:text-[2rem] font-bold text-dark mt-4">Send us a message</h3>
-                    <p className="text-dark-muted text-sm sm:text-base mt-2">
-                      Fill this in and we'll get back to you within a few hours.
-                    </p>
+                    <SectionTitle
+                      variant="plain"
+                      as="h3"
+                      align="left"
+                      size="lg"
+                      title="Send us a message"
+                      subtitle="Fill this in and we'll get back to you within a few hours."
+                      rule
+                      rulePosition="before"
+                    />
 
                     <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -539,9 +552,14 @@ export default function ContactPage() {
          --------------------------------------------------------------- */}
       <section className="bg-cream px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
         <div className="max-w-[1344px] mx-auto">
-          <motion.div {...fadeUp()} className="text-center">
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-dark">Why Travel with ULAA?</h2>
-            <p className="text-dark-muted mt-2">Not just trips. A community of like-minded explorers.</p>
+          <motion.div {...fadeUp()}>
+            <SectionTitle
+              variant="plain"
+              align="center"
+              size="xl"
+              title="Why Travel with ULAA?"
+              subtitle="Not just trips. A community of like-minded explorers."
+            />
           </motion.div>
 
           <div className="mt-10 sm:mt-12 grid grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6">

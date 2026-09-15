@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import Button from '../../components/ui/Button';
+import SectionTitle from '../../components/ui/SectionTitle';
 import type { UpcomingTrip } from '../../types/types-index';
 import { PLACEHOLDER_IMAGE, getCoverImageStyle } from '../../utils/utils-index';
 import { ArrowLeft, ArrowRight, Play } from '@phosphor-icons/react';
@@ -57,7 +58,12 @@ export default function TripComingSoon({ trip }: TripComingSoonProps) {
         </div>
       </div>
       <div className="max-w-[1344px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
-        <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-3">Something exciting is on the way!</h2>
+        <SectionTitle
+          variant="plain"
+          align="center"
+          title="Something exciting is on the way!"
+          className="mb-3"
+        />
         <p className="text-dark-muted text-sm sm:text-base max-w-lg mx-auto mb-8">
           We're putting the finishing touches on this adventure. The full itinerary, pricing, and
           booking details will be available soon. While you wait, check out our other upcoming

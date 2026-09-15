@@ -4,8 +4,7 @@ import { Sparkle } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import TripCard from '../components/ui/TripCard';
-import { TripSearchFilterBar } from '../components/ui/TripSearchFilterBar';
-import { SkeletonGrid } from '../components/ui/Skeletons';
+import BrowseShell from '../components/ui/BrowseShell';
 import { getUpcomingTrips } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
@@ -88,124 +87,82 @@ export default function UpcomingTripsPage() {
 
   return (
     <Layout>
-      {/* Hero */}
-      <div className="relative h-80 md:h-96 overflow-hidden">
-        <img src={HERO_IMAGE} alt="Upcoming Trips" className="w-full h-full object-cover" loading="eager" fetchPriority="high" />
-        <div className="absolute inset-0 bg-gradient-to-b from-dark/60 to-dark/80" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <span className="text-secondary font-script font-medium text-2xl sm:text-3xl md:text-4xl block">Plan Your Journey</span>
-            <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">Upcoming Trips</h1>
-            <p className="text-white/80 mt-3 text-lg max-w-xl">
-              Handpicked adventures to India's most beautiful hidden destinations.
-            </p>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="bg-white border-b border-background-warm sticky top-20 z-30 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1344px] mx-auto py-4">
-          <TripSearchFilterBar
-            search={search}
-            onSearchChange={setSearch}
-            month={month}
-            onMonthChange={setMonth}
-            monthCounts={monthCounts}
-            showFilters={showFilters}
-            onToggleFilters={() => setShowFilters(!showFilters)}
-          />
-        </div>
-      </div>
-
-      {/* Live special offer(s) — only rendered when at least one trip has
-          a flash offer live right now; disappears on its own once the
-          offer's end date passes. */}
-      {activeSpecialOfferTrips.length > 0 && (
-        <div className="px-4 sm:px-6 lg:px-8 pt-6">
-          <div className="max-w-[1344px] mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="bg-gradient-to-r from-primary-dark to-primary rounded-xl px-4 sm:px-6 py-4 flex flex-wrap items-center gap-3"
-            >
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/15 text-white shrink-0">
-                <Sparkle size={18} weight="fill" />
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-button font-bold text-sm sm:text-base leading-tight">
-                  {activeSpecialOfferTrips.length === 1
-                    ? (() => {
-                        const t = activeSpecialOfferTrips[0];
-                        const daysLeft = specialOfferDaysLeft(t.special_offer_date!, t.special_offer_end_date);
-                        return `${t.special_offer_name} — ${daysLeft <= 1 ? 'ends today!' : `ends in ${daysLeft} days!`}`;
-                      })()
-                    : `${activeSpecialOfferTrips.length} special offers live now!`}
-                </p>
-                <p className="text-white/80 text-xs sm:text-sm mt-0.5">
-                  {activeSpecialOfferTrips.length === 1
-                    ? 'Grab this trip at the offer price before it\'s gone.'
-                    : activeSpecialOfferTrips.map(t => t.special_offer_name).join(' · ')}
-                </p>
-              </div>
-              {activeSpecialOfferTrips.length === 1 && (
-                <Link
-                  to={`/trips/${activeSpecialOfferTrips[0].slug}`}
-                  className="shrink-0 bg-white text-primary-dark font-button font-semibold text-xs sm:text-sm px-4 py-2 rounded-md hover:bg-white/90 transition-colors"
+      <BrowseShell
+        hero={{
+          image: HERO_IMAGE,
+          imageAlt: 'Upcoming Trips',
+          label: 'Plan Your Journey',
+          title: 'Upcoming Trips',
+          subtitle: "Handpicked adventures to India's most beautiful hidden destinations.",
+        }}
+        filters={{
+          search,
+          onSearchChange: setSearch,
+          month,
+          onMonthChange: setMonth,
+          monthCounts,
+          showFilters,
+          onToggleFilters: () => setShowFilters(!showFilters),
+        }}
+        filterBarClassName="bg-white"
+        afterFilters={
+          // Live special offer(s) — only rendered when at least one trip has
+          // a flash offer live right now; disappears on its own once the
+          // offer's end date passes.
+          activeSpecialOfferTrips.length > 0 && (
+            <div className="px-4 sm:px-6 lg:px-8 pt-6">
+              <div className="max-w-[1344px] mx-auto">
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="bg-gradient-to-r from-primary-dark to-primary rounded-xl px-4 sm:px-6 py-4 flex flex-wrap items-center gap-3"
                 >
-                  View Trip
-                </Link>
-              )}
-            </motion.div>
-          </div>
-        </div>
-      )}
-
-      {/* Trips */}
-      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-6 md:py-16">
-        <div className="max-w-[1344px] mx-auto">
-        {loading ? (
-          <SkeletonGrid count={6} type="trip" />
-        ) : (
-          <div aria-live="polite">
-            {trips.length === 0 ? (
-              <div className="text-center py-24">
-                <p className="font-display text-2xl text-dark-muted">No upcoming trips yet.</p>
-                <p className="text-sm text-dark-muted mt-2">Check back soon — new adventures are on the way.</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-24">
-                <p className="font-display text-2xl text-dark-muted">No trips found.</p>
-                <p className="text-sm text-dark-muted mt-2">Try adjusting your search or filters.</p>
-                {(search !== '' || month !== 'All') && (
-                  <button
-                    onClick={() => { setSearch(''); setMonth('All'); }}
-                    className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white font-button text-sm font-semibold hover:bg-primary-dark transition-colors"
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <p className="text-dark-muted text-base sm:text-lg mb-6 md:mb-8">
-                  <span className="font-semibold text-primary">{navLabel}</span>{' '}
-                  <span className="text-sm sm:text-base">
-                    Showing <span className="font-semibold text-dark">{filtered.length}</span> trip{filtered.length !== 1 ? 's' : ''}
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/15 text-white shrink-0">
+                    <Sparkle size={18} weight="fill" />
                   </span>
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                  {filtered.map((trip, i) => (
-                    <TripCard key={trip.id} trip={trip} index={i} />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        </div>
-      </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-button font-bold text-sm sm:text-base leading-tight">
+                      {activeSpecialOfferTrips.length === 1
+                        ? (() => {
+                            const t = activeSpecialOfferTrips[0];
+                            const daysLeft = specialOfferDaysLeft(t.special_offer_date!, t.special_offer_end_date);
+                            return `${t.special_offer_name} — ${daysLeft <= 1 ? 'ends today!' : `ends in ${daysLeft} days!`}`;
+                          })()
+                        : `${activeSpecialOfferTrips.length} special offers live now!`}
+                    </p>
+                    <p className="text-white/80 text-xs sm:text-sm mt-0.5">
+                      {activeSpecialOfferTrips.length === 1
+                        ? 'Grab this trip at the offer price before it\'s gone.'
+                        : activeSpecialOfferTrips.map(t => t.special_offer_name).join(' · ')}
+                    </p>
+                  </div>
+                  {activeSpecialOfferTrips.length === 1 && (
+                    <Link
+                      to={`/trips/${activeSpecialOfferTrips[0].slug}`}
+                      className="shrink-0 bg-white text-primary-dark font-button font-semibold text-xs sm:text-sm px-4 py-2 rounded-md hover:bg-white/90 transition-colors"
+                    >
+                      View Trip
+                    </Link>
+                  )}
+                </motion.div>
+              </div>
+            </div>
+          )
+        }
+        loading={loading}
+        skeletonType="trip"
+        items={trips}
+        filteredItems={filtered}
+        emptyState={{ title: 'No upcoming trips yet.', message: 'Check back soon — new adventures are on the way.' }}
+        noResultsState={{ title: 'No trips found.', message: 'Try adjusting your search or filters.' }}
+        hasActiveFilters={search !== '' || month !== 'All'}
+        onClearFilters={() => { setSearch(''); setMonth('All'); }}
+        countLabel={navLabel}
+        countNoun="trip"
+        itemKey={trip => trip.id}
+        renderItem={(trip, i) => <TripCard trip={trip} index={i} />}
+      />
     </Layout>
   );
 }

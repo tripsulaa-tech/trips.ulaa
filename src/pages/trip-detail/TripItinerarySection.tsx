@@ -3,6 +3,7 @@ import ItineraryDayPhotos from '../../components/ui/ItineraryDayPhotos';
 import { getTripHighlightIcon, getTripHighlightPalette } from '../../constants/tripHighlightIcons';
 import type { UpcomingTrip } from '../../types/types-index';
 import { getItineraryGridClass } from './tripDetailUtils';
+import SectionTitle from '../../components/ui/SectionTitle';
 
 interface TripItinerarySectionProps {
   itinerary: UpcomingTrip['itinerary'];
@@ -17,9 +18,13 @@ export default function TripItinerarySection({
 }: TripItinerarySectionProps) {
   return (
     <section id="itinerary" className="scroll-mt-44 mb-10 sm:mb-[60px]">
-      <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-6 sm:mb-10 text-center px-2">
-        {itinerary.length} Day{itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments
-      </h2>
+      <SectionTitle
+        variant="plain"
+        align="center"
+        title={`${itinerary.length} Day${itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments`}
+        className="px-2"
+        titleClassName="mb-6 sm:mb-10"
+      />
       <p className="text-center text-dark-muted text-sm -mt-4 mb-6">
         Tap a day's icon to see the details
       </p>

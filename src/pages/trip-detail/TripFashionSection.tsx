@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import GalleryViewer from '../../components/ui/GalleryViewer';
+import SectionTitle from '../../components/ui/SectionTitle';
 
 interface TripFashionSectionProps {
   photos: string[];
@@ -19,7 +20,7 @@ export default function TripFashionSection({ photos, description, tripTitle }: T
 
   return (
     <section className="scroll-mt-44">
-      <h2 className="font-display text-2xl font-bold text-dark mb-2">Fashion Aesthetics</h2>
+      <SectionTitle variant="plain" align="left" title="Fashion Aesthetics" titleClassName="mb-2" />
       {description && (
         <p className="text-dark-muted text-sm mb-4">{description}</p>
       )}

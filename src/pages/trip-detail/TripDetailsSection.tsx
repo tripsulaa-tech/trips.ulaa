@@ -2,6 +2,7 @@ import type { UpcomingTrip, TripInclusionItem } from '../../types/types-index';
 import { formatAgeRange } from '../../utils/utils-index';
 import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 import { getThingsToCarryIcon } from './tripDetailUtils';
+import SectionTitle from '../../components/ui/SectionTitle';
 import { MapPin, NavigationArrow as Navigation, UserCheck } from '@phosphor-icons/react';
 
 interface TripDetailsSectionProps {
@@ -22,7 +23,7 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
       {/* Things to Carry — kept directly above Meeting Point */}
       {hasThingsToCarry && (
         <section className="scroll-mt-44">
-          <h2 className="font-display text-xl sm:text-2xl font-bold text-dark mb-2">Things to Carry</h2>
+          <SectionTitle variant="plain" align="left" size="sm" title="Things to Carry" titleClassName="mb-2" />
           <p className="text-dark-muted text-sm mb-3 sm:mb-4">Pack smart. Travel light. Stay ready.</p>
           <div className="flex flex-wrap gap-2">
             {trip.things_to_carry_items!.map((item: TripInclusionItem, i: number) => {
@@ -41,9 +42,14 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
       {/* Meeting Point */}
       {trip.meeting_point && (
         <section className="bg-background-warm rounded-lg p-5 sm:p-6">
-          <h2 className="font-display text-xl sm:text-2xl font-bold text-dark mb-3 flex items-center gap-2">
-            <Navigation size={22} className="text-primary" /> Meeting Point
-          </h2>
+          <SectionTitle
+            variant="plain"
+            align="left"
+            size="sm"
+            icon={<Navigation size={22} className="text-primary" />}
+            title="Meeting Point"
+            titleClassName="mb-3"
+          />
           <p className="text-dark font-semibold mb-1">{trip.meeting_point}</p>
           {trip.meeting_address && (
             <p className="text-dark-muted text-sm mb-3">{trip.meeting_address}</p>
@@ -85,9 +91,14 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
           restriction on this trip (Admin → Trips → Basic Info). */}
       {(trip.min_age != null || trip.max_age != null) && (
         <section className="bg-background-warm rounded-lg p-5 sm:p-6">
-          <h2 className="font-display text-xl sm:text-2xl font-bold text-dark mb-2 flex items-center gap-2">
-            <UserCheck size={22} className="text-primary" /> Eligibility
-          </h2>
+          <SectionTitle
+            variant="plain"
+            align="left"
+            size="sm"
+            icon={<UserCheck size={22} className="text-primary" />}
+            title="Eligibility"
+            titleClassName="mb-2"
+          />
           <p className="text-dark-muted">
             This trip is open to travelers aged {formatAgeRange(trip.min_age, trip.max_age)}.
           </p>
@@ -97,7 +108,14 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
       {/* Trip Leader */}
       {hasLeader && (
         <section className="scroll-mt-44 bg-dark rounded-lg p-5 sm:p-8">
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4 sm:mb-6 text-center">Meet Your Trip Leader</h2>
+          <SectionTitle
+            variant="plain"
+            align="center"
+            size="xl"
+            light
+            title="Meet Your Trip Leader"
+            titleClassName="mb-4 sm:mb-6"
+          />
           <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-center sm:items-start">
             {leader!.photo ? (
               <img

@@ -3,6 +3,7 @@ import FAQAccordion from '../../components/ui/FAQAccordion';
 import CancellationPolicyDisplay from '../../components/ui/CancellationPolicyDisplay';
 import type { UpcomingTrip } from '../../types/types-index';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
+import SectionTitle from '../../components/ui/SectionTitle';
 import { CaretDown as ChevronDown, CaretUp as ChevronUp } from '@phosphor-icons/react';
 
 interface TripFaqCancellationSectionProps {
@@ -31,7 +32,7 @@ export default function TripFaqCancellationSection({
             aria-expanded={faqsOpen}
             className="w-full flex items-center justify-between gap-4 mb-6"
           >
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark">FAQs</h2>
+            <SectionTitle variant="plain" align="left" title="FAQs" />
             {faqsOpen ? (
               <ChevronUp size={24} className="text-primary shrink-0" />
             ) : (
@@ -62,7 +63,7 @@ export default function TripFaqCancellationSection({
           aria-expanded={cancellationOpen}
           className="w-full flex items-center justify-between gap-4 mb-6"
         >
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark">Cancellation Policy</h2>
+          <SectionTitle variant="plain" align="left" title="Cancellation Policy" />
           {cancellationOpen ? (
             <ChevronUp size={24} className="text-primary shrink-0" />
           ) : (

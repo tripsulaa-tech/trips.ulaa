@@ -12,6 +12,8 @@ import {
   Heart,
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
+import SectionTitle from '../components/ui/SectionTitle';
+import NotFoundState from '../components/ui/NotFoundState';
 import { GalleryGrid } from '../components/ui/GalleryViewer';
 import { AlbumSkeleton } from '../components/ui/Skeletons';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -157,16 +159,14 @@ export default function AlbumPage() {
   if (!album) {
     return (
       <Layout>
-        <div className="min-h-screen flex flex-col items-center justify-center">
-          <p className="font-display text-3xl text-dark-muted">Album not found.</p>
-          <Link
-            to="/completed-trips"
-            onClick={() => sessionStorage.setItem('ulaa:restoreScroll:/completed-trips', '1')}
-            className="mt-4 text-primary hover:underline"
-          >
-            ← Back to Trips
-          </Link>
-        </div>
+        <NotFoundState
+          icon={<Images size={28} />}
+          title="Album not found"
+          message="This album may have been removed or the link is out of date. Browse our other travel stories instead."
+          actionLabel="Back to All Albums"
+          actionTo="/completed-trips"
+          onActionClick={() => sessionStorage.setItem('ulaa:restoreScroll:/completed-trips', '1')}
+        />
       </Layout>
     );
   }
@@ -298,11 +298,14 @@ export default function AlbumPage() {
           {album.description && (
             <motion.section {...fadeUp()} className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10">
               <div className="md:col-span-4">
-                <p className="font-button text-primary text-[11px] font-semibold uppercase tracking-[0.25em]">
-                  In short
-                </p>
-                <h2 className="font-display text-3xl sm:text-[2rem] font-bold text-dark mt-3">Adventure Recap</h2>
-                <span className="block w-12 h-[3px] rounded-full bg-primary mt-4" aria-hidden="true" />
+                <SectionTitle
+                  variant="plain"
+                  align="left"
+                  size="lg"
+                  label="In short"
+                  title="Adventure Recap"
+                  rule
+                />
               </div>
               <p className="md:col-span-8 text-dark-muted text-lg sm:text-xl leading-relaxed font-body">
                 {album.description}
@@ -315,10 +318,14 @@ export default function AlbumPage() {
               instead of a wall of text. */}
           {album.story && (
             <motion.section {...fadeUp()} className="max-w-3xl">
-              <p className="font-button text-primary text-[11px] font-semibold uppercase tracking-[0.25em]">
-                How it went
-              </p>
-              <h2 className="font-display text-3xl sm:text-[2rem] font-bold text-dark mt-3 mb-8">The Story</h2>
+              <SectionTitle
+                variant="plain"
+                align="left"
+                size="lg"
+                label="How it went"
+                title="The Story"
+                titleClassName="mb-8"
+              />
               <div className="border-l-2 border-background-warm pl-6 sm:pl-8 space-y-6">
                 {album.story.split('\n\n').map((para, i) => (
                   <p
@@ -340,11 +347,14 @@ export default function AlbumPage() {
           {album.gallery_images.length > 0 && (
             <section>
               <motion.div {...fadeUp()} className="mb-7 sm:mb-9">
-                <p className="font-button text-primary text-[11px] font-semibold uppercase tracking-[0.25em]">
-                  {album.gallery_images.length} photos
-                </p>
-                <h2 className="font-display text-3xl sm:text-[2rem] font-bold text-dark mt-3">Relive the Journey</h2>
-                <span className="block w-12 h-[3px] rounded-full bg-primary mt-4" aria-hidden="true" />
+                <SectionTitle
+                  variant="plain"
+                  align="left"
+                  size="lg"
+                  label={`${album.gallery_images.length} photos`}
+                  title="Relive the Journey"
+                  rule
+                />
               </motion.div>
               <GalleryGrid images={album.gallery_images} fallbackLocation={album.destination} />
             </section>

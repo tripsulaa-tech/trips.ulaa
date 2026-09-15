@@ -1,4 +1,5 @@
 import TripHighlightIconDisplay from '../../components/ui/TripHighlightIconDisplay';
+import SectionTitle from '../../components/ui/SectionTitle';
 import type { UpcomingTrip, TripInclusionItem } from '../../types/types-index';
 import { CheckCircle, XCircle } from '@phosphor-icons/react';
 
@@ -25,7 +26,7 @@ export default function TripInclusionsSection({
         {/* What's Included */}
         {((trip.included_groups?.length ?? 0) > 0 || (trip.included_items?.length ?? 0) > 0) && (
           <div>
-            <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Included</h2>
+            <SectionTitle variant="plain" align="left" title="What's Included" titleClassName="mb-4" />
             {(trip.included_groups?.length ?? 0) > 0 ? (
               // Masonry (CSS columns) instead of a row-locked grid: a
               // grid would stretch every card in a row to match the
@@ -91,7 +92,7 @@ export default function TripInclusionsSection({
         {/* What's Not Included */}
         {((trip.not_included_items?.length ?? 0) > 0 || trip.not_included.length > 0) && (
           <div>
-            <h2 className="font-display text-2xl font-bold text-dark mb-4">What's Not Included</h2>
+            <SectionTitle variant="plain" align="left" title="What's Not Included" titleClassName="mb-4" />
             <div className="flex flex-wrap gap-2">
               {(trip.not_included_items?.length ?? 0) > 0
                 ? trip.not_included_items!.map((item: TripInclusionItem, i: number) => (

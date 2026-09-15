@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import TripHighlightIconDisplay from '../../components/ui/TripHighlightIconDisplay';
 import Button from '../../components/ui/Button';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
+import SectionTitle from '../../components/ui/SectionTitle';
 import type { UpcomingTrip, TripConfidenceItem, ButtonLabelsConfig } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, formatAgeRange, specialOfferDaysLeft } from '../../utils/utils-index';
 import { getGoogleCalendarUrl, downloadTripIcs } from '../../utils/calendar';
@@ -85,7 +86,7 @@ export default function TripConfidenceBookingSection({
     <div className={`grid grid-cols-1 gap-5 sm:gap-6 ${hasConfidenceItems ? 'lg:grid-cols-[1fr_640px] lg:divide-x lg:divide-background-warm' : ''}`}>
       {hasConfidenceItems && (
         <section id="confidence" className="scroll-mt-44 flex flex-col justify-center lg:pr-10">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-3">Travel with Confidence</h2>
+          <SectionTitle variant="plain" align="left" title="Travel with Confidence" titleClassName="mb-3" />
           {trip.confidence_description && (
             <p className="text-dark-muted text-base leading-relaxed mb-4 sm:mb-6">{trip.confidence_description}</p>
           )}

@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import PagedCarousel, { type PagedCarouselHandle } from '../../components/ui/PagedCarousel';
 import { useResponsiveItemsPerView } from '../../components/ui/useResponsiveItemsPerView';
+import SectionTitle from '../../components/ui/SectionTitle';
 import { ArrowRight } from '@phosphor-icons/react';
 
 interface TripAccommodationSectionProps {
@@ -17,7 +18,7 @@ export default function TripAccommodationSection({ description, photos, carousel
 
   return (
     <section id="accommodation" className="scroll-mt-44">
-      <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-2">Stay. Relax. Repeat.</h2>
+      <SectionTitle variant="plain" align="left" title="Stay. Relax. Repeat." titleClassName="mb-2" />
       {description && (
         <p className="text-dark-muted leading-relaxed text-sm sm:text-base mb-4 sm:mb-6">{description}</p>
       )}

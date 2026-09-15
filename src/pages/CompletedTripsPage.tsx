@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
 import AlbumCard from '../components/ui/AlbumCard';
-import { TripSearchFilterBar } from '../components/ui/TripSearchFilterBar';
-import { SkeletonGrid } from '../components/ui/Skeletons';
+import BrowseShell from '../components/ui/BrowseShell';
 import { getCompletedTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
@@ -166,98 +164,68 @@ export default function CompletedTripsPage() {
 
   return (
     <Layout>
-      {/* Hero */}
-      <div className="relative h-80 md:h-96 overflow-hidden">
-        <img src={HERO_IMAGE} alt="Completed Trips" className="w-full h-full object-cover" loading="eager" fetchPriority="high" />
-        <div className="absolute inset-0 bg-gradient-to-b from-dark/50 to-dark/85" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <span className="text-secondary font-script font-medium text-2xl sm:text-3xl md:text-4xl block">Travel Journal</span>
-            <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">Our Travel Albums</h1>
-            <p className="text-white/80 mt-3 text-lg max-w-xl">
-              Every trip is a story. Browse through our collection of beautiful memories.
-            </p>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="bg-white border-b border-background-warm py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1344px] mx-auto grid grid-cols-3 gap-6 text-center">
-          {stats.map(({ value, label }) => (
-            <div key={label}>
-              <p className="font-display text-3xl md:text-4xl font-bold text-primary">
-                {loading ? '—' : value}
-              </p>
-              <p className="text-dark-muted text-sm md:text-base mt-1">{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Albums Grid */}
-      <div className="relative isolate px-6 lg:px-8 pt-6 md:pt-16">
-        <div className="max-w-[1344px] mx-auto">
-        <div className="mb-6 md:mb-12 flex justify-center">
-          <SectionTitle
-            label="Our Stories"
-            title="Adventures we've lived."
-            subtitle="Click on any album to relive the journey through photos and stories."
-            align="center"
-          />
-        </div>
-        </div>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="bg-background border-b border-background-warm sticky top-20 z-30 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1344px] mx-auto py-0 md:py-4">
-          <TripSearchFilterBar
-            search={search}
-            onSearchChange={setSearch}
-            month={month}
-            onMonthChange={setMonth}
-            monthCounts={monthCounts}
-            showFilters={showFilters}
-            onToggleFilters={() => setShowFilters(!showFilters)}
-          />
-        </div>
-      </div>
-
-      {/* Albums Grid */}
-      <div className="relative isolate px-6 lg:px-8 py-6 md:py-16">
-        <div className="max-w-[1344px] mx-auto">
-
-        {loading ? (
-          <SkeletonGrid count={6} type="album" />
-        ) : trips.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="font-display text-2xl text-dark-muted">No completed trips yet.</p>
-            <p className="text-sm text-dark-muted mt-2">Check back soon — our first album is on the way.</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="font-display text-2xl text-dark-muted">No albums found.</p>
-            <p className="text-sm text-dark-muted mt-2">Try adjusting your search or filters.</p>
-          </div>
-        ) : (
+      <BrowseShell
+        hero={{
+          image: HERO_IMAGE,
+          imageAlt: 'Completed Trips',
+          label: 'Travel Journal',
+          title: 'Our Travel Albums',
+          subtitle: 'Every trip is a story. Browse through our collection of beautiful memories.',
+        }}
+        filters={{
+          search,
+          onSearchChange: setSearch,
+          month,
+          onMonthChange: setMonth,
+          monthCounts,
+          showFilters,
+          onToggleFilters: () => setShowFilters(!showFilters),
+        }}
+        filterBarClassName="bg-background"
+        beforeFilters={
           <>
-            <p className="text-dark-muted text-base sm:text-lg mb-6 md:mb-8">
-              <span className="font-semibold text-primary">{navLabel}</span>{' '}
-              <span className="text-sm sm:text-base">
-                Showing <span className="font-semibold text-dark">{filtered.length}</span> album{filtered.length !== 1 ? 's' : ''}
-              </span>
-            </p>
-            {/* All albums shown in a single grid — no carousel */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {filtered.map((trip, i) => (
-                <AlbumCard key={trip.id} trip={trip} index={i} />
-              ))}
+            {/* Stats */}
+            <div className="bg-white border-b border-background-warm py-8 px-4 sm:px-6 lg:px-8">
+              <div className="max-w-[1344px] mx-auto grid grid-cols-3 gap-6 text-center">
+                {stats.map(({ value, label }) => (
+                  <div key={label}>
+                    <p className="font-display text-3xl md:text-4xl font-bold text-primary">
+                      {loading ? '—' : value}
+                    </p>
+                    <p className="text-dark-muted text-sm md:text-base mt-1">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Albums intro */}
+            <div className="relative isolate px-6 lg:px-8 pt-6 md:pt-16">
+              <div className="max-w-[1344px] mx-auto">
+                <div className="mb-6 md:mb-12 flex justify-center">
+                  <SectionTitle
+                    label="Our Stories"
+                    title="Adventures we've lived."
+                    subtitle="Click on any album to relive the journey through photos and stories."
+                    align="center"
+                  />
+                </div>
+              </div>
             </div>
           </>
-        )}
-        </div>
-      </div>
+        }
+        loading={loading}
+        skeletonType="album"
+        items={trips}
+        filteredItems={filtered}
+        emptyState={{ title: 'No completed trips yet.', message: 'Check back soon — our first album is on the way.' }}
+        noResultsState={{ title: 'No albums found.', message: 'Try adjusting your search or filters.' }}
+        hasActiveFilters={search !== '' || month !== 'All'}
+        onClearFilters={() => { setSearch(''); setMonth('All'); }}
+        countLabel={navLabel}
+        countNoun="album"
+        itemKey={trip => trip.id}
+        renderItem={(trip, i) => <AlbumCard trip={trip} index={i} />}
+      />
     </Layout>
   );
 }

@@ -47,3 +47,47 @@ export function SkeletonGrid({ count = 6, type = 'trip' }: SkeletonGridProps) {
     </div>
   );
 }
+
+// Full-page loading placeholder for TripDetailPage — a tall hero band
+// followed by a couple of stacked content-block placeholders, so the page
+// doesn't flash from blank to fully-laid-out content.
+export function TripDetailSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className={`h-80 sm:h-[28rem] bg-background-warm ${shimmer}`} />
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
+        <div className="max-w-[1344px] mx-auto space-y-9 sm:space-y-12">
+          <div className={`h-24 bg-background-warm rounded-xl ${shimmer}`} />
+          <div className="space-y-3">
+            <div className={`h-6 bg-background-warm rounded-md w-1/3 ${shimmer}`} />
+            <div className={`h-4 bg-background-warm rounded-md w-full ${shimmer}`} />
+            <div className={`h-4 bg-background-warm rounded-md w-5/6 ${shimmer}`} />
+          </div>
+          <div className={`h-72 bg-background-warm rounded-xl ${shimmer}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Full-page loading placeholder for AlbumPage — mirrors its own hero +
+// meta-card + content shape, matching TripDetailSkeleton's approach.
+export function AlbumSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className={`h-[62vh] min-h-[440px] md:h-[72vh] md:min-h-[560px] bg-background-warm ${shimmer}`} />
+      <div className="relative z-10 px-4 sm:px-6 lg:px-8 -mt-9 sm:-mt-11">
+        <div className="max-w-[1344px] mx-auto">
+          <div className={`h-24 rounded-2xl bg-background-warm shadow-warm-lg ${shimmer}`} />
+        </div>
+      </div>
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <div className="max-w-[1344px] mx-auto space-y-6">
+          <div className={`h-4 bg-background-warm rounded-md w-full ${shimmer}`} />
+          <div className={`h-4 bg-background-warm rounded-md w-5/6 ${shimmer}`} />
+          <div className={`h-4 bg-background-warm rounded-md w-2/3 ${shimmer}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
