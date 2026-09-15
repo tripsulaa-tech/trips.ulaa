@@ -27,6 +27,7 @@ import TestimonialCard from '../components/ui/TestimonialCard';
 import { getSiteContent, getTestimonials, getCompletedTrips } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
 import { fadeUp } from '../utils/animation';
@@ -70,6 +71,12 @@ export default function AboutPage() {
   // once it loads, so the page has its real height immediately — no async
   // "ready" gate needed.
   useScrollRestoration('/about', true);
+
+  usePageMeta({
+    title: 'About Us | ULAA Trips',
+    description: "Unseen. Local. Adventures. Activities. — a girls-only travel revolution. Learn who we are and why women travel with ULAA.",
+    path: '/about',
+  });
 
   const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
@@ -206,11 +213,15 @@ export default function AboutPage() {
                   src={hero.mobile_image || hero.image}
                   alt={hero.heading}
                   className="w-full h-full object-cover md:hidden"
+                  loading="eager"
+                  fetchPriority="high"
                 />
                 <img
                   src={hero.image || hero.mobile_image}
                   alt={hero.heading}
                   className="w-full h-full object-cover hidden md:block"
+                  loading="eager"
+                  fetchPriority="high"
                 />
               </>
             ) : (
@@ -302,6 +313,8 @@ export default function AboutPage() {
                 src={our_story.image}
                 alt={our_story.heading}
                 className="rounded-2xl shadow-warm-lg w-full h-80 md:h-[440px] object-cover"
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               <div className="rounded-2xl shadow-warm-lg w-full h-80 md:h-[440px] bg-background-warm flex items-center justify-center">
@@ -539,6 +552,8 @@ export default function AboutPage() {
                         src={community.photos[0]}
                         alt="Our community"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </motion.div>
                   )}
@@ -559,6 +574,8 @@ export default function AboutPage() {
                             src={photo}
                             alt={`Community photo ${i + 2}`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                            decoding="async"
                           />
                           {isLast && (
                             <Link

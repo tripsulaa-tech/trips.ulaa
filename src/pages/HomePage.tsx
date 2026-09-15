@@ -3,6 +3,7 @@ import Layout from '../components/layout/Layout';
 import HeroSection from '../sections/home/HeroSection';
 import SpecialOfferPopup from '../sections/home/SpecialOfferPopup';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const WhyULAA = lazy(() => import('../sections/home/WhyULAA'));
 const UpcomingTripsPreview = lazy(() => import('../sections/home/UpcomingTripsPreview'));
@@ -19,6 +20,12 @@ export default function HomePage() {
   // immediately (even before its data streams in), so the page's height is
   // stable from first paint and there's no async "ready" gate to wait on.
   useScrollRestoration('/', true);
+
+  usePageMeta({
+    title: 'ULAA Trips — Unseen. Local. Adventures. Activities.',
+    description: "ULAA Trips — Unseen. Local. Adventures. Activities. Girls-only travel community organizing curated trips to India's hidden destinations.",
+    path: '/',
+  });
 
   return (
     <Layout>

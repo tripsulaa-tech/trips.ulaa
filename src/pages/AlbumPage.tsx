@@ -13,6 +13,8 @@ import {
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import { GalleryGrid } from '../components/ui/GalleryViewer';
+import { AlbumSkeleton } from '../components/ui/Skeletons';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { getCompletedTripBySlug, likeCompletedTrip, unlikeCompletedTrip } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { CompletedTrip } from '../types/types-index';
@@ -64,6 +66,17 @@ export default function AlbumPage() {
   // outline look on load — it's not what's doing the enforcing anymore.
   const [liked, setLiked] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
+
+  // Falls back to a generic title/description while the album is still
+  // loading (or if the slug doesn't resolve), then swaps in the album's
+  // own once it arrives — so sharing an album link renders that album's
+  // title and cover photo instead of the site-wide default.
+  usePageMeta({
+    title: album ? `${album.title} | ULAA Trips` : 'Completed Trips | ULAA Trips',
+    description: album?.description,
+    image: album?.cover_image,
+    path: `/completed-trips/${slug ?? ''}`,
+  });
 
   useEffect(() => {
     if (!slug) return;
@@ -136,9 +149,7 @@ export default function AlbumPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="h-screen flex items-center justify-center">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
+        <AlbumSkeleton />
       </Layout>
     );
   }
@@ -180,6 +191,8 @@ export default function AlbumPage() {
           src={album.cover_image || PLACEHOLDER_IMAGE}
           alt={album.title}
           className="absolute inset-0 w-full h-full object-cover"
+          loading="eager"
+          fetchPriority="high"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-dark/10 to-dark/85" />
 

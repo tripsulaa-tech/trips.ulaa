@@ -27,6 +27,7 @@ import { WhatsAppIcon } from '../components/icons/WhatsAppIcon';
 import { submitContactEnquiry } from '../services/api';
 import { getWhatsAppLink } from '../utils/utils-index';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { validateEmail, validateFullName, validateOptionalPhone } from '../utils/formValidation';
 import { fadeUp } from '../utils/animation';
 import contactImg from '../assets/hero.webp';
@@ -96,6 +97,12 @@ export default function ContactPage() {
   // bottom nav, same as the trips pages. The form is static, so there's no
   // async load to wait on before restoring.
   useScrollRestoration('/contact', true);
+
+  usePageMeta({
+    title: 'Contact Us | ULAA Trips',
+    description: "Got questions, custom plans, or just want to say hi? Reach the ULAA team on WhatsApp, email or Instagram.",
+    path: '/contact',
+  });
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -188,6 +195,8 @@ export default function ContactPage() {
                   alt=""
                   className="w-full h-full object-cover"
                   style={{ clipPath: 'url(#ulaa-contact-blob)' }}
+                  loading="eager"
+                  fetchPriority="high"
                 />
               </div>
 

@@ -11,6 +11,7 @@ import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { useMonthFilteredTrips } from '../hooks/useMonthFilteredTrips';
 import { useLiveNavLabel } from '../hooks/useLiveNavLabel';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import { getActivePrice, specialOfferDaysLeft } from '../utils/utils-index';
 import type { UpcomingTrip } from '../types/types-index';
@@ -55,6 +56,12 @@ export default function UpcomingTripsPage() {
   // tab switch, browser back), they land where they left off.
   useScrollRestoration('/trips', !loading);
 
+  usePageMeta({
+    title: 'Upcoming Trips | ULAA Trips',
+    description: "Handpicked, girls-only adventures to India's most beautiful hidden destinations. Browse upcoming trips and book your seat.",
+    path: '/trips',
+  });
+
   // Live publish/draft + coming-soon status — re-pulls the public list the
   // moment an admin publishes a trip, unpublishes/deletes one, or flips
   // "Coming Soon", so anyone already on this page sees it appear/disappear
@@ -83,7 +90,7 @@ export default function UpcomingTripsPage() {
     <Layout>
       {/* Hero */}
       <div className="relative h-80 md:h-96 overflow-hidden">
-        <img src={HERO_IMAGE} alt="Upcoming Trips" className="w-full h-full object-cover" />
+        <img src={HERO_IMAGE} alt="Upcoming Trips" className="w-full h-full object-cover" loading="eager" fetchPriority="high" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/60 to-dark/80" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>

@@ -2,10 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useLocation, Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
+import { TripDetailSkeleton } from '../components/ui/Skeletons';
 import TripCountdownCard from '../components/ui/TripCountdownCard';
 import type { PagedCarouselHandle } from '../components/ui/PagedCarousel';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { getUpcomingTripBySlug, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
@@ -60,6 +62,17 @@ export default function TripDetailPage() {
   // the real trip content (and therefore the page's real height) has
   // rendered — see useScrollRestoration's `ready` param.
   useScrollRestoration(location.pathname, !loading);
+
+  // Falls back to a generic title/description while the trip is still
+  // loading (or if the slug doesn't resolve), then swaps in the trip's own
+  // once it arrives — so sharing a trip link renders that trip's title and
+  // cover photo instead of the site-wide default.
+  usePageMeta({
+    title: trip ? `${trip.title} | ULAA Trips` : 'Upcoming Trips | ULAA Trips',
+    description: trip?.description,
+    image: trip?.cover_image,
+    path: `/trips/${slug ?? ''}`,
+  });
   const toggleHighlight = (i: number) => {
     setExpandedHighlights(prev => {
       const next = new Set(prev);
@@ -239,9 +252,7 @@ export default function TripDetailPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="h-screen flex items-center justify-center">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
+        <TripDetailSkeleton />
       </Layout>
     );
   }

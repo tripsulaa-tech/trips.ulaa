@@ -10,6 +10,7 @@ import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { useMonthFilteredTrips } from '../hooks/useMonthFilteredTrips';
 import { useLiveNavLabel } from '../hooks/useLiveNavLabel';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import type { CompletedTrip, AboutContent } from '../types/types-index';
@@ -126,6 +127,12 @@ export default function CompletedTripsPage() {
   // tab switch, browser back), they land where they left off.
   useScrollRestoration('/completed-trips', !loading);
 
+  usePageMeta({
+    title: 'Completed Trips | ULAA Trips',
+    description: 'Relive past ULAA adventures — photo albums and stories from our girls-only trips across India.',
+    path: '/completed-trips',
+  });
+
   // Live publish/draft status — when the admin publishes a new album (or
   // unpublishes/deletes one) while someone is already sitting on this page,
   // re-pull the public list so it appears/disappears without needing a
@@ -161,7 +168,7 @@ export default function CompletedTripsPage() {
     <Layout>
       {/* Hero */}
       <div className="relative h-80 md:h-96 overflow-hidden">
-        <img src={HERO_IMAGE} alt="Completed Trips" className="w-full h-full object-cover" />
+        <img src={HERO_IMAGE} alt="Completed Trips" className="w-full h-full object-cover" loading="eager" fetchPriority="high" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/50 to-dark/85" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
