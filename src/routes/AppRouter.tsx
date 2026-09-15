@@ -1,4 +1,4 @@
-import { lazy, Suspense, useLayoutEffect } from 'react';
+import { lazy, Suspense, useLayoutEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
 import { useAuth } from '../context/useAuth';
@@ -19,9 +19,19 @@ if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
 
 // Scrolls the window to the top whenever the route changes, so navigating
 // (e.g. via the footer's Upcoming Trips / Completed Trips / About / Contact
-// links) always lands the user at the top of the destination page.
+// links) always lands the user at the top of the destination page. Also
+// moves keyboard/screen-reader focus to the new page, since client-side
+// routing never does what a full page load does for free (reset focus to
+// the top of the document).
 function ScrollToTop() {
   const { pathname } = useLocation();
+  // True only for the very first render of the whole app (a hard page
+  // load) — focus is deliberately left alone there, since the browser's
+  // own default (the document) is what's expected on first load, not an
+  // immediate jump into the content. Every render after that is a
+  // client-side navigation, where moving focus is the part a full page
+  // load would otherwise have done for free.
+  const isInitialLoad = useRef(true);
 
   // Layout effect (runs synchronously before paint) + an instant jump
   // instead of an animated one: the position is already correct in the
@@ -35,10 +45,44 @@ function ScrollToTop() {
     // grid they were browsing. When that flag is set for this pathname,
     // skip the reset and let the destination page's own restoration
     // handle it (see hooks/useScrollRestoration.ts).
-    if (sessionStorage.getItem(`ulaa:restoreScroll:${pathname}`)) {
+    if (!sessionStorage.getItem(`ulaa:restoreScroll:${pathname}`)) {
+      scrollToInstant(0);
+    }
+
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
       return;
     }
-    scrollToInstant(0);
+
+    // Admin routes don't render Layout's #main-content landmark (see
+    // components/layout/Layout.tsx), so this simply finds nothing there
+    // and no-ops. Public routes are lazy-loaded, so the destination page
+    // can still be mid-Suspense (its chunk not yet fetched) at this exact
+    // instant — retry across a few animation frames rather than giving up
+    // immediately, the same bounded-retry shape
+    // hooks/useScrollRestoration.ts uses for the same "content isn't
+    // mounted yet" race. `preventScroll` avoids a second, redundant jump —
+    // the scroll position was already set above.
+    let cancelled = false;
+    let rafId = 0;
+    const deadline = performance.now() + 1000;
+    const tryFocus = () => {
+      if (cancelled) return;
+      const main = document.getElementById('main-content');
+      if (main) {
+        main.focus({ preventScroll: true });
+        return;
+      }
+      if (performance.now() < deadline) {
+        rafId = requestAnimationFrame(tryFocus);
+      }
+    };
+    rafId = requestAnimationFrame(tryFocus);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+    };
   }, [pathname]);
 
   return null;
