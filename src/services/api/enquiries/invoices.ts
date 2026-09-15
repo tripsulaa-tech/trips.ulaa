@@ -1,86 +1,13 @@
 import { supabase } from '../../supabase';
 import { formatPrice } from '../../../utils/utils-index';
 import type { Enquiry, Payment } from '../../../types/types-index';
-import { PAYMENT_TYPE_LOG_LABEL, computeAutoStatus, computeBookingStatus, refreshJourneyStage, autoSendBookingEmail } from './shared';
+import { PAYMENT_TYPE_LOG_LABEL, refreshJourneyStage, autoSendBookingEmail } from './shared';
 import { logActivity } from './activity';
 import { getPaymentsForEnquiry } from './payments';
 
 // =============================================
 // Enquiries — invoices
 // =============================================
-
-// Records one specific, admin-picked invoice type/amount as money already
-// collected (status defaults to 'paid' via the DB column default) — unlike
-// recordPayment, `amount` here is this transaction's own amount, not a new
-// running total, so the admin doesn't have to do the addition themselves
-// when generating e.g. an explicit "Advance" or "Balance" invoice from the
-// Invoices list. Powers the "Generate Invoice" action for every type except
-// addon (see addAddonCharge) and refund (see recordRefund, which
-// already has its own dedicated, cancellation-aware flow).
-export async function recordTypedPayment(
-  current: Enquiry,
-  payment: {
-    type: 'full_payment' | 'advance' | 'balance' | 'installment';
-    amount: number;
-    payment_method?: string;
-    utr_number?: string;
-    notes?: string;
-  }
-): Promise<Enquiry> {
-  if (payment.amount <= 0) {
-    throw new Error('Invoice amount must be greater than zero.');
-  }
-  const prospectiveTotal = (current.amount_paid || 0) + payment.amount;
-  if (current.total_amount != null && current.total_amount > 0 && prospectiveTotal > current.total_amount) {
-    throw new Error("This would take amount paid past the booking's total amount.");
-  }
-
-  const { error: paymentError } = await supabase.from('payments').insert({
-    enquiry_id: current.id,
-    amount: payment.amount,
-    payment_type: payment.type,
-    payment_method: payment.payment_method,
-    utr_number: payment.utr_number || null,
-    notes: payment.notes,
-  });
-  if (paymentError) throw paymentError;
-
-  // Re-read the trigger-updated amount_paid, same reasoning as recordPayment
-  // above — never assume the new total, read back what the sync trigger
-  // actually wrote.
-  const { data: refreshed, error: refreshError } = await supabase
-    .from('enquiries')
-    .select('amount_paid, balance_due_date, booking_amount, booking_status, total_amount')
-    .eq('id', current.id)
-    .single();
-  if (refreshError) throw refreshError;
-
-  const isPaidFull = !!refreshed.total_amount && refreshed.total_amount > 0 && refreshed.amount_paid >= refreshed.total_amount;
-  const status = computeAutoStatus(refreshed.amount_paid, refreshed.total_amount, current.status);
-  const bookingStatus = computeBookingStatus(
-    refreshed.amount_paid,
-    refreshed.total_amount,
-    refreshed.booking_amount,
-    refreshed.balance_due_date,
-    refreshed.booking_status
-  );
-
-  const { error } = await supabase
-    .from('enquiries')
-    .update({ is_paid: isPaidFull, status, booking_status: bookingStatus })
-    .eq('id', current.id);
-  if (error) throw error;
-  const updated = await refreshJourneyStage(current.id);
-  await logActivity(
-    current.id,
-    `${PAYMENT_TYPE_LOG_LABEL[payment.type] || payment.type} received`,
-    `${formatPrice(payment.amount)}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
-  );
-  // See autoSendBookingEmail in shared.ts — same auto-receipt behaviour as
-  // recordPayment, for the "Generate Invoice" path.
-  await autoSendBookingEmail(updated, await getPaymentsForEnquiry(current.id));
-  return updated;
-}
 
 // Raises an invoice for money that hasn't been collected yet — e.g. a
 // Balance or Installment invoice generated ahead of the customer actually

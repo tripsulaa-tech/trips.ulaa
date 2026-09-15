@@ -4,16 +4,6 @@ import type { TripLeader } from '../../types/types-index';
 // =============================================
 // Trip Leaders
 // =============================================
-export async function getTripLeaders(): Promise<TripLeader[]> {
-  const { data, error } = await supabase
-    .from('trip_leaders')
-    .select('*')
-    .eq('is_published', true)
-    .order('sort_order', { ascending: true });
-  if (error) throw error;
-  return data || [];
-}
-
 export async function getAllTripLeadersAdmin(): Promise<TripLeader[]> {
   const { data, error } = await supabase
     .from('trip_leaders')

@@ -44,7 +44,7 @@ export const PAYMENT_TYPE_LOG_LABEL: Record<string, string> = {
 };
 
 // Single call site every real-money-collected path (recordPayment,
-// recordTypedPayment, addAddonCharge's collectedNow branch, markInvoicePaid)
+// addAddonCharge's collectedNow branch, markInvoicePaid)
 // goes through to fire off an updated booking-confirmation receipt. No-ops
 // silently when the enquiry has no email on file, and swallows any send
 // failure (edge function not deployed, Resend rejection, etc.) rather than

@@ -49,41 +49,6 @@ export interface TripExcelReportRow {
   organiserCostBreakdown: CostBreakdownItem[];
 }
 
-// Business-wide figures behind the "Summary" sheet — one field per section
-// of the CSV export (handleExportCsv in AdminReports.tsx), passed through
-// as already-computed values so this module only lays them out and never
-// recomputes a number the rest of the Reports page could end up disagreeing
-// with.
-export interface ExcelReportSummary {
-  // Raw `period` state value ('all' | 'month' | '30d') — used only for the
-  // filename, so it matches the CSV export's filename convention
-  // (ulaa-report-<period>-<date>). The human-readable label below is what
-  // actually gets printed on the sheet.
-  periodSlug: string;
-  periodLabel: string;
-  tripLabel: string;
-  lead: { total: number; conversionPct: number; newCount: number; contactedCount: number; avgResponseTime: string };
-  booking: { confirmed: number; completed: number; cancelled: number };
-  financial: { revenue: number; refundAmount: number; outstandingBalance: number; avgBookingValue: number };
-  financeTotals: { totalRevenue: number; totalCosts: number; netProfit: number };
-  financeMarginPct: number;
-  financeByTrip: {
-    title: string;
-    travelerCount: number;
-    totalRevenue: number;
-    ulaaCosts: number;
-    organiserCosts: number;
-    totalCosts: number;
-    netProfit: number;
-    profitPerPerson: number;
-  }[];
-  operational: { occupancyPct: number; seatsBooked: number; totalSeats: number; cancellationPct: number; noShowPct: number };
-  sourceBreakdown: { label: string; total: number; booked: number; conversionPct: number }[];
-  paymentMethodBreakdown: { method: string; amount: number; count: number; sharePct: number }[];
-  tripBreakdown: { title: string; startDate: string; seatsBooked: number; totalSeats: number; occupancyPct: number; collected: number; pending: number }[];
-  outstandingByPerson: { name: string; trip: string; total: number; paid: number; balance: number }[];
-}
-
 // Palette pulled straight from the app's own theme tokens
 // (src/styles/globals.css's @theme block) instead of a one-off mockup
 // palette, so the exported workbook reads as an extension of the admin UI
@@ -270,164 +235,6 @@ function buildTripSheetRows(trip: TripExcelReportRow): Row[] {
   return rows;
 }
 
-const SUMMARY_COLS = 8;
-const SUMMARY_SHEET_COLUMNS = [
-  { width: 30 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 },
-];
-
-// Lays out every section of the CSV export (handleExportCsv in
-// AdminReports.tsx), in the same order, as one styled sheet — see that
-// function for the source of truth on which figures belong here.
-function buildSummarySheetRows(summary: ExcelReportSummary): Row[] {
-  const rows: Row[] = [];
-
-  rows.push(bannerRow('ULAA Reports', SUMMARY_COLS));
-  rows.push(padRow([
-    dataCell(`Period: ${summary.periodLabel}`, { align: 'left', columnSpan: 4 }),
-    null, null, null,
-    dataCell(`Trip: ${summary.tripLabel}`, { align: 'left', columnSpan: 4 }),
-    null, null, null,
-  ] as Row, SUMMARY_COLS));
-  rows.push(blankRow(SUMMARY_COLS));
-
-  // ---- Lead Reports ----
-  rows.push(sectionTitleRow('Lead Reports', SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Total Leads', 'Conversion %', 'New', 'Contacted', 'Avg Response Time'], SUMMARY_COLS));
-  rows.push(padRow([
-    dataCell(summary.lead.total),
-    dataCell(summary.lead.conversionPct),
-    dataCell(summary.lead.newCount),
-    dataCell(summary.lead.contactedCount),
-    dataCell(summary.lead.avgResponseTime, { align: 'center' }),
-  ], SUMMARY_COLS));
-  rows.push(blankRow(SUMMARY_COLS));
-
-  // ---- Booking Reports ----
-  rows.push(sectionTitleRow('Booking Reports', SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Confirmed', 'Completed', 'Cancelled'], SUMMARY_COLS));
-  rows.push(padRow([
-    dataCell(summary.booking.confirmed),
-    dataCell(summary.booking.completed),
-    dataCell(summary.booking.cancelled, { tone: summary.booking.cancelled > 0 ? 'negative' : undefined }),
-  ], SUMMARY_COLS));
-  rows.push(blankRow(SUMMARY_COLS));
-
-  // ---- Financial Reports ----
-  rows.push(sectionTitleRow('Financial Reports (net of refunds)', SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Revenue', 'Refund Amount', 'Outstanding Balance', 'Avg Booking Value'], SUMMARY_COLS));
-  rows.push(padRow([
-    dataCell(summary.financial.revenue, { tone: 'positive' }),
-    dataCell(summary.financial.refundAmount),
-    dataCell(summary.financial.outstandingBalance),
-    dataCell(summary.financial.avgBookingValue),
-  ], SUMMARY_COLS));
-  rows.push(blankRow(SUMMARY_COLS));
-
-  // ---- Trip Finance & Profitability ----
-  rows.push(sectionTitleRow('Trip Finance & Profitability (all trips with Finances tab filled in, all-time)', SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Total Revenue', 'Total Costs', 'Net Profit', 'Profit Margin %'], SUMMARY_COLS));
-  rows.push(padRow([
-    dataCell(summary.financeTotals.totalRevenue, { tone: 'positive' }),
-    dataCell(summary.financeTotals.totalCosts),
-    dataCell(summary.financeTotals.netProfit, { tone: summary.financeTotals.netProfit < 0 ? 'negative' : 'positive' }),
-    dataCell(summary.financeMarginPct),
-  ], SUMMARY_COLS));
-  rows.push(blankRow(SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Trip', 'Travelers', 'Revenue', 'ULAA Costs', 'Organiser Costs', 'Total Costs', 'Net Profit', 'Profit/Person'], SUMMARY_COLS));
-  if (summary.financeByTrip.length === 0) {
-    rows.push(fallbackRow('No trips with the Finances tab filled in', SUMMARY_COLS));
-  } else {
-    summary.financeByTrip.forEach(t => rows.push(padRow([
-      dataCell(t.title, { align: 'left' }),
-      dataCell(t.travelerCount),
-      dataCell(t.totalRevenue, { tone: 'positive' }),
-      dataCell(t.ulaaCosts),
-      dataCell(t.organiserCosts),
-      dataCell(t.totalCosts),
-      dataCell(t.netProfit, { tone: t.netProfit < 0 ? 'negative' : 'positive' }),
-      dataCell(Math.round(t.profitPerPerson)),
-    ], SUMMARY_COLS)));
-  }
-  rows.push(blankRow(SUMMARY_COLS));
-
-  // ---- Operational Reports ----
-  rows.push(sectionTitleRow('Operational Reports', SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Occupancy %', 'Seats Booked', 'Total Seats', 'Cancellation Rate %', 'No-Show Rate %'], SUMMARY_COLS));
-  rows.push(padRow([
-    dataCell(summary.operational.occupancyPct),
-    dataCell(summary.operational.seatsBooked),
-    dataCell(summary.operational.totalSeats),
-    dataCell(summary.operational.cancellationPct, { tone: summary.operational.cancellationPct > 0 ? 'negative' : undefined }),
-    dataCell(summary.operational.noShowPct, { tone: summary.operational.noShowPct > 0 ? 'negative' : undefined }),
-  ], SUMMARY_COLS));
-  rows.push(blankRow(SUMMARY_COLS));
-
-  // ---- Lead Source Breakdown ----
-  rows.push(sectionTitleRow('Lead Source Breakdown', SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Source', 'Total Leads', 'Booked', 'Conversion %'], SUMMARY_COLS));
-  if (summary.sourceBreakdown.length === 0) {
-    rows.push(fallbackRow('No leads in this view', SUMMARY_COLS));
-  } else {
-    summary.sourceBreakdown.forEach(s => rows.push(padRow([
-      dataCell(s.label, { align: 'left' }),
-      dataCell(s.total),
-      dataCell(s.booked),
-      dataCell(s.conversionPct),
-    ], SUMMARY_COLS)));
-  }
-  rows.push(blankRow(SUMMARY_COLS));
-
-  // ---- Payment Method Breakdown ----
-  rows.push(sectionTitleRow('Payment Method Breakdown', SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Method', 'Amount', 'Transactions', 'Share %'], SUMMARY_COLS));
-  if (summary.paymentMethodBreakdown.length === 0) {
-    rows.push(fallbackRow('No payments collected in this range', SUMMARY_COLS));
-  } else {
-    summary.paymentMethodBreakdown.forEach(m => rows.push(padRow([
-      dataCell(m.method, { align: 'left' }),
-      dataCell(m.amount, { tone: 'positive' }),
-      dataCell(m.count),
-      dataCell(m.sharePct),
-    ], SUMMARY_COLS)));
-  }
-  rows.push(blankRow(SUMMARY_COLS));
-
-  // ---- Per-Trip Breakdown ----
-  rows.push(sectionTitleRow('Per-Trip Breakdown', SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Trip', 'Start Date', 'Seats Booked', 'Total Seats', 'Occupancy %', 'Collected', 'Pending'], SUMMARY_COLS));
-  if (summary.tripBreakdown.length === 0) {
-    rows.push(fallbackRow('No trips in this view', SUMMARY_COLS));
-  } else {
-    summary.tripBreakdown.forEach(t => rows.push(padRow([
-      dataCell(t.title, { align: 'left' }),
-      dataCell(t.startDate || '—', { align: 'center' }),
-      dataCell(t.seatsBooked),
-      dataCell(t.totalSeats),
-      dataCell(t.occupancyPct),
-      dataCell(t.collected, { tone: 'positive' }),
-      dataCell(t.pending, { tone: t.pending > 0 ? 'negative' : undefined }),
-    ], SUMMARY_COLS)));
-  }
-  rows.push(blankRow(SUMMARY_COLS));
-
-  // ---- Outstanding Balances by Person ----
-  rows.push(sectionTitleRow('Outstanding Balances by Person', SUMMARY_COLS));
-  rows.push(columnHeaderRow(['Name', 'Trip', 'Total Amount', 'Paid So Far', 'Balance'], SUMMARY_COLS));
-  if (summary.outstandingByPerson.length === 0) {
-    rows.push(fallbackRow('No outstanding balances', SUMMARY_COLS));
-  } else {
-    summary.outstandingByPerson.forEach(p => rows.push(padRow([
-      dataCell(p.name, { align: 'left' }),
-      dataCell(p.trip, { align: 'left' }),
-      dataCell(p.total),
-      dataCell(p.paid),
-      dataCell(p.balance, { tone: p.balance > 0 ? 'negative' : undefined }),
-    ], SUMMARY_COLS)));
-  }
-
-  return rows;
-}
-
 // Filesystem/sheet-name-safe slug for a trip title, used in the downloaded
 // filename for the single-trip export below.
 function slugifyTripTitle(title: string): string {
@@ -443,10 +250,9 @@ export async function downloadTripExcelReport(trip: TripExcelReportRow): Promise
     .toFile(`ulaa-trip-report-${slugifyTripTitle(trip.tripTitle)}-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-// "All Trips" export: one sheet per trip, deduping sheet names the same way
-// downloadExcelReport used to (Excel sheet names are unique and capped at
-// 31 chars) — no Summary sheet, since the Reports page no longer builds an
-// ExcelReportSummary for this button.
+// "All Trips" export: one sheet per trip, deduping sheet names (Excel sheet
+// names are unique and capped at 31 chars) — no Summary sheet, since the
+// Reports page's Export Excel button no longer builds one.
 export async function downloadAllTripsExcelReport(trips: TripExcelReportRow[]): Promise<void> {
   const usedNames = new Set<string>();
   const sheets = trips.map(trip => {
@@ -463,29 +269,3 @@ export async function downloadAllTripsExcelReport(trips: TripExcelReportRow[]): 
   await writeXlsxFile(sheets).toFile(`ulaa-all-trips-report-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-// Kept for reference / possible future reuse — no longer called from
-// AdminReports.tsx (its Export Excel button now calls the two functions
-// above directly), but left in place since nothing about the Summary sheet
-// layout itself is wrong, only that the page stopped building the
-// ExcelReportSummary + CSV-export data it needs.
-export async function downloadExcelReport(summary: ExcelReportSummary, tripRows: TripExcelReportRow[]): Promise<void> {
-  const usedNames = new Set<string>(['Summary']);
-  const tripSheets = tripRows.map(trip => {
-    let name = trip.tripTitle.replace(/[\\/*?:[\]]/g, ' ').slice(0, 31) || 'Trip';
-    let suffix = 2;
-    while (usedNames.has(name)) {
-      const base = name.slice(0, 28 - String(suffix).length);
-      name = `${base} (${suffix})`;
-      suffix += 1;
-    }
-    usedNames.add(name);
-    return { data: buildTripSheetRows(trip), sheet: name, columns: TRIP_SHEET_COLUMNS };
-  });
-
-  const sheets = [
-    { data: buildSummarySheetRows(summary), sheet: 'Summary', columns: SUMMARY_SHEET_COLUMNS },
-    ...tripSheets,
-  ];
-
-  await writeXlsxFile(sheets).toFile(`ulaa-report-${summary.periodSlug}-${new Date().toISOString().slice(0, 10)}.xlsx`);
-}

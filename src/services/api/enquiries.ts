@@ -48,7 +48,6 @@ export {
 } from './enquiries/payments';
 
 export {
-  recordTypedPayment,
   generatePendingInvoice,
   addAddonCharge,
   markInvoicePaid,

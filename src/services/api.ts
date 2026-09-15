@@ -68,7 +68,6 @@ export {
   recordPayment,
   getPaymentsForEnquiry,
   getAllPayments,
-  recordTypedPayment,
   generatePendingInvoice,
   addAddonCharge,
   markInvoicePaid,
@@ -96,7 +95,6 @@ export {
 } from './api/testimonials';
 
 export {
-  getTripLeaders,
   getAllTripLeadersAdmin,
   createTripLeader,
   updateTripLeader,
