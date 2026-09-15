@@ -19,6 +19,7 @@ import { SOURCE_OPTIONS } from './AdminEnquiriesShared';
 import { DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
 import type { TravellerContact } from '../travellers/travellerContacts';
 import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
+import { useSuggestionField, useIndexedSuggestionField } from '../useSuggestionField';
 
 type ConvertingWaitlist = { id: string; name: string; groupId: string | null; groupSize: number | null; groupSeq: number; slots: number };
 
@@ -64,62 +65,6 @@ export default function AddEnquiryModal({
   const effectiveMinAge = selectedTrip?.min_age ?? DEFAULT_MIN_AGE;
   const effectiveMaxAge = selectedTrip?.max_age ?? DEFAULT_MAX_AGE;
 
-  // City / email-domain suggestion dropdown state for the solo form —
-  // same purpose as BookingForm's own citySuggestions*/emailSuggestions*
-  // state, just local to this modal instead of the public form.
-  const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
-  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
-  const [emailSuggestionsOpen, setEmailSuggestionsOpen] = useState(false);
-  const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
-  const handleCityInput = (value: string) => {
-    const matches = getCitySuggestions(value);
-    setCitySuggestions(matches);
-    setCitySuggestionsOpen(matches.length > 0);
-  };
-  const selectCitySuggestion = (city: string) => {
-    setForm(f => ({ ...f, city }));
-    setCitySuggestionsOpen(false);
-    touch('city');
-  };
-  const handleEmailInput = (value: string) => {
-    const matches = getEmailSuggestions(value);
-    setEmailSuggestions(matches);
-    setEmailSuggestionsOpen(matches.length > 0);
-  };
-  const selectEmailSuggestion = (email: string) => {
-    setForm(f => ({ ...f, email }));
-    setEmailSuggestionsOpen(false);
-    touch('email');
-  };
-
-  // Same idea, per row, for the group (multi-seat waitlist conversion)
-  // form — only one row's dropdown is ever open at a time, so a single
-  // "which row" index is enough rather than per-row state.
-  const [personCitySuggestFor, setPersonCitySuggestFor] = useState<number | null>(null);
-  const [personCitySuggestions, setPersonCitySuggestions] = useState<string[]>([]);
-  const [personEmailSuggestFor, setPersonEmailSuggestFor] = useState<number | null>(null);
-  const [personEmailSuggestions, setPersonEmailSuggestions] = useState<string[]>([]);
-  const handlePersonCityInput = (i: number, value: string) => {
-    const matches = getCitySuggestions(value);
-    setPersonCitySuggestions(matches);
-    setPersonCitySuggestFor(matches.length > 0 ? i : null);
-  };
-  const selectPersonCitySuggestion = (i: number, city: string) => {
-    updateWaitlistPerson(i, { city });
-    setPersonCitySuggestFor(null);
-    touchPerson(i, 'city');
-  };
-  const handlePersonEmailInput = (i: number, value: string) => {
-    const matches = getEmailSuggestions(value);
-    setPersonEmailSuggestions(matches);
-    setPersonEmailSuggestFor(matches.length > 0 ? i : null);
-  };
-  const selectPersonEmailSuggestion = (i: number, email: string) => {
-    updateWaitlistPerson(i, { email });
-    setPersonEmailSuggestFor(null);
-    touchPerson(i, 'email');
-  };
-
   // Which fields have been blurred yet — required-field errors (name,
   // phone, and the "advance required to convert" amount check) would
   // otherwise fire the instant the modal opens, since these all start
@@ -137,6 +82,30 @@ export default function AddEnquiryModal({
   }, [isOpen, convertingWaitlist?.id]);
   const touch = (field: string) => setTouched(prev => new Set(prev).add(field));
   const touchPerson = (i: number, field: string) => setTouchedPeople(prev => new Set(prev).add(`${i}:${field}`));
+
+  // City / email-domain suggestion dropdown state for the solo form —
+  // same purpose as BookingForm's own citySuggestions*/emailSuggestions*
+  // state, just local to this modal instead of the public form.
+  const citySuggestField = useSuggestionField(getCitySuggestions, city => {
+    setForm(f => ({ ...f, city }));
+    touch('city');
+  });
+  const emailSuggestField = useSuggestionField(getEmailSuggestions, email => {
+    setForm(f => ({ ...f, email }));
+    touch('email');
+  });
+
+  // Same idea, per row, for the group (multi-seat waitlist conversion)
+  // form — only one row's dropdown is ever open at a time, so this tracks
+  // "which row" instead of per-row state.
+  const personCitySuggestField = useIndexedSuggestionField(getCitySuggestions, (i, city) => {
+    updateWaitlistPerson(i, { city });
+    touchPerson(i, 'city');
+  });
+  const personEmailSuggestField = useIndexedSuggestionField(getEmailSuggestions, (i, email) => {
+    updateWaitlistPerson(i, { email });
+    touchPerson(i, 'email');
+  });
 
   // Live, field-level errors for the solo form — recomputed on every
   // render so a missing name/phone or an amount that doesn't qualify for
@@ -297,14 +266,14 @@ export default function AddEnquiryModal({
                       id={`ge-p-email-${i}`}
                       type="email"
                       value={p.email}
-                      onChange={e => { updateWaitlistPerson(i, { email: e.target.value }); handlePersonEmailInput(i, e.target.value); }}
-                      onBlur={() => { touchPerson(i, 'email'); setPersonEmailSuggestFor(null); }}
+                      onChange={e => { updateWaitlistPerson(i, { email: e.target.value }); personEmailSuggestField.handleInput(i, e.target.value); }}
+                      onBlur={() => { touchPerson(i, 'email'); personEmailSuggestField.close(); }}
                       aria-describedby={touchedPeople.has(`${i}:email`) && groupErrors[i].email ? `ge-p-email-${i}-error` : undefined}
                       className={inputClass}
                       placeholder="Optional"
                     />
                     {touchedPeople.has(`${i}:email`) && groupErrors[i].email && <p id={`ge-p-email-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].email}</p>}
-                    {personEmailSuggestFor === i && <SuggestionDropdown items={personEmailSuggestions} onSelect={email => selectPersonEmailSuggestion(i, email)} />}
+                    {personEmailSuggestField.openIndex === i && <SuggestionDropdown items={personEmailSuggestField.suggestions} onSelect={email => personEmailSuggestField.select(i, email)} />}
                   </div>
                   <div>
                     <label htmlFor={`ge-p-age-${i}`} className="block text-xs font-medium text-dark mb-1">Age</label>
@@ -329,14 +298,14 @@ export default function AddEnquiryModal({
                     <input
                       id={`ge-p-city-${i}`}
                       value={p.city}
-                      onChange={e => { updateWaitlistPerson(i, { city: e.target.value }); handlePersonCityInput(i, e.target.value); }}
-                      onBlur={() => { touchPerson(i, 'city'); setPersonCitySuggestFor(null); }}
+                      onChange={e => { updateWaitlistPerson(i, { city: e.target.value }); personCitySuggestField.handleInput(i, e.target.value); }}
+                      onBlur={() => { touchPerson(i, 'city'); personCitySuggestField.close(); }}
                       aria-describedby={touchedPeople.has(`${i}:city`) && groupErrors[i].city ? `ge-p-city-${i}-error` : undefined}
                       className={inputClass}
                       placeholder="Optional"
                     />
                     {touchedPeople.has(`${i}:city`) && groupErrors[i].city && <p id={`ge-p-city-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].city}</p>}
-                    {personCitySuggestFor === i && <SuggestionDropdown items={personCitySuggestions} onSelect={city => selectPersonCitySuggestion(i, city)} />}
+                    {personCitySuggestField.openIndex === i && <SuggestionDropdown items={personCitySuggestField.suggestions} onSelect={city => personCitySuggestField.select(i, city)} />}
                   </div>
                   <div>
                     <label htmlFor={`ge-p-food-${i}`} className="block text-xs font-medium text-dark mb-1">Food Preference</label>
@@ -406,14 +375,14 @@ export default function AddEnquiryModal({
               id="ge-email"
               type="email"
               value={form.email}
-              onChange={e => { setForm(f => ({ ...f, email: e.target.value })); handleEmailInput(e.target.value); }}
-              onBlur={() => { touch('email'); setEmailSuggestionsOpen(false); }}
+              onChange={e => { setForm(f => ({ ...f, email: e.target.value })); emailSuggestField.handleInput(e.target.value); }}
+              onBlur={() => { touch('email'); emailSuggestField.close(); }}
               aria-describedby={soloErrorsVisible.email ? 'ge-email-error' : undefined}
               className={inputClass}
               placeholder="Optional"
             />
             {soloErrorsVisible.email && <p id="ge-email-error" role="alert" className={errorClass}>{soloErrorsVisible.email}</p>}
-            {emailSuggestionsOpen && <SuggestionDropdown items={emailSuggestions} onSelect={selectEmailSuggestion} />}
+            {emailSuggestField.open && <SuggestionDropdown items={emailSuggestField.suggestions} onSelect={emailSuggestField.select} />}
           </div>
 
           {/* Possible-duplicate soft warning (3.5) — fuzzy phone/email
@@ -487,14 +456,14 @@ export default function AddEnquiryModal({
             <input
               id="ge-city"
               value={form.city}
-              onChange={e => { setForm(f => ({ ...f, city: e.target.value })); handleCityInput(e.target.value); }}
-              onBlur={() => { touch('city'); setCitySuggestionsOpen(false); }}
+              onChange={e => { setForm(f => ({ ...f, city: e.target.value })); citySuggestField.handleInput(e.target.value); }}
+              onBlur={() => { touch('city'); citySuggestField.close(); }}
               aria-describedby={soloErrorsVisible.city ? 'ge-city-error' : undefined}
               className={inputClass}
               placeholder="Optional"
             />
             {soloErrorsVisible.city && <p id="ge-city-error" role="alert" className={errorClass}>{soloErrorsVisible.city}</p>}
-            {citySuggestionsOpen && <SuggestionDropdown items={citySuggestions} onSelect={selectCitySuggestion} />}
+            {citySuggestField.open && <SuggestionDropdown items={citySuggestField.suggestions} onSelect={citySuggestField.select} />}
           </div>
           <div>
             <label htmlFor="ge-source" className="block text-sm font-medium text-dark mb-1">Source *</label>

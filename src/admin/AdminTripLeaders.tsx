@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -15,12 +15,15 @@ import AddFab from '../components/ui/AddFab';
 import Modal from '../components/ui/Modal';
 import ImageUploadField from '../components/ui/ImageUploadField';
 import {
-  getAllTripLeadersAdmin, createTripLeader, updateTripLeader, deleteTripLeader, deleteImageByUrl,
+  getAllTripLeadersAdmin, createTripLeader, updateTripLeader, deleteTripLeader,
 } from '../services/api';
 import { useConfirm } from '../components/ui/useConfirm';
 import type { TripLeader, AboutFounderSocialLink } from '../types/types-index';
 import { slugify } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
+import { usePhotoDiscardOnClose } from './usePhotoDiscardOnClose';
+
+const STORAGE_BUCKET = 'ulaa';
 
 interface TripLeaderForm {
   name: string;
@@ -52,18 +55,12 @@ export default function AdminTripLeaders() {
     load();
   }, []);
 
-  // Tracks the photo URL that was already on the form when the modal opened
-  // (empty for create, existing photo for edit). Any storage URL present at
-  // close-time that wasn't in this snapshot was uploaded during the session
-  // but never saved — delete it best-effort so it doesn't orphan in storage.
-  const initialModalPhotoRef = useRef<string>('');
-  const STORAGE_BUCKET = 'ulaa';
-  const isStorageUrl = (url: string) => url.includes(`/object/public/${STORAGE_BUCKET}/`);
+  const photoDiscard = usePhotoDiscardOnClose(STORAGE_BUCKET);
 
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyForm, is_published: true });
-    initialModalPhotoRef.current = '';
+    photoDiscard.track('');
     setModalOpen(true);
   };
 
@@ -73,17 +70,12 @@ export default function AdminTripLeaders() {
       name: t.name, photo: t.photo || '', designation: t.designation || '',
       description: t.description, social_links: t.social_links || [], is_published: t.is_published,
     });
-    initialModalPhotoRef.current = t.photo || '';
+    photoDiscard.track(t.photo || '');
     setModalOpen(true);
   };
 
   const closeModal = () => {
-    const current = form.photo;
-    const initial = initialModalPhotoRef.current;
-    if (current && current !== initial && isStorageUrl(current)) {
-      deleteImageByUrl(STORAGE_BUCKET, current).catch(() => {});
-    }
-    initialModalPhotoRef.current = '';
+    photoDiscard.discardIfUnsaved(form.photo);
     setModalOpen(false);
   };
 
@@ -95,8 +87,7 @@ export default function AdminTripLeaders() {
       } else {
         await createTripLeader({ ...form, sort_order: items.length });
       }
-      // Upload is now committed to the DB — nothing to clean up on close.
-      initialModalPhotoRef.current = '';
+      photoDiscard.markCommitted();
       setModalOpen(false);
       load();
     } catch {

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Dispatch, SetStateAction, RefObject } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { scrollToTextMatch } from '../utils/scroll';
 
 interface UseSectionTabChromeResult {
   activeSection: number;
@@ -84,40 +85,23 @@ export function useSectionTabChrome(loading: boolean, sectionCount: number): Use
   };
 
   const handlePageSearch = () => {
-    const query = pageSearch.trim().toLowerCase();
+    const query = pageSearch.trim();
     const container = scrollBodyRef.current;
     if (!query || !container) {
       setPageSearchNoMatch(false);
       return;
     }
-    const candidates = Array.from(container.querySelectorAll<HTMLElement>('label, h2'));
-    const match = candidates.find(el => el.textContent?.toLowerCase().includes(query));
-    if (!match) {
-      setPageSearchNoMatch(true);
-      return;
-    }
-    setPageSearchNoMatch(false);
-    const sectionEl = match.closest<HTMLElement>('[data-section]');
-    if (sectionEl) setActiveSection(Number(sectionEl.dataset.section) - 1);
-    // Scroll within `container` only — see scrollSectionIntoView's comment
-    // for why match.scrollIntoView() itself isn't used here. Centered in
-    // whatever room is left below the sticky toolbar, so a match never
-    // lands underneath it.
-    const containerRect = container.getBoundingClientRect();
-    const matchRect = match.getBoundingClientRect();
-    const offset = stickyOffset();
-    const visibleHeight = container.clientHeight - offset;
-    const centerOffset = offset + visibleHeight / 2 - match.clientHeight / 2;
-    const top = container.scrollTop + (matchRect.top - containerRect.top) - centerOffset;
-    container.scrollTo({ top, behavior: 'smooth' });
-    const previousBackground = match.style.backgroundColor;
-    const previousTransition = match.style.transition;
-    match.style.transition = 'background-color 0.3s ease';
-    match.style.backgroundColor = '#FDE9D9';
-    setTimeout(() => {
-      match.style.backgroundColor = previousBackground;
-      match.style.transition = previousTransition;
-    }, 1500);
+    // See scrollToTextMatch (shared with useTripFormModal's own
+    // handleModalSearch) for why the scroll is scoped to `container`
+    // directly rather than calling the match's own scrollIntoView().
+    const found = scrollToTextMatch(container, query, 'label, h2', {
+      getStickyOffset: stickyOffset,
+      onMatch: match => {
+        const sectionEl = match.closest<HTMLElement>('[data-section]');
+        if (sectionEl) setActiveSection(Number(sectionEl.dataset.section) - 1);
+      },
+    });
+    setPageSearchNoMatch(!found);
   };
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -21,6 +21,7 @@ import type { Testimonial, TestimonialsSectionContent } from '../../types/types-
 import { slugify } from '../../utils/utils-index';
 import { makeTempId } from '../useAdminHomePage';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
+import { usePhotoDiscardOnClose } from '../usePhotoDiscardOnClose';
 
 interface TestimonialForm {
   name: string;
@@ -59,17 +60,12 @@ export default function TestimonialsSection({
     setSectionText(s => ({ ...s, [key]: value }));
   };
 
-  // Tracks the photo URL that was already on the form when the modal opened
-  // (empty for create, existing photo for edit). Any storage URL present at
-  // close-time that wasn't in this snapshot was uploaded during the session
-  // but never committed — delete it best-effort so it doesn't orphan in storage.
-  const initialModalPhotoRef = useRef<string>('');
-  const isStorageUrl = (url: string) => url.includes(`/object/public/${STORAGE_BUCKET}/`);
+  const photoDiscard = usePhotoDiscardOnClose(STORAGE_BUCKET);
 
   const openCreate = () => {
     setEditingId(null);
     setForm({ ...emptyForm, is_published: true });
-    initialModalPhotoRef.current = '';
+    photoDiscard.track('');
     setModalOpen(true);
   };
 
@@ -79,17 +75,12 @@ export default function TestimonialsSection({
       name: t.name, photo: t.photo || '', review: t.review, rating: t.rating,
       destination: t.destination || '', is_published: t.is_published,
     });
-    initialModalPhotoRef.current = t.photo || '';
+    photoDiscard.track(t.photo || '');
     setModalOpen(true);
   };
 
   const closeModal = () => {
-    const current = form.photo;
-    const initial = initialModalPhotoRef.current;
-    if (current && current !== initial && isStorageUrl(current)) {
-      deleteImageByUrl(STORAGE_BUCKET, current).catch(() => {});
-    }
-    initialModalPhotoRef.current = '';
+    photoDiscard.discardIfUnsaved(form.photo);
     setModalOpen(false);
   };
 
@@ -107,7 +98,7 @@ export default function TestimonialsSection({
         created_at: new Date().toISOString(),
       }]);
     }
-    initialModalPhotoRef.current = '';
+    photoDiscard.markCommitted();
     setModalOpen(false);
   };
 

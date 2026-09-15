@@ -14,6 +14,7 @@ import {
 } from '../../utils/formValidation';
 import { getCitySuggestions, getEmailSuggestions } from '../enquiries/AdminEnquiriesShared';
 import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
+import { useSuggestionField } from '../useSuggestionField';
 
 export type TravellerEditForm = {
   full_name: string;
@@ -74,30 +75,14 @@ export default function AdminEditTravellerModal({
   const cityError = cityErrorRaw === true ? undefined : cityErrorRaw;
   const hasErrors = !!(nameError || phoneError || emailError || cityError);
 
-  const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
-  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
-  const [emailSuggestionsOpen, setEmailSuggestionsOpen] = useState(false);
-  const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
-  const handleCityInput = (value: string) => {
-    const matches = getCitySuggestions(value);
-    setCitySuggestions(matches);
-    setCitySuggestionsOpen(matches.length > 0);
-  };
-  const selectCitySuggestion = (city: string) => {
+  const citySuggestField = useSuggestionField(getCitySuggestions, city => {
     setForm(f => ({ ...f, city }));
-    setCitySuggestionsOpen(false);
     setTouched(true);
-  };
-  const handleEmailInput = (value: string) => {
-    const matches = getEmailSuggestions(value);
-    setEmailSuggestions(matches);
-    setEmailSuggestionsOpen(matches.length > 0);
-  };
-  const selectEmailSuggestion = (email: string) => {
+  });
+  const emailSuggestField = useSuggestionField(getEmailSuggestions, email => {
     setForm(f => ({ ...f, email }));
-    setEmailSuggestionsOpen(false);
     setTouched(true);
-  };
+  });
 
   const handleSaveClick = () => {
     setTouched(true);
@@ -147,14 +132,14 @@ export default function AdminEditTravellerModal({
               id="tc-edit-email"
               type="email"
               value={form.email}
-              onChange={e => { setForm(f => ({ ...f, email: e.target.value })); handleEmailInput(e.target.value); }}
-              onBlur={() => { setTouched(true); setEmailSuggestionsOpen(false); }}
+              onChange={e => { setForm(f => ({ ...f, email: e.target.value })); emailSuggestField.handleInput(e.target.value); }}
+              onBlur={() => { setTouched(true); emailSuggestField.close(); }}
               aria-describedby={touched && emailError ? 'tc-edit-email-error' : undefined}
               className={inputClass}
               placeholder="Optional"
             />
             {touched && emailError && <p id="tc-edit-email-error" role="alert" className="text-red-500 text-xs mt-1">{emailError}</p>}
-            {emailSuggestionsOpen && <SuggestionDropdown items={emailSuggestions} onSelect={selectEmailSuggestion} />}
+            {emailSuggestField.open && <SuggestionDropdown items={emailSuggestField.suggestions} onSelect={emailSuggestField.select} />}
           </div>
         </div>
         <div className="relative">
@@ -163,14 +148,14 @@ export default function AdminEditTravellerModal({
             id="tc-edit-city"
             type="text"
             value={form.city}
-            onChange={e => { setForm(f => ({ ...f, city: e.target.value })); handleCityInput(e.target.value); }}
-            onBlur={() => { setTouched(true); setCitySuggestionsOpen(false); }}
+            onChange={e => { setForm(f => ({ ...f, city: e.target.value })); citySuggestField.handleInput(e.target.value); }}
+            onBlur={() => { setTouched(true); citySuggestField.close(); }}
             aria-describedby={touched && cityError ? 'tc-edit-city-error' : undefined}
             className={inputClass}
             placeholder="Optional"
           />
           {touched && cityError && <p id="tc-edit-city-error" role="alert" className="text-red-500 text-xs mt-1">{cityError}</p>}
-          {citySuggestionsOpen && <SuggestionDropdown items={citySuggestions} onSelect={selectCitySuggestion} />}
+          {citySuggestField.open && <SuggestionDropdown items={citySuggestField.suggestions} onSelect={citySuggestField.select} />}
         </div>
         <div className="flex gap-3 pt-2">
           <Button variant="outline" size="md" className="flex-1" onClick={onClose}>Cancel</Button>

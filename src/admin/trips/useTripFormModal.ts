@@ -10,6 +10,7 @@ import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy'
 import { emptyTripFinance } from '../../utils/tripFinance';
 import { emptyEndBanner, emptyForm, computeDuration, type TripForm } from './tripFormTypes';
 import { handleExportTemplate, parseImportedTripForm } from './tripTemplateIO';
+import { scrollToTextMatch } from '../../utils/scroll';
 
 export { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
@@ -86,47 +87,21 @@ export function useTripFormModal(load: () => void) {
   // into view with a brief highlight flash — a quick way to jump straight
   // to a field (e.g. "meeting point", "pricing") without hunting through
   // tabs. `modalBodyRef` is the modal's own scrollable body (see Modal's
-  // `bodyRef`), so scrolling is done by moving its scrollTop directly —
-  // mirroring useContentEditorPage's handlePageSearch — rather than calling
-  // the match's own scrollIntoView(). scrollIntoView() walks every
-  // scrollable ancestor up to <body>/<html>, including the modal panel's
-  // own overflow-hidden wrapper, which still accepts a programmatic
-  // scrollTop even though the user can't scroll it by hand — so it could
-  // silently shift the page's own hidden scroll position and surface a
-  // stray native scrollbar behind the modal.
+  // `bodyRef`); see scrollToTextMatch (shared with useSectionTabChrome's
+  // own handlePageSearch) for why scrolling is scoped to it directly rather
+  // than calling the match's own scrollIntoView(). The sticky bar it's kept
+  // clear of here is Tabs' own `data-sticky-toolbar` marker.
   const handleModalSearch = () => {
-    const query = modalSearch.trim().toLowerCase();
+    const query = modalSearch.trim();
     const container = modalBodyRef.current;
     if (!query || !container) {
       setModalSearchNoMatch(false);
       return;
     }
-    const candidates = Array.from(container.querySelectorAll<HTMLElement>('label, h4'));
-    const match = candidates.find(el => el.textContent?.toLowerCase().includes(query));
-    if (!match) {
-      setModalSearchNoMatch(true);
-      return;
-    }
-    setModalSearchNoMatch(false);
-    // Centered in whatever room is left below the sticky tab bar (found via
-    // Tabs' own `data-sticky-toolbar` marker), so a match never lands
-    // underneath it.
-    const containerRect = container.getBoundingClientRect();
-    const matchRect = match.getBoundingClientRect();
-    const stickyBar = container.querySelector<HTMLElement>('[data-sticky-toolbar]');
-    const offset = stickyBar ? stickyBar.getBoundingClientRect().height : 0;
-    const visibleHeight = container.clientHeight - offset;
-    const centerOffset = offset + visibleHeight / 2 - match.clientHeight / 2;
-    const top = container.scrollTop + (matchRect.top - containerRect.top) - centerOffset;
-    container.scrollTo({ top, behavior: 'smooth' });
-    const previousBackground = match.style.backgroundColor;
-    const previousTransition = match.style.transition;
-    match.style.transition = 'background-color 0.3s ease';
-    match.style.backgroundColor = '#FDE9D9';
-    setTimeout(() => {
-      match.style.backgroundColor = previousBackground;
-      match.style.transition = previousTransition;
-    }, 1500);
+    const found = scrollToTextMatch(container, query, 'label, h4', {
+      getStickyOffset: c => c.querySelector<HTMLElement>('[data-sticky-toolbar]')?.getBoundingClientRect().height ?? 0,
+    });
+    setModalSearchNoMatch(!found);
   };
 
   // Runs the field search automatically as the admin types, so there's no
