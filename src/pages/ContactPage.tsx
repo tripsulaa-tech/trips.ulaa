@@ -26,6 +26,8 @@ import Button from '../components/ui/Button';
 import SectionTitle from '../components/ui/SectionTitle';
 import { WhatsAppIcon } from '../components/icons/WhatsAppIcon';
 import { submitContactEnquiry } from '../services/api';
+import { useBotTrap } from '../utils/botProtection';
+import HoneypotField from '../components/ui/HoneypotField';
 import { getWhatsAppLink } from '../utils/utils-index';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -108,10 +110,19 @@ export default function ContactPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const { register, handleSubmit, watch, formState: { errors }, reset } = useForm<ContactForm>();
+  // Best-effort bot mitigation (honeypot field + minimum fill time) — see
+  // src/utils/botProtection.ts.
+  const { honeypotRef, isLikelyBot } = useBotTrap();
 
   const messageLength = watch('message', '')?.length ?? 0;
 
   const onSubmit = async (data: ContactForm) => {
+    // Silently no-op on a likely-bot submission rather than surfacing an
+    // error, so a scripted submitter gets no useful signal back.
+    if (isLikelyBot()) {
+      setStatus('success');
+      return;
+    }
     try {
       setStatus('loading');
       await submitContactEnquiry({
@@ -430,6 +441,7 @@ export default function ContactPage() {
                     />
 
                     <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+                      <HoneypotField inputRef={honeypotRef} />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="relative">

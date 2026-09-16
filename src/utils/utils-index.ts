@@ -400,3 +400,16 @@ export function collectStorageUrls(value: unknown, bucket: string): Set<string> 
   walk(value);
   return urls;
 }
+
+// First letter of the first name + first letter of the second "word" in a
+// full name (e.g. "Srivarshini M V" -> "SM"). Shared by the admin traveller
+// card/table and the enquiry header card, which previously each kept their
+// own copy of this logic (with a differing empty-input fallback, preserved
+// here via the emptyFallback param).
+export function getInitials(fullName: string, emptyFallback = ''): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return emptyFallback;
+  const first = parts[0][0] || '';
+  const second = parts.length > 1 ? (parts[1][0] || '') : '';
+  return (first + second).toUpperCase();
+}

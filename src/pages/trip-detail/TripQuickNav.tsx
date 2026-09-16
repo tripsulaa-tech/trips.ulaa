@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
+import { STICKY_FILTER_TOP_CLASS } from '../../components/ui/BrowseShell';
 import type { UpcomingTrip } from '../../types/types-index';
 import { addToCalendar } from '../../utils/calendar';
 import { ShareNetwork as Share2, CalendarPlus } from '@phosphor-icons/react';
@@ -51,7 +52,7 @@ export default function TripQuickNav({
   hasDetailsSection,
 }: TripQuickNavProps) {
   return (
-    <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-3 sm:px-6 lg:px-8">
+    <div className={`sticky ${STICKY_FILTER_TOP_CLASS} z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-3 sm:px-6 lg:px-8`}>
       <div className="max-w-[1344px] mx-auto flex items-center gap-1 sm:gap-2">
         <nav ref={navBarRef} aria-label="Jump to section" className="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar py-2.5 sm:py-3">
           {(trip.highlight_cards?.length ?? 0) > 0 && (

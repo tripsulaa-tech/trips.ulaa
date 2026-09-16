@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/useAuth';
 import Button from '../components/ui/Button';
 import { getEmailDomainSuggestions } from '../constants/emailDomains';
+import KeyboardNavSuggestionDropdown from '../components/ui/KeyboardNavSuggestionDropdown';
+import { handleSuggestionKeyDown } from '../components/ui/suggestionKeyNav';
 import {
   WarningCircle as AlertCircle,
 } from '@phosphor-icons/react';
@@ -41,27 +43,8 @@ export default function AdminLogin() {
     setEmailSuggestionIndex(-1);
   };
 
-  // Down/Up move a highlighted row (wrapping at either end), Enter picks
-  // whichever row is highlighted, and Escape dismisses the list without
-  // changing the field. A no-op whenever the dropdown isn't open, so it
-  // never interferes with normal typing or submitting the form.
-  const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!emailSuggestionsOpen || emailSuggestions.length === 0) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setEmailSuggestionIndex((emailSuggestionIndex + 1) % emailSuggestions.length);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setEmailSuggestionIndex(emailSuggestionIndex <= 0 ? emailSuggestions.length - 1 : emailSuggestionIndex - 1);
-    } else if (e.key === 'Enter') {
-      if (emailSuggestionIndex >= 0) {
-        e.preventDefault();
-        selectEmailSuggestion(emailSuggestions[emailSuggestionIndex]);
-      }
-    } else if (e.key === 'Escape') {
-      setEmailSuggestionsOpen(false);
-    }
-  };
+  const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) =>
+    handleSuggestionKeyDown(e, emailSuggestions, emailSuggestionsOpen, emailSuggestionIndex, setEmailSuggestionIndex, selectEmailSuggestion, setEmailSuggestionsOpen);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,27 +92,7 @@ export default function AdminLogin() {
                 aria-invalid={!!error}
               />
               {emailSuggestionsOpen && (
-                <ul
-                  role="listbox"
-                  className="absolute z-20 left-0 right-0 mt-1 max-h-56 overflow-auto app-scroll rounded-lg border-2 border-background-warm bg-white shadow-warm-lg py-1"
-                >
-                  {emailSuggestions.map((suggestion, idx) => (
-                    <li key={suggestion} role="option" aria-selected={idx === emailSuggestionIndex}>
-                      <button
-                        type="button"
-                        // onMouseDown (not onClick) fires before the input's
-                        // onBlur, and preventDefault stops that blur from
-                        // firing at all — so picking a suggestion never
-                        // races with the dropdown closing itself out from
-                        // under the click.
-                        onMouseDown={e => { e.preventDefault(); selectEmailSuggestion(suggestion); }}
-                        className={`w-full px-4 py-2 text-sm text-left font-body text-dark transition-colors ${idx === emailSuggestionIndex ? 'bg-background-warm' : 'hover:bg-background-warm'}`}
-                      >
-                        {suggestion}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <KeyboardNavSuggestionDropdown items={emailSuggestions} activeIndex={emailSuggestionIndex} onSelect={selectEmailSuggestion} />
               )}
             </div>
             <div>

@@ -11,25 +11,13 @@ import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import FoodMark from '../../components/ui/FoodMark';
 import type { Enquiry } from '../../types/types-index';
-import { formatDate } from '../../utils/utils-index';
+import { formatDate, getInitials } from '../../utils/utils-index';
 import {
   foodBadge, foodPreferenceKey, journeyBadge, nextManualAction, isNotInterested,
   canMarkNotInterested, closedReasonLabel, canSetFollowUp, followUpStatus,
 } from './AdminEnquiryCommon';
 import type { InvoiceAction } from './AdminEnquiryCommon';
 import { isCancelled, bookingStateBadge, attendanceBadge } from './AdminEnquiriesShared';
-
-// First letter of the first name + first letter of the second "word" in
-// full_name (e.g. "Srivarshini M V" -> "SM") — shown in the avatar circle
-// instead of a generic person icon, so the header reads as "who" at a
-// glance. Falls back to just the first letter when there's only one word.
-function nameInitials(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '';
-  const first = parts[0][0] || '';
-  const second = parts.length > 1 ? (parts[1][0] || '') : '';
-  return (first + second).toUpperCase();
-}
 
 interface AdminEnquiryHeaderCardProps {
   enquiry: Enquiry;
@@ -83,7 +71,7 @@ export default function AdminEnquiryHeaderCard({
               the name line — so it reads as "here's who this card is
               about" rather than a decoration on the first line only. */}
           <span className="shrink-0 w-16 h-16 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center text-xl font-display font-bold">
-            {nameInitials(enquiry.full_name)}
+            {getInitials(enquiry.full_name)}
           </span>
           <div className="min-w-0">
             <h2 className="font-display text-xl font-bold text-dark truncate">{enquiry.full_name}</h2>

@@ -4,18 +4,9 @@ import {
   PencilSimple as Edit2, Trash as Trash2,
   CaretUp as ChevronUp, CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
-import { formatDate, getWhatsAppLink } from '../../utils/utils-index';
+import { formatDate, getInitials, getWhatsAppLink } from '../../utils/utils-index';
 import { journeyBadge } from '../enquiries/AdminEnquiryCommon';
 import type { TravellerContact } from './travellerContacts';
-
-// Initials avatar — travellers don't have a photo the way Trip Leaders do,
-// so this fills the same visual slot the Trip Leader card gives its
-// circular photo.
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
-}
 
 // Same card shell/layout as the Trip Leaders directory (see
 // AdminTripLeaders.tsx's mobile card and the reference screenshot): avatar
@@ -52,7 +43,7 @@ export default function AdminTravellerCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-sm flex-shrink-0">
-            {initials(contact.fullName)}
+            {getInitials(contact.fullName, '?')}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">

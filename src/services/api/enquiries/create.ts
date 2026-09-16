@@ -19,7 +19,11 @@ export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
     // Log the raw Postgrest error so the real cause (bad column, NOT NULL
     // violation, check constraint, RLS, etc.) is visible in devtools instead
     // of only surfacing as a generic "Something went wrong" in the UI.
-    console.error('submitEnquiry failed:', error.code, error.message, error.details, error.hint);
+    // Dev-only: in production this would hand a probing visitor free
+    // schema/constraint/trigger details for reconnaissance.
+    if (import.meta.env.DEV) {
+      console.error('submitEnquiry failed:', error.code, error.message, error.details, error.hint);
+    }
     if (error.code === '23505') {
       throw new Error('DUPLICATE_ENQUIRY');
     }

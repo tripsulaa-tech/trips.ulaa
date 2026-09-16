@@ -12,6 +12,8 @@ import {
 } from '@phosphor-icons/react';
 import type { BookingFormData, BookingMode, BookingFormDraft, WaitlistFormData } from '../../types/types-index';
 import { submitEnquiry, submitGroupEnquiry, submitWaitlist, getTripSeatSnapshot } from '../../services/api';
+import { useBotTrap } from '../../utils/botProtection';
+import HoneypotField from './HoneypotField';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
 import { validateFullName, validateCity, validateEmail, validatePhone, validateOptionalPhone, validateAge, DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
@@ -21,6 +23,8 @@ import { getEmailDomainSuggestions } from '../../constants/emailDomains';
 import Button from './Button';
 import Modal from './Modal';
 import TermsBlocks from './TermsBlocks';
+import KeyboardNavSuggestionDropdown from './KeyboardNavSuggestionDropdown';
+import { handleSuggestionKeyDown } from './suggestionKeyNav';
 
 // How many rows to show at once in the City / Email-domain suggestion
 // dropdowns — enough to be useful without the list itself needing to
@@ -83,6 +87,9 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [termsOpen, setTermsOpen] = useState(false);
+  // Best-effort bot mitigation (honeypot field + minimum fill time) — see
+  // src/utils/botProtection.ts. Checked first thing in onSubmit below.
+  const { honeypotRef, isLikelyBot } = useBotTrap();
   const [bookingMode, setBookingMode] = useState<BookingMode>(initialDraft?.bookingMode ?? 'solo');
   const [groupSize, setGroupSize] = useState(initialDraft?.groupSize ?? MIN_GROUP_SIZE);
   // Raw text the user is typing into the "Number of People" input. Kept
@@ -296,6 +303,15 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   };
 
   const onSubmit = async (data: BookingFormData) => {
+    // Best-effort bot mitigation: a filled honeypot or a suspiciously
+    // instant submit is a strong signal this isn't a real person filling
+    // out the form. Silently no-op (pretend success) rather than showing
+    // an error, so a scripted submitter gets no useful signal back about
+    // why it failed.
+    if (isLikelyBot()) {
+      setStatus('success');
+      return;
+    }
     // Trim all text fields to strip accidental leading/trailing whitespace
     // before submission — the DB's unique index already normalises with
     // lower(trim()), but storing untrimmed values would mean a second
@@ -523,71 +539,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     setEmailSuggestionIndex(-1);
   };
 
-  // Shared arrow-key/Enter/Escape handling for both suggestion dropdowns —
-  // Down/Up move a highlighted row (wrapping at either end), Enter picks
-  // whichever row is highlighted, and Escape dismisses the list without
-  // changing the field. Left as a no-op whenever the dropdown in question
-  // isn't open, so it never interferes with normal typing or the form's
-  // own Enter-to-submit behavior.
-  const handleSuggestionKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    items: string[],
-    isOpen: boolean,
-    activeIndex: number,
-    setActiveIndex: (index: number) => void,
-    onSelect: (value: string) => void,
-    setOpen: (open: boolean) => void
-  ) => {
-    if (!isOpen || items.length === 0) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setActiveIndex((activeIndex + 1) % items.length);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActiveIndex(activeIndex <= 0 ? items.length - 1 : activeIndex - 1);
-    } else if (e.key === 'Enter') {
-      if (activeIndex >= 0) {
-        e.preventDefault();
-        onSelect(items[activeIndex]);
-      }
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-    }
-  };
-
-  // Small shared dropdown used by both suggestion lists above. Positioned
-  // relative to the input's own wrapping div (see the `relative` wrapper
-  // around each field below) rather than portalled, since it only ever
-  // needs to sit right under a short, single-line input.
-  const SuggestionDropdown = ({ items, activeIndex, onSelect }: { items: string[]; activeIndex: number; onSelect: (value: string) => void }) => (
-    <ul
-      role="listbox"
-      className="absolute z-20 left-0 right-0 mt-1 max-h-56 overflow-auto app-scroll rounded-lg border-2 border-background-warm bg-white shadow-warm-lg py-1"
-    >
-      {items.map((item, idx) => (
-        <li key={item} role="option" aria-selected={idx === activeIndex}>
-          <button
-            type="button"
-            // onMouseDown (not onClick) fires before the input's onBlur,
-            // and preventDefault stops that blur from firing at all — so
-            // picking a suggestion never races with the dropdown closing
-            // itself out from under the click.
-            onMouseDown={e => { e.preventDefault(); onSelect(item); }}
-            className={`w-full px-4 py-2 text-sm text-left font-body text-dark transition-colors ${idx === activeIndex ? 'bg-background-warm' : 'hover:bg-background-warm'}`}
-          >
-            {item}
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-
   const emailReg = register('email', { required: 'Email is required', validate: validateEmail });
   const cityReg = register('city', { required: 'City is required', validate: validateCity });
 
   return (
     <>
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+      <HoneypotField inputRef={honeypotRef} />
       {tripTitle && (
         <div className="bg-background-warm rounded-lg px-4 py-3 mb-2">
           <p className="text-sm text-dark-muted">
@@ -760,7 +718,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             className={inputClass}
           />
           {errors.email && <p id={`${ids.email}-error`} role="alert" className={errorClass}>{errors.email.message}</p>}
-          {emailSuggestionsOpen && <SuggestionDropdown items={emailSuggestions} activeIndex={emailSuggestionIndex} onSelect={selectEmailSuggestion} />}
+          {emailSuggestionsOpen && <KeyboardNavSuggestionDropdown items={emailSuggestions} activeIndex={emailSuggestionIndex} onSelect={selectEmailSuggestion} />}
         </div>
 
         {/* City */}
@@ -779,7 +737,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             className={inputClass}
           />
           {errors.city && <p id={`${ids.city}-error`} role="alert" className={errorClass}>{errors.city.message}</p>}
-          {citySuggestionsOpen && <SuggestionDropdown items={citySuggestions} activeIndex={citySuggestionIndex} onSelect={selectCitySuggestion} />}
+          {citySuggestionsOpen && <KeyboardNavSuggestionDropdown items={citySuggestions} activeIndex={citySuggestionIndex} onSelect={selectCitySuggestion} />}
         </div>
 
         {/* Emergency Contact */}

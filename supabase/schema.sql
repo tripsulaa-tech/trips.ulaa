@@ -14,6 +14,13 @@
 -- several gaps (missing column defaults, missing check constraints, unclear
 -- FK targets, incomplete trigger/function bindings, a missing RLS delete
 -- policy on `enquiries`). All of those are resolved below.
+--
+-- Security-audit follow-up (see add_public_text_length_guards.sql): added
+-- char_length CHECK constraints on every public-insertable free-text column
+-- on `enquiries`/`waitlist` (full_name, phone, email, city,
+-- emergency_contact, message), since the anon key can insert directly
+-- against PostgREST and bypass the client-side validation in
+-- src/utils/formValidation.ts entirely.
 -- ============================================================================
 
 
@@ -317,7 +324,18 @@ create table public.enquiries (
   constraint enquiries_group_seq_check
     check (group_seq >= 1),
   constraint enquiries_booking_state_check
-    check (booking_state = any (array['active'::text, 'cancelled'::text]))
+    check (booking_state = any (array['active'::text, 'cancelled'::text])),
+  -- Length guards on public-insertable free-text columns (see
+  -- add_public_text_length_guards.sql). Client-side validation in
+  -- src/utils/formValidation.ts is UX only -- the public anon key can
+  -- insert directly against PostgREST, bypassing the React form
+  -- entirely, so these are the real, non-bypassable bound.
+  constraint enquiries_full_name_len check (char_length(full_name) between 1 and 120),
+  constraint enquiries_phone_len check (char_length(phone) <= 20),
+  constraint enquiries_email_len check (char_length(email) <= 254),
+  constraint enquiries_city_len check (city is null or char_length(city) <= 100),
+  constraint enquiries_emergency_contact_len check (emergency_contact is null or char_length(emergency_contact) <= 100),
+  constraint enquiries_message_len check (message is null or char_length(message) <= 2000)
 );
 
 create index enquiries_is_paid_idx on public.enquiries using btree (is_paid);
@@ -480,7 +498,14 @@ create table public.waitlist (
     check (status = any (array['waiting'::text, 'notified'::text, 'converted'::text, 'declined'::text, 'expired'::text])),
   -- Prevents the same person from spamming the same sold-out trip's
   -- waitlist with repeat submissions.
-  constraint waitlist_trip_email_unique unique (trip_id, email)
+  constraint waitlist_trip_email_unique unique (trip_id, email),
+  -- Length guards on public-insertable free-text columns -- same
+  -- rationale as the enquiries table's guards above (see
+  -- add_public_text_length_guards.sql).
+  constraint waitlist_full_name_len check (char_length(full_name) between 1 and 120),
+  constraint waitlist_phone_len check (char_length(phone) <= 20),
+  constraint waitlist_email_len check (char_length(email) <= 254),
+  constraint waitlist_message_len check (message is null or char_length(message) <= 2000)
 );
 
 create index waitlist_trip_id_idx on public.waitlist using btree (trip_id);

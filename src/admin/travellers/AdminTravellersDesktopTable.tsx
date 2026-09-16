@@ -3,18 +3,9 @@ import {
   PencilSimple as Edit2, Trash as Trash2,
 } from '@phosphor-icons/react';
 import { TableHeaderBar, TablePagination } from '../../components/ui/DataTableChrome';
-import { formatDate, getWhatsAppLink } from '../../utils/utils-index';
+import { formatDate, getInitials, getWhatsAppLink } from '../../utils/utils-index';
 import { journeyBadge } from '../enquiries/AdminEnquiryCommon';
 import type { TravellerContact } from './travellerContacts';
-
-// Initials avatar — same helper as AdminTravellerCard's mobile card, kept
-// local since it's a one-liner and the two views don't otherwise share
-// component code.
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
-}
 
 interface AdminTravellersDesktopTableProps {
   pageItems: TravellerContact[];
@@ -77,7 +68,7 @@ export default function AdminTravellersDesktopTable({
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-xs flex-shrink-0">
-                        {initials(contact.fullName)}
+                        {getInitials(contact.fullName, '?')}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
