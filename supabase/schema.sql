@@ -724,6 +724,61 @@ begin
 end;
 $function$;
 
+-- Security audit fix — see add_public_insert_privilege_guard.sql for the
+-- full rationale. "Public insert enquiries" is `with check (true)`, which
+-- doesn't restrict which columns a raw (non-app) request may set, so this
+-- clamps every trusted-only column back to its safe default whenever the
+-- inserting role isn't an authenticated admin (e.g. bypass_capacity_check,
+-- amount_paid, status, journey_stage can otherwise be spoofed directly
+-- against PostgREST). Admin-authored inserts are unaffected.
+create or replace function public.aaa_sanitize_public_enquiry_insert()
+returns trigger
+language plpgsql
+as $function$
+begin
+  if auth.role() <> 'authenticated' then
+    new.amount_paid             := 0;
+    new.is_paid                 := false;
+    new.bypass_capacity_check   := false;
+    new.status                  := 'new';
+    new.booking_status          := null;
+    new.journey_stage           := 'new_enquiry';
+    new.third_party_charges     := null;
+    new.checked_in_at           := null;
+    new.cancelled_at            := null;
+    new.is_no_show              := false;
+    new.refund_amount           := 0;
+    new.suggested_refund_amount := null;
+    new.deleted_at              := null;
+    new.booking_state           := 'active';
+    new.booking_id              := null;
+    if new.source is distinct from 'website' then
+      new.source := 'website';
+    end if;
+  end if;
+  return new;
+end;
+$function$;
+
+-- Same fix for waitlist: on_waitlist_status_change (enforce_waitlist_
+-- conversion) only fires BEFORE UPDATE, so it never runs on INSERT — a raw
+-- request could otherwise set status='converted' (or a fabricated
+-- 'notified'/offer_expiry) with none of that trigger's real checks applied.
+create or replace function public.aaa_sanitize_public_waitlist_insert()
+returns trigger
+language plpgsql
+as $function$
+begin
+  if auth.role() <> 'authenticated' then
+    new.status               := 'waiting';
+    new.notified_at          := null;
+    new.offer_expiry         := null;
+    new.converted_enquiry_id := null;
+  end if;
+  return new;
+end;
+$function$;
+
 -- Rejects an insert into enquiries/waitlist whose age falls outside the
 -- referenced trip's optional min_age/max_age (see add_trip_age_range.sql).
 -- Fails open whenever there's nothing to check (age/trip_id missing, no
@@ -1571,6 +1626,19 @@ create trigger waitlist_enforce_age_eligibility
 create trigger on_waitlist_status_change
   before update on public.waitlist
   for each row execute function public.enforce_waitlist_conversion();
+
+-- Security audit fix (see add_public_insert_privilege_guard.sql): clamps
+-- every trusted-only column on enquiries/waitlist back to its safe default
+-- whenever the inserting role isn't an authenticated admin, since RLS's
+-- `with check (true)` on the public insert policies below does not
+-- restrict which columns a raw request may set. Named "aaa_" so it runs
+-- before every other BEFORE INSERT trigger on these tables.
+create trigger aaa_sanitize_public_enquiry_insert
+  before insert on public.enquiries
+  for each row execute function public.aaa_sanitize_public_enquiry_insert();
+create trigger aaa_sanitize_public_waitlist_insert
+  before insert on public.waitlist
+  for each row execute function public.aaa_sanitize_public_waitlist_insert();
 
 create trigger on_trip_seat_freed
   after update on public.upcoming_trips

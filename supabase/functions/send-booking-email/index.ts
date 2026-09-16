@@ -1,10 +1,17 @@
 // supabase/functions/send-booking-email/index.ts
 //
-// Sends the booking confirmation email for real, via Resend's API — the
-// admin panel's own auth (Supabase JWT) is enough to call this, since only
-// logged-in admins can reach the "Send booking email" button in the first
-// place. No shared secret needed, unlike send-push (which is called from a
-// DB trigger, not a logged-in user).
+// Sends the booking confirmation email for real, via Resend's API.
+//
+// Security audit fix: this function used to rely entirely on Supabase's
+// platform-level `verify_jwt` (the default for a function deployed without
+// `--no-verify-jwt`) to keep this "admin-only". That check only verifies
+// that *some* valid project JWT was presented — and the public anon key
+// (shipped in every client bundle and in .env) IS a valid JWT. So the
+// function was reachable by anyone on the internet, not just logged-in
+// admins, letting them send arbitrary email (with an arbitrary HTML body
+// and attachment) through this site's Resend account/domain. This function
+// now independently verifies the caller's token belongs to a real,
+// logged-in Supabase Auth user before doing anything else.
 //
 // One-time setup:
 //   1. Create a Resend account (resend.com) and verify a sending domain —
@@ -22,6 +29,8 @@
 //   { "to": "...", "subject": "...", "html": "...",
 //     "attachmentBase64": "...", "attachmentFilename": "Invoice-....pdf" }
 
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 // Falls back to Resend's own shared test sender so the function doesn't
 // crash if this hasn't been configured yet — but that sender can only
@@ -29,10 +38,26 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 // sends need RESEND_FROM_EMAIL set to an address on a verified domain.
 const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') ?? 'Ulaa Trips <onboarding@resend.dev>';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+// Locked to the real site origin instead of '*' — this function is only
+// ever called from the admin panel running on this domain (or localhost
+// during development), never from an arbitrary third-party page.
+const ALLOWED_ORIGINS = new Set([
+  'https://www.ulaatrips.com',
+  'https://ulaatrips.com',
+  'http://localhost:5173',
+]);
+
+function corsHeadersFor(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') ?? '';
+  return {
+    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.has(origin) ? origin : 'https://www.ulaatrips.com',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    Vary: 'Origin',
+  };
+}
 
 interface SendBookingEmailBody {
   to: string;
@@ -43,9 +68,34 @@ interface SendBookingEmailBody {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+
+  // --- Auth check -----------------------------------------------------
+  // Verify the caller is a real, logged-in Supabase Auth user (an admin),
+  // not just anyone holding the public anon key. Platform `verify_jwt`
+  // alone does not make this distinction (see comment above).
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { data: userData, error: userError } = await authClient.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  // --- End auth check ---------------------------------------------------
 
   let payload: SendBookingEmailBody;
   try {
