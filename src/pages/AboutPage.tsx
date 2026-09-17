@@ -322,8 +322,11 @@ export default function AboutPage() {
               </div>
             )}
           </motion.div>
-          <motion.div {...fadeUp(0.15)} className="space-y-6">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark leading-tight whitespace-pre-line">
+          <motion.div {...fadeUp(0.15)}>
+            <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+              {our_story.sub_heading}
+            </p>
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark leading-tight mb-4 whitespace-pre-line">
               {our_story.heading}
             </h2>
             <p className="text-dark-muted text-lg leading-relaxed whitespace-pre-line">

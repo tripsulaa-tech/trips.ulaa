@@ -13,6 +13,7 @@ export const DEFAULT_ABOUT: AboutContent = {
 
   // 2. Our Story
   our_story: {
+    sub_heading: 'How It Began',
     heading: 'Our Story',
     description:
       'ULAA was born from a simple frustration — why should women have to compromise their sense of adventure because the world hasn\'t made it safe enough? We set out to change that. Every trip we design puts safety, sisterhood, and soul-level experiences at the centre.',

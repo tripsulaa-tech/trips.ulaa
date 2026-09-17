@@ -1,7 +1,7 @@
-import { TextAa, TextAlignLeft } from '@phosphor-icons/react';
+import { TextAa, TextAlignLeft, Sparkle } from '@phosphor-icons/react';
 import ImageUploadField from '../../components/ui/ImageUploadField';
 import type { AboutContent } from '../../types/types-index';
-import { inputClass, iconLabelClass, helperTextClass } from './shared';
+import { inputClass, iconLabelClass, helperTextClass, previewLabelClass, previewBoxClass } from './shared';
 
 export default function OurStorySection({
   content,
@@ -19,6 +19,20 @@ export default function OurStorySection({
         <p className="text-xs text-dark-muted mt-1">The photo-and-copy panel introducing ULAA, shown just below the hero.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="about-story-sub-heading" className={iconLabelClass}>
+            <Sparkle size={14} className="text-primary" aria-hidden="true" />
+            Eyebrow Text
+          </label>
+          <p className={helperTextClass}>Small script tagline shown above the heading.</p>
+          <input
+            id="about-story-sub-heading"
+            value={content.sub_heading}
+            onChange={e => setStory('sub_heading', e.target.value)}
+            className={inputClass}
+            placeholder="How It Began"
+          />
+        </div>
         <div>
           <label htmlFor="about-story-heading" className={iconLabelClass}>
             <TextAa size={14} className="text-primary" aria-hidden="true" />
@@ -48,6 +62,16 @@ export default function OurStorySection({
           />
         </div>
       </div>
+
+      {/* Live preview of the heading block */}
+      <div>
+        <p className={previewLabelClass}>Live preview</p>
+        <div className={previewBoxClass}>
+          <span className="font-script text-2xl text-primary">{content.sub_heading || 'How It Began'}</span>
+          <span className="font-display text-2xl sm:text-3xl font-bold text-dark leading-tight">{content.heading || 'Our Story'}</span>
+        </div>
+      </div>
+
       <ImageUploadField
         label="Story Image"
         value={content.image}

@@ -821,6 +821,7 @@ export interface AboutContent {
   };
   // 2. Our Story
   our_story: {
+    sub_heading: string;
     heading: string;
     description: string;
     image: string;

@@ -12,9 +12,9 @@ interface SectionTitleProps {
    *
    * 'plain' — a compact, non-animated section heading used for in-page
    * section headers (trip detail, album, contact). With no `label`/`rule`
-   * it's just a bare heading; passing `label` adds a small uppercase
-   * eyebrow above the title, and `rule` adds a short accent bar next to it
-   * — covering what used to be three separate hand-rolled treatments.
+   * it's just a bare heading; passing `label` adds a cursive font-script
+   * eyebrow above the title (sized down from the script variant), and
+   * `rule` adds a short accent bar next to it.
    */
   variant?: 'script' | 'plain';
   /** Heading element to render. Defaults to 'h2'. */
@@ -23,7 +23,7 @@ interface SectionTitleProps {
   icon?: ReactNode;
   /**
    * script: large font-script label above the title.
-   * plain: small uppercase eyebrow label above the title.
+   * plain: font-script label above the title, sized down from the script variant.
    */
   label?: string;
   title: ReactNode;
@@ -99,7 +99,7 @@ export default function SectionTitle({
         {rule && rulePosition === 'before' && <RuleBar className={label ? 'mb-3' : 'mb-4'} />}
         {label && (
           <p
-            className={`font-button text-[11px] font-semibold uppercase tracking-[0.25em] ${
+            className={`font-script font-normal text-2xl ${
               light ? 'text-white/80' : 'text-primary'
             }`}
           >
