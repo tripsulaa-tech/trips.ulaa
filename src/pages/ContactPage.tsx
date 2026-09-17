@@ -208,11 +208,6 @@ export default function ContactPage() {
                 />
               </div>
 
-              {/* Handwritten note, left of the photo */}
-              <p className="absolute left-0 top-[14%] font-script text-dark text-xl sm:text-2xl leading-[1.5] -rotate-6">
-                Good<br />Trips<br />Brighter<br />People ♥
-              </p>
-
               {/* Rotating seal */}
               <motion.div
                 className="absolute -top-2 right-0 sm:right-2 w-24 h-24 sm:w-28 sm:h-28"
@@ -238,12 +233,6 @@ export default function ContactPage() {
                 </span>
               </motion.div>
 
-              {/* Torn sticky note */}
-              <div className="absolute bottom-[6%] right-[2%] sm:right-[4%] rotate-[4deg] bg-white shadow-card px-5 py-4 [clip-path:polygon(0%_6%,100%_0%,97%_100%,3%_94%)]">
-                <p className="font-script text-dark text-lg sm:text-xl leading-[1.45]">
-                  Travel<br />Ask<br />Plan<br />Repeat ♥
-                </p>
-              </div>
             </motion.div>
           </div>
         </div>
