@@ -32,7 +32,7 @@ export default function TripFaqCancellationSection({
             aria-expanded={faqsOpen}
             className="w-full flex items-center justify-between gap-4 mb-6"
           >
-            <SectionTitle variant="plain" align="left" title="FAQs" />
+            <SectionTitle variant="plain" align="left" label="Common questions" title="FAQs" />
             {faqsOpen ? (
               <ChevronUp size={24} className="text-primary shrink-0" />
             ) : (
@@ -63,7 +63,7 @@ export default function TripFaqCancellationSection({
           aria-expanded={cancellationOpen}
           className="w-full flex items-center justify-between gap-4 mb-6"
         >
-          <SectionTitle variant="plain" align="left" title="Cancellation Policy" />
+          <SectionTitle variant="plain" align="left" label="Change of plans" title="Cancellation Policy" />
           {cancellationOpen ? (
             <ChevronUp size={24} className="text-primary shrink-0" />
           ) : (

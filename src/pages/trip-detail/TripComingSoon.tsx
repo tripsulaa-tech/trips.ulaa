@@ -47,7 +47,7 @@ export default function TripComingSoon({ trip }: TripComingSoonProps) {
               >
                 <ArrowLeft size={16} /> All Trips
               </Link>
-              <span className="inline-flex w-fit items-center gap-1.5 bg-gold text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md mb-3 sm:mb-4">
+              <span className="inline-flex w-fit items-center gap-1.5 bg-amber-500 text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md mb-3 sm:mb-4">
                 Coming Soon
               </span>
               <h1 className="font-display text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-3 sm:mb-4 leading-tight">
@@ -61,6 +61,7 @@ export default function TripComingSoon({ trip }: TripComingSoonProps) {
         <SectionTitle
           variant="plain"
           align="center"
+          label="Stay tuned"
           title="Something exciting is on the way!"
           className="mb-3"
         />

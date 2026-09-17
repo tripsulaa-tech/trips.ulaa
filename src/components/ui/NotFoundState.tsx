@@ -6,6 +6,8 @@ import SectionTitle from './SectionTitle';
 interface NotFoundStateProps {
   /** A phosphor icon element, e.g. `<Compass size={28} />`. */
   icon: ReactNode;
+  /** Small eyebrow above the title, matching the app's other section headers. Defaults to '404'. */
+  label?: string;
   title: string;
   message: string;
   actionLabel: string;
@@ -17,7 +19,7 @@ interface NotFoundStateProps {
 // Full-page "not found" state (wrong/removed slug) — shares the same
 // heading treatment, copy structure, and CTA button as the trips-listing
 // pages' empty/no-results states, instead of a single bare line of text.
-export default function NotFoundState({ icon, title, message, actionLabel, actionTo, onActionClick }: NotFoundStateProps) {
+export default function NotFoundState({ icon, label = '404', title, message, actionLabel, actionTo, onActionClick }: NotFoundStateProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center px-4 py-20">
       <span
@@ -26,7 +28,7 @@ export default function NotFoundState({ icon, title, message, actionLabel, actio
       >
         {icon}
       </span>
-      <SectionTitle variant="plain" align="center" size="xl" title={title} subtitle={message} />
+      <SectionTitle variant="plain" align="center" size="xl" label={label} title={title} subtitle={message} />
       <Link to={actionTo} onClick={onActionClick} className="mt-7">
         <Button variant="primary">{actionLabel}</Button>
       </Link>

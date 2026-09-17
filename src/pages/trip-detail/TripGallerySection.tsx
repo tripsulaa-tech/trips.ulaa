@@ -15,7 +15,7 @@ export default function TripGallerySection({ trip }: TripGallerySectionProps) {
   return (
     <section id="gallery" className="scroll-mt-44">
       <div className="mb-6">
-        <SectionTitle variant="plain" align="left" title="Places You'll Definitely Post" titleClassName="mb-2" />
+        <SectionTitle variant="plain" align="left" label="Photo ops" title="Places You'll Definitely Post" titleClassName="mb-2" />
         {trip.gallery_description && (
           <p className="text-dark-muted text-sm max-w-2xl">{trip.gallery_description}</p>
         )}

@@ -18,7 +18,7 @@ export default function TripAccommodationSection({ description, photos, carousel
 
   return (
     <section id="accommodation" className="scroll-mt-44">
-      <SectionTitle variant="plain" align="left" title="Stay. Relax. Repeat." titleClassName="mb-2" />
+      <SectionTitle variant="plain" align="left" label="Where you'll stay" title="Stay. Relax. Repeat." titleClassName="mb-2" />
       {description && (
         <p className="text-dark-muted leading-relaxed text-sm sm:text-base mb-4 sm:mb-6">{description}</p>
       )}

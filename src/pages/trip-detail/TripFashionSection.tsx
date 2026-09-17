@@ -20,7 +20,7 @@ export default function TripFashionSection({ photos, description, tripTitle }: T
 
   return (
     <section className="scroll-mt-44">
-      <SectionTitle variant="plain" align="left" title="Fashion Aesthetics" titleClassName="mb-2" />
+      <SectionTitle variant="plain" align="left" label="What to wear" title="Fashion Aesthetics" titleClassName="mb-2" />
       {description && (
         <p className="text-dark-muted text-sm mb-4">{description}</p>
       )}

@@ -23,7 +23,7 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
       {/* Things to Carry — kept directly above Meeting Point */}
       {hasThingsToCarry && (
         <section className="scroll-mt-44">
-          <SectionTitle variant="plain" align="left" size="sm" title="Things to Carry" titleClassName="mb-2" />
+          <SectionTitle variant="plain" align="left" size="sm" label="Before you go" title="Things to Carry" titleClassName="mb-2" />
           <p className="text-dark-muted text-sm mb-3 sm:mb-4">Pack smart. Travel light. Stay ready.</p>
           <div className="flex flex-wrap gap-2">
             {trip.things_to_carry_items!.map((item: TripInclusionItem, i: number) => {
@@ -47,6 +47,7 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
             align="left"
             size="sm"
             icon={<Navigation size={22} className="text-primary" />}
+            label="Where to meet"
             title="Meeting Point"
             titleClassName="mb-3"
           />
@@ -96,6 +97,7 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
             align="left"
             size="sm"
             icon={<UserCheck size={22} className="text-primary" />}
+            label="Who can join"
             title="Eligibility"
             titleClassName="mb-2"
           />
@@ -113,6 +115,7 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
             align="center"
             size="xl"
             light
+            label="Your trip leader"
             title="Meet Your Trip Leader"
             titleClassName="mb-4 sm:mb-6"
           />

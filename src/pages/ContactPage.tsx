@@ -213,7 +213,7 @@ export default function ContactPage() {
               </div>
 
               {/* Handwritten note, left of the photo */}
-              <p className="absolute left-0 top-[14%] font-script font-normal text-dark text-xl sm:text-2xl leading-[1.5] -rotate-6">
+              <p className="absolute left-0 top-[14%] font-script text-dark text-xl sm:text-2xl leading-[1.5] -rotate-6">
                 Good<br />Trips<br />Brighter<br />People ♥
               </p>
 
@@ -244,7 +244,7 @@ export default function ContactPage() {
 
               {/* Torn sticky note */}
               <div className="absolute bottom-[6%] right-[2%] sm:right-[4%] rotate-[4deg] bg-white shadow-card px-5 py-4 [clip-path:polygon(0%_6%,100%_0%,97%_100%,3%_94%)]">
-                <p className="font-script font-normal text-dark text-lg sm:text-xl leading-[1.45]">
+                <p className="font-script text-dark text-lg sm:text-xl leading-[1.45]">
                   Travel<br />Ask<br />Plan<br />Repeat ♥
                 </p>
               </div>
@@ -265,6 +265,7 @@ export default function ContactPage() {
                 variant="plain"
                 align="left"
                 size="lg"
+                label="Get in touch"
                 title="Reach us your way"
                 subtitle={
                   <>
@@ -434,6 +435,7 @@ export default function ContactPage() {
                       as="h3"
                       align="left"
                       size="lg"
+                      label="Drop us a line"
                       title="Send us a message"
                       subtitle="Fill this in and we'll get back to you within a few hours."
                       rule
@@ -569,6 +571,7 @@ export default function ContactPage() {
               variant="plain"
               align="center"
               size="xl"
+              label="The ULAA difference"
               title="Why Travel with ULAA?"
               subtitle="Not just trips. A community of like-minded explorers."
             />

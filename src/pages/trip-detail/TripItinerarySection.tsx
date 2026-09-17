@@ -21,6 +21,7 @@ export default function TripItinerarySection({
       <SectionTitle
         variant="plain"
         align="center"
+        label="Day by day"
         title={`${itinerary.length} Day${itinerary.length !== 1 ? 's' : ''} of Unforgettable Moments`}
         className="px-2"
         titleClassName="mb-6 sm:mb-10"

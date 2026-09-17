@@ -86,7 +86,7 @@ export default function TripConfidenceBookingSection({
     <div className={`grid grid-cols-1 gap-5 sm:gap-6 ${hasConfidenceItems ? 'lg:grid-cols-[1fr_640px] lg:divide-x lg:divide-background-warm' : ''}`}>
       {hasConfidenceItems && (
         <section id="confidence" className="scroll-mt-44 flex flex-col justify-center lg:pr-10">
-          <SectionTitle variant="plain" align="left" title="Travel with Confidence" titleClassName="mb-3" />
+          <SectionTitle variant="plain" align="left" label="Book with ease" title="Travel with Confidence" titleClassName="mb-3" />
           {trip.confidence_description && (
             <p className="text-dark-muted text-base leading-relaxed mb-4 sm:mb-6">{trip.confidence_description}</p>
           )}
@@ -175,7 +175,7 @@ export default function TripConfidenceBookingSection({
                 Sold Out
               </span>
             ) : isAlmostFull ? (
-              <span className="inline-block bg-secondary/15 text-secondary-dark text-sm font-button font-semibold px-4 py-2 rounded-md">
+              <span className="inline-block bg-amber-50 text-amber-700 text-sm font-button font-semibold px-4 py-2 rounded-md">
                 Only {remaining} seats left — almost full!
               </span>
             ) : trip.advance_amount != null ? (
