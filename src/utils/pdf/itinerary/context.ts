@@ -149,7 +149,7 @@ export function createPdfContext(doc: jsPDF) {
 
   const icons = createIcons({ doc, setDraw, setFill, setText, drawCheck, drawCross, COLORS });
 
-  /** Renders an actual lucide-react icon (the same component
+  /** Renders an actual Phosphor icon (the same component
    *  TripHighlightIconDisplay / TripDetailPage.tsx render on the live site)
    *  into the PDF as real vector paths via svg2pdf.js — not a hand-drawn
    *  approximation from the `icons` set above. Follows the same
@@ -158,11 +158,14 @@ export function createPdfContext(doc: jsPDF) {
    *  `s` is both its width and height. Best-effort: a failed render (e.g.
    *  an unsupported SVG feature) is swallowed rather than breaking the
    *  whole PDF, matching the same defensive pattern used for image loads
-   *  elsewhere in this file. */
+   *  elsewhere in this file.
+   *  Name kept as `drawLucideIcon` for now to avoid touching every call
+   *  site across the itinerary-PDF section files — it's Phosphor-only now
+   *  (see `AnyIcon`), the name is just stale. */
   async function drawLucideIcon(Icon: AnyIcon, x: number, y: number, s = 20, color: RGB = COLORS.primary) {
     try {
       const markup = renderToStaticMarkup(
-        createElement(Icon, { size: s, color: rgbToHex(color), strokeWidth: 2 })
+        createElement(Icon, { size: s, color: rgbToHex(color), weight: 'regular' })
       );
       const svgEl = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement;
       await doc.svg(svgEl, { x, y: y - s, width: s, height: s });

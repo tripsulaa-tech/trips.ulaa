@@ -284,7 +284,7 @@ export function createIcons({ doc, setDraw, setFill, setText, drawCheck, drawCro
       doc.line(cx - r, cy, cx + r, cy);
     },
     instagram(x: number, y: number, s = 20, color: RGB = COLORS.primary) {
-      // Sized/weighted to match the real lucide-react icons used for the
+      // Sized/weighted to match the real Phosphor icons used for the
       // other contact-bar entries (Headphones/Phone/Mail/Globe), which fill
       // most of their `s`-sized box — this hand-drawn glyph previously used
       // only 72% of that box at a thinner stroke, so it read smaller and

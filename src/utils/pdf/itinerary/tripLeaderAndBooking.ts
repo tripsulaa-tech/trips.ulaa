@@ -1,7 +1,7 @@
 import {
-  Calendar, Clock, Users, UserCheck, Phone, Mail, Globe, MessageSquare, Headphones,
-  ShieldCheck, BadgeCheck,
-} from 'lucide-react';
+  Calendar, Clock, Users, UserCheck, Phone, Envelope as Mail, Globe, Chat as MessageSquare,
+  Headphones, ShieldCheck, SealCheck as BadgeCheck,
+} from '@phosphor-icons/react';
 import type { PdfCtx } from './context';
 import type { AnyIcon, RGB, PdfTrip } from './shared';
 import type { ButtonLabelsConfig } from '../../../types/types-index';
@@ -375,7 +375,7 @@ import { formatDateRange, formatAgeRange, formatDate, getActivePrice, getStrikeT
     ];
     const rowH = 18;
     for (const item of metaItems) {
-      // Real lucide-react icons (same Calendar/Clock/Users/UserCheck the
+      // Real Phosphor icons (same Calendar/Clock/Users/UserCheck the
       // live booking widget uses), not the hand-drawn `icons.*` set — those
       // were coming out visually cramped/misaligned at this small size.
       await drawLucideIcon(item.icon, innerLeft + 6, ry + 4, 12, COLORS.primary);
@@ -461,11 +461,12 @@ import { formatDateRange, formatAgeRange, formatDate, getActivePrice, getStrikeT
       const cx0 = colX + 18;
       setFill(COLORS.backgroundWarm);
       doc.circle(cx0 + 12, contactMidY, 15, 'F');
-      // Real lucide-react icons, not the hand-drawn `icons.*` set — those
+      // Real Phosphor icons, not the hand-drawn `icons.*` set — those
       // were coming out visually messy/misaligned inside this circle. The
-      // one exception is Instagram: lucide dropped brand icons a few
-      // versions back, so "Follow Us" uses the hand-drawn `icons.instagram`
-      // glyph instead, at matching size/position.
+      // one exception is Instagram: "Follow Us" still uses the hand-drawn
+      // `icons.instagram` glyph rather than Phosphor's InstagramLogo, at
+      // matching size/position — left as-is from the lucide era (lucide
+      // had dropped brand icons), not yet revisited since the migration.
       // Icon glyph is slightly smaller than the circle behind it (16 vs the
       // circle's radius-15 background), centered within it.
       const contactIconS = 16;

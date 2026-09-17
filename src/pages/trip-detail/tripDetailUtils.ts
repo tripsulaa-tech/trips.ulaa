@@ -64,8 +64,8 @@ export function getItineraryGridClass(days: number): string {
 // Fallback icon matching for Things to Carry items that don't have an
 // admin-picked icon. The keyword→key matching rules are shared with the PDF
 // export (see constants/thingsToCarryIconRules.ts) so both resolve to the
-// same *kind* of glyph; only the icon components themselves differ here
-// (this app uses @phosphor-icons/react, the PDF uses lucide-react).
+// same *kind* of glyph — both the live site and the PDF export render via
+// @phosphor-icons/react now.
 const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', TripHighlightIconType> = {
   jacket: Shirt,
   shoe: Footprints,

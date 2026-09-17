@@ -18,8 +18,8 @@ import {
   Airplane as Plane,
   Image as ImageIcon,
   Play,
+  SmileySad as Frown,
 } from '@phosphor-icons/react';
-import { Frown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';

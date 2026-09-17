@@ -1,7 +1,3 @@
-import {
-  Sunset, Sunrise, Cherry, Grape, Drum, Landmark, MapPinned as MapAlert, Frown,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 // Every icon reference below (Ph.X) resolves to a lazily-loaded component —
 // see createLazyPhosphorIcon. This file lists (by name) every icon
 // @phosphor-icons/react ships, so the admin picker isn't limited to a
@@ -9,11 +5,11 @@ import type { LucideIcon } from 'lucide-react';
 // eagerly: each is fetched via its own dynamic import only the first time it
 // actually renders (previously `import * as Ph from '@phosphor-icons/react'`
 // plus this same enumeration forced Rollup to bundle the whole library —
-// every weight variant of every icon — into one ~4.7MB eager chunk). A small
-// handful of curated icons (Sunset, Sunrise, Cherry, Grape, Drum, Landmark,
-// MapAlert, Frown) have no reasonable Phosphor equivalent and keep their
-// original lucide-react glyph instead — everything else below renders via
-// Phosphor (see Ph.* references, and Ph itself below).
+// every weight variant of every icon — into one ~4.7MB eager chunk).
+// Fully migrated to Phosphor — everything below renders via Ph.* (see Ph
+// itself below). A handful of entries use the closest available Phosphor
+// icon rather than a literal name match (see inline notes below), since
+// Phosphor has no Sunset/Sunrise/Cherry/Landmark/Drum/Grape icons.
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { resolvePhosphorIcon } from '../components/icons/LazyPhosphorIcon';
 import LinkedHeartsIcon from '../components/icons/LinkedHeartsIcon';
@@ -41,17 +37,16 @@ const Ph = new Proxy({} as Record<string, PhosphorIcon>, {
 // display components fall back to rendering the raw string if the key isn't
 // found here (see resolveTripHighlightIcon in TripHighlightIcon.tsx).
 //
-// Icon set: Phosphor (@phosphor-icons/react), migrated from lucide-react.
-// All stored `key` strings are unchanged from the lucide-react era, so any
-// trip/admin data already referencing a key like "shield-check" still
-// resolves correctly — only the rendered glyph changed. A small set of
-// curated icons kept their original Lucide glyph where Phosphor has no
-// reasonable equivalent (see import list above).
+// Icon set: Phosphor (@phosphor-icons/react), migrated from a former
+// lucide-react set. All stored `key` strings are unchanged from that era,
+// so any trip/admin data already referencing a key like "shield-check"
+// still resolves correctly — only the rendered glyph changed. A handful of
+// curated icons (sunset, sunrise, cherry, landmark, map-alert) use the
+// closest available Phosphor icon rather than a literal name match, since
+// Phosphor ships no direct equivalent for those glyphs; "grape" and "drum"
+// were dropped outright (no reasonable substitute).
 
-// Icon components differ slightly between Phosphor's `Icon` type and
-// lucide-react's `LucideIcon` type (different prop shapes: `weight` vs
-// `strokeWidth`), so entries are typed loosely enough to accept either.
-export type TripHighlightIconType = PhosphorIcon | LucideIcon;
+export type TripHighlightIconType = PhosphorIcon;
 
 interface TripHighlightIconMeta {
   key: string;
@@ -1503,15 +1498,14 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'ship', label: 'Ship', Icon: Ph.Boat as TripHighlightIconType, keywords: ['cruise', 'ferry', 'boat', 'ship'] },
   { key: 'anchor', label: 'Anchor', Icon: Ph.Anchor as TripHighlightIconType, keywords: ['nautical', 'port', 'harbor', 'sea'] },
   { key: 'fish', label: 'Fish', Icon: Ph.Fish as TripHighlightIconType, keywords: ['snorkel', 'snorkeling', 'diving', 'marine', 'fish', 'reef'] },
-  { key: 'sunset', label: 'Sunset', Icon: Sunset as TripHighlightIconType, keywords: ['sunset', 'evening', 'golden hour', 'beach walks'] },
-  { key: 'sunrise', label: 'Sunrise', Icon: Sunrise as TripHighlightIconType, keywords: ['sunrise', 'morning', 'dawn'] },
+  { key: 'sunset', label: 'Sunset', Icon: Ph.SunHorizon as TripHighlightIconType, keywords: ['sunset', 'evening', 'golden hour', 'beach walks'] },
+  { key: 'sunrise', label: 'Sunrise', Icon: Ph.SunDim as TripHighlightIconType, keywords: ['sunrise', 'morning', 'dawn'] },
   // Food & cafés
   { key: 'coffee', label: 'Coffee', Icon: Ph.Coffee as TripHighlightIconType, keywords: ['coffee', 'cafe', 'cafes', 'breakfast', 'brew', 'mornings'] },
   { key: 'utensils', label: 'Dining', Icon: Ph.ForkKnife as TripHighlightIconType, keywords: ['food', 'dining', 'meal', 'meals', 'cuisine', 'local food'] },
   { key: 'wine', label: 'Wine', Icon: Ph.Wine as TripHighlightIconType, keywords: ['wine', 'drinks', 'vineyard', 'winery'] },
   { key: 'ice-cream', label: 'Ice Cream', Icon: Ph.IceCream as TripHighlightIconType, keywords: ['dessert', 'sweet', 'icecream', 'ice cream', 'treats'] },
-  { key: 'cherry', label: 'Cherry', Icon: Cherry as TripHighlightIconType, keywords: ['orchard', 'local produce', 'fruit'] },
-  { key: 'grape', label: 'Grapes', Icon: Grape as TripHighlightIconType, keywords: ['vineyard', 'wine', 'orchard', 'fruit'] },
+  { key: 'cherry', label: 'Cherry', Icon: Ph.Cherries as TripHighlightIconType, keywords: ['orchard', 'local produce', 'fruit'] },
   { key: 'beer', label: 'Beer', Icon: Ph.BeerStein as TripHighlightIconType, keywords: ['nightlife', 'brewery', 'drinks', 'bar'] },
   // Wildlife & adventure
   { key: 'paw-print', label: 'Paw Print', Icon: Ph.PawPrint as TripHighlightIconType, keywords: ['wildlife', 'wild adventure', 'safari', 'animal', 'animals', 'jungle', 'leopards', 'elephants'] },
@@ -1539,7 +1533,6 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'ticket', label: 'Ticket', Icon: Ph.Ticket as TripHighlightIconType, keywords: ['entry', 'events', 'attractions', 'tickets'] },
   { key: 'music', label: 'Music', Icon: Ph.MusicNotes as TripHighlightIconType, keywords: ['nightlife', 'festival', 'live music', 'fun'] },
   { key: 'guitar', label: 'Guitar', Icon: Ph.Guitar as TripHighlightIconType, keywords: ['music', 'culture', 'bonfire'] },
-  { key: 'drum', label: 'Drum', Icon: Drum as TripHighlightIconType, keywords: ['festival', 'culture', 'celebration'] },
   { key: 'camera', label: 'Camera', Icon: Ph.Camera as TripHighlightIconType, keywords: ['photography', 'sightseeing', 'photo spot', 'memories'] },
   { key: 'image', label: 'Image', Icon: Ph.Image as TripHighlightIconType, keywords: ['image', 'photo', 'photos', 'gallery', 'album', 'albums', 'completed trips', 'journey', 'memories', 'picture', 'pictures'] },
   // Girls-only / social vibes
@@ -1550,7 +1543,7 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'sparkles', label: 'Sparkles', Icon: Ph.Sparkle as TripHighlightIconType, keywords: ['magic', 'memories', 'fun', 'special'] },
   { key: 'star', label: 'Star', Icon: Ph.Star as TripHighlightIconType, keywords: ['special', 'favorite', 'unforgettable', 'highlight'] },
   // Culture & heritage
-  { key: 'landmark', label: 'Landmark', Icon: Landmark as TripHighlightIconType, keywords: ['heritage', 'monument', 'culture', 'history', 'local experiences'] },
+  { key: 'landmark', label: 'Landmark', Icon: Ph.Bank as TripHighlightIconType, keywords: ['heritage', 'monument', 'culture', 'history', 'local experiences'] },
   { key: 'castle', label: 'Castle', Icon: Ph.CastleTurret as TripHighlightIconType, keywords: ['fort', 'palace', 'heritage', 'history'] },
   { key: 'building-2', label: 'Architecture', Icon: Ph.Buildings as TripHighlightIconType, keywords: ['architecture', 'city', 'urban'] },
   // Transport
@@ -1587,7 +1580,7 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'user-round-x', label: 'Not a Match', Icon: Ph.UserMinus as TripHighlightIconType, keywords: ['not a match', 'declined', 'unmatched', 'no match', 'remove', 'blocked'] },
   { key: 'people-heart', label: 'Companion Match', Icon: Ph.HandHeart as TripHighlightIconType, keywords: ['companion', 'travel buddy', 'matched', 'connection', 'friendship', 'love'] },
   { key: 'shield-x', label: 'Not Protected', Icon: Ph.ShieldSlash as TripHighlightIconType, keywords: ['not protected', 'unprotected', 'no insurance', 'unsafe', 'declined protection'] },
-  { key: 'map-alert', label: 'Location Alert', Icon: MapAlert as TripHighlightIconType, keywords: ['location alert', 'travel advisory', 'map warning', 'area alert'] },
+  { key: 'map-alert', label: 'Location Alert', Icon: Ph.MapPin as TripHighlightIconType, keywords: ['location alert', 'travel advisory', 'map warning', 'area alert'] },
   // Things to Carry / travel essentials
   { key: 'shirt', label: 'Warm Jacket', Icon: Ph.ShirtFolded as TripHighlightIconType, keywords: ['warm jacket', 'jacket', 'thermal wear', 'thermal', 'sweater', 'hoodie', 'fleece', 'winter clothing', 'clothing'] },
   { key: 'footprints', label: 'Comfortable Shoes', Icon: Ph.Footprints as TripHighlightIconType, keywords: ['comfortable shoes', 'shoes', 'shoe', 'boots', 'boot', 'sandals', 'footwear', 'trek shoes', 'walking shoes'] },

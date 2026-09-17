@@ -3,12 +3,11 @@
 // representative icon key, falling back to 'default' (Backpack) for
 // anything unrecognized.
 //
-// Used by both the live site (src/pages/trip-detail/tripDetailUtils.ts,
-// via @phosphor-icons/react) and the PDF export
-// (src/utils/pdf/itinerary/shared.ts, via lucide-react) so an admin-typed
-// item with no explicit icon resolves to the same *kind* of glyph in both
-// places, even though each renders it through a different icon library.
-// Only the keyword→key mapping lives here; each caller supplies its own
+// Used by both the live site (src/pages/trip-detail/tripDetailUtils.ts) and
+// the PDF export (src/utils/pdf/itinerary/shared.ts) — both render via
+// @phosphor-icons/react now — so an admin-typed item with no explicit icon
+// resolves to the same *kind* of glyph in both places. Only the
+// keyword→key mapping lives here; each caller supplies its own
 // key→icon-component lookup.
 export type ThingsToCarryIconKey =
   | 'jacket' | 'shoe' | 'sunglasses' | 'cap' | 'glove' | 'earphone'

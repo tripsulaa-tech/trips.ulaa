@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 // Side-effect import — patches jsPDF's prototype with `.svg(element, opts)`,
 // used by drawLucideIcon (see pdf/itinerary/context.ts) to draw real
-// lucide-react icons as crisp vector paths instead of hand-drawn
+// Phosphor icons as crisp vector paths instead of hand-drawn
 // approximations.
 import 'svg2pdf.js';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../types/types-index';

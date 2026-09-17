@@ -1,10 +1,11 @@
 import type { UpcomingTrip, TripHighlightCard, TripIncludedGroup, TripInclusionItem } from '../../../types/types-index';
 import { getTripHighlightIcon, type TripHighlightIconType } from '../../../constants/tripHighlightIcons';
 import {
-  Shirt, Footprints, Glasses, HatGlasses, Hand, Headphones, BatteryCharging,
-  Pill, SprayCan, Droplet, GlassWater, Cookie, Sparkles, FileText, IdCard,
-  Camera, Stamp, Plane, ShieldCheck, CreditCard, PlugZap, Backpack,
-} from 'lucide-react';
+  ShirtFolded as Shirt, Footprints, Eyeglasses as Glasses, Beanie as HatGlasses, Hand,
+  Headphones, BatteryCharging, Pill, SprayBottle as SprayCan, Drop as Droplet,
+  Drop as GlassWater, Cookie, Sparkle as Sparkles, FileText, IdentificationCard as IdCard,
+  Camera, Stamp, Airplane as Plane, ShieldCheck, CreditCard, Plug as PlugZap, Backpack,
+} from '@phosphor-icons/react';
 import { formatPrice } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
 import { matchThingsToCarryIconKey, type ThingsToCarryIconKey } from '../../../constants/thingsToCarryIconRules';
@@ -14,12 +15,11 @@ export { tierLabel } from '../../../constants/cancellationPolicy';
 
 export type { RGB } from '../shared';
 
-// Icons drawn into the PDF can come from either the lucide-react imports
-// above (chrome/fallback glyphs) or from the trip highlight icon store,
-// which now renders via @phosphor-icons/react — see
-// src/constants/tripHighlightIcons.ts. `drawLucideIcon` (see drawing.ts)
-// accepts either, since both render to plain SVG markup via
-// `renderToStaticMarkup` the same way.
+// Icons drawn into the PDF can come from either the @phosphor-icons/react
+// imports above (chrome/fallback glyphs) or from the trip highlight icon
+// store (see src/constants/tripHighlightIcons.ts) — both are Phosphor
+// components now, so `drawLucideIcon` (see context.ts) renders either the
+// same way via `renderToStaticMarkup`.
 export type AnyIcon = TripHighlightIconType;
 
 export function rgbToHex([r, g, b]: RGB): string {
@@ -27,7 +27,7 @@ export function rgbToHex([r, g, b]: RGB): string {
 }
 
 /** Resolves an admin-picked icon-library key (e.g. "shield-check") to its
- *  actual lucide-react component, falling back for empty/legacy values. */
+ *  actual Phosphor component, falling back for empty/legacy values. */
 export function resolveIcon(key: string | undefined | null, fallback: AnyIcon): AnyIcon {
   const meta = key ? getTripHighlightIcon(key) : undefined;
   return meta ? meta.Icon : fallback;
@@ -36,8 +36,8 @@ export function resolveIcon(key: string | undefined | null, fallback: AnyIcon): 
 // Keyword→key matching rules are shared with the live site (see
 // constants/thingsToCarryIconRules.ts) so an admin-typed "Things to Carry"
 // item with no explicit icon still resolves to the same *kind* of glyph in
-// the PDF as it does on the live site; only the icon components differ
-// (this file uses lucide-react, the site uses @phosphor-icons/react).
+// the PDF as it does on the live site — both render via
+// @phosphor-icons/react now.
 const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', AnyIcon> = {
   jacket: Shirt,
   shoe: Footprints,
@@ -126,8 +126,8 @@ export function heroMoneyRupee(amount: number): string {
 // descriptions when present, else the legacy plain-text list — same
 // precedence TripDetailPage itself uses. `included`/`things_to_carry` keep
 // each item's `icon` key (not just its description) so the PDF can resolve
-// and draw the exact same lucide-react glyph the live site does — see
-// `drawLucideIcon` in drawing.ts.
+// and draw the exact same Phosphor glyph the live site does — see
+// `drawLucideIcon` in context.ts.
 export type PdfListItem = Pick<TripInclusionItem, 'description' | 'icon'>;
 
 export type PdfTrip = UpcomingTrip & {

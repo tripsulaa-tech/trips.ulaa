@@ -1,6 +1,6 @@
 import {
-  Users, ShieldCheck, Clock3, CalendarClock, UserX, PackageX, Building2, CheckCircle2,
-} from 'lucide-react';
+  Users, ShieldCheck, Clock, CalendarCheck, UserMinus, Package, Buildings, CheckCircle,
+} from '@phosphor-icons/react';
 import type { PdfCtx } from './context';
 import type { AnyIcon, PdfTrip } from './shared';
 import { MARGIN, CONTENT_W, CONTENT_BOTTOM, COLORS, tierLabel } from './shared';
@@ -11,7 +11,7 @@ import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../../../constant
   // -----------------------------------------------------------------------
   // Mirrors CancellationPolicyDisplay.tsx exactly: same 8 clauses in the
   // same order (including "Minimum Group Size", previously missing here)
-  // with the same lucide-react icon per clause instead of a plain number
+  // with the same Phosphor icon per clause instead of a plain number
   // badge, plus the same closing acceptance disclaimer the site shows below
   // all the cards.
   // =========================================================================
@@ -29,16 +29,16 @@ import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../../../constant
         body: [
           `The remaining trip balance must be paid at least ${policy.payment_due_days} days before the departure date, unless otherwise communicated. Failure to complete the payment by the due date may result in automatic cancellation of your booking without prior notice.`,
         ],
-        icon: Clock3,
+        icon: Clock,
       },
       {
         title: 'Cancellation by Participant',
         body: policy.tiers.map(tier => `${tierLabel(tier)}: ${tier.description}`),
-        icon: CalendarClock,
+        icon: CalendarCheck,
       },
-      { title: 'No Show', body: [STATIC.noShow], icon: UserX },
-      { title: 'Missed Services', body: [STATIC.missedServices], icon: PackageX },
-      { title: 'Trip Cancellation by Organizer', body: STATIC.organizerCancellation, icon: Building2 },
+      { title: 'No Show', body: [STATIC.noShow], icon: UserMinus },
+      { title: 'Missed Services', body: [STATIC.missedServices], icon: Package },
+      { title: 'Trip Cancellation by Organizer', body: STATIC.organizerCancellation, icon: Buildings },
       {
         title: 'Minimum Group Size',
         body: [STATIC.minimumGroupSize.intro, ...STATIC.minimumGroupSize.options.map(o => `\u2022 ${o}`)],
@@ -49,7 +49,7 @@ import { CANCELLATION_POLICY_STATIC_SECTIONS as STATIC } from '../../../constant
         body: [
           `Where applicable, approved refunds will be processed within ${policy.refund_min_days}\u2013${policy.refund_max_days} working days, subject to the receipt of refunds from the respective third-party service providers.`,
         ],
-        icon: CheckCircle2,
+        icon: CheckCircle,
       },
     ];
 
