@@ -1601,7 +1601,7 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   // Moods & questions (mainly for "Have You Ever…" style prompts)
   { key: 'x', label: 'Cancelled', Icon: Ph.X as TripHighlightIconType, keywords: ['cancelled', 'cancel', 'no', 'plans fell through', 'let down'] },
   { key: 'help-circle', label: 'Unsure', Icon: Ph.Question as TripHighlightIconType, keywords: ['unsure', 'question', 'confused', 'worried', 'uncertain', 'doubt'] },
-  { key: 'frown', label: 'Disappointed', Icon: Frown as TripHighlightIconType, keywords: ['disappointed', 'sad', 'nervous', 'upset', 'frown'] },
+  { key: 'frown', label: 'Disappointed', Icon: Ph.SmileySad as TripHighlightIconType, keywords: ['disappointed', 'sad', 'nervous', 'upset', 'frown'] },
   { key: 'smile', label: 'Happy', Icon: Ph.Smiley as TripHighlightIconType, keywords: ['happy', 'excited', 'joy', 'positive', 'smile'] },
   { key: 'alert-circle', label: 'Concern', Icon: Ph.WarningCircle as TripHighlightIconType, keywords: ['concern', 'worried', 'anxious', 'alert', 'caution'] },
   { key: 'meh', label: 'Indifferent', Icon: Ph.SmileyMeh as TripHighlightIconType, keywords: ['indifferent', 'unsure', 'meh', 'neutral', 'nervous'] },

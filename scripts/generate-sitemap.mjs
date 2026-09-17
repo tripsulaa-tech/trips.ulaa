@@ -49,11 +49,10 @@ function urlEntry({ path, lastmod, changefreq, priority }) {
   return lines.join('\n');
 }
 
-async function fetchSlugs(supabase, table, pathPrefix) {
-  const { data, error } = await supabase
-    .from(table)
-    .select('slug, updated_at')
-    .eq('is_published', true);
+async function fetchSlugs(supabase, table, pathPrefix, applyFilter) {
+  const { data, error } = await applyFilter(
+    supabase.from(table).select('slug, updated_at')
+  );
 
   if (error) {
     console.warn(`[generate-sitemap] Couldn't fetch "${table}", skipping those pages: ${error.message}`);
@@ -79,8 +78,8 @@ async function main() {
   } else {
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     const [trips, albums] = await Promise.all([
-      fetchSlugs(supabase, 'upcoming_trips', '/trips'),
-      fetchSlugs(supabase, 'completed_trips', '/completed-trips'),
+      fetchSlugs(supabase, 'upcoming_trips', '/trips', q => q.in('status', ['coming_soon', 'published'])),
+      fetchSlugs(supabase, 'completed_trips', '/completed-trips', q => q.eq('is_published', true)),
     ]);
     dynamicEntries = [...trips, ...albums];
   }
