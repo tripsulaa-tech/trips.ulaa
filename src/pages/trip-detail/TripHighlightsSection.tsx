@@ -22,7 +22,10 @@ export default function TripHighlightsSection({
 }: TripHighlightsSectionProps) {
   return (
     <section id="highlights" className="scroll-mt-44">
-      <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-5 sm:mb-8 flex items-center justify-center gap-2 text-center">
+      <p className="font-script font-normal text-3xl md:text-4xl text-primary text-center mb-2 whitespace-pre-line">
+        The little things
+      </p>
+      <h2 className="font-display text-2xl sm:text-3xl font-bold text-dark mb-2 flex items-center justify-center gap-2 text-center">
         Why You'll Love This Trip
         <button
           type="button"
@@ -49,6 +52,9 @@ export default function TripHighlightsSection({
           </motion.span>
         </button>
       </h2>
+      <p className="text-center text-dark-muted text-sm sm:text-base mb-5 sm:mb-8">
+        Six reasons this trip will stay with you long after it's over.
+      </p>
       <p className="sm:hidden text-center text-dark-muted text-sm -mt-3 mb-4">
         Tap the heart to reveal all reasons
       </p>
