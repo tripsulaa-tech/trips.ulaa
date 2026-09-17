@@ -87,7 +87,7 @@ export default function BrowseShell<T>({
         <div className="absolute inset-0 bg-gradient-to-b from-dark/60 to-dark/80" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <span className="text-secondary font-script font-medium text-2xl sm:text-3xl md:text-4xl block">{hero.label}</span>
+            <span className="text-secondary font-script font-normal text-2xl sm:text-3xl md:text-4xl block">{hero.label}</span>
             <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">{hero.title}</h1>
             <p className="text-white/80 mt-3 text-lg max-w-xl">{hero.subtitle}</p>
           </motion.div>

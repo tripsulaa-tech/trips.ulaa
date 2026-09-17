@@ -34,7 +34,7 @@ export default function CTASection() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4 sm:space-y-6"
         >
-          <span className="inline-flex items-center gap-3 text-secondary font-script font-medium text-2xl sm:text-3xl md:text-4xl">
+          <span className="inline-flex items-center gap-3 text-secondary font-script font-normal text-2xl sm:text-3xl md:text-4xl">
             {eyebrow}
           </span>
 

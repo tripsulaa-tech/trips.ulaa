@@ -111,7 +111,7 @@ export default function CtaBannerSection({
           )}
           <div className="absolute inset-0 bg-gradient-to-r from-dark/90 via-dark/70 to-dark/50" />
           <div className="relative space-y-3">
-            <span className="inline-block text-secondary font-script font-medium text-lg">{content.eyebrow}</span>
+            <span className="inline-block text-secondary font-script font-normal text-lg">{content.eyebrow}</span>
             <p className="font-display text-2xl font-bold leading-tight text-white">
               {content.heading_line1}
               <br />

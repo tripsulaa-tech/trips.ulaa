@@ -133,7 +133,7 @@ export default function SectionTitle({
   const Label = label && (
     <span
       className={`
-        font-script font-medium text-3xl md:text-4xl
+        font-script font-normal text-3xl md:text-4xl
         ${light ? 'text-secondary' : 'text-primary'}
       `}
     >

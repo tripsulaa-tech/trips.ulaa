@@ -68,7 +68,7 @@ const WHY_ULAA = [
     Icon: Leaf,
     title: 'Authentic Experiences',
     description: 'Hidden gems, local stories and real connections.',
-    circle: 'bg-primary/10 text-primary',
+    circle: 'bg-orange-50 text-primary',
   },
   {
     Icon: Heart,
@@ -213,7 +213,7 @@ export default function ContactPage() {
               </div>
 
               {/* Handwritten note, left of the photo */}
-              <p className="absolute left-0 top-[14%] font-script text-dark text-xl sm:text-2xl leading-[1.5] -rotate-6">
+              <p className="absolute left-0 top-[14%] font-script font-normal text-dark text-xl sm:text-2xl leading-[1.5] -rotate-6">
                 Good<br />Trips<br />Brighter<br />People ♥
               </p>
 
@@ -244,7 +244,7 @@ export default function ContactPage() {
 
               {/* Torn sticky note */}
               <div className="absolute bottom-[6%] right-[2%] sm:right-[4%] rotate-[4deg] bg-white shadow-card px-5 py-4 [clip-path:polygon(0%_6%,100%_0%,97%_100%,3%_94%)]">
-                <p className="font-script text-dark text-lg sm:text-xl leading-[1.45]">
+                <p className="font-script font-normal text-dark text-lg sm:text-xl leading-[1.45]">
                   Travel<br />Ask<br />Plan<br />Repeat ♥
                 </p>
               </div>
@@ -298,7 +298,7 @@ export default function ContactPage() {
                   href={`mailto:${EMAIL}`}
                   className="group flex flex-col rounded-2xl border border-background-warm bg-white p-5 shadow-card hover:shadow-card-hover transition-shadow"
                 >
-                  <span className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="w-11 h-11 rounded-xl bg-orange-50 text-primary flex items-center justify-center">
                     <Envelope size={22} />
                   </span>
                   <p className="font-display font-bold text-dark mt-4">Email Us</p>
@@ -329,7 +329,7 @@ export default function ContactPage() {
 
                 {/* Based in India — informational, so it's a div, not a link */}
                 <div className="flex flex-col rounded-2xl border border-background-warm bg-white p-5 shadow-card">
-                  <span className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="w-11 h-11 rounded-xl bg-orange-50 text-primary flex items-center justify-center">
                     <MapPin size={22} />
                   </span>
                   <p className="font-display font-bold text-dark mt-4">Based in India</p>

@@ -68,7 +68,7 @@ export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderP
         </motion.div>
 
         <motion.div {...fadeUp(0.1)} className="flex flex-col items-center md:items-start text-center md:text-left">
-          <span className="font-script font-medium text-3xl md:text-4xl text-secondary">
+          <span className="font-script font-normal text-3xl md:text-4xl text-secondary">
             Meet the Founder
           </span>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-white mt-3">
