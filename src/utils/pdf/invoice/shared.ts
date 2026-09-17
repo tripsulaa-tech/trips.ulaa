@@ -85,7 +85,7 @@ export const FOOTER_RESERVE = 34; // room left at the bottom of every page for t
 /** Filename used for both downloaded and shared files. */
 export function invoiceFileName(enquiry: Enquiry): string {
   const ref = (enquiry.booking_id || enquiry.id).replace(/[^a-zA-Z0-9-]/g, '');
-  return `ULAA-Invoice-${ref}.pdf`;
+  return `Ulaa-Invoice-${ref}.pdf`;
 }
 
 /** Same rationale as tripItineraryPdf.ts's sanitizeForPdf (now shared —
@@ -129,7 +129,7 @@ export function loadFooterBanner(): Promise<{ dataUrl: string; ratio: number } |
 // Instagram handle, WhatsApp, website.
 export const FOOTER_BANNER_LINKS: { x1: number; y1: number; x2: number; y2: number; url: string }[] = [
   { x1: 415 / 1254, y1: 78 / 252, x2: 585 / 1254, y2: 132 / 252, url: 'https://instagram.com/ulaa.trips' },
-  { x1: 600 / 1254, y1: 78 / 252, x2: 780 / 1254, y2: 132 / 252, url: 'https://wa.me/916381336772?text=' + encodeURIComponent('Hi! I am interested in ULAA trips.') },
+  { x1: 600 / 1254, y1: 78 / 252, x2: 780 / 1254, y2: 132 / 252, url: 'https://wa.me/916381336772?text=' + encodeURIComponent('Hi! I am interested in Ulaa trips.') },
   { x1: 795 / 1254, y1: 78 / 252, x2: 1030 / 1254, y2: 132 / 252, url: 'https://www.ulaatrips.com' },
 ];
 

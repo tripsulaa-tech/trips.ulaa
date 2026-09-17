@@ -49,7 +49,7 @@ export default function JourneyIntroSection({
     <div ref={sectionRef} data-section={3} className="scroll-mt-4 space-y-4">
       <div className="pb-3 border-b border-background-warm">
         <h2 className="font-display text-lg font-bold text-dark">3 · To Unforgettable Journeys</h2>
-        <p className="text-xs text-dark-muted mt-1">The split "Have You Ever… / Welcome to ULAA" panel bridging the intro and the rest of the page.</p>
+        <p className="text-xs text-dark-muted mt-1">The split "Have You Ever… / Welcome to Ulaa" panel bridging the intro and the rest of the page.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -179,10 +179,10 @@ export default function JourneyIntroSection({
         </div>
       </div>
 
-      {/* Welcome to ULAA (nested) */}
+      {/* Welcome to Ulaa (nested) */}
       <div className="border-t border-background-warm pt-4 space-y-3">
         <h3 className="font-display text-sm font-bold text-dark uppercase tracking-wide">
-          Welcome to ULAA
+          Welcome to Ulaa
         </h3>
         <div>
           <label htmlFor="about-wtu-heading" className={labelClass}>Main Heading</label>
@@ -236,7 +236,7 @@ export default function JourneyIntroSection({
                     hintText={item.title}
                   />
                 </div>
-                <label htmlFor={`about-wtu-item-${i}`} className="sr-only">Welcome to ULAA item {i + 1}</label>
+                <label htmlFor={`about-wtu-item-${i}`} className="sr-only">Welcome to Ulaa item {i + 1}</label>
                 <input
                   id={`about-wtu-item-${i}`}
                   value={item.title}

@@ -73,8 +73,8 @@ export default function AboutPage() {
   useScrollRestoration('/about', true);
 
   usePageMeta({
-    title: 'About Us | ULAA Trips',
-    description: "Unseen. Local. Adventures. Activities. — a girls-only travel revolution. Learn who we are and why women travel with ULAA.",
+    title: 'About Us | Ulaa Trips',
+    description: "Unseen. Local. Adventures. Activities. — a girls-only travel revolution. Learn who we are and why women travel with Ulaa.",
     path: '/about',
   });
 
@@ -337,7 +337,7 @@ export default function AboutPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════
-          3 & 4. HAVE YOU EVER... / WELCOME TO ULAA (merged split card)
+          3 & 4. HAVE YOU EVER... / WELCOME TO Ulaa (merged split card)
       ══════════════════════════════════════════════════════════════ */}
       <section className="pt-12 pb-12 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-[1344px] mx-auto">
@@ -459,7 +459,7 @@ export default function AboutPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════
-          5. WHY ULAA IS DIFFERENT
+          5. WHY Ulaa IS DIFFERENT
       ══════════════════════════════════════════════════════════════ */}
       <section className="py-12 px-4 sm:px-6 lg:px-8 bg-background-warm">
         <div className="max-w-[1344px] mx-auto">
@@ -731,7 +731,7 @@ export default function AboutPage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          9. YOUR ULAA JOURNEY
+          9. YOUR Ulaa JOURNEY
       ══════════════════════════════════════════════════════════════ */}
       <section className="py-12 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-5xl mx-auto">

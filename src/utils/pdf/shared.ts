@@ -10,7 +10,7 @@ import { sanitizeForPdf } from '../pdfText';
 export type RGB = readonly [number, number, number];
 
 export const BRAND_BASE = {
-  name: 'ULAA',
+  name: 'Ulaa',
   website: 'www.ulaatrips.com',
   instagram: '@ulaa.trips',
   email: 'trips.ulaa@gmail.com',

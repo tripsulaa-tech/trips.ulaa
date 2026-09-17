@@ -12,14 +12,14 @@ createRoot(document.getElementById('root')!).render(
 )
 
 // Give the admin panel its own installable identity, separate from the
-// public site's "ULAA" home-screen app.
+// public site's "Ulaa" home-screen app.
 //
 // This used to swap the manifest/apple-touch-icon/title tags in via JS
 // after load, but iOS's "Add to Home Screen" reliably reads a page's PWA
 // metadata only from what the server actually returned for that URL — it
 // doesn't pick up tags mutated after the fact. /admin is now served by its
 // own static admin.html (see vite.config.ts + vercel.json rewrites) with
-// the "ULAA Admin" manifest/icons baked in directly, so no runtime swap is
+// the "Ulaa Admin" manifest/icons baked in directly, so no runtime swap is
 // needed here anymore.
 
 // Register the service worker for both the public site and /admin. Chrome

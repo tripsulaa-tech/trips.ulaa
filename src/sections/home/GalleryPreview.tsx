@@ -73,7 +73,7 @@ export default function GalleryPreview() {
               <motion.img
                 layoutId={`home-gallery-${i}`}
                 src={img}
-                alt={`ULAA Gallery ${i + 1}`}
+                alt={`Ulaa Gallery ${i + 1}`}
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />

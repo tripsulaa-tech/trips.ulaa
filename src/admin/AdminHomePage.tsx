@@ -10,7 +10,7 @@ import CtaBannerSection from './home-sections/CtaBannerSection';
 import BottomNavSection from './home-sections/BottomNavSection';
 import ButtonNamingSection from './home-sections/ButtonNamingSection';
 
-// Replaces the old separate admin pages for Home Hero, Why ULAA,
+// Replaces the old separate admin pages for Home Hero, Why Ulaa,
 // Testimonials, Instagram Moments, Founder, the Bottom Nav Bar, and Button
 // Naming (routes /admin/home-hero, /admin/why-us, /admin/instagram-moments,
 // /admin/testimonials, /admin/founder, /admin/bottom-nav,
@@ -50,7 +50,7 @@ export default function AdminHomePage() {
   return (
     <ContentEditorShell
       title="Home Page"
-      subtitle="Manage the Hero Banner, Why ULAA, Testimonials, Instagram Moments, Founder, and CTA Banner sections shown on the home page."
+      subtitle="Manage the Hero Banner, Why Ulaa, Testimonials, Instagram Moments, Founder, and CTA Banner sections shown on the home page."
       hasUnsavedChanges={hasUnsavedChanges}
       loading={loading}
       searchId="home-page-search"

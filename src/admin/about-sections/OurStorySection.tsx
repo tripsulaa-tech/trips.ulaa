@@ -16,7 +16,7 @@ export default function OurStorySection({
     <div ref={sectionRef} data-section={2} className="scroll-mt-4 space-y-4">
       <div className="pb-3 border-b border-background-warm">
         <h2 className="font-display text-lg font-bold text-dark">2 · Our Story</h2>
-        <p className="text-xs text-dark-muted mt-1">The photo-and-copy panel introducing ULAA, shown just below the hero.</p>
+        <p className="text-xs text-dark-muted mt-1">The photo-and-copy panel introducing Ulaa, shown just below the hero.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>

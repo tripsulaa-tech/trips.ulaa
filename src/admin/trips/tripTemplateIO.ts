@@ -14,7 +14,7 @@ import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 export const handleExportTemplate = () => {
   const template = {
     _instructions:
-      'This is a blank template of the ULAA "Add Trip" admin form. Fill in every field ' +
+      'This is a blank template of the Ulaa "Add Trip" admin form. Fill in every field ' +
       'with trip details (use the provided trip photos/notes as source material). ' +
       'Keep the JSON structure and key names exactly as-is — only replace the placeholder ' +
       'values. Leave a field as an empty string "" if there is truly nothing to fill in. ' +

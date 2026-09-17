@@ -364,7 +364,7 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
                     return (
                       <>
                         <div className="flex justify-between"><span className="text-dark-muted">Total Revenue ({s.travelerCount} booked{usingReal ? '' : ', est.'})</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
-                        <div className="flex justify-between"><span className="text-dark-muted">ULAA's Total Costs</span><span className="text-dark">{formatPrice(s.ulaaCosts)}</span></div>
+                        <div className="flex justify-between"><span className="text-dark-muted">Ulaa's Total Costs</span><span className="text-dark">{formatPrice(s.ulaaCosts)}</span></div>
                         <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Entry Ticket Costs</span><span className="text-dark-muted">{formatPrice(s.entryTicketCosts)}</span></div>
                         <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Kit Costs</span><span className="text-dark-muted">{formatPrice(s.kitCosts)}</span></div>
                         <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Cost</span><span className="text-dark-muted">{formatPrice(s.agencyCost)}</span></div>

@@ -362,7 +362,7 @@ export default function AdminEnquiriesMobileCards({
                       {e.phone && (
                         <div className="flex items-center gap-2.5 min-w-0">
                           <a
-                            href={getWhatsAppLink(e.phone, `Hi ${e.full_name.trim().split(/\s+/)[0]}, following up on your ${e.trip_title ? `${e.trip_title} ` : ''}enquiry with ULAA — `)}
+                            href={getWhatsAppLink(e.phone, `Hi ${e.full_name.trim().split(/\s+/)[0]}, following up on your ${e.trip_title ? `${e.trip_title} ` : ''}enquiry with Ulaa — `)}
                             target="_blank"
                             rel="noopener noreferrer"
                             title={`Message ${e.full_name} on WhatsApp`}

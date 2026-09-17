@@ -129,7 +129,7 @@ export function useSectionTabChrome(loading: boolean, sectionCount: number): Use
   // Keeps the edge fades in sync with the tab bar's scroll position — same
   // approach as Tabs.tsx. Depends on sectionCount since the tab bar's
   // scrollWidth changes on pages whose section list grows/shrinks with the
-  // data (e.g. Why ULAA's feature cards); a no-op re-run on pages with a
+  // data (e.g. Why Ulaa's feature cards); a no-op re-run on pages with a
   // fixed section count.
   const updateTabFades = () => {
     const el = tabBarRef.current;

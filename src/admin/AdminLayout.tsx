@@ -115,7 +115,7 @@ interface AdminLayoutProps {
   children: ReactNode;
   title: string;
   subtitle?: string;
-  // Page-level (non-modal) admin screens like About/Why ULAA have no
+  // Page-level (non-modal) admin screens like About/Why Ulaa have no
   // save-on-close event to hook the way a modal does — the only signal
   // that something might be lost is the admin trying to navigate away.
   // If provided, this is checked before any sidebar/logo/"View Site" link
@@ -125,7 +125,7 @@ interface AdminLayoutProps {
   hasUnsavedChanges?: () => boolean;
   // Locks the page to exactly the viewport height instead of
   // letting it grow with content (min-h-screen) — used by single-card
-  // editor pages (About/Founder/Why ULAA via ContentEditorShell) so their
+  // editor pages (About/Founder/Why Ulaa via ContentEditorShell) so their
   // own internal scroll area is the only thing that ever scrolls. A tiny
   // rounding mismatch between the card's own max-height and the real
   // header height was otherwise enough to make the whole page scroll by a
@@ -354,9 +354,9 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       <div className={`relative pt-6 pb-4 flex items-center ${collapsed ? 'flex-col gap-3 px-2' : 'justify-center px-6'}`}>
         <Link to="/" className="inline-block shrink-0" onClick={guardNavigate}>
           {collapsed ? (
-            <img src="/favicon.svg" alt="ULAA" className="h-11 w-11" />
+            <img src="/favicon.svg" alt="Ulaa" className="h-11 w-11" />
           ) : (
-            <img src="/ULAA.svg" alt="ULAA" className="h-32" />
+            <img src="/ULAA.svg" alt="Ulaa" className="h-32" />
           )}
         </Link>
         {/* Collapse/expand toggle — desktop only; the mobile drawer always
@@ -506,7 +506,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
     if (sidebarOpen) mobileCloseBtnRef.current?.focus();
   }, [sidebarOpen]);
 
-  // Fixed-height editor pages (About/Founder/Why ULAA) already have their
+  // Fixed-height editor pages (About/Founder/Why Ulaa) already have their
   // own internal "app-scroll" area for content, and size themselves to
   // exactly 100vh — but a sub-pixel rounding mismatch between that and the
   // real viewport height is sometimes enough to give the whole document a

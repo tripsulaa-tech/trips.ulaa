@@ -29,7 +29,7 @@ const STORAGE_BUCKET = 'ulaa';
 // same "one place to edit everything" direction as the rest of this page.
 export const SECTION_TITLES = [
   'Hero Banner',
-  'Why ULAA',
+  'Why Ulaa',
   'Testimonials',
   'Instagram Moments',
   'Meet the Founder',
@@ -77,7 +77,7 @@ interface UseAdminHomePageResult {
 
   // Tab bar / scroll-spy chrome — same shape as useContentEditorPage's,
   // fixed to SECTION_TITLES.length since this page's section list never
-  // grows/shrinks with the data (unlike Why ULAA's feature cards).
+  // grows/shrinks with the data (unlike Why Ulaa's feature cards).
   activeSection: number;
   setSectionRef: (index: number, el: HTMLDivElement | null) => void;
   tabBarRef: React.RefObject<HTMLDivElement | null>;
@@ -327,7 +327,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   // Tab bar / scroll-spy / page-search chrome — shared with
   // useContentEditorPage via useSectionTabChrome (see that file for the
   // duplication this replaces); fixed section count since this page's
-  // section list never grows/shrinks with the data (unlike Why ULAA's
+  // section list never grows/shrinks with the data (unlike Why Ulaa's
   // feature cards).
   const {
     activeSection, setSectionRef, tabBarRef, tabButtonRefs, showLeftFade, showRightFade,

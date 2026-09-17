@@ -69,7 +69,7 @@ export default function TripDetailPage() {
   // once it arrives — so sharing a trip link renders that trip's title and
   // cover photo instead of the site-wide default.
   usePageMeta({
-    title: trip ? `${trip.title} | ULAA Trips` : 'Upcoming Trips | ULAA Trips',
+    title: trip ? `${trip.title} | Ulaa Trips` : 'Upcoming Trips | Ulaa Trips',
     description: trip?.description,
     image: trip?.cover_image,
     path: `/trips/${slug ?? ''}`,

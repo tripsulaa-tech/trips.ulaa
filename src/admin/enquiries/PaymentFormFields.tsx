@@ -238,7 +238,7 @@ export default function PaymentFormFields({
                 Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
               </p>
               {/* Quick preset for the common case: this traveller wants to
-                  bring a child along. ULAA trips aren't built around kids
+                  bring a child along. Ulaa trips aren't built around kids
                   (no separate child pricing/seat type), so this is just a
                   one-off add-on against an existing enquiry rather than a
                   field on the public booking form — same Add-on mechanism

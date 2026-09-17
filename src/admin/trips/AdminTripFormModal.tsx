@@ -385,8 +385,8 @@ export default function AdminTripFormModal({
             </div>
 
             <div className="md:col-span-2">
-              <h4 className="text-sm font-semibold text-dark mb-1">ULAA's Costs</h4>
-              <p className="text-xs text-dark-muted -mt-0.5 mb-2">What ULAA spends to promote and run this trip.</p>
+              <h4 className="text-sm font-semibold text-dark mb-1">Ulaa's Costs</h4>
+              <p className="text-xs text-dark-muted -mt-0.5 mb-2">What Ulaa spends to promote and run this trip.</p>
             </div>
             <div>
               <label htmlFor="trip-ad-spend" className="block text-sm font-medium text-dark mb-1">Ad / Promotion Spend (₹)</label>
@@ -422,14 +422,14 @@ export default function AdminTripFormModal({
                 onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, kit_cost_per_person: e.target.value === '' ? null : +e.target.value } }))}
                 aria-describedby="trip-kit-cost-hint"
                 className={inputClass}
-                placeholder="Kits ULAA gives travelers"
+                placeholder="Kits Ulaa gives travelers"
               />
-              <p id="trip-kit-cost-hint" className="text-xs text-dark-muted mt-1">What ULAA spends per traveler on welcome kits.</p>
+              <p id="trip-kit-cost-hint" className="text-xs text-dark-muted mt-1">What Ulaa spends per traveler on welcome kits.</p>
             </div>
 
             <div className="md:col-span-2 pt-2 border-t border-background-warm">
-              <h4 className="text-sm font-semibold text-dark mb-1">On-Ground Agency (paid by ULAA)</h4>
-              <p className="text-xs text-dark-muted -mt-0.5 mb-2">The local agency ULAA pays to run the trip on the ground.</p>
+              <h4 className="text-sm font-semibold text-dark mb-1">On-Ground Agency (paid by Ulaa)</h4>
+              <p className="text-xs text-dark-muted -mt-0.5 mb-2">The local agency Ulaa pays to run the trip on the ground.</p>
             </div>
             <div>
               <label htmlFor="trip-agency-name" className="block text-sm font-medium text-dark mb-1">Agency Name</label>
@@ -468,7 +468,7 @@ export default function AdminTripFormModal({
                 placeholder="e.g. 29300"
               />
               <p id="trip-agency-amount-hint" className="text-xs text-dark-muted mt-1">
-                e.g. traveler is charged ₹39,999, ₹29,300 of that goes to the agency — the rest covers entry tickets, kits, promotion, and ULAA's margin.
+                e.g. traveler is charged ₹39,999, ₹29,300 of that goes to the agency — the rest covers entry tickets, kits, promotion, and Ulaa's margin.
               </p>
             </div>
 
@@ -504,7 +504,7 @@ export default function AdminTripFormModal({
                 className={inputClass}
                 placeholder="e.g. 7000"
               />
-              <p id="trip-child-fare-vendor-hint" className="text-xs text-dark-muted mt-1">What ULAA pays the on-ground agency per child — separate from the adult agency rate above.</p>
+              <p id="trip-child-fare-vendor-hint" className="text-xs text-dark-muted mt-1">What Ulaa pays the on-ground agency per child — separate from the adult agency rate above.</p>
             </div>
             <div>
               <label htmlFor="trip-child-fare-entry-ticket" className="block text-sm font-medium text-dark mb-1">Child Fare Entry Ticket Cost (₹)</label>
@@ -575,7 +575,7 @@ export default function AdminTripFormModal({
                 className={inputClass}
                 placeholder="Actual amount paid, if any"
               />
-              <p id="trip-organiser-agency-hint" className="text-xs text-dark-muted mt-1">Separate from the ULAA→agency amount above. Leave blank/0 if the organiser doesn't pay the agency directly for this trip.</p>
+              <p id="trip-organiser-agency-hint" className="text-xs text-dark-muted mt-1">Separate from the Ulaa→agency amount above. Leave blank/0 if the organiser doesn't pay the agency directly for this trip.</p>
             </div>
             <div>
               <label htmlFor="trip-organiser-misc" className="block text-sm font-medium text-dark mb-1">Miscellaneous Expenses (₹)</label>
@@ -632,7 +632,7 @@ export default function AdminTripFormModal({
                       : `(estimate: ${s.travelerCount} booked seats × regular price — no bookings to total yet)`}
                   </span></h4>
                   <div className="flex justify-between"><span className="text-dark-muted">Total Revenue</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
-                  <div className="flex justify-between border-t border-background-warm pt-1.5"><span className="text-dark-muted">ULAA's Total Costs</span><span className="text-dark font-medium">{formatPrice(s.ulaaCosts)}</span></div>
+                  <div className="flex justify-between border-t border-background-warm pt-1.5"><span className="text-dark-muted">Ulaa's Total Costs</span><span className="text-dark font-medium">{formatPrice(s.ulaaCosts)}</span></div>
                   <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Entry Ticket Costs</span><span className="text-dark-muted">{formatPrice(s.entryTicketCosts)}</span></div>
                   <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Kit Costs</span><span className="text-dark-muted">{formatPrice(s.kitCosts)}</span></div>
                   <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Cost</span><span className="text-dark-muted">{formatPrice(s.agencyCost)}</span></div>
@@ -1098,7 +1098,7 @@ export default function AdminTripFormModal({
                 onChange={e => setForm(f => ({ ...f, meeting_details: e.target.value }))}
                 aria-describedby="trip-meeting-details-hint"
                 className={inputClass}
-                placeholder="e.g. Look for the ULAA placard near the arrivals gate"
+                placeholder="e.g. Look for the Ulaa placard near the arrivals gate"
               />
               <p id="trip-meeting-details-hint" className="text-xs text-dark-muted mt-1.5">
                 Time, Terminal, and Details are all optional — leave any of them blank and the trip page and PDF show a friendly "to be communicated" placeholder instead.

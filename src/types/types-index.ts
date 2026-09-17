@@ -1,5 +1,5 @@
 // =============================================
-// ULAA - TypeScript Types & Interfaces
+// Ulaa - TypeScript Types & Interfaces
 // =============================================
 
 // =============================================
@@ -59,9 +59,9 @@ export interface TripEndBanner {
 // end_banner/cancellation_policy above. All amounts are in ₹.
 //
 // Shape mirrors how the business actually thinks about a trip's money:
-//   - ULAA's own costs: promotion, and the two per-traveler costs (entry
+//   - Ulaa's own costs: promotion, and the two per-traveler costs (entry
 //     tickets + welcome kits) that scale with headcount.
-//   - The on-ground agency ULAA pays, either as one fixed lump sum or as a
+//   - The on-ground agency Ulaa pays, either as one fixed lump sum or as a
 //     per-traveler rate (agency_amount_type controls which).
 //   - The trip organiser's own expenses, which are their spend to run the
 //     trip on the ground and are NOT necessarily proportional to traveler
@@ -70,7 +70,7 @@ export interface TripEndBanner {
 //     entered as-is, never auto-multiplied.
 //   - Child Fare add-ons (see PaymentFormFields's Child Fare chip) get
 //     their own vendor/entry-ticket/kit rates, since a child costs
-//     ULAA a different (and usually lower) amount on every one of those
+//     Ulaa a different (and usually lower) amount on every one of those
 //     lines than an adult traveler does. Charged as one flat rate per
 //     trip — never per-child — and locked from the payment form once set
 //     here, so an add-on can never drift from the trip's configured rate.
@@ -78,8 +78,8 @@ export interface TripEndBanner {
 export interface TripFinance {
   ad_spend: number | null;                    // total promotion/ad spend for this trip
   entry_ticket_cost_per_person: number | null; // per-traveler entry/activity ticket cost
-  kit_cost_per_person: number | null;          // per-traveler welcome-kit cost (given by ULAA)
-  agency_name: string;                         // on-ground agency ULAA pays
+  kit_cost_per_person: number | null;          // per-traveler welcome-kit cost (given by Ulaa)
+  agency_name: string;                         // on-ground agency Ulaa pays
   agency_amount_type: 'fixed' | 'per_traveler';
   agency_amount: number | null;                // interpreted per agency_amount_type
   // Single flat rate per trip (same for every Child Fare add-on on this
@@ -88,7 +88,7 @@ export interface TripFinance {
   // adult entry_ticket/kit fields above, since kids can differ from
   // adults on every one of these numbers.
   child_fare_amount: number | null;              // what the traveler is charged for a Child Fare add-on
-  child_fare_vendor_amount: number | null;       // what ULAA pays the on-ground agency per child
+  child_fare_vendor_amount: number | null;       // what Ulaa pays the on-ground agency per child
   child_fare_entry_ticket_cost: number | null;   // per-child entry ticket cost (can differ from the adult rate above)
   child_fare_kit_cost: number | null;            // per-child welcome-kit cost (can differ from the adult rate above; not always 0)
   organiser_name: string;                      // person running the trip on-ground
@@ -460,7 +460,7 @@ export interface Enquiry {
   // waitlist entry into a booking, since the seat was already accounted for
   // on the waitlist rather than being a fresh request against live capacity.
   bypass_capacity_check?: boolean;
-  // Human-readable booking reference (e.g. "ULAA-2026-000123"), assigned by
+  // Human-readable booking reference (e.g. "Ulaa-2026-000123"), assigned by
   // a DB trigger the first time amount_paid goes above 0 — see
   // add_booking_id_invoice.sql. Null until then, and never re-issued or
   // cleared afterwards (including on cancellation). Drives the "Download
@@ -534,7 +534,7 @@ export interface Payment {
   payment_type: 'booking_amount' | 'balance' | 'installment' | 'refund' | 'full_payment' | 'advance' | 'addon';
   payment_method?: string;
   // Bank/UPI transaction reference, manually entered by the admin — N/A for
-  // cash. Distinct from invoice_number (ULAA's own auto-assigned per-
+  // cash. Distinct from invoice_number (Ulaa's own auto-assigned per-
   // transaction identifier). See add_payment_utr_reference.sql.
   utr_number?: string | null;
   paid_at: string;
@@ -931,7 +931,7 @@ export interface TripLeader {
 }
 
 // =============================================
-// Why ULAA / "Why Choose Us" cards (editable via Admin)
+// Why Ulaa / "Why Choose Us" cards (editable via Admin)
 // =============================================
 interface WhyUlaaFeature {
   image: string;

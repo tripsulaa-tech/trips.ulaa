@@ -88,7 +88,7 @@ export default function Footer() {
           <Link to="/" className="inline-block">
             <img
               src="/ULAA-logo-Footer.png"
-              alt="ULAA — Unseen. Local. Adventures. Activities."
+              alt="Ulaa — Unseen. Local. Adventures. Activities."
               className="w-full max-w-[260px] mx-auto h-auto -mb-3"
             />
           </Link>
@@ -173,7 +173,7 @@ export default function Footer() {
             Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> for the fearless women of India.
           </p>
           <p className="mt-2 text-xs text-cream/50">
-            © {year} ULAA · <a href="https://www.ulaatrips.com" className="hover:text-secondary transition-colors">www.ulaatrips.com</a> · All rights reserved.
+            © {year} Ulaa · <a href="https://www.ulaatrips.com" className="hover:text-secondary transition-colors">www.ulaatrips.com</a> · All rights reserved.
           </p>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function Footer() {
             <Link to="/" className="inline-block">
               <img
                 src="/ULAA-logo-Footer.png"
-                alt="ULAA — Unseen. Local. Adventures. Activities."
+                alt="Ulaa — Unseen. Local. Adventures. Activities."
                 className="w-full max-w-[210px] h-auto"
               />
             </Link>
@@ -280,7 +280,7 @@ export default function Footer() {
             Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> for the fearless women of India.
           </span>
           <span className="h-3.5 w-px bg-white/15" />
-          <span>© {year} ULAA · <a href="https://www.ulaatrips.com" className="hover:text-secondary transition-colors">www.ulaatrips.com</a> · All rights reserved.</span>
+          <span>© {year} Ulaa · <a href="https://www.ulaatrips.com" className="hover:text-secondary transition-colors">www.ulaatrips.com</a> · All rights reserved.</span>
         </div>
       </div>
     </footer>

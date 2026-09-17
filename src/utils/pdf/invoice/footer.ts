@@ -15,7 +15,7 @@ export function renderFooterAndPageNumbers(
 
   ctx.checkPageBreak(70);
   const noteText =
-    "This invoice reflects amounts recorded for this booking only. Cancellation and refund amounts, if any, are governed by ULAA's Terms & Cancellation Policy shared at the time of booking.";
+    "This invoice reflects amounts recorded for this booking only. Cancellation and refund amounts, if any, are governed by Ulaa's Terms & Cancellation Policy shared at the time of booking.";
   setFill(COLORS.gold);
   doc.circle(MARGIN + 5, cursor.y, 5, 'F');
   doc.setFont('helvetica', 'bold');

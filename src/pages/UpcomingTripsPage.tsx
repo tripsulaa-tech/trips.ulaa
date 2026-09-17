@@ -56,7 +56,7 @@ export default function UpcomingTripsPage() {
   useScrollRestoration('/trips', !loading);
 
   usePageMeta({
-    title: 'Upcoming Trips | ULAA Trips',
+    title: 'Upcoming Trips | Ulaa Trips',
     description: "Handpicked, girls-only adventures to India's most beautiful hidden destinations. Browse upcoming trips and book your seat.",
     path: '/trips',
   });

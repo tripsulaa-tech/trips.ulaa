@@ -26,7 +26,7 @@ L.Icon.Default.mergeOptions({
 
 /** Falls back to India's rough geographic centre so the map opens on
  *  a sensible view before the admin has searched or clicked anything —
- *  every ULAA trip so far departs from somewhere in India. */
+ *  every Ulaa trip so far departs from somewhere in India. */
 const DEFAULT_CENTER: [number, number] = [22.3511, 78.6677];
 const DEFAULT_ZOOM = 5;
 const SELECTED_ZOOM = 15;

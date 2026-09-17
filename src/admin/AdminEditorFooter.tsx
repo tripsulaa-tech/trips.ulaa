@@ -1,7 +1,7 @@
 import Button from '../components/ui/Button';
 
 // Sticky Save/Reset footer shared by the single-item admin content editors
-// (About, Why ULAA, Founder, Home Hero, Bottom Nav, Button Labels) — pinned
+// (About, Why Ulaa, Founder, Home Hero, Bottom Nav, Button Labels) — pinned
 // to the bottom of the card's own scroll area, same pattern as the Add Trip
 // modal's footer. Save and Reset always split the row 50/50 (`flex-1` on
 // both, `min-w-0` so the label truncates instead of forcing the flex item

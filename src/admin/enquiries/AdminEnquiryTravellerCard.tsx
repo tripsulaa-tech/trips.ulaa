@@ -429,7 +429,7 @@ export default function AdminEnquiryTravellerCard({
           {!editing && enquiry.phone && (
             <div className="flex items-center gap-2.5 min-w-0">
               <a
-                href={getWhatsAppLink(enquiry.phone, `Hi ${enquiry.full_name.trim().split(/\s+/)[0]}, following up on your ${enquiry.trip_title ? `${enquiry.trip_title} ` : ''}enquiry with ULAA — `)}
+                href={getWhatsAppLink(enquiry.phone, `Hi ${enquiry.full_name.trim().split(/\s+/)[0]}, following up on your ${enquiry.trip_title ? `${enquiry.trip_title} ` : ''}enquiry with Ulaa — `)}
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`Message ${enquiry.full_name} on WhatsApp`}

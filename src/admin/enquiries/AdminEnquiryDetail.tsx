@@ -727,13 +727,13 @@ export default function AdminEnquiryDetail() {
       if (canShareFile) {
         await navigator.share({
           files: [file],
-          title: `ULAA Invoice — ${enquiry.booking_id || ''}`,
-          text: `Invoice for booking ${enquiry.booking_id || ''} (${enquiry.trip_title || 'ULAA trip'})`,
+          title: `Ulaa Invoice — ${enquiry.booking_id || ''}`,
+          text: `Invoice for booking ${enquiry.booking_id || ''} (${enquiry.trip_title || 'Ulaa trip'})`,
         });
       } else {
         await downloadInvoicePdf(enquiry, rows);
         const text = encodeURIComponent(
-          `Hi ${enquiry.full_name}, here's your ULAA booking summary:\n` +
+          `Hi ${enquiry.full_name}, here's your Ulaa booking summary:\n` +
           `Booking ID: ${enquiry.booking_id || '—'}\n` +
           `Trip: ${enquiry.trip_title || '—'}\n` +
           `Amount paid: ${formatPrice(enquiry.amount_paid || 0)}${enquiry.total_amount ? ` of ${formatPrice(enquiry.total_amount)}` : ''}\n` +
@@ -1120,7 +1120,7 @@ export default function AdminEnquiryDetail() {
                   };
                   measure();
                   // The iframe's own load event can fire before the two
-                  // external ULAA logo images (one of them the taller
+                  // external Ulaa logo images (one of them the taller
                   // logo+tagline "footer" variant — see the .logo-dark
                   // comment in bookingEmail.ts) have actually finished
                   // decoding, since they're fetched from ulaatrips.com

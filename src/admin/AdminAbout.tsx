@@ -33,11 +33,11 @@ const SECTION_TITLES = [
   '1 · Hero Banner',
   '2 · Our Story',
   '3 · To Unforgettable Journeys',
-  '4 · Why ULAA is Different',
+  '4 · Why Ulaa is Different',
   '5 · Our Community',
   '6 · Statistics',
   '7 · What Our Girls Say',
-  '8 · Your ULAA Journey',
+  '8 · Your Ulaa Journey',
 ];
 
 export default function AdminAbout() {

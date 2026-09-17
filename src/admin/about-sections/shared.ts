@@ -8,7 +8,7 @@ export const iconLabelClass = 'flex items-center gap-1.5 text-sm font-medium tex
 export const helperTextClass = 'text-2xs text-dark-muted leading-snug mb-1.5';
 
 // Repeatable-item card shell — mirrors the "pro" card treatment applied to
-// the Home Page editor's Why ULAA cards (see home-sections/WhyUlaaSection.tsx):
+// the Home Page editor's Why Ulaa cards (see home-sections/WhyUlaaSection.tsx):
 // a numbered header bar instead of a bare "Card N" label, with a soft
 // hover-highlight border so the list doesn't read as a flat stack of boxes.
 export const itemCardClass = 'rounded-xl border-2 border-background-warm bg-white overflow-hidden hover:border-primary/30 transition-colors';
@@ -17,6 +17,6 @@ export const itemNumberBadgeClass = 'flex items-center justify-center w-5 h-5 ro
 
 // Live-preview box used under a heading/eyebrow/subheading trio so an admin
 // can see roughly how the text will read on the public page without leaving
-// the panel — same treatment as the Home Page editor's "Why ULAA" preview.
+// the panel — same treatment as the Home Page editor's "Why Ulaa" preview.
 export const previewLabelClass = 'text-2xs font-medium text-dark-muted uppercase tracking-wide mb-1.5';
 export const previewBoxClass = 'rounded-lg bg-cream border border-background-warm px-5 py-6 flex flex-col items-center text-center gap-2';

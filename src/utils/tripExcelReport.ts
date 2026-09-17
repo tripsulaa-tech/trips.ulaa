@@ -1,4 +1,4 @@
-// ULAA Reports .xlsx export — powers the "Export Excel" button on the
+// Ulaa Reports .xlsx export — powers the "Export Excel" button on the
 // Reports page (see AdminReports.tsx). Produces a single styled workbook,
 // colored with the app's own brand palette (src/styles/globals.css's
 // @theme block) rather than a one-off palette, containing:
@@ -167,7 +167,7 @@ function breakdownItemRow(label: string, amount: number, cols: number, opts: { b
 }
 
 // Itemized cost breakdown block: a bold section label ("Organiser Costs" /
-// "ULAA Costs"), one row per underlying TripFinance line item the admin
+// "Ulaa Costs"), one row per underlying TripFinance line item the admin
 // actually entered on the Finances tab, and a bold Total row. `total` is
 // passed in from the already-computed ulaaCosts/organiserCosts figure
 // (not re-summed from `items`) so this can never drift from the summary
@@ -192,7 +192,7 @@ const TRIP_SHEET_COLUMNS = [{ width: 28 }, { width: 16 }, { width: 16 }, { width
 function buildTripSheetRows(trip: TripExcelReportRow): Row[] {
   const rows: Row[] = [];
 
-  rows.push(bannerRow('ULAA Reports', TRIP_COLS));
+  rows.push(bannerRow('Ulaa Reports', TRIP_COLS));
   rows.push(blankRow(TRIP_COLS));
 
   rows.push(columnHeaderRow(['Trip', 'Travelers', 'Veg', 'Non Veg'], TRIP_COLS));
@@ -205,7 +205,7 @@ function buildTripSheetRows(trip: TripExcelReportRow): Row[] {
   rows.push(blankRow(TRIP_COLS));
 
   rows.push(sectionTitleRow('Cost & Profit Summary', TRIP_COLS));
-  rows.push(columnHeaderRow(['Revenue', 'ULAA Costs', 'Organiser Costs', 'Total Costs', 'Net Profit', 'Profit/Person'], TRIP_COLS));
+  rows.push(columnHeaderRow(['Revenue', 'Ulaa Costs', 'Organiser Costs', 'Total Costs', 'Net Profit', 'Profit/Person'], TRIP_COLS));
   rows.push(padRow([
     dataCell(trip.revenue, { tone: 'positive' }),
     dataCell(trip.ulaaCosts),
@@ -233,7 +233,7 @@ function buildTripSheetRows(trip: TripExcelReportRow): Row[] {
   rows.push(blankRow(TRIP_COLS));
 
   rows.push(...costBreakdownBlock('Organiser Costs', trip.organiserCostBreakdown, trip.organiserCosts, TRIP_COLS));
-  rows.push(...costBreakdownBlock('ULAA Costs', trip.ulaaCostBreakdown, trip.ulaaCosts, TRIP_COLS));
+  rows.push(...costBreakdownBlock('Ulaa Costs', trip.ulaaCostBreakdown, trip.ulaaCosts, TRIP_COLS));
 
   return rows;
 }

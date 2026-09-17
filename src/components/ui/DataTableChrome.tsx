@@ -335,8 +335,8 @@ export function ContactQuickLinks({ phone, email, name, tripTitle, size = 'sm' }
   const firstName = name?.trim().split(/\s+/)[0];
   const greeting = firstName ? `Hi ${firstName}` : 'Hi';
   const whatsappMessage = tripTitle
-    ? `${greeting}, following up on your ${tripTitle} enquiry with ULAA — `
-    : `${greeting}, following up on your enquiry with ULAA — `;
+    ? `${greeting}, following up on your ${tripTitle} enquiry with Ulaa — `
+    : `${greeting}, following up on your enquiry with Ulaa — `;
 
   const btnClass = `shrink-0 inline-flex items-center justify-center ${dim} rounded-full border border-background-warm text-dark-muted hover:border-primary/40 hover:text-primary transition-colors`;
 

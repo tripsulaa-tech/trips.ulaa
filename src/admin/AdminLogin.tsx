@@ -69,9 +69,9 @@ export default function AdminLogin() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <img src="/ULAA-logo.png" alt="ULAA" className="h-28 mx-auto mb-4" />
+          <img src="/ULAA-logo.png" alt="Ulaa" className="h-28 mx-auto mb-4" />
           <h1 className="font-display text-3xl font-bold text-dark">Admin Panel</h1>
-          <p className="text-dark-muted text-sm mt-1">Sign in to manage ULAA trips and enquiries.</p>
+          <p className="text-dark-muted text-sm mt-1">Sign in to manage Ulaa trips and enquiries.</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-warm-lg p-8">

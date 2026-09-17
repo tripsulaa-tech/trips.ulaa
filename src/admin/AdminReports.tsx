@@ -689,7 +689,7 @@ export default function AdminReports() {
 
     const f = t.finance;
 
-    // ULAA Costs breakdown — mirrors computeTripFinanceSummary's own
+    // Ulaa Costs breakdown — mirrors computeTripFinanceSummary's own
     // ulaaCosts formula (ad spend + per-traveler costs + agency + child
     // fare costs) line by line, using the already-computed per-traveler
     // and agency figures from `t` (entryTicketCosts, kitCosts, agencyCost,

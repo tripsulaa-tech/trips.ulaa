@@ -5,7 +5,7 @@ import { collectStorageUrls } from '../utils/utils-index';
 import { useSectionTabChrome } from './useSectionTabChrome';
 
 // Shared by every "single site_content record, edited on its own admin
-// page" screen (About, Founder, Why ULAA, ...): load-on-mount with a
+// page" screen (About, Founder, Why Ulaa, ...): load-on-mount with a
 // defaults fallback, a save that diffs+cleans up orphaned storage images,
 // an unsaved-changes snapshot for AdminLayout's navigate-away guard, and
 // the tab bar / page-search / scroll-spy chrome (delegated to

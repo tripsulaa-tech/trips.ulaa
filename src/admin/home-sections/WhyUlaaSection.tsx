@@ -34,7 +34,7 @@ export default function WhyUlaaSection({
     <div ref={sectionRef} data-section={2} className="scroll-mt-4 space-y-8">
       <div className="space-y-4">
         <div className="pb-3 border-b border-background-warm">
-          <h2 className="font-display text-lg font-bold text-dark">Why ULAA — Section Text</h2>
+          <h2 className="font-display text-lg font-bold text-dark">Why Ulaa — Section Text</h2>
           <p className="text-xs text-dark-muted mt-1">
             The heading block and the 6 image cards shown in the "Travel differently." section on the home page.
           </p>

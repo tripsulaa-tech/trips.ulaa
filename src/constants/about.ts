@@ -5,7 +5,7 @@ export const DEFAULT_ABOUT: AboutContent = {
   hero: {
     image: '',
     mobile_image: '',
-    heading: 'About ULAA',
+    heading: 'About Ulaa',
     subheading: 'Unseen. Local. Adventures. Activities. — A girls-only travel revolution.',
     cta_label: 'Explore Trips',
     cta_url: '/trips',
@@ -16,7 +16,7 @@ export const DEFAULT_ABOUT: AboutContent = {
     sub_heading: 'How It Began',
     heading: 'Our Story',
     description:
-      'ULAA was born from a simple frustration — why should women have to compromise their sense of adventure because the world hasn\'t made it safe enough? We set out to change that. Every trip we design puts safety, sisterhood, and soul-level experiences at the centre.',
+      'Ulaa was born from a simple frustration — why should women have to compromise their sense of adventure because the world hasn\'t made it safe enough? We set out to change that. Every trip we design puts safety, sisterhood, and soul-level experiences at the centre.',
     image: '',
   },
 
@@ -35,7 +35,7 @@ export const DEFAULT_ABOUT: AboutContent = {
       ],
     },
     welcome_to_ulaa: {
-      heading: 'Welcome to ULAA',
+      heading: 'Welcome to Ulaa',
       subheading: 'Your home for safe, soulful, sisterhood travel.',
       items: [
         { icon: 'shield-check', title: 'Safety First', description: 'Every destination, accommodation, and guide is vetted with women\'s safety as the top priority.' },
@@ -49,7 +49,7 @@ export const DEFAULT_ABOUT: AboutContent = {
   // 5. Why Ulaa is Different
   why_different: {
     sub_heading: 'Beyond the Ordinary',
-    heading: 'Why ULAA is Different',
+    heading: 'Why Ulaa is Different',
     subheading: 'Thoughtfully crafted for every traveler.',
     cards: [
       { heading: 'Women-Only Safe Spaces', description: 'Every trip is exclusively for women, creating an environment where you can truly let your guard down.', image: '' },
@@ -90,7 +90,7 @@ export const DEFAULT_ABOUT: AboutContent = {
   // 9. Your Ulaa Journey
   journey: {
     sub_heading: 'One Step Closer',
-    heading: 'Your ULAA Journey',
+    heading: 'Your Ulaa Journey',
     subheading: 'One booking. Countless unforgettable moments.',
     steps: [
       { heading: 'Discover Your Trip', description: 'Browse our carefully curated calendar of upcoming women-only trips across India and beyond.', icon: 'compass' },

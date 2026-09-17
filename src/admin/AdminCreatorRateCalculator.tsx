@@ -230,7 +230,7 @@ const DEFAULT_MESSAGE_TEMPLATE = [
   '{{items}}',
   '',
   'These are our suggested ranges — happy to discuss and finalise. Let us know your thoughts!',
-  '— Team ULAA',
+  '— Team Ulaa',
 ].join('\n');
 
 const DEFAULT_VARIANT_ID = 'default';

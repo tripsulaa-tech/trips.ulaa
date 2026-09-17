@@ -1,5 +1,5 @@
 // =============================================
-// ULAA - Utility Functions
+// Ulaa - Utility Functions
 // =============================================
 
 import type { CSSProperties } from 'react';
@@ -265,7 +265,7 @@ export function getWhatsAppLink(phone: string, message?: string): string {
   // (see the phone input patterns in BookingForm/WaitlistForm), which
   // would otherwise produce a broken link.
   const digitsOnly = phone.replace(/\D/g, '');
-  const encoded = encodeURIComponent(message || 'Hi! I am interested in ULAA trips.');
+  const encoded = encodeURIComponent(message || 'Hi! I am interested in Ulaa trips.');
   return `https://wa.me/${digitsOnly}?text=${encoded}`;
 }
 
@@ -380,7 +380,7 @@ export function getVisitorId(): string {
 // Walks an arbitrary JSON-shaped value (objects, arrays, strings mixed
 // together) and collects every string that looks like a Supabase storage
 // URL for the given bucket. Used by page-level admin forms (About, Why
-// ULAA) that don't have a single flat list of image fields the way a
+// Ulaa) that don't have a single flat list of image fields the way a
 // modal form does — content here is a nested tree of sections, each of
 // which may or may not hold an image URL — so rather than hand-maintain a
 // list of every image field (and have it drift as sections are added),

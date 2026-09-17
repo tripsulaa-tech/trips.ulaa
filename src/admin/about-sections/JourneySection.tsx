@@ -36,8 +36,8 @@ export default function JourneySection({
   return (
     <div ref={sectionRef} data-section={8} className="scroll-mt-4 space-y-4">
       <div className="pb-3 border-b border-background-warm">
-        <h2 className="font-display text-lg font-bold text-dark">8 · Your ULAA Journey</h2>
-        <p className="text-xs text-dark-muted mt-1">The heading block and up to 10 step cards shown in the closing "Your ULAA Journey" timeline.</p>
+        <h2 className="font-display text-lg font-bold text-dark">8 · Your Ulaa Journey</h2>
+        <p className="text-xs text-dark-muted mt-1">The heading block and up to 10 step cards shown in the closing "Your Ulaa Journey" timeline.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -90,7 +90,7 @@ export default function JourneySection({
         <p className={previewLabelClass}>Live preview</p>
         <div className={previewBoxClass}>
           <span className="font-script text-2xl text-primary">{content.sub_heading || 'One Step Closer'}</span>
-          <span className="font-display text-2xl sm:text-3xl font-bold text-dark leading-tight">{content.heading || 'Your ULAA Journey'}</span>
+          <span className="font-display text-2xl sm:text-3xl font-bold text-dark leading-tight">{content.heading || 'Your Ulaa Journey'}</span>
           {content.subheading && (
             <span className="text-sm text-dark-muted max-w-md leading-relaxed">{content.subheading}</span>
           )}

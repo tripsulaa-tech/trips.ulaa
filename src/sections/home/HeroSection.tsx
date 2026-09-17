@@ -167,7 +167,7 @@ export default function HeroSection() {
                 )}
                 <img
                   src={currentSlide.image}
-                  alt="ULAA — Girls-only travel experiences"
+                  alt="Ulaa — Girls-only travel experiences"
                   className="w-full h-full object-cover"
                   fetchPriority={index === 0 ? 'high' : 'auto'}
                   draggable={false}

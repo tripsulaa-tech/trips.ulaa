@@ -36,7 +36,7 @@ Our first stop was Cherrapunji — the wettest place on Earth, and for good reas
 
 The highlight? The Double Decker Living Root Bridge. A two-hour trek through dense forest, over handmade bamboo bridges, across rushing streams. By the time we saw it — a bridge grown entirely from the roots of a rubber tree over 500 years — there wasn't a dry eye among us.
 
-The nights were spent in a small homestay run by a Khasi grandmother who cooked the most extraordinary rice and smoked pork. She laughed when we told her this was our favorite meal on any ULAA trip.
+The nights were spent in a small homestay run by a Khasi grandmother who cooked the most extraordinary rice and smoked pork. She laughed when we told her this was our favorite meal on any Ulaa trip.
 
 Meghalaya reminded us why we travel — not for Instagram, but for the moments that change you.`,
   participants: 14,
@@ -74,7 +74,7 @@ export default function AlbumPage() {
   // own once it arrives — so sharing an album link renders that album's
   // title and cover photo instead of the site-wide default.
   usePageMeta({
-    title: album ? `${album.title} | ULAA Trips` : 'Completed Trips | ULAA Trips',
+    title: album ? `${album.title} | Ulaa Trips` : 'Completed Trips | Ulaa Trips',
     description: album?.description,
     image: album?.cover_image,
     path: `/completed-trips/${slug ?? ''}`,

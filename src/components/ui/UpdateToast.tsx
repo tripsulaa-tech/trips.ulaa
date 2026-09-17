@@ -20,7 +20,7 @@ export default function UpdateToast() {
       <div className="flex items-center gap-3 bg-dark text-white rounded-xl shadow-lg px-4 py-3">
         <RefreshCw size={18} className="shrink-0 text-primary" />
         <div className="flex-1 text-sm font-body">
-          <p className="font-semibold">A new version of ULAA is available</p>
+          <p className="font-semibold">A new version of Ulaa is available</p>
           <p className="text-white/70 text-xs">Refresh whenever you're ready.</p>
         </div>
         <button

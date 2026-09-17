@@ -14,7 +14,7 @@ import {
 
 // Soft limits matching the card's real-world footprint on the public page
 // (aspect-[4/3] tile, heading text-sm sm:text-base, description text-xs) —
-// same treatment as the Home Page editor's Why ULAA cards.
+// same treatment as the Home Page editor's Why Ulaa cards.
 const HEADING_SOFT_LIMIT = 26;
 const DESCRIPTION_SOFT_LIMIT = 85;
 
@@ -36,8 +36,8 @@ export default function WhyDifferentSection({
   return (
     <div ref={sectionRef} data-section={4} className="scroll-mt-4 space-y-4">
       <div className="pb-3 border-b border-background-warm">
-        <h2 className="font-display text-lg font-bold text-dark">4 · Why ULAA is Different</h2>
-        <p className="text-xs text-dark-muted mt-1">The heading block and up to 6 photo cards shown in the "Why ULAA is Different" section.</p>
+        <h2 className="font-display text-lg font-bold text-dark">4 · Why Ulaa is Different</h2>
+        <p className="text-xs text-dark-muted mt-1">The heading block and up to 6 photo cards shown in the "Why Ulaa is Different" section.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -90,7 +90,7 @@ export default function WhyDifferentSection({
         <p className={previewLabelClass}>Live preview</p>
         <div className={previewBoxClass}>
           <span className="font-script text-2xl text-primary">{content.sub_heading || 'Beyond the Ordinary'}</span>
-          <span className="font-display text-2xl sm:text-3xl font-bold text-dark leading-tight">{content.heading || 'Why ULAA is Different'}</span>
+          <span className="font-display text-2xl sm:text-3xl font-bold text-dark leading-tight">{content.heading || 'Why Ulaa is Different'}</span>
           {content.subheading && (
             <span className="text-sm text-dark-muted max-w-md leading-relaxed">{content.subheading}</span>
           )}

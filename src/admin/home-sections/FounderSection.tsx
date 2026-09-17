@@ -64,7 +64,7 @@ export default function FounderSection({
             value={content.designation}
             onChange={e => setFounder('designation', e.target.value)}
             className={inputClass}
-            placeholder="Founder & CEO, ULAA"
+            placeholder="Founder & CEO, Ulaa"
           />
         </div>
       </div>

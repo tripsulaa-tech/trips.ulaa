@@ -53,7 +53,7 @@ export default function Navbar() {
           <Link to="/" onClick={handleLogoClick} className="flex items-center gap-3 group">
             <img
               src="/ULAA-logo.png"
-              alt="ULAA Logo"
+              alt="Ulaa Logo"
               className="h-14 sm:h-16 w-auto transition-transform duration-300 group-hover:scale-105"
             />
           </Link>

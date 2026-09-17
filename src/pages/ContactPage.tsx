@@ -17,13 +17,12 @@ import {
   Leaf,
   Heart,
   MapTrifold,
-  UsersThree,
-  Star,
   TreePalm,
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import SectionTitle from '../components/ui/SectionTitle';
+import TripHighlightIconDisplay from '../components/ui/TripHighlightIconDisplay';
 import { WhatsAppIcon } from '../components/icons/WhatsAppIcon';
 import { submitContactEnquiry } from '../services/api';
 import { useBotTrap } from '../utils/botProtection';
@@ -54,33 +53,30 @@ const HERO_CHIPS = [
   { Icon: MapTrifold, label: 'Personalized Plans' },
 ] as const;
 
-// "Why Travel with ULAA?" strip at the foot of the page. Each tile gets its
-// own pastel circle rather than the page's single brand orange, so the four
-// read as a set of distinct promises instead of one repeated badge.
+// "Why Travel with Ulaa?" strip at the foot of the page. Uses the same solid,
+// filled icon-circle treatment (TripHighlightIconDisplay) as the "Why You'll
+// Love This Trip" cards on the trip detail page, rather than a hover-only
+// pastel state, so the promise reads clearly without needing a hover/tap.
 const WHY_ULAA = [
   {
-    Icon: UsersThree,
+    icon: 'users-three',
     title: 'Women-First Community',
     description: 'A safe, supportive space for women travelers.',
-    circle: 'bg-green-50 text-green-600',
   },
   {
-    Icon: Leaf,
+    icon: 'leaf',
     title: 'Authentic Experiences',
     description: 'Hidden gems, local stories and real connections.',
-    circle: 'bg-orange-50 text-primary',
   },
   {
-    Icon: Heart,
+    icon: 'heart',
     title: 'Trip Assistance',
     description: "From planning to packing, we're with you.",
-    circle: 'bg-pink-50 text-pink-500',
   },
   {
-    Icon: Star,
+    icon: 'star',
     title: 'Thoughtfully Curated',
     description: 'Small groups, big memories.',
-    circle: 'bg-blue-50 text-blue-500',
   },
 ] as const;
 
@@ -102,8 +98,8 @@ export default function ContactPage() {
   useScrollRestoration('/contact', true);
 
   usePageMeta({
-    title: 'Contact Us | ULAA Trips',
-    description: "Got questions, custom plans, or just want to say hi? Reach the ULAA team on WhatsApp, email or Instagram.",
+    title: 'Contact Us | Ulaa Trips',
+    description: "Got questions, custom plans, or just want to say hi? Reach the Ulaa team on WhatsApp, email or Instagram.",
     path: '/contact',
   });
 
@@ -562,7 +558,7 @@ export default function ContactPage() {
       </section>
 
       {/* ---------------------------------------------------------------
-          Why travel with ULAA
+          Why travel with Ulaa
          --------------------------------------------------------------- */}
       <section className="bg-cream px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
         <div className="max-w-[1344px] mx-auto">
@@ -571,18 +567,18 @@ export default function ContactPage() {
               variant="plain"
               align="center"
               size="xl"
-              label="The ULAA difference"
-              title="Why Travel with ULAA?"
+              label="The Ulaa difference"
+              title="Why Travel with Ulaa?"
               subtitle="Not just trips. A community of like-minded explorers."
             />
           </motion.div>
 
           <div className="mt-10 sm:mt-12 grid grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6">
-            {WHY_ULAA.map(({ Icon, title, description, circle }, index) => (
+            {WHY_ULAA.map(({ icon, title, description }, index) => (
               <motion.div key={title} {...fadeUp(index * 0.08)} className="text-center px-2">
-                <span className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center ${circle}`}>
-                  <Icon size={28} />
-                </span>
+                <div className="mx-auto w-fit">
+                  <TripHighlightIconDisplay icon={icon} index={index} size="md" filled />
+                </div>
                 <h3 className="font-display font-bold text-dark mt-4">{title}</h3>
                 <p className="text-dark-muted text-sm mt-2 leading-relaxed">{description}</p>
               </motion.div>

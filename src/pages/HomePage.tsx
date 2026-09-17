@@ -22,8 +22,8 @@ export default function HomePage() {
   useScrollRestoration('/', true);
 
   usePageMeta({
-    title: 'ULAA Trips — Unseen. Local. Adventures. Activities.',
-    description: "ULAA Trips — Unseen. Local. Adventures. Activities. Girls-only travel community organizing curated trips to India's hidden destinations.",
+    title: 'Ulaa Trips — Unseen. Local. Adventures. Activities.',
+    description: "Ulaa Trips — Unseen. Local. Adventures. Activities. Girls-only travel community organizing curated trips to India's hidden destinations.",
     path: '/',
   });
 

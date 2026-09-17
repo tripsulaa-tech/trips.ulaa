@@ -6,11 +6,11 @@ import { useEffect } from 'react';
 const DEFAULT_IMAGE = 'https://www.ulaatrips.com/ULAA-logo.png';
 
 interface PageMetaOptions {
-  /** Full document title for this page, e.g. "Upcoming Trips | ULAA Trips". */
+  /** Full document title for this page, e.g. "Upcoming Trips | Ulaa Trips". */
   title: string;
   /** Meta/OG description. Falls back to index.html's site-wide description when omitted. */
   description?: string;
-  /** OG/Twitter image URL. Falls back to the ULAA logo when omitted. */
+  /** OG/Twitter image URL. Falls back to the Ulaa logo when omitted. */
   image?: string;
   /** Route path (not the live URL) used to build the canonical link and og:url,
    *  e.g. '/trips' or `/trips/${slug}`. Defaults to the current location. */

@@ -28,8 +28,8 @@ interface CalendarEventFields {
 }
 
 function buildEventFields(trip: UpcomingTrip): CalendarEventFields {
-  const title = `${trip.title} — ULAA Trip`;
-  const details = trip.description || `Trip to ${trip.destination} with ULAA.`;
+  const title = `${trip.title} — Ulaa Trip`;
+  const details = trip.description || `Trip to ${trip.destination} with Ulaa.`;
   const location = trip.meeting_point || trip.destination;
   const start = toCalendarDate(trip.start_date);
   const end = toCalendarDate(dayAfter(trip.end_date));

@@ -5,7 +5,7 @@ import AdminEditorFooter from './AdminEditorFooter';
 import Select from '../components/ui/Select';
 
 // The wrapper markup shared by every useContentEditorPage-based screen
-// (About, Founder, Why ULAA, ...): bordered white card with its own scroll
+// (About, Founder, Why Ulaa, ...): bordered white card with its own scroll
 // area (the thicker "app-scroll" scrollbar), a pinned search bar + tab bar
 // up top, and a footer that blends into and sticks to the bottom of the
 // card while the sections scroll — same skeleton as the Add Trip popup,

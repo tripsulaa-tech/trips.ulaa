@@ -25,7 +25,7 @@ const Ph = new Proxy({} as Record<string, PhosphorIcon>, {
 });
 
 // =============================================
-// ULAA — Trip Highlight Icon Library
+// Ulaa — Trip Highlight Icon Library
 // =============================================
 // Curated set of "app theme" icons admins can pick from when building the
 // "Why You'll Love This Trip" cards (TripHighlightCard.icon). Each entry has
@@ -1663,7 +1663,7 @@ export function searchTripHighlightIcons(query: string): TripHighlightIconMeta[]
 
 /**
  * Rotating pastel palette for the highlight-card icon circles, keeping the
- * same warm ULAA brand tones (primary/secondary/gold) while still giving
+ * same warm Ulaa brand tones (primary/secondary/gold) while still giving
  * each card in the row a distinct look, matching the "Why You'll Love This
  * Trip" reference design.
  */

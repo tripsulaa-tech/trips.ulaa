@@ -30,7 +30,7 @@ const DEMO_COMPLETED: CompletedTrip[] = [
   {
     id: '3', title: 'Andaman Island Hopping', destination: 'Andaman Islands',
     slug: 'andaman-island-hopping', trip_date: '2024-06-10',
-    description: 'Pristine beaches, bioluminescent waters, and snorkeling through coral gardens with our 12 fearless ULAA women.',
+    description: 'Pristine beaches, bioluminescent waters, and snorkeling through coral gardens with our 12 fearless Ulaa women.',
     participants: 12, cover_image: 'https://images.unsplash.com/photo-1519922639192-e73293ca430e?w=600&q=80',
     gallery_images: [],
     is_published: true, likes_count: 0, created_at: '', updated_at: '',

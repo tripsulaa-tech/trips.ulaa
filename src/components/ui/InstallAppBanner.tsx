@@ -135,18 +135,18 @@ export default function InstallAppBanner() {
       />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-dark">
-          {isAdmin ? 'Install ULAA Admin' : 'Install the ULAA app'}
+          {isAdmin ? 'Install Ulaa Admin' : 'Install the Ulaa app'}
         </p>
         <p className="mt-0.5 text-xs text-dark-muted">
           {ios
             ? isAdmin
               ? 'Add the admin dashboard to your home screen for quick access.'
-              : 'Add ULAA to your home screen for a faster, app-like experience.'
+              : 'Add Ulaa to your home screen for a faster, app-like experience.'
             : canInstall
               ? isAdmin
                 ? 'Add the admin dashboard to your home screen for quick access.'
-                : 'Add ULAA to your home screen for a faster, app-like experience.'
-              : 'The main ULAA app is already installed on this device, so use "Create shortcut" instead to get a separate Admin icon.'}
+                : 'Add Ulaa to your home screen for a faster, app-like experience.'
+              : 'The main Ulaa app is already installed on this device, so use "Create shortcut" instead to get a separate Admin icon.'}
         </p>
         {ios && iosBrowser ? (
           <div className="mt-3 flex gap-2">
@@ -222,7 +222,7 @@ export default function InstallAppBanner() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <p className="text-sm font-semibold text-dark">
-                  {isAdmin ? 'Install ULAA Admin' : 'Install the ULAA app'}
+                  {isAdmin ? 'Install Ulaa Admin' : 'Install the Ulaa app'}
                 </p>
                 <ol className="mt-3 space-y-3">
                   {IOS_STEPS[iosBrowser].map((step) => (
