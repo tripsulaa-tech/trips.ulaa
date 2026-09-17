@@ -111,7 +111,7 @@ export default function ActionsMenu({ items, disabled, label = 'Actions', varian
           ref={menuRef}
           role="menu"
           style={{ position: 'fixed', top: coords.top, left: coords.left, width: MENU_WIDTH }}
-          className="z-50 bg-white rounded-md shadow-lg border border-background-warm py-1"
+          className="z-50 bg-white rounded-lg shadow-lg border border-background-warm py-1"
         >
           {visibleItems.map((item, i) => {
             const prevItem = visibleItems[i - 1];

@@ -68,7 +68,7 @@ const WHY_ULAA = [
     Icon: Leaf,
     title: 'Authentic Experiences',
     description: 'Hidden gems, local stories and real connections.',
-    circle: 'bg-orange-50 text-primary',
+    circle: 'bg-primary/10 text-primary',
   },
   {
     Icon: Heart,
@@ -298,7 +298,7 @@ export default function ContactPage() {
                   href={`mailto:${EMAIL}`}
                   className="group flex flex-col rounded-2xl border border-background-warm bg-white p-5 shadow-card hover:shadow-card-hover transition-shadow"
                 >
-                  <span className="w-11 h-11 rounded-xl bg-orange-50 text-primary flex items-center justify-center">
+                  <span className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                     <Envelope size={22} />
                   </span>
                   <p className="font-display font-bold text-dark mt-4">Email Us</p>
@@ -329,7 +329,7 @@ export default function ContactPage() {
 
                 {/* Based in India — informational, so it's a div, not a link */}
                 <div className="flex flex-col rounded-2xl border border-background-warm bg-white p-5 shadow-card">
-                  <span className="w-11 h-11 rounded-xl bg-orange-50 text-primary flex items-center justify-center">
+                  <span className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                     <MapPin size={22} />
                   </span>
                   <p className="font-display font-bold text-dark mt-4">Based in India</p>

@@ -250,7 +250,7 @@ export default function AlbumPage() {
             <div className="flex flex-wrap items-center gap-x-6 sm:gap-x-10 gap-y-4">
               {META_STATS.map(({ Icon, label, value }) => value !== null && (
                 <div key={label} className="flex items-center gap-3">
-                  <span className="w-9 h-9 shrink-0 rounded-lg bg-orange-50 text-primary flex items-center justify-center">
+                  <span className="w-9 h-9 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <Icon size={18} />
                   </span>
                   <span className="leading-tight">

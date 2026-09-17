@@ -87,7 +87,7 @@ export default function Select<T extends string | number = string>({
             width: coords.width,
             maxHeight: 240,
           }}
-          className="z-[100] overflow-auto app-scroll rounded-md border-2 border-background-warm bg-white shadow-warm-lg py-1"
+          className="z-[100] overflow-auto app-scroll rounded-lg border-2 border-background-warm bg-white shadow-warm-lg py-1"
         >
           {options.map(opt => (
             <li key={String(opt.value)} role="option" aria-selected={opt.value === value}>

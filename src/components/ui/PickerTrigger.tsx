@@ -44,7 +44,7 @@ export function PickerTrigger({
   return (
     <span
       onClick={() => !disabled && onToggle()}
-      className={`relative w-full flex items-center gap-2 rounded-lg border-2 bg-background text-dark cursor-pointer ${isOpen ? 'border-primary' : 'border-background-warm hover:border-primary/50'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${sizeClasses} ${className}`}
+      className={`relative w-full flex items-center gap-2 rounded-md border-2 bg-background text-dark cursor-pointer ${isOpen ? 'border-primary' : 'border-background-warm hover:border-primary/50'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${sizeClasses} ${className}`}
     >
       <button
         ref={triggerRef}

@@ -92,7 +92,7 @@ export function TripSearchFilterBar({
             placeholder="Search destination or trip..."
             value={search}
             onChange={e => onSearchChange(e.target.value)}
-            className="w-full pl-12 pr-4 py-2 rounded-lg border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
+            className="w-full pl-12 pr-4 py-2 rounded-md border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
           />
         </div>
         {/* Month filter - desktop */}
@@ -104,7 +104,7 @@ export function TripSearchFilterBar({
           onClick={onToggleFilters}
           aria-expanded={showFilters}
           aria-controls="mobile-month-filters"
-          className="md:hidden flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-background-warm text-dark font-button text-sm shrink-0"
+          className="md:hidden flex items-center gap-2 px-4 py-2 rounded-md border-2 border-background-warm text-dark font-button text-sm shrink-0"
         >
           <Filter size={16} aria-hidden="true" />
           Filter

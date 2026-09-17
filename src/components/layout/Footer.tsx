@@ -80,7 +80,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-[#271e18] text-[#fdfcf6] overflow-hidden">
+    <footer className="bg-dark text-cream/95 overflow-hidden">
       {/* ===================== MOBILE / TABLET ===================== */}
       <div className="lg:hidden">
         <div className="max-w-md mx-auto px-6 sm:px-8 pt-6 pb-10 text-center">
@@ -94,7 +94,7 @@ export default function Footer() {
           </Link>
 
           {/* Tagline */}
-          <p className="mt-4 text-[#a89a8a] text-base leading-relaxed">
+          <p className="mt-4 text-cream/60 text-base leading-relaxed">
             Girls-only travel experiences
             <br />
             Discover hidden destinations together.
@@ -110,7 +110,7 @@ export default function Footer() {
               aria-label={label}
               className="flex flex-col items-center gap-2 group"
             >
-              <span className="w-16 h-16 rounded-full border border-[#a85a2a]/40 flex items-center justify-center text-[#e4782f] transition-colors group-hover:bg-[#a85a2a]/10">
+              <span className="w-16 h-16 rounded-full border border-primary/40 flex items-center justify-center text-secondary transition-colors group-hover:bg-primary/10">
                 {icon}
               </span>
             </a>
@@ -119,11 +119,11 @@ export default function Footer() {
 
         {/* Ornamental divider */}
         <div className="mt-6 flex items-center gap-3">
-          <span className="h-px flex-1 bg-[#a85a2a]/40" />
-          <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#e4782f]" fill="currentColor">
+          <span className="h-px flex-1 bg-primary/40" />
+          <svg viewBox="0 0 24 24" className="w-4 h-4 text-secondary" fill="currentColor">
             <path d="M12 2c1 3 3 5 6 6-3 1-5 3-6 6-1-3-3-5-6-6 3-1 5-3 6-6z" />
           </svg>
-          <span className="h-px flex-1 bg-[#a85a2a]/40" />
+          <span className="h-px flex-1 bg-primary/40" />
         </div>
 
         {/* Nav row */}
@@ -134,8 +134,8 @@ export default function Footer() {
               to={to}
               className={`flex flex-col items-center gap-2 px-1 ${i !== 0 ? 'border-l border-white/10' : ''}`}
             >
-              <Icon className="w-5 h-5 text-[#efe3cf]" strokeWidth={1.75} />
-              <span className="text-xs sm:text-sm leading-tight text-[#efe3cf]">
+              <Icon className="w-5 h-5 text-cream" strokeWidth={1.75} />
+              <span className="text-xs sm:text-sm leading-tight text-cream">
                 {label.split(' ').map((word, idx) => (
                   <span key={idx} className="block">{word}</span>
                 ))}
@@ -148,32 +148,32 @@ export default function Footer() {
         <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.03] py-3.5 px-3 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
           <a
             href="mailto:trips.ulaa@gmail.com"
-            className="flex items-center gap-1 text-2xs sm:text-2xs text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors whitespace-nowrap shrink-0"
+            className="flex items-center gap-1 text-2xs sm:text-2xs text-cream/95 hover:text-secondary transition-colors whitespace-nowrap shrink-0"
           >
-            <Mail className="w-3.5 h-3.5 text-[#e4782f] shrink-0" strokeWidth={1.75} />
+            <Mail className="w-3.5 h-3.5 text-secondary shrink-0" strokeWidth={1.75} />
             trips.ulaa@gmail.com
           </a>
           <span className="h-6 w-px bg-white/10 shrink-0" />
           <a
             href="tel:+916381336772"
-            className="flex items-center gap-1 text-2xs sm:text-2xs text-[#fdfcf6]/95 hover:text-[#e4782f] transition-colors whitespace-nowrap shrink-0"
+            className="flex items-center gap-1 text-2xs sm:text-2xs text-cream/95 hover:text-secondary transition-colors whitespace-nowrap shrink-0"
           >
-            <Phone className="w-3.5 h-3.5 text-[#e4782f] shrink-0" strokeWidth={1.75} />
+            <Phone className="w-3.5 h-3.5 text-secondary shrink-0" strokeWidth={1.75} />
             +91 63813 36772
           </a>
           <span className="h-6 w-px bg-white/10 shrink-0" />
-          <div className="flex items-center gap-1 text-2xs sm:text-2xs text-[#fdfcf6]/95 whitespace-nowrap shrink-0">
-            <MapPin className="w-3.5 h-3.5 text-[#e4782f] shrink-0" strokeWidth={1.75} />
+          <div className="flex items-center gap-1 text-2xs sm:text-2xs text-cream/95 whitespace-nowrap shrink-0">
+            <MapPin className="w-3.5 h-3.5 text-secondary shrink-0" strokeWidth={1.75} />
             India
           </div>
         </div>
 
           {/* Bottom */}
-          <p className="mt-8 text-sm text-[#a89a8a] flex items-center justify-center gap-1.5">
-            Made with <Heart className="w-3.5 h-3.5 text-[#e4782f] fill-[#e4782f]" /> for the fearless women of India.
+          <p className="mt-8 text-sm text-cream/60 flex items-center justify-center gap-1.5">
+            Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> for the fearless women of India.
           </p>
-          <p className="mt-2 text-xs text-[#a89a8a]/80">
-            © {year} ULAA · <a href="https://www.ulaatrips.com" className="hover:text-[#e4782f] transition-colors">www.ulaatrips.com</a> · All rights reserved.
+          <p className="mt-2 text-xs text-cream/50">
+            © {year} ULAA · <a href="https://www.ulaatrips.com" className="hover:text-secondary transition-colors">www.ulaatrips.com</a> · All rights reserved.
           </p>
         </div>
       </div>
@@ -190,28 +190,28 @@ export default function Footer() {
                 className="w-full max-w-[210px] h-auto"
               />
             </Link>
-            <p className="mt-3 text-[#a89a8a] text-base leading-relaxed max-w-sm">
+            <p className="mt-3 text-cream/60 text-base leading-relaxed max-w-sm">
               A girls-only travel community for curated trips to India's most beautiful hidden destinations.
             </p>
           </div>
 
           {/* Quick Links */}
           <div className="border-l border-white/10 pl-10 xl:pl-14">
-            <h3 className="text-[#e4782f] text-sm font-button font-semibold tracking-[0.15em] uppercase">
+            <h3 className="text-secondary text-sm font-button font-semibold tracking-[0.15em] uppercase">
               Quick Links
             </h3>
-            <span className="mt-2 block w-8 h-px bg-[#e4782f]" />
+            <span className="mt-2 block w-8 h-px bg-secondary" />
             <ul className="mt-4 space-y-5">
               {quickLinks.map(({ label, to, icon: Icon }) => (
                 <li key={to}>
                   <Link
                     to={to}
-                    className="group flex items-center gap-2.5 text-[#fdfcf6]/90 hover:text-[#e4782f] transition-colors text-base"
+                    className="group flex items-center gap-2.5 text-cream/90 hover:text-secondary transition-colors text-base"
                   >
-                    <Icon className="w-4 h-4 text-[#e4782f] shrink-0" strokeWidth={1.75} />
+                    <Icon className="w-4 h-4 text-secondary shrink-0" strokeWidth={1.75} />
                     {label}
                     <ChevronRight
-                      className="w-4 h-4 text-[#fdfcf6]/40 group-hover:text-[#e4782f] group-hover:translate-x-0.5 transition-all"
+                      className="w-4 h-4 text-cream/40 group-hover:text-secondary group-hover:translate-x-0.5 transition-all"
                       strokeWidth={2}
                     />
                   </Link>
@@ -222,31 +222,31 @@ export default function Footer() {
 
           {/* Contact */}
           <div className="border-l border-white/10 pl-10 xl:pl-14">
-            <h3 className="text-[#e4782f] text-sm font-button font-semibold tracking-[0.15em] uppercase">
+            <h3 className="text-secondary text-sm font-button font-semibold tracking-[0.15em] uppercase">
               Contact
             </h3>
-            <span className="mt-2 block w-8 h-px bg-[#e4782f]" />
+            <span className="mt-2 block w-8 h-px bg-secondary" />
             <ul className="mt-4 space-y-5 text-base">
               <li>
                 <a
                   href="mailto:trips.ulaa@gmail.com"
-                  className="flex items-center gap-2.5 text-[#fdfcf6]/90 hover:text-[#e4782f] transition-colors"
+                  className="flex items-center gap-2.5 text-cream/90 hover:text-secondary transition-colors"
                 >
-                  <Mail className="w-4 h-4 text-[#e4782f] shrink-0" strokeWidth={1.75} />
+                  <Mail className="w-4 h-4 text-secondary shrink-0" strokeWidth={1.75} />
                   trips.ulaa@gmail.com
                 </a>
               </li>
               <li>
                 <a
                   href="tel:+916381336772"
-                  className="flex items-center gap-2.5 text-[#fdfcf6]/90 hover:text-[#e4782f] transition-colors"
+                  className="flex items-center gap-2.5 text-cream/90 hover:text-secondary transition-colors"
                 >
-                  <Phone className="w-4 h-4 text-[#e4782f] shrink-0" strokeWidth={1.75} />
+                  <Phone className="w-4 h-4 text-secondary shrink-0" strokeWidth={1.75} />
                   +91 63813 36772
                 </a>
               </li>
-              <li className="flex items-start gap-2.5 text-[#fdfcf6]/90">
-                <MapPin className="w-4 h-4 text-[#e4782f] shrink-0 mt-0.5" strokeWidth={1.75} />
+              <li className="flex items-start gap-2.5 text-cream/90">
+                <MapPin className="w-4 h-4 text-secondary shrink-0 mt-0.5" strokeWidth={1.75} />
                 India — Explore Everywhere
               </li>
             </ul>
@@ -254,10 +254,10 @@ export default function Footer() {
 
           {/* Follow Us */}
           <div className="border-l border-white/10 pl-10 xl:pl-14">
-            <h3 className="text-[#e4782f] text-sm font-button font-semibold tracking-[0.15em] uppercase">
+            <h3 className="text-secondary text-sm font-button font-semibold tracking-[0.15em] uppercase">
               Follow Us
             </h3>
-            <span className="mt-2 block w-8 h-px bg-[#e4782f]" />
+            <span className="mt-2 block w-8 h-px bg-secondary" />
             <div className="mt-4 flex items-center gap-3">
               {socialItems.map(({ label, href, external, icon }) => (
                 <a
@@ -265,7 +265,7 @@ export default function Footer() {
                   href={href}
                   {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                   aria-label={label}
-                  className="w-11 h-11 rounded-full border border-[#a85a2a]/40 flex items-center justify-center text-[#fdfcf6]/90 hover:text-[#e4782f] hover:bg-[#a85a2a]/10 transition-colors"
+                  className="w-11 h-11 rounded-full border border-primary/40 flex items-center justify-center text-cream/90 hover:text-secondary hover:bg-primary/10 transition-colors"
                 >
                   {icon}
                 </a>
@@ -275,12 +275,12 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="relative max-w-[1344px] mx-auto mt-8 pt-5 border-t border-white/10 flex items-center justify-center gap-3 text-sm text-[#a89a8a]">
+        <div className="relative max-w-[1344px] mx-auto mt-8 pt-5 border-t border-white/10 flex items-center justify-center gap-3 text-sm text-cream/60">
           <span className="flex items-center gap-1.5">
-            Made with <Heart className="w-3.5 h-3.5 text-[#e4782f] fill-[#e4782f]" /> for the fearless women of India.
+            Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> for the fearless women of India.
           </span>
           <span className="h-3.5 w-px bg-white/15" />
-          <span>© {year} ULAA · <a href="https://www.ulaatrips.com" className="hover:text-[#e4782f] transition-colors">www.ulaatrips.com</a> · All rights reserved.</span>
+          <span>© {year} ULAA · <a href="https://www.ulaatrips.com" className="hover:text-secondary transition-colors">www.ulaatrips.com</a> · All rights reserved.</span>
         </div>
       </div>
     </footer>

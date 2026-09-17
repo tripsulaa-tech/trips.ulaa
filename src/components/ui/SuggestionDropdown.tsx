@@ -6,7 +6,7 @@ export default function SuggestionDropdown({ items, onSelect }: { items: string[
   return (
     <ul
       role="listbox"
-      className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded-md border-2 border-background-warm bg-white shadow-lg py-1"
+      className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded-lg border-2 border-background-warm bg-white shadow-lg py-1"
     >
       {items.map(item => (
         <li key={item} role="option">

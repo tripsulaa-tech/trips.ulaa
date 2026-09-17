@@ -113,7 +113,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent" />
           <div className="absolute top-4 left-4">
-            <span className="bg-amber-500 text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
+            <span className="bg-gold text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
               Coming Soon
             </span>
           </div>

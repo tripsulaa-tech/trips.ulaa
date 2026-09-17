@@ -340,7 +340,7 @@ export default function AboutPage() {
         <div className="max-w-[1344px] mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-6 sm:mb-12">
             {journey_intro.sub_heading && (
-              <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+              <p className="font-script font-medium text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
                 {journey_intro.sub_heading}
               </p>
             )}
@@ -462,7 +462,7 @@ export default function AboutPage() {
         <div className="max-w-[1344px] mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-6 sm:mb-12">
             {why_different.sub_heading && (
-              <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+              <p className="font-script font-medium text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
                 {why_different.sub_heading}
               </p>
             )}
@@ -527,7 +527,7 @@ export default function AboutPage() {
                     className="flex-shrink-0 bg-gradient-to-br from-background-warm to-primary/10 rounded-2xl p-6"
                   >
                     {community.sub_heading && (
-                      <p className="font-script font-normal text-xl text-primary mb-1 whitespace-pre-line">
+                      <p className="font-script font-medium text-xl text-primary mb-1 whitespace-pre-line">
                         {community.sub_heading}
                       </p>
                     )}
@@ -598,7 +598,7 @@ export default function AboutPage() {
               <>
                 <motion.div {...fadeUp()} className="text-center mb-12">
                   {community.sub_heading && (
-                    <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+                    <p className="font-script font-medium text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
                       {community.sub_heading}
                     </p>
                   )}
@@ -652,7 +652,7 @@ export default function AboutPage() {
           <div className="max-w-[1344px] mx-auto">
             <motion.div {...fadeUp()} className="text-center mb-6">
               {testimonialsContent.sub_heading && (
-                <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+                <p className="font-script font-medium text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
                   {testimonialsContent.sub_heading}
                 </p>
               )}
@@ -734,7 +734,7 @@ export default function AboutPage() {
         <div className="max-w-5xl mx-auto">
           <motion.div {...fadeUp()} className="text-center mb-16">
             {journey.sub_heading && (
-              <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
+              <p className="font-script font-medium text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
                 {journey.sub_heading}
               </p>
             )}

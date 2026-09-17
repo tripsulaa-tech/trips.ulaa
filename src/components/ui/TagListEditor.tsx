@@ -85,7 +85,7 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
           onPaste={handlePaste}
           onBlur={handleBlur}
           placeholder={placeholder || 'Type and press Enter to add'}
-          className="flex-1 px-3 py-2 rounded-lg border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+          className="flex-1 px-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
         />
         <button
           type="button"

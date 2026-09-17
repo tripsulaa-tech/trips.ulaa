@@ -7,6 +7,7 @@
   --color-primary-light: #C4703A;
   --color-primary-dark: #8B4820;
   --color-secondary: #D98A3A;
+  --color-secondary-dark: #B87531;
   --color-dark: #2D2118;
   --color-dark-muted: #4A3728;
   --color-background: #F8F4EC;
@@ -28,6 +29,15 @@
   --shadow-card: 0 2px 16px rgba(45, 33, 24, 0.08);
   --shadow-card-hover: 0 12px 40px rgba(45, 33, 24, 0.15);
 }
+
+/* Border-radius scale — pick the tier that matches the component's role,
+   rather than an arbitrary size, so similar elements always match:
+     rounded-md   — buttons, text inputs, select/picker triggers
+     rounded-lg   — dropdown/popover panels, small utility panels
+     rounded-xl   — compact list cards (album/testimonial cards)
+     rounded-2xl  — primary/featured cards (trip cards, contact cards)
+     rounded-3xl  — hero/large feature panels
+     rounded-full — pills, avatars, icon buttons */
 
 * {
   box-sizing: border-box;

@@ -257,7 +257,7 @@ export default function MeetingPointMapPicker({ isOpen, onClose, onSelect, initi
           )}
 
           {results.length > 0 && (
-            <ul className="absolute z-[1000] left-0 right-0 mt-1 bg-white border-2 border-background-warm rounded-md shadow-warm-lg max-h-56 overflow-y-auto app-scroll">
+            <ul className="absolute z-[1000] left-0 right-0 mt-1 bg-white border-2 border-background-warm rounded-lg shadow-warm-lg max-h-56 overflow-y-auto app-scroll">
               {results.map(result => (
                 <li key={result.place_id}>
                   <button

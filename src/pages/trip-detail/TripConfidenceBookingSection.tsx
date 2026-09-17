@@ -175,7 +175,7 @@ export default function TripConfidenceBookingSection({
                 Sold Out
               </span>
             ) : isAlmostFull ? (
-              <span className="inline-block bg-amber-50 text-amber-700 text-sm font-button font-semibold px-4 py-2 rounded-md">
+              <span className="inline-block bg-secondary/15 text-secondary-dark text-sm font-button font-semibold px-4 py-2 rounded-md">
                 Only {remaining} seats left — almost full!
               </span>
             ) : trip.advance_amount != null ? (
