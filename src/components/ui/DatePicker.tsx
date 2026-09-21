@@ -88,7 +88,7 @@ export default function DatePicker({
 
   const sizeClasses = size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-3 py-2 text-sm';
 
-  const coords = useDropdownPosition(triggerRef, isOpen, 380);
+  const coords = useDropdownPosition(triggerRef, isOpen, 380, 256);
 
   useLayoutEffect(() => {
     if (isOpen) {

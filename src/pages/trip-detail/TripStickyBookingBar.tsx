@@ -86,20 +86,31 @@ export default function TripStickyBookingBar({
                   <span className="text-dark-muted text-2xs shrink-0">to reserve</span>
                 </div>
 
-                {/* Row 2: total price + strike-through, its own line so it
-                    never competes for space with the badges below. */}
-                <div className="flex items-baseline gap-1.5 mt-0.5">
+                {/* Row 2: total price + strike-through + Save badge,
+                    grouped together so the discount reads right next to
+                    the price it applies to. */}
+                <div className="flex items-baseline gap-1.5 mt-0.5 flex-wrap">
                   {strikeThroughPrice != null && (
                     <span className="text-dark-muted line-through text-2xs shrink-0">{formatPrice(strikeThroughPrice)}</span>
                   )}
                   <span className="text-dark text-2xs font-semibold shrink-0">{formatPrice(activePrice)} total</span>
+                  {saveAmount != null && (
+                    <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                      Save {formatPrice(saveAmount)}
+                    </span>
+                  )}
                 </div>
 
-                {/* Row 3: Save + PLUS OFFER, grouped together on their own
-                    line rather than left to wrap wherever they happen to
-                    run out of room — keeps the two badges aligned as a
-                    pair instead of splitting across separate lines. */}
-                <SaveAndPlusOfferBadges saveAmount={saveAmount} showPlusOffer={showPlusOffer} plusOfferAmount={plusOfferAmount} />
+                {/* Row 3: PLUS OFFER, its own line, same reasoning as
+                    before — Save has moved up next to the total. */}
+                {showPlusOffer && (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="inline-flex items-center gap-1 bg-pink-50 border border-pink-200 text-pink-600 text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                      <Gift size={10} weight="fill" className="shrink-0" />
+                      PLUS {formatPrice(plusOfferAmount as number)} OFFER
+                    </span>
+                  </div>
+                )}
 
                 {/* Row 4: Special Offer / Early Bird + Ends date, its own
                     line for the same reason — a predictable line break
@@ -119,7 +130,7 @@ export default function TripStickyBookingBar({
                   </div>
                 ) : isEarlyBird && (
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span className="bg-secondary text-dark text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                    <span className="bg-secondary text-white text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                       Early Bird
                     </span>
                     {trip.early_bird_deadline && (
@@ -163,7 +174,7 @@ export default function TripStickyBookingBar({
                   ) : (
                     <>
                       {isEarlyBird && (
-                        <span className="bg-secondary text-dark text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                        <span className="bg-secondary text-white text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                           Early Bird
                         </span>
                       )}

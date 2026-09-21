@@ -64,7 +64,7 @@ export default function TimePicker({
   const minuteListRef = useRef<HTMLDivElement>(null);
 
   const sizeClasses = size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-3 py-2 text-sm';
-  const coords = useDropdownPosition(triggerRef, isOpen, 240);
+  const coords = useDropdownPosition(triggerRef, isOpen, 240, 192);
 
   useCloseOnOutsideClick(isOpen, [triggerRef, panelRef], () => setIsOpen(false), { escape: true });
 

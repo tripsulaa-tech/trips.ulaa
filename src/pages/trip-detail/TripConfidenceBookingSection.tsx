@@ -112,6 +112,7 @@ export default function TripConfidenceBookingSection({
 
       <section className={`bg-white rounded-lg shadow-warm-lg border border-background-warm p-5 py-6 sm:p-8 sm:py-10 sm:pl-10 sm:pr-14 ${hasConfidenceItems ? 'lg:ml-10' : 'max-w-2xl mx-auto w-full'}`}>
         <div className="max-w-xl mx-auto text-center">
+          <SectionTitle variant="plain" align="center" title="Reserve Your Spot" size="sm" titleClassName="mb-5" />
           {activePrice != null && (
             <div className="mb-5 pb-5 border-b border-background-warm">
               {strikeThroughPrice != null ? (
@@ -138,7 +139,7 @@ export default function TripConfidenceBookingSection({
                         {trip.special_offer_name}
                       </span>
                     ) : isEarlyBird && (
-                      <span className="bg-secondary text-dark text-xs font-button font-semibold px-2.5 py-1 rounded-md">
+                      <span className="bg-secondary text-white text-xs font-button font-semibold px-2.5 py-1 rounded-md">
                         Early Bird
                       </span>
                     )}

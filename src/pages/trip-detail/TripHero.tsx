@@ -164,7 +164,7 @@ export default function TripHero({
                 {trip.special_offer_name}
               </span>
             ) : isEarlyBird && (
-              <span className="hidden sm:flex items-center gap-1.5 bg-secondary text-dark text-xs font-button font-semibold px-3 py-1.5 rounded-md">
+              <span className="hidden sm:flex items-center gap-1.5 bg-secondary text-white text-xs font-button font-semibold px-3 py-1.5 rounded-md">
                 Early Bird
               </span>
             )}

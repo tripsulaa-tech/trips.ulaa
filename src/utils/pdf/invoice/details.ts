@@ -1,6 +1,6 @@
 import type { Enquiry } from '../../../types/types-index';
 import type { InvoicePdfCtx } from './context';
-import { COLORS, MARGIN, CONTENT_W, val, fdate } from './shared';
+import { COLORS, MARGIN, CONTENT_W, val } from './shared';
 
 // =============================================================================
 // Two-column details: Traveller Details / Trip Details. Advances
@@ -50,7 +50,6 @@ export function renderDetails(ctx: InvoicePdfCtx, enquiry: Enquiry): void {
   }
 
   rightY = drawField('Trip', val(enquiry.trip_title), col2X, rightY, colW);
-  rightY = drawField('Departure Date', fdate(enquiry.departure_date), col2X, rightY, colW);
   rightY = drawField('Package', packageLabel, col2X, rightY, colW);
   rightY = drawField('City', val(enquiry.city), col2X, rightY, colW);
 
