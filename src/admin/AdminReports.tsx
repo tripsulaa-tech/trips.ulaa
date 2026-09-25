@@ -471,8 +471,22 @@ export default function AdminReports() {
       isBooked(e) && e.trip_id && upcomingTripIds.has(e.trip_id) && (tripId === ALL_TRIPS || e.trip_id === tripId)
     ).length;
 
+    // Same reasoning as Occupancy just above: Top Destinations is "how
+    // many people are actually booked onto each destination right now",
+    // not "how many booked during the selected period" — so, like
+    // seatsBooked, it's deliberately built from the full `enquiries` list
+    // (isBooked + the Trip dropdown only) rather than from `bookedList`
+    // (which is `scoped`, i.e. also filtered by the period toggle). Using
+    // `bookedList` here silently dropped anyone whose booking predates the
+    // selected window — e.g. with "This Month" selected, a trip with 13
+    // real booked travellers could show as low as however many of them
+    // happened to book within the current month, which is exactly the
+    // "Sri Lanka shows 13 booked elsewhere but only 9 here" bug.
+    const destBookedList = enquiries.filter(e =>
+      isBooked(e) && (tripId === ALL_TRIPS || e.trip_id === tripId)
+    );
     const destCounts = new Map<string, number>();
-    bookedList.forEach(e => {
+    destBookedList.forEach(e => {
       const dest = (e.trip_id && destinationById.get(e.trip_id)) || e.trip_title || 'Unknown';
       destCounts.set(dest, (destCounts.get(dest) || 0) + 1);
     });
