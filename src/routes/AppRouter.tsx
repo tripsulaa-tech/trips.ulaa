@@ -133,6 +133,7 @@ const AdminAbout = lazy(() => import('../admin/AdminAbout'));
 const AdminHomePage = lazy(() => import('../admin/AdminHomePage'));
 const AdminTripLeaders = lazy(() => import('../admin/AdminTripLeaders'));
 const AdminCreatorRateCalculator = lazy(() => import('../admin/AdminCreatorRateCalculator'));
+const AdminInvoiceGenerator = lazy(() => import('../admin/AdminInvoiceGenerator'));
 
 const PageLoader = () => (
   <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
@@ -215,6 +216,9 @@ export default function AppRouter() {
             } />
             <Route path="/admin/creator-rate-calculator" element={
               <ProtectedRoute><AdminCreatorRateCalculator /></ProtectedRoute>
+            } />
+            <Route path="/admin/invoice-generator" element={
+              <ProtectedRoute><AdminInvoiceGenerator /></ProtectedRoute>
             } />
 
             {/* 404 */}

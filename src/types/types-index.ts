@@ -1036,3 +1036,54 @@ export interface CreatorRateCalculation {
 /** Shape needed to save a new calculation — everything except id/created_at,
  *  which the database assigns. */
 export type CreatorRateCalculationInput = Omit<CreatorRateCalculation, 'id' | 'created_at'>;
+
+// =============================================
+// Invoice Generator (Admin tool)
+// =============================================
+/** One saved line item on an Invoice Generator invoice — same shape as
+ *  InvoiceGeneratorLineItem in src/utils/invoiceGeneratorPdf.ts, minus the
+ *  client-only `id` used as a React list key. */
+export interface InvoiceGeneratorRecordItem {
+  description: string;
+  subDescription: string;
+  amount: number;
+}
+
+/** A saved run of the standalone Admin → Invoice Generator tool — the full
+ *  form contents, so a past invoice can be reloaded to reuse (same client,
+ *  bank details, etc.) or re-downloaded as an identical PDF later. */
+export interface InvoiceGeneratorRecord {
+  id: string;
+  /** Server-assigned by the assign_invoice_generator_number() trigger —
+   *  never edited by the admin, and never sent by the client (the trigger
+   *  overwrites whatever's in the insert payload). */
+  invoice_number: string;
+  /** The invoice's position in the series (1, 2, 3…), same trigger. Also
+   *  server-assigned/overwritten. */
+  invoice_seq: number;
+  invoice_number_prefix: string;
+  invoice_title: string;
+  invoice_subtitle: string;
+  billing_company_name: string;
+  billing_address: string;
+  /** 'YYYY-MM-DD' */
+  invoice_date: string;
+  items: InvoiceGeneratorRecordItem[];
+  bank: {
+    accountNumber: string;
+    ifscCode: string;
+    bankName: string;
+    accountHolderName: string;
+    gpayNumber: string;
+  };
+  signatory_name: string;
+  total: number;
+  created_at: string;
+}
+
+/** Shape needed to save a new invoice — everything except id/created_at,
+ *  which the database assigns. invoice_seq is also database-assigned (by
+ *  the same trigger that assigns invoice_number) so it's omitted too;
+ *  invoice_number itself is still sent along with the rest of the save
+ *  payload for convenience, but the trigger overwrites it regardless. */
+export type InvoiceGeneratorRecordInput = Omit<InvoiceGeneratorRecord, 'id' | 'created_at' | 'invoice_seq'>;

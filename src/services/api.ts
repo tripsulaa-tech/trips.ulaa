@@ -118,3 +118,10 @@ export {
   saveCreatorRateCalculation,
   deleteCreatorRateCalculation,
 } from './api/creatorRateCalculator';
+
+export {
+  getNextInvoiceGeneratorNumber,
+  getInvoiceGeneratorInvoices,
+  saveInvoiceGeneratorInvoice,
+  deleteInvoiceGeneratorInvoice,
+} from './api/invoiceGenerator';
