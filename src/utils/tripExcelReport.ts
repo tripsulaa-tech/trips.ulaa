@@ -6,7 +6,7 @@
 //      export produces (handleExportCsv, same file) — Lead Reports,
 //      Booking Reports, Financial Reports, Trip Finance & Profitability,
 //      Operational Reports, Lead Source Breakdown, Payment Method
-//      Breakdown, Per-Trip Breakdown, and Outstanding Balances by Person —
+//      Breakdown, Per-Trip Breakdown, and Balances by Person —
 //      in the same order, so nothing visible in the CSV is missing here.
 //   2. One sheet per trip that has a Finances tab filled in, itemizing
 //      that trip's Organiser/ULAA cost breakdown and per-person balances
@@ -41,7 +41,13 @@ interface TripExcelReportRow {
   totalCosts: number;
   netProfit: number;
   profitPerPerson: number;
-  outstandingByPerson: { name: string; total: number; paid: number; balance: number }[];
+  // Every booked, priced traveler on the trip — fully-paid travelers
+  // (balance 0) included, not just the ones who still owe money. See
+  // AdminReports.tsx's balancesByPerson/buildExcelRowForTrip for why: a
+  // trip with 13 real booked travelers used to print as few as however
+  // many of them still had a balance outstanding, silently dropping the
+  // rest of the roster from this sheet.
+  balancesByPerson: { name: string; total: number; paid: number; balance: number }[];
   // Line items behind the ulaaCosts / organiserCosts totals above — see
   // AdminReports.tsx's buildExcelRowForTrip for how these are derived from
   // the trip's raw TripFinance record. Each block's own line items are
@@ -131,7 +137,7 @@ function columnHeaderRow(labels: string[], cols: number): Row {
 // `t.netProfit < 0 ? 'text-red-600' : 'text-green-700'`).
 function dataCell(
   value: string | number,
-  opts: { align?: 'left' | 'center' | 'right'; tone?: 'positive' | 'negative'; columnSpan?: number } = {}
+  opts: { align?: 'left' | 'center' | 'right'; tone?: 'positive' | 'negative'; columnSpan?: number; bold?: boolean } = {}
 ) {
   return {
     value,
@@ -140,6 +146,7 @@ function dataCell(
     align: opts.align ?? (typeof value === 'number' ? 'right' as const : 'left' as const),
     borderColor: COLORS.border,
     borderStyle: 'thin' as const,
+    ...(opts.bold ? { fontWeight: 'bold' as const } : {}),
     ...(opts.columnSpan ? { columnSpan: opts.columnSpan } : {}),
   };
 }
@@ -152,41 +159,85 @@ function fallbackRow(label: string, cols: number): Row {
 
 // One line of an itemized cost breakdown: a label spanning all but the
 // last column (long agency/organiser names routinely overflow a single
-// narrow column) and a right-aligned amount in the last, matching the
-// grey, borderless field style the reference layout uses for this section
-// (as opposed to the bordered tables above it).
-function breakdownItemRow(label: string, amount: number, cols: number, opts: { bold?: boolean } = {}): Row {
-  const weight = opts.bold ? ({ fontWeight: 'bold' as const }) : {};
-  const labelSpan = cols - 2;
+// narrow column) and a right-aligned amount in the last. Built on the
+// same bordered `dataCell` used by every other table on the sheet
+// (Trip/Travelers, Cost & Profit Summary, Balances by Person) so this
+// section reads as part of the same themed workbook instead of a plain
+// unstyled dump of label/amount pairs. `cols` is expected to be exactly
+// COST_COLS — the label spans everything except the last (Amount)
+// column, with no extra filler column past it.
+function costItemRow(label: string, amount: number, cols: number, opts: { bold?: boolean } = {}): Row {
+  const labelSpan = cols - 1;
   const nulls = Array.from({ length: labelSpan - 1 }, () => null);
-  return padRow([
-    { value: label, backgroundColor: COLORS.fieldBackground, textColor: COLORS.textDark, columnSpan: labelSpan, ...weight },
+  return [
+    dataCell(label, { align: 'left', columnSpan: labelSpan, bold: opts.bold }),
     ...nulls,
-    { value: amount, backgroundColor: COLORS.fieldBackground, textColor: COLORS.textDark, align: 'right', ...weight },
-  ] as Row, cols);
+    dataCell(amount, { bold: opts.bold }),
+  ] as Row;
 }
 
-// Itemized cost breakdown block: a bold section label ("Organiser Costs" /
-// "Ulaa Costs"), one row per underlying TripFinance line item the admin
-// actually entered on the Finances tab, and a bold Total row. `total` is
-// passed in from the already-computed ulaaCosts/organiserCosts figure
-// (not re-summed from `items`) so this can never drift from the summary
-// row further up the sheet even if a future line item gets added to one
-// but not the other.
+// Column header for a cost breakdown block — "Item" spanning the same
+// label width costItemRow uses, "Amount" over the amount column — in the
+// same columnHeader color every other table's header row on this sheet
+// uses, rather than the plain bold-on-cream text the plain layout had.
+function costHeaderRow(cols: number): Row {
+  const labelSpan = cols - 1;
+  const nulls = Array.from({ length: labelSpan - 1 }, () => null);
+  const headerCell = (value: string, columnSpan?: number) => ({
+    value,
+    backgroundColor: COLORS.columnHeader,
+    textColor: COLORS.columnHeaderText,
+    fontWeight: 'bold' as const,
+    align: 'center' as const,
+    borderColor: COLORS.border,
+    borderStyle: 'thin' as const,
+    ...(columnSpan ? { columnSpan } : {}),
+  });
+  return [
+    headerCell('Item', labelSpan),
+    ...nulls,
+    headerCell('Amount'),
+  ] as Row;
+}
+
+// Itemized cost breakdown block: an orange section banner ("Organiser
+// Costs" / "Ulaa Costs") matching every other section title on the sheet,
+// a themed column header, one bordered row per underlying TripFinance
+// line item the admin actually entered on the Finances tab, and a bold
+// Total row. `total` is passed in from the already-computed
+// ulaaCosts/organiserCosts figure (not re-summed from `items`) so this
+// can never drift from the summary row further up the sheet even if a
+// future line item gets added to one but not the other. Every row is
+// widened to TRIP_COLS with a plain cream fill and no border past the
+// real Item/Amount columns — the banner/header/borders themselves stay
+// sized to `cols` (COST_COLS), but the row's own background still
+// reaches the sheet's full width, matching the cream wash every other
+// section (Cost & Profit Summary, the blank spacer rows) already carries
+// all the way across — instead of leaving the unused columns E/F with no
+// fill at all, which read as a gray gap in the sheet.
 function costBreakdownBlock(label: string, items: CostBreakdownItem[], total: number, cols: number): Row[] {
-  const headerRow: Row = [{ value: label, backgroundColor: COLORS.fieldBackground, textColor: COLORS.textDark, fontWeight: 'bold', columnSpan: cols }];
-  for (let i = 1; i < cols; i++) headerRow.push(null);
-  const rows: Row[] = [headerRow];
+  const rows: Row[] = [sectionTitleRow(label, cols), costHeaderRow(cols)];
   if (items.length === 0) {
     rows.push(fallbackRow('No costs entered', cols));
   } else {
-    items.forEach(item => rows.push(breakdownItemRow(item.label, item.amount, cols)));
+    items.forEach(item => rows.push(costItemRow(item.label, item.amount, cols)));
   }
-  rows.push(breakdownItemRow('Total', total, cols, { bold: true }));
-  return rows;
+  rows.push(costItemRow('Total', total, cols, { bold: true }));
+  return rows.map(row => padRow(row, TRIP_COLS));
 }
 
 const TRIP_COLS = 6;
+// Narrower widths for sections that don't actually have 6 real columns of
+// data — Balances by Person only ever has Name/Total/Paid/Balance, and a
+// cost breakdown only ever has Item/Amount (Item just needs several
+// columns of span for long agency/organiser names to not get clipped).
+// Passing TRIP_COLS into these used to pad every row out with 1-2 extra
+// blank cream cells past the real data, which visually stretched those
+// tables the full width of the sheet for no reason. Building them at
+// their own natural width instead means each block ends exactly where
+// its last real column (Balance / Amount) ends.
+const BALANCE_COLS = 4;
+const COST_COLS = 5;
 const TRIP_SHEET_COLUMNS = [{ width: 28 }, { width: 16 }, { width: 16 }, { width: 14 }, { width: 14 }, { width: 16 }];
 
 function buildTripSheetRows(trip: TripExcelReportRow): Row[] {
@@ -207,33 +258,65 @@ function buildTripSheetRows(trip: TripExcelReportRow): Row[] {
   rows.push(sectionTitleRow('Cost & Profit Summary', TRIP_COLS));
   rows.push(columnHeaderRow(['Revenue', 'Ulaa Costs', 'Organiser Costs', 'Total Costs', 'Net Profit', 'Profit/Person'], TRIP_COLS));
   rows.push(padRow([
-    dataCell(trip.revenue, { tone: 'positive' }),
-    dataCell(trip.ulaaCosts),
-    dataCell(trip.organiserCosts),
-    dataCell(trip.totalCosts),
-    dataCell(trip.netProfit, { tone: trip.netProfit < 0 ? 'negative' : 'positive' }),
-    dataCell(Math.round(trip.profitPerPerson)),
+    dataCell(trip.revenue, { align: 'center', tone: 'positive' }),
+    dataCell(trip.ulaaCosts, { align: 'center' }),
+    dataCell(trip.organiserCosts, { align: 'center' }),
+    dataCell(trip.totalCosts, { align: 'center' }),
+    dataCell(trip.netProfit, { align: 'center', bold: true, tone: trip.netProfit < 0 ? 'negative' : 'positive' }),
+    dataCell(Math.round(trip.profitPerPerson), { align: 'center' }),
   ], TRIP_COLS));
   rows.push(blankRow(TRIP_COLS));
 
-  rows.push(sectionTitleRow('Outstanding Balances by Person', TRIP_COLS));
-  rows.push(columnHeaderRow(['Name', 'Total Amount', 'Paid So Far', 'Balance'], TRIP_COLS));
-  if (trip.outstandingByPerson.length === 0) {
-    rows.push(fallbackRow('No outstanding balances', 4));
+  const balancesSectionStart = rows.length;
+  rows.push(sectionTitleRow('Balances by Person', BALANCE_COLS));
+  rows.push(columnHeaderRow(['Name', 'Total Amount', 'Paid So Far', 'Balance'], BALANCE_COLS));
+  if (trip.balancesByPerson.length === 0) {
+    rows.push(fallbackRow('No priced bookings yet', BALANCE_COLS));
   } else {
-    trip.outstandingByPerson.forEach(p => {
-      rows.push(padRow([
+    trip.balancesByPerson.forEach(p => {
+      rows.push([
         dataCell(p.name, { align: 'left' }),
         dataCell(p.total),
+        // Fully paid travelers (balance 0) print "Paid" in green instead
+        // of a bare 0 — same distinction the on-screen table now draws —
+        // so a fully-settled row reads as settled at a glance rather than
+        // looking like a data gap next to the real outstanding amounts.
         dataCell(p.paid),
-        dataCell(p.balance, { tone: p.balance > 0 ? 'negative' : undefined }),
-      ], TRIP_COLS));
+        p.balance > 0
+          ? dataCell(p.balance, { tone: 'negative' })
+          : dataCell('Paid', { tone: 'positive', align: 'right' }),
+      ] as Row);
     });
+    // Bold roll-up across every traveler in the table above (paid and
+    // still-owing alike) — Total Amount and Paid So Far always sum
+    // cleanly since every row has a real number in each; Balance sums to
+    // just what's still outstanding business-wide for this trip, since
+    // fully-paid rows contribute 0 to it.
+    const personTotals = trip.balancesByPerson.reduce(
+      (acc, p) => ({ total: acc.total + p.total, paid: acc.paid + p.paid, balance: acc.balance + p.balance }),
+      { total: 0, paid: 0, balance: 0 }
+    );
+    rows.push([
+      dataCell('Total', { align: 'left', bold: true }),
+      dataCell(personTotals.total, { bold: true }),
+      dataCell(personTotals.paid, { bold: true }),
+      dataCell(personTotals.balance, { tone: personTotals.balance > 0 ? 'negative' : 'positive', bold: true }),
+    ] as Row);
+  }
+  // Widen every row just pushed for this section (banner, header, each
+  // traveler, the Total row) out to TRIP_COLS with plain cream fill and
+  // no border past column D — same reasoning as costBreakdownBlock above:
+  // the table's own borders/colors stay sized to BALANCE_COLS, but the
+  // row background still reaches the sheet's full width instead of
+  // leaving E/F with no fill.
+  for (let i = balancesSectionStart; i < rows.length; i++) {
+    rows[i] = padRow(rows[i], TRIP_COLS);
   }
   rows.push(blankRow(TRIP_COLS));
 
-  rows.push(...costBreakdownBlock('Organiser Costs', trip.organiserCostBreakdown, trip.organiserCosts, TRIP_COLS));
-  rows.push(...costBreakdownBlock('Ulaa Costs', trip.ulaaCostBreakdown, trip.ulaaCosts, TRIP_COLS));
+  rows.push(...costBreakdownBlock('Organiser Costs', trip.organiserCostBreakdown, trip.organiserCosts, COST_COLS));
+  rows.push(blankRow(TRIP_COLS));
+  rows.push(...costBreakdownBlock('Ulaa Costs', trip.ulaaCostBreakdown, trip.ulaaCosts, COST_COLS));
 
   return rows;
 }

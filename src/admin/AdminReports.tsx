@@ -655,7 +655,18 @@ export default function AdminReports() {
   // Same isBooked + total scoping as the Outstanding Balance card itself,
   // so the two can never disagree — this is that number broken out
   // person-by-person instead of just the business-wide total.
-  const outstandingByPerson = useMemo(() => {
+  //
+  // Deliberately NOT filtered down to balance > 0 — every booked traveler
+  // with a price set is listed here, fully-paid ones included (they just
+  // show a 0 balance). Dropping balance === 0 rows used to mean a trip
+  // with, say, 13 booked and paying travelers but only 9 still owing money
+  // would show only 9 names here, which read as "4 people are missing"
+  // even though they were counted correctly everywhere else on this page
+  // (traveler counts, revenue, Top Destinations, ...). Sorting by balance
+  // descending still puts anyone who still owes money at the top and the
+  // fully-paid names at the bottom, so the "who to chase" use case this
+  // table exists for isn't hurt by including everyone.
+  const balancesByPerson = useMemo(() => {
     return scoped
       .filter(e => isBooked(e) && e.total_amount)
       .map(e => {
@@ -668,9 +679,18 @@ export default function AdminReports() {
           balance,
         };
       })
-      .filter(row => row.balance > 0)
       .sort((a, b) => b.balance - a.balance);
   }, [scoped, destinationById]);
+
+  // Bold roll-up row for the table below — same "sum of what's actually
+  // in the table" reasoning as the Excel export's identical total, kept
+  // as its own memo so the render below doesn't re-reduce on every paint.
+  const balancesTotal = useMemo(() => {
+    return balancesByPerson.reduce(
+      (acc, p) => ({ total: acc.total + p.total, paid: acc.paid + p.paid, balance: acc.balance + p.balance }),
+      { total: 0, paid: 0, balance: 0 }
+    );
+  }, [balancesByPerson]);
 
   // Assembles one trip's row for the styled Excel export (tripExcelReport.ts)
   // out of financeByTrip's already-computed cost/profit summary plus three
@@ -690,7 +710,11 @@ export default function AdminReports() {
     const tripBookings = enquiries.filter(e => e.trip_id === t.id && isBooked(e));
     const vegCount = tripBookings.filter(e => e.food_preference === 'veg').length;
     const nonVegCount = tripBookings.filter(e => e.food_preference === 'non_veg').length;
-    const outstanding = tripBookings
+    // Every booked, priced traveler on this trip — fully-paid ones
+    // included (see balancesByPerson above for why balance === 0 rows
+    // are kept rather than filtered out: this is what fed the "13 booked
+    // but only 9 in the sheet" bug in the exported workbook too).
+    const balances = tripBookings
       .filter(e => e.total_amount)
       .map(e => ({
         name: e.full_name,
@@ -698,7 +722,6 @@ export default function AdminReports() {
         paid: e.amount_paid || 0,
         balance: Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)),
       }))
-      .filter(row => row.balance > 0)
       .sort((a, b) => b.balance - a.balance);
 
     const f = t.finance;
@@ -751,7 +774,7 @@ export default function AdminReports() {
       totalCosts: t.totalCosts,
       netProfit: t.netProfit,
       profitPerPerson: t.profitPerPerson,
-      outstandingByPerson: outstanding,
+      balancesByPerson: balances,
       ulaaCostBreakdown,
       organiserCostBreakdown,
     };
@@ -822,7 +845,7 @@ export default function AdminReports() {
                 onClick={handleExportExcel}
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.96 }}
-                title="Download a formatted per-trip Excel report (finance summary + outstanding balances)"
+                title="Download a formatted per-trip Excel report (finance summary + per-person balances)"
                 className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
               >
                 <Download size={14} aria-hidden="true" />
@@ -944,12 +967,12 @@ export default function AdminReports() {
                 </div>
               )}
 
-              {outstandingByPerson.length > 0 && (
+              {balancesByPerson.length > 0 && (
                 <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto">
                   <p className="text-2xs font-button font-bold text-dark-muted uppercase tracking-wide flex items-center gap-1.5 px-4 pt-4">
-                    <UserCircle size={13} aria-hidden="true" /> Outstanding Balances by Person ({outstandingByPerson.length})
+                    <UserCircle size={13} aria-hidden="true" /> Balances by Person ({balancesByPerson.length})
                   </p>
-                  <table className="w-full text-sm min-w-[520px] mt-2">
+                  <table className="w-full text-sm min-w-[560px] mt-2">
                     <thead>
                       <tr className="border-b border-background-warm text-left">
                         <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide">Traveler</th>
@@ -960,16 +983,29 @@ export default function AdminReports() {
                       </tr>
                     </thead>
                     <tbody>
-                      {outstandingByPerson.map((p, i) => (
+                      {balancesByPerson.map((p, i) => (
                         <motion.tr key={`${p.name}-${i}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
                           <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[180px]">{p.name}</td>
                           <td className="px-4 py-2.5 text-dark-muted truncate max-w-[180px]">{p.trip}</td>
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{formatPrice(p.total)}</td>
                           <td className="px-4 py-2.5 text-green-700 text-right whitespace-nowrap">{formatPrice(p.paid)}</td>
-                          <td className="px-4 py-2.5 text-primary font-semibold text-right whitespace-nowrap">{formatPrice(p.balance)}</td>
+                          <td className={`px-4 py-2.5 font-semibold text-right whitespace-nowrap ${p.balance > 0 ? 'text-primary' : 'text-green-700'}`}>
+                            {p.balance > 0 ? formatPrice(p.balance) : 'Paid'}
+                          </td>
                         </motion.tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-background-warm font-semibold bg-background-warm/40">
+                        <td className="px-4 py-2.5 text-dark">Total</td>
+                        <td className="px-4 py-2.5"></td>
+                        <td className="px-4 py-2.5 text-dark text-right whitespace-nowrap">{formatPrice(balancesTotal.total)}</td>
+                        <td className="px-4 py-2.5 text-green-700 text-right whitespace-nowrap">{formatPrice(balancesTotal.paid)}</td>
+                        <td className={`px-4 py-2.5 text-right whitespace-nowrap ${balancesTotal.balance > 0 ? 'text-primary' : 'text-green-700'}`}>
+                          {formatPrice(balancesTotal.balance)}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}
