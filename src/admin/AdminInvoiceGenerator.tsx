@@ -1,7 +1,7 @@
 // Admin > Invoice Generator — a tool for putting together a one-off
 // invoice: billing address, a short line-item table, bank details and a
 // signatory, then downloading it (or printing it) as a PDF laid out to
-// match the reference "MEND PROMOTION" design exactly. See
+// match the reference "Jini J Tracy" design exactly. See
 // src/utils/invoiceGeneratorPdf.ts for the actual PDF drawing — this file
 // is the form, the live preview, and the Save/Saved-Invoices UI.
 //
@@ -65,11 +65,11 @@ import {
 import type { InvoiceGeneratorRecord } from '../types/types-index';
 
 const BANK_FIELDS: { key: keyof InvoiceGeneratorBankDetails; label: string; placeholder: string }[] = [
-  { key: 'accountNumber', label: 'Account Number', placeholder: 'e.g. 42216749328' },
-  { key: 'ifscCode', label: 'IFSC Code', placeholder: 'e.g. SBIN0000796' },
-  { key: 'bankName', label: 'Bank Name', placeholder: 'e.g. SBI' },
-  { key: 'accountHolderName', label: 'Name', placeholder: 'e.g. Hari krishnan V' },
-  { key: 'gpayNumber', label: 'GPAY No.', placeholder: 'e.g. 8248600801' },
+  { key: 'accountNumber', label: 'Account Number', placeholder: 'e.g. 423801505983' },
+  { key: 'ifscCode', label: 'IFSC Code', placeholder: 'e.g. ICIC0004238' },
+  { key: 'bankName', label: 'Bank Name', placeholder: 'e.g. ICICI Bank' },
+  { key: 'accountHolderName', label: 'Name', placeholder: 'e.g. Jini J Tracy' },
+  { key: 'gpayNumber', label: 'GPAY No.', placeholder: 'e.g. 6383336772' },
 ];
 
 // Debounce for the live preview rebuild — typing a full sentence
@@ -333,7 +333,7 @@ export default function AdminInvoiceGenerator() {
                   value={data.invoiceTitle}
                   onChange={e => setField('invoiceTitle', e.target.value)}
                   className={inputClass}
-                  placeholder="e.g. MEND PROMOTION"
+                  placeholder="e.g. Jini J Tracy"
                 />
               </div>
               <div>
@@ -460,7 +460,7 @@ export default function AdminInvoiceGenerator() {
                         value={item.description}
                         onChange={e => updateItem(item.id, { description: e.target.value })}
                         className={inputClass}
-                        placeholder="e.g. MEND PROMOTION"
+                        placeholder="e.g. MEND Promotion"
                       />
                     </div>
                     <div>
@@ -471,7 +471,7 @@ export default function AdminInvoiceGenerator() {
                         value={item.subDescription}
                         onChange={e => updateItem(item.id, { subDescription: e.target.value })}
                         className={inputClass}
-                        placeholder="e.g. Hari krishnan (ORGANIC VIDEO)"
+                        placeholder="e.g. Sub"
                       />
                     </div>
                     <div>
@@ -527,7 +527,7 @@ export default function AdminInvoiceGenerator() {
                 value={data.signatoryName}
                 onChange={e => setField('signatoryName', e.target.value)}
                 className={inputClass}
-                placeholder="e.g. Hari krishnan V"
+                placeholder="e.g. Jini J Tracy"
               />
               <p className="text-2xs text-dark-muted mt-1">Printed under the signature line at the bottom of the invoice. Defaults to the bank account Name above if left blank.</p>
             </div>

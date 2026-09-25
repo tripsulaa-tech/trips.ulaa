@@ -7,7 +7,7 @@ import { PAGE_W, PAGE_H, MARGIN, drawVectorIcon, type RGB } from './pdf/invoice/
 // Admin "Invoice Generator" — a standalone tool (Admin > Invoice Generator)
 // that lets an admin type in a one-off invoice (billing address, a short
 // line-item table, bank details, a signatory) and get back a PDF laid out
-// to match the "MEND PROMOTION" reference design exactly: serif "INVOICE"
+// to match the "Jini J Tracy" reference design exactly: serif "INVOICE"
 // wordmark + lime underline, a billing-address block with a pin icon, an
 // Invoice No./Date card, a dark-green table header with a highlighted
 // total row, a Bank Details card, and a signature line.
@@ -46,9 +46,9 @@ export interface InvoiceGeneratorBankDetails {
 }
 
 export interface InvoiceGeneratorData {
-  /** Bold caps heading top-right, e.g. "MEND PROMOTION". */
+  /** Bold caps heading top-right, e.g. "Jini J Tracy". */
   invoiceTitle: string;
-  /** Small caps line beneath the title, e.g. "ORGANIC VIDEO". */
+  /** Small caps line beneath the title, e.g. "justjini_". */
   invoiceSubtitle: string;
   billingCompanyName: string;
   /** Free-form, newline-separated. */
@@ -95,8 +95,8 @@ export function defaultInvoiceGeneratorData(): InvoiceGeneratorData {
   const today = new Date();
   const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   return {
-    invoiceTitle: 'MEND PROMOTION',
-    invoiceSubtitle: 'ORGANIC VIDEO',
+    invoiceTitle: 'Jini J Tracy',
+    invoiceSubtitle: 'justjini_',
     billingCompanyName: '',
     billingAddress: '',
     invoiceNumberPrefix: DEFAULT_INVOICE_NUMBER_PREFIX,
