@@ -91,27 +91,27 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
         <button
           type="button"
           onClick={startBasicPremium}
-          className="text-sm px-3 py-2 rounded-md border border-primary/40 text-primary hover:bg-primary/5 transition-colors"
+          className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
         >
-          Start with Basic &amp; Premium (Water Activities)
+          <Plus size={13} aria-hidden="true" /> Start with Basic &amp; Premium (Water Activities)
         </button>
       )}
 
       {/* Options */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-dark">1. Options — what travelers can add</p>
+        <p className="text-sm font-medium text-dark">1. Options — what travelers can add</p>
         {options.map(o => (
-          <div key={o.id} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end bg-background-warm/40 rounded-md p-2">
+          <div key={o.id} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end bg-background-warm rounded-lg p-3">
             <div className="col-span-2 md:col-span-4">
-              <label htmlFor={`opt-name-${o.id}`} className="block text-xs font-medium text-dark mb-1">Name</label>
+              <label htmlFor={`opt-name-${o.id}`} className="block text-sm font-medium text-dark mb-1">Name</label>
               <input id={`opt-name-${o.id}`} value={o.name} onChange={e => patchOption(o.id, { name: e.target.value })} className={inputClass} placeholder="e.g. Water Activities" />
             </div>
             <div className="col-span-2 md:col-span-5">
-              <label htmlFor={`opt-desc-${o.id}`} className="block text-xs font-medium text-dark mb-1">Short description (optional)</label>
+              <label htmlFor={`opt-desc-${o.id}`} className="block text-sm font-medium text-dark mb-1">Short description (optional)</label>
               <input id={`opt-desc-${o.id}`} value={o.description} onChange={e => patchOption(o.id, { description: e.target.value })} className={inputClass} placeholder="e.g. Rafting & kayaking" />
             </div>
             <div className="col-span-1 md:col-span-2">
-              <label htmlFor={`opt-price-${o.id}`} className="block text-xs font-medium text-dark mb-1">Extra price (₹)</label>
+              <label htmlFor={`opt-price-${o.id}`} className="block text-sm font-medium text-dark mb-1">Extra price (₹)</label>
               <input
                 id={`opt-price-${o.id}`}
                 type="number"
@@ -123,33 +123,33 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
               />
             </div>
             <div className="col-span-1 md:col-span-1 flex justify-end">
-              <button type="button" onClick={() => removeOption(o.id)} className="p-1.5 text-dark-muted hover:text-red-600 transition-colors" aria-label={`Remove option ${o.name || ''}`}>
-                <Trash2 size={16} />
+              <button type="button" onClick={() => removeOption(o.id)} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0" aria-label={`Remove option ${o.name || ''}`}>
+                <Trash2 size={13} aria-hidden="true" />
               </button>
             </div>
           </div>
         ))}
-        <button type="button" onClick={addOption} className="text-xs px-2.5 py-1 rounded-full border border-primary/40 text-primary hover:bg-primary/5 inline-flex items-center gap-1 transition-colors">
-          <Plus size={12} /> Add option
+        <button type="button" onClick={addOption} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors">
+          <Plus size={13} aria-hidden="true" /> Add option
         </button>
       </div>
 
       {/* Packages */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-dark">2. Packages — presets travelers choose from (the first one is the default)</p>
+        <p className="text-sm font-medium text-dark">2. Packages — presets travelers choose from (the first one is the default)</p>
         {packages.map(p => (
-          <div key={p.id} className="bg-background-warm/40 rounded-md p-3 space-y-2">
+          <div key={p.id} className="bg-background-warm rounded-lg p-3 space-y-2">
             <div className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end">
               <div className="col-span-2 md:col-span-3">
-                <label htmlFor={`pkg-name-${p.id}`} className="block text-xs font-medium text-dark mb-1">Package name</label>
+                <label htmlFor={`pkg-name-${p.id}`} className="block text-sm font-medium text-dark mb-1">Package name</label>
                 <input id={`pkg-name-${p.id}`} value={p.name} onChange={e => patchPackage(p.id, { name: e.target.value })} className={inputClass} placeholder="e.g. Premium" />
               </div>
               <div className="col-span-2 md:col-span-2">
-                <label htmlFor={`pkg-desc-${p.id}`} className="block text-xs font-medium text-dark mb-1">Short description (optional)</label>
+                <label htmlFor={`pkg-desc-${p.id}`} className="block text-sm font-medium text-dark mb-1">Short description (optional)</label>
                 <input id={`pkg-desc-${p.id}`} value={p.description} onChange={e => patchPackage(p.id, { description: e.target.value })} className={inputClass} />
               </div>
               <div className="col-span-1 md:col-span-2">
-                <label htmlFor={`pkg-price-${p.id}`} className="block text-xs font-medium text-dark mb-1">Price / person (₹)</label>
+                <label htmlFor={`pkg-price-${p.id}`} className="block text-sm font-medium text-dark mb-1">Price / person (₹)</label>
                 <input
                   id={`pkg-price-${p.id}`}
                   type="number"
@@ -162,7 +162,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
                 />
               </div>
               <div className="col-span-1 md:col-span-2">
-                <label htmlFor={`pkg-eb-price-${p.id}`} className="block text-xs font-medium text-dark mb-1">Early-bird (₹)</label>
+                <label htmlFor={`pkg-eb-price-${p.id}`} className="block text-sm font-medium text-dark mb-1">Early-bird (₹)</label>
                 <input
                   id={`pkg-eb-price-${p.id}`}
                   type="number"
@@ -171,18 +171,18 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
                   value={p.early_bird_price ?? ''}
                   onChange={e => patchPackage(p.id, { early_bird_price: numOrNull(e.target.value) })}
                   disabled={!p.early_bird || !hasOwnPrice(p)}
-                  className={`${inputClass} disabled:opacity-50`}
+                  className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed`}
                   placeholder={p.early_bird ? (hasOwnPrice(p) ? 'Early-bird price' : 'Set price first') : 'Off'}
                 />
               </div>
               <div className="col-span-1 md:col-span-1 flex justify-end">
-                <button type="button" onClick={() => removePackage(p.id)} className="p-1.5 text-dark-muted hover:text-red-600 transition-colors" aria-label={`Remove package ${p.name || ''}`}>
-                  <Trash2 size={16} />
+                <button type="button" onClick={() => removePackage(p.id)} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0" aria-label={`Remove package ${p.name || ''}`}>
+                  <Trash2 size={13} aria-hidden="true" />
                 </button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-dark-muted">Includes:</span>
+              <span className="text-sm font-medium text-dark">Includes:</span>
               {options.length === 0 && <span className="text-xs text-dark-muted">add an option above first</span>}
               {options.map(o => {
                 const on = p.option_ids.includes(o.id);
@@ -192,18 +192,18 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
                     type="button"
                     aria-pressed={on}
                     onClick={() => toggleOptionInPackage(p, o.id)}
-                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${on ? 'border-primary bg-primary/10 text-primary' : 'border-background-warm text-dark-muted hover:border-primary/40'}`}
+                    className={`text-xs font-medium px-2.5 py-1.5 rounded-md border-2 transition-colors ${on ? 'border-primary bg-primary/10 text-primary' : 'border-background-warm bg-background text-dark-muted hover:border-primary/50'}`}
                   >
                     {on ? '✓ ' : ''}{o.name || 'Unnamed option'}
                   </button>
                 );
               })}
-              <label className="ml-auto inline-flex items-center gap-1.5 text-xs text-dark cursor-pointer">
-                <input type="checkbox" checked={!!p.early_bird} onChange={e => patchPackage(p.id, { early_bird: e.target.checked })} />
+              <label className="ml-auto inline-flex items-center gap-2 text-sm text-dark cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-primary" checked={!!p.early_bird} onChange={e => patchPackage(p.id, { early_bird: e.target.checked })} />
                 Early-bird price applies
               </label>
-              <label className="inline-flex items-center gap-1.5 text-xs text-dark cursor-pointer">
-                <input type="checkbox" checked={!!p.highlight} onChange={e => patchPackage(p.id, { highlight: e.target.checked })} />
+              <label className="inline-flex items-center gap-2 text-sm text-dark cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-primary" checked={!!p.highlight} onChange={e => patchPackage(p.id, { highlight: e.target.checked })} />
                 Show "Most popular"
               </label>
             </div>
@@ -222,8 +222,8 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
             })()}
           </div>
         ))}
-        <button type="button" onClick={addPackage} className="text-xs px-2.5 py-1 rounded-full border border-primary/40 text-primary hover:bg-primary/5 inline-flex items-center gap-1 transition-colors">
-          <Plus size={12} /> Add package
+        <button type="button" onClick={addPackage} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors">
+          <Plus size={13} aria-hidden="true" /> Add package
         </button>
       </div>
 

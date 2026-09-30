@@ -70,7 +70,7 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
     <div className="md:col-span-2 space-y-3">
       <div>
         {embedded
-          ? <h5 className="text-sm font-medium text-dark mb-1">Other Trip Costs</h5>
+          ? <h5 className="text-sm font-semibold text-dark mb-1">Other Trip Costs</h5>
           : <h4 className="text-sm font-semibold text-dark mb-1">Other Trip Costs</h4>}
         <p className="text-xs text-dark-muted -mt-0.5">
           One line per cost — ads, entry tickets, kits, transport, stay, food, activities. Pick how it is charged: a <strong>lump sum</strong> (e.g. Ad / Promotion, Transport),
@@ -86,9 +86,9 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
             const linkedOption = it.basis === 'per_selected' && it.option_id ? options.find(o => o.id === it.option_id) : undefined;
             const overCount = it.basis === 'per_selected' && !it.option_id && (it.quantity || 0) > travelerCount && travelerCount > 0;
             return (
-              <div key={it.id} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end bg-background-warm/40 rounded-md p-2">
+              <div key={it.id} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end bg-background-warm rounded-lg p-3">
                 <div className="col-span-2 md:col-span-3">
-                  <label htmlFor={`ci-name-${it.id}`} className="block text-xs font-medium text-dark mb-1">Name</label>
+                  <label htmlFor={`ci-name-${it.id}`} className="block text-sm font-medium text-dark mb-1">Name</label>
                   <input
                     id={`ci-name-${it.id}`}
                     value={it.name}
@@ -98,7 +98,7 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                   />
                 </div>
                 <div className="col-span-2 md:col-span-3">
-                  <label htmlFor={`ci-basis-${it.id}`} className="block text-xs font-medium text-dark mb-1">Charged</label>
+                  <label htmlFor={`ci-basis-${it.id}`} className="block text-sm font-medium text-dark mb-1">Charged</label>
                   <Select
                     inputId={`ci-basis-${it.id}`}
                     value={it.basis}
@@ -107,7 +107,7 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label htmlFor={`ci-rate-${it.id}`} className="block text-xs font-medium text-dark mb-1">
+                  <label htmlFor={`ci-rate-${it.id}`} className="block text-sm font-medium text-dark mb-1">
                     {it.basis === 'fixed' ? 'Amount (₹)' : 'Rate / person (₹)'}
                   </label>
                   <input
@@ -121,7 +121,7 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label htmlFor={`ci-qty-${it.id}`} className="block text-xs font-medium text-dark mb-1">People</label>
+                  <label htmlFor={`ci-qty-${it.id}`} className="block text-sm font-medium text-dark mb-1">People</label>
                   {it.basis === 'per_selected' && it.option_id ? (
                     <div id={`ci-qty-${it.id}`} className="px-3 py-2 text-sm text-dark">
                       {r.qty} <span className="text-dark-muted text-xs">counted</span>
@@ -148,25 +148,28 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                   <button
                     type="button"
                     onClick={() => remove(it.id)}
-                    className="p-1.5 text-dark-muted hover:text-red-600 transition-colors"
+                    className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
                     aria-label={`Remove ${it.name || 'cost line'}`}
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={13} aria-hidden="true" />
                   </button>
                 </div>
                 {it.basis === 'per_selected' && options.length > 0 && (
-                  <div className="col-span-2 md:col-span-12 flex items-center gap-2 text-xs">
-                    <label htmlFor={`ci-opt-${it.id}`} className="text-dark-muted">Headcount from:</label>
-                    <select
-                      id={`ci-opt-${it.id}`}
-                      value={it.option_id ?? ''}
-                      onChange={e => update(it.id, { option_id: e.target.value || null })}
-                      className="rounded-md border border-background-warm bg-white px-2 py-1 text-xs text-dark"
-                    >
-                      <option value="">Typed by hand</option>
-                      {options.map(o => <option key={o.id} value={o.id}>{o.name || 'Unnamed option'} (bookings)</option>)}
-                    </select>
-                    {linkedOption && <span className="text-dark-muted">{r.qty} traveler{r.qty === 1 ? '' : 's'} picked {linkedOption.name}</span>}
+                  <div className="col-span-2 md:col-span-12 flex flex-wrap items-center gap-2">
+                    <label htmlFor={`ci-opt-${it.id}`} className="text-sm font-medium text-dark">Headcount from:</label>
+                    <div className="w-full sm:w-64">
+                      <Select
+                        inputId={`ci-opt-${it.id}`}
+                        size="sm"
+                        value={it.option_id ?? ''}
+                        onChange={val => update(it.id, { option_id: val || null })}
+                        options={[
+                          { value: '', label: 'Typed by hand' },
+                          ...options.map(o => ({ value: o.id, label: `${o.name || 'Unnamed option'} (bookings)` })),
+                        ]}
+                      />
+                    </div>
+                    {linkedOption && <span className="text-xs text-dark-muted">{r.qty} traveler{r.qty === 1 ? '' : 's'} picked {linkedOption.name}</span>}
                   </div>
                 )}
                 {overCount && (
@@ -177,21 +180,21 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
               </div>
             );
           })}
-          <div className="flex justify-between text-sm px-2">
-            <span className="text-dark-muted">Other Trip Costs total</span>
-            <span className="text-dark font-medium">{formatPrice(total)}</span>
+          <div className="flex justify-between text-sm px-3 pt-2 border-t border-background-warm">
+            <span className="font-medium text-dark">Other Trip Costs total</span>
+            <span className="text-primary font-semibold">{formatPrice(total)}</span>
           </div>
         </div>
       )}
 
       <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-xs text-dark-muted">Quick add:</span>
+        <span className="text-sm font-medium text-dark">Quick add:</span>
         {PRESETS.map(p => (
           <button
             key={p.name}
             type="button"
             onClick={() => add(p)}
-            className="text-xs px-2.5 py-1 rounded-full border border-background-warm text-dark hover:bg-background-warm/60 transition-colors"
+            className="text-xs font-medium px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background text-dark hover:border-primary/50 hover:bg-primary/5 transition-colors"
           >
             + {p.name}
           </button>
@@ -199,9 +202,9 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
         <button
           type="button"
           onClick={() => add()}
-          className="text-xs px-2.5 py-1 rounded-full border border-primary/40 text-primary hover:bg-primary/5 inline-flex items-center gap-1 transition-colors"
+          className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
         >
-          <Plus size={12} /> Custom line
+          <Plus size={13} aria-hidden="true" /> Custom line
         </button>
       </div>
     </div>
