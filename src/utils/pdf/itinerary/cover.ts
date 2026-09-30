@@ -4,6 +4,7 @@ import { BRAND, PAGE_W, PAGE_H, MARGIN, CONTENT_W, COLORS, money, loadCoverCropp
 import { sanitizeForPdf } from '../../pdfText';
 import { loadContainImage } from '../../pdfImageLoading';
 import { formatDateRange, formatAgeRange, getActivePrice } from '../../utils-index';
+import { withBasicPricing } from '../../tripOptions';
 
 /** Renders the "Cover" slide — trip hero photo, title, meta pills, and
  *  description strip. Extracted from tripItineraryPdf.ts (see that file's
@@ -94,7 +95,9 @@ export async function renderCover(ctx: PdfCtx, trip: PdfTrip): Promise<void> {
     // Meta row: dates • duration • total seats • age eligibility • early bird.
     // Pills auto-wrap onto a second row if the full set doesn't fit one line
     // (long destinations/durations, or an early-bird pill, can push it over).
-    const { activePrice, isEarlyBird } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
+    // Basic (first package) price when the trip has packages.
+    const priced = withBasicPricing(trip);
+    const { activePrice, isEarlyBird } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date);
     const metaParts = [
       formatDateRange(trip.start_date, trip.end_date),
       trip.duration,

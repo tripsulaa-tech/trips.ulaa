@@ -3,10 +3,12 @@ import type {
   TripHighlightCard, TripInclusionItem, TripIncludedGroup, TripGalleryItem,
   TripConfidenceItem, TripCardFeatureTag, TripEndBanner, CoverImageCrop,
   TripFinance,
+  TripOptionsConfig,
 } from '../../types/types-index';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
 import { emptyTripFinance } from '../../utils/tripFinance';
+import { emptyTripOptions } from '../../utils/tripOptions';
 
 export interface TripForm {
   title: string;
@@ -89,6 +91,8 @@ export interface TripForm {
   // Internal-only cost/profit record — see TripFinance and the "Finances &
   // Profit" tab. Never rendered on the public site.
   trip_finance: TripFinance;
+  // Public packages/options — see TripOptionsConfig. Empty lists = plain single-price trip.
+  trip_options: TripOptionsConfig;
 }
 
 export const emptyEndBanner: TripEndBanner = { image: '', heading: '', description: '', cta_label: '', cta_url: '' };
@@ -112,6 +116,7 @@ export const emptyForm: TripForm = {
   trip_leader_id: '',
   meeting_address: '', end_banner: emptyEndBanner,
   trip_finance: emptyTripFinance,
+  trip_options: emptyTripOptions,
 };
 
 // Computes a "X Days / Y Nights" string from two yyyy-mm-dd date strings.

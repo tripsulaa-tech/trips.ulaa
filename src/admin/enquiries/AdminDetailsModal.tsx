@@ -20,6 +20,7 @@ import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
 import type { Enquiry, Payment } from '../../types/types-index';
 import type { InvoiceAction } from './AdminEnquiryCommon';
 import { formatDate, formatPrice, formatTime } from '../../utils/utils-index';
+import { isPremiumPackage } from '../../utils/tripOptions';
 
 export default function DetailsModal({
   detailsTarget,
@@ -258,7 +259,10 @@ export default function DetailsModal({
               </div>
               <div>
                 <p className="text-dark-muted text-xs">Package</p>
-                <p className="text-dark truncate">{PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}</p>
+                <p className="text-dark truncate">
+                  {detailsTarget.package_name ? <span className={`font-semibold ${isPremiumPackage(detailsTarget.package_name) ? 'premium-gold-text' : 'text-primary'}`}>{detailsTarget.package_name}</span> : null}
+                  {detailsTarget.package_name ? <span className="text-dark-muted text-xs"> · {PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}</span> : PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}
+                </p>
               </div>
               <div>
                 <p className="text-dark-muted text-xs">Date &amp; Time</p>

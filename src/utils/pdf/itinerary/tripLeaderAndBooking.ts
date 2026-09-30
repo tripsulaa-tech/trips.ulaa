@@ -7,6 +7,7 @@ import type { AnyIcon, RGB, PdfTrip } from './shared';
 import type { ButtonLabelsConfig } from '../../../types/types-index';
 import { BRAND, MARGIN, CONTENT_W, COLORS, money, heroMoneyRupee, rgbToHex, loadCoverCroppedImage } from './shared';
 import { formatDateRange, formatAgeRange, formatDate, getActivePrice, getStrikeThroughPrice, publicSeatsLeft } from '../../utils-index';
+import { withBasicPricing } from '../../tripOptions';
 
 /** Renders "Trip Leader & Booking" — founder bio, booking-form summary
  *  card, and the "Need Help?" contact bar. Extracted from
@@ -182,8 +183,10 @@ import { formatDateRange, formatAgeRange, formatDate, getActivePrice, getStrikeT
     doc.setFontSize(14.5);
     doc.text('Secure Your Spot Soon', cardCX, RIGHT_TOP + PAD + 6, { align: 'center' });
 
-    const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
-    const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
+    // Basic (first package) price when the trip has packages.
+    const priced = withBasicPricing(trip);
+    const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date);
+    const strikeThroughPrice = getStrikeThroughPrice(activePrice, priced.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
     const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
     const isFull = remaining === 0;
     const isAlmostFull = remaining > 0 && remaining <= 5;

@@ -81,9 +81,14 @@ export interface TripEndBanner {
 // simple, generic list instead of a new field per cost. Each line has ONE
 // rate and ONE way of being multiplied (see TripCostItem below).
 export interface TripFinance {
-  ad_spend: number | null;                    // total promotion/ad spend for this trip
-  entry_ticket_cost_per_person: number | null; // per-traveler entry/activity ticket cost
-  kit_cost_per_person: number | null;          // per-traveler welcome-kit cost (given by Ulaa)
+  // LEGACY — these three used to be dedicated inputs. They are now just
+  // cost lines in `cost_items` (Ad / Promotion Spend = lump sum, Entry Ticket
+  // and Traveler Kit = per traveler). Old records may still carry a value
+  // here; foldLegacyCosts() (utils/tripFinance.ts) converts it into a cost
+  // line on read, so nothing new writes to these.
+  ad_spend?: number | null;
+  entry_ticket_cost_per_person?: number | null;
+  kit_cost_per_person?: number | null;
   agency_name: string;                         // on-ground agency Ulaa pays
   agency_amount_type: 'fixed' | 'per_traveler';
   agency_amount: number | null;                // interpreted per agency_amount_type
@@ -118,7 +123,54 @@ export interface TripCostItem {
   name: string;                // e.g. "Transport", "Water Activities", "Jatayu"
   basis: TripCostBasis;
   rate: number | null;         // ₹ — lump sum for fixed, ₹ per person otherwise
-  quantity: number | null;     // how many people opted in (per_selected only)
+  quantity: number | null;     // how many people opted in (per_selected only, when option_id is not set)
+  // Links this cost line to a public TripOption. When set on a
+  // 'per_selected' line, the headcount is COUNTED from real bookings that
+  // picked that option (Enquiry.selected_option_ids) instead of typed in.
+  option_id?: string | null;
+}
+
+// =============================================
+// Trip options & packages (public + admin)
+// =============================================
+// One generic model instead of hardcoded tiers:
+//   - An OPTION is one thing a traveler can take on top of the base trip
+//     (Water Activities, Jatayu, ...) with the extra price they pay.
+//   - A PACKAGE is just a named preset that ticks a set of options
+//     ("Basic" = none, "Premium" = Water Activities).
+// A package's price is DERIVED: trip's active price + sum of its options'
+// prices — never typed in separately, so it can't drift. What ULAA pays for
+// an option lives in trip_finance.cost_items (admin-only), linked by
+// option_id. Stored as one JSONB blob on upcoming_trips.trip_options.
+export interface TripOption {
+  id: string;                  // stable key, referenced by packages, bookings and cost lines
+  name: string;                // e.g. "Water Activities"
+  description: string;         // short public blurb, optional
+  price: number | null;        // ₹ extra per person charged to the traveler
+}
+
+export interface TripPackage {
+  id: string;
+  name: string;                // e.g. "Basic", "Premium"
+  description: string;         // short public blurb, optional
+  option_ids: string[];        // options this package includes (empty = base trip only)
+  highlight?: boolean;         // shows a "Most popular" badge
+  // Early-bird price applies to this package. Off (or missing) = the package
+  // is always charged the regular trip price, even inside the early-bird
+  // window (e.g. Basic has no early bird, only Premium does).
+  early_bird?: boolean;
+  // Admin-set price per person for this package (e.g. Basic ₹10,000,
+  // Premium ₹12,000). Blank/null = derived: trip price + its options.
+  price?: number | null;
+  // Early-bird price per person for this package, used while the trip's
+  // early-bird window is open. Only used when `early_bird` is on and
+  // `price` is set; blank = no early-bird discount on this package.
+  early_bird_price?: number | null;
+}
+
+export interface TripOptionsConfig {
+  options: TripOption[];
+  packages: TripPackage[];
 }
 
 // Saved position/zoom for a trip's cover_image, set via the Cover Image
@@ -242,6 +294,9 @@ export interface UpcomingTrip {
   // any public-facing page/component; admin-only (Add/Edit Trip → Finances
   // & Profit tab, and the read-only summary on the Trip Details view).
   trip_finance?: TripFinance | null;
+  // Public packages/options a traveler can choose from — see
+  // TripOptionsConfig. Null/empty = a plain single-price trip.
+  trip_options?: TripOptionsConfig | null;
   gallery_images: string[];
   terms_and_conditions?: string;
   cancellation_policy?: CancellationPolicy;
@@ -477,6 +532,15 @@ export interface Enquiry {
   // small badge in the list/detail view without reading payment notes.
   // See add_enquiry_child_addon_flag.sql.
   has_child_addon?: boolean;
+  // Which trip options this traveler took (ids from trip_options.options).
+  // Set by the booking form; the DB re-validates the ids and computes
+  // total_amount from them (see add_trip_packages.sql). Drives the
+  // per-option headcounts in the trip finance summary.
+  selected_option_ids?: string[];
+  // Package the traveler picked (id + a name snapshot for display), purely
+  // a label — the option ids above are what actually count.
+  package_id?: string | null;
+  package_name?: string | null;
   // Admin-only escape hatch from enforce_enquiry_capacity_or_waitlist() —
   // always false/omitted on the public booking form. Used when converting a
   // waitlist entry into a booking, since the seat was already accounted for
@@ -670,6 +734,10 @@ export interface BookingFormData {
   trip_title?: string;
   terms_accepted: boolean;
   food_preference: 'veg' | 'non_veg';
+  // Optional package choice — ids only; the server prices it (see
+  // add_trip_packages.sql), the client never sends an amount.
+  package_id?: string | null;
+  selected_option_ids?: string[];
 }
 
 // Not part of BookingFormData itself (that's the react-hook-form-managed
@@ -689,6 +757,10 @@ export interface BookingFormDraft {
   groupSize: number;
   groupVegCount: number;
   foodPreference: 'veg' | 'non_veg' | null;
+  // Package picked for a solo booking / per-package headcounts for a group
+  // (package id -> people). Absent on drafts saved before packages existed.
+  packageId?: string | null;
+  groupPackageCounts?: Record<string, number>;
   full_name: string;
   age: string;
   phone: string;

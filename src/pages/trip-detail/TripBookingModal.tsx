@@ -3,6 +3,7 @@ import BookingForm from '../../components/ui/BookingForm';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { isBookingDraftDirty } from '../../utils/bookingDraft';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../../types/types-index';
+import { getPackageBase } from '../../utils/tripOptions';
 
 interface TripBookingModalProps {
   trip: UpcomingTrip;
@@ -13,6 +14,8 @@ interface TripBookingModalProps {
   onClose: () => void;
   bookingDraft: BookingFormDraft | null;
   onDraftChange: (draft: BookingFormDraft | null) => void;
+  // Package the visitor tapped on the trip page's package cards, if any.
+  initialPackageId?: string | null;
 }
 
 // Routes to an enquiry or the waitlist depending on whether what's
@@ -27,6 +30,7 @@ export default function TripBookingModal({
   onClose,
   bookingDraft,
   onDraftChange,
+  initialPackageId,
 }: TripBookingModalProps) {
   const confirm = useConfirm();
 
@@ -67,6 +71,9 @@ export default function TripBookingModal({
         maxAge={trip.max_age}
         initialDraft={bookingDraft}
         onDraftChange={onDraftChange}
+        tripOptions={trip.trip_options}
+        packageBase={getPackageBase(trip)}
+        initialPackageId={initialPackageId}
         onSuccess={() => setTimeout(onClose, 3000)}
       />
     </Modal>

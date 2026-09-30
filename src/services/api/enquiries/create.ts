@@ -87,11 +87,20 @@ export async function submitContactEnquiry(contact: {
 // a group can be a mix of veg/non-veg, so it's collected per-seat on the
 // form (see BookingForm's group food-preference stepper) and passed here
 // as an array of length groupSize, one entry per seat.
-export async function submitGroupEnquiry(enquiry: BookingFormData, groupSize: number, foodPreferences: ('veg' | 'non_veg')[]): Promise<void> {
+// Like food, the package choice is per seat: `seatPackages` (optional, one
+// entry per seat) carries each seat's package_id + option ids. Ids only —
+// the DB prices every row (see add_trip_packages.sql).
+export async function submitGroupEnquiry(
+  enquiry: BookingFormData,
+  groupSize: number,
+  foodPreferences: ('veg' | 'non_veg')[],
+  seatPackages?: { package_id: string | null; selected_option_ids: string[] }[],
+): Promise<void> {
   const groupId = crypto.randomUUID();
   const rows = Array.from({ length: groupSize }, (_, i) => ({
     ...enquiry,
     food_preference: foodPreferences[i],
+    ...(seatPackages?.[i] ? { package_id: seatPackages[i].package_id, selected_option_ids: seatPackages[i].selected_option_ids } : {}),
     group_id: groupId,
     group_size: groupSize,
     group_seq: i + 1,

@@ -133,6 +133,12 @@ export async function updateEnquiryDetails(
     food_preference?: 'veg' | 'non_veg' | null;
     package_type?: 'early_bird' | 'normal';
     total_amount?: number | null;
+    // Trip package (Basic / Premium / ...) picked for this traveler — the
+    // trip_options counterpart to package_type above. Ids + a name
+    // snapshot; total_amount is passed separately when it should change.
+    package_id?: string | null;
+    package_name?: string | null;
+    selected_option_ids?: string[];
   }
 ): Promise<Enquiry> {
   const patch: Record<string, unknown> = {};
@@ -199,6 +205,14 @@ export async function updateEnquiryDetails(
   if (fields.package_type !== undefined) {
     track('Package', PACKAGE_LABEL[current.package_type] || current.package_type, PACKAGE_LABEL[fields.package_type] || fields.package_type);
     patch.package_type = fields.package_type;
+  }
+  if (fields.package_id !== undefined || fields.selected_option_ids !== undefined) {
+    if (fields.package_id !== undefined) {
+      track('Trip Package', current.package_name || '', fields.package_name || '');
+      patch.package_id = fields.package_id || null;
+      patch.package_name = fields.package_id ? (fields.package_name || null) : null;
+    }
+    if (fields.selected_option_ids !== undefined) patch.selected_option_ids = fields.selected_option_ids;
   }
   if (fields.total_amount !== undefined) {
     track('List Price', current.total_amount != null ? formatPrice(current.total_amount) : '', fields.total_amount != null ? formatPrice(fields.total_amount) : '');

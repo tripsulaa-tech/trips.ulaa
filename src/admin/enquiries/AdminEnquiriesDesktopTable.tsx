@@ -17,6 +17,7 @@ import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import type { useDragScroll } from '../../components/ui/dataTableUtils';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, formatPrice } from '../../utils/utils-index';
+import { isPremiumPackage } from '../../utils/tripOptions';
 import {
   PACKAGE_CONFIG,
   foodBadge, foodPreferenceKey, SOURCE_CONFIG,
@@ -279,10 +280,21 @@ export default function AdminEnquiriesDesktopTable({
                     <p className="text-2xs text-dark-muted/80">{formatTime(e.created_at)}</p>
                   </td>
                   <td className="px-2 py-4 text-center">
-                    <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
-                      e.package_type === 'early_bird' ? 'text-purple-700' : 'text-slate-700'
-                    }`}>
-                      {e.package_type === 'early_bird' && <Bird size={12} className="shrink-0" aria-hidden="true" />}
+                    {/* Trip package the traveler chose (Basic / Premium / ...)
+                        on top, price tier (Early Bird / Normal) underneath.
+                        Trips without packages just show the tier. */}
+                    {e.package_name && (
+                      <p
+                        title="Trip package this traveler chose"
+                        className={`text-xs font-button font-bold whitespace-nowrap ${isPremiumPackage(e.package_name) ? 'premium-gold-text' : 'text-primary'}`}
+                      >
+                        {e.package_name}
+                      </p>
+                    )}
+                    <span className={`inline-flex items-center gap-1 font-button font-semibold whitespace-nowrap ${
+                      e.package_name ? 'text-2xs' : 'text-xs'
+                    } ${e.package_type === 'early_bird' ? 'text-purple-700' : e.package_name ? 'text-dark-muted' : 'text-slate-700'}`}>
+                      {e.package_type === 'early_bird' && <Bird size={e.package_name ? 10 : 12} className="shrink-0" aria-hidden="true" />}
                       {PACKAGE_CONFIG[e.package_type || 'normal'].label}
                     </span>
                   </td>

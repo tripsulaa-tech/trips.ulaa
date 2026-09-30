@@ -7,7 +7,8 @@ import type { UpcomingTrip, TripLeader } from '../../types/types-index';
 import { slugify } from '../../utils/utils-index';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
-import { emptyTripFinance } from '../../utils/tripFinance';
+import { emptyTripFinance, foldLegacyCosts } from '../../utils/tripFinance';
+import { emptyTripOptions, cleanTripOptions } from '../../utils/tripOptions';
 import { emptyEndBanner, emptyForm, computeDuration, type TripForm } from './tripFormTypes';
 import { handleExportTemplate, parseImportedTripForm } from './tripTemplateIO';
 import { scrollToTextMatch } from '../../utils/scroll';
@@ -171,7 +172,8 @@ export function useTripFormModal(load: () => void) {
       confidence_description: trip.confidence_description || '',
       meeting_address: trip.meeting_address || '',
       end_banner: trip.end_banner || emptyEndBanner,
-      trip_finance: trip.trip_finance || emptyTripFinance,
+      trip_finance: foldLegacyCosts(trip.trip_finance || emptyTripFinance),
+      trip_options: trip.trip_options || emptyTripOptions,
     };
     setForm(editForm);
     initialModalUrlsRef.current = collectTripFormUrls(editForm);
@@ -236,6 +238,9 @@ export function useTripFormModal(load: () => void) {
         max_age: form.max_age === '' ? null : form.max_age,
         trip_leader_id: form.trip_leader_id === '' ? null : form.trip_leader_id,
         seats_booked: Math.max(0, Math.min(form.seats_booked, form.total_seats)),
+        // Blank/unnamed rows and dangling option references are dropped;
+        // nothing left = stored as null (a plain single-price trip).
+        trip_options: cleanTripOptions(form.trip_options),
       };
       if (editingTrip) {
         await updateUpcomingTrip(editingTrip.id, data);

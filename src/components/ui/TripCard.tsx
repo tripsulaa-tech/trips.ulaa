@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
+import { hasPackages, withBasicPricing } from '../../utils/tripOptions';
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
@@ -135,8 +136,12 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
   const isAlmostFull = remaining <= 5 && remaining > 0;
   const isFull = remaining === 0;
-  const { activePrice, isEarlyBird, isSpecialOffer } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
-  const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
+  // Trips with packages show the first package's (Basic) price on the card;
+  // Premium etc. are picked on the trip page / booking form.
+  const priced = withBasicPricing(trip);
+  const basicPackageName = hasPackages(trip.trip_options) ? trip.trip_options.packages[0].name : null;
+  const { activePrice, isEarlyBird, isSpecialOffer } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date);
+  const strikeThroughPrice = getStrikeThroughPrice(activePrice, priced.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
   // Save = strikeThroughPrice - activePrice (marketing "was ₹X" price vs
   // what they pay). PLUS OFFER = trip.price - activePrice (actual regular
   // price vs what they pay) — these coincide unless strike_through_price
@@ -146,8 +151,8 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   const saveAmount = strikeThroughPrice != null && activePrice != null
     ? strikeThroughPrice - activePrice
     : null;
-  const plusOfferAmount = trip.price != null && activePrice != null
-    ? trip.price - activePrice
+  const plusOfferAmount = priced.price != null && activePrice != null
+    ? priced.price - activePrice
     : null;
   // Admin's "hide special-offer promo" quick action (Admin → Upcoming
   // Trips) silences the border/badges below without touching the price
@@ -297,6 +302,9 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-display text-2xl font-bold text-primary">{formatPrice(activePrice)}</span>
                 <span className="text-xs font-medium text-dark-muted">/person</span>
+                {basicPackageName && (
+                  <span className="text-2xs font-medium text-dark-muted bg-background-warm px-1.5 py-0.5 rounded">{basicPackageName}</span>
+                )}
                 {strikeThroughPrice != null && (
                   <span className="text-gray-400 line-through text-sm">{formatPrice(strikeThroughPrice)}</span>
                 )}

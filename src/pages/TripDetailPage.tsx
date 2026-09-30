@@ -13,6 +13,7 @@ import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
 import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice, formatDateRange } from '../utils/utils-index';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
+import { hasPackages } from '../utils/tripOptions';
 
 import TripComingSoon from './trip-detail/TripComingSoon';
 import TripHero from './trip-detail/TripHero';
@@ -21,6 +22,8 @@ import TripHighlightsSection from './trip-detail/TripHighlightsSection';
 import TripItinerarySection from './trip-detail/TripItinerarySection';
 import TripAccommodationSection from './trip-detail/TripAccommodationSection';
 import TripInclusionsSection from './trip-detail/TripInclusionsSection';
+import TripPackagesSection from './trip-detail/TripPackagesSection';
+import { withBasicPricing } from '../utils/tripOptions';
 import TripGallerySection from './trip-detail/TripGallerySection';
 import TripFashionSection from './trip-detail/TripFashionSection';
 import TripConfidenceBookingSection from './trip-detail/TripConfidenceBookingSection';
@@ -214,7 +217,7 @@ export default function TripDetailPage() {
   // Highlight the quick-jump tab for whichever section is currently in view.
   useEffect(() => {
     if (!trip) return;
-    const ids = ['highlights', 'itinerary', 'accommodation', 'inclusions', 'gallery', 'confidence', 'details', 'faqs', 'cancellation'];
+    const ids = ['highlights', 'itinerary', 'accommodation', 'inclusions', 'packages', 'gallery', 'confidence', 'details', 'faqs', 'cancellation'];
     const sections = ids
       .map(id => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -248,7 +251,10 @@ export default function TripDetailPage() {
 
   useCloseOnOutsideClick(calendarMenuOpen, [calendarMenuRef], () => setCalendarMenuOpen(false), { escape: true });
 
-  const openBooking = () => setBookingOpen(true);
+  // Package card the visitor tapped (null = opened via a plain Book button).
+  const [preselectedPackageId, setPreselectedPackageId] = useState<string | null>(null);
+  const openBooking = () => { setPreselectedPackageId(null); setBookingOpen(true); };
+  const choosePackage = (packageId: string) => { setPreselectedPackageId(packageId); setBookingOpen(true); };
 
   if (loading) {
     return (
@@ -279,8 +285,11 @@ export default function TripDetailPage() {
   const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
   const isFull = remaining === 0;
   const isAlmostFull = remaining > 0 && remaining <= 5;
-  const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date);
-  const strikeThroughPrice = getStrikeThroughPrice(activePrice, trip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
+  // Headline price = the first package's (Basic) price when the trip has
+  // packages; Premium etc. show in "Choose Your Package" and the booking form.
+  const pricedTrip = withBasicPricing(trip);
+  const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(pricedTrip.price, pricedTrip.early_bird_price, pricedTrip.early_bird_deadline, pricedTrip.special_offer_price, pricedTrip.special_offer_date, pricedTrip.special_offer_end_date);
+  const strikeThroughPrice = getStrikeThroughPrice(activePrice, pricedTrip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
   // Amount still payable before the trip once the advance/reservation
   // amount is paid — powers the "Reserve today with only ₹X" panel below,
   // which replaces the old plain "Seats available" badge when the admin
@@ -314,6 +323,7 @@ export default function TripDetailPage() {
         registerNavLink={registerNavLink}
         hasConfidenceItems={hasConfidenceItems}
         hasDetailsSection={hasDetailsSection}
+        hasPackages={hasPackages(trip.trip_options)}
       />
 
       {/* Main Content */}
@@ -373,6 +383,12 @@ export default function TripDetailPage() {
             toggleInSet={toggleInSet}
           />
 
+          <TripPackagesSection
+            trip={trip}
+            buttonLabels={buttonLabels}
+            onChoose={choosePackage}
+          />
+
           {((trip.gallery_items?.length ?? 0) > 0 || trip.gallery_images.length > 0) && (
             <TripGallerySection trip={trip} />
           )}
@@ -386,7 +402,7 @@ export default function TripDetailPage() {
           )}
 
           <TripConfidenceBookingSection
-            trip={trip}
+            trip={pricedTrip}
             buttonLabels={buttonLabels}
             confidenceItems={trip.confidence_items}
             activeConfidenceItems={activeConfidenceItems}
@@ -420,7 +436,7 @@ export default function TripDetailPage() {
       </div>
 
       <TripStickyBookingBar
-        trip={trip}
+        trip={pricedTrip}
         buttonLabels={buttonLabels}
         activePrice={activePrice}
         strikeThroughPrice={strikeThroughPrice}
@@ -445,10 +461,11 @@ export default function TripDetailPage() {
         onClose={() => setBookingOpen(false)}
         bookingDraft={bookingDraft}
         onDraftChange={setBookingDraft}
+        initialPackageId={preselectedPackageId}
       />
 
       <TripSpecialOfferPopup
-        trip={trip}
+        trip={pricedTrip}
         isSpecialOffer={isSpecialOffer}
         activePrice={activePrice}
         strikeThroughPrice={strikeThroughPrice}

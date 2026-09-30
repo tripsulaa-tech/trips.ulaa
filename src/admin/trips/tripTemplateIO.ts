@@ -1,6 +1,7 @@
 import type { TripForm } from './tripFormTypes';
 import { emptyEndBanner, emptyForm, computeDuration } from './tripFormTypes';
 import { emptyTripFinance } from '../../utils/tripFinance';
+import { emptyTripOptions } from '../../utils/tripOptions';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
 import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
@@ -318,6 +319,8 @@ export function parseImportedTripForm(raw: unknown): TripForm {
       // imported trip always starts with a blank finance record; the admin
       // fills it in separately in the "Finances & Profit" tab.
       trip_finance: emptyTripFinance,
+      // Packages are set per trip in Pricing & Availability, not templated.
+      trip_options: emptyTripOptions,
     };
   return imported;
 }

@@ -16,9 +16,11 @@ export type EditDetailsForm = {
   food_preference: 'veg' | 'non_veg' | '';
   source: Enquiry['source'];
   package_type: 'early_bird' | 'normal';
+  // Trip package (see TripOptionsConfig) — '' = none / plain trip.
+  trip_package_id: string;
 };
 
 export const emptyEditDetailsForm: EditDetailsForm = {
   full_name: '', email: '', phone: '', city: '', age: '', trip_id: '',
-  food_preference: '', source: 'website', package_type: 'normal',
+  food_preference: '', source: 'website', package_type: 'normal', trip_package_id: '',
 };

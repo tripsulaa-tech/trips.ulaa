@@ -1,3 +1,4 @@
+import { withBasicPricing } from '../../utils/tripOptions';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUpcomingTrips } from '../../services/api';
@@ -67,16 +68,18 @@ export default function SpecialOfferPopup() {
           // of this popup entirely, even while its special_offer_price/date
           // is still live — see add_trip_hide_special_offer_promo.sql.
           if (t.hide_special_offer_promo) return false;
+          // Priced as the Basic (first) package when the trip has packages.
+          const pt = withBasicPricing(t);
           const { isSpecialOffer } = getActivePrice(
-            t.price, t.early_bird_price, t.early_bird_deadline,
-            t.special_offer_price, t.special_offer_date, t.special_offer_end_date
+            pt.price, pt.early_bird_price, pt.early_bird_deadline,
+            pt.special_offer_price, pt.special_offer_date, pt.special_offer_end_date
           );
           if (!isSpecialOffer) return false;
           const remaining = publicSeatsLeft(t.total_seats, t.seats_booked, t.waitlist_reserved || 0);
           return remaining > 0;
         });
 
-        if (featured) setTrip(featured);
+        if (featured) setTrip(withBasicPricing(featured));
       })
       .catch(() => {})
       .finally(() => {

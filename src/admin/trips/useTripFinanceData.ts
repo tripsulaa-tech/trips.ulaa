@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getEnquiries } from '../../services/api';
 import type { Enquiry } from '../../types/types-index';
 import { isBooked } from '../enquiries/AdminEnquiriesShared';
+import { countOptionSelections } from '../../utils/tripOptions';
 
 export interface TripRevenue {
   bookedCount: number;
@@ -11,6 +12,8 @@ export interface TripRevenue {
   // childFareCount so the Child Fare vendor/entry-ticket/kit costs only
   // apply to travelers that actually have one, not every booking.
   childFareCount: number;
+  // option id -> how many bookings picked it (see enquiries.selected_option_ids).
+  optionCounts: Record<string, number>;
 }
 
 // Loads every enquiry once (same source AdminEnquiries/AdminReports read)
@@ -42,6 +45,7 @@ export function useTripFinanceData() {
       bookedCount: bookings.length,
       totalRevenue: bookings.reduce((sum, e) => sum + (e.total_amount || 0), 0),
       childFareCount: bookings.filter(e => e.has_child_addon).length,
+      optionCounts: countOptionSelections(bookings),
     };
   };
 

@@ -12,6 +12,7 @@ import { useMonthFilteredTrips } from '../hooks/useMonthFilteredTrips';
 import { useLiveNavLabel } from '../hooks/useLiveNavLabel';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
+import { withBasicPricing } from '../utils/tripOptions';
 import { getActivePrice, specialOfferDaysLeft } from '../utils/utils-index';
 import type { UpcomingTrip } from '../types/types-index';
 
@@ -81,7 +82,7 @@ export default function UpcomingTripsPage() {
   // trip list changes, not on every render, since "today" only actually
   // changes once a day.
   const activeSpecialOfferTrips = useMemo(
-    () => trips.filter(trip => getActivePrice(trip.price, trip.early_bird_price, trip.early_bird_deadline, trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date).isSpecialOffer),
+    () => trips.filter(trip => { const pt = withBasicPricing(trip); return getActivePrice(pt.price, pt.early_bird_price, pt.early_bird_deadline, pt.special_offer_price, pt.special_offer_date, pt.special_offer_end_date).isSpecialOffer; }),
     [trips]
   );
 

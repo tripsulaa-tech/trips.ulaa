@@ -1,6 +1,6 @@
 import { Plus, Trash as Trash2 } from '@phosphor-icons/react';
 import Select from '../../components/ui/Select';
-import type { TripCostItem, TripCostBasis } from '../../types/types-index';
+import type { TripCostItem, TripCostBasis, TripOption } from '../../types/types-index';
 import { resolveCostItem } from '../../utils/tripFinance';
 import { formatPrice } from '../../utils/utils-index';
 import { inputClass } from './useTripFormModal';
@@ -9,8 +9,8 @@ import { inputClass } from './useTripFormModal';
 //
 // Every line is just: Name + How it's charged + Rate (+ headcount when only
 // some travelers take part). Three ways to charge, nothing else to learn:
-//   Lump sum        — Transport, Stay, Parking, Toll
-//   Per traveler    — Food (x every booked traveler, follows bookings live)
+//   Lump sum        — Ad / Promotion, Transport, Stay, Parking, Toll
+//   Per traveler    — Entry Ticket, Traveler Kit, Food (x every booked traveler, follows bookings live)
 //   Selected people — Water Activities, Jatayu (you type how many opted in)
 
 interface Preset {
@@ -20,6 +20,9 @@ interface Preset {
 
 // One-tap starters — purely a convenience, every field stays editable.
 const PRESETS: Preset[] = [
+  { name: 'Ad / Promotion', basis: 'fixed' },
+  { name: 'Entry Ticket', basis: 'per_traveler' },
+  { name: 'Traveler Kit', basis: 'per_traveler' },
   { name: 'Transport', basis: 'fixed' },
   { name: 'Stay', basis: 'fixed' },
   { name: 'Food', basis: 'per_traveler' },
@@ -40,10 +43,18 @@ const newId = () => `ci_${Date.now().toString(36)}_${(idCounter++).toString(36)}
 interface TripCostItemsEditorProps {
   items: TripCostItem[];
   travelerCount: number;
+  // The trip's public options (Water Activities, Jatayu, ...). A "Selected
+  // people only" line can be linked to one so its headcount is COUNTED from
+  // what travelers actually picked when booking, instead of typed in.
+  options?: TripOption[];
+  // option id -> how many booked travelers picked it.
+  optionCounts?: Record<string, number>;
   onChange: (items: TripCostItem[]) => void;
+  // Sits inside the "Ulaa's Costs" section instead of being its own block.
+  embedded?: boolean;
 }
 
-export default function TripCostItemsEditor({ items, travelerCount, onChange }: TripCostItemsEditorProps) {
+export default function TripCostItemsEditor({ items, travelerCount, options = [], optionCounts = {}, onChange, embedded = false }: TripCostItemsEditorProps) {
   const update = (id: string, patch: Partial<TripCostItem>) =>
     onChange(items.map(it => (it.id === id ? { ...it, ...patch } : it)));
   const remove = (id: string) => onChange(items.filter(it => it.id !== id));
@@ -53,15 +64,17 @@ export default function TripCostItemsEditor({ items, travelerCount, onChange }: 
       { id: newId(), name: preset?.name ?? '', basis: preset?.basis ?? 'fixed', rate: null, quantity: null },
     ]);
 
-  const total = items.reduce((sum, it) => sum + resolveCostItem(it, travelerCount).amount, 0);
+  const total = items.reduce((sum, it) => sum + resolveCostItem(it, travelerCount, optionCounts).amount, 0);
 
   return (
     <div className="md:col-span-2 space-y-3">
       <div>
-        <h4 className="text-sm font-semibold text-dark mb-1">Other Trip Costs</h4>
+        {embedded
+          ? <h5 className="text-sm font-medium text-dark mb-1">Other Trip Costs</h5>
+          : <h4 className="text-sm font-semibold text-dark mb-1">Other Trip Costs</h4>}
         <p className="text-xs text-dark-muted -mt-0.5">
-          Anything else this trip costs — one line each. Pick how it is charged: a <strong>lump sum</strong> (e.g. Transport),
-          <strong> per traveler</strong> (e.g. Food, uses the {travelerCount} booked), or <strong>selected people only</strong> (e.g. Water Activities —
+          One line per cost — ads, entry tickets, kits, transport, stay, food, activities. Pick how it is charged: a <strong>lump sum</strong> (e.g. Ad / Promotion, Transport),
+          <strong> per traveler</strong> (e.g. Entry Ticket, Kit, Food — uses the {travelerCount} booked), or <strong>selected people only</strong> (e.g. Water Activities —
           enter how many opted in).
         </p>
       </div>
@@ -69,8 +82,9 @@ export default function TripCostItemsEditor({ items, travelerCount, onChange }: 
       {items.length > 0 && (
         <div className="space-y-2">
           {items.map(it => {
-            const r = resolveCostItem(it, travelerCount);
-            const overCount = it.basis === 'per_selected' && (it.quantity || 0) > travelerCount && travelerCount > 0;
+            const r = resolveCostItem(it, travelerCount, optionCounts);
+            const linkedOption = it.basis === 'per_selected' && it.option_id ? options.find(o => o.id === it.option_id) : undefined;
+            const overCount = it.basis === 'per_selected' && !it.option_id && (it.quantity || 0) > travelerCount && travelerCount > 0;
             return (
               <div key={it.id} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end bg-background-warm/40 rounded-md p-2">
                 <div className="col-span-2 md:col-span-3">
@@ -108,7 +122,11 @@ export default function TripCostItemsEditor({ items, travelerCount, onChange }: 
                 </div>
                 <div className="md:col-span-2">
                   <label htmlFor={`ci-qty-${it.id}`} className="block text-xs font-medium text-dark mb-1">People</label>
-                  {it.basis === 'per_selected' ? (
+                  {it.basis === 'per_selected' && it.option_id ? (
+                    <div id={`ci-qty-${it.id}`} className="px-3 py-2 text-sm text-dark">
+                      {r.qty} <span className="text-dark-muted text-xs">counted</span>
+                    </div>
+                  ) : it.basis === 'per_selected' ? (
                     <input
                       id={`ci-qty-${it.id}`}
                       type="number"
@@ -136,6 +154,21 @@ export default function TripCostItemsEditor({ items, travelerCount, onChange }: 
                     <Trash2 size={16} />
                   </button>
                 </div>
+                {it.basis === 'per_selected' && options.length > 0 && (
+                  <div className="col-span-2 md:col-span-12 flex items-center gap-2 text-xs">
+                    <label htmlFor={`ci-opt-${it.id}`} className="text-dark-muted">Headcount from:</label>
+                    <select
+                      id={`ci-opt-${it.id}`}
+                      value={it.option_id ?? ''}
+                      onChange={e => update(it.id, { option_id: e.target.value || null })}
+                      className="rounded-md border border-background-warm bg-white px-2 py-1 text-xs text-dark"
+                    >
+                      <option value="">Typed by hand</option>
+                      {options.map(o => <option key={o.id} value={o.id}>{o.name || 'Unnamed option'} (bookings)</option>)}
+                    </select>
+                    {linkedOption && <span className="text-dark-muted">{r.qty} traveler{r.qty === 1 ? '' : 's'} picked {linkedOption.name}</span>}
+                  </div>
+                )}
                 {overCount && (
                   <p className="col-span-2 md:col-span-12 text-xs text-amber-700">
                     {it.quantity} people selected, but only {travelerCount} are booked.

@@ -16,6 +16,7 @@ interface TripQuickNavProps {
   registerNavLink: (id: string, el: HTMLAnchorElement | null) => void;
   hasConfidenceItems: boolean;
   hasDetailsSection: boolean;
+  hasPackages?: boolean;
 }
 
 // Section tab, factored out since every entry shares the same active/inactive
@@ -50,6 +51,7 @@ export default function TripQuickNav({
   registerNavLink,
   hasConfidenceItems,
   hasDetailsSection,
+  hasPackages = false,
 }: TripQuickNavProps) {
   return (
     <div className={`sticky ${STICKY_FILTER_TOP_CLASS} z-30 bg-white/95 backdrop-blur-md border-b border-background-warm px-3 sm:px-6 lg:px-8`}>
@@ -65,6 +67,9 @@ export default function TripQuickNav({
             <NavTab id="accommodation" label="Stay" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
           <NavTab id="inclusions" label="Inclusions" activeSection={activeSection} registerNavLink={registerNavLink} />
+          {hasPackages && (
+            <NavTab id="packages" label="Packages" activeSection={activeSection} registerNavLink={registerNavLink} />
+          )}
           {(trip.gallery_images.length > 0 || (trip.gallery_items?.length ?? 0) > 0) && (
             <NavTab id="gallery" label="Gallery" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}

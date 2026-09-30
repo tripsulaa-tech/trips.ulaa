@@ -359,14 +359,12 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
                     // loading — see useTripFinanceData.
                     const usingReal = !!actualRevenue;
                     const s = actualRevenue
-                      ? computeTripFinanceSummary(trip.trip_finance, actualRevenue.bookedCount, actualRevenue.totalRevenue, actualRevenue.childFareCount)
+                      ? computeTripFinanceSummary(trip.trip_finance, actualRevenue.bookedCount, actualRevenue.totalRevenue, actualRevenue.childFareCount, actualRevenue.optionCounts)
                       : computeTripFinanceSummary(trip.trip_finance, trip.seats_booked, (trip.price || 0) * trip.seats_booked);
                     return (
                       <>
                         <div className="flex justify-between"><span className="text-dark-muted">Total Revenue ({s.travelerCount} booked{usingReal ? '' : ', est.'})</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
                         <div className="flex justify-between"><span className="text-dark-muted">Ulaa's Total Costs</span><span className="text-dark">{formatPrice(s.ulaaCosts)}</span></div>
-                        <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Entry Ticket Costs</span><span className="text-dark-muted">{formatPrice(s.entryTicketCosts)}</span></div>
-                        <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Kit Costs</span><span className="text-dark-muted">{formatPrice(s.kitCosts)}</span></div>
                         <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Cost</span><span className="text-dark-muted">{formatPrice(s.agencyCost)}</span></div>
                         {s.costItems.map(c => (
                           <div key={c.id} className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">{c.name || 'Unnamed cost'}{c.basis !== 'fixed' ? ` (${c.qty} × ${formatPrice(c.rate)})` : ''}</span><span className="text-dark-muted">{formatPrice(c.amount)}</span></div>
@@ -379,7 +377,6 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
                             <div className="flex justify-between pl-8 text-xs"><span className="text-dark-muted">Kit</span><span className="text-dark-muted">{formatPrice(s.childFareKitCost)}</span></div>
                           </>
                         )}
-                        <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Ad Spend</span><span className="text-dark-muted">{formatPrice(trip.trip_finance.ad_spend || 0)}</span></div>
                         <div className="flex justify-between"><span className="text-dark-muted">Trip Organiser's Expenses</span><span className="text-dark">{formatPrice(s.organiserCosts)}</span></div>
                         <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Travel Tickets</span><span className="text-dark-muted">{formatPrice(trip.trip_finance.organiser_travel_cost || 0)}</span></div>
                         <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Payment</span><span className="text-dark-muted">{formatPrice(trip.trip_finance.organiser_agency_payment || 0)}</span></div>

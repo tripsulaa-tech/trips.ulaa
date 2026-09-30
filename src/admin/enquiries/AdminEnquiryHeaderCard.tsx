@@ -12,6 +12,7 @@ import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import FoodMark from '../../components/ui/FoodMark';
 import type { Enquiry } from '../../types/types-index';
 import { formatDate, getInitials } from '../../utils/utils-index';
+import { isPremiumPackage } from '../../utils/tripOptions';
 import {
   foodBadge, foodPreferenceKey, journeyBadge, nextManualAction, isNotInterested,
   canMarkNotInterested, closedReasonLabel, canSetFollowUp, followUpStatus,
@@ -79,6 +80,11 @@ export default function AdminEnquiryHeaderCard({
             <span title={`Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
               <jb.icon size={12} className="shrink-0" aria-hidden="true" /> {jb.label}
             </span>
+            {isPremiumPackage(enquiry.package_name) && (
+              <span title="Trip package this traveler chose" className="premium-gold-border inline-flex items-center text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap">
+                <span className="premium-gold-text">{enquiry.package_name}</span>
+              </span>
+            )}
             {/* Booking State — independent of Booking Journey above, per
                 CRM spec section 3. Only shown once there's an actual
                 booking (cancelling a bare lead is "Not Interested", not

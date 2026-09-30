@@ -371,3 +371,58 @@ button, .btn {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Premium package card (BookingPackagePicker) — a golden border that keeps
+   travelling around the card so the top tier feels special. A registered
+   custom property (@property) lets the conic-gradient angle animate; the
+   solid fill sits on the padding-box layer so only the 2px border shows the
+   gold. Browsers without @property support just show a static gold border. */
+@property --premium-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes premium-border-spin {
+  to { --premium-angle: 360deg; }
+}
+.premium-gold-border {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#FFFDF8, #FFFDF8) padding-box,
+    conic-gradient(from var(--premium-angle), #B8860B, #F7E08F, #C8962A, #FFF6CC, #B8860B, #E9C25A, #B8860B) border-box;
+  animation: premium-border-spin 3.5s linear infinite;
+  transition: box-shadow 0.25s ease;
+}
+.premium-gold-border--selected {
+  background:
+    linear-gradient(#FBF1E1, #FBF1E1) padding-box,
+    conic-gradient(from var(--premium-angle), #B8860B, #F7E08F, #C8962A, #FFF6CC, #B8860B, #E9C25A, #B8860B) border-box;
+  box-shadow: 0 0 14px rgba(200, 150, 42, 0.35);
+}
+.premium-gold-border:hover {
+  box-shadow: 0 0 12px rgba(200, 150, 42, 0.3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .premium-gold-border { animation: none; }
+}
+
+/* Premium package text (name + price) — dark-gold gradient with a light
+   shine that glides across, in step with the golden border. Kept dark enough
+   at its lightest stop to stay readable on the cream card. The description
+   line is left as normal body text. */
+@keyframes premium-text-shine {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.premium-gold-text {
+  background-image: linear-gradient(100deg, #7A5200 0%, #A87A0E 30%, #D4A017 50%, #A87A0E 70%, #7A5200 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #A87A0E;
+  animation: premium-text-shine 3.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .premium-gold-text { animation: none; }
+}

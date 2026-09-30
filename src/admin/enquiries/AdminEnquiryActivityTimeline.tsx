@@ -11,6 +11,14 @@ import { WhatsAppIcon } from '../../components/icons/WhatsAppIcon';
 import type { ActivityLogEntry } from '../../types/types-index';
 import { formatDate, formatTime } from '../../utils/utils-index';
 
+// Log lines are stored as plain text (e.g. "Trip Package: Basic → Premium"),
+// so the golden Premium styling is applied by splitting out that word.
+function withPremiumHighlight(text: string): ReactNode {
+  return text.split(/(premium\w*)/i).map((part, i) =>
+    i % 2 === 1 ? <span key={i} className="premium-gold-text font-semibold">{part}</span> : part,
+  );
+}
+
 interface AdminEnquiryActivityTimelineProps {
   activityLog: ActivityLogEntry[];
   loading: boolean;
@@ -131,8 +139,8 @@ export default function AdminEnquiryActivityTimeline({ activityLog, loading }: A
                   {!isLast && <span className="w-0.5 flex-1 min-h-[1.75rem] my-0.5 rounded-full bg-gradient-to-b from-[#D9C7AC] to-[#D9C7AC]/40" aria-hidden="true" />}
                 </div>
                 <div className={`min-w-0 flex-1 ${isLast ? 'pb-0' : 'pb-4'}`}>
-                  <p className="text-dark text-sm font-medium pt-1">{entry.action}</p>
-                  {entry.details && <p className="text-dark-muted text-xs mt-0.5">{entry.details}</p>}
+                  <p className="text-dark text-sm font-medium pt-1">{withPremiumHighlight(entry.action)}</p>
+                  {entry.details && <p className="text-dark-muted text-xs mt-0.5">{withPremiumHighlight(entry.details)}</p>}
                   <p className="text-dark-muted text-2xs mt-0.5">
                     {formatDate(entry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(entry.created_at)}
                   </p>

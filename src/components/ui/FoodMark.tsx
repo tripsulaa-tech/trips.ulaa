@@ -1,16 +1,22 @@
-// Standard FSSAI-style veg / non-veg square mark — a green square with a
-// filled dot for veg, a red/brown square with a filled triangle for
-// non-veg. Used in place of a generic fork/knife icon anywhere food
-// preference is shown, since this is the mark people actually recognize.
-// Renders in `currentColor`, so it automatically matches whatever text
-// color class the surrounding badge already sets (e.g. text-green-700).
-// 'mixed' is a distinct fixed-color two-tone version — for a group booking
+// Veg / non-veg symbols used everywhere food preference is shown (booking
+// form and admin): a leaf for veg, a piece of meat for non-veg. Both draw in
+// `currentColor`, so they automatically match whatever text color class the
+// surrounding badge already sets (e.g. text-green-700 / text-red-700).
+// 'mixed' shows both side by side in fixed green/red — for a group booking
 // that's part veg, part non-veg, so it isn't tied to a single badge color.
+// 'not_set' is a neutral dashed square: no choice made yet.
+import LeafIcon from '../icons/LeafIcon';
+import ChickenLegIcon from '../icons/ChickenLegIcon';
+
 interface FoodMarkProps {
   type: 'veg' | 'non_veg' | 'not_set' | 'mixed';
   size?: number;
   className?: string;
 }
+
+// Callers pass small badge sizes (9-12px) that suit a filled dot/triangle;
+// the outline leaf/meat icons need a little more room to stay readable.
+const scale = (size: number) => Math.round(size * 1.3);
 
 export default function FoodMark({ type, size = 12, className = '' }: FoodMarkProps) {
   if (type === 'not_set') {
@@ -21,24 +27,15 @@ export default function FoodMark({ type, size = 12, className = '' }: FoodMarkPr
     );
   }
   if (type === 'mixed') {
+    const half = Math.round(size * 0.9);
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-        <rect x="2.5" y="2.5" width="9" height="19" rx="1.5" ry="1.5" stroke="#15803d" strokeWidth="2" />
-        <circle cx="7" cy="12" r="3" fill="#15803d" />
-        <rect x="12.5" y="2.5" width="9" height="19" rx="1.5" ry="1.5" stroke="#b91c1c" strokeWidth="2" />
-        <path d="M17 8.5L20 15.5H14L17 8.5Z" fill="#b91c1c" />
-      </svg>
+      <span className={`inline-flex items-center shrink-0 ${className}`} aria-hidden="true">
+        <LeafIcon size={half} className="text-green-700" />
+        <ChickenLegIcon size={half} className="text-red-700" />
+      </span>
     );
   }
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <rect x="2.5" y="2.5" width="19" height="19" rx="1.5" stroke="currentColor" strokeWidth="2" />
-      {type === 'veg' ? (
-        <circle cx="12" cy="12" r="5.5" fill="currentColor" />
-      ) : (
-        <path d="M12 6L18.2 17H5.8L12 6Z" fill="currentColor" />
-      )}
-    </svg>
-  );
+  return type === 'veg'
+    ? <LeafIcon size={scale(size)} className={className} />
+    : <ChickenLegIcon size={scale(size)} className={className} />;
 }
-

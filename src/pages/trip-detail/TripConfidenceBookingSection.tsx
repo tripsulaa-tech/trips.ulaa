@@ -5,6 +5,7 @@ import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import SectionTitle from '../../components/ui/SectionTitle';
 import type { UpcomingTrip, TripConfidenceItem, ButtonLabelsConfig } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, formatAgeRange, specialOfferDaysLeft } from '../../utils/utils-index';
+import { hasPackages } from '../../utils/tripOptions';
 import { getGoogleCalendarUrl, downloadTripIcs } from '../../utils/calendar';
 import {
   Calendar,
@@ -72,6 +73,7 @@ export default function TripConfidenceBookingSection({
   // non-hidden special offer, and only when it says something the green
   // badge doesn't.
   const showSpecialOfferPromo = isSpecialOffer && !trip.hide_special_offer_promo;
+  const basicPackageName = hasPackages(trip.trip_options) ? trip.trip_options.packages[0].name : null;
   const saveAmount = strikeThroughPrice != null && activePrice != null
     ? strikeThroughPrice - activePrice
     : null;
@@ -121,7 +123,7 @@ export default function TripConfidenceBookingSection({
                     <span className="font-display text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
                     <span className="text-dark-muted line-through text-lg">{formatPrice(strikeThroughPrice)}</span>
                   </div>
-                  <p className="text-dark-muted text-xs mt-1">per person</p>
+                  <p className="text-dark-muted text-xs mt-1">per person{basicPackageName ? ` · ${basicPackageName} package` : ''}</p>
 
                   <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
                     <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-button font-medium px-2.5 py-1 rounded-md">
@@ -162,7 +164,7 @@ export default function TripConfidenceBookingSection({
               ) : (
                 <>
                   <span className="font-display text-3xl font-bold text-dark">{formatPrice(activePrice)}</span>
-                  <p className="text-dark-muted text-xs mt-1">per person</p>
+                  <p className="text-dark-muted text-xs mt-1">per person{basicPackageName ? ` · ${basicPackageName} package` : ''}</p>
                   {deadlinePassed && (
                     <p className="text-dark-muted text-xs mt-1">Early-bird offer has ended</p>
                   )}

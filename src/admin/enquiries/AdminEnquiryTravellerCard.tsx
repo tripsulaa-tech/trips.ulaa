@@ -8,7 +8,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { WhatsAppIcon } from '../../components/icons/WhatsAppIcon';
 import {
-  User, Briefcase, Buildings as Building2, ForkKnife as Utensils,
+  User, Briefcase, Buildings as Building2,
   CalendarBlank as CalendarDays, Globe, Package, Bird,
   Phone as PhoneIcon, EnvelopeSimple, Pencil, Check, X,
 } from '@phosphor-icons/react';
@@ -16,6 +16,7 @@ import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, getWhatsAppLink } from '../../utils/utils-index';
+import { isPremiumPackage } from '../../utils/tripOptions';
 import { PACKAGE_CONFIG, PACKAGE_OPTIONS, SOURCE_CONFIG, SOURCE_OPTIONS_ALL, FOOD_PREFERENCE_OPTIONS } from './AdminEnquiryCommon';
 import type { EditDetailsForm } from './AdminEditDetailsModal';
 import {
@@ -335,7 +336,7 @@ export default function AdminEnquiryTravellerCard({
           </div>
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
-              <Utensils size={15} aria-hidden="true" />
+              <FoodMark type={enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : 'not_set'} size={12} />
             </span>
             <div className="min-w-0 flex-1">
               <label htmlFor="eq-detail-edit-food" className="text-dark-muted text-xs">Food Preference</label>
@@ -426,6 +427,44 @@ export default function AdminEnquiryTravellerCard({
               )}
             </div>
           </div>
+          {/* Trip package (Basic / Premium / ...) — only for trips that
+              define packages, or a traveler who already picked one. Kept
+              separate from the early-bird/normal "Package" above: that one
+              is the price tier, this is what the traveler chose to do. */}
+          {(() => {
+            const tripPackages = selectedTrip?.trip_options?.packages ?? [];
+            if (tripPackages.length === 0 && !enquiry.package_name) return null;
+            return (
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
+                  <Package size={15} aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <label htmlFor="eq-detail-edit-trip-package" className="text-dark-muted text-xs">Trip Package</label>
+                  {editing && tripPackages.length > 0 ? (
+                    <div className="mt-0.5">
+                      <Select
+                        inputId="eq-detail-edit-trip-package"
+                        size="sm"
+                        value={editForm.trip_package_id}
+                        onChange={val => setEditForm(f => ({ ...f, trip_package_id: val }))}
+                        options={[{ value: '', label: 'None (base trip)' }, ...tripPackages.map(p => ({ value: p.id, label: p.name }))]}
+                      />
+                      {enquiry.booking_id && (
+                        <span className="block text-2xs text-dark-muted mt-0.5">Amount unchanged — adjust via Track Payment / Add-on</span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-dark text-sm font-semibold truncate">
+                      {isPremiumPackage(enquiry.package_name)
+                        ? <span className="premium-gold-text">{enquiry.package_name}</span>
+                        : enquiry.package_name || 'None'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
           {!editing && enquiry.phone && (
             <div className="flex items-center gap-2.5 min-w-0">
               <a

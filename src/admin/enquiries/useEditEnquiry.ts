@@ -3,6 +3,7 @@ import { updateEnquiryDetails } from '../../services/api';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { emptyEditDetailsForm, type EditDetailsForm } from './AdminEditDetailsModal';
 import { computeDiscountedTotal } from './AdminEnquiryCommon';
+import { packageListPrice, packageOptionIds } from '../../utils/tripOptions';
 import { useAlert } from '../../components/ui/useAlert';
 import {
   validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity, validateOptionalAge,
@@ -32,7 +33,7 @@ export function useEditEnquiry(params: {
   load: () => void;
   getTripPrice: (tripId: string | undefined, packageType: Enquiry['package_type']) => number | undefined;
 }) {
-  const { trips, load, getTripPrice } = params;
+  const { trips, load } = params;
   const alert = useAlert();
 
   const [editTarget, setEditTarget] = useState<Enquiry | null>(null);
@@ -51,6 +52,7 @@ export function useEditEnquiry(params: {
       food_preference: enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg' ? enquiry.food_preference : '',
       source: enquiry.source,
       package_type: enquiry.package_type === 'early_bird' ? 'early_bird' : 'normal',
+      trip_package_id: enquiry.package_id || '',
     });
     setEditTouched(new Set());
     setEditTarget(enquiry);
@@ -90,14 +92,54 @@ export function useEditEnquiry(params: {
       // list price, same as Track Payment does when its own Package field
       // changes. Bookings (which lock this field entirely) never hit this
       // branch, so an already-collected/confirmed total is never touched.
-      const packageChanged = editForm.package_type !== editTarget.package_type;
       const tripIdForPricing = editForm.trip_id || editTarget.trip_id || undefined;
-      const newListPrice = packageChanged && !editTarget.booking_id
-        ? getTripPrice(tripIdForPricing, editForm.package_type)
-        : undefined;
-      const newTotalAmount = newListPrice != null
-        ? computeDiscountedTotal(newListPrice, editTarget.discount_amount || '')
-        : undefined;
+      const pricingTrip = newTrip ?? trips.find(t => t.id === tripIdForPricing);
+      const cfg = pricingTrip?.trip_options ?? null;
+
+      // Trip package (Basic / Premium / ...): swapping it changes which
+      // options this traveler took (which drives the per-option headcounts
+      // in Trip Finance) AND which price tier applies, because early-bird
+      // pricing is per package (e.g. only Premium gets it).
+      const pkgChanged = editForm.trip_package_id !== (editTarget.package_id || '');
+      const pkg = cfg?.packages.find(p => p.id === editForm.trip_package_id);
+      let packagePatch: { package_id: string | null; package_name: string | null; selected_option_ids: string[] } | undefined;
+      const newOptionIds = pkgChanged
+        ? (pkg && cfg ? packageOptionIds(pkg, cfg) : [])
+        : (editTarget.selected_option_ids || []);
+      if (pkgChanged) {
+        packagePatch = { package_id: pkg?.id ?? null, package_name: pkg?.name ?? null, selected_option_ids: newOptionIds };
+      }
+
+      // Price tier. If the admin didn't pick a tier by hand, follow the
+      // package: a package without early-bird is always Normal; an
+      // early-bird package moves to Early Bird when the trip's window is
+      // still open (or the traveler already was early-bird).
+      let finalPackageType = editForm.package_type;
+      const typeEditedByHand = editForm.package_type !== editTarget.package_type;
+      if (pkgChanged && !typeEditedByHand && cfg && cfg.packages.length > 0) {
+        if (!pkg || !pkg.early_bird) {
+          finalPackageType = 'normal';
+        } else {
+          const windowOpen = !!pricingTrip?.early_bird_deadline
+            && new Date() <= new Date(`${pricingTrip.early_bird_deadline}T23:59:59.999`);
+          finalPackageType = editTarget.package_type === 'early_bird' || windowOpen ? 'early_bird' : 'normal';
+        }
+      }
+      const tierChanged = finalPackageType !== editTarget.package_type;
+
+      // Amount. Before a booking exists the total follows the package and
+      // tier: the package's own price (or trip price + its options when it
+      // has none) for that tier, with any existing discount re-applied.
+      // Once a booking exists the amount is left alone — the traveler has
+      // already been invoiced/paid against it, so any difference goes
+      // through Track Payment / an Add-on.
+      let totalAfterPackage: number | undefined;
+      if (!editTarget.booking_id && (pkgChanged || tierChanged) && pricingTrip) {
+        const listPrice = packageListPrice(pkg, cfg, pricingTrip, finalPackageType);
+        if (listPrice != null) {
+          totalAfterPackage = computeDiscountedTotal(listPrice, editTarget.discount_amount || '') ?? listPrice;
+        }
+      }
       await updateEnquiryDetails(editTarget.id, editTarget, {
         full_name: editForm.full_name,
         email: editForm.email,
@@ -108,8 +150,9 @@ export function useEditEnquiry(params: {
         trip_title: editForm.trip_id ? (newTrip?.title ?? null) : null,
         food_preference: editForm.food_preference || null,
         source: editForm.source,
-        package_type: editForm.package_type,
-        ...(newTotalAmount !== undefined ? { total_amount: newTotalAmount } : {}),
+        package_type: finalPackageType,
+        ...(totalAfterPackage !== undefined ? { total_amount: totalAfterPackage } : {}),
+        ...(packagePatch ?? {}),
       });
       setEditTarget(null);
       load();

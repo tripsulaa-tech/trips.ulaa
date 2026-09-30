@@ -14,7 +14,7 @@
 // axis nothing else exposes — a time period — so "how are we trending this
 // month" is answerable without exporting to a spreadsheet.
 import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { loadPersisted, savePersisted } from '../utils/sessionState';
 import {
@@ -40,7 +40,6 @@ import {
   Confetti as PartyPopper,
   CalendarX as CalendarX2,
   MapPin,
-  ForkKnife as UtensilsCrossed,
   UserMinus as UserX,
   ChartPie as PieChart,
   DownloadSimple as Download,
@@ -50,6 +49,7 @@ import {
   UserCircle,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
+import FoodMark from '../components/ui/FoodMark';
 import Select from '../components/ui/Select';
 import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getAllPayments } from '../services/api';
 import type { Enquiry, UpcomingTrip, CompletedTrip, Payment, TripFinance } from '../types/types-index';
@@ -57,6 +57,7 @@ import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
 import { computeTripFinanceSummary } from '../utils/tripFinance';
+import { countOptionSelections } from '../utils/tripOptions';
 import { downloadTripExcelReport, downloadAllTripsExcelReport } from '../utils/tripExcelReport';
 
 // Real, human-readable label for every value enquiries.source can actually
@@ -190,9 +191,14 @@ const cardVariants = {
   show: { opacity: 1, y: 0 },
 };
 
+// Leaf + meat side by side — the Food Preference card counts veg and non-veg.
+function FoodPreferenceIcon({ size = 18, className }: { size?: number; className?: string }) {
+  return <FoodMark type="mixed" size={size} className={className} />;
+}
+
 function StatCard({
   label, value, sub, icon: Icon, tone = 'primary',
-}: { label: string; value: string | number; sub?: string; icon: typeof Users; tone?: Tone }) {
+}: { label: string; value: string | number; sub?: string; icon: ComponentType<{ size?: number; className?: string }>; tone?: Tone }) {
   const t = TONE_STYLES[tone];
   return (
     <motion.div
@@ -621,7 +627,7 @@ export default function AdminReports() {
         const tripBookings = enquiries.filter(e => e.trip_id === t.id && isBooked(e));
         const totalRevenue = tripBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0);
         const childFareCount = tripBookings.filter(e => e.has_child_addon).length;
-        const summary = computeTripFinanceSummary(t.trip_finance, tripBookings.length, totalRevenue, childFareCount);
+        const summary = computeTripFinanceSummary(t.trip_finance, tripBookings.length, totalRevenue, childFareCount, countOptionSelections(tripBookings));
         return {
           id: t.id,
           title: t.title || t.destination,
@@ -727,17 +733,12 @@ export default function AdminReports() {
     const f = t.finance;
 
     // Ulaa Costs breakdown — mirrors computeTripFinanceSummary's own
-    // ulaaCosts formula (ad spend + per-traveler costs + agency + child
-    // fare costs) line by line, using the already-computed per-traveler
-    // and agency figures from `t` (entryTicketCosts, kitCosts, agencyCost,
-    // ...) plus the one raw field that summary doesn't expose on its own:
-    // ad_spend. Child Fare lines are only included when this trip actually
-    // has Child Fare bookings — otherwise they're three zero rows that add
-    // nothing.
+    // ulaaCosts formula (agency + cost lines + child fare costs) line by
+    // line. Ad spend, entry tickets and kits are ordinary cost lines now, so
+    // they appear with the other cost lines below. Child Fare lines are only
+    // included when this trip actually has Child Fare bookings — otherwise
+    // they're three zero rows that add nothing.
     const ulaaCostBreakdown: { label: string; amount: number }[] = [
-      { label: 'Ad Spend', amount: f.ad_spend || 0 },
-      { label: 'Entry Ticket Costs (Adults)', amount: t.entryTicketCosts },
-      { label: 'Kit Costs (Adults)', amount: t.kitCosts },
       {
         label: f.agency_name
           ? `Agency Payment — ${f.agency_name}${f.agency_amount_type === 'per_traveler' ? ' (per traveler)' : ''}`
@@ -1080,7 +1081,7 @@ export default function AdminReports() {
                 <StatCard label="Occupancy" value={`${operational.occupancyPct}%`} sub={`${operational.seatsBooked} of ${operational.totalSeats} seats · upcoming trips`} icon={UsersThree} tone="primary" />
                 <StatCard label="Cancellation Rate" value={`${operational.cancellationPct}%`} sub={`${operational.cancelledOfBooked} of ${operational.everBookedCount} bookings`} icon={XCircle} tone="red" />
                 <StatCard label="No-Show Rate" value={`${operational.noShowPct}%`} sub={`${operational.noShowCount} of ${operational.attendanceRecordedCount} arrivals tracked`} icon={UserX} tone="primary" />
-                <StatCard label="Food Preference" value={`${operational.veg}V / ${operational.nonVeg}NV`} sub={operational.notSet ? `${operational.notSet} not set` : 'Travellers'} icon={UtensilsCrossed} tone="primary" />
+                <StatCard label="Food Preference" value={`${operational.veg}V / ${operational.nonVeg}NV`} sub={operational.notSet ? `${operational.notSet} not set` : 'Travellers'} icon={FoodPreferenceIcon} tone="primary" />
               </div>
 
               {operational.topDestinations.length > 0 && (

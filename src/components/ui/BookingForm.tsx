@@ -7,10 +7,9 @@ import {
   FileText,
   User,
   Users,
-  ForkKnife as Utensils,
   Clock as Clock3,
 } from '@phosphor-icons/react';
-import type { BookingFormData, BookingMode, BookingFormDraft, WaitlistFormData } from '../../types/types-index';
+import type { BookingFormData, BookingMode, BookingFormDraft, WaitlistFormData, TripOptionsConfig } from '../../types/types-index';
 import { submitEnquiry, submitGroupEnquiry, submitWaitlist, getTripSeatSnapshot } from '../../services/api';
 import { useBotTrap } from '../../utils/botProtection';
 import HoneypotField from './HoneypotField';
@@ -23,6 +22,10 @@ import { getEmailDomainSuggestions } from '../../constants/emailDomains';
 import Button from './Button';
 import Modal from './Modal';
 import TermsBlocks from './TermsBlocks';
+import BookingPackagePicker from './BookingPackagePicker';
+import ChickenLegIcon from '../icons/ChickenLegIcon';
+import LeafIcon from '../icons/LeafIcon';
+import { hasPackages, packageOptionIds, seatPackageAssignments, noPackageBase, type PackageBase } from '../../utils/tripOptions';
 import KeyboardNavSuggestionDropdown from './KeyboardNavSuggestionDropdown';
 import { handleSuggestionKeyDown } from './suggestionKeyNav';
 
@@ -62,9 +65,21 @@ interface BookingFormProps {
   // null right after a successful submit, once the form has actually been
   // cleared, so a stale draft doesn't get restored into the next booking.
   onDraftChange?: (draft: BookingFormDraft | null) => void;
+  // The trip's public packages (Basic / Premium / ...). When it has any,
+  // a package choice is shown and sent along with the enquiry — ids only,
+  // the DB prices it. Omitted/empty = plain single-price trip, form
+  // behaves exactly as before.
+  tripOptions?: TripOptionsConfig | null;
+  // Today's price for the plain trip, used only to show each package's
+  // price and an estimated total in the picker.
+  packageBase?: PackageBase | null;
+  // Package to preselect (e.g. the card the visitor tapped on the trip
+  // page). Wins over a restored draft's package, since it's the most
+  // recent thing the visitor chose.
+  initialPackageId?: string | null;
 }
 
-export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge, initialDraft, onDraftChange }: BookingFormProps) {
+export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge, initialDraft, onDraftChange, tripOptions, packageBase, initialPackageId }: BookingFormProps) {
   // Shared id prefix so every label/input pair below has a stable,
   // unique-per-instance id — needed for htmlFor/aria-describedby wiring,
   // and unique in case this form is ever mounted more than once at a time.
@@ -123,6 +138,20 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   // above. Kept in sync with groupVegCount whenever it changes elsewhere
   // (e.g. clamped down when groupSize shrinks) via the effect below.
   const [vegCountInput, setVegCountInput] = useState(String(initialDraft?.groupVegCount ?? MIN_GROUP_SIZE));
+
+  // Package choice (only when the trip has packages). Solo: one package id,
+  // defaulting to the first (usually the base/"Basic" one). Group: people
+  // per package — the first package takes the remainder, same idea as the
+  // veg/non-veg split above.
+  const packagesOn = hasPackages(tripOptions);
+  const validPackageId = (id?: string | null) =>
+    id && tripOptions?.packages.some(p => p.id === id) ? id : null;
+  const [packageId, setPackageId] = useState<string | null>(
+    validPackageId(initialPackageId) ?? validPackageId(initialDraft?.packageId) ?? tripOptions?.packages[0]?.id ?? null
+  );
+  const [groupPackageCounts, setGroupPackageCounts] = useState<Record<string, number>>(
+    initialDraft?.groupPackageCounts ?? {}
+  );
 
   // Whether what's currently selected/entered actually fits in the seats
   // left. When it doesn't, submitting still succeeds — it just becomes a
@@ -248,6 +277,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       groupSize,
       groupVegCount,
       foodPreference,
+      packageId,
+      groupPackageCounts,
       full_name: values.full_name ?? '',
       age: values.age != null ? String(values.age) : '',
       phone: values.phone ?? '',
@@ -270,7 +301,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     const subscription = watch(() => reportDraft());
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookingMode, groupSize, groupVegCount, foodPreference, watch]);
+  }, [bookingMode, groupSize, groupVegCount, foodPreference, packageId, groupPackageCounts, watch]);
 
   // Shared shape behind both the group and solo submit paths below: try
   // the real enquiry/booking submission when the live seat count says it
@@ -373,7 +404,15 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         // (group_size on the row), not one enquiry per seat. The veg/non-veg
         // split isn't stored as structured data on a single row, so it's
         // folded into the message for whoever follows up.
-        const foodNote = `${groupVegCountClamped} veg / ${groupSize - groupVegCountClamped} non-veg.`;
+        const seatPackages = packagesOn ? seatPackageAssignments(tripOptions!, groupSize, groupPackageCounts) : undefined;
+        // Same for the package split — the waitlist row has no package
+        // columns, so it travels in the message for whoever follows up.
+        const packageNote = seatPackages
+          ? tripOptions!.packages
+              .map(p => `${seatPackages.filter(s => s.package_id === p.id).length}× ${p.name}`)
+              .join(', ') + '.'
+          : '';
+        const foodNote = `${groupVegCountClamped} veg / ${groupSize - groupVegCountClamped} non-veg.${packageNote ? ` Packages: ${packageNote}` : ''}`;
         const waitlistPayload = {
           full_name: d.full_name,
           phone: d.phone,
@@ -389,11 +428,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
         await submitWithWaitlistFallback(
           groupFitsLive,
-          () => submitGroupEnquiry({ ...d, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences),
+          () => submitGroupEnquiry({ ...d, trip_id: tripId, trip_title: tripTitle }, groupSize, foodPreferences, seatPackages),
           waitlistPayload
         );
         setSuccessCount(groupSize);
       } else {
+        const chosenPackage = packagesOn ? tripOptions!.packages.find(p => p.id === packageId) ?? tripOptions!.packages[0] : null;
+        const soloPackageNote = chosenPackage ? `Package: ${chosenPackage.name}.` : '';
         const waitlistPayload = {
           full_name: d.full_name,
           phone: d.phone,
@@ -402,7 +443,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           city: d.city,
           emergency_contact: d.emergency_contact,
           food_preference: foodPreference,
-          message: d.message,
+          message: soloPackageNote ? (d.message ? `${soloPackageNote} ${d.message}` : soloPackageNote) : d.message,
           trip_id: tripId!,
           trip_title: tripTitle,
           group_size: null,
@@ -410,7 +451,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
         await submitWithWaitlistFallback(
           soloFitsLive,
-          () => submitEnquiry({ ...d, food_preference: foodPreference as 'veg' | 'non_veg', trip_id: tripId, trip_title: tripTitle }),
+          () => submitEnquiry({
+            ...d,
+            food_preference: foodPreference as 'veg' | 'non_veg',
+            trip_id: tripId,
+            trip_title: tripTitle,
+            ...(chosenPackage ? { package_id: chosenPackage.id, selected_option_ids: packageOptionIds(chosenPackage, tripOptions) } : {}),
+          }),
           waitlistPayload
         );
         setSuccessCount(1);
@@ -434,6 +481,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       setGroupSizeInput(String(MIN_GROUP_SIZE));
       setGroupVegCount(MIN_GROUP_SIZE);
       setFoodPreference(null);
+      setPackageId(tripOptions?.packages[0]?.id ?? null);
+      setGroupPackageCounts({});
       onDraftChange?.(null);
       onSuccess?.();
     } catch (err) {
@@ -758,6 +807,20 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         </div>
       </div>
 
+      {/* Package (only for trips that offer packages) */}
+      {packagesOn && (
+        <BookingPackagePicker
+          config={tripOptions!}
+          base={packageBase ?? noPackageBase}
+          mode={bookingMode}
+          groupSize={groupSize}
+          packageId={packageId}
+          onPackageChange={setPackageId}
+          groupCounts={groupPackageCounts}
+          onGroupCountsChange={setGroupPackageCounts}
+        />
+      )}
+
       {/* Food Preference */}
       <div>
         {bookingMode === 'solo' ? (
@@ -775,11 +838,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
                 aria-pressed={foodPreference === 'veg'}
                 className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
                   foodPreference === 'veg'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-background-warm text-dark-muted hover:border-primary/40'
+                    ? 'border-green-600 bg-green-50 text-green-700'
+                    : 'border-background-warm text-dark-muted hover:border-green-600/40'
                 }`}
               >
-                <Utensils size={16} aria-hidden="true" /> Veg
+                <LeafIcon size={18} /> Veg
               </button>
               <button
                 type="button"
@@ -787,11 +850,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
                 aria-pressed={foodPreference === 'non_veg'}
                 className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
                   foodPreference === 'non_veg'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-background-warm text-dark-muted hover:border-primary/40'
+                    ? 'border-red-600 bg-red-50 text-red-700'
+                    : 'border-background-warm text-dark-muted hover:border-red-600/40'
                 }`}
               >
-                <Utensils size={16} aria-hidden="true" /> Non-veg
+                <ChickenLegIcon size={18} /> Non-veg
               </button>
             </div>
             {foodPreferenceError && <p id={`${ids.foodPreference}-error`} role="alert" className={errorClass}>{foodPreferenceError}</p>}

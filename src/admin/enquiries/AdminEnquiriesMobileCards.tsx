@@ -9,7 +9,6 @@ import {
   CurrencyInr as IndianRupee,
   Users,
   User,
-  ForkKnife as Utensils,
   CalendarDot as CalendarClock,
   Briefcase,
   Buildings as Building2,
@@ -31,6 +30,7 @@ import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, formatPrice, getWhatsAppLink } from '../../utils/utils-index';
+import { isPremiumPackage } from '../../utils/tripOptions';
 import {
   PACKAGE_CONFIG,
   SOURCE_CONFIG,
@@ -210,6 +210,16 @@ export default function AdminEnquiriesMobileCards({
                       <User size={9}  aria-hidden="true" /> Solo
                     </span>
                   )}
+                  {e.package_name && (
+                    <span
+                      title="Trip package this traveler chose"
+                      className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap shrink-0 ${
+                        isPremiumPackage(e.package_name) ? 'bg-gold/10' : 'bg-primary/10 text-primary'
+                      }`}
+                    >
+                      <span className={isPremiumPackage(e.package_name) ? 'premium-gold-text' : undefined}>{e.package_name}</span>
+                    </span>
+                  )}
                   {e.has_child_addon && (
                     <span
                       title="A Child Fare add-on has been added to this booking"
@@ -313,7 +323,7 @@ export default function AdminEnquiriesMobileCards({
                       </div>
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
-                          <Utensils size={15}  aria-hidden="true" />
+                          <FoodMark type={e.food_preference === 'veg' || e.food_preference === 'non_veg' ? e.food_preference : 'not_set'} size={12} />
                         </span>
                         <div className="min-w-0">
                           <p className="text-dark-muted text-xs">Food Preference</p>
@@ -356,7 +366,10 @@ export default function AdminEnquiriesMobileCards({
                         </span>
                         <div className="min-w-0">
                           <p className="text-dark-muted text-xs">Package</p>
-                          <p className="text-dark text-sm truncate">{PACKAGE_CONFIG[e.package_type || 'normal'].label}</p>
+                          <p className="text-dark text-sm truncate">
+                            {e.package_name ? <span className={`font-semibold ${isPremiumPackage(e.package_name) ? 'premium-gold-text' : 'text-primary'}`}>{e.package_name}</span> : null}
+                            {e.package_name ? <span className="text-dark-muted text-xs"> · {PACKAGE_CONFIG[e.package_type || 'normal'].label}</span> : PACKAGE_CONFIG[e.package_type || 'normal'].label}
+                          </p>
                         </div>
                       </div>
                       {e.phone && (
