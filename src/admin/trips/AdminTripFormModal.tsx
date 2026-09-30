@@ -76,6 +76,18 @@ interface AdminTripFormModalProps {
  *  own comment for the rest of the split. All form state lives in the
  *  parent's useTripFormModal hook; this component is deliberately just the
  *  view over `form`/`setForm`. */
+// Responsive grids for groups of short fields (numbers, amounts, short text),
+// so boxes don't stretch to half the modal for a value like "8000":
+//   FIELD_GRID_4 (groups of 4): 2 per row on phones/tablets, 4 on desktop.
+//   FIELD_GRID_3 (groups of 3 or 5): 2 per row on phones, 3 on tablets/desktop.
+// Labels reserve two lines below `lg` so a wrapped label never pushes its
+// input out of line with the input next to it.
+const FIELD_GRID_BASE =
+  'md:col-span-2 grid gap-x-3 sm:gap-x-4 gap-y-4 items-start ' +
+  '[&>div>label]:flex [&>div>label]:items-end [&>div>label]:min-h-10 lg:[&>div>label]:min-h-0';
+const FIELD_GRID_4 = `${FIELD_GRID_BASE} grid-cols-2 lg:grid-cols-4`;
+const FIELD_GRID_3 = `${FIELD_GRID_BASE} grid-cols-2 md:grid-cols-3`;
+
 export default function AdminTripFormModal({
   modalOpen, closeModal, editingTrip, form, setForm,
   modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef,
@@ -195,7 +207,7 @@ export default function AdminTripFormModal({
             </div>
           </TabPanel>
           <TabPanel label="Pricing & Availability" icon={<Tag size={15} />}>
-            <div className="md:col-span-2 grid grid-cols-2 gap-4">
+            <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-4 items-start">
               <div>
                 <label htmlFor="trip-total-seats" className="block text-sm font-medium text-dark mb-1">Total Seats</label>
                 <input id="trip-total-seats" type="number" min={0} value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
@@ -217,60 +229,60 @@ export default function AdminTripFormModal({
                 </p>
               </div>
             </div>
-            <div>
-              <label htmlFor="trip-price" className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹) *</label>
-              <input
-                id="trip-price"
-                type="number"
-                value={form.price}
-                onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : +e.target.value }))}
-                className={inputClass}
-                placeholder="e.g. 42999"
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-strike-price" className="block text-sm font-medium text-dark mb-1">Strikeout Price per person (₹)</label>
-              <input
-                id="trip-strike-price"
-                type="number"
-                value={form.strike_through_price}
-                onChange={e => setForm(f => ({ ...f, strike_through_price: e.target.value === '' ? '' : +e.target.value }))}
-                className={inputClass}
-                placeholder="e.g. 49999 (optional)"
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-early-bird-price" className="block text-sm font-medium text-dark mb-1">Early-Bird Price per person (₹)</label>
-              <input
-                id="trip-early-bird-price"
-                type="number"
-                value={form.early_bird_price}
-                onChange={e => setForm(f => ({ ...f, early_bird_price: e.target.value === '' ? '' : +e.target.value }))}
-                className={inputClass}
-                placeholder="e.g. 39999 (optional)"
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-advance-amount" className="block text-sm font-medium text-dark mb-1">Advance/Reservation Amount (₹)</label>
-              <input
-                id="trip-advance-amount"
-                type="number"
-                min={0}
-                value={form.advance_amount}
-                onChange={e => setForm(f => ({ ...f, advance_amount: e.target.value === '' ? '' : +e.target.value }))}
-                aria-describedby="trip-advance-amount-hint"
-                className={inputClass}
-                placeholder="e.g. 8999 (optional)"
-              />
-              <p id="trip-advance-amount-hint" className="text-xs text-dark-muted mt-1">
-                Shown on the public trip page as "Reserve today with only ₹{form.advance_amount || 'X'}". Leave blank to show the seats-available badge instead.
-              </p>
+            <div className={FIELD_GRID_4}>
+              <div>
+                <label htmlFor="trip-price" className="block text-sm font-medium text-dark mb-1">Regular Price per person (₹) *</label>
+                <input
+                  id="trip-price"
+                  type="number"
+                  value={form.price}
+                  onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : +e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 42999"
+                />
+              </div>
+              <div>
+                <label htmlFor="trip-strike-price" className="block text-sm font-medium text-dark mb-1">Strikeout Price per person (₹)</label>
+                <input
+                  id="trip-strike-price"
+                  type="number"
+                  value={form.strike_through_price}
+                  onChange={e => setForm(f => ({ ...f, strike_through_price: e.target.value === '' ? '' : +e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 49999 (optional)"
+                />
+              </div>
+              <div>
+                <label htmlFor="trip-early-bird-price" className="block text-sm font-medium text-dark mb-1">Early-Bird Price per person (₹)</label>
+                <input
+                  id="trip-early-bird-price"
+                  type="number"
+                  value={form.early_bird_price}
+                  onChange={e => setForm(f => ({ ...f, early_bird_price: e.target.value === '' ? '' : +e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 39999 (optional)"
+                />
+              </div>
+              <div>
+                <label htmlFor="trip-advance-amount" className="block text-sm font-medium text-dark mb-1">Advance/Reservation Amount (₹)</label>
+                <input
+                  id="trip-advance-amount"
+                  type="number"
+                  min={0}
+                  value={form.advance_amount}
+                  onChange={e => setForm(f => ({ ...f, advance_amount: e.target.value === '' ? '' : +e.target.value }))}
+                  aria-describedby="trip-advance-amount-hint"
+                  className={inputClass}
+                  placeholder="e.g. 8999 (optional)"
+                />
+              </div>
+              <p id="trip-advance-amount-hint" className="col-span-2 lg:col-span-4 text-xs text-dark-muted -mt-1"> Shown on the public trip page as "Reserve today with only ₹{form.advance_amount || 'X'}". Leave blank to show the seats-available badge instead. </p>
             </div>
             <div className="md:col-span-2 bg-primary/5 border border-primary/20 rounded-md p-3 space-y-3">
               <p className="text-xs text-dark-muted">
                 Optional named flash offer (e.g. "Diwali Dhamaka"). Unlike Early-Bird above, this is meant for a short, urgent occasion sale — set Start and End Date to the same day for a one-day flash sale, or a few days apart (e.g. a 3-day window) for a long-weekend sale. It shows automatically on the Trip Card with a live "Offer ends in X days" countdown, and disappears on its own the day after End Date. Leave End Date blank to run it for Start Date only.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-4 items-start [&>div>label]:flex [&>div>label]:items-end [&>div>label]:min-h-10 lg:[&>div>label]:min-h-0">
                 <div>
                   <label htmlFor="trip-special-offer-name" className="block text-sm font-medium text-dark mb-1">Offer Name</label>
                   <input
@@ -410,45 +422,45 @@ export default function AdminTripFormModal({
               <h4 className="text-sm font-semibold text-dark mb-1">On-Ground Agency (paid by Ulaa)</h4>
               <p className="text-xs text-dark-muted -mt-0.5 mb-2">The local agency Ulaa pays to run the trip on the ground.</p>
             </div>
-            <div>
-              <label htmlFor="trip-agency-name" className="block text-sm font-medium text-dark mb-1">Agency Name</label>
-              <input
-                id="trip-agency-name"
-                value={form.trip_finance.agency_name}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, agency_name: e.target.value } }))}
-                className={inputClass}
-                placeholder="e.g. Spiti Adventures Co."
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-agency-amount-type" className="block text-sm font-medium text-dark mb-1">Agency Payment Type</label>
-              <Select
-                inputId="trip-agency-amount-type"
-                value={form.trip_finance.agency_amount_type}
-                onChange={val => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, agency_amount_type: val as 'fixed' | 'per_traveler' } }))}
-                options={[
-                  { value: 'fixed', label: 'Fixed lump sum' },
-                  { value: 'per_traveler', label: 'Per traveler' },
-                ]}
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-agency-amount" className="block text-sm font-medium text-dark mb-1">
-                Amount Paid to Agency (₹{form.trip_finance.agency_amount_type === 'per_traveler' ? ' per person' : ' total'})
-              </label>
-              <input
-                id="trip-agency-amount"
-                type="number"
-                min={0}
-                value={form.trip_finance.agency_amount ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, agency_amount: e.target.value === '' ? null : +e.target.value } }))}
-                aria-describedby="trip-agency-amount-hint"
-                className={inputClass}
-                placeholder="e.g. 29300"
-              />
-              <p id="trip-agency-amount-hint" className="text-xs text-dark-muted mt-1">
-                e.g. traveler is charged ₹39,999, ₹29,300 of that goes to the agency — the rest covers entry tickets, kits, promotion, and Ulaa's margin.
-              </p>
+            <div className={FIELD_GRID_3}>
+              <div>
+                <label htmlFor="trip-agency-name" className="block text-sm font-medium text-dark mb-1">Agency Name</label>
+                <input
+                  id="trip-agency-name"
+                  value={form.trip_finance.agency_name}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, agency_name: e.target.value } }))}
+                  className={inputClass}
+                  placeholder="e.g. Spiti Adventures Co."
+                />
+              </div>
+              <div>
+                <label htmlFor="trip-agency-amount-type" className="block text-sm font-medium text-dark mb-1">Agency Payment Type</label>
+                <Select
+                  inputId="trip-agency-amount-type"
+                  value={form.trip_finance.agency_amount_type}
+                  onChange={val => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, agency_amount_type: val as 'fixed' | 'per_traveler' } }))}
+                  options={[
+                    { value: 'fixed', label: 'Fixed lump sum' },
+                    { value: 'per_traveler', label: 'Per traveler' },
+                  ]}
+                />
+              </div>
+              <div>
+                <label htmlFor="trip-agency-amount" className="block text-sm font-medium text-dark mb-1">
+                  Amount Paid to Agency (₹{form.trip_finance.agency_amount_type === 'per_traveler' ? ' per person' : ' total'})
+                </label>
+                <input
+                  id="trip-agency-amount"
+                  type="number"
+                  min={0}
+                  value={form.trip_finance.agency_amount ?? ''}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, agency_amount: e.target.value === '' ? null : +e.target.value } }))}
+                  aria-describedby="trip-agency-amount-hint"
+                  className={inputClass}
+                  placeholder="e.g. 29300"
+                />
+              </div>
+              <p id="trip-agency-amount-hint" className="col-span-2 md:col-span-3 text-xs text-dark-muted -mt-1"> e.g. traveler is charged ₹39,999, ₹29,300 of that goes to the agency — the rest covers entry tickets, kits, promotion, and Ulaa's margin. </p>
             </div>
 
             <div className="md:col-span-2 pt-2 border-t border-background-warm">
@@ -457,59 +469,61 @@ export default function AdminTripFormModal({
                 One flat rate for this whole trip — applies to every Child Fare add-on (see the Child Fare chip on Track Payment/Add-on). Once set here, the add-on amount auto-fills and locks so it can never drift from these numbers.
               </p>
             </div>
-            <div>
-              <label htmlFor="trip-child-fare-amount" className="block text-sm font-medium text-dark mb-1">Child Fare Amount (₹)</label>
-              <input
-                id="trip-child-fare-amount"
-                type="number"
-                min={0}
-                value={form.trip_finance.child_fare_amount ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_amount: e.target.value === '' ? null : +e.target.value } }))}
-                aria-describedby="trip-child-fare-amount-hint"
-                className={inputClass}
-                placeholder="e.g. 8000"
-              />
-              <p id="trip-child-fare-amount-hint" className="text-xs text-dark-muted mt-1">What the traveler is charged for bringing a child along.</p>
-            </div>
-            <div>
-              <label htmlFor="trip-child-fare-vendor" className="block text-sm font-medium text-dark mb-1">Child Fare Vendor Amount (₹)</label>
-              <input
-                id="trip-child-fare-vendor"
-                type="number"
-                min={0}
-                value={form.trip_finance.child_fare_vendor_amount ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_vendor_amount: e.target.value === '' ? null : +e.target.value } }))}
-                aria-describedby="trip-child-fare-vendor-hint"
-                className={inputClass}
-                placeholder="e.g. 7000"
-              />
-              <p id="trip-child-fare-vendor-hint" className="text-xs text-dark-muted mt-1">What Ulaa pays the on-ground agency per child — separate from the adult agency rate above.</p>
-            </div>
-            <div>
-              <label htmlFor="trip-child-fare-entry-ticket" className="block text-sm font-medium text-dark mb-1">Child Fare Entry Ticket Cost (₹)</label>
-              <input
-                id="trip-child-fare-entry-ticket"
-                type="number"
-                min={0}
-                value={form.trip_finance.child_fare_entry_ticket_cost ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_entry_ticket_cost: e.target.value === '' ? null : +e.target.value } }))}
-                className={inputClass}
-                placeholder="Per child, can differ from adults"
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-child-fare-kit" className="block text-sm font-medium text-dark mb-1">Child Fare Kit Cost (₹)</label>
-              <input
-                id="trip-child-fare-kit"
-                type="number"
-                min={0}
-                value={form.trip_finance.child_fare_kit_cost ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_kit_cost: e.target.value === '' ? null : +e.target.value } }))}
-                aria-describedby="trip-child-fare-kit-hint"
-                className={inputClass}
-                placeholder="Per child — not always 0"
-              />
-              <p id="trip-child-fare-kit-hint" className="text-xs text-dark-muted mt-1">Kids don't always skip the welcome kit — leave 0 only if this trip's kids genuinely get none.</p>
+            <div className={FIELD_GRID_4}>
+              <div>
+                <label htmlFor="trip-child-fare-amount" className="block text-sm font-medium text-dark mb-1">Child Fare Amount (₹)</label>
+                <input
+                  id="trip-child-fare-amount"
+                  type="number"
+                  min={0}
+                  value={form.trip_finance.child_fare_amount ?? ''}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_amount: e.target.value === '' ? null : +e.target.value } }))}
+                  aria-describedby="trip-child-fare-amount-hint"
+                  className={inputClass}
+                  placeholder="e.g. 8000"
+                />
+                <p id="trip-child-fare-amount-hint" className="text-xs text-dark-muted mt-1">What the traveler is charged for bringing a child along.</p>
+              </div>
+              <div>
+                <label htmlFor="trip-child-fare-vendor" className="block text-sm font-medium text-dark mb-1">Child Fare Vendor Amount (₹)</label>
+                <input
+                  id="trip-child-fare-vendor"
+                  type="number"
+                  min={0}
+                  value={form.trip_finance.child_fare_vendor_amount ?? ''}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_vendor_amount: e.target.value === '' ? null : +e.target.value } }))}
+                  aria-describedby="trip-child-fare-vendor-hint"
+                  className={inputClass}
+                  placeholder="e.g. 7000"
+                />
+                <p id="trip-child-fare-vendor-hint" className="text-xs text-dark-muted mt-1">What Ulaa pays the on-ground agency per child — separate from the adult agency rate above.</p>
+              </div>
+              <div>
+                <label htmlFor="trip-child-fare-entry-ticket" className="block text-sm font-medium text-dark mb-1">Child Fare Entry Ticket Cost (₹)</label>
+                <input
+                  id="trip-child-fare-entry-ticket"
+                  type="number"
+                  min={0}
+                  value={form.trip_finance.child_fare_entry_ticket_cost ?? ''}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_entry_ticket_cost: e.target.value === '' ? null : +e.target.value } }))}
+                  className={inputClass}
+                  placeholder="Per child, can differ from adults"
+                />
+              </div>
+              <div>
+                <label htmlFor="trip-child-fare-kit" className="block text-sm font-medium text-dark mb-1">Child Fare Kit Cost (₹)</label>
+                <input
+                  id="trip-child-fare-kit"
+                  type="number"
+                  min={0}
+                  value={form.trip_finance.child_fare_kit_cost ?? ''}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_kit_cost: e.target.value === '' ? null : +e.target.value } }))}
+                  aria-describedby="trip-child-fare-kit-hint"
+                  className={inputClass}
+                  placeholder="Per child — not always 0"
+                />
+                <p id="trip-child-fare-kit-hint" className="text-xs text-dark-muted mt-1">Kids don't always skip the welcome kit — leave 0 only if this trip's kids genuinely get none.</p>
+              </div>
             </div>
 
             <div className="md:col-span-2 pt-2 border-t border-background-warm">
@@ -518,69 +532,71 @@ export default function AdminTripFormModal({
                 What the person running the trip on the ground spends. Entered as actuals, not multiplied by traveler count — the organiser's own agency payment in particular often doesn't scale with headcount.
               </p>
             </div>
-            <div>
-              <label htmlFor="trip-organiser-name" className="block text-sm font-medium text-dark mb-1">Trip Organiser Name</label>
-              <input
-                id="trip-organiser-name"
-                value={form.trip_finance.organiser_name}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_name: e.target.value } }))}
-                className={inputClass}
-                placeholder="e.g. Rahul"
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-organiser-travel" className="block text-sm font-medium text-dark mb-1">Organiser Travel Tickets (₹)</label>
-              <input
-                id="trip-organiser-travel"
-                type="number"
-                min={0}
-                value={form.trip_finance.organiser_travel_cost ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_travel_cost: e.target.value === '' ? null : +e.target.value } }))}
-                aria-describedby="trip-organiser-travel-hint"
-                className={inputClass}
-                placeholder="Flight / train / bus"
-              />
-              <p id="trip-organiser-travel-hint" className="text-xs text-dark-muted mt-1">Organiser's own flight/train/bus fare to reach and return from the trip.</p>
-            </div>
-            <div>
-              <label htmlFor="trip-organiser-agency" className="block text-sm font-medium text-dark mb-1">Organiser's Agency Payment (₹)</label>
-              <input
-                id="trip-organiser-agency"
-                type="number"
-                min={0}
-                value={form.trip_finance.organiser_agency_payment ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_agency_payment: e.target.value === '' ? null : +e.target.value } }))}
-                aria-describedby="trip-organiser-agency-hint"
-                className={inputClass}
-                placeholder="Actual amount paid, if any"
-              />
-              <p id="trip-organiser-agency-hint" className="text-xs text-dark-muted mt-1">Separate from the Ulaa→agency amount above. Leave blank/0 if the organiser doesn't pay the agency directly for this trip.</p>
-            </div>
-            <div>
-              <label htmlFor="trip-organiser-misc" className="block text-sm font-medium text-dark mb-1">Miscellaneous Expenses (₹)</label>
-              <input
-                id="trip-organiser-misc"
-                type="number"
-                min={0}
-                value={form.trip_finance.organiser_misc_expense ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_misc_expense: e.target.value === '' ? null : +e.target.value } }))}
-                className={inputClass}
-                placeholder="Local transport, food, tips, etc."
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-organiser-own-entry-ticket" className="block text-sm font-medium text-dark mb-1">Organiser's Own Entry Ticket (₹)</label>
-              <input
-                id="trip-organiser-own-entry-ticket"
-                type="number"
-                min={0}
-                value={form.trip_finance.organiser_own_entry_ticket ?? ''}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_own_entry_ticket: e.target.value === '' ? null : +e.target.value } }))}
-                aria-describedby="trip-organiser-own-entry-ticket-hint"
-                className={inputClass}
-                placeholder="The organiser's personal entry ticket"
-              />
-              <p id="trip-organiser-own-entry-ticket-hint" className="text-xs text-dark-muted mt-1">The trip organiser needs their own entry ticket too — separate from the per-traveler entry tickets counted above.</p>
+            <div className={FIELD_GRID_3}>
+              <div>
+                <label htmlFor="trip-organiser-name" className="block text-sm font-medium text-dark mb-1">Trip Organiser Name</label>
+                <input
+                  id="trip-organiser-name"
+                  value={form.trip_finance.organiser_name}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_name: e.target.value } }))}
+                  className={inputClass}
+                  placeholder="e.g. Rahul"
+                />
+              </div>
+              <div>
+                <label htmlFor="trip-organiser-travel" className="block text-sm font-medium text-dark mb-1">Organiser Travel Tickets (₹)</label>
+                <input
+                  id="trip-organiser-travel"
+                  type="number"
+                  min={0}
+                  value={form.trip_finance.organiser_travel_cost ?? ''}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_travel_cost: e.target.value === '' ? null : +e.target.value } }))}
+                  aria-describedby="trip-organiser-travel-hint"
+                  className={inputClass}
+                  placeholder="Flight / train / bus"
+                />
+                <p id="trip-organiser-travel-hint" className="text-xs text-dark-muted mt-1">Organiser's own flight/train/bus fare to reach and return from the trip.</p>
+              </div>
+              <div>
+                <label htmlFor="trip-organiser-agency" className="block text-sm font-medium text-dark mb-1">Organiser's Agency Payment (₹)</label>
+                <input
+                  id="trip-organiser-agency"
+                  type="number"
+                  min={0}
+                  value={form.trip_finance.organiser_agency_payment ?? ''}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_agency_payment: e.target.value === '' ? null : +e.target.value } }))}
+                  aria-describedby="trip-organiser-agency-hint"
+                  className={inputClass}
+                  placeholder="Actual amount paid, if any"
+                />
+                <p id="trip-organiser-agency-hint" className="text-xs text-dark-muted mt-1">Separate from the Ulaa→agency amount above. Leave blank/0 if the organiser doesn't pay the agency directly for this trip.</p>
+              </div>
+              <div>
+                <label htmlFor="trip-organiser-misc" className="block text-sm font-medium text-dark mb-1">Miscellaneous Expenses (₹)</label>
+                <input
+                  id="trip-organiser-misc"
+                  type="number"
+                  min={0}
+                  value={form.trip_finance.organiser_misc_expense ?? ''}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_misc_expense: e.target.value === '' ? null : +e.target.value } }))}
+                  className={inputClass}
+                  placeholder="Local transport, food, tips, etc."
+                />
+              </div>
+              <div>
+                <label htmlFor="trip-organiser-own-entry-ticket" className="block text-sm font-medium text-dark mb-1">Organiser's Own Entry Ticket (₹)</label>
+                <input
+                  id="trip-organiser-own-entry-ticket"
+                  type="number"
+                  min={0}
+                  value={form.trip_finance.organiser_own_entry_ticket ?? ''}
+                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_own_entry_ticket: e.target.value === '' ? null : +e.target.value } }))}
+                  aria-describedby="trip-organiser-own-entry-ticket-hint"
+                  className={inputClass}
+                  placeholder="The organiser's personal entry ticket"
+                />
+                <p id="trip-organiser-own-entry-ticket-hint" className="text-xs text-dark-muted mt-1">The trip organiser needs their own entry ticket too — separate from the per-traveler entry tickets counted above.</p>
+              </div>
             </div>
             <div className="md:col-span-2">
               <label htmlFor="trip-finance-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
@@ -1047,26 +1063,27 @@ export default function AdminTripFormModal({
               </p>
             </div>
 
-            <div>
-              <label htmlFor="trip-meeting-time" className="block text-sm font-medium text-dark mb-1">Time</label>
-              <input
-                id="trip-meeting-time"
-                value={form.meeting_time}
-                onChange={e => setForm(f => ({ ...f, meeting_time: e.target.value }))}
-                className={inputClass}
-                placeholder="e.g. 7:00 AM on Day 1"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="trip-meeting-terminal" className="block text-sm font-medium text-dark mb-1">Terminal</label>
-              <input
-                id="trip-meeting-terminal"
-                value={form.meeting_terminal}
-                onChange={e => setForm(f => ({ ...f, meeting_terminal: e.target.value }))}
-                className={inputClass}
-                placeholder="e.g. Terminal 2, Departure Gate"
-              />
+            <div className="md:col-span-2 grid grid-cols-2 gap-x-3 sm:gap-x-4 items-start">
+              <div>
+                <label htmlFor="trip-meeting-time" className="block text-sm font-medium text-dark mb-1">Time</label>
+                <input
+                  id="trip-meeting-time"
+                  value={form.meeting_time}
+                  onChange={e => setForm(f => ({ ...f, meeting_time: e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 7:00 AM on Day 1"
+                />
+              </div>
+              <div>
+                <label htmlFor="trip-meeting-terminal" className="block text-sm font-medium text-dark mb-1">Terminal</label>
+                <input
+                  id="trip-meeting-terminal"
+                  value={form.meeting_terminal}
+                  onChange={e => setForm(f => ({ ...f, meeting_terminal: e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. Terminal 2, Departure Gate"
+                />
+              </div>
             </div>
 
             <div className="md:col-span-2">
