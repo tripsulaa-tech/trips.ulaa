@@ -536,7 +536,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   }
 
   const inputClass = `
-    w-full px-4 py-3 rounded-lg border-2 bg-background
+    w-full min-w-0 px-3 sm:px-4 py-3 rounded-lg border-2 bg-background
     font-body text-dark placeholder-dark-muted/50
     transition-all duration-200 outline-none
     focus:border-primary focus:bg-white
@@ -603,8 +603,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         </div>
       )}
 
-      {/* Solo vs Group booking */}
-      <div>
+      {/* Solo vs Group booking — shares a row with Number of People on
+          tablet/desktop when Group is picked; stacks on phones. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 items-start">
+      <div className={bookingMode === 'group' ? '' : 'sm:col-span-2'}>
         <label id={ids.bookingType} className="block text-sm font-medium text-dark mb-1">Booking Type</label>
         <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby={ids.bookingType}>
           <button
@@ -690,10 +692,14 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           {groupSizeError && <p id={`${ids.groupSize}-error`} role="alert" className={errorClass}>{groupSizeError}</p>}
         </div>
       )}
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Phones: 2-col grid so short fields (Age, City) pair up; desktop: 6-col
+          so Name+Age, City+Phone, Email+Emergency each fill a row. DOM order
+          matches the visual order at every breakpoint (tab order stays sane). */}
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-x-3 sm:gap-x-4 gap-y-4">
         {/* Full Name */}
-        <div>
+        <div className="col-span-2 sm:col-span-4">
           <label htmlFor={ids.fullName} className="block text-sm font-medium text-dark mb-1">Full Name *</label>
           <input
             id={ids.fullName}
@@ -708,7 +714,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         </div>
 
         {/* Age */}
-        <div>
+        <div className="col-span-1 sm:col-span-2">
           <label htmlFor={ids.age} className="block text-sm font-medium text-dark mb-1">Age *</label>
           <input
             id={ids.age}
@@ -733,8 +739,27 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           {errors.age && <p id={`${ids.age}-error`} role="alert" className={errorClass}>{errors.age.message}</p>}
         </div>
 
+        {/* City */}
+        <div className="relative col-span-1 sm:col-span-3">
+          <label htmlFor={ids.city} className="block text-sm font-medium text-dark mb-1">City *</label>
+          <input
+            id={ids.city}
+            {...cityReg}
+            onChange={e => { cityReg.onChange(e); handleCityInput(e.target.value); }}
+            onBlur={e => { cityReg.onBlur(e); setCitySuggestionsOpen(false); }}
+            onKeyDown={e => handleSuggestionKeyDown(e, citySuggestions, citySuggestionsOpen, citySuggestionIndex, setCitySuggestionIndex, selectCitySuggestion, setCitySuggestionsOpen)}
+            placeholder="Your city"
+            autoComplete="address-level2"
+            aria-invalid={!!errors.city}
+            aria-describedby={errors.city ? `${ids.city}-error` : undefined}
+            className={inputClass}
+          />
+          {errors.city && <p id={`${ids.city}-error`} role="alert" className={errorClass}>{errors.city.message}</p>}
+          {citySuggestionsOpen && <KeyboardNavSuggestionDropdown items={citySuggestions} activeIndex={citySuggestionIndex} onSelect={selectCitySuggestion} />}
+        </div>
+
         {/* Phone */}
-        <div>
+        <div className="col-span-2 sm:col-span-3">
           <label htmlFor={ids.phone} className="block text-sm font-medium text-dark mb-1">Phone Number *</label>
           <input
             id={ids.phone}
@@ -751,7 +776,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         </div>
 
         {/* Email */}
-        <div className="relative">
+        <div className="relative col-span-2 sm:col-span-3">
           <label htmlFor={ids.email} className="block text-sm font-medium text-dark mb-1">Email *</label>
           <input
             id={ids.email}
@@ -770,34 +795,15 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           {emailSuggestionsOpen && <KeyboardNavSuggestionDropdown items={emailSuggestions} activeIndex={emailSuggestionIndex} onSelect={selectEmailSuggestion} />}
         </div>
 
-        {/* City */}
-        <div className="relative">
-          <label htmlFor={ids.city} className="block text-sm font-medium text-dark mb-1">City *</label>
-          <input
-            id={ids.city}
-            {...cityReg}
-            onChange={e => { cityReg.onChange(e); handleCityInput(e.target.value); }}
-            onBlur={e => { cityReg.onBlur(e); setCitySuggestionsOpen(false); }}
-            onKeyDown={e => handleSuggestionKeyDown(e, citySuggestions, citySuggestionsOpen, citySuggestionIndex, setCitySuggestionIndex, selectCitySuggestion, setCitySuggestionsOpen)}
-            placeholder="Your city"
-            autoComplete="address-level2"
-            aria-invalid={!!errors.city}
-            aria-describedby={errors.city ? `${ids.city}-error` : undefined}
-            className={inputClass}
-          />
-          {errors.city && <p id={`${ids.city}-error`} role="alert" className={errorClass}>{errors.city.message}</p>}
-          {citySuggestionsOpen && <KeyboardNavSuggestionDropdown items={citySuggestions} activeIndex={citySuggestionIndex} onSelect={selectCitySuggestion} />}
-        </div>
-
         {/* Emergency Contact */}
-        <div>
+        <div className="col-span-2 sm:col-span-3">
           <label htmlFor={ids.emergencyContact} className="block text-sm font-medium text-dark mb-1">Emergency Contact</label>
           <input
             id={ids.emergencyContact}
             type="tel"
             inputMode="tel"
             {...register('emergency_contact', { validate: validateOptionalPhone })}
-            placeholder="Emergency contact number"
+            placeholder="Emergency contact no."
             autoComplete="off"
             aria-invalid={!!errors.emergency_contact}
             aria-describedby={errors.emergency_contact ? `${ids.emergencyContact}-error` : undefined}

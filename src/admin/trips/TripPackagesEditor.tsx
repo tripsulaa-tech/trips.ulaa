@@ -107,11 +107,11 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
               <input id={`opt-name-${o.id}`} value={o.name} onChange={e => patchOption(o.id, { name: e.target.value })} className={inputClass} placeholder="e.g. Water Activities" />
             </div>
             <div className="col-span-2 md:col-span-5">
-              <label htmlFor={`opt-desc-${o.id}`} className="block text-sm font-medium text-dark mb-1">Short description (optional)</label>
+              <label htmlFor={`opt-desc-${o.id}`} className="block text-sm font-medium text-dark mb-1"><span className="sm:hidden">Note (optional)</span><span className="hidden sm:inline">Short description (optional)</span></label>
               <input id={`opt-desc-${o.id}`} value={o.description} onChange={e => patchOption(o.id, { description: e.target.value })} className={inputClass} placeholder="e.g. Rafting & kayaking" />
             </div>
             <div className="col-span-1 md:col-span-2">
-              <label htmlFor={`opt-price-${o.id}`} className="block text-sm font-medium text-dark mb-1">Extra price (₹)</label>
+              <label htmlFor={`opt-price-${o.id}`} className="block text-sm font-medium text-dark mb-1"><span className="sm:hidden">Extra (₹)</span><span className="hidden sm:inline">Extra price (₹)</span></label>
               <input
                 id={`opt-price-${o.id}`}
                 type="number"
@@ -140,16 +140,16 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
         {packages.map(p => (
           <div key={p.id} className="bg-background-warm rounded-lg p-3 space-y-2">
             <div className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end">
-              <div className="col-span-2 md:col-span-3">
-                <label htmlFor={`pkg-name-${p.id}`} className="block text-sm font-medium text-dark mb-1">Package name</label>
+              <div className="col-span-1 md:col-span-3">
+                <label htmlFor={`pkg-name-${p.id}`} className="block text-sm font-medium text-dark mb-1"><span className="sm:hidden">Name</span><span className="hidden sm:inline">Package name</span></label>
                 <input id={`pkg-name-${p.id}`} value={p.name} onChange={e => patchPackage(p.id, { name: e.target.value })} className={inputClass} placeholder="e.g. Premium" />
               </div>
-              <div className="col-span-2 md:col-span-2">
-                <label htmlFor={`pkg-desc-${p.id}`} className="block text-sm font-medium text-dark mb-1">Short description (optional)</label>
+              <div className="col-span-1 md:col-span-2">
+                <label htmlFor={`pkg-desc-${p.id}`} className="block text-sm font-medium text-dark mb-1"><span className="sm:hidden">Note (optional)</span><span className="hidden sm:inline">Short description (optional)</span></label>
                 <input id={`pkg-desc-${p.id}`} value={p.description} onChange={e => patchPackage(p.id, { description: e.target.value })} className={inputClass} />
               </div>
               <div className="col-span-1 md:col-span-2">
-                <label htmlFor={`pkg-price-${p.id}`} className="block text-sm font-medium text-dark mb-1">Price / person (₹)</label>
+                <label htmlFor={`pkg-price-${p.id}`} className="block text-sm font-medium text-dark mb-1"><span className="sm:hidden">Price (₹)</span><span className="hidden sm:inline">Price / person (₹)</span></label>
                 <input
                   id={`pkg-price-${p.id}`}
                   type="number"

@@ -33,8 +33,8 @@ const PRESETS: Preset[] = [
 
 const BASIS_OPTIONS: { value: TripCostBasis; label: string }[] = [
   { value: 'fixed', label: 'Lump sum' },
-  { value: 'per_traveler', label: 'Per traveler (all)' },
-  { value: 'per_selected', label: 'Selected people only' },
+  { value: 'per_traveler', label: 'Per traveler' },
+  { value: 'per_selected', label: 'Selected people' },
 ];
 
 let idCounter = 0;
@@ -87,7 +87,7 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
             const overCount = it.basis === 'per_selected' && !it.option_id && (it.quantity || 0) > travelerCount && travelerCount > 0;
             return (
               <div key={it.id} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end bg-background-warm rounded-lg p-3">
-                <div className="col-span-2 md:col-span-3">
+                <div className="col-span-1 md:col-span-3">
                   <label htmlFor={`ci-name-${it.id}`} className="block text-sm font-medium text-dark mb-1">Name</label>
                   <input
                     id={`ci-name-${it.id}`}
@@ -97,7 +97,7 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                     placeholder="e.g. Jatayu"
                   />
                 </div>
-                <div className="col-span-2 md:col-span-3">
+                <div className="col-span-1 md:col-span-3">
                   <label htmlFor={`ci-basis-${it.id}`} className="block text-sm font-medium text-dark mb-1">Charged</label>
                   <Select
                     inputId={`ci-basis-${it.id}`}
@@ -106,9 +106,9 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                     options={BASIS_OPTIONS}
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div className="col-span-1 md:col-span-2">
                   <label htmlFor={`ci-rate-${it.id}`} className="block text-sm font-medium text-dark mb-1">
-                    {it.basis === 'fixed' ? 'Amount (₹)' : 'Rate / person (₹)'}
+                    {it.basis === 'fixed' ? 'Amount (₹)' : <><span className="sm:hidden">Rate (₹)</span><span className="hidden sm:inline">Rate / person (₹)</span></>}
                   </label>
                   <input
                     id={`ci-rate-${it.id}`}

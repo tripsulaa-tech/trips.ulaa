@@ -42,8 +42,8 @@ export default function BookingPackagePicker({
     return (
       <div>
         <p id="package-picker-label" className="block text-sm font-medium text-dark mb-1">Package *</p>
-        <div role="radiogroup" aria-labelledby="package-picker-label" className="grid gap-2">
-          {config.packages.map(pkg => {
+        <div role="radiogroup" aria-labelledby="package-picker-label" className="grid gap-2 sm:grid-cols-2">
+          {config.packages.map((pkg, i) => {
             const selected = chosen === pkg.id;
             const extras = includedOptions(pkg, config);
             const premium = isPremiumPackage(pkg.name);
@@ -54,7 +54,7 @@ export default function BookingPackagePicker({
                 role="radio"
                 aria-checked={selected}
                 onClick={() => onPackageChange(pkg.id)}
-                className={`text-left rounded-lg border-2 px-4 py-3 transition-colors ${
+                className={`text-left rounded-lg border-2 px-3 sm:px-4 py-3 transition-colors ${config.packages.length % 2 === 1 && i === config.packages.length - 1 ? 'sm:col-span-2' : ''} ${
                   isPremiumPackage(pkg.name)
                     ? `premium-gold-border ${selected ? 'premium-gold-border--selected' : ''}`
                     : selected ? 'border-primary bg-primary/10' : 'border-background-warm hover:border-primary/40'
