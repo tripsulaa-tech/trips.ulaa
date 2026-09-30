@@ -5,7 +5,7 @@
 // read-only Trip Details view. Kept separate from utils-index.ts so the
 // public bundle doesn't need to think about this at all — it's purely an
 // admin concern.
-import type { TripFinance } from '../types/types-index';
+import type { TripFinance, TripCostItem } from '../types/types-index';
 
 export const emptyTripFinance: TripFinance = {
   ad_spend: null,
@@ -23,8 +23,32 @@ export const emptyTripFinance: TripFinance = {
   organiser_agency_payment: null,
   organiser_misc_expense: null,
   organiser_own_entry_ticket: null,
+  cost_items: [],
   notes: '',
 };
+
+// One resolved cost line: how many units it applies to and what it comes to.
+export interface ResolvedCostItem {
+  id: string;
+  name: string;
+  basis: TripCostItem['basis'];
+  rate: number;
+  qty: number;      // 1 for fixed, traveler count for per_traveler, headcount for per_selected
+  amount: number;   // rate x qty
+}
+
+// The single place that decides "rate x how many". Used by the summary
+// below AND by the editor rows, so what admins see per line always equals
+// what gets added to the total.
+export function resolveCostItem(item: TripCostItem, travelerCount: number): ResolvedCostItem {
+  const rate = Math.max(0, item.rate || 0);
+  const qty = item.basis === 'fixed'
+    ? 1
+    : item.basis === 'per_traveler'
+      ? Math.max(0, travelerCount || 0)
+      : Math.max(0, item.quantity || 0);
+  return { id: item.id, name: item.name, basis: item.basis, rate, qty, amount: rate * qty };
+}
 
 interface TripFinanceSummary {
   travelerCount: number;
@@ -39,7 +63,9 @@ interface TripFinanceSummary {
   childFareEntryTicketCost: number; // child_fare_entry_ticket_cost x childFareCount
   childFareKitCost: number;       // child_fare_kit_cost x childFareCount
   childFareCosts: number;         // childFareVendorCost + childFareEntryTicketCost + childFareKitCost
-  ulaaCosts: number;              // ad spend + perTravelerCosts + agencyCost + childFareCosts
+  costItems: ResolvedCostItem[];  // each generic cost line, resolved (rate x qty)
+  costItemsTotal: number;         // sum of costItems
+  ulaaCosts: number;              // ad spend + perTravelerCosts + agencyCost + childFareCosts + costItemsTotal
   organiserCosts: number;         // organiser travel + organiser agency payment + misc + organiser's own entry ticket
   totalCosts: number;             // ulaaCosts + organiserCosts
   netProfit: number;              // totalRevenue - totalCosts
@@ -92,7 +118,9 @@ export function computeTripFinanceSummary(
   const childFareEntryTicketCost = (f.child_fare_entry_ticket_cost || 0) * childFares;
   const childFareKitCost = (f.child_fare_kit_cost || 0) * childFares;
   const childFareCosts = childFareVendorCost + childFareEntryTicketCost + childFareKitCost;
-  const ulaaCosts = (f.ad_spend || 0) + perTravelerCosts + agencyCost + childFareCosts;
+  const costItems = (f.cost_items || []).map(item => resolveCostItem(item, travelers));
+  const costItemsTotal = costItems.reduce((sum, c) => sum + c.amount, 0);
+  const ulaaCosts = (f.ad_spend || 0) + perTravelerCosts + agencyCost + childFareCosts + costItemsTotal;
   const organiserCosts = (f.organiser_travel_cost || 0) + (f.organiser_agency_payment || 0) + (f.organiser_misc_expense || 0) + (f.organiser_own_entry_ticket || 0);
   const totalCosts = ulaaCosts + organiserCosts;
   const netProfit = revenue - totalCosts;
@@ -110,6 +138,8 @@ export function computeTripFinanceSummary(
     childFareEntryTicketCost,
     childFareKitCost,
     childFareCosts,
+    costItems,
+    costItemsTotal,
     ulaaCosts,
     organiserCosts,
     totalCosts,

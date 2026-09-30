@@ -41,6 +41,7 @@ import { computeTripFinanceSummary } from '../../utils/tripFinance';
 import type { TripRevenue } from './useTripFinanceData';
 import { computeDuration, type TripForm } from './tripFormTypes';
 import { inputClass } from './useTripFormModal';
+import TripCostItemsEditor from './TripCostItemsEditor';
 
 interface AdminTripFormModalProps {
   modalOpen: boolean;
@@ -472,6 +473,13 @@ export default function AdminTripFormModal({
               </p>
             </div>
 
+            <div className="md:col-span-2 pt-2 border-t border-background-warm" />
+            <TripCostItemsEditor
+              items={form.trip_finance.cost_items || []}
+              travelerCount={actualRevenue ? actualRevenue.bookedCount : form.seats_booked}
+              onChange={cost_items => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, cost_items } }))}
+            />
+
             <div className="md:col-span-2 pt-2 border-t border-background-warm">
               <h4 className="text-sm font-semibold text-dark mb-1">Child Fare</h4>
               <p className="text-xs text-dark-muted -mt-0.5 mb-2">
@@ -636,6 +644,9 @@ export default function AdminTripFormModal({
                   <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Entry Ticket Costs</span><span className="text-dark-muted">{formatPrice(s.entryTicketCosts)}</span></div>
                   <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Kit Costs</span><span className="text-dark-muted">{formatPrice(s.kitCosts)}</span></div>
                   <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Cost</span><span className="text-dark-muted">{formatPrice(s.agencyCost)}</span></div>
+                  {s.costItems.map(c => (
+                    <div key={c.id} className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">{c.name || 'Unnamed cost'}{c.basis !== 'fixed' ? ` (${c.qty} × ${formatPrice(c.rate)})` : ''}</span><span className="text-dark-muted">{formatPrice(c.amount)}</span></div>
+                  ))}
                   {s.childFareCount > 0 && (
                     <>
                       <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Child Fare Costs ({s.childFareCount})</span><span className="text-dark-muted">{formatPrice(s.childFareCosts)}</span></div>

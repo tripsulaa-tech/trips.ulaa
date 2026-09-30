@@ -745,6 +745,15 @@ export default function AdminReports() {
         amount: t.agencyCost,
       },
     ];
+    // Generic cost lines (Transport, Stay, Food, activities...) — already
+    // resolved by computeTripFinanceSummary (rate x qty), so the sheet's
+    // line items keep summing to ulaaCosts.
+    t.costItems.forEach(c => {
+      ulaaCostBreakdown.push({
+        label: c.basis === 'fixed' ? (c.name || 'Other Cost') : `${c.name || 'Other Cost'} (${c.qty} × ${c.rate})`,
+        amount: c.amount,
+      });
+    });
     if (t.childFareCount > 0) {
       ulaaCostBreakdown.push(
         { label: `Child Fare — Vendor Cost (×${t.childFareCount})`, amount: t.childFareVendorCost },

@@ -368,6 +368,9 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
                         <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Entry Ticket Costs</span><span className="text-dark-muted">{formatPrice(s.entryTicketCosts)}</span></div>
                         <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Kit Costs</span><span className="text-dark-muted">{formatPrice(s.kitCosts)}</span></div>
                         <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Cost</span><span className="text-dark-muted">{formatPrice(s.agencyCost)}</span></div>
+                        {s.costItems.map(c => (
+                          <div key={c.id} className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">{c.name || 'Unnamed cost'}{c.basis !== 'fixed' ? ` (${c.qty} × ${formatPrice(c.rate)})` : ''}</span><span className="text-dark-muted">{formatPrice(c.amount)}</span></div>
+                        ))}
                         {s.childFareCount > 0 && (
                           <>
                             <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Child Fare Costs ({s.childFareCount})</span><span className="text-dark-muted">{formatPrice(s.childFareCosts)}</span></div>

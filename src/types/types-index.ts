@@ -75,6 +75,11 @@ export interface TripEndBanner {
 //     trip — never per-child — and locked from the payment form once set
 //     here, so an add-on can never drift from the trip's configured rate.
 // See src/utils/tripFinance.ts for how these roll up into a profit summary.
+//
+// Extra cost lines (cost_items) cover everything else on the agency's quote
+// — transport, stay, food, parking, toll, and optional activities — as one
+// simple, generic list instead of a new field per cost. Each line has ONE
+// rate and ONE way of being multiplied (see TripCostItem below).
 export interface TripFinance {
   ad_spend: number | null;                    // total promotion/ad spend for this trip
   entry_ticket_cost_per_person: number | null; // per-traveler entry/activity ticket cost
@@ -96,7 +101,24 @@ export interface TripFinance {
   organiser_agency_payment: number | null;      // amount the organiser separately pays the agency (varies, entered manually)
   organiser_misc_expense: number | null;        // organiser's miscellaneous on-ground spend
   organiser_own_entry_ticket: number | null;    // the organiser's own personal entry ticket, separate from the per-traveler entry tickets above
+  cost_items?: TripCostItem[];                  // generic extra cost lines (transport, stay, food, optional activities...). Missing = none.
   notes: string;                                // free-text notes (payment terms, receipts, etc.)
+}
+
+// One generic cost line on a trip. `basis` decides how `rate` is multiplied:
+//   fixed         — one lump sum, quantity is always 1        (Transport, Stay, Parking, Toll)
+//   per_traveler  — rate x every booked traveler              (Food)
+//   per_selected  — rate x `quantity`, a headcount entered by  (Water Activities, Jatayu)
+//                   hand for activities only some travelers pick
+// `quantity` is only read when basis === 'per_selected'.
+export type TripCostBasis = 'fixed' | 'per_traveler' | 'per_selected';
+
+export interface TripCostItem {
+  id: string;                  // stable key for the editor row
+  name: string;                // e.g. "Transport", "Water Activities", "Jatayu"
+  basis: TripCostBasis;
+  rate: number | null;         // ₹ — lump sum for fixed, ₹ per person otherwise
+  quantity: number | null;     // how many people opted in (per_selected only)
 }
 
 // Saved position/zoom for a trip's cover_image, set via the Cover Image
