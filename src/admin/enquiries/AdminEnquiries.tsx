@@ -2,18 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowsClockwise as RefreshCw,
   Plus,
   UsersThree,
   CheckCircle as CheckCircle2,
-  ChatCircle as MessageCircle,
-  CaretDown as ChevronDown,
-  SlidersHorizontal,
   Trash as Trash2,
   Users,
   Pencil,
   X,
-  CalendarDot as CalendarClock,
   MagnifyingGlass as Search,
   CalendarBlank as CalendarDays,
 } from '@phosphor-icons/react';
@@ -52,7 +47,7 @@ import {
   isGroupEntry, STATUS_CONFIG, PAY_FILTER_LABELS, FOOD_FILTER_LABELS,
   BOOKING_FILTER_LABELS, GROUP_FILTER_LABELS, PACKAGE_FILTER_LABELS, packageFilterKey,
 } from './AdminEnquiriesShared';
-import FilterDropdown from './AdminFilterDropdown';
+import AdminEnquiryFilterPanel from './AdminEnquiryFilterPanel';
 import { KpiCards, KpiCarousel } from '../../components/ui/KpiCards';
 import AddEnquiryModal from './AdminAddEnquiryModal';
 import BulkEnquiryModal from './AdminBulkEnquiryModal';
@@ -87,7 +82,6 @@ export default function AdminEnquiries() {
     followUpDueOnly, setFollowUpDueOnly,
     searchQuery, setSearchQuery, trimmedSearch,
     selectedTripKey, setSelectedTripKey,
-    openFilterPanel, setOpenFilterPanel,
     currentPage, setCurrentPage,
     sortKey, sortDir, handleSort,
     activeFilterCount,
@@ -198,11 +192,6 @@ export default function AdminEnquiries() {
     bulkEditAllowed, selectedTripName,
     toggleSelectOne, toggleSelectAllFiltered,
   } = useEnquirySelection(enquiries, selectedTripKey);
-  // Mobile only: filter panel is collapsed by default (it's 7 stacked
-  // fields — always showing it pushes the actual list off-screen on a
-  // phone) and is opened via the toggle in the Filters header. Desktop
-  // ignores this entirely and always shows the panel expanded.
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   // Lightweight, self-dismissing confirmation for things that succeeded but
   // don't need to block the admin with an "OK" click — unlike the shared
   // AlertDialog (used inside the hooks above, e.g. useAddEnquiry/
@@ -843,371 +832,99 @@ export default function AdminEnquiries() {
           </div>
         )}
 
-            {/* Filters — one single row: Search | Filters | Clear All.
-                Each filter box pops open a dropdown of options below it,
-                plus a "More Filters" overflow box for anything used less
-                often (currently Source). Only one dropdown is open at a
-                time; a transparent full-screen layer closes whichever is
-                open when you click elsewhere. */}
-            {openFilterPanel && (
-              <div className="fixed inset-0 z-20" onClick={() => setOpenFilterPanel(null)} />
-            )}
-            <div className="bg-white rounded-lg shadow-card p-4">
-              <button
-                type="button"
-                onClick={() => setMobileFiltersOpen(o => !o)}
-                aria-expanded={mobileFiltersOpen}
-                aria-controls="enq-mobile-filters-panel"
-                className="w-full flex items-center gap-2 sm:pointer-events-none sm:cursor-default"
-              >
-                <SlidersHorizontal size={16} className="text-dark shrink-0" />
-                <span className="font-button font-bold text-dark text-base whitespace-nowrap flex-1 text-left">Filters</span>
-                {activeFilterCount > 0 && (
-                  <span className="shrink-0 inline-flex items-center justify-center px-2 h-[22px] rounded-md bg-primary/10 text-primary text-2xs font-button font-semibold">
-                    {activeFilterCount} active
-                  </span>
-                )}
-                <ChevronDown size={18} className={`sm:hidden shrink-0 text-dark-muted transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-              </button>
-
-              <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row sm:items-end gap-3 mt-4`} id="enq-mobile-filters-panel">
-                {/* Filters + Clear All — sit together in one row at the
-                    bottom of the panel. */}
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2 flex-1 min-w-0">
-                  {/* Trip — lets an admin scope everything below (KPIs,
-                      summary card, table) to one trip, or back to "All
-                      Trips", without leaving this page. Same pattern as the
-                      Trip filter on the Waitlist page. Spans both mobile
-                      grid columns since it's the primary/most-used filter. */}
-                  <div className="relative col-span-2 sm:col-span-1 w-full sm:w-auto sm:min-w-[150px]">
-                    <label htmlFor="enq-filter-trip" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Trip</label>
-                    <button
-                      id="enq-filter-trip"
-                      aria-haspopup="listbox"
-                      aria-expanded={openFilterPanel === 'trip'}
-                      onClick={() => setOpenFilterPanel(p => (p === 'trip' ? null : 'trip'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
-                        openFilterPanel === 'trip' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-sm font-button font-medium text-primary truncate">{activeGroup ? activeGroup.title : 'All'}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'trip' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                    </button>
-                    {openFilterPanel === 'trip' && (
-                      <FilterDropdown
-                        value={selectedTripKey ?? 'all'}
-                        onSelect={key => { setSelectedTripKey(key === 'all' ? null : key); setOpenFilterPanel(null); }}
-                        options={[
-                          { key: 'all', label: 'All trips', count: enquiries.length },
-                          ...tripGroups.map(g => ({
-                            key: g.key,
-                            label: g.title,
-                            count: g.enquiries.length,
-                            section: g.key === UNLINKED_GROUP_KEY ? undefined : g.isDeletedTrip ? 'Deleted' : g.isCompletedTrip ? 'Completed' : undefined,
-                          })),
-                        ]}
-                      />
-                    )}
-                  </div>
-
-                  {/* Explicit "General Enquiries" chip (3.8) — a one-click
-                      toggle for the no-trip bucket (Contact Us messages +
-                      any manual entry logged without picking a trip),
-                      separate from the Trip dropdown above, so it doesn't
-                      require an admin to think to open that dropdown and
-                      scroll past every trip to find it. Only rendered when
-                      there's actually something in that bucket. */}
-                  {enquiries.some(e => !e.trip_id) && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTripKey(k => (k === UNLINKED_GROUP_KEY ? null : UNLINKED_GROUP_KEY))}
-                      title="Enquiries not linked to any trip — Contact Us messages and manual entries logged without picking a trip"
-                      className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-button font-semibold rounded-md border-2 px-3 h-[38px] transition-colors whitespace-nowrap ${
-                        selectedTripKey === UNLINKED_GROUP_KEY
-                          ? 'bg-primary text-white border-primary'
-                          : 'border-background-warm text-dark hover:border-primary/30'
-                      }`}
-                    >
-                      <MessageCircle size={13} className="shrink-0" aria-hidden="true" />
-                      General Enquiries
-                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-2xs ${
-                        selectedTripKey === UNLINKED_GROUP_KEY ? 'bg-white/20' : 'bg-background-warm'
-                      }`}>
-                        {enquiries.filter(e => !e.trip_id).length}
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Lead Status — renamed from "Query Status" for clarity
-                      now that the table's own Status column shows the full
-                      combined Booking Journey pipeline (New Enquiry ...
-                      Completed) rather than this new/contacted/closed lead
-                      state alone; this filter only ever reaches the three
-                      lead values (see Enquiry.status). */}
-                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-query" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Lead Status</label>
-                    <button
-                      id="enq-filter-query"
-                      aria-haspopup="listbox"
-                      aria-expanded={openFilterPanel === 'query'}
-                      onClick={() => setOpenFilterPanel(p => (p === 'query' ? null : 'query'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
-                        openFilterPanel === 'query' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-sm font-button font-medium text-primary truncate">{filter === 'all' ? 'All' : STATUS_CONFIG[filter].label}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'query' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                    </button>
-                    {openFilterPanel === 'query' && (
-                      <FilterDropdown
-                        value={filter}
-                        onSelect={key => { setFilter(key); setOpenFilterPanel(null); }}
-                        options={(['all', 'new', 'contacted', 'closed'] as const).map(key => ({
-                          key, label: key === 'all' ? 'All' : STATUS_CONFIG[key].label, count: counts[key],
-                        }))}
-                      />
-                    )}
-                  </div>
-
-                  {/* Booking Journey — a separate, finer-grained dimension
-                      from Lead Status above (see journeyFilter's own
-                      comment). Lets an admin isolate a specific pipeline
-                      stage, e.g. everyone currently "Fully Paid" or "Checked
-                      In", which neither Lead Status nor the coarser Booking
-                      (booked/not booked/cancelled) filter below can reach. */}
-                  <div className="relative w-full sm:w-auto sm:min-w-[160px]">
-                    <label htmlFor="enq-filter-journey" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking Journey</label>
-                    <button
-                      id="enq-filter-journey"
-                      aria-haspopup="listbox"
-                      aria-expanded={openFilterPanel === 'journey'}
-                      onClick={() => setOpenFilterPanel(p => (p === 'journey' ? null : 'journey'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
-                        openFilterPanel === 'journey' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-sm font-button font-medium text-primary truncate">{journeyFilter === 'all' ? 'All' : JOURNEY_STAGE_CONFIG[journeyFilter].label}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'journey' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                    </button>
-                    {openFilterPanel === 'journey' && (
-                      <FilterDropdown
-                        value={journeyFilter}
-                        onSelect={key => { setJourneyFilter(key); setOpenFilterPanel(null); }}
-                        options={([
-                          'all', 'new_enquiry', 'contacted', 'advance_pending', 'advance_paid', 'confirmed',
-                          'balance_pending', 'fully_paid', 'checked_in', 'completed', 'not_interested',
-                        ] as const).map(key => ({
-                          key, label: key === 'all' ? 'All' : JOURNEY_STAGE_CONFIG[key].label, count: journeyCounts[key],
-                        }))}
-                      />
-                    )}
-                  </div>
-
-                  {/* Payment */}
-                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-pay" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Payment</label>
-                    <button
-                      id="enq-filter-pay"
-                      aria-haspopup="listbox"
-                      aria-expanded={openFilterPanel === 'pay'}
-                      onClick={() => setOpenFilterPanel(p => (p === 'pay' ? null : 'pay'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
-                        openFilterPanel === 'pay' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-sm font-button font-medium text-primary truncate">{PAY_FILTER_LABELS[payFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'pay' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                    </button>
-                    {openFilterPanel === 'pay' && (
-                      <FilterDropdown
-                        value={payFilter}
-                        onSelect={key => { setPayFilter(key); setOpenFilterPanel(null); }}
-                        options={(['all', 'paid', 'partial', 'unpaid', 'not_set'] as const).map(key => ({
-                          key, label: PAY_FILTER_LABELS[key], count: payCounts[key],
-                        }))}
-                      />
-                    )}
-                  </div>
-
-                  {/* Booking */}
-                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-booked" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Booking</label>
-                    <button
-                      id="enq-filter-booked"
-                      aria-haspopup="listbox"
-                      aria-expanded={openFilterPanel === 'booked'}
-                      onClick={() => setOpenFilterPanel(p => (p === 'booked' ? null : 'booked'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
-                        openFilterPanel === 'booked' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-sm font-button font-medium text-primary truncate">{BOOKING_FILTER_LABELS[bookedFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'booked' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                    </button>
-                    {openFilterPanel === 'booked' && (
-                      <FilterDropdown
-                        value={bookedFilter}
-                        onSelect={key => { setBookedFilter(key); setOpenFilterPanel(null); }}
-                        options={(['all', 'booked', 'not_booked', 'cancelled'] as const).map(key => ({
-                          key, label: BOOKING_FILTER_LABELS[key], count: bookedCounts[key],
-                        }))}
-                      />
-                    )}
-                  </div>
-
-                  {/* Follow-ups Due — a plain toggle chip (not a dropdown
-                      like the filters above) since there's only one
-                      meaningful thing to isolate: reminders due today or
-                      overdue. Only rendered when there's at least one, same
-                      as the General Enquiries chip above. */}
-                  {followUpDueCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setFollowUpDueOnly(v => !v)}
-                      title="Contacted leads with a follow-up reminder due today or overdue"
-                      className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-button font-semibold rounded-md border-2 px-3 h-[38px] transition-colors whitespace-nowrap self-end ${
-                        followUpDueOnly
-                          ? 'bg-primary text-white border-primary'
-                          : 'border-background-warm text-dark hover:border-primary/30'
-                      }`}
-                    >
-                      <CalendarClock size={13} className="shrink-0" aria-hidden="true" />
-                      Follow-ups Due
-                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-md text-2xs ${
-                        followUpDueOnly ? 'bg-white/20' : 'bg-background-warm'
-                      }`}>
-                        {followUpDueCount}
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Group / Solo */}
-                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-group" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Group / Solo</label>
-                    <button
-                      id="enq-filter-group"
-                      aria-haspopup="listbox"
-                      aria-expanded={openFilterPanel === 'group'}
-                      onClick={() => setOpenFilterPanel(p => (p === 'group' ? null : 'group'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
-                        openFilterPanel === 'group' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-sm font-button font-medium text-primary truncate">{GROUP_FILTER_LABELS[groupFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'group' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                    </button>
-                    {openFilterPanel === 'group' && (
-                      <FilterDropdown
-                        value={groupFilter}
-                        onSelect={key => { setGroupFilter(key); setOpenFilterPanel(null); }}
-                        options={(['all', 'group', 'solo'] as const).map(key => ({
-                          key, label: GROUP_FILTER_LABELS[key], count: groupCounts[key],
-                        }))}
-                      />
-                    )}
-                  </div>
-
-                  {/* Food */}
-                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-food" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Food</label>
-                    <button
-                      id="enq-filter-food"
-                      aria-haspopup="listbox"
-                      aria-expanded={openFilterPanel === 'food'}
-                      onClick={() => setOpenFilterPanel(p => (p === 'food' ? null : 'food'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
-                        openFilterPanel === 'food' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-sm font-button font-medium text-primary truncate">{FOOD_FILTER_LABELS[foodFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'food' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                    </button>
-                    {openFilterPanel === 'food' && (
-                      <FilterDropdown
-                        value={foodFilter}
-                        onSelect={key => { setFoodFilter(key); setOpenFilterPanel(null); }}
-                        options={(['all', 'veg', 'non_veg', 'not_set'] as const).map(key => ({
-                          key, label: FOOD_FILTER_LABELS[key], count: foodCounts[key],
-                        }))}
-                      />
-                    )}
-                  </div>
-
-                  {/* Package — Early Bird vs Normal pricing (added
-                      alongside auto-pricing; see add_enquiry_auto_pricing.sql
-                      and PACKAGE_FILTER_LABELS). */}
-                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-package" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Package</label>
-                    <button
-                      id="enq-filter-package"
-                      aria-haspopup="listbox"
-                      aria-expanded={openFilterPanel === 'package'}
-                      onClick={() => setOpenFilterPanel(p => (p === 'package' ? null : 'package'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
-                        openFilterPanel === 'package' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-sm font-button font-medium text-primary truncate">{PACKAGE_FILTER_LABELS[packageFilter]}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'package' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                    </button>
-                    {openFilterPanel === 'package' && (
-                      <FilterDropdown
-                        value={packageFilter}
-                        onSelect={key => { setPackageFilter(key); setOpenFilterPanel(null); }}
-                        options={(['all', 'early_bird', 'normal'] as const).map(key => ({
-                          key, label: PACKAGE_FILTER_LABELS[key], count: packageCounts[key],
-                        }))}
-                      />
-                    )}
-                  </div>
-
-                  {/* Source — overflow filter, kept in the same
-                      label-on-top style as the rest of the row. */}
-                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
-                    <label htmlFor="enq-filter-more" className="block text-2xs font-button font-bold text-dark-muted uppercase tracking-wide mb-1">Source</label>
-                    <button
-                      id="enq-filter-more"
-                      aria-haspopup="listbox"
-                      aria-expanded={openFilterPanel === 'more'}
-                      onClick={() => setOpenFilterPanel(p => (p === 'more' ? null : 'more'))}
-                      className={`w-full flex items-center justify-between gap-2 rounded border-2 px-3 py-2 bg-white transition-colors ${
-                        openFilterPanel === 'more' ? 'border-primary/50' : 'border-background-warm hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-sm font-button font-medium text-primary truncate">{sourceFilter === 'all' ? 'All' : SOURCE_CONFIG[sourceFilter].label}</span>
-                      <ChevronDown size={14} className={`text-dark-muted shrink-0 transition-transform ${openFilterPanel === 'more' ? 'rotate-180' : ''}`} aria-hidden="true" />
-                    </button>
-                    {openFilterPanel === 'more' && (
-                      <FilterDropdown
-                        align="right"
-                        value={sourceFilter}
-                        onSelect={key => { setSourceFilter(key); setOpenFilterPanel(null); }}
-                        options={[
-                          { key: 'all' as const, label: 'All sources', count: sourceCounts.all },
-                          ...(Object.keys(SOURCE_CONFIG) as (keyof typeof SOURCE_CONFIG)[]).map(key => ({
-                            key, label: SOURCE_CONFIG[key].label, count: sourceCounts[key] || 0,
-                          })),
-                        ]}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* Clear All — sits at the end of the row; disabled (and
-                    dimmed) whenever no filter or search term is active. */}
-                <button
-                  onClick={clearAllFilters}
-                  disabled={activeFilterCount === 0}
-                  className={`w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-button font-semibold rounded-md border-2 px-3 py-2 transition-colors whitespace-nowrap ${
-                    activeFilterCount === 0
-                      ? 'border-background-warm text-dark-muted/40 cursor-default'
-                      : 'border-background-warm text-dark hover:border-primary/30'
-                  }`}
-                >
-                  <RefreshCw size={13} aria-hidden="true" /> Clear All
-                </button>
-              </div>
-            </div>
+            {/* Filters — chip-based panel (one tap per filter, applied filters
+                always visible, rare filters under "More filters"). See
+                AdminEnquiryFilterPanel.tsx. */}
+            <AdminEnquiryFilterPanel
+              trip={{
+                selectedKey: selectedTripKey,
+                selectedLabel: activeGroup ? activeGroup.title : null,
+                onSelect: setSelectedTripKey,
+                options: [
+                  { key: 'all', label: 'All trips', count: enquiries.length },
+                  ...tripGroups.map(g => ({
+                    key: g.key,
+                    label: g.title,
+                    count: g.enquiries.length,
+                    section: g.key === UNLINKED_GROUP_KEY ? undefined : g.isDeletedTrip ? 'Deleted' : g.isCompletedTrip ? 'Completed' : undefined,
+                  })),
+                ],
+                generalKey: UNLINKED_GROUP_KEY,
+                generalCount: enquiries.filter(e => !e.trip_id).length,
+              }}
+              booking={{
+                value: bookedFilter,
+                onChange: v => setBookedFilter(v as typeof bookedFilter),
+                options: (['all', 'booked', 'not_booked', 'cancelled'] as const).map(key => ({
+                  key, label: BOOKING_FILTER_LABELS[key], count: bookedCounts[key],
+                })),
+              }}
+              payment={{
+                value: payFilter,
+                onChange: v => setPayFilter(v as typeof payFilter),
+                options: (['all', 'paid', 'partial', 'unpaid', 'not_set'] as const).map(key => ({
+                  key, label: PAY_FILTER_LABELS[key], count: payCounts[key],
+                })),
+              }}
+              followUp={{ active: followUpDueOnly, count: followUpDueCount, onToggle: () => setFollowUpDueOnly(v => !v) }}
+              leadStatus={{
+                value: filter,
+                onChange: v => setFilter(v as typeof filter),
+                options: (['all', 'new', 'contacted', 'closed'] as const).map(key => ({
+                  key, label: key === 'all' ? 'All' : STATUS_CONFIG[key].label, count: counts[key],
+                })),
+              }}
+              journey={{
+                value: journeyFilter,
+                onChange: v => setJourneyFilter(v as typeof journeyFilter),
+                options: ([
+                  'all', 'new_enquiry', 'contacted', 'advance_pending', 'advance_paid', 'confirmed',
+                  'balance_pending', 'fully_paid', 'checked_in', 'completed', 'not_interested',
+                ] as const).map(key => ({
+                  key, label: key === 'all' ? 'All' : JOURNEY_STAGE_CONFIG[key].label, count: journeyCounts[key],
+                })),
+              }}
+              group={{
+                value: groupFilter,
+                onChange: v => setGroupFilter(v as typeof groupFilter),
+                options: (['all', 'group', 'solo'] as const).map(key => ({
+                  key, label: GROUP_FILTER_LABELS[key], count: groupCounts[key],
+                })),
+              }}
+              food={{
+                value: foodFilter,
+                onChange: v => setFoodFilter(v as typeof foodFilter),
+                options: (['all', 'veg', 'non_veg', 'not_set'] as const).map(key => ({
+                  key,
+                  label: FOOD_FILTER_LABELS[key],
+                  count: foodCounts[key],
+                  icon: key === 'all' ? undefined : <FoodMark type={key} size={10} />,
+                })),
+              }}
+              pkg={{
+                value: packageFilter,
+                onChange: v => setPackageFilter(v as typeof packageFilter),
+                options: (['all', 'early_bird', 'normal'] as const).map(key => ({
+                  key, label: PACKAGE_FILTER_LABELS[key], count: packageCounts[key],
+                })),
+              }}
+              source={{
+                value: sourceFilter,
+                onChange: v => setSourceFilter(v as typeof sourceFilter),
+                options: [
+                  { key: 'all', label: 'All', count: sourceCounts.all },
+                  ...(Object.keys(SOURCE_CONFIG) as (keyof typeof SOURCE_CONFIG)[]).map(key => ({
+                    key: key as string, label: SOURCE_CONFIG[key].label, count: sourceCounts[key] || 0,
+                  })),
+                ],
+              }}
+              searchQuery={searchQuery}
+              onClearSearch={() => setSearchQuery('')}
+              activeCount={activeFilterCount}
+              onClearAll={clearAllFilters}
+              shownCount={sortedFiltered.length}
+              totalCount={scopedEnquiries.length}
+            />
 
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading enquiries...</div>
