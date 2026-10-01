@@ -1,6 +1,8 @@
 import type { Payment } from '../../../types/types-index';
 import type { InvoicePdfCtx } from './context';
+import { sanitizeForPdf } from '../../pdfText';
 import type { RGB } from './shared';
+import { formatPrice } from '../../utils-index';
 import { COLORS, MARGIN, PAGE_H, PAGE_W, CONTENT_W, FOOTER_RESERVE, PAYMENT_TYPE_LABEL, val, money, fdate } from './shared';
 
 // =============================================================================
@@ -23,6 +25,7 @@ export function renderPaymentTable(ctx: InvoicePdfCtx, payments: Payment[]): voi
   setDraw(COLORS.grayLine);
   doc.setLineWidth(0.75);
   doc.line(MARGIN, cursor.y + 6, PAGE_W - MARGIN, cursor.y + 6);
+
   cursor.y += 24;
 
   const colInvoice = MARGIN;       // 40
@@ -135,5 +138,95 @@ export function renderPaymentTable(ctx: InvoicePdfCtx, payments: Payment[]): voi
   setDraw(COLORS.grayLineSoft);
   doc.setLineWidth(0.5);
   doc.line(MARGIN, cursor.y, PAGE_W - MARGIN, cursor.y);
-  cursor.y += 26;
+  cursor.y += 16;
+
+  const { enquiry } = ctx;
+  const addonsAll = payments.reduce((sum, p) => sum + (p.payment_type === 'addon' ? Math.abs(p.amount) : 0), 0);
+  const discount = enquiry.discount_amount || 0;
+  const totalAmount = enquiry.total_amount || 0;
+  // Sum of the settled rows above (pending ones excluded, refunds subtracted),
+  // so this line always ties back to the table.
+  const totalPaid = payments.reduce((sum, p) => {
+    if (p.status === 'pending') return sum;
+    return sum + (p.payment_type === 'refund' ? -Math.abs(p.amount) : p.amount);
+  }, 0);
+
+  // Totals block, right-aligned under the table:
+  //   Trip Fare / (Add-ons) / (Referral Discount)
+  //   ──────────────
+  //   Total Payable
+  //   ──────────────
+  //   Paid / Balance Due
+  // Labels use helvetica; amounts use the embedded RupeeSans subset so the
+  // real ₹ glyph prints (helvetica's charset has none). If that font failed
+  // to register, amounts fall back to the sanitized "Rs." form.
+  const hasRupee = Boolean((doc.getFontList() as Record<string, unknown>).RupeeSans);
+  const amountText = (n: number) => (hasRupee ? formatPrice(n) : money(n));
+
+  function drawAmount(n: number, y: number, color: RGB, opts: { bold?: boolean; size: number; minus?: boolean }) {
+    const x = PAGE_W - MARGIN;
+    setText(color);
+    doc.setFontSize(opts.size);
+    doc.setFont(hasRupee ? 'RupeeSans' : 'helvetica', opts.bold ? 'bold' : 'normal');
+    const txt = amountText(n);
+    doc.text(txt, x, y, { align: 'right' });
+    if (opts.minus) {
+      // Drawn as a short bar: the core PDF font has no true minus glyph.
+      const w = doc.getTextWidth(txt);
+      const barW = 5;
+      const gap = 4;
+      setDraw(color);
+      doc.setLineWidth(1.1);
+      doc.line(x - w - gap - barW, y - opts.size * 0.3, x - w - gap, y - opts.size * 0.3);
+    }
+  }
+
+  function drawRow(label: string, n: number, y: number, o: { labelColor: RGB; valueColor: RGB; bold: boolean; size: number; minus?: boolean }) {
+    doc.setFont('helvetica', o.bold ? 'bold' : 'normal');
+    doc.setFontSize(o.size);
+    setText(o.labelColor);
+    doc.text(label, left, y);
+    drawAmount(n, y, o.valueColor, { bold: true, size: o.size, minus: o.minus });
+  }
+
+  const tripFare = Math.max(0, totalAmount - addonsAll + discount);
+  const balanceDue = Math.max(0, totalAmount - totalPaid);
+
+  const sumW = 240;
+  const left = PAGE_W - MARGIN - sumW;
+  const right = PAGE_W - MARGIN;
+  const lineH = 18;
+  const rows = 1 + (addonsAll > 0 ? 1 : 0) + (discount > 0 ? 1 : 0);
+  ctx.checkPageBreak(rows * lineH + 110);
+
+  let ty = cursor.y + 10;
+  drawRow('Trip Fare', tripFare, ty, { labelColor: COLORS.darkMuted, valueColor: COLORS.dark, bold: false, size: 9.5 });
+  ty += lineH;
+  if (addonsAll > 0) {
+    drawRow('Add-ons', addonsAll, ty, { labelColor: COLORS.darkMuted, valueColor: COLORS.dark, bold: false, size: 9.5 });
+    ty += lineH;
+  }
+  if (discount > 0) {
+    const reason = sanitizeForPdf(enquiry.discount_reason);
+    const label = !reason ? 'Discount' : /discount/i.test(reason) ? reason : `${reason} Discount`;
+    drawRow(label, discount, ty, { labelColor: COLORS.darkMuted, valueColor: COLORS.green, bold: false, size: 9.5, minus: true });
+    ty += lineH;
+  }
+
+  ty -= 4;
+  setDraw(COLORS.primaryDark);
+  doc.setLineWidth(1);
+  doc.line(left, ty, right, ty);
+  ty += 16;
+  drawRow('Total Payable', totalAmount, ty, { labelColor: COLORS.dark, valueColor: COLORS.dark, bold: true, size: 11 });
+
+  ty += 10;
+  doc.line(left, ty, right, ty);
+  ty += 16;
+  drawRow('Paid', totalPaid, ty, { labelColor: COLORS.green, valueColor: COLORS.green, bold: true, size: 10.5 });
+  ty += 18;
+  const balColor = balanceDue > 0 ? COLORS.red : COLORS.green;
+  drawRow('Balance Due', balanceDue, ty, { labelColor: balColor, valueColor: balColor, bold: true, size: 10.5 });
+
+  cursor.y = ty + 22;
 }

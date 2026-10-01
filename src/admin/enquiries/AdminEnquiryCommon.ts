@@ -650,27 +650,27 @@ export const CONTACT_OUTCOME_CONFIG: Record<ContactOutcome, {
 }> = {
   interested: {
     label: 'Interested',
-    description: "They want to book — this opens Payment to move them to Advance Pending.",
+    description: "Wants to book. Opens Payment to move to Advance Pending.",
     effect: 'advance',
   },
   needs_time: {
     label: 'Needs Time',
-    description: 'Checking with family/friends — stays Contacted with a follow-up reminder.',
+    description: 'Checking with family or friends. Stays Contacted with a follow-up reminder.',
     effect: 'stays_contacted',
   },
   call_later: {
     label: 'Call Later',
-    description: "Asked to be called back — stays Contacted with a follow-up reminder.",
+    description: "Asked for a call back. Stays Contacted with a follow-up reminder.",
     effect: 'stays_contacted',
   },
   payment_arrangement: {
     label: 'Payment Arrangement Needed',
-    description: 'Wants to book but needs time to arrange funds — stays Contacted with a follow-up reminder.',
+    description: 'Needs time to arrange funds. Stays Contacted with a follow-up reminder.',
     effect: 'stays_contacted',
   },
   no_response: {
     label: 'No Response',
-    description: "Didn't pick up — stays Contacted with a retry reminder.",
+    description: "Didn't pick up. Stays Contacted with a retry reminder.",
     effect: 'stays_contacted',
   },
   not_interested: {

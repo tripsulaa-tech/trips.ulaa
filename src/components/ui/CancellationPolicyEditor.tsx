@@ -42,8 +42,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
     <div>
       <label className="block text-sm font-medium text-dark mb-1">Cancellation Policy</label>
       <p className="text-xs text-dark-muted mb-3">
-        Shown to the user on this trip's page in a dedicated "Cancellation" tab. The day thresholds below are the only
-        things that usually change trip to trip — edit them freely; the rest of the policy wording is shared across all trips.
+        Shown in the trip's "Cancellation" tab. Usually only the day thresholds change per trip; the wording is shared across all trips.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-background-warm rounded-lg p-3 mb-3">
@@ -153,8 +152,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
         </div>
       )}
       <p className="text-xs text-dark-muted mt-2">
-        Leave "From" blank for the tier closest to departure (shows as "Within X days"), and leave "To" blank for the
-        furthest-out tier (shows as "More than X days"). Order tiers from furthest to nearest departure.
+        Leave "From" blank for the tier nearest departure ("Within X days") and "To" blank for the furthest ("More than X days"). Order tiers furthest to nearest.
       </p>
     </div>
   );

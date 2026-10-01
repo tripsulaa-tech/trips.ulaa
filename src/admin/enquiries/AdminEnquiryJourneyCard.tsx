@@ -115,7 +115,7 @@ export default function AdminEnquiryJourneyCard({
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
             <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
               <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                 <Suitcase size={17} aria-hidden="true" />
@@ -125,24 +125,28 @@ export default function AdminEnquiryJourneyCard({
                 <p className="text-dark text-sm font-bold">{formatPrice(tripAmount)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
-              <span className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 inline-flex items-center justify-center shrink-0">
-                <PlusCircle size={17} aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-dark-muted text-2xs">Addons</p>
-                <p className="text-sky-600 text-sm font-bold">{addonsAmount > 0 ? formatPrice(addonsAmount) : '—'}</p>
+            {addonsAmount > 0 && (
+              <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
+                <span className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 inline-flex items-center justify-center shrink-0">
+                  <PlusCircle size={17} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-2xs">Addons</p>
+                  <p className="text-sky-600 text-sm font-bold">{formatPrice(addonsAmount)}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
-              <span className="w-9 h-9 rounded-full bg-rose-100 text-rose-600 inline-flex items-center justify-center shrink-0">
-                <Percent size={17} aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-dark-muted text-2xs">Discount</p>
-                <p className="text-rose-600 text-sm font-bold">{discountAmount > 0 ? `- ${formatPrice(discountAmount)}` : '—'}</p>
+            )}
+            {discountAmount > 0 && (
+              <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
+                <span className="w-9 h-9 rounded-full bg-rose-100 text-rose-600 inline-flex items-center justify-center shrink-0">
+                  <Percent size={17} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-2xs">Discount</p>
+                  <p className="text-rose-600 text-sm font-bold">{`- ${formatPrice(discountAmount)}`}</p>
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
               <span className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0">
                 <FileText size={17} aria-hidden="true" />

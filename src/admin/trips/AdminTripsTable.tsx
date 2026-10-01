@@ -12,11 +12,14 @@ import {
   FileArrowDown as FileDown,
   FileX,
   Megaphone,
+  SignIn as LogIn,
   CaretUp as ChevronUp,
   CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import AddFab from '../../components/ui/AddFab';
+import ActionsMenu from '../../components/ui/ActionsMenu';
+import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import type { UpcomingTrip } from '../../types/types-index';
 import { formatDate } from '../../utils/utils-index';
 
@@ -29,6 +32,7 @@ interface AdminTripsTableProps {
   onExportTemplate: () => void;
   onAddTrip: () => void;
   onView: (trip: UpcomingTrip) => void;
+  onCheckIn: (trip: UpcomingTrip) => void;
   onEdit: (trip: UpcomingTrip) => void;
   onDelete: (trip: UpcomingTrip) => void;
   onTogglePublish: (trip: UpcomingTrip) => void;
@@ -46,12 +50,56 @@ interface AdminTripsTableProps {
 export default function AdminTripsTable({
   trips, loading, pdfDownloadingId,
   importInputRef, onImportInputChange, onExportTemplate,
-  onAddTrip, onView, onEdit, onDelete,
+  onAddTrip, onView, onCheckIn, onEdit, onDelete,
   onTogglePublish, onToggleComingSoon, onToggleHidePdf, onToggleSpecialOfferPromo, onMoveTrip, onDownloadPdf,
 }: AdminTripsTableProps) {
   const publishedCount = trips.filter(t => t.status === 'published').length;
   const comingSoonCount = trips.filter(t => t.status === 'coming_soon').length;
   const draftCount = trips.filter(t => t.status === 'draft').length;
+
+  // Everything except Edit and Delete lives in each row's ⋮ menu, so the
+  // Actions column stays short instead of carrying seven icon buttons.
+  // Labels name the action the click will perform (e.g. "Unpublish" on a
+  // published trip), and the hover title keeps the longer explanation.
+  const rowMenuItems = (trip: UpcomingTrip): ActionMenuItem[] => [
+    {
+      label: 'Check-in',
+      icon: LogIn,
+      onClick: () => onCheckIn(trip),
+      title: 'See everyone in Booked status for this trip',
+    },
+    {
+      label: trip.status === 'coming_soon' ? 'Switch to Published' : 'Mark as Coming Soon',
+      icon: Hourglass,
+      onClick: () => onToggleComingSoon(trip),
+      title: trip.status === 'coming_soon' ? 'Switch to fully Published (show full trip)' : 'Mark as Coming Soon (show only cover + title)',
+    },
+    {
+      label: trip.status === 'draft' ? 'Publish' : 'Unpublish',
+      icon: trip.status === 'draft' ? Eye : EyeOff,
+      onClick: () => onTogglePublish(trip),
+      title: trip.status === 'draft' ? 'Publish' : 'Unpublish (move to Draft)',
+    },
+    {
+      label: pdfDownloadingId === trip.id ? 'Downloading PDF…' : 'Download PDF',
+      icon: FileDown,
+      onClick: () => onDownloadPdf(trip),
+      disabled: pdfDownloadingId === trip.id,
+      title: 'Download itinerary PDF',
+    },
+    {
+      label: trip.hide_pdf_download ? 'Show PDF Download' : 'Hide PDF Download',
+      icon: FileX,
+      onClick: () => onToggleHidePdf(trip),
+      title: trip.hide_pdf_download ? 'PDF download is hidden from users on the trip page. Click to show it again' : 'Hide the PDF download option from users on the trip page',
+    },
+    {
+      label: trip.hide_special_offer_promo ? 'Show Offer Popup' : 'Hide Offer Popup',
+      icon: Megaphone,
+      onClick: () => onToggleSpecialOfferPromo(trip),
+      title: trip.hide_special_offer_promo ? 'Special-offer popup & badge are stopped for this trip. Click to show them again' : 'Stop the special-offer popup & badge from showing for this trip',
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -98,16 +146,16 @@ export default function AdminTripsTable({
             <button
               onClick={() => importInputRef.current?.click()}
               title="Import Template"
-              className="inline-flex items-center gap-1.5 text-xs font-button font-semibold px-2.5 py-1.5 rounded-md border-2 border-primary/30 text-primary hover:bg-primary/5 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-2 pr-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors"
             >
-              <Upload size={14} aria-hidden="true" /> Import
+              <Upload size={18} weight="duotone" aria-hidden="true" /> Import
             </button>
             <button
               onClick={onExportTemplate}
               title="Export Template"
-              className="inline-flex items-center gap-1.5 text-xs font-button font-semibold px-2.5 py-1.5 rounded-md border-2 border-primary/30 text-primary hover:bg-primary/5 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-2 pr-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors"
             >
-              <Download size={14} aria-hidden="true" /> Export
+              <Download size={18} weight="duotone" aria-hidden="true" /> Export
             </button>
           </div>
         </div>
@@ -130,7 +178,7 @@ export default function AdminTripsTable({
         <>
           {/* Mobile (below sm): a card per trip — the desktop table's hidden
               md/lg columns (destination, date, seats) plus a 112px-wide
-              Actions column squeezing 6 icon buttons meant a phone was left
+              Actions column squeezing a row of icon buttons meant a phone was left
               with a cramped, hard-to-tap row, so this gives every field and
               action room to breathe instead. Same pattern as AdminAlbums /
               AdminTripLeaders. */}
@@ -185,40 +233,13 @@ export default function AdminTripsTable({
                   </div>
 
                   <div className="flex items-center justify-end gap-0.5 pt-1 border-t border-background-warm">
-                    <button onClick={() => onToggleComingSoon(trip)} aria-label={trip.status === 'coming_soon' ? `Switch ${trip.title} to fully Published` : `Mark ${trip.title} as Coming Soon`} className={`flex-shrink-0 p-2 rounded hover:bg-background transition-colors ${trip.status === 'coming_soon' ? 'text-amber-600' : 'text-dark-muted hover:text-primary'}`}>
-                      <Hourglass size={16} aria-hidden="true" />
-                    </button>
-                    <button onClick={() => onTogglePublish(trip)} aria-label={trip.status === 'draft' ? `Publish ${trip.title}` : `Unpublish ${trip.title}`} className="flex-shrink-0 p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
-                      {trip.status === 'draft' ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />}
-                    </button>
-                    <button
-                      onClick={() => onDownloadPdf(trip)}
-                      disabled={pdfDownloadingId === trip.id}
-                      aria-label={`Download itinerary PDF for ${trip.title}`}
-                      className="flex-shrink-0 p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
-                    >
-                      <FileDown size={16} className={pdfDownloadingId === trip.id ? 'animate-pulse' : ''} aria-hidden="true" />
-                    </button>
-                    <button
-                      onClick={() => onToggleHidePdf(trip)}
-                      aria-label={trip.hide_pdf_download ? `Show PDF download for ${trip.title}` : `Hide PDF download for ${trip.title}`}
-                      className={`flex-shrink-0 p-2 rounded hover:bg-background transition-colors ${trip.hide_pdf_download ? 'text-red-600' : 'text-dark-muted hover:text-primary'}`}
-                    >
-                      <FileX size={16} aria-hidden="true" />
-                    </button>
-                    <button
-                      onClick={() => onToggleSpecialOfferPromo(trip)}
-                      aria-label={trip.hide_special_offer_promo ? `Show special-offer popup & badge for ${trip.title}` : `Stop special-offer popup & badge for ${trip.title}`}
-                      className={`flex-shrink-0 p-2 rounded hover:bg-background transition-colors ${trip.hide_special_offer_promo ? 'text-red-600' : 'text-dark-muted hover:text-primary'}`}
-                    >
-                      <Megaphone size={16} aria-hidden="true" />
-                    </button>
                     <button onClick={() => onEdit(trip)} aria-label={`Edit ${trip.title}`} className="flex-shrink-0 p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors">
                       <Edit2 size={16} aria-hidden="true" />
                     </button>
                     <button onClick={() => onDelete(trip)} aria-label={`Delete ${trip.title}`} className="flex-shrink-0 p-2 rounded hover:bg-primary/5 text-dark-muted hover:text-primary transition-colors">
                       <Trash2 size={16} aria-hidden="true" />
                     </button>
+                    <ActionsMenu variant="plain" label={`More actions for ${trip.title}`} items={rowMenuItems(trip)} />
                   </div>
                 </motion.div>
               );
@@ -278,43 +299,13 @@ export default function AdminTripsTable({
                     </td>
                     <td className="pl-2 pr-2 sm:pl-4 sm:pr-3 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-end gap-0.5 sm:gap-1.5">
-                        <button onClick={() => onToggleComingSoon(trip)} aria-label={trip.status === 'coming_soon' ? `Switch ${trip.title} to fully Published` : `Mark ${trip.title} as Coming Soon`} className={`flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background transition-colors ${trip.status === 'coming_soon' ? 'text-amber-600' : 'text-dark-muted hover:text-primary'}`} title={trip.status === 'coming_soon' ? 'Switch to fully Published (show full trip)' : 'Mark as Coming Soon (show only cover + title)'}>
-                          <Hourglass size={15} aria-hidden="true" />
-                        </button>
-                        <button onClick={() => onTogglePublish(trip)} aria-label={trip.status === 'draft' ? `Publish ${trip.title}` : `Unpublish ${trip.title}`} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title={trip.status === 'draft' ? 'Publish' : 'Unpublish (move to Draft)'}>
-                          {trip.status === 'draft' ? <Eye size={15} aria-hidden="true" /> : <EyeOff size={15} aria-hidden="true" />}
-                        </button>
-                        <button
-                          onClick={() => onDownloadPdf(trip)}
-                          disabled={pdfDownloadingId === trip.id}
-                          aria-label={`Download itinerary PDF for ${trip.title}`}
-                          className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors disabled:opacity-50"
-                          title="Download itinerary PDF"
-                        >
-                          <FileDown size={15} className={pdfDownloadingId === trip.id ? 'animate-pulse' : ''} aria-hidden="true" />
-                        </button>
-                        <button
-                          onClick={() => onToggleHidePdf(trip)}
-                          aria-label={trip.hide_pdf_download ? `Show PDF download for ${trip.title}` : `Hide PDF download for ${trip.title}`}
-                          className={`flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background transition-colors ${trip.hide_pdf_download ? 'text-red-600' : 'text-dark-muted hover:text-primary'}`}
-                          title={trip.hide_pdf_download ? 'PDF download hidden from users on the trip page — click to show it again' : 'Hide the PDF download option from users on the trip page'}
-                        >
-                          <FileX size={15} aria-hidden="true" />
-                        </button>
-                        <button
-                          onClick={() => onToggleSpecialOfferPromo(trip)}
-                          aria-label={trip.hide_special_offer_promo ? `Show special-offer popup & badge for ${trip.title}` : `Stop special-offer popup & badge for ${trip.title}`}
-                          className={`flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background transition-colors ${trip.hide_special_offer_promo ? 'text-red-600' : 'text-dark-muted hover:text-primary'}`}
-                          title={trip.hide_special_offer_promo ? 'Special-offer popup & badge stopped for this trip — click to show again' : 'Stop the special-offer popup & badge from showing for this trip'}
-                        >
-                          <Megaphone size={15} aria-hidden="true" />
-                        </button>
                         <button onClick={() => onEdit(trip)} aria-label={`Edit ${trip.title}`} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-background active:bg-background text-dark-muted hover:text-primary transition-colors" title="Edit">
                           <Edit2 size={15} aria-hidden="true" />
                         </button>
                         <button onClick={() => onDelete(trip)} aria-label={`Delete ${trip.title}`} className="flex-shrink-0 p-2 sm:p-1.5 rounded hover:bg-primary/5 active:bg-primary/5 text-dark-muted hover:text-primary transition-colors" title="Delete">
                           <Trash2 size={15} aria-hidden="true" />
                         </button>
+                        <ActionsMenu variant="plain" label={`More actions for ${trip.title}`} items={rowMenuItems(trip)} />
                       </div>
                     </td>
                   </motion.tr>

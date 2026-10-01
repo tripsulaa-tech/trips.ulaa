@@ -94,8 +94,8 @@ export default function AdminEditTravellerModal({
       <div className="space-y-4">
         <p className="text-xs text-dark-muted -mt-1">
           {target && target.tripCount > 1
-            ? `Updates these details across all ${target.tripCount} of this traveller's trips. Doesn't touch payments, status, or booking history.`
-            : "Fixes who this contact actually is. Doesn't touch payments, status, or booking history."}
+            ? `Updates all ${target.tripCount} of this traveller's trips. Payments, status and booking history are unchanged.`
+            : "Corrects contact details. Payments, status and booking history are unchanged."}
         </p>
         <div>
           <label htmlFor="tc-edit-name" className="block text-sm font-medium text-dark mb-1">Full Name</label>

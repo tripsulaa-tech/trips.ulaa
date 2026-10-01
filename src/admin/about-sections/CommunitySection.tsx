@@ -82,7 +82,7 @@ export default function CommunitySection({
         onChange={photos => setCommunity('photos', photos)}
         bucket="ulaa"
         pathPrefix="about/community"
-        hint="Square, at least 600×600px — shown in a cropped grid."
+        hint="Square, min 600×600px. Shown in a cropped grid."
         allowUrl
       />
     </div>

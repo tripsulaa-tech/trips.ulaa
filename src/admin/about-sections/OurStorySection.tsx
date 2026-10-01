@@ -78,7 +78,7 @@ export default function OurStorySection({
         onChange={url => setStory('image', url)}
         bucket="ulaa"
         pathPrefix="about/story"
-        hint="Landscape, at least 1000×880px — shown in a cropped rounded panel."
+        hint="Landscape, min 1000×880px. Shown in a cropped rounded panel."
         allowUrl
       />
     </div>

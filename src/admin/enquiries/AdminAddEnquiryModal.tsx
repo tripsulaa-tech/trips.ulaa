@@ -533,7 +533,7 @@ export default function AddEnquiryModal({
               className={inputClass}
               placeholder="e.g. 5000 (advance) — leave blank if unpaid"
             />
-            <p id="ge-amount-paid-hint" className="text-2xs text-dark-muted mt-1">Any amount here books a seat right away. Full amount auto-closes the enquiry.</p>
+            <p id="ge-amount-paid-hint" className="text-2xs text-dark-muted mt-1">Any amount books the seat. Paying the full amount closes the enquiry.</p>
             {soloErrorsVisible.amount_paid && <p id="ge-amount-paid-error" role="alert" className={errorClass}>{soloErrorsVisible.amount_paid}</p>}
           </div>
           {(Number(form.amount_paid) || 0) > 0 && (

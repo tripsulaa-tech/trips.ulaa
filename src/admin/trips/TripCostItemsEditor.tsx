@@ -73,9 +73,7 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
           ? <h5 className="text-sm font-semibold text-dark mb-1">Other Trip Costs</h5>
           : <h4 className="text-sm font-semibold text-dark mb-1">Other Trip Costs</h4>}
         <p className="text-xs text-dark-muted -mt-0.5">
-          One line per cost — ads, entry tickets, kits, transport, stay, food, activities. Pick how it is charged: a <strong>lump sum</strong> (e.g. Ad / Promotion, Transport),
-          <strong> per traveler</strong> (e.g. Entry Ticket, Kit, Food — uses the {travelerCount} booked), or <strong>selected people only</strong> (e.g. Water Activities —
-          enter how many opted in).
+          One line per cost. Choose <strong>Lump sum</strong> (e.g. ads), <strong>Per traveler</strong> (uses the {travelerCount} booked) or <strong>Selected people</strong> (enter how many opted in).
         </p>
       </div>
 

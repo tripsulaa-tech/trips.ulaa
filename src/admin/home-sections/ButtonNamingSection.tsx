@@ -29,7 +29,7 @@ export default function ButtonNamingSection({
           placeholder="e.g. Pack Your Bags"
         />
         <p className="text-xs text-dark-muted mt-1">
-          Shown on the trip detail page's booking button and on the matching button in the trip PDF, whenever seats are open.
+          Booking button text on the trip page and PDF while seats are open.
         </p>
       </div>
 
@@ -45,7 +45,7 @@ export default function ButtonNamingSection({
           placeholder="e.g. Join Waitlist"
         />
         <p className="text-xs text-dark-muted mt-1">
-          Shown instead, in both places, once a trip has no seats left.
+          Shown instead once the trip has no seats left.
         </p>
       </div>
     </div>

@@ -16,9 +16,7 @@ export default function StatsSection({
       <div className="pb-3 border-b border-background-warm">
         <h2 className="font-display text-lg font-bold text-dark">6 · Statistics</h2>
         <p className="text-xs text-dark-muted mt-1">
-          The numbers themselves are calculated live from completed trips, so they're always accurate.
-          Only the labels below are editable here — and they're shared by both this page and the
-          Completed Trips page, so changing a name updates it in both places.
+          Numbers are calculated live from completed trips. Only the labels are editable, and they are shared with the Completed Trips page.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

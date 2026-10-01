@@ -35,7 +35,7 @@ export default function FounderSection({
     <div ref={sectionRef} data-section={5} className="scroll-mt-4 space-y-4">
       <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">Meet the Founder</h2>
       <p className="text-xs text-dark-muted -mt-2">
-        This single source is shown on the About page, the Home page, and the Upcoming Trips page — edit it once here and it updates everywhere.
+        One source for the About, Home and Upcoming Trips pages. Edit once to update all.
       </p>
       <ImageUploadField
         label="Founder Photo"
@@ -44,7 +44,7 @@ export default function FounderSection({
         bucket="ulaa"
         pathPrefix="founder"
         maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
-        hint="Square, at least 600×600px, with the face centered."
+        hint="Square, min 600×600px, face centered."
         allowUrl
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -90,7 +90,7 @@ export default function FounderSection({
           </button>
         </div>
         <p className="text-xs text-dark-muted -mt-1">
-          Full URLs work best, but a bare username (e.g. "justjini_") also works for Instagram, LinkedIn, Facebook, X, YouTube, TikTok, and Pinterest. For WhatsApp, enter a phone number with country code (e.g. "919876543210"). For Mail/Gmail, enter the email address.
+          Use a full URL, or just a username (e.g. "justjini_") for Instagram, LinkedIn, Facebook, X, YouTube, TikTok and Pinterest. WhatsApp: number with country code (e.g. "919876543210"). Mail: email address.
         </p>
         {content.social_links.map((link: AboutFounderSocialLink, i: number) => (
           <div key={i} className="rounded-lg border border-background-warm p-3 space-y-2">

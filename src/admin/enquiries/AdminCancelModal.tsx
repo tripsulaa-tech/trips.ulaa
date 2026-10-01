@@ -69,8 +69,8 @@ export default function CancelModal({
           </div>
 
           <p className="text-sm text-dark-muted">
-            This frees up their seat right away. {cancelTarget.amount_paid > 0 && `They've paid ${formatPrice(cancelTarget.amount_paid)} so far — `}
-            amount paid stays on record; refunds are tracked separately from the Payment screen.
+            This frees the seat immediately. {cancelTarget.amount_paid > 0 && `Paid so far: ${formatPrice(cancelTarget.amount_paid)}. `}
+            Amount paid stays on record; track refunds from the Payment screen.
           </p>
 
           {cancelTarget.trip_id && waitlistWaitingCounts[cancelTarget.trip_id]?.entries > 0 && (
@@ -110,7 +110,7 @@ export default function CancelModal({
               placeholder="Airline/hotel penalties, if known — optional"
             />
             <p id="cancel-charges-hint" className="text-2xs text-dark-muted mt-1">
-              Used to compute the suggested refund estimate. You can leave this blank and add it later.
+              Used for the suggested refund estimate. Optional; can be added later.
             </p>
           </div>
 
@@ -123,7 +123,7 @@ export default function CancelModal({
             />
             <span>
               This is a <span className="font-medium">no-show</span> (didn't report at the meeting point/date/time).
-              <span className="block text-2xs text-dark-muted">Per policy, no-shows forfeit the full amount paid — the refund amount will be locked at ₹0.</span>
+              <span className="block text-2xs text-dark-muted">No-shows forfeit the full amount per policy. Refund is locked at ₹0.</span>
             </span>
           </label>
 

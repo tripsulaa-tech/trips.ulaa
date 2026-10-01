@@ -83,7 +83,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
       <div>
         <h4 className="text-sm font-semibold text-dark mb-1">Packages & Options</h4>
         <p className="text-xs text-dark-muted -mt-0.5">
-          Optional. Let travelers pick a package (e.g. Basic or Premium) on the public trip page and booking form. Leave empty for a normal single-price trip.
+          Optional. Lets travelers choose a package (e.g. Basic or Premium). Leave empty for a single-price trip.
         </p>
       </div>
 
@@ -216,7 +216,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
                     {q.price != null && q.price > 0 ? formatPrice(q.price) : `+${formatPrice(q.extra)}`}
                   </span>
                   {q.isEarlyBird ? ' (early-bird)' : ''}
-                  {!hasOwnPrice(p) && ' — no price set, so trip price + options'}
+                  {!hasOwnPrice(p) && ' · no price set, using trip price + options'}
                 </p>
               );
             })()}
@@ -229,7 +229,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
 
       {!isEmpty && (
         <p className="text-xs text-dark-muted">
-          Type a price for each package (e.g. Basic ₹10,000, Premium ₹12,000). Leave it blank to use trip price + its options. Tick "Early-bird price applies" on a package to give it an early-bird price while the trip's early-bird date is still open. What ULAA pays for an option goes in the Finances &amp; Profit tab → Other Trip Costs.
+          Set a price per package, or leave blank to use trip price + options. Tick "Early-bird price applies" to use early-bird pricing until the deadline. Option costs go under Finances &amp; Profit → Other Trip Costs.
         </p>
       )}
     </div>

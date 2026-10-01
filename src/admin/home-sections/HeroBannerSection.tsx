@@ -117,7 +117,7 @@ export default function HeroBannerSection({
         {content.slides.length === 0 && (
           <p className="text-xs text-dark-muted flex items-center gap-1.5 bg-background-warm/60 rounded-md px-3 py-2">
             <Images size={14} className="flex-shrink-0" aria-hidden="true" />
-            No photos yet — the homepage will keep showing its original default hero image until you add some below.
+            No photos yet. The homepage keeps its default hero image until you add some.
           </p>
         )}
       </div>
@@ -146,7 +146,7 @@ export default function HeroBannerSection({
           />
         </div>
         <p className="text-xs text-dark-muted -mt-2">
-          Wide landscape, at least 1920×1080px. Slides play in the order below — use the arrows to reorder, and the eye icon to temporarily hide a photo without deleting it.
+          Wide landscape, min 1920×1080px. Slides play in order; use the arrows to reorder and the eye icon to hide a photo.
         </p>
 
         {content.slides.length === 0 ? (
@@ -254,7 +254,7 @@ export default function HeroBannerSection({
                           onChange={url => updateSlide(slide.id, { mobile_image: url })}
                           bucket={STORAGE_BUCKET}
                           pathPrefix="home-hero-mobile"
-                          hint="Tall portrait, at least 1080×1350px. Falls back to the main photo if left empty."
+                          hint="Portrait, min 1080×1350px. Falls back to the main photo if empty."
                         />
                       </div>
                     </details>

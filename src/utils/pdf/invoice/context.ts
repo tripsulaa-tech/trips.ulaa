@@ -17,7 +17,7 @@ import { COLORS, PAGE_W, PAGE_H, MARGIN, FOOTER_RESERVE, val, drawVectorIcon as 
 
 /** Builds the shared drawing context for one invoice PDF run, then passed
  *  into every section renderer below. */
-export function createInvoiceContext(doc: jsPDF, enquiry: Enquiry) {
+export function createInvoiceContext(doc: jsPDF, enquiry: Enquiry, tripUrl: string | null = null) {
   const setFill = (c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
   const setText = (c: RGB) => doc.setTextColor(c[0], c[1], c[2]);
   const setDraw = (c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
@@ -72,6 +72,10 @@ export function createInvoiceContext(doc: jsPDF, enquiry: Enquiry) {
   return {
     doc,
     enquiry,
+    // Public trip-details URL (null when the trip can't be resolved) — used
+    // for the clickable trip name and the cancellation-policy deep link.
+    tripUrl,
+    cancellationUrl: tripUrl ? `${tripUrl}#cancellation` : null,
     setFill,
     setText,
     setDraw,

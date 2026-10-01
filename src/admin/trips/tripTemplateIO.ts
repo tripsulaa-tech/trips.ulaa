@@ -1,35 +1,136 @@
 import type { TripForm } from './tripFormTypes';
 import { emptyEndBanner, emptyForm, computeDuration } from './tripFormTypes';
+import type { TripFinance, TripCostItem, TripCostBasis, TripOptionsConfig, TripOption, TripPackage } from '../../types/types-index';
 import { emptyTripFinance } from '../../utils/tripFinance';
-import { emptyTripOptions } from '../../utils/tripOptions';
+import { emptyTripOptions, newOptionId } from '../../utils/tripOptions';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
 import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 
 // ── Export Template ──────────────────────────────────────────────────────
-// Builds and downloads a blank, annotated JSON template mirroring every
-// field on the Add Trip form. Meant to be handed to an external tool
-// (e.g. ChatGPT, given trip photos) to fill in trip details, which the
-// admin can then copy back into the Add Trip form by hand. This is an
-// export-only helper — nothing here is read back into the app.
+// Builds and downloads a blank, annotated JSON template mirroring the
+// Add/Edit Trip form. Keys are ordered exactly like the form's tabs (Basic
+// Info → Pricing & Availability → Finances & Profit → Media → Overview &
+// Itinerary → Inclusions & Prep → Accommodation → Meeting Point → End Banner
+// → FAQs → Cancellation Policy → Publish), so a person or tool filling it in
+// can follow the form top to bottom. Meant to be handed to an external tool
+// (e.g. ChatGPT, given trip photos) to fill in trip details, then loaded back
+// through Import Template (see parseImportedTripForm below).
+//
+// Not part of the template: Trip Leader (a link to the Trip Leaders
+// directory, not free text — assign it from the Trip Leader tab after
+// importing) and Terms & Conditions (the default is kept unless the template
+// supplies custom text).
 export const handleExportTemplate = () => {
   const template = {
     _instructions:
-      'This is a blank template of the Ulaa "Add Trip" admin form. Fill in every field ' +
-      'with trip details (use the provided trip photos/notes as source material). ' +
-      'Keep the JSON structure and key names exactly as-is — only replace the placeholder ' +
-      'values. Leave a field as an empty string "" if there is truly nothing to fill in. ' +
-      'Fields marked "(leave blank — uploaded manually)" are image uploads and cannot be ' +
-      'filled from this template; leave those as empty strings, the admin will upload the ' +
-      'actual photos in the app after pasting the rest of this back in.',
-    title: '<Trip title, e.g. "Spiti Valley Winter Expedition">',
+      'This is a blank template of the Ulaa "Add/Edit Trip" admin form. Keys follow the form\'s tabs ' +
+      'from top to bottom. Fill in every field with trip details (use the provided trip photos/notes ' +
+      'as source material). Keep the JSON structure and key names exactly as-is — only replace the ' +
+      'placeholder values. Leave a field as an empty string "" if there is truly nothing to fill in. ' +
+      'Fields marked "(leave blank — uploaded manually)" are image uploads and cannot be filled from ' +
+      'this template; leave those as empty strings, the admin will upload the actual photos in the app ' +
+      'after importing. The "trip_finance" block is INTERNAL (never shown on the public site) — fill it ' +
+      'only if cost details are provided, otherwise leave its values blank.',
+
+    // ── Tab: Basic Info ─────────────────────────────────────────────
+    title: '<Trip Title, e.g. "Spiti Valley Winter Expedition">',
     destination: '<Destination, e.g. "Spiti, Himachal Pradesh">',
-    start_date: '<Start date, format YYYY-MM-DD>',
-    end_date: '<End date, format YYYY-MM-DD>',
     duration: '(auto-computed from start_date/end_date — leave blank)',
+    start_date: '<Start Date, format YYYY-MM-DD>',
+    end_date: '<End Date, format YYYY-MM-DD>',
+    min_age: '<Min Age as a number, or "" for no limit>',
+    max_age: '<Max Age as a number, or "" for no limit>',
     description: '<Short 2-4 sentence overview. Day-by-day plan goes in itinerary below, not here>',
-    min_age: '<Minimum eligible age as a number, or "" for no restriction>',
-    max_age: '<Maximum eligible age as a number, or "" for no restriction>',
+
+    // ── Tab: Pricing & Availability ─────────────────────────────────
+    total_seats: '<Total Seats as a number, e.g. 15>',
+    seats_booked: 0,
+    trip_type: '<"domestic" or "international", or "" if not set. Sets the default cancellation rules>',
+    early_bird_deadline: '<Early-Bird Deadline, format YYYY-MM-DD, or "">',
+    price: '<Regular Price per person in INR as a number>',
+    strike_through_price: '<Strikeout Price per person in INR (old price shown crossed out), or "">',
+    early_bird_price: '<Early-Bird Price per person in INR as a number, or "">',
+    advance_amount: '<Advance/Reservation Amount in INR as a number, or "" to show seats left instead>',
+    special_offer_name: '<Optional flash offer name, e.g. "Diwali Dhamaka", or "">',
+    special_offer_price: '<Offer Price per person in INR as a number, or "">',
+    special_offer_date: '<Offer Start Date, format YYYY-MM-DD, or "">',
+    special_offer_end_date: '<Offer End Date (inclusive), format YYYY-MM-DD, e.g. 3 days after special_offer_date for a 3-day sale, or "" to run it for the start date only>',
+    card_feature_tags: [
+      { icon: '<Icon-library key, NOT an emoji — e.g. "venus", "crown", "map-pinned". See src/constants/tripHighlightIcons.ts. Up to 4 tags>', label: '<Short bold label, e.g. "Girls-Only">' },
+    ],
+    // Packages & add-ons travelers can choose from. Leave both lists empty
+    // for a plain single-price trip. A package's price is either its own
+    // "price" or, when blank, derived as the trip price + its options. The
+    // "id" values below are just local names used to link packages to
+    // options (e.g. "water") — real ids are generated on import.
+    trip_options: {
+      options: [
+        { id: '<Short local id, e.g. "water">', name: '<Option name, e.g. "Water Activities">', description: '<Short public blurb, or "">', price: '<Extra price per person in INR as a number, or "">' },
+      ],
+      packages: [
+        {
+          name: '<Package name, e.g. "Basic" or "Premium">',
+          description: '<Short public blurb, or "">',
+          option_ids: ['<id of an option above that this package includes — leave the list empty for the base trip only>'],
+          highlight: false,
+          early_bird: false,
+          price: '<Package price per person in INR, or "" to derive it from the trip price + options>',
+          early_bird_price: '<Package early-bird price in INR (only used when early_bird is true and price is set), or "">',
+        },
+      ],
+    },
+
+    // ── Tab: Finances & Profit (INTERNAL — never shown publicly) ────
+    trip_finance: {
+      // Ulaa's Costs — one line per cost (ads, tickets, kits, transport, stay, food...)
+      cost_items: [
+        {
+          name: '<Cost name, e.g. "Transport", "Ad / Promotion", "Entry Ticket">',
+          basis: '<"fixed" (lump sum), "per_traveler" (rate × every booked traveler) or "per_selected" (rate × a headcount)>',
+          rate: '<INR — the lump sum for "fixed", otherwise INR per person>',
+          quantity: '<Headcount, only for "per_selected" lines not linked to an option, or "">',
+          option_id: '<Optional: id of a trip_options option to count the headcount from real bookings, or "">',
+        },
+      ],
+      // On-Ground Agency
+      agency_name: '<Agency Name, e.g. "Spiceland Holidays">',
+      agency_amount_type: '<"fixed" (one total) or "per_traveler" (a rate per person)>',
+      agency_amount: '<Amount Paid to the agency in INR (total or per person, per agency_amount_type), or "">',
+      // Child Fare — one flat rate for the whole trip
+      child_fare_amount: '<Child Fare Amount charged to the traveler per child, in INR, or "">',
+      child_fare_vendor_amount: '<Vendor Amount Ulaa pays the agency per child, in INR, or "">',
+      child_fare_entry_ticket_cost: '<Entry Ticket Cost per child, in INR, or "">',
+      child_fare_kit_cost: '<Kit Cost per child, in INR (0 only if no kit is given), or "">',
+      // Trip Organiser's Expenses — actual amounts, not multiplied by traveler count
+      organiser_name: '<Organiser Name, the person running the trip on the ground, or "">',
+      organiser_travel_cost: '<Travel Tickets (organiser\'s own fare) in INR, or "">',
+      organiser_agency_payment: '<Agency Payment by the organiser, separate from agency_amount, in INR, or "">',
+      organiser_misc_expense: '<Miscellaneous on-ground costs in INR, or "">',
+      organiser_own_entry_ticket: '<Own Entry Ticket in INR, or "">',
+      notes: '<Internal notes — payment terms, receipts, or "">',
+    },
+
+    // ── Tab: Media ──────────────────────────────────────────────────
+    cover_image: '(leave blank — uploaded manually)',
+    hero_mobile_image: '(leave blank — uploaded manually)',
+    // Note: included_items, not_included_items, and gallery_images are
+    // deliberately left out of this template. They're legacy fallback
+    // fields (see UpcomingTrip in types-index.ts) with no editor in the
+    // current form — included_groups, the plain "not_included" tag list,
+    // and gallery_items replaced them — so there'd be no way to review a
+    // filled-in value before saving.
+    gallery_description: '<Short intro paragraph shown below the "Places You\'ll Definitely Post" heading, or "">',
+    gallery_items: [
+      { photo: '(leave blank — uploaded manually)', description: '<Caption / Place Name for this photo>' },
+    ],
+    fashion_description: '<Short intro paragraph shown below the "Fashion Aesthetics" heading, or "">',
+    fashion_photos: ['(leave blank — uploaded manually, or paste at least 6 source photo URLs — this gallery looks sparse with fewer than 6)'],
+
+    // ── Tab: Overview & Itinerary ───────────────────────────────────
+    highlight_cards: [
+      { icon: '<Icon-library key, NOT an emoji — same key system as itinerary.icon, e.g. "mountain-snow", "camera", "car", "palmtree". See src/constants/tripHighlightIcons.ts for the full list. An emoji here silently falls back to plain text instead of the colored icon circle used elsewhere on the page. Include at least 6 cards — this section looks sparse with fewer than 6>', heading: '<Short heading>', description: '<1-2 sentence description>' },
+    ],
     itinerary: [
       {
         day: 1,
@@ -40,34 +141,54 @@ export const handleExportTemplate = () => {
         bullets: ['<Optional bulleted sub-item for this day, e.g. "Guided trek to the viewpoint">'],
       },
     ],
+
+    // ── Tab: Inclusions & Prep ──────────────────────────────────────
+    included_groups: [
+      {
+        icon: '<Icon-library key, NOT an emoji — e.g. "hotel", "utensils", "car". See src/constants/tripHighlightIcons.ts. Include at least 4 groups — this section looks sparse with fewer than 4>',
+        heading: '<Group heading, e.g. "Premium Stay Experience">',
+        bullets: ['<Bulleted sub-item under this heading, e.g. "5 Nights accommodation at carefully selected 4-star and beachfront properties">'],
+      },
+    ],
     not_included: ['<Short line item of what is NOT included, e.g. "Flights to base city">'],
-    meeting_point: '<Free-text meeting point label, e.g. "Delhi Airport Terminal 3">',
-    meeting_point_map_url: '<Google Maps link for the meeting point, or "">',
-    meeting_time: '<Meeting time, e.g. "6:00 AM">',
+    things_to_carry_items: [
+      { icon: '<Icon-library key, NOT an emoji — e.g. "shirt", "footprints", "hand", "glasses", "pill". See src/constants/tripHighlightIcons.ts>', description: '<Item traveller should pack, e.g. "Warm jacket">' },
+    ],
+    confidence_description: '<Short intro paragraph shown below the "Travel with Confidence" heading, or "">',
+    confidence_items: [
+      { icon: '<Icon-library key, NOT an emoji — e.g. "shield-check", "headset", "users". See src/constants/tripHighlightIcons.ts. Include at least 6 items — this section looks sparse with fewer than 6>', description: '<"Travel with Confidence" point, e.g. "24/7 support during the trip">' },
+    ],
+
+    // ── Tab: Accommodation ──────────────────────────────────────────
+    accommodation_description: '<Section Description for the "Stay. Relax. Repeat." section — describe the accommodation>',
+    accommodation_photos: ['(leave blank — uploaded manually, or paste at least 6 source photo URLs — this gallery looks sparse with fewer than 6)'],
+
+    // ── Tab: Meeting Point ──────────────────────────────────────────
+    meeting_point: '<Location Name, e.g. "Delhi Airport Terminal 3">',
+    meeting_address: '<Full street Address of the meeting point, or "">',
+    meeting_point_map_url: '<Meeting Point — Google Maps Link, or "">',
+    meeting_time: '<Time, e.g. "6:00 AM">',
     meeting_terminal: '<Terminal/gate/landmark detail, or "">',
-    meeting_address: '<Full street address of the meeting point, or "">',
-    meeting_details: '<Any extra logistics notes for the meeting point, or "">',
+    meeting_details: '<Any extra logistics Details for the meeting point, or "">',
+
+    // ── Tab: End Banner ─────────────────────────────────────────────
+    end_banner: {
+      image: '(leave blank — uploaded manually)',
+      heading: '<Heading shown on the left of the banner, e.g. "Ready to Experience the Magic?">',
+      description: '<One or two lines below the heading>',
+      cta_label: '<Button Label, e.g. "Book Your Seat", or "" to hide the button>',
+      cta_url: '<Button Link, or "" to open the booking form>',
+    },
+
+    // ── Tab: Terms & Conditions ─────────────────────────────────────
+    terms_and_conditions: '(leave as default unless the trip needs custom terms)',
+
+    // ── Tab: FAQs ───────────────────────────────────────────────────
     faqs: [
       { question: '<Frequently asked question>', answer: '<Answer>' },
     ],
-    total_seats: '<Total number of seats as a number, e.g. 15>',
-    seats_booked: 0,
-    price: '<Regular price per person in INR as a number>',
-    early_bird_price: '<Early bird price per person in INR as a number, or "">',
-    early_bird_deadline: '<Early bird deadline, format YYYY-MM-DD, or "">',
-    strike_through_price: '<Optional "was ₹X" marketing price as a number, or "">',
-    advance_amount: '<Optional advance/reservation amount in INR as a number, or "">',
-    special_offer_name: '<Optional flash offer name, e.g. "Diwali Dhamaka", or "">',
-    special_offer_price: '<Optional flash offer price per person in INR as a number, or "">',
-    special_offer_date: '<Optional flash offer start date, format YYYY-MM-DD, or "">',
-    special_offer_end_date: '<Optional flash offer end date (inclusive), format YYYY-MM-DD, e.g. 3 days after special_offer_date for a 3-day sale, or "" to run it for special_offer_date only>',
-    card_feature_tags: [
-      { icon: '<Icon-library key, NOT an emoji — e.g. "venus", "crown", "map-pinned". See src/constants/tripHighlightIcons.ts.>', label: '<Short bold label, e.g. "Girls-Only">' },
-    ],
-    trip_type: '<"domestic" or "international", or "" if not set>',
-    cover_image: '(leave blank — uploaded manually)',
-    hero_mobile_image: '(leave blank — uploaded manually)',
-    terms_and_conditions: '(leave as default unless the trip needs custom terms)',
+
+    // ── Tab: Cancellation Policy ────────────────────────────────────
     cancellation_policy: {
       payment_due_days: '<Days before departure the remaining balance is due, as a number>',
       tiers: [
@@ -80,50 +201,11 @@ export const handleExportTemplate = () => {
       refund_min_days: '<Fastest number of working days an approved refund is processed in>',
       refund_max_days: '<Slowest number of working days an approved refund is processed in>',
     },
+
+    // ── Tab: Publish ────────────────────────────────────────────────
+    // Imports always open as a draft, whatever is set here — switch to
+    // "coming_soon" or "published" in the Publish tab after reviewing.
     status: 'draft',
-    // ── Extended content blocks ──────────────────────────────────────
-    // Note: included_items, not_included_items, and gallery_images are
-    // deliberately left out of this template. They're legacy fallback
-    // fields (see UpcomingTrip in types-index.ts) with no editor in the
-    // current Add Trip form — included_groups, the plain "not_included"
-    // tag list, and gallery_items replaced them — so there'd be no way
-    // to review a filled-in value before saving.
-    highlight_cards: [
-      { icon: '<Icon-library key, NOT an emoji — same key system as itinerary.icon, e.g. "mountain-snow", "camera", "car", "palmtree". See src/constants/tripHighlightIcons.ts for the full list. An emoji here silently falls back to plain text instead of the colored icon circle used elsewhere on the page. Include at least 6 cards — this section looks sparse with fewer than 6>', heading: '<Short heading>', description: '<1-2 sentence description>' },
-    ],
-    accommodation_description: '<"Stay. Relax. Repeat." section body — describe the accommodation>',
-    accommodation_photos: ['(leave blank — uploaded manually, or paste at least 6 source photo URLs — this gallery looks sparse with fewer than 6)'],
-    included_groups: [
-      {
-        icon: '<Icon-library key, NOT an emoji — e.g. "hotel", "utensils", "car". See src/constants/tripHighlightIcons.ts. Include at least 4 groups — this section looks sparse with fewer than 4>',
-        heading: '<Group heading, e.g. "Premium Stay Experience">',
-        bullets: ['<Bulleted sub-item under this heading, e.g. "5 Nights accommodation at carefully selected 4-star and beachfront properties">'],
-      },
-    ],
-    gallery_items: [
-      { photo: '(leave blank — uploaded manually)', description: '<Caption / place name for this photo>' },
-    ],
-    gallery_description: '<Short intro paragraph shown below the "Places You\'ll Definitely Post" heading, or "">',
-    fashion_photos: ['(leave blank — uploaded manually, or paste at least 6 source photo URLs — this gallery looks sparse with fewer than 6)'],
-    fashion_description: '<Short intro paragraph shown below the "Fashion Aesthetics" heading, or "">',
-    things_to_carry_items: [
-      { icon: '<Icon-library key, NOT an emoji — e.g. "shirt", "footprints", "hand", "glasses", "pill". See src/constants/tripHighlightIcons.ts>', description: '<Item traveller should pack, e.g. "Warm jacket">' },
-    ],
-    // Note: trip leader assignment is deliberately left out of this
-    // template — it's a link to the Trip Leaders directory (Admin → Trip
-    // Leaders), not free text, so there'd be nothing meaningful to fill in
-    // here. Assign a trip leader from the Trip Leader tab after importing.
-    confidence_items: [
-      { icon: '<Icon-library key, NOT an emoji — e.g. "shield-check", "headset", "users". See src/constants/tripHighlightIcons.ts. Include at least 6 items — this section looks sparse with fewer than 6>', description: '<"Travel with Confidence" point, e.g. "24/7 support during the trip">' },
-    ],
-    confidence_description: '<Short intro paragraph shown below the "Travel with Confidence" heading, or "">',
-    end_banner: {
-      image: '(leave blank — uploaded manually)',
-      heading: '<End banner heading>',
-      description: '<End banner description>',
-      cta_label: '<Call-to-action button text, e.g. "Book Now">',
-      cta_url: '<Call-to-action link, or "">',
-    },
   };
 
   const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
@@ -137,10 +219,6 @@ export const handleExportTemplate = () => {
   URL.revokeObjectURL(url);
 };
 
-// Reads a filled-in export template (e.g. produced by ChatGPT from
-// handleExportTemplate's output) and populates the Add Trip form so the
-// admin only has to review/adjust and upload photos before saving —
-// instead of retyping everything by hand.
 const isPlaceholder = (v: unknown): boolean =>
   typeof v !== 'string' || v.trim() === '' || v.trim().startsWith('<') || v.trim().startsWith('(');
 
@@ -213,6 +291,79 @@ const asIconKey = (v: unknown): string => {
 };
 
 
+const COST_BASES: TripCostBasis[] = ['fixed', 'per_traveler', 'per_selected'];
+let costIdCounter = 0;
+const newCostItemId = () => `ci_${Date.now().toString(36)}_${(costIdCounter++).toString(36)}`;
+
+// The template links packages (and cost lines) to options by a short local
+// id such as "water". Real ids are generated here, and every link is
+// re-pointed at them; links to an unknown/unfilled option are dropped.
+function parseTripOptions(raw: unknown): { config: TripOptionsConfig; idMap: Record<string, string> } {
+  const src = asObj(raw);
+  const idMap: Record<string, string> = {};
+  const options: TripOption[] = asArr(src.options)
+    .filter(o => !isPlaceholder(o?.name))
+    .map(o => {
+      const id = newOptionId('opt');
+      const localId = asStr(o?.id);
+      if (localId) idMap[localId] = id;
+      return { id, name: asStr(o?.name), description: asStr(o?.description), price: asNumOrNull(o?.price) };
+    });
+  const packages: TripPackage[] = asArr(src.packages)
+    .filter(p => !isPlaceholder(p?.name))
+    .map(p => {
+      const optionIds = Array.isArray(p?.option_ids)
+        ? (p.option_ids as unknown[]).map(x => idMap[asStr(x)]).filter((x): x is string => !!x)
+        : [];
+      return {
+        id: newOptionId('pkg'),
+        name: asStr(p?.name),
+        description: asStr(p?.description),
+        option_ids: Array.from(new Set(optionIds)),
+        highlight: p?.highlight === true,
+        early_bird: p?.early_bird === true,
+        price: asNumOrNull(p?.price),
+        early_bird_price: asNumOrNull(p?.early_bird_price),
+      };
+    });
+  return { config: options.length || packages.length ? { options, packages } : emptyTripOptions, idMap };
+}
+
+function parseTripFinance(raw: unknown, optionIdMap: Record<string, string>): TripFinance {
+  if (!raw || typeof raw !== 'object') return emptyTripFinance;
+  const f = asObj(raw);
+  const costItems: TripCostItem[] = asArr(f.cost_items)
+    .filter(c => !isPlaceholder(c?.name))
+    .map(c => {
+      const basis = COST_BASES.includes(c?.basis as TripCostBasis) ? (c.basis as TripCostBasis) : 'fixed';
+      return {
+        id: newCostItemId(),
+        name: asStr(c?.name),
+        basis,
+        rate: asNumOrNull(c?.rate),
+        quantity: basis === 'per_selected' ? asNumOrNull(c?.quantity) : null,
+        option_id: optionIdMap[asStr(c?.option_id)] ?? null,
+      };
+    });
+  return {
+    agency_name: asStr(f.agency_name),
+    agency_amount_type: f.agency_amount_type === 'per_traveler' ? 'per_traveler' : 'fixed',
+    agency_amount: asNumOrNull(f.agency_amount),
+    child_fare_amount: asNumOrNull(f.child_fare_amount),
+    child_fare_vendor_amount: asNumOrNull(f.child_fare_vendor_amount),
+    child_fare_entry_ticket_cost: asNumOrNull(f.child_fare_entry_ticket_cost),
+    child_fare_kit_cost: asNumOrNull(f.child_fare_kit_cost),
+    organiser_name: asStr(f.organiser_name),
+    organiser_travel_cost: asNumOrNull(f.organiser_travel_cost),
+    organiser_agency_payment: asNumOrNull(f.organiser_agency_payment),
+    organiser_misc_expense: asNumOrNull(f.organiser_misc_expense),
+    organiser_own_entry_ticket: asNumOrNull(f.organiser_own_entry_ticket),
+    cost_items: costItems,
+    notes: asStr(f.notes),
+  };
+}
+
+
 // ── Import Template ──────────────────────────────────────────────────────
 // Reads a filled-in export template (e.g. produced by ChatGPT from
 // handleExportTemplate's output) and returns a TripForm so the admin only
@@ -224,6 +375,7 @@ export function parseImportedTripForm(raw: unknown): TripForm {
   const r = asObj(raw);
   const cancellationPolicySrc = asObj(r.cancellation_policy);
   const endBannerSrc = asObj(r.end_banner);
+  const { config: tripOptions, idMap: optionIdMap } = parseTripOptions(r.trip_options);
   const imported: TripForm = {
       title: asStr(r.title),
       destination: asStr(r.destination),
@@ -314,13 +466,12 @@ export function parseImportedTripForm(raw: unknown): TripForm {
             cta_url: asStr(endBannerSrc.cta_url),
           }
         : emptyEndBanner,
-      // Deliberately never part of the export/import template — this is
-      // internal cost/profit data, not shareable trip content. A freshly
-      // imported trip always starts with a blank finance record; the admin
-      // fills it in separately in the "Finances & Profit" tab.
-      trip_finance: emptyTripFinance,
-      // Packages are set per trip in Pricing & Availability, not templated.
-      trip_options: emptyTripOptions,
+      // Internal cost/profit data (Finances & Profit tab). Optional in the
+      // template — a missing or untouched block imports as a blank record.
+      trip_finance: parseTripFinance(r.trip_finance, optionIdMap),
+      // Packages & add-ons from Pricing & Availability. Missing or untouched
+      // = a plain single-price trip.
+      trip_options: tripOptions,
     };
   return imported;
 }

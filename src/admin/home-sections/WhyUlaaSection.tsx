@@ -100,7 +100,7 @@ export default function WhyUlaaSection({
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2 pb-3 border-b border-background-warm">
           <h2 className="font-display text-lg font-bold text-dark">Cards ({content.features.length})</h2>
-          <p className="text-xs text-dark-muted hidden sm:block">Each card's preview mirrors exactly how it looks on the home page.</p>
+          <p className="text-xs text-dark-muted hidden sm:block">Each preview matches the home page.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -135,7 +135,7 @@ export default function WhyUlaaSection({
                     />
                     <p className="flex items-center gap-1 text-2xs text-dark-muted leading-snug">
                       <ImageIcon size={11} className="flex-shrink-0" aria-hidden="true" />
-                      4:3 landscape, at least 800×600px
+                      4:3 landscape, min 800×600px
                     </p>
                   </div>
 

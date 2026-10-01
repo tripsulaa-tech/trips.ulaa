@@ -48,8 +48,8 @@ export default function AdminEnquiryFollowUpModal({
       <div className="space-y-4">
         <p className="text-sm text-dark-muted">
           {target?.follow_up_at
-            ? 'This lead is still warm — update when to check back in.'
-            : "This lead is still warm but not ready to close either way — pick a date to check back in. It'll show as due on that day, and clears automatically once this lead moves past Contacted."}
+            ? 'Update the date to check back in.'
+            : "Lead is warm but not ready to close. Pick a date to check back. It shows as due that day and clears once the lead moves past Contacted."}
         </p>
         <div className="grid grid-cols-2 gap-3">
           <div>

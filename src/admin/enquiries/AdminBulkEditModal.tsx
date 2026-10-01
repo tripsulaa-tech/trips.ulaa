@@ -62,7 +62,7 @@ export default function BulkEditModal({
           </p>
         )}
         <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">
-          Only fields you change here are applied — anything left on "No change" is left exactly as it is for every selected enquiry.
+          Only changed fields are applied. Fields left on "No change" stay as they are.
         </p>
 
         <div>
@@ -99,12 +99,12 @@ export default function BulkEditModal({
           />
           {bulkForm.package_type !== BULK_NO_CHANGE && !activeGroupTripId && (
             <p className="text-amber-600 text-2xs mt-1">
-              These enquiries aren't linked to a trip, so there's no configured price to pull in — enter the amount manually below.
+              These enquiries have no linked trip, so no price is available. Enter the amount manually.
             </p>
           )}
           {bulkForm.package_type !== BULK_NO_CHANGE && activeGroupTripId && getTripPrice(activeGroupTripId, bulkForm.package_type) == null && (
             <p className="text-amber-600 text-2xs mt-1">
-              This trip's price for this package isn't set yet — enter the amount manually below, or add it under Upcoming Trips first.
+              No price is set for this package. Enter the amount manually, or add it under Upcoming Trips.
             </p>
           )}
         </div>
@@ -176,7 +176,7 @@ export default function BulkEditModal({
             placeholder="Leave blank to leave unchanged"
           />
           <p id="bulk-amount-paid-hint" className="text-2xs text-dark-muted mt-1">
-            Sets what's been collected so far for every selected enquiry, as a new total — not added on top of what's already recorded. Leave blank to leave each one's amount paid as-is.
+            Sets the new total collected for every selected enquiry. It replaces the current amount; it is not added to it. Leave blank to keep each as is.
           </p>
           {overpaid && (
             <p id="bulk-amount-paid-error" role="alert" className={errorClass}>
@@ -195,7 +195,7 @@ export default function BulkEditModal({
           />
           {bulkForm.status === 'contacted' && (
             <p className="text-2xs text-dark-muted mt-1">
-              The Payment popup only appears for single-record updates, so it won't open here.
+              The Payment popup does not open for bulk updates.
             </p>
           )}
         </div>

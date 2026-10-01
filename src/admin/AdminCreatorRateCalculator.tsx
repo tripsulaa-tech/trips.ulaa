@@ -838,7 +838,7 @@ export default function AdminCreatorRateCalculator() {
 
           <p className="text-xs text-dark-muted mb-4 inline-flex items-start gap-1.5">
             <Info size={14} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
-            Enter the creator's follower count, average views for their last 10 Reels, and select their niche.
+            Enter the creator's follower count, average views on their last 10 Reels, and niche.
           </p>
 
           {/* Optional identity — not part of the original spreadsheet, but
@@ -916,7 +916,7 @@ export default function AdminCreatorRateCalculator() {
             </button>
           </div>
           <p className="text-2xs text-dark-muted mb-2">
-            Tip: copy the 10 view counts (one per line, from Insights or a spreadsheet) and hit "Paste all 10", or paste into any box below and press Enter to move to the next.
+            Tip: copy the 10 view counts (one per line) and click "Paste all 10", or paste into any box and press Enter to move on.
           </p>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-5">
             {reelViews.map((val, i) => (
@@ -1028,7 +1028,7 @@ export default function AdminCreatorRateCalculator() {
                 </table>
               </div>
               <p className="text-xs text-dark-muted mt-3 italic">
-                💡 Negotiation Tip: these prices are suggested benchmark rates. Quote higher than these to leave room for negotiation and arrive at your desired final commercial.
+                💡 Negotiation tip: these are benchmark rates. Quote higher to leave room for negotiation.
               </p>
             </motion.div>
           </>

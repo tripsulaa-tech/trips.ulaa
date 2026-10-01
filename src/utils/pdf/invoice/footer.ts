@@ -2,9 +2,9 @@ import type { InvoicePdfCtx } from './context';
 import { BRAND, COLORS, MARGIN, PAGE_W, PAGE_H, CONTENT_W, FOOTER_BANNER_LINKS } from './shared';
 
 // =============================================================================
-// Footer note + thank-you + bottom brand bar — flows after the table (not
-// pinned to the physical page bottom), so a long payment history never
-// overlaps it — followed by the page-number badge on every page.
+// Footer note + bottom brand bar. The note is pinned just above the banner
+// when there's room, and otherwise flows after the table so a long payment
+// history never overlaps it. The page-number badge goes on every page.
 // =============================================================================
 
 export function renderFooterAndPageNumbers(
@@ -13,9 +13,30 @@ export function renderFooterAndPageNumbers(
 ): void {
   const { doc, setFill, setText, cursor } = ctx;
 
-  ctx.checkPageBreak(70);
   const noteText =
     "This invoice reflects amounts recorded for this booking only. Cancellation and refund amounts, if any, are governed by Ulaa's Terms & Cancellation Policy shared at the time of booking.";
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8.5);
+  const noteLines: string[] = doc.splitTextToSize(noteText, CONTENT_W - 20);
+  const noteH = noteLines.length * 11;
+
+  // Where the brand banner will start (it sits flush on the page bottom).
+  const bannerTop = PAGE_H - (footerBanner ? CONTENT_W / footerBanner.ratio : 34);
+
+  // Preferred spot: pinned just above the banner, under a hairline, so the
+  // terms sit in the same place on every invoice. If the content already
+  // runs too far down for that, fall back to flowing right after it.
+  const pinnedRuleY = bannerTop - noteH - 28;
+  const pinned = pinnedRuleY >= cursor.y + 8;
+  if (pinned) {
+    ctx.setDraw(COLORS.grayLine);
+    doc.setLineWidth(0.75);
+    doc.line(MARGIN, pinnedRuleY, PAGE_W - MARGIN, pinnedRuleY);
+    cursor.y = pinnedRuleY + 16;
+  } else {
+    ctx.checkPageBreak(70);
+  }
+
   setFill(COLORS.gold);
   doc.circle(MARGIN + 5, cursor.y, 5, 'F');
   doc.setFont('helvetica', 'bold');
@@ -25,9 +46,14 @@ export function renderFooterAndPageNumbers(
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(8.5);
   setText(COLORS.darkMuted);
-  const noteLines = doc.splitTextToSize(noteText, CONTENT_W - 20);
   doc.text(noteLines, MARGIN + 16, cursor.y + 3);
-  cursor.y += noteLines.length * 11 + 20;
+  // The info icon and the whole note link to this trip's Cancellation
+  // Policy section on the public trip page.
+  if (ctx.cancellationUrl) {
+    doc.link(MARGIN, cursor.y - 6, 12, 12, { url: ctx.cancellationUrl });
+    doc.link(MARGIN + 16, cursor.y - 6, CONTENT_W - 20, noteH + 2, { url: ctx.cancellationUrl });
+  }
+  cursor.y += noteH + 8;
 
   // Bottom brand banner — the "Empowering women to explore, together" /
   // "Follow us — Instagram / WhatsApp / website" artwork, dropped in as one

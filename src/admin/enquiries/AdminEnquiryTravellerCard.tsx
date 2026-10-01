@@ -16,6 +16,7 @@ import Select from '../../components/ui/Select';
 import FoodMark from '../../components/ui/FoodMark';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { formatDate, formatTime, getWhatsAppLink } from '../../utils/utils-index';
+import { formatPhone } from '../../utils/formatPhone';
 import { isPremiumPackage } from '../../utils/tripOptions';
 import { PACKAGE_CONFIG, PACKAGE_OPTIONS, SOURCE_CONFIG, SOURCE_OPTIONS_ALL, FOOD_PREFERENCE_OPTIONS } from './AdminEnquiryCommon';
 import type { EditDetailsForm } from './AdminEditDetailsModal';
@@ -199,7 +200,7 @@ export default function AdminEnquiryTravellerCard({
                 {editTouched.has('phone') && editErrors.phone && <p id="eq-detail-edit-phone-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.phone}</p>}
               </>
             ) : (
-              <p className="text-dark text-sm font-semibold truncate">{enquiry.phone}</p>
+              <p className="text-dark text-sm font-semibold whitespace-nowrap">{formatPhone(enquiry.phone)}</p>
             )}
           </div>
         </div>
@@ -479,7 +480,7 @@ export default function AdminEnquiryTravellerCard({
               </a>
               <div className="min-w-0 flex-1">
                 <p className="text-dark-muted text-xs">WhatsApp</p>
-                <p className="text-dark text-sm font-semibold truncate">{enquiry.phone}</p>
+                <p className="text-dark text-sm font-semibold whitespace-nowrap">{formatPhone(enquiry.phone)}</p>
               </div>
             </div>
           )}

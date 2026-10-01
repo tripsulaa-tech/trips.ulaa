@@ -160,12 +160,14 @@ export default function AdminTripFormModal({
           <TabPanel label="Basic Info" icon={<IdentificationCard size={15} />}>
             <div className="md:col-span-2">
               <label htmlFor="trip-title" className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
-              <input id="trip-title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley Winter Expedition" />
+              <input id="trip-title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley Winter Expedition" aria-describedby="trip-title-hint" />
+              <p id="trip-title-hint" className="text-xs text-dark-muted mt-1">Shown on the Trip Card and trip page.</p>
             </div>
             <div className="md:col-span-2 grid grid-cols-2 gap-x-3 sm:gap-x-4 items-start">
               <div>
                 <label htmlFor="trip-destination" className="block text-sm font-medium text-dark mb-1">Destination *</label>
-                <input id="trip-destination" value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti, HP" />
+                <input id="trip-destination" value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti, HP" aria-describedby="trip-destination-hint" />
+                <p id="trip-destination-hint" className="text-xs text-dark-muted mt-1">Place the trip goes to.</p>
               </div>
               <div>
                 <label htmlFor="trip-duration" className="block text-sm font-medium text-dark mb-1">Duration *</label>
@@ -178,8 +180,7 @@ export default function AdminTripFormModal({
                   placeholder="Auto from dates"
                 />
                 <p id="trip-duration-hint" className="text-xs text-dark-muted mt-1">
-                  <span className="sm:hidden">Auto from dates.</span>
-                  <span className="hidden sm:inline">Calculated from the Start and End Date.</span>
+                  Auto-calculated from the dates.
                 </p>
               </div>
             </div>
@@ -229,13 +230,12 @@ export default function AdminTripFormModal({
               </div>
               <p className="col-span-2 md:col-span-4 text-xs text-dark-muted -mt-2" aria-live="polite">
                 {ageSummary(form.min_age, form.max_age)}{' '}
-                <span className="hidden sm:inline">Leave both blank for no restriction.</span>
-                <span className="sm:hidden">Blank = no limit.</span>
+                Leave blank for no limit.
               </p>
             </div>
             <div className="md:col-span-2">
               <label htmlFor="trip-description" className="block text-sm font-medium text-dark mb-1">Description *</label>
-              <p id="trip-description-hint" className="text-xs text-dark-muted mb-1">Short overview only — put the day-by-day plan in Itinerary below, not here.</p>
+              <p id="trip-description-hint" className="text-xs text-dark-muted mb-1">Short overview only. Add the day-wise plan under Itinerary.</p>
               <textarea id="trip-description" aria-describedby="trip-description-hint" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} />
             </div>
           </TabPanel>
@@ -243,7 +243,8 @@ export default function AdminTripFormModal({
             <div className={FIELD_GRID_4}>
               <div>
                 <label htmlFor="trip-total-seats" className="block text-sm font-medium text-dark mb-1">Total Seats</label>
-                <input id="trip-total-seats" type="number" min={0} inputMode="numeric" value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} className={inputClass} />
+                <input id="trip-total-seats" type="number" min={0} inputMode="numeric" value={form.total_seats} onChange={e => setForm(f => ({ ...f, total_seats: +e.target.value }))} aria-describedby="trip-total-seats-hint" className={inputClass} />
+                <p id="trip-total-seats-hint" className="text-xs text-dark-muted mt-1">Maximum seats available.</p>
               </div>
               <div>
                 <label htmlFor="trip-seats-filled" className="block text-sm font-medium text-dark mb-1">Seats Filled</label>
@@ -275,8 +276,7 @@ export default function AdminTripFormModal({
                   ]}
                 />
                 <p className="text-xs text-dark-muted mt-1">
-                  <span className="sm:hidden">Sets cancellation rules.</span>
-                  <span className="hidden sm:inline">Auto-fills the right cancellation rules on bookings.</span>
+                  Sets the default cancellation rules.
                 </p>
               </div>
               <div>
@@ -289,8 +289,7 @@ export default function AdminTripFormModal({
                   onChange={early_bird_deadline => setForm(f => ({ ...f, early_bird_deadline }))}
                 />
                 <p className="text-xs text-dark-muted mt-1">
-                  <span className="sm:hidden">Then regular price.</span>
-                  <span className="hidden sm:inline">Early-bird price shows until this date, then switches to regular.</span>
+                  Early-bird price applies until this date.
                 </p>
               </div>
             </div>
@@ -304,7 +303,9 @@ export default function AdminTripFormModal({
                   onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : +e.target.value }))}
                   className={inputClass}
                   placeholder="e.g. 42999"
+                  aria-describedby="trip-price-hint"
                 />
+                <p id="trip-price-hint" className="text-xs text-dark-muted mt-1">Standard price per person.</p>
               </div>
               <div>
                 <label htmlFor="trip-strike-price" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Strikeout Price per person (₹)" short="Strikeout (₹)" /></label>
@@ -315,7 +316,9 @@ export default function AdminTripFormModal({
                   onChange={e => setForm(f => ({ ...f, strike_through_price: e.target.value === '' ? '' : +e.target.value }))}
                   className={inputClass}
                   placeholder="e.g. 49999"
+                  aria-describedby="trip-strike-price-hint"
                 />
+                <p id="trip-strike-price-hint" className="text-xs text-dark-muted mt-1">Old price, shown crossed out.</p>
               </div>
               <div>
                 <label htmlFor="trip-early-bird-price" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Early-Bird Price per person (₹)" short="Early-Bird (₹)" /></label>
@@ -326,7 +329,9 @@ export default function AdminTripFormModal({
                   onChange={e => setForm(f => ({ ...f, early_bird_price: e.target.value === '' ? '' : +e.target.value }))}
                   className={inputClass}
                   placeholder="e.g. 39999"
+                  aria-describedby="trip-early-bird-price-hint"
                 />
+                <p id="trip-early-bird-price-hint" className="text-xs text-dark-muted mt-1">Used until the Early-Bird Deadline.</p>
               </div>
               <div>
                 <label htmlFor="trip-advance-amount" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Advance/Reservation Amount (₹)" short="Advance (₹)" /></label>
@@ -341,11 +346,11 @@ export default function AdminTripFormModal({
                   placeholder="e.g. 8999"
                 />
               </div>
-              <p id="trip-advance-amount-hint" className="col-span-2 md:col-span-4 text-xs text-dark-muted -mt-1">Shown as "Reserve today with only ₹{form.advance_amount || 'X'}". <span className="hidden sm:inline">Leave blank to show the seats-available badge instead.</span></p>
+              <p id="trip-advance-amount-hint" className="col-span-2 md:col-span-4 text-xs text-dark-muted -mt-1">Shown as "Reserve today with only ₹{form.advance_amount || 'X'}". Leave blank to show seats left instead.</p>
             </div>
             <div className="md:col-span-2 bg-primary/5 border border-primary/20 rounded-md p-3 space-y-3">
               <p className="text-xs text-dark-muted">
-                Optional named flash offer (e.g. "Diwali Dhamaka"). Unlike Early-Bird above, this is meant for a short, urgent occasion sale — set Start and End Date to the same day for a one-day flash sale, or a few days apart (e.g. a 3-day window) for a long-weekend sale. It shows automatically on the Trip Card with a live "Offer ends in X days" countdown, and disappears on its own the day after End Date. Leave End Date blank to run it for Start Date only.
+                Optional short sale (e.g. "Diwali Dhamaka"). Shows on the Trip Card with an "Offer ends in X days" countdown and stops after the End Date. For a one-day sale, use the same date or leave End Date blank.
               </p>
               <div className={FIELD_GRID_4_NESTED}>
                 <div>
@@ -412,7 +417,7 @@ export default function AdminTripFormModal({
                 )}
               </div>
               <p className="text-xs text-dark-muted -mt-1">
-                Up to 4 fixed tags shown in the icon row on the public Trip Card, e.g. "Girls-Only". Leave empty to auto-show travelers, age range, duration, and destination count instead.
+                Up to 4 tags on the Trip Card (e.g. "Girls-Only"). Leave empty to show travelers, age range, duration and destinations automatically.
               </p>
               {form.card_feature_tags.map((tag, i) => (
                 <div key={i} className="flex items-start gap-2">
@@ -430,7 +435,7 @@ export default function AdminTripFormModal({
                   <button type="button" onClick={() => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.filter((_, idx) => idx !== i) }))} aria-label={`Remove tag ${i + 1}`} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
                 </div>
               ))}
-              {form.card_feature_tags.length === 0 && <p className="text-xs text-dark-muted">No custom tags — card will auto-show travelers, age range, duration, and destination count.</p>}
+              {form.card_feature_tags.length === 0 && <p className="text-xs text-dark-muted">No custom tags. The card shows travelers, age range, duration and destinations.</p>}
             </div>
             <TripPackagesEditor
               value={form.trip_options}
@@ -449,7 +454,7 @@ export default function AdminTripFormModal({
 
             <div className="md:col-span-2">
               <h4 className="text-sm font-semibold text-dark mb-1">Ulaa's Costs</h4>
-              <p className="text-xs text-dark-muted -mt-0.5 mb-2">What Ulaa spends to promote and run this trip — add one line each for ads, entry tickets, kits, transport, stay, food and anything else.</p>
+              <p className="text-xs text-dark-muted -mt-0.5 mb-2">What Ulaa spends on this trip: ads, tickets, kits, transport, stay, food and more. One line per cost.</p>
             </div>
             <TripCostItemsEditor
               embedded
@@ -462,11 +467,11 @@ export default function AdminTripFormModal({
 
             <div className="md:col-span-2 pt-2 border-t border-background-warm">
               <h4 className="text-sm font-semibold text-dark mb-1">On-Ground Agency (paid by Ulaa)</h4>
-              <p className="text-xs text-dark-muted -mt-0.5 mb-2">The local agency Ulaa pays to run the trip on the ground.</p>
+              <p className="text-xs text-dark-muted -mt-0.5 mb-2">Local agency that runs the trip.</p>
             </div>
             <div className={FIELD_GRID_3}>
               <div>
-                <label htmlFor="trip-agency-name" className="block text-sm font-medium text-dark mb-1">Agency Name</label>
+                <label htmlFor="trip-agency-name" className="block text-sm font-medium text-dark mb-1">Name</label>
                 <input
                   id="trip-agency-name"
                   value={form.trip_finance.agency_name}
@@ -476,7 +481,7 @@ export default function AdminTripFormModal({
                 />
               </div>
               <div>
-                <label htmlFor="trip-agency-amount-type" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Agency Payment Type" short="Pay Type" /></label>
+                <label htmlFor="trip-agency-amount-type" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Payment Type" short="Pay Type" /></label>
                 <Select
                   inputId="trip-agency-amount-type"
                   value={form.trip_finance.agency_amount_type}
@@ -486,11 +491,12 @@ export default function AdminTripFormModal({
                     { value: 'per_traveler', label: 'Per traveler' },
                   ]}
                 />
+                <p id="trip-agency-type-hint" className="text-xs text-dark-muted mt-1">Fixed total, or a rate per traveler.</p>
               </div>
               <div>
                 <label htmlFor="trip-agency-amount" className="block text-sm font-medium text-dark mb-1">
                   <ShortLabel
-                    full={`Amount Paid to Agency (₹${form.trip_finance.agency_amount_type === 'per_traveler' ? ' per person' : ' total'})`}
+                    full={`Amount Paid (₹${form.trip_finance.agency_amount_type === 'per_traveler' ? ' per person' : ' total'})`}
                     short={form.trip_finance.agency_amount_type === 'per_traveler' ? 'Per Person (₹)' : 'Total (₹)'}
                   />
                 </label>
@@ -505,18 +511,18 @@ export default function AdminTripFormModal({
                   placeholder="e.g. 29300"
                 />
               </div>
-              <p id="trip-agency-amount-hint" className="col-span-2 sm:col-span-3 text-xs text-dark-muted -mt-1">e.g. traveler pays ₹39,999, ₹29,300 goes to the agency. <span className="hidden sm:inline">The rest covers tickets, kits, promotion and Ulaa's margin.</span></p>
+              <p id="trip-agency-amount-hint" className="col-span-2 sm:col-span-3 text-xs text-dark-muted -mt-1">Example: traveler pays ₹39,999, agency gets ₹29,300.</p>
             </div>
 
             <div className="md:col-span-2 pt-2 border-t border-background-warm">
               <h4 className="text-sm font-semibold text-dark mb-1">Child Fare</h4>
               <p className="text-xs text-dark-muted -mt-0.5 mb-2">
-                One flat rate for this whole trip — applies to every Child Fare add-on (see the Child Fare chip on Track Payment/Add-on). Once set here, the add-on amount auto-fills and locks so it can never drift from these numbers.
+                One flat rate for the whole trip, used for every child add-on. Once set, the add-on amount auto-fills and stays locked.
               </p>
             </div>
             <div className={FIELD_GRID_4}>
               <div>
-                <label htmlFor="trip-child-fare-amount" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Child Fare Amount (₹)" short="Child Fare (₹)" /></label>
+                <label htmlFor="trip-child-fare-amount" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Amount (₹)" short="Amount (₹)" /></label>
                 <input
                   id="trip-child-fare-amount"
                   type="number"
@@ -528,11 +534,11 @@ export default function AdminTripFormModal({
                   placeholder="e.g. 8000"
                 />
                 <p id="trip-child-fare-amount-hint" className="text-xs text-dark-muted mt-1">
-                  <span className="sm:hidden">Charged to traveler.</span><span className="hidden sm:inline">What the traveler is charged for bringing a child along.</span>
+                  Charged to the traveler per child.
                 </p>
               </div>
               <div>
-                <label htmlFor="trip-child-fare-vendor" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Child Fare Vendor Amount (₹)" short="Vendor (₹)" /></label>
+                <label htmlFor="trip-child-fare-vendor" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Vendor Amount (₹)" short="Vendor (₹)" /></label>
                 <input
                   id="trip-child-fare-vendor"
                   type="number"
@@ -544,11 +550,11 @@ export default function AdminTripFormModal({
                   placeholder="e.g. 7000"
                 />
                 <p id="trip-child-fare-vendor-hint" className="text-xs text-dark-muted mt-1">
-                  <span className="sm:hidden">Ulaa pays agency / child.</span><span className="hidden sm:inline">What Ulaa pays the on-ground agency per child — separate from the adult rate above.</span>
+                  Ulaa pays the agency per child. Separate from the adult rate.
                 </p>
               </div>
               <div>
-                <label htmlFor="trip-child-fare-entry-ticket" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Child Fare Entry Ticket Cost (₹)" short="Entry Ticket (₹)" /></label>
+                <label htmlFor="trip-child-fare-entry-ticket" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Entry Ticket Cost (₹)" short="Entry Ticket (₹)" /></label>
                 <input
                   id="trip-child-fare-entry-ticket"
                   type="number"
@@ -560,7 +566,7 @@ export default function AdminTripFormModal({
                 />
               </div>
               <div>
-                <label htmlFor="trip-child-fare-kit" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Child Fare Kit Cost (₹)" short="Kit (₹)" /></label>
+                <label htmlFor="trip-child-fare-kit" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Kit Cost (₹)" short="Kit (₹)" /></label>
                 <input
                   id="trip-child-fare-kit"
                   type="number"
@@ -572,7 +578,7 @@ export default function AdminTripFormModal({
                   placeholder="Per child"
                 />
                 <p id="trip-child-fare-kit-hint" className="text-xs text-dark-muted mt-1">
-                  <span className="sm:hidden">0 only if no kit.</span><span className="hidden sm:inline">Kids don't always skip the welcome kit — leave 0 only if they get none.</span>
+                  Enter 0 only if no kit is given.
                 </p>
               </div>
             </div>
@@ -580,22 +586,24 @@ export default function AdminTripFormModal({
             <div className="md:col-span-2 pt-2 border-t border-background-warm">
               <h4 className="text-sm font-semibold text-dark mb-1">Trip Organiser's Expenses</h4>
               <p className="text-xs text-dark-muted -mt-0.5 mb-2">
-                What the person running the trip on the ground spends. Entered as actuals, not multiplied by traveler count — the organiser's own agency payment in particular often doesn't scale with headcount.
+                What the on-ground organiser spends. Enter actual amounts; they are not multiplied by traveler count.
               </p>
             </div>
             <div className={FIELD_GRID_5}>
               <div>
-                <label htmlFor="trip-organiser-name" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Trip Organiser Name" short="Organiser" /></label>
+                <label htmlFor="trip-organiser-name" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Name" short="Name" /></label>
                 <input
                   id="trip-organiser-name"
                   value={form.trip_finance.organiser_name}
                   onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_name: e.target.value } }))}
                   className={inputClass}
                   placeholder="e.g. Rahul"
+                  aria-describedby="trip-organiser-name-hint"
                 />
+                <p id="trip-organiser-name-hint" className="text-xs text-dark-muted mt-1">Person running the trip on the ground.</p>
               </div>
               <div>
-                <label htmlFor="trip-organiser-travel" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Organiser Travel Tickets (₹)" short="Travel (₹)" /></label>
+                <label htmlFor="trip-organiser-travel" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Travel Tickets (₹)" short="Travel (₹)" /></label>
                 <input
                   id="trip-organiser-travel"
                   type="number"
@@ -606,10 +614,10 @@ export default function AdminTripFormModal({
                   className={inputClass}
                   placeholder="Flight / train / bus"
                 />
-                <p id="trip-organiser-travel-hint" className="text-xs text-dark-muted mt-1"><span className="sm:hidden">Own fare to/from trip.</span><span className="hidden sm:inline">Organiser's own flight/train/bus fare to reach and return.</span></p>
+                <p id="trip-organiser-travel-hint" className="text-xs text-dark-muted mt-1">Own fare to and from the trip.</p>
               </div>
               <div>
-                <label htmlFor="trip-organiser-agency" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Organiser's Agency Payment (₹)" short="Agency (₹)" /></label>
+                <label htmlFor="trip-organiser-agency" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Agency Payment (₹)" short="Agency (₹)" /></label>
                 <input
                   id="trip-organiser-agency"
                   type="number"
@@ -620,10 +628,10 @@ export default function AdminTripFormModal({
                   className={inputClass}
                   placeholder="If any"
                 />
-                <p id="trip-organiser-agency-hint" className="text-xs text-dark-muted mt-1"><span className="sm:hidden">Blank/0 if none.</span><span className="hidden sm:inline">Separate from the Ulaa→agency amount above. Blank/0 if none.</span></p>
+                <p id="trip-organiser-agency-hint" className="text-xs text-dark-muted mt-1">Separate from the agency amount above. Leave blank or 0 if none.</p>
               </div>
               <div>
-                <label htmlFor="trip-organiser-misc" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Miscellaneous Expenses (₹)" short="Misc (₹)" /></label>
+                <label htmlFor="trip-organiser-misc" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Miscellaneous (₹)" short="Misc (₹)" /></label>
                 <input
                   id="trip-organiser-misc"
                   type="number"
@@ -632,10 +640,12 @@ export default function AdminTripFormModal({
                   onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_misc_expense: e.target.value === '' ? null : +e.target.value } }))}
                   className={inputClass}
                   placeholder="Transport, food, tips"
+                  aria-describedby="trip-organiser-misc-hint"
                 />
+                <p id="trip-organiser-misc-hint" className="text-xs text-dark-muted mt-1">Other on-ground costs not listed above.</p>
               </div>
               <div>
-                <label htmlFor="trip-organiser-own-entry-ticket" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Organiser's Own Entry Ticket (₹)" short="Own Ticket (₹)" /></label>
+                <label htmlFor="trip-organiser-own-entry-ticket" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Own Entry Ticket (₹)" short="Own Ticket (₹)" /></label>
                 <input
                   id="trip-organiser-own-entry-ticket"
                   type="number"
@@ -646,7 +656,7 @@ export default function AdminTripFormModal({
                   className={inputClass}
                   placeholder="Personal ticket"
                 />
-                <p id="trip-organiser-own-entry-ticket-hint" className="text-xs text-dark-muted mt-1"><span className="sm:hidden">Not in traveler tickets.</span><span className="hidden sm:inline">Separate from the per-traveler entry tickets above.</span></p>
+                <p id="trip-organiser-own-entry-ticket-hint" className="text-xs text-dark-muted mt-1">Separate from traveler entry tickets.</p>
               </div>
             </div>
             <div className="md:col-span-2">
@@ -658,7 +668,9 @@ export default function AdminTripFormModal({
                 rows={3}
                 className={`${inputClass} resize-none`}
                 placeholder="Payment terms, receipts, anything worth remembering about this trip's money"
+                aria-describedby="trip-finance-notes-hint"
               />
+              <p id="trip-finance-notes-hint" className="text-xs text-dark-muted mt-1">Internal only. Not shown to travelers.</p>
             </div>
 
             {(() => {
@@ -674,8 +686,8 @@ export default function AdminTripFormModal({
                 <div className="md:col-span-2 bg-background-warm/60 rounded-md p-4 space-y-1.5 text-sm">
                   <h4 className="text-sm font-semibold text-dark mb-1">Profit Summary <span className="font-normal text-dark-muted text-xs">
                     {usingReal
-                      ? `(${s.travelerCount} real booking${s.travelerCount === 1 ? '' : 's'}, actual amounts invoiced)`
-                      : `(estimate: ${s.travelerCount} booked seats × regular price — no bookings to total yet)`}
+                      ? `(${s.travelerCount} real booking${s.travelerCount === 1 ? '' : 's'}, actual invoiced amounts)`
+                      : `(estimate: ${s.travelerCount} seats × regular price; no bookings yet)`}
                   </span></h4>
                   <div className="flex justify-between"><span className="text-dark-muted">Total Revenue</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
                   <div className="flex justify-between border-t border-background-warm pt-1.5"><span className="text-dark-muted">Ulaa's Total Costs</span><span className="text-dark font-medium">{formatPrice(s.ulaaCosts)}</span></div>
@@ -717,7 +729,7 @@ export default function AdminTripFormModal({
                 pathPrefix="trip-covers"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
-                hint="Landscape, at least 1600×1200px, with the main subject centered — this same photo is reused for the trip card and desktop hero, so you'll reposition/zoom it for each after uploading. The mobile hero uses its own separate image, uploaded below."
+                hint="Landscape, min 1600×1200px, subject centered. Used for the Trip Card and desktop hero; reposition it for each after upload."
                 allowUrl
               />
               {form.cover_image && (
@@ -735,7 +747,7 @@ export default function AdminTripFormModal({
                 pathPrefix="trip-covers/hero-mobile"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
-                hint="Tall portrait, 9:16 ratio, at least 1080×1920px — fills the full-height banner on phone screens edge to edge, in place of the cropped cover image. Optional: falls back to the Cover Image (repositioned above) if left empty."
+                hint="Portrait 9:16, min 1080×1920px. Shown on phones. Optional; falls back to the Cover Image."
                 allowUrl
               />
             </div>
@@ -755,7 +767,9 @@ export default function AdminTripFormModal({
                   rows={2}
                   className={`${inputClass} resize-none`}
                   placeholder="Short intro paragraph shown below the &quot;Places You'll Definitely Post&quot; heading..."
+                  aria-describedby="trip-gallery-description-hint"
                 />
+                <p id="trip-gallery-description-hint" className="text-xs text-dark-muted mt-1">Intro text under the section heading.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {form.gallery_items.map((item, i) => (
@@ -770,7 +784,7 @@ export default function AdminTripFormModal({
                       onChange={url => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, photo: url } : it) }))}
                       bucket="ulaa"
                       pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/gallery`}
-                      hint="4:3 landscape works best (e.g. 1200×900px) — shown in a cropped carousel tile."
+                      hint="4:3 landscape, e.g. 1200×900px. Shown in a cropped carousel."
                       aspectRatio="3/2"
                       allowUrl
                     />
@@ -792,7 +806,7 @@ export default function AdminTripFormModal({
                 onChange={urls => setForm(f => ({ ...f, fashion_photos: urls }))}
                 bucket="ulaa"
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/fashion`}
-                hint="Shown uncropped in a masonry grid, so portrait, landscape, or square all work — just keep each photo at least 800px on its shortest side."
+                hint="Any orientation, min 800px on the shortest side. Shown uncropped in a grid."
                 allowUrl
               >
                 <label htmlFor="trip-fashion-description" className="block text-sm font-medium text-dark mb-1">Section Description</label>
@@ -803,7 +817,9 @@ export default function AdminTripFormModal({
                   rows={2}
                   className={`${inputClass} resize-none`}
                   placeholder="Short intro paragraph shown below the &quot;Fashion Aesthetics&quot; heading..."
+                  aria-describedby="trip-fashion-description-hint"
                 />
+                <p id="trip-fashion-description-hint" className="text-xs text-dark-muted mt-1">Intro text under the section heading.</p>
               </MultiImageUploadField>
             </div>
           </TabPanel>
@@ -820,6 +836,7 @@ export default function AdminTripFormModal({
                   <Plus size={13} aria-hidden="true" /> Add Card
                 </button>
               </div>
+              <p className="text-xs text-dark-muted -mt-1">Highlight cards on the trip page. Each has an icon, heading and short description.</p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {form.highlight_cards.map((card, i) => (
                   <div key={i} className="border border-background-warm rounded-lg p-4 space-y-2">
@@ -875,7 +892,7 @@ export default function AdminTripFormModal({
                   <Plus size={13} aria-hidden="true" /> Add Group
                 </button>
               </div>
-              <p className="text-xs text-dark-muted mb-3">Shown instead of the icon grid above when at least one group is added, e.g. a "Premium Stay Experience" heading with bulleted details below it.</p>
+              <p className="text-xs text-dark-muted mb-3">Replaces the icon grid above once a group is added (e.g. "Premium Stay Experience" with bullet details).</p>
               <div className="space-y-3">
               {form.included_groups.map((group, gi) => (
                 <div key={gi} className="border border-background-warm rounded-lg p-4 space-y-2">
@@ -923,7 +940,7 @@ export default function AdminTripFormModal({
                         }
                       }}
                     />
-                    <p id={`trip-included-bullets-hint-${gi}`} className="text-2xs text-dark-muted mt-1">Paste a list — each line or paragraph automatically becomes its own bullet below.</p>
+                    <p id={`trip-included-bullets-hint-${gi}`} className="text-2xs text-dark-muted mt-1">Paste a list. Each line becomes a bullet.</p>
                     {group.bullets.length > 0 && (
                       <ul className="space-y-2 mt-2">
                         {group.bullets.map((bullet, bi) => (
@@ -955,6 +972,7 @@ export default function AdminTripFormModal({
                 value={form.not_included}
                 onChange={items => setForm(f => ({ ...f, not_included: items }))}
                 placeholder="e.g. Flights"
+                helperText="Items not covered by the trip price."
               />
             </div>
             <div className="md:col-span-2 space-y-3">
@@ -962,6 +980,7 @@ export default function AdminTripFormModal({
                 <label className="block text-sm font-semibold text-dark">Things to Carry</label>
                 <button type="button" onClick={() => setForm(f => ({ ...f, things_to_carry_items: [...f.things_to_carry_items, { icon: '', description: '' }] }))} className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"><Plus size={13} aria-hidden="true" /> Add Item</button>
               </div>
+              <p className="text-xs text-dark-muted -mt-1">Packing list shown to travelers.</p>
               {form.things_to_carry_items.map((item, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <div className="w-32 flex-shrink-0">
@@ -996,7 +1015,9 @@ export default function AdminTripFormModal({
                   rows={3}
                   className={`${inputClass} resize-none`}
                   placeholder="Short intro paragraph shown below the &quot;Travel with Confidence&quot; heading..."
+                  aria-describedby="trip-confidence-description-hint"
                 />
+                <p id="trip-confidence-description-hint" className="text-xs text-dark-muted mt-1">Intro text under the section heading.</p>
               </div>
               {form.confidence_items.map((item, i) => (
                 <div key={i} className="flex items-start gap-2">
@@ -1027,7 +1048,9 @@ export default function AdminTripFormModal({
                 rows={4}
                 className={`${inputClass} resize-none`}
                 placeholder="Describe the accommodation experience for this trip..."
+                aria-describedby="trip-accommodation-description-hint"
               />
+              <p id="trip-accommodation-description-hint" className="text-xs text-dark-muted mt-1">Intro text for the accommodation section.</p>
             </div>
             <div className="md:col-span-2">
               <MultiImageUploadField
@@ -1036,7 +1059,7 @@ export default function AdminTripFormModal({
                 onChange={urls => setForm(f => ({ ...f, accommodation_photos: urls }))}
                 bucket="ulaa"
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/accommodation`}
-                hint="16:9 landscape works best (e.g. 1280×720px) — shown in cropped cards."
+                hint="16:9 landscape, e.g. 1280×720px. Shown in cropped cards."
                 allowUrl
               />
             </div>
@@ -1072,7 +1095,7 @@ export default function AdminTripFormModal({
                   Find on Maps <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </div>
-              <p id="trip-meeting-point-hint" className="text-xs text-dark-muted mt-1.5">Shown as plain text on the trip page. Use "Pick on Map" to search or drop a pin and auto-fill this, the address, and the maps link below — or "Find on Maps" to look it up on Google Maps in a new tab.</p>
+              <p id="trip-meeting-point-hint" className="text-xs text-dark-muted mt-1.5">Shown as plain text on the trip page. Use "Pick on Map" to auto-fill the address and map link.</p>
             </div>
 
             <div className="md:col-span-2">
@@ -1083,7 +1106,9 @@ export default function AdminTripFormModal({
                 onChange={e => setForm(f => ({ ...f, meeting_address: e.target.value }))}
                 className={inputClass}
                 placeholder="e.g. Near HRTC Bus Terminal, Cart Road, Shimla - 171001"
+                aria-describedby="trip-meeting-address-hint"
               />
+              <p id="trip-meeting-address-hint" className="text-xs text-dark-muted mt-1.5">Full address shown with the meeting point.</p>
             </div>
 
             <div className="md:col-span-2">
@@ -1097,7 +1122,7 @@ export default function AdminTripFormModal({
                 placeholder="Paste the link here"
               />
               <p id="trip-meeting-map-url-hint" className="text-xs text-dark-muted mt-1.5">
-                In the Maps tab that opened: confirm the pin is on the right spot (search again if not) → tap <span className="font-medium text-dark">Share</span> → <span className="font-medium text-dark">Copy link</span> → paste it above.
+                On Google Maps: confirm the pin → <span className="font-medium text-dark">Share</span> → <span className="font-medium text-dark">Copy link</span> → paste above.
                 {form.meeting_point_map_url.trim() && (
                   <>
                     {' '}
@@ -1148,7 +1173,7 @@ export default function AdminTripFormModal({
                 placeholder="e.g. Look for the Ulaa placard near the arrivals gate"
               />
               <p id="trip-meeting-details-hint" className="text-xs text-dark-muted mt-1.5">
-                Time, Terminal, and Details are all optional — leave any of them blank and the trip page and PDF show a friendly "to be communicated" placeholder instead.
+                Time, Terminal and Details are optional. If blank, "to be communicated" is shown.
               </p>
             </div>
           </TabPanel>
@@ -1166,7 +1191,7 @@ export default function AdminTripFormModal({
                 placeholder="Select a trip leader..."
               />
               <p className="text-xs text-dark-muted mt-1.5">
-                Optional. The public trip page and downloadable PDF show this leader's photo/name/designation/bio live from the directory — edit their details in Admin → Trip Leaders and every trip they're assigned to updates automatically.
+                Optional. Leader details come from Admin → Trip Leaders and update here automatically.
               </p>
             </div>
             {(() => {
@@ -1203,7 +1228,7 @@ export default function AdminTripFormModal({
                 bucket="ulaa"
                 pathPrefix="trip-end-banners"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
-                hint="Wide landscape, at least 1600×900px — shown full-bleed behind the closing CTA text."
+                hint="Wide landscape, min 1600×900px. Shown behind the closing banner text."
                 allowUrl
               />
             </div>
@@ -1215,7 +1240,9 @@ export default function AdminTripFormModal({
                 onChange={e => setForm(f => ({ ...f, end_banner: { ...f.end_banner, heading: e.target.value } }))}
                 className={inputClass}
                 placeholder="e.g. Ready to Experience the Magic?"
+                aria-describedby="trip-end-banner-heading-hint"
               />
+              <p id="trip-end-banner-heading-hint" className="text-xs text-dark-muted mt-1">Main heading, shown on the left of the banner.</p>
             </div>
             <div className="md:col-span-2">
               <label htmlFor="trip-end-banner-description" className="block text-sm font-medium text-dark mb-1">Description</label>
@@ -1226,7 +1253,9 @@ export default function AdminTripFormModal({
                 rows={3}
                 className={`${inputClass} resize-none`}
                 placeholder="A short compelling call-to-action paragraph..."
+                aria-describedby="trip-end-banner-description-hint"
               />
+              <p id="trip-end-banner-description-hint" className="text-xs text-dark-muted mt-1">One or two lines below the heading.</p>
             </div>
             <div className="md:col-span-2 grid grid-cols-2 gap-x-3 sm:gap-x-4 items-start">
             <div>
@@ -1237,7 +1266,9 @@ export default function AdminTripFormModal({
                 onChange={e => setForm(f => ({ ...f, end_banner: { ...f.end_banner, cta_label: e.target.value } }))}
                 className={inputClass}
                 placeholder="Book Your Seat"
+                aria-describedby="trip-end-banner-cta-label-hint"
               />
+              <p id="trip-end-banner-cta-label-hint" className="text-xs text-dark-muted mt-1">Leave blank to hide the button.</p>
             </div>
             <div>
               <label htmlFor="trip-end-banner-cta-url" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="CTA URL (optional)" short="Button Link" /></label>
@@ -1247,7 +1278,9 @@ export default function AdminTripFormModal({
                 onChange={e => setForm(f => ({ ...f, end_banner: { ...f.end_banner, cta_url: e.target.value } }))}
                 className={inputClass}
                 placeholder="#booking"
+                aria-describedby="trip-end-banner-cta-url-hint"
               />
+              <p id="trip-end-banner-cta-url-hint" className="text-xs text-dark-muted mt-1">Leave blank to open the booking form.</p>
             </div>
             </div>
           </TabPanel>
@@ -1280,9 +1313,9 @@ export default function AdminTripFormModal({
               <p className="text-sm font-medium text-dark">Status</p>
               <div className="space-y-2">
                 {([
-                  { value: 'draft' as const, label: 'Draft', desc: 'Hidden everywhere on the public site.' },
-                  { value: 'coming_soon' as const, label: 'Coming Soon', desc: "Public, but only the cover image and title show — the trip card hides price/dates/seats and the trip detail page hides everything below the banner. Use this to put a trip up early while you're still filling in the rest of its content." },
-                  { value: 'published' as const, label: 'Published', desc: 'Public, full bookable trip page.' },
+                  { value: 'draft' as const, label: 'Draft', desc: 'Hidden on the public site.' },
+                  { value: 'coming_soon' as const, label: 'Coming Soon', desc: 'Public, but only the cover image and title show. Price, dates, seats and details stay hidden.' },
+                  { value: 'published' as const, label: 'Published', desc: 'Public and bookable.' },
                 ]).map(opt => (
                   <label key={opt.value} className={`flex items-start gap-3 rounded-md border-2 p-3 cursor-pointer transition-colors ${form.status === opt.value ? 'border-primary bg-primary/5' : 'border-background-warm bg-background'}`}>
                     <input

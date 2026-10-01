@@ -53,7 +53,11 @@ export default function TripDetailPage() {
   const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
   const accommodationCarouselRef = useRef<PagedCarouselHandle>(null);
   const [faqsOpen, setFaqsOpen] = useState(false);
-  const [cancellationOpen, setCancellationOpen] = useState(false);
+  // Starts expanded when the page is opened via a #cancellation deep link
+  // (e.g. the invoice PDF's terms note), so it's already open on first paint.
+  const [cancellationOpen, setCancellationOpen] = useState(
+    () => typeof window !== 'undefined' && window.location.hash === '#cancellation'
+  );
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [expandedHighlights, setExpandedHighlights] = useState<Set<number>>(new Set());
   // Tracks whether the "Why You'll Love This Trip" heart has been tapped —
@@ -65,7 +69,55 @@ export default function TripDetailPage() {
   // position is remembered separately. `!loading` gates the restore until
   // the real trip content (and therefore the page's real height) has
   // rendered — see useScrollRestoration's `ready` param.
-  useScrollRestoration(location.pathname, !loading);
+  // A #cancellation deep link wins over any remembered scroll position —
+  // otherwise the restore (which re-asserts for 1.5s) would drag the page
+  // away from the section we're about to jump to.
+  const hasCancellationHash = location.hash === '#cancellation';
+  if (hasCancellationHash) sessionStorage.removeItem(`ulaa:restoreScroll:${location.pathname}`);
+  useScrollRestoration(location.pathname, !loading && !hasCancellationHash);
+
+  // Deep link support (e.g. from the invoice PDF's terms note →
+  // /trips/<slug>#cancellation): the Cancellation Policy block is collapsed
+  // by default, so open it, then keep the section pinned at its anchor
+  // position (instant jumps, once per frame) for a few seconds while images
+  // and fonts above it finish loading and shift the layout. Stops the moment
+  // the visitor scrolls, touches, clicks or presses a key themselves.
+  useEffect(() => {
+    if (loading || !trip || location.hash !== '#cancellation') return;
+    setCancellationOpen(true);
+    let cancelled = false;
+    const root = document.documentElement;
+    const pin = () => {
+      if (cancelled) return;
+      const el = document.getElementById('cancellation');
+      if (!el) return;
+      const margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+      if (Math.abs(el.getBoundingClientRect().top - margin) > 2) {
+        const prev = root.style.scrollBehavior;
+        root.style.scrollBehavior = 'auto'; // bypass the site's global smooth scrolling
+        el.scrollIntoView({ block: 'start' });
+        root.style.scrollBehavior = prev;
+      }
+    };
+    pin();
+    // setInterval (not requestAnimationFrame) so it keeps working when the
+    // link opens in a background tab, where rAF is paused.
+    const intervalId = window.setInterval(pin, 50);
+    const stopTimer = window.setTimeout(() => { cancelled = true; window.clearInterval(intervalId); }, 5000);
+    const stop = () => { cancelled = true; window.clearInterval(intervalId); };
+    // Only a deliberate scroll gesture by the visitor hands control back.
+    const events = ['wheel', 'touchmove'] as const;
+    events.forEach((ev) => window.addEventListener(ev, stop, { passive: true, once: true }));
+    const onVisible = () => { if (document.visibilityState === 'visible') pin(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(stopTimer);
+      events.forEach((ev) => window.removeEventListener(ev, stop));
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [loading, trip, location.hash]);
 
   // Falls back to a generic title/description while the trip is still
   // loading (or if the slug doesn't resolve), then swaps in the trip's own

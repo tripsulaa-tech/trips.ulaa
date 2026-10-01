@@ -1,57 +1,85 @@
 import type { Enquiry } from '../../../types/types-index';
 import type { InvoicePdfCtx } from './context';
 import { COLORS, MARGIN, CONTENT_W, val } from './shared';
+import { formatPhone } from '../../formatPhone';
 
 // =============================================================================
-// Two-column details: Traveller Details / Trip Details. Advances
-// `ctx.cursor.y` past whichever column ends up taller.
+// Billed-to / Trip block — two plain columns split by a thin vertical line:
+//
+//   BILLED TO                 │  TRIP
+//   Irine Thomas              │  Varkala Girls Escape
+//   +91 82811 35894           │  Package - Premium
+//   irinethomas07@gmail.com   │  City - Bengaluru
+//
+// No boxes or pills — just a small label and the details beneath it.
+// Advances `ctx.cursor.y` past whichever column is taller.
 // =============================================================================
 
 export function renderDetails(ctx: InvoicePdfCtx, enquiry: Enquiry): void {
-  const { doc, setFill, setText, cursor } = ctx;
-  const packageLabel = enquiry.package_type === 'early_bird' ? 'Early Bird' : 'Normal';
+  const { doc, setText, setDraw, cursor } = ctx;
+  const tripPackage = (enquiry.package_name || '').trim();
+  const packageName = tripPackage || (enquiry.package_type === 'early_bird' ? 'Early Bird' : 'Normal');
 
-  function drawPill(text: string, x: number, y: number) {
+  const gutter = 36;
+  const colW = (CONTENT_W - gutter) / 2;
+  const col2X = MARGIN + colW + gutter;
+  const top = cursor.y;
+
+  function label(text: string, x: number) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    const w = doc.getTextWidth(text) + 20;
-    setFill(COLORS.primaryDark);
-    doc.roundedRect(x, y, w, 18, 3, 3, 'F');
-    setText(COLORS.white);
-    doc.text(text, x + w / 2, y + 12.5, { align: 'center' });
-  }
-
-  function drawField(label: string, value: string, x: number, y: number, w: number): number {
-    doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    setText(COLORS.darkMuted);
-    doc.text(label.toUpperCase(), x, y);
+    setText(COLORS.primaryDark);
+    doc.text(text, x, top + 8);
+  }
+
+  // Draws wrapped lines and returns the y of the next free line.
+  function line(text: string, x: number, y: number, opts: { bold?: boolean; size?: number; muted?: boolean }): number {
+    doc.setFont('helvetica', opts.bold ? 'bold' : 'normal');
+    doc.setFontSize(opts.size ?? 10);
+    setText(opts.muted ? COLORS.darkMuted : COLORS.dark);
+    const lines: string[] = doc.splitTextToSize(text, colW);
+    doc.text(lines, x, y);
+    return y + lines.length * 14;
+  }
+
+  // --- Billed to ---------------------------------------------------------
+  label('BILLED TO', MARGIN);
+  let leftY = top + 25;
+  leftY = line(val(enquiry.full_name), MARGIN, leftY, { bold: true, size: 11.5 });
+  leftY = line(formatPhone(enquiry.phone) || '\u2014', MARGIN, leftY, { muted: true });
+  leftY = line(val(enquiry.email), MARGIN, leftY, { muted: true });
+
+  // --- Trip --------------------------------------------------------------
+  label('TRIP', col2X);
+  let rightY = top + 25;
+  const tripNameY = rightY;
+  rightY = line(val(enquiry.trip_title), col2X, rightY, { bold: true, size: 11.5 });
+  // Whole trip-name block links to that trip's details page.
+  if (ctx.tripUrl) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    setText(COLORS.dark);
-    const lines = doc.splitTextToSize(value, w);
-    doc.text(lines, x, y + 14);
-    return y + 14 + lines.length * 13 + 10;
+    doc.setFontSize(11.5);
+    const nameLines: string[] = doc.splitTextToSize(val(enquiry.trip_title), colW);
+    const nameW = Math.min(colW, Math.max(...nameLines.map((l) => doc.getTextWidth(l))));
+    doc.link(col2X, tripNameY - 11, nameW, nameLines.length * 14, { url: ctx.tripUrl });
   }
 
-  const colW = (CONTENT_W - 30) / 2;
-  const col2X = MARGIN + colW + 30;
-
-  drawPill('TRAVELLER DETAILS', MARGIN, cursor.y);
-  drawPill('TRIP DETAILS', col2X, cursor.y);
-  let leftY = cursor.y + 34;
-  let rightY = cursor.y + 34;
-
-  leftY = drawField('Traveller Name', val(enquiry.full_name), MARGIN, leftY, colW);
-  leftY = drawField('Phone', val(enquiry.phone), MARGIN, leftY, colW);
-  leftY = drawField('Email', val(enquiry.email), MARGIN, leftY, colW);
-  if (enquiry.group_size && enquiry.group_size > 1) {
-    leftY = drawField('Group Booking', `Seat ${enquiry.group_seq} of ${enquiry.group_size}`, MARGIN, leftY, colW);
+  // Package and city, plain black text, one per line:
+  //   Package - Premium
+  //   City - Bengaluru
+  // The package is the trip package (Premium / Basic); trips with no
+  // packages fall back to the booking's own type (Normal / Early Bird).
+  rightY = line(`Package - ${packageName}`, col2X, rightY, {});
+  const city = val(enquiry.city);
+  if (enquiry.city && city !== '\u2014') {
+    rightY = line(`City - ${city}`, col2X, rightY, {});
   }
 
-  rightY = drawField('Trip', val(enquiry.trip_title), col2X, rightY, colW);
-  rightY = drawField('Package', packageLabel, col2X, rightY, colW);
-  rightY = drawField('City', val(enquiry.city), col2X, rightY, colW);
+  // --- Divider -----------------------------------------------------------
+  const bottom = Math.max(leftY, rightY);
+  setDraw(COLORS.grayLine);
+  doc.setLineWidth(0.75);
+  const dividerX = MARGIN + colW + gutter / 2;
+  doc.line(dividerX, top, dividerX, bottom - 8);
 
-  cursor.y = Math.max(leftY, rightY) + 4;
+  cursor.y = bottom + 18;
 }

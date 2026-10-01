@@ -140,7 +140,7 @@ export default function AdminAddWaitlistModal({
             placeholder="Leave blank for solo"
           />
           <p id="wl-add-group-size-hint" className="text-2xs text-dark-muted mt-1">
-            Only how many seats they need together — not the number of separate people they're asking on behalf of.
+            Seats needed together, not the number of people asking on their behalf.
           </p>
         </div>
         <div className="md:col-span-2">

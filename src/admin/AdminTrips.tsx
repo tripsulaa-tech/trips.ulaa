@@ -8,6 +8,7 @@ import { useTripFinanceData } from './trips/useTripFinanceData';
 import AdminTripsTable from './trips/AdminTripsTable';
 import AdminTripFormModal from './trips/AdminTripFormModal';
 import AdminTripViewModal from './trips/AdminTripViewModal';
+import AdminTripCheckInModal from './trips/AdminTripCheckInModal';
 import type { UpcomingTrip } from '../types/types-index';
 
 /** The Upcoming Trips admin page — everyone who's booking, or might book, a
@@ -25,6 +26,7 @@ import type { UpcomingTrip } from '../types/types-index';
 export default function AdminTrips() {
   const { trips, loading, load } = useTripsData();
   const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
+  const [checkInTrip, setCheckInTrip] = useState<UpcomingTrip | null>(null);
   const { revenueByTripId } = useTripFinanceData();
   const location = useLocation();
   const navigate = useNavigate();
@@ -85,6 +87,7 @@ export default function AdminTrips() {
         onExportTemplate={handleExportTemplate}
         onAddTrip={openCreate}
         onView={setViewingTrip}
+        onCheckIn={setCheckInTrip}
         onEdit={openEdit}
         onDelete={handleDelete}
         onTogglePublish={togglePublish}
@@ -118,6 +121,8 @@ export default function AdminTrips() {
         onEdit={openEditFromView}
         actualRevenue={revenueByTripId(viewingTrip?.id)}
       />
+
+      <AdminTripCheckInModal key={checkInTrip?.id ?? 'closed'} trip={checkInTrip} onClose={() => setCheckInTrip(null)} />
     </AdminLayout>
   );
 }

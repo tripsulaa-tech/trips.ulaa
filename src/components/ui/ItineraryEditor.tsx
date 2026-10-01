@@ -58,7 +58,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
           <Plus size={14} aria-hidden="true" /> Add Day
         </button>
       </div>
-      <p className="text-xs text-dark-muted mb-3">Each day becomes its own card on the trip page instead of one long paragraph.</p>
+      <p className="text-xs text-dark-muted mb-3">Each day shows as its own card on the trip page.</p>
 
       {value.length === 0 ? (
         <p className="text-sm text-dark-muted bg-background-warm rounded-lg px-4 py-3">No itinerary days yet. Click "Add Day" to build a day-by-day plan.</p>
@@ -121,12 +121,12 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                       rows={2}
                       className={`${inputClass} resize-none`}
                     />
-                    <p className="text-2xs text-dark-muted mt-1">Paste a list — each paragraph (separated by a blank line) automatically becomes its own bullet below.</p>
+                    <p className="text-2xs text-dark-muted mt-1">Paste a list. Each paragraph (blank line between) becomes a bullet.</p>
                   </div>
                 </div>
               </div>
               {!day.icon && (
-                <p className="text-2xs text-dark-muted">No icon set — the trip page will just show "Day {day.day}".</p>
+                <p className="text-2xs text-dark-muted">No icon set. The page shows "Day {day.day}".</p>
               )}
 
               {(day.bullets?.length || 0) > 0 && (

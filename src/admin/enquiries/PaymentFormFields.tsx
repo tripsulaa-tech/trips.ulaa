@@ -109,7 +109,7 @@ export default function PaymentFormFields({
           />
           {hasPayment && pricingLocked && (
             <p className="text-2xs text-dark-muted mt-1">
-              Already paid {formatPrice(enquiry.amount_paid || 0)} against the current total — unlock to recalculate.
+              Already paid {formatPrice(enquiry.amount_paid || 0)} Unlock to recalculate.
             </p>
           )}
         </div>
@@ -121,7 +121,7 @@ export default function PaymentFormFields({
             <div className={`${fieldClass} bg-background-warm text-dark-muted`}>
               {listPrice != null ? formatPrice(listPrice) : 'Not set'}
             </div>
-            <p className="text-2xs text-dark-muted mt-1">Trip's price for this package, before discount</p>
+            <p className="text-2xs text-dark-muted mt-1">Package price before discount.</p>
           </div>
           <div>
             <label htmlFor={`${idPrefix}-discount`} className="block text-sm font-medium text-dark mb-1">Discount (₹)</label>
@@ -154,7 +154,7 @@ export default function PaymentFormFields({
           {hasPayment && pricingLocked && (
             <div className="col-span-2">
               <p className="text-2xs text-dark-muted -mt-2">
-                Already paid {formatPrice(enquiry.amount_paid || 0)} against the current total — recalculating will change the balance/refund position. Use the "Unlock to edit" link above Package to proceed.
+                Already paid {formatPrice(enquiry.amount_paid || 0)} Recalculating changes the balance or refund. Use "Unlock to edit" above Package.
               </p>
             </div>
           )}
@@ -199,7 +199,7 @@ export default function PaymentFormFields({
           />
           {isChildFare && (
             <p id={`${idPrefix}-amount-paid-childfare-hint`} className="text-2xs text-dark-muted mt-1">
-              Locked to this trip's configured Child Fare Amount — set it under Add/Edit Trip → Finances & Profit to change it.
+              Locked to the trip's Child Fare Amount. Change it under Edit Trip → Finances & Profit.
             </p>
           )}
           {paymentErrors.amount_paid && <p id={`${idPrefix}-amount-paid-error`} role="alert" className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
@@ -235,7 +235,7 @@ export default function PaymentFormFields({
           {paymentForm.payment_type === 'addon' && (
             <>
               <p className="text-2xs text-dark-muted mt-1">
-                Adds this amount on top of the booking's total amount right away — e.g. a hotel upgrade — whether or not it's collected now.
+                Added to the booking total immediately (e.g. a hotel upgrade), whether or not it is collected now.
               </p>
               {/* Quick preset for the common case: this traveller wants to
                   bring a child along. Ulaa trips aren't built around kids
@@ -273,7 +273,7 @@ export default function PaymentFormFields({
               </button>
               {!tripChildFareAmount && (
                 <p className="text-2xs text-dark-muted mt-1">
-                  {enquiry.trip_id ? "Set this trip's Child Fare Amount under Add/Edit Trip → Finances & Profit to enable this." : 'No trip linked to this enquiry, so there\u2019s no configured Child Fare rate to use.'}
+                  {enquiry.trip_id ? "Set the trip's Child Fare Amount under Edit Trip → Finances & Profit to enable this." : 'No trip linked, so no Child Fare rate is available.'}
                 </p>
               )}
             </>
@@ -359,7 +359,7 @@ export default function PaymentFormFields({
 
       {enquiry.cancelled_at && (
         <div className="bg-red-50 rounded-md p-3 space-y-2">
-          <p className="text-red-700 text-xs font-medium">This booking is cancelled. Track any refund here as you process it.</p>
+          <p className="text-red-700 text-xs font-medium">Booking cancelled. Track any refund here.</p>
           <label className="flex items-start gap-2 text-xs text-dark cursor-pointer bg-white/60 rounded px-2 py-1.5">
             <input
               type="checkbox"
@@ -370,7 +370,7 @@ export default function PaymentFormFields({
             />
             <span>
               Mark as <span className="font-medium">no-show</span>
-              <span className="block text-2xs text-dark-muted">No refund is given for no-shows, per policy — this locks the refund amount to ₹0.</span>
+              <span className="block text-2xs text-dark-muted">No refund for no-shows per policy. Refund is locked to ₹0.</span>
             </span>
           </label>
           {!enquiry.is_no_show && (

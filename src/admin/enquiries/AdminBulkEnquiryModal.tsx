@@ -75,8 +75,8 @@ export default function BulkEnquiryModal({
           />
           <p className="text-2xs text-dark-muted mt-1">
             {isOtherTrip
-              ? "For a trip with no record anywhere in the app — name it below."
-              : 'Active trips and trips with a Completed Trips album are listed above. Pick "Other / past trip" only if it\u2019s not in either.'}
+              ? "Trip not in the app. Enter its name below."
+              : 'Lists active trips and trips with a Completed Trips album. Choose "Other / past trip" if yours isn\u2019t listed.'}
           </p>
         </div>
 
@@ -116,7 +116,7 @@ export default function BulkEnquiryModal({
           />
           <p className="text-2xs text-dark-muted mt-1">
             {entries.length === 0
-              ? 'Just a name works fine, or add a phone (and email) after a comma — e.g. "Priya, 9876543210" — so they show up in the Contact Book too.'
+              ? 'One person per line. A name is enough; add a phone or email after a comma (e.g. "Priya, 9876543210") to add them to the Contact Book.'
               : `${entries.length} ${entries.length === 1 ? 'person' : 'people'} detected${withPhone > 0 ? `, ${withPhone} with a phone number` : ''}.`}
           </p>
         </div>

@@ -1,6 +1,6 @@
 import type { Enquiry } from '../../../types/types-index';
 import type { InvoicePdfCtx } from './context';
-import { BRAND, COLORS, MARGIN, PAGE_W, ICON_GLOBE, ICON_MAIL, ICON_PHONE, val, fdate } from './shared';
+import { BRAND, COLORS, MARGIN, PAGE_W, ICON_GLOBE, ICON_MAIL, ICON_PHONE, ICON_CALENDAR, val, fdate } from './shared';
 
 // =============================================================================
 // Header — logo/tagline/contact on the left, invoice title/booking ID/date
@@ -16,42 +16,50 @@ export async function renderHeader(
   const invoiceDate = fdate(new Date().toISOString());
 
   const headerTop = cursor.y;
-  const logoBoxW = 132;
-  const logoBoxH = 42;
+  const logoBoxW = 120;
+  const logoBoxH = 84;
+
+  // Left block — logo, tagline and website share one centre line, so the
+  // three read as a single centred lockup.
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  const tagW = doc.getTextWidth(BRAND.tagline);
+  const webIconSize = 8;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const webUnitW = webIconSize + 5 + doc.getTextWidth(BRAND.website);
+
+  let drawW = 0;
+  let drawH = 0;
   if (logo) {
-    const drawH = Math.min(logoBoxH, logoBoxW / logo.ratio);
-    const drawW = drawH * logo.ratio;
+    drawH = Math.min(logoBoxH, logoBoxW / logo.ratio);
+    drawW = drawH * logo.ratio;
+  }
+  const blockW = Math.max(drawW, tagW, webUnitW);
+  const centreX = MARGIN + blockW / 2;
+
+  if (logo) {
     const format = logo.dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-    doc.addImage(logo.dataUrl, format, MARGIN, headerTop, drawW, drawH);
+    doc.addImage(logo.dataUrl, format, centreX - drawW / 2, headerTop, drawW, drawH);
   } else {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(22);
     setText(COLORS.primary);
-    doc.text(BRAND.name, MARGIN, headerTop + 24);
+    doc.text(BRAND.name, centreX, headerTop + 24, { align: 'center' });
   }
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   setText(COLORS.darkMuted);
-  doc.text(BRAND.tagline, MARGIN, headerTop + logoBoxH + 12);
+  doc.text(BRAND.tagline, centreX, headerTop + logoBoxH + 12, { align: 'center' });
 
-  // Website / email / phone rows — each led by the same lucide icon (Globe
-  // / Mail / Phone) the site itself uses in the footer's contact list,
-  // drawn as real vector shapes instead of the old plain bullet dot.
-  let contactY = headerTop + logoBoxH + 28;
-  const contactRows: { text: string; icon: string }[] = [
-    { text: BRAND.website, icon: ICON_GLOBE },
-    { text: BRAND.email, icon: ICON_MAIL },
-    { text: BRAND.phone, icon: ICON_PHONE },
-  ];
-  const contactIconSize = 8;
-  for (const row of contactRows) {
-    await ctx.drawVectorIcon(row.icon, MARGIN, contactY - contactIconSize + 1.5, contactIconSize, COLORS.primaryDark);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    setText(COLORS.darkMuted);
-    doc.text(row.text, MARGIN + contactIconSize + 5, contactY);
-    contactY += 13;
-  }
+  const webY = headerTop + logoBoxH + 28;
+  const webX = centreX - webUnitW / 2;
+  await ctx.drawVectorIcon(ICON_GLOBE, webX, webY - webIconSize + 1.5, webIconSize, COLORS.primaryDark);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  setText(COLORS.darkMuted);
+  doc.text(BRAND.website, webX + webIconSize + 5, webY);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(19);
@@ -67,25 +75,50 @@ export async function renderHeader(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   setText(COLORS.darkMuted);
-  doc.text('BOOKING ID', PAGE_W - MARGIN, headerTop + 42, { align: 'right' });
+  doc.text('BOOKING ID', PAGE_W - MARGIN, headerTop + 38, { align: 'right' });
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   const bookingIdText = val(enquiry.booking_id);
   const bidW = doc.getTextWidth(bookingIdText) + 20;
   setFill(COLORS.backgroundWarm);
-  doc.roundedRect(PAGE_W - MARGIN - bidW, headerTop + 48, bidW, 20, 4, 4, 'F');
+  doc.roundedRect(PAGE_W - MARGIN - bidW, headerTop + 43, bidW, 20, 4, 4, 'F');
   setText(COLORS.primaryDark);
-  doc.text(bookingIdText, PAGE_W - MARGIN - bidW / 2, headerTop + 62, { align: 'center' });
+  doc.text(bookingIdText, PAGE_W - MARGIN - bidW / 2, headerTop + 57, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   setText(COLORS.darkMuted);
-  doc.text(`Invoice Date: ${invoiceDate}`, PAGE_W - MARGIN, headerTop + 86, { align: 'right' });
+  const dateText = `Invoice Date: ${invoiceDate}`;
+  const dateTextW = doc.getTextWidth(dateText);
+  doc.text(dateText, PAGE_W - MARGIN, headerTop + 77, { align: 'right' });
+  await ctx.drawVectorIcon(ICON_CALENDAR, PAGE_W - MARGIN - dateTextW - 5 - 9, headerTop + 77 - 9 + 1.5, 9, COLORS.primaryDark);
 
-  cursor.y = headerTop + 110;
+  // Website / email / phone — right-aligned under the invoice date, each
+  // led by the same icon the site's footer uses (vector shapes). Keeps the
+  // left column to just logo + tagline so both sides of the header carry
+  // similar weight.
+  let contactY = headerTop + 96;
+  const contactRows: { text: string; icon: string }[] = [
+    { text: BRAND.email, icon: ICON_MAIL },
+    { text: BRAND.phone, icon: ICON_PHONE },
+  ];
+  const contactIconSize = 8;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  for (const row of contactRows) {
+    const textW = doc.getTextWidth(row.text);
+    const textX = PAGE_W - MARGIN - textW;
+    setText(COLORS.darkMuted);
+    doc.text(row.text, textX, contactY);
+    await ctx.drawVectorIcon(row.icon, textX - contactIconSize - 5, contactY - contactIconSize + 1.5, contactIconSize, COLORS.primaryDark);
+    contactY += 13;
+  }
+
+  // Divider sits just under whichever column is taller.
+  cursor.y = Math.max(webY + 14, contactY + 1);
   setDraw(COLORS.grayLine);
   doc.setLineWidth(0.75);
   doc.line(MARGIN, cursor.y, PAGE_W - MARGIN, cursor.y);
-  cursor.y += 26;
+  cursor.y += 22;
 }

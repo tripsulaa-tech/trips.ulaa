@@ -379,7 +379,7 @@ export default function AdminAlbums() {
               placeholder="Paste the link here"
             />
             <p className="text-xs text-dark-muted mt-1.5">
-              Optional. In the Maps tab: confirm the pin is right → <span className="font-medium text-dark">Share</span> → <span className="font-medium text-dark">Copy link</span> → paste here. Without this, the album page falls back to a text search for the destination.
+              Optional. On Google Maps: confirm the pin → <span className="font-medium text-dark">Share</span> → <span className="font-medium text-dark">Copy link</span> → paste here. Without it, the album page searches the destination by text.
               {form.map_url.trim() && (
                 <>
                   {' '}
@@ -393,6 +393,7 @@ export default function AdminAlbums() {
           <div>
             <label htmlFor="album-batch" className="block text-sm font-medium text-dark mb-1">Batch (optional)</label>
             <input id="album-batch" value={form.batch} onChange={e => setForm(f => ({ ...f, batch: e.target.value }))} className={`${inputClass} ${duplicateAlbum ? '!border-red-400' : ''}`} placeholder="e.g. 1 (shows as 'Batch 1')" />
+            <p className="text-xs text-dark-muted mt-1">Use when the same trip ran in more than one batch.</p>
             {duplicateAlbum && (
               <p role="alert" className="text-xs text-red-500 mt-1">
                 An album with this title already exists{form.batch.trim() ? ' for this batch' : ''}. Use a different batch, or change the title.
@@ -411,7 +412,8 @@ export default function AdminAlbums() {
           </div>
           <div>
             <label htmlFor="album-participants" className="block text-sm font-medium text-dark mb-1">Participants</label>
-            <input id="album-participants" type="number" value={form.participants} onChange={e => setForm(f => ({ ...f, participants: +e.target.value }))} className={inputClass} />
+            <input id="album-participants" type="number" value={form.participants} onChange={e => setForm(f => ({ ...f, participants: +e.target.value }))} className={inputClass} aria-describedby="album-participants-hint" />
+            <p id="album-participants-hint" className="text-xs text-dark-muted mt-1">Number of travelers on this trip.</p>
           </div>
           <div>
             <ImageUploadField
@@ -422,7 +424,7 @@ export default function AdminAlbums() {
               pathPrefix="album-covers"
               fileNamePrefix={editing ? editing.slug : (slugify(form.title) || undefined)}
               maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
-              hint="Wide landscape, at least 1600×1200px — shown full-bleed as the album's hero banner."
+              hint="Wide landscape, min 1600×1200px. Shown as the album hero banner."
             />
           </div>
           <div className="md:col-span-2">
@@ -438,7 +440,7 @@ export default function AdminAlbums() {
               // being typed, falling back to "new" only if the title is
               // still empty.
               pathPrefix={`albums/${editing ? editing.slug : (slugify(form.title) || 'new')}`}
-              hint="Shown uncropped in a masonry grid, so any aspect works — just keep each photo at least 800px on its shortest side."
+              hint="Any orientation, min 800px on the shortest side. Shown uncropped in a grid."
             />
           </div>
           <div className="md:col-span-2">
@@ -455,6 +457,7 @@ export default function AdminAlbums() {
           <div className="md:col-span-2 flex items-center gap-3">
             <input type="checkbox" id="pub" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
             <label htmlFor="pub" className="text-sm font-medium text-dark">Publish immediately</label>
+            <span className="text-xs text-dark-muted">Leave unchecked to save as a draft.</span>
           </div>
         </div>
         <div className="flex gap-3 mt-6">
@@ -534,7 +537,7 @@ export default function AdminAlbums() {
               <details className="group">
                 <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
                   <span className="transition-transform group-open:rotate-90">▶</span> Original Trip Plan
-                  <span className="text-dark-muted/70 font-normal">(from Upcoming Trips — admin reference only, not shown publicly)</span>
+                  <span className="text-dark-muted/70 font-normal">(from Upcoming Trips; admin reference only)</span>
                 </summary>
                 <div className="mt-2 bg-background rounded-md p-3 max-h-80 overflow-y-auto app-scroll space-y-4">
                   {viewing.original_highlight_cards?.length ? (

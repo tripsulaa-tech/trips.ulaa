@@ -29,7 +29,7 @@ export default function CtaBannerSection({
         onChange={url => setField('image', url)}
         bucket="ulaa"
         pathPrefix="cta-banner"
-        hint="Wide landscape, at least 1400×700px — shown with a dark gradient overlay."
+        hint="Wide landscape, min 1400×700px. Shown with a dark gradient overlay."
         allowUrl
       />
       <div>

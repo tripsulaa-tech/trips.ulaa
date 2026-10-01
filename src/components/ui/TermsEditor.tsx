@@ -102,8 +102,7 @@ export default function TermsEditor({ value, onChange }: TermsEditorProps) {
         </button>
       </div>
       <p className="text-xs text-dark-muted mb-3">
-        Shown to participants on the booking form for this trip — they must tick a checkbox agreeing to these before
-        they can submit an enquiry. Sections are numbered automatically; start a line in the body with "- " for a bullet point.
+        Shown on the booking form. Travelers must accept before submitting an enquiry. Sections auto-number; start a line with "- " for a bullet.
       </p>
 
       {sections.length === 0 ? (

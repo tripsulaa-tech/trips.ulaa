@@ -386,7 +386,7 @@ export default function AdminInvoiceGenerator() {
                     <NextNumber size={16} aria-hidden="true" className={numberLoading ? 'animate-spin' : undefined} />
                   </button>
                 </div>
-                <p className="text-2xs text-dark-muted mt-1">Auto-generated, in series with saved invoices (e.g. JJ001, JJ002…) — not editable.</p>
+                <p className="text-2xs text-dark-muted mt-1">Auto-generated in series (e.g. JJ001, JJ002). Not editable.</p>
               </div>
               <div>
                 <label htmlFor="inv-date" className="block text-sm font-medium text-dark mb-1">Invoice Date</label>
@@ -529,7 +529,7 @@ export default function AdminInvoiceGenerator() {
                 className={inputClass}
                 placeholder="e.g. Jini J Tracy"
               />
-              <p className="text-2xs text-dark-muted mt-1">Printed under the signature line at the bottom of the invoice. Defaults to the bank account Name above if left blank.</p>
+              <p className="text-2xs text-dark-muted mt-1">Printed under the signature line. Defaults to the bank account name if blank.</p>
             </div>
           </motion.div>
 

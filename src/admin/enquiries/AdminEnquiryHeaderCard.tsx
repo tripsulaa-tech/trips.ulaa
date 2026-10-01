@@ -100,7 +100,10 @@ export default function AdminEnquiryHeaderCard({
                 section 4. Only shown once it's meaningful (checked in or
                 a recorded no-show); "Not Started" beforehand is implied
                 by the Journey badge not yet reaching Checked In. */}
-            {(enquiry.checked_in_at || enquiry.is_no_show) && (
+            {/* The Journey badge already reads "Checked In" once the stage is
+                checked_in, so only add this one when it tells something new
+                (a no-show, or checked in while the journey stage lags). */}
+            {((enquiry.is_no_show) || (enquiry.checked_in_at && enquiry.journey_stage !== 'checked_in')) && (
               <span title="Attendance" className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${attendanceBadge(enquiry).color}`}>
                 <LogIn size={12} className="shrink-0" aria-hidden="true" /> {attendanceBadge(enquiry).label}
               </span>

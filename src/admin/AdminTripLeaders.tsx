@@ -272,7 +272,8 @@ export default function AdminTripLeaders() {
           </div>
           <div>
             <label htmlFor="tl-designation" className="block text-sm font-medium text-dark mb-1">Designation</label>
-            <input id="tl-designation" value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} className={inputClass} placeholder="e.g. Lead Trip Captain" />
+            <input id="tl-designation" value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} className={inputClass} placeholder="e.g. Lead Trip Captain" aria-describedby="tl-designation-hint" />
+            <p id="tl-designation-hint" className="text-xs text-dark-muted mt-1">Role shown under the name.</p>
           </div>
           <div className="md:col-span-2">
             <ImageUploadField
@@ -282,13 +283,14 @@ export default function AdminTripLeaders() {
               bucket="ulaa"
               pathPrefix="trip-leader-photos"
               fileNamePrefix={slugify(form.name) || undefined}
-              hint="Square, at least 600×600px, with the face centered."
+              hint="Square, min 600×600px, face centered."
               allowUrl
             />
           </div>
           <div className="md:col-span-2">
             <label htmlFor="tl-description" className="block text-sm font-medium text-dark mb-1">About / Bio *</label>
-            <textarea id="tl-description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} className={`${inputClass} resize-none`} />
+            <textarea id="tl-description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} className={`${inputClass} resize-none`} aria-describedby="tl-description-hint" />
+            <p id="tl-description-hint" className="text-xs text-dark-muted mt-1">Shown on the trip page and PDF.</p>
           </div>
           <div className="md:col-span-2 space-y-3">
             <div className="flex items-center justify-between">
@@ -302,7 +304,7 @@ export default function AdminTripLeaders() {
               </button>
             </div>
             <p className="text-xs text-dark-muted -mt-1">
-              Full URLs work best, but a bare username (e.g. "justjini_") also works for Instagram, LinkedIn, Facebook, X, YouTube, TikTok, and Pinterest. For WhatsApp, enter a phone number with country code (e.g. "919876543210"). For Mail/Gmail, enter the email address.
+              Use a full URL, or just a username (e.g. "justjini_") for Instagram, LinkedIn, Facebook, X, YouTube, TikTok and Pinterest. WhatsApp: number with country code (e.g. "919876543210"). Mail: email address.
             </p>
             {form.social_links.map((link, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -340,6 +342,7 @@ export default function AdminTripLeaders() {
           <div className="md:col-span-2 flex items-center gap-3">
             <input type="checkbox" id="tlpub" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
             <label htmlFor="tlpub" className="text-sm font-medium text-dark">Publish immediately</label>
+            <span className="text-xs text-dark-muted">Leave unchecked to save as a draft.</span>
           </div>
         </div>
         <div className="flex gap-3 mt-6">

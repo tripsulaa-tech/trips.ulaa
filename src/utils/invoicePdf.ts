@@ -1,5 +1,8 @@
 import { jsPDF } from 'jspdf';
 import type { Enquiry, Payment } from '../types/types-index';
+import { RUPEE_SANS_REGULAR_BASE64, RUPEE_SANS_BOLD_BASE64 } from './rupeeFont';
+import { supabase } from '../services/supabase';
+import { slugify } from './utils-index';
 import { PAGE_W, PAGE_H, loadLogo, loadFooterBanner, invoiceFileName } from './pdf/invoice/shared';
 import { createInvoiceContext } from './pdf/invoice/context';
 import { renderHeader } from './pdf/invoice/header';
@@ -53,12 +56,44 @@ import { renderFooterAndPageNumbers } from './pdf/invoice/footer';
  * on record. Returns the assembled doc; downloadInvoicePdf() and
  * invoiceAsFile() both just call this and then export it differently.
  */
+const SITE_ORIGIN = 'https://www.ulaatrips.com';
+
+/** Public trip-details URL for the enquiry's trip. Prefers the trip's real
+ *  (frozen) slug looked up by trip_id; falls back to slugify(title), which
+ *  reproduces it for trips created normally. Best-effort — null if neither
+ *  is available, in which case the PDF simply has no trip links. */
+async function resolveTripUrl(enquiry: Enquiry): Promise<string | null> {
+  let slug: string | null = null;
+  if (enquiry.trip_id) {
+    try {
+      const { data } = await supabase.from('upcoming_trips').select('slug').eq('id', enquiry.trip_id).maybeSingle();
+      slug = data?.slug ?? null;
+    } catch {
+      /* fall through to the title-derived slug */
+    }
+  }
+  if (!slug && enquiry.trip_title) slug = slugify(enquiry.trip_title) || null;
+  return slug ? `${SITE_ORIGIN}/trips/${slug}` : null;
+}
+
 async function buildInvoicePdfDoc(enquiry: Enquiry, payments: Payment[]): Promise<jsPDF> {
   const logo = await loadLogo();
   const footerBanner = await loadFooterBanner();
 
   const doc = new jsPDF({ unit: 'pt', format: [PAGE_W, PAGE_H], orientation: 'portrait' });
-  const ctx = createInvoiceContext(doc, enquiry);
+  // Embedded subset font so the totals block can print the real ₹ glyph
+  // (helvetica can't). Best-effort: on failure amounts fall back to "Rs.".
+  try {
+    doc.addFileToVFS('RupeeSans-Regular.ttf', RUPEE_SANS_REGULAR_BASE64);
+    doc.addFont('RupeeSans-Regular.ttf', 'RupeeSans', 'normal');
+    doc.addFileToVFS('RupeeSans-Bold.ttf', RUPEE_SANS_BOLD_BASE64);
+    doc.addFont('RupeeSans-Bold.ttf', 'RupeeSans', 'bold');
+  } catch {
+    /* falls back to "Rs." — see paymentTable.ts */
+  }
+
+  const tripUrl = await resolveTripUrl(enquiry);
+  const ctx = createInvoiceContext(doc, enquiry, tripUrl);
   ctx.cursor.y = ctx.drawPageTop(false);
 
   // -------------------------------------------------------------------

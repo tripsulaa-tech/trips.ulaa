@@ -25,7 +25,7 @@ export default function HeroSection({
           onChange={url => setHero('image', url)}
           bucket="ulaa"
           pathPrefix="about/hero"
-          hint="Wide landscape, at least 1920×1080px — shown full-bleed as the page's top banner on tablet & desktop screens."
+          hint="Wide landscape, min 1920×1080px. Shown full-width on tablet and desktop."
           allowUrl
         />
         <ImageUploadField
@@ -34,7 +34,7 @@ export default function HeroSection({
           onChange={url => setHero('mobile_image', url)}
           bucket="ulaa"
           pathPrefix="about/hero-mobile"
-          hint="Tall portrait, at least 1080×1350px — shown on phone screens instead of the desktop banner. Falls back to the desktop banner if left empty."
+          hint="Portrait, min 1080×1350px. Shown on phones; falls back to the desktop banner if empty."
           allowUrl
         />
       </div>

@@ -31,6 +31,7 @@ export default function FAQEditor({ value, onChange }: FAQEditorProps) {
           <Plus size={14} /> Add FAQ
         </button>
       </div>
+      <p className="text-xs text-dark-muted mb-3">Common questions shown on the trip page.</p>
 
       {value.length === 0 ? (
         <p className="text-sm text-dark-muted bg-background-warm rounded-lg px-4 py-3">No FAQs yet.</p>
