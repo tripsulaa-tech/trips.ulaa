@@ -716,7 +716,7 @@ export default function AdminEnquiries() {
         <div className="bg-white rounded-lg shadow-card overflow-hidden">
           <div className="flex flex-col md:flex-row">
             {/* Section 1 — trip photo + name / date / seats booked · food split */}
-            <div className="flex items-center gap-3 p-4 flex-1 min-w-0 md:basis-1/3 border-b md:border-b-0 border-background-warm mx-4 md:mx-0 md:my-4 md:border-r">
+            <div className="flex items-center gap-3 p-4 pr-0 md:pr-4 flex-1 min-w-0 md:basis-1/3 border-b md:border-b-0 border-background-warm mx-4 md:mx-0 md:my-4 md:border-r">
               <div className="w-14 h-14 rounded-md overflow-hidden bg-background-warm shrink-0">
                 {activeGroup?.trip?.cover_image && (
                   <img src={activeGroup.trip.cover_image} alt={activeGroup.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
@@ -746,7 +746,7 @@ export default function AdminEnquiries() {
                   // seats actually booked.
                   const food = foodTotals(scopedEnquiries.filter(isBooked));
                   return (
-                    <p className="text-dark-muted text-xs flex items-center flex-wrap gap-1.5">
+                    <p className="text-dark-muted text-[11px] md:text-xs flex items-center flex-wrap gap-x-1 md:gap-x-1.5 gap-y-0.5 [&>span]:whitespace-nowrap">
                       {activeGroup?.trip && <span>{activeGroup.trip.seats_booked}/{activeGroup.trip.total_seats} seats booked</span>}
                       {(food.veg > 0 || food.nonVeg > 0) && (
                         <>
