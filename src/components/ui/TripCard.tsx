@@ -272,7 +272,10 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         <div className="absolute bottom-4 left-4 right-4">
           <div className="inline-flex items-center gap-1.5 bg-white text-dark text-xs font-button font-semibold px-3 py-1.5 rounded-md shadow-warm max-w-full">
             <MapPin size={13} className="text-primary shrink-0" />
-            <span className="truncate">{formatDestinationDotsCompact(trip.destination)}</span>
+            {/* Wider screens give the pill more room, so it can name more stops
+                before folding the rest into "+N". */}
+            <span className="truncate xl:hidden">{formatDestinationDotsCompact(trip.destination)}</span>
+            <span className="hidden truncate xl:inline">{formatDestinationDotsCompact(trip.destination, 52)}</span>
           </div>
         </div>
       </Link>
