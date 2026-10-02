@@ -37,6 +37,7 @@ export default function AdminTrips() {
     togglePublish,
     toggleComingSoon,
     toggleHidePdfDownload,
+    toggleBannerHasText,
     toggleHideSpecialOfferPromo,
     moveTrip,
     handleDownloadTripPdf,
@@ -132,6 +133,7 @@ export default function AdminTrips() {
         onTogglePublish={togglePublish}
         onToggleComingSoon={toggleComingSoon}
         onToggleHidePdf={toggleHidePdfDownload}
+        onToggleBannerHasText={toggleBannerHasText}
         onToggleSpecialOfferPromo={toggleHideSpecialOfferPromo}
         onMoveTrip={moveTrip}
         onDownloadPdf={handleDownloadTripPdf}

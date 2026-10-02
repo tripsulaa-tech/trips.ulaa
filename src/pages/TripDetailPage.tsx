@@ -11,7 +11,7 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { getUpcomingTripBySlug, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
-import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice, formatDateRange } from '../utils/utils-index';
+import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice } from '../utils/utils-index';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import { hasPackages } from '../utils/tripOptions';
 
@@ -363,6 +363,7 @@ export default function TripDetailPage() {
         isAlmostFull={isAlmostFull}
         isEarlyBird={isEarlyBird}
         isSpecialOffer={isSpecialOffer}
+        seatsLeft={remaining}
         descriptionExpanded={descriptionExpanded}
         setDescriptionExpanded={setDescriptionExpanded}
         onBook={openBooking}
@@ -381,18 +382,12 @@ export default function TripDetailPage() {
       {/* Main Content */}
       <div className="relative isolate px-4 sm:px-6 lg:px-8 py-8 sm:py-16 pb-12 lg:pb-16">
         <div className="max-w-[1344px] mx-auto space-y-9 sm:space-y-12">
-          {/* Countdown — premium card, shown at all breakpoints. Below
-              `lg` this keeps a centered/stacked mobile layout; at `lg`+ it
-              spans the full content width (matching every other section
-              on the page) and reflows into a horizontal banner so the
-              extra width reads as intentional, not just stretched. The
-              card owns its own live tick and renders nothing once the
-              trip has started. */}
+          {/* Countdown — a light ticket-style strip. Stacks on mobile, one
+              horizontal row (when / how long / book) from `lg`. Renders
+              nothing once the trip has started. */}
           <TripCountdownCard
             startDate={trip.start_date}
-            destination={trip.destination}
-            dateRangeLabel={formatDateRange(trip.start_date, trip.end_date)}
-            ctaLabel={buttonLabels.primaryCta}
+            ctaLabel={isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta}
             onCtaClick={openBooking}
             isAlmostFull={isAlmostFull}
             isFull={isFull}

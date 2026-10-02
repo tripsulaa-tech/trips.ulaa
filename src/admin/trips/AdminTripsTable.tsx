@@ -11,6 +11,7 @@ import {
   Hourglass,
   FileArrowDown as FileDown,
   FileX,
+  TextAa,
   Megaphone,
   SignIn as LogIn,
   CaretUp as ChevronUp,
@@ -38,6 +39,7 @@ interface AdminTripsTableProps {
   onTogglePublish: (trip: UpcomingTrip) => void;
   onToggleComingSoon: (trip: UpcomingTrip) => void;
   onToggleHidePdf: (trip: UpcomingTrip) => void;
+  onToggleBannerHasText: (trip: UpcomingTrip) => void;
   onToggleSpecialOfferPromo: (trip: UpcomingTrip) => void;
   onMoveTrip: (index: number, dir: -1 | 1) => void;
   onDownloadPdf: (trip: UpcomingTrip) => void;
@@ -51,7 +53,7 @@ export default function AdminTripsTable({
   trips, loading, pdfDownloadingId,
   importInputRef, onImportInputChange, onExportTemplate,
   onAddTrip, onView, onCheckIn, onEdit, onDelete,
-  onTogglePublish, onToggleComingSoon, onToggleHidePdf, onToggleSpecialOfferPromo, onMoveTrip, onDownloadPdf,
+  onTogglePublish, onToggleComingSoon, onToggleHidePdf, onToggleBannerHasText, onToggleSpecialOfferPromo, onMoveTrip, onDownloadPdf,
 }: AdminTripsTableProps) {
   const publishedCount = trips.filter(t => t.status === 'published').length;
   const comingSoonCount = trips.filter(t => t.status === 'coming_soon').length;
@@ -92,6 +94,12 @@ export default function AdminTripsTable({
       icon: FileX,
       onClick: () => onToggleHidePdf(trip),
       title: trip.hide_pdf_download ? 'PDF download is hidden from users on the trip page. Click to show it again' : 'Hide the PDF download option from users on the trip page',
+    },
+    {
+      label: trip.banner_has_text ? 'Show Hero Title' : 'Hide Hero Title',
+      icon: TextAa,
+      onClick: () => onToggleBannerHasText(trip),
+      title: trip.banner_has_text ? 'The title is hidden on the trip page hero because the banner already contains it. Click to show it again' : 'Hide the title on the trip page hero — use when the banner image already has the title written on it',
     },
     {
       label: trip.hide_special_offer_promo ? 'Show Offer Popup' : 'Hide Offer Popup',

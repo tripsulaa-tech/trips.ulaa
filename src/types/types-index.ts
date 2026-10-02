@@ -347,6 +347,11 @@ export interface UpcomingTrip {
   // (shown) so existing trips keep working with no migration. See
   // add_trip_hide_pdf_download.sql.
   hide_pdf_download?: boolean;
+  // When true, the Trip Detail hero doesn't draw the trip title over the
+  // banner (it stays in the page as screen-reader/SEO text) — for banner
+  // artwork that already has the title written into it. See
+  // add_trip_banner_has_text.sql.
+  banner_has_text?: boolean;
   created_at: string;
   updated_at: string;
 }

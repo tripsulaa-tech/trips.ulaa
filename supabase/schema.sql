@@ -190,6 +190,9 @@ create table public.upcoming_trips (
   -- When true, hides the "Download itinerary PDF" option from the public
   -- Trip Detail page for this trip. See add_trip_hide_pdf_download.sql.
   hide_pdf_download       boolean not null default false,
+  -- When true, the Trip Detail hero doesn't draw the title over a banner
+  -- whose artwork already contains it. See add_trip_banner_has_text.sql.
+  banner_has_text         boolean not null default false,
   -- When true, silences the special-offer *promotion* for this trip — the
   -- homepage SpecialOfferPopup and the TripCard's gradient border/badge —
   -- without touching special_offer_price/date below. See

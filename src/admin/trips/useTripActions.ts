@@ -64,6 +64,14 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
     load();
   };
 
+  // Toggles whether the Trip Detail hero draws the trip title over the
+  // banner. Turn it on when the banner artwork already contains the title.
+  // See add_trip_banner_has_text.sql.
+  const toggleBannerHasText = async (trip: UpcomingTrip) => {
+    await updateUpcomingTrip(trip.id, { banner_has_text: !trip.banner_has_text });
+    load();
+  };
+
   // Toggles whether this trip's special-offer *promotion* (homepage
   // SpecialOfferPopup + TripCard gradient border/badge) is shown. Doesn't
   // touch special_offer_price/date — the offer, if still within its date
@@ -113,6 +121,7 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
     togglePublish,
     toggleComingSoon,
     toggleHidePdfDownload,
+    toggleBannerHasText,
     toggleHideSpecialOfferPromo,
     moveTrip,
     handleDownloadTripPdf,

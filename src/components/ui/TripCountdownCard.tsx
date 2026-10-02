@@ -1,16 +1,9 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Flame } from '@phosphor-icons/react';
-
-// Lazy — pulls in three.js (a real chunk of KB) only once someone actually
-// lands on a trip page with an active countdown, and never blocks the
-// countdown numbers/CTA themselves from rendering and being tappable.
-const TripOrbitScene = lazy(() => import('./TripOrbitScene'));
+import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { ArrowRight } from '@phosphor-icons/react';
 
 interface TripCountdownCardProps {
   startDate: string | null | undefined;
-  destination: string;
-  dateRangeLabel: string;
   ctaLabel: string;
   onCtaClick: () => void;
   isAlmostFull: boolean;
@@ -25,15 +18,28 @@ interface RemainingTime {
   seconds: number;
 }
 
+const HOUR = 3600000;
+const DAY = 24 * HOUR;
+
+// Seconds only appear once departure is this close. Further out they are
+// pure noise: a ticking number that tells nobody anything useful.
+const SHOW_SECONDS_WITHIN_MS = 3 * DAY;
+// Inside the final 48 hours the card shifts to a warmer, more urgent accent.
+const URGENT_WITHIN_MS = 2 * DAY;
+
 /**
- * Premium "trip starts in" countdown card shown near the top of a trip
- * detail page. Owns its own live tick, so callers just hand it a start
- * date and a couple of seat-scarcity flags.
+ * "Trip starts in" countdown shown at the top of a trip detail page.
+ *
+ * It answers three questions, in this order:
+ *   1. How long until we leave?  (the numbers, days first and largest)
+ *   2. When exactly is that?     (weekday + date, left)
+ *   3. What do I do about it?    (seat note + one booking button, right)
+ *
+ * Destination, trip length and the full date range already live in the
+ * hero directly above, so they are intentionally not repeated here.
  */
 export default function TripCountdownCard({
   startDate,
-  destination,
-  dateRangeLabel,
   ctaLabel,
   onCtaClick,
   isAlmostFull,
@@ -41,9 +47,12 @@ export default function TripCountdownCard({
   remainingSeats,
 }: TripCountdownCardProps) {
   const [remaining, setRemaining] = useState<RemainingTime | null>(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const target = startDate ? new Date(`${startDate}T00:00:00`).getTime() : null;
+    let timer: ReturnType<typeof setTimeout>;
+
     const tick = () => {
       if (!target) {
         setRemaining(null);
@@ -55,176 +64,122 @@ export default function TripCountdownCard({
         return;
       }
       setRemaining({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff % 86400000) / 3600000),
-        minutes: Math.floor((diff % 3600000) / 60000),
+        days: Math.floor(diff / DAY),
+        hours: Math.floor((diff % DAY) / HOUR),
+        minutes: Math.floor((diff % HOUR) / 60000),
         seconds: Math.floor((diff % 60000) / 1000),
       });
+      // Tick every second only while seconds are visible; otherwise
+      // twice a minute is plenty and saves needless re-renders.
+      timer = setTimeout(tick, diff <= SHOW_SECONDS_WITHIN_MS ? 1000 : 30000);
     };
+
     tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    return () => clearTimeout(timer);
   }, [startDate]);
 
-  if (!remaining) return null;
+  if (!remaining || !startDate) return null;
 
-  // Urgency — inside the final 48 hours the card switches to a warmer
-  // orange/coral palette.
-  const hoursLeft = remaining.days * 24 + remaining.hours;
-  const urgent = hoursLeft < 48;
+  const msLeft =
+    remaining.days * DAY + remaining.hours * HOUR + remaining.minutes * 60000 + remaining.seconds * 1000;
+  const urgent = msLeft < URGENT_WITHIN_MS;
+  const showSeconds = msLeft <= SHOW_SECONDS_WITHIN_MS;
 
-  const units: { v: number; l: string }[] = [
-    { v: remaining.days, l: 'Days' },
-    { v: remaining.hours, l: 'Hrs' },
-    { v: remaining.minutes, l: 'Min' },
-    { v: remaining.seconds, l: 'Sec' },
+  const departureLabel = new Date(`${startDate}T00:00:00`).toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  const units: { v: number; one: string; many: string; lead?: boolean }[] = [
+    { v: remaining.days, one: 'day', many: 'days', lead: true },
+    { v: remaining.hours, one: 'hour', many: 'hours' },
+    { v: remaining.minutes, one: 'minute', many: 'minutes' },
+    ...(showSeconds ? [{ v: remaining.seconds, one: 'second', many: 'seconds' }] : []),
   ];
 
+  const accentText = urgent ? 'text-red-600' : 'text-primary';
+  const seatNote = isFull
+    ? 'Sold out. Join the waitlist.'
+    : isAlmostFull
+      ? `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left`
+      : null;
+
   return (
-    <div>
-      <div
-        className={`relative rounded-lg p-px shadow-[0_28px_60px_-20px_rgba(9,7,20,0.55)] ${
-          urgent
-            ? 'bg-gradient-to-br from-orange-400/50 via-white/10 to-red-600/40'
-            : 'bg-gradient-to-br from-gold/50 via-white/10 to-primary-dark/40'
-        }`}
-      >
-        <motion.button
-          type="button"
-          onClick={onCtaClick}
-          aria-label={
-            urgent
-              ? `Only hours left — tap to ${ctaLabel}`
-              : `Trip starts soon — tap to ${ctaLabel}`
-          }
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.985 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
-          className={`tc-grain group/btn relative overflow-hidden block w-full text-left tc-gradient rounded-lg px-6 py-7 sm:px-10 sm:py-10 lg:px-14 lg:py-11 ${
-            urgent
-              ? 'bg-gradient-to-br from-[#210A07] via-[#3A130C] to-[#1A0705]'
-              : 'bg-gradient-to-br from-[#1A130A] via-[#2E1D10] to-[#140D07]'
-          }`}
-        >
-          {/* Soft radial spotlight + ambient glows for depth */}
-          <div className={`pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 lg:w-[36rem] rounded-full blur-[90px] ${urgent ? 'bg-orange-400/20' : 'bg-gold/20'}`} />
-          <div className={`pointer-events-none absolute -bottom-16 -left-10 w-40 h-40 rounded-full blur-3xl ${urgent ? 'bg-red-500/15' : 'bg-primary-dark/15'}`} />
-          <div className={`pointer-events-none absolute -bottom-16 -right-10 w-40 h-40 rounded-full blur-3xl hidden lg:block ${urgent ? 'bg-red-500/15' : 'bg-primary-dark/15'}`} />
-
-          {/* Ambient scene — drifting embers in the margins plus a slim
-              flight-path line filling in along the bottom edge, spanning
-              the full card so the wide banner reads as designed instead of
-              empty, and staying clear of the digit tiles above it. Lazy +
-              Suspense-gated: the countdown numbers above render and are
-              tappable immediately regardless of whether/when this finishes
-              loading. */}
-          <Suspense fallback={null}>
-            <TripOrbitScene urgent={urgent} />
-          </Suspense>
-
-          {/* Mobile/tablet: seats-left badge now sits stacked above "Trip
-              starts in" (see the flex-col below) instead of floating in
-              the corner — moved in per feedback so it reads as one clear
-              stack of urgency signals instead of two competing focal
-              points. */}
-
-          <div className="relative flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
-            <div className="flex flex-col items-center lg:items-start gap-1.5 lg:flex-1 lg:min-w-0">
-              {(isAlmostFull || isFull) && (
-                <span className="lg:hidden inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-2xs font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
-                  <Flame size={11} className="text-amber-300" />
-                  {isFull ? 'Sold out' : `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left!`}
-                </span>
-              )}
-              <p
-                className={`flex items-center gap-2 text-2xs lg:text-xs font-button font-bold uppercase tracking-[0.25em] whitespace-nowrap bg-clip-text text-transparent ${
-                  urgent ? 'bg-gradient-to-r from-orange-300 to-amber-200' : 'bg-gradient-to-r from-primary-light to-gold'
-                }`}
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${urgent ? 'bg-orange-400' : 'bg-gold'}`} />
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${urgent ? 'bg-orange-400' : 'bg-gold'}`} />
-                </span>
-                {urgent ? 'Final countdown' : 'Trip starts in'}
-              </p>
-              <p className="hidden lg:block text-white/65 text-xs font-medium">
-                {destination} &middot; {dateRangeLabel}
-              </p>
-            </div>
-
-            {/* Screen-reader summary — coarse (days/hours, or days/hrs/min
-                once urgent) so the text only actually changes once an hour
-                (or once a minute when urgent) instead of re-announcing on
-                every second-tick of the decorative digits below. */}
-            <p className="sr-only" aria-live="polite">
-              {urgent
-                ? `${remaining.days} days, ${remaining.hours} hours, ${remaining.minutes} minutes until this trip starts`
-                : `${remaining.days} days, ${remaining.hours} hours until this trip starts`}
-            </p>
-
-            <div className="flex items-center gap-2 sm:gap-3 lg:gap-4" aria-hidden="true">
-              {units.map(({ v, l }, i) => (
-                <div key={l} className="flex items-center gap-2 sm:gap-3 lg:gap-4">
-                  <div className="text-center">
-                    <div
-                      className={`relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] lg:w-24 lg:h-24 overflow-hidden rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_28px_-10px_rgba(0,0,0,0.65)] ${l === 'Sec' ? 'tc-tick' : ''}`}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent" />
-                      <div className="absolute left-0 right-0 top-1/2 h-px bg-white/[0.06] -translate-y-px z-10" />
-                      <AnimatePresence mode="popLayout" initial={false}>
-                        <motion.div
-                          key={v}
-                          initial={{ y: 16, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          exit={{ y: -16, opacity: 0 }}
-                          transition={{ duration: 0.4, ease: 'easeOut' }}
-                          className={`absolute inset-0 flex items-center justify-center font-display text-3xl sm:text-4xl lg:text-5xl font-bold bg-clip-text text-transparent tabular-nums ${
-                            urgent ? 'bg-gradient-to-b from-white to-orange-300/90' : 'bg-gradient-to-b from-white to-primary-light/90'
-                          }`}
-                        >
-                          {String(v).padStart(2, '0')}
-                        </motion.div>
-                      </AnimatePresence>
-                    </div>
-                    <div className="text-white/65 text-2xs lg:text-xs font-medium uppercase tracking-[0.2em] text-center mt-2">{l}</div>
-                  </div>
-                  {i < units.length - 1 && (
-                    <span className={`font-display text-xl sm:text-2xl lg:text-3xl font-bold pb-4 sm:pb-5 lg:pb-6 select-none ${urgent ? 'text-orange-300/40' : 'text-primary-light/40'}`}>:</span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col items-center lg:items-end gap-2 lg:flex-1 lg:min-w-0">
-              {/* Desktop: grouped with the CTA it describes instead of
-                  floating alone up in the card's corner. */}
-              {(isAlmostFull || isFull) && (
-                <span className="hidden lg:inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400/15 to-amber-300/10 backdrop-blur-sm border border-amber-300/25 text-amber-200 text-2xs font-button font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
-                  <Flame size={11} className="text-amber-300" />
-                  {isFull ? 'Sold out' : `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left!`}
-                </span>
-              )}
-              <span
-                className={`hidden lg:inline-flex items-center gap-2 font-button font-bold text-sm px-5 py-2.5 rounded-full whitespace-nowrap transition-colors ${
-                  urgent
-                    ? 'bg-gradient-to-r from-orange-400/20 to-amber-300/10 border border-orange-300/30 text-orange-200 group-hover/btn:from-orange-400/30 group-hover/btn:to-amber-300/20'
-                    : 'bg-gradient-to-r from-primary-light/20 to-gold/10 border border-primary-light/30 text-primary-light group-hover/btn:from-primary-light/30 group-hover/btn:to-gold/20'
-                }`}
-              >
-                {ctaLabel}
-                <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
+    <section
+      aria-label="Time until this trip starts"
+      className={`rounded-2xl border bg-white shadow-card px-5 py-6 sm:px-8 sm:py-7 lg:px-10 ${
+        urgent ? 'border-red-200' : 'border-primary/15'
+      }`}
+    >
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-10">
+        {/* When */}
+        <div className="text-center lg:text-left">
+          <p className={`flex items-center justify-center lg:justify-start gap-2 text-sm font-semibold ${accentText}`}>
+            {urgent && (
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
               </span>
-              <p className="flex items-center gap-1.5 text-white/70 text-2xs font-medium lg:hidden">
-                Don't miss out — tap to {ctaLabel}
-                <ArrowRight size={12} className={`transition-transform group-hover/btn:translate-x-1 ${urgent ? 'text-orange-300' : 'text-primary-light'}`} />
-              </p>
-              <p className="hidden lg:block text-white/65 text-xs whitespace-nowrap">
-                Don't miss out — tap to {ctaLabel}
-              </p>
+            )}
+            {urgent ? 'Leaving soon' : 'Trip starts in'}
+          </p>
+          <p className="mt-1 text-dark-muted text-sm sm:text-base">{departureLabel}</p>
+        </div>
+
+        {/* Screen-reader summary. Coarse on purpose so it doesn't re-announce
+            on every visual tick. */}
+        <p className="sr-only" aria-live="polite">
+          {urgent
+            ? `${remaining.days} days, ${remaining.hours} hours, ${remaining.minutes} minutes until this trip starts`
+            : `${remaining.days} days, ${remaining.hours} hours until this trip starts`}
+        </p>
+
+        {/* How long: days are the headline, the rest is supporting detail */}
+        <div
+          className="flex items-end justify-center divide-x divide-dark/10"
+          aria-hidden="true"
+        >
+          {units.map(({ v, one, many, lead }) => (
+            <div key={one} className="px-3 sm:px-5 lg:px-6 first:pl-0 last:pr-0 text-center">
+              <div
+                className={`relative overflow-hidden font-display font-semibold tabular-nums leading-none ${
+                  lead
+                    ? `${accentText} text-5xl sm:text-6xl lg:text-7xl`
+                    : 'text-dark text-3xl sm:text-4xl lg:text-5xl'
+                }`}
+              >
+                <motion.span
+                  key={v}
+                  className="inline-block"
+                  initial={reduceMotion ? false : { y: -10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                >
+                  {String(v).padStart(2, '0')}
+                </motion.span>
+              </div>
+              <div className="mt-2 text-xs sm:text-sm text-dark-muted">{v === 1 ? one : many}</div>
             </div>
-          </div>
-        </motion.button>
+          ))}
+        </div>
+
+        {/* What to do */}
+        <div className="flex flex-col items-center lg:items-end gap-2.5">
+          {seatNote && (
+            <p className={`text-sm font-semibold ${isFull ? 'text-dark-muted' : 'text-red-600'}`}>{seatNote}</p>
+          )}
+          <button
+            type="button"
+            onClick={onCtaClick}
+            className="group/btn inline-flex w-full lg:w-auto items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 font-button font-semibold text-white shadow-warm transition-colors hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {ctaLabel}
+            {!isFull && <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />}
+          </button>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
