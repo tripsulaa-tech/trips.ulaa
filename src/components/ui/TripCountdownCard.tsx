@@ -361,7 +361,32 @@ export default function TripCountdownCard({
                 </span>
               ))}
             </p>
-            {stops.length >= 2 && !departed && (
+            {stops.length >= 2 && game.phase === 'idle' && (
+              /* The challenge: a speech bubble from the plane. It is a button
+                 too, so tapping the words works as well as tapping the plane.
+                 Space is reserved during the intro flight so nothing jumps. */
+              <motion.button
+                type="button"
+                onClick={game.onClick}
+                tabIndex={game.introDone ? 0 : -1}
+                aria-hidden={!game.introDone}
+                className="relative ml-auto mb-1.5 cursor-pointer touch-manipulation rounded-2xl bg-[#F3E2BC] px-4 py-2 text-sm sm:text-base font-semibold text-[#3A2316] shadow-[0_10px_24px_-10px_rgba(0,0,0,0.7)]"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={
+                  game.introDone
+                    ? { opacity: 1, scale: 1, y: reduceMotion ? 0 : [0, -4, 0] }
+                    : { opacity: 0, scale: 0.85, y: 0 }
+                }
+                transition={{
+                  default: { type: 'spring', stiffness: 260, damping: 18 },
+                  y: reduceMotion ? { duration: 0 } : { duration: 1.6, ease: 'easeInOut', repeat: Infinity, delay: 0.5 },
+                }}
+              >
+                Think you can catch me? Tap the plane!
+                <span aria-hidden="true" className="absolute -bottom-1 right-6 h-3 w-3 rotate-45 bg-[#F3E2BC]" />
+              </motion.button>
+            )}
+            {stops.length >= 2 && game.phase !== 'idle' && !departed && (
               <div className="flex items-center gap-2.5">
                 {showPips && (
                   <span className="flex gap-1" aria-hidden="true">
@@ -457,12 +482,22 @@ export default function TripCountdownCard({
               >
                 {/* Invitation: a soft ping until the first tap */}
                 {game.introDone && game.phase === 'idle' && (
-                  <span aria-hidden="true" className="absolute inset-1.5 rounded-full bg-[#E9C77B]/25 animate-ping" />
+                  <span aria-hidden="true" className="absolute inset-0 rounded-full bg-[#E9C77B]/30 ring-2 ring-[#E9C77B]/50 animate-ping" />
                 )}
                 <motion.span
                   className="relative flex"
-                  animate={{ scaleX: game.pos.facing, rotate: game.spin }}
-                  transition={{ duration: reduceMotion ? 0 : 0.45, ease: 'easeOut' }}
+                  animate={{
+                    scaleX: game.pos.facing,
+                    rotate: game.spin,
+                    y: game.introDone && game.phase === 'idle' && !reduceMotion ? [0, -4, 0] : 0,
+                  }}
+                  transition={{
+                    default: { duration: reduceMotion ? 0 : 0.45, ease: 'easeOut' },
+                    y:
+                      game.introDone && game.phase === 'idle' && !reduceMotion
+                        ? { duration: 1.6, ease: 'easeInOut', repeat: Infinity, delay: 0.5 }
+                        : { duration: 0.2 },
+                  }}
                 >
                   <PremiumPlane size={40} />
                 </motion.span>
@@ -495,7 +530,26 @@ export default function TripCountdownCard({
         />
 
         <div>
-          <p className={`font-semibold text-lg ${isAlmostFull && !isFull ? 'text-red-600' : 'text-dark'}`}>{seatHeadline}</p>
+          {isAlmostFull && !isFull ? (
+            <motion.p
+              className="inline-block font-bold text-xl text-red-600 bg-clip-text"
+              style={
+                reduceMotion
+                  ? undefined
+                  : {
+                      backgroundImage: 'linear-gradient(90deg,#C62828,#F0792B,#C62828)',
+                      backgroundSize: '200% 100%',
+                      WebkitTextFillColor: 'transparent',
+                    }
+              }
+              animate={reduceMotion ? undefined : { backgroundPosition: ['0% 50%', '200% 50%'] }}
+              transition={{ duration: 2.6, ease: 'linear', repeat: Infinity }}
+            >
+              {seatHeadline}
+            </motion.p>
+          ) : (
+            <p className="font-semibold text-lg text-dark">{seatHeadline}</p>
+          )}
           {seatSub && <p className="mt-0.5 text-sm text-dark-muted">{seatSub}</p>}
 
           {showSeatMap && (
