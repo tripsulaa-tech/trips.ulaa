@@ -382,11 +382,13 @@ export default function TripDetailPage() {
       {/* Main Content */}
       <div className="relative isolate px-4 sm:px-6 lg:px-8 py-8 sm:py-16 pb-12 lg:pb-16">
         <div className="max-w-[1344px] mx-auto space-y-9 sm:space-y-12">
-          {/* Countdown — a light ticket-style strip. Stacks on mobile, one
-              horizontal row (when / how long / book) from `lg`. Renders
-              nothing once the trip has started. */}
+          {/* Countdown — boarding-pass card: sleeps-to-go + route on the
+              left, seat map + booking button on the stub. Stacks on mobile.
+              Renders nothing once the trip has started. */}
           <TripCountdownCard
             startDate={trip.start_date}
+            destination={trip.destination}
+            totalSeats={trip.total_seats}
             ctaLabel={isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta}
             onCtaClick={openBooking}
             isAlmostFull={isAlmostFull}
