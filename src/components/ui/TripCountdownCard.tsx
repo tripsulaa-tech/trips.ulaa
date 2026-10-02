@@ -48,20 +48,20 @@ function PremiumPlane({ size = 40 }: { size?: number }) {
       {/* Contrail */}
       <span
         aria-hidden="true"
-        className="absolute right-[88%] top-1/2 h-[2px] w-12 -translate-y-1/2 rounded-full bg-gradient-to-l from-amber-100/80 via-amber-200/30 to-transparent"
+        className="absolute right-[88%] top-1/2 h-[2px] w-12 -translate-y-1/2 rounded-full bg-gradient-to-l from-[#FBEFD3]/80 via-[#E9C77B]/30 to-transparent"
       />
       <svg
         width={size}
         height={size}
         viewBox="0 0 48 48"
         aria-hidden="true"
-        className="relative drop-shadow-[0_2px_8px_rgba(242,181,68,0.65)]"
+        className="relative drop-shadow-[0_2px_8px_rgba(233,199,123,0.6)]"
       >
         <defs>
           <linearGradient id={`${uid}-body`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#FFF8DE" />
-            <stop offset="0.55" stopColor="#F6CF76" />
-            <stop offset="1" stopColor="#D9932E" />
+            <stop offset="0" stopColor="#FBEFD3" />
+            <stop offset="0.55" stopColor="#E9C77B" />
+            <stop offset="1" stopColor="#C8962A" />
           </linearGradient>
         </defs>
         <path d={half} fill={`url(#${uid}-body)`} />
@@ -79,10 +79,14 @@ function PremiumPlane({ size = 40 }: { size?: number }) {
 
 /* ───────────────────────── Game ───────────────────────── */
 
-const GOAL = 5; // catches to win a round
-const ROUND_LIMIT_MS = 15000; // after this the plane "gets away"
+const GOAL = 4; // catches the visitor can actually make
+const ROUND_LIMIT_MS = 15000; // too slow and it takes off without them
 
-type Phase = 'idle' | 'playing' | 'won' | 'escaped';
+// idle: waiting for the first tap
+// playing: tap it, it hops, it speeds up
+// teasing: the "fifth" catch. Not tappable, the plane is already leaving
+// departed: it took off. The booking message takes over.
+type Phase = 'idle' | 'playing' | 'teasing' | 'departed';
 interface PlanePos {
   idx: number;
   facing: 1 | -1;
@@ -99,15 +103,16 @@ function nextPos(prev: PlanePos, count: number): PlanePos {
 }
 
 /**
- * "Catch the plane if you can": the plane that flies the route on load is
- * also a game. Tap it to start, then catch it five times. It hops between
- * stops by itself, a little faster after every catch, and it gets away if
- * you take longer than 15 seconds. Before the final catch it stops hopping
- * and waits, so the last tap is always catchable. Win and you get your time,
- * a burst of gold, and a nudge to catch the real flight: the booking button.
+ * "Catch the plane if you can", with a punchline.
  *
- * With reduced motion on it never hops by itself (nothing chases the
- * visitor), so five taps still wins.
+ * Tap the plane to start. It hops between stops, a little faster after every
+ * catch. You can catch it four times. On the fifth it is already taking
+ * off, so it cannot be tapped, and the card turns the joke into the pitch:
+ * you can't catch this flight by chasing it, you catch it by booking.
+ * The booking button then glows until the visitor acts (or chases again).
+ *
+ * Taking longer than 15 seconds ends the same way. With reduced motion on,
+ * the plane never hops by itself (nothing chases the visitor).
  */
 function usePlaneGame(stopCount: number, reduceMotion: boolean | null) {
   const last = Math.max(0, stopCount - 1);
@@ -117,8 +122,6 @@ function usePlaneGame(stopCount: number, reduceMotion: boolean | null) {
   const [runCatches, setRunCatches] = useState(0);
   const [spin, setSpin] = useState(0);
   const [startedAt, setStartedAt] = useState(0);
-  const [lastMs, setLastMs] = useState(0);
-  const [nudge, setNudge] = useState(false);
 
   // The intro flight takes ~2.8s including its delay.
   useEffect(() => {
@@ -126,66 +129,54 @@ function usePlaneGame(stopCount: number, reduceMotion: boolean | null) {
     return () => clearTimeout(t);
   }, [reduceMotion]);
 
+  // The plane hops on its own, a little quicker with every catch.
   useEffect(() => {
-    if (!nudge) return;
-    const t = setTimeout(() => setNudge(false), 7000);
-    return () => clearTimeout(t);
-  }, [nudge]);
-
-  // The plane hops on its own, a little quicker with every catch. It stops
-  // before the last one so the final tap is always catchable.
-  useEffect(() => {
-    if (phase !== 'playing' || reduceMotion || runCatches >= GOAL - 1) return;
-    const dwell = Math.max(900, 1500 - (runCatches - 1) * 200);
+    if (phase !== 'playing' || reduceMotion) return;
+    const dwell = Math.max(900, 1500 - (runCatches - 1) * 250);
     const t = setTimeout(() => setPos((p) => nextPos(p, stopCount)), dwell);
     return () => clearTimeout(t);
   }, [phase, runCatches, pos.idx, stopCount, reduceMotion]);
 
-  // Too slow: it flies home to the last stop.
+  // Too slow: it takes off without them.
   useEffect(() => {
     if (phase !== 'playing' || reduceMotion) return;
-    const t = setTimeout(() => {
-      setPhase('escaped');
-      setRunCatches(0);
-      setPos({ idx: last, facing: 1 });
-    }, ROUND_LIMIT_MS);
+    const t = setTimeout(() => setPhase('departed'), ROUND_LIMIT_MS);
     return () => clearTimeout(t);
-  }, [phase, startedAt, last, reduceMotion]);
+  }, [phase, startedAt, reduceMotion]);
+
+  // The tease: one beat of "one more!" and then it's gone.
+  useEffect(() => {
+    if (phase !== 'teasing') return;
+    const t = setTimeout(() => setPhase('departed'), 1300);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   const onClick = () => {
     if (!introDone || stopCount < 2) return;
+    if (phase === 'teasing' || phase === 'departed') return;
     const fresh = phase !== 'playing';
-    const now = Date.now();
-    const begin = fresh ? now : startedAt;
     const n = fresh ? 1 : runCatches + 1;
     setSpin((s) => s + 360);
-    if (fresh) setStartedAt(now);
-
-    if (n >= GOAL) {
-      const ms = now - begin;
-      setLastMs(ms);
-      setPhase('won');
-      setRunCatches(GOAL);
-      setPos({ idx: last, facing: 1 });
-      setNudge(true);
-      return;
-    }
-    setPhase('playing');
+    if (fresh) setStartedAt(Date.now());
     setRunCatches(n);
     setPos((p) => nextPos(p, stopCount));
+    setPhase(n >= GOAL ? 'teasing' : 'playing');
   };
 
-  const secs = (ms: number) => (ms / 1000).toFixed(1);
+  const chaseAgain = () => {
+    setPhase('idle');
+    setRunCatches(0);
+    setPos({ idx: last, facing: 1 });
+  };
+
   let hint = 'Catch the plane if you can';
   if (phase === 'playing') {
-    hint = ['', 'Got one! 1 of 5', 'Faster now. 2 of 5', 'Halfway there. 3 of 5', 'Last one, it\'s resting. Catch it!'][runCatches] ?? '';
-  } else if (phase === 'won') {
-    hint = `Caught in ${secs(lastMs)}s! Now catch the flight with us`;
-  } else if (phase === 'escaped') {
-    hint = 'It got away! Tap to try again';
+    hint = ['', 'Got one! 1 of 4', 'Faster now. 2 of 4', 'Three down. 3 of 4'][runCatches] ?? '';
+  } else if (phase === 'teasing') {
+    hint = 'One more… wait, it\'s taking off!';
   }
 
-  return { introDone, phase, pos, runCatches, spin, nudge, hint, onClick };
+  return { introDone, phase, pos, runCatches, spin, hint, onClick, chaseAgain };
 }
 
 const BURST = Array.from({ length: 10 }, (_, i) => {
@@ -284,14 +275,19 @@ export default function TripCountdownCard({
 
   const showSeatMap = totalSeats > 0 && totalSeats <= MAX_SEAT_ICONS;
   const takenSeats = Math.max(0, totalSeats - remainingSeats);
-  const seatHeadline = isFull
-    ? 'Sold out'
-    : isAlmostFull
-      ? `Only ${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left`
-      : `${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} still open`;
+  // Deliberately not "Only 1 seat left": the hero chip and the sticky bar
+  // already say that. The stub shows the same fact as a count, next to the map.
+  const seatHeadline =
+    totalSeats > 0
+      ? isFull
+        ? `All ${totalSeats} seats taken`
+        : `${takenSeats} of ${totalSeats} seats taken`
+      : isFull
+        ? 'Sold out'
+        : `${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left`;
 
-  const playing = game.phase === 'playing';
-  const won = game.phase === 'won';
+  const departed = game.phase === 'departed';
+  const showPips = game.phase === 'playing' || game.phase === 'teasing';
 
   return (
     <section
@@ -309,10 +305,10 @@ export default function TripCountdownCard({
         {/* Low sun on the horizon, the one piece of atmosphere */}
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute -bottom-40 -right-16 h-96 w-96 rounded-full blur-2xl ${
+          className={`pointer-events-none absolute -bottom-52 -right-24 h-96 w-96 rounded-full blur-2xl ${
             urgent
               ? 'bg-[radial-gradient(circle,#F26B3A_0%,#B8301C_38%,transparent_70%)] opacity-70'
-              : 'bg-[radial-gradient(circle,#F2B544_0%,#D98A3A_35%,transparent_70%)] opacity-60'
+              : 'bg-[radial-gradient(circle,#D98A3A_0%,#A85A2A_40%,transparent_70%)] opacity-70'
           }`}
         />
 
@@ -329,12 +325,12 @@ export default function TripCountdownCard({
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
               className={`font-display font-extrabold tabular-nums tracking-tight text-6xl sm:text-7xl lg:text-8xl bg-clip-text text-transparent bg-gradient-to-b ${
-                urgent ? 'from-white to-orange-300' : 'from-white to-amber-200'
+                urgent ? 'from-cream to-orange-300' : 'from-cream to-[#E9C77B]'
               }`}
             >
               {bigNumber}
             </motion.span>
-            <span className="font-script text-3xl sm:text-4xl lg:text-5xl text-amber-100">{bigWord}</span>
+            <span className="font-script text-3xl sm:text-4xl lg:text-5xl text-[#F3E2BC]">{bigWord}</span>
           </h2>
 
           {/* Screen-reader summary, coarse so it doesn't re-announce every tick */}
@@ -354,34 +350,58 @@ export default function TripCountdownCard({
                 </span>
               ))}
             </p>
-            {stops.length >= 2 && (
+            {stops.length >= 2 && !departed && (
               <div className="flex items-center gap-2.5">
-                {(playing || won) && (
+                {showPips && (
                   <span className="flex gap-1" aria-hidden="true">
                     {Array.from({ length: GOAL }, (_, i) => (
                       <span
                         key={i}
                         className={`h-2 w-2 rounded-full transition-colors duration-200 ${
-                          i < game.runCatches ? 'bg-amber-300' : 'bg-white/25'
+                          i < game.runCatches ? 'bg-[#E9C77B]' : 'bg-white/25'
                         }`}
                       />
                     ))}
                   </span>
                 )}
-                <p
-                  aria-live="polite"
-                  className={`font-script text-xl sm:text-2xl transition-colors ${won ? 'text-amber-300' : 'text-amber-100/90'}`}
-                >
+                <p aria-live="polite" className="text-sm sm:text-base font-semibold text-[#F3E2BC]">
                   {game.hint}
                 </p>
               </div>
             )}
           </div>
 
+          {/* The punchline: you can't chase this flight, you book it. */}
+          {stops.length >= 2 && departed && (
+            <div className="mt-5" aria-live="polite">
+              {/* Script carries the feeling, sans carries the instruction */}
+              <p className="font-script text-2xl sm:text-3xl leading-tight text-[#E9C77B]">Want to catch the flight?</p>
+              <p className="mt-1.5 max-w-xl text-base sm:text-lg leading-relaxed text-white/90">
+                Pack your bags and catch it with <strong className="font-semibold text-white">Ulaa</strong>. Book your
+                seats soon.
+              </p>
+              <button
+                type="button"
+                onClick={game.chaseAgain}
+                className="mt-3 text-sm text-white/70 underline underline-offset-4 decoration-white/30 hover:text-white cursor-pointer"
+              >
+                Chase the plane again
+              </button>
+            </div>
+          )}
+
           {/* The route. The plane flies it once on load, then it's a game. */}
           {stops.length >= 2 && (
             <div className="mt-6 relative flex items-start justify-between">
               <div aria-hidden="true" className="absolute left-1.5 right-1.5 top-[5px] border-t-2 border-dashed border-white/30" />
+              {stops.length > 2 && (
+                <span
+                  aria-hidden="true"
+                  className="md:hidden absolute left-1/2 top-[5px] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/15 bg-[#3A2316] px-2.5 py-0.5 text-xs text-white/75"
+                >
+                  {stops.length - 2} stops between
+                </span>
+              )}
               {stops.map((stop, i) => {
                 const edge = i === 0 || i === stops.length - 1;
                 return (
@@ -392,10 +412,10 @@ export default function TripCountdownCard({
                   >
                     <span
                       className={`h-3 w-3 rounded-full border-2 ${
-                        edge ? 'border-amber-300 bg-amber-300' : 'border-white/60 bg-[#47291A]'
+                        edge ? 'border-[#E9C77B] bg-[#E9C77B]' : 'border-white/60 bg-[#47291A]'
                       }`}
                     />
-                    <span className={`text-xs sm:text-sm whitespace-nowrap ${edge ? 'text-white font-semibold' : 'text-white/70'}`}>
+                    <span className={`text-sm whitespace-nowrap ${edge ? 'text-white font-semibold' : 'text-white/70'}`}>
                       {stop}
                     </span>
                   </div>
@@ -406,20 +426,27 @@ export default function TripCountdownCard({
                 type="button"
                 aria-label="Catch the plane"
                 onClick={game.onClick}
-                className="absolute top-[5px] -ml-[24px] -mt-[24px] z-10 flex h-12 w-12 items-center justify-center rounded-full touch-manipulation cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+                disabled={game.phase === 'teasing' || departed}
+                className="absolute top-[5px] -ml-[24px] -mt-[24px] z-10 flex h-12 w-12 items-center justify-center rounded-full touch-manipulation cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9C77B]"
                 initial={reduceMotion ? false : { left: '0%' }}
-                animate={{ left: `${(game.pos.idx / (stops.length - 1)) * 100}%` }}
+                animate={
+                  departed
+                    ? { left: '118%', y: -40, opacity: 0 }
+                    : { left: `${(game.pos.idx / (stops.length - 1)) * 100}%`, y: 0, opacity: 1 }
+                }
                 transition={
                   reduceMotion
                     ? { duration: 0 }
-                    : game.introDone
-                      ? { type: 'spring', stiffness: 300, damping: 20 }
-                      : { duration: 2.4, ease: 'easeInOut', delay: 0.4 }
+                    : departed
+                      ? { duration: 1.1, ease: 'easeIn' }
+                      : game.introDone
+                        ? { type: 'spring', stiffness: 300, damping: 20 }
+                        : { duration: 2.4, ease: 'easeInOut', delay: 0.4 }
                 }
               >
                 {/* Invitation: a soft ping until the first tap */}
                 {game.introDone && game.phase === 'idle' && (
-                  <span aria-hidden="true" className="absolute inset-1.5 rounded-full bg-amber-300/25 animate-ping" />
+                  <span aria-hidden="true" className="absolute inset-1.5 rounded-full bg-[#E9C77B]/25 animate-ping" />
                 )}
                 <motion.span
                   className="relative flex"
@@ -435,7 +462,7 @@ export default function TripCountdownCard({
                     <motion.span
                       key={`${game.spin}-${i}`}
                       aria-hidden="true"
-                      className="pointer-events-none absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-amber-300"
+                      className="pointer-events-none absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-[#E9C77B]"
                       initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
                       animate={{ x: d.x, y: d.y, opacity: 0, scale: 0.4 }}
                       transition={{ duration: 0.7, ease: 'easeOut' }}
@@ -457,13 +484,13 @@ export default function TripCountdownCard({
         />
 
         <div>
-          <p className={`font-semibold text-lg ${isAlmostFull && !isFull ? 'text-red-600' : 'text-dark'}`}>{seatHeadline}</p>
+          <p className={`font-semibold text-lg ${isAlmostFull || isFull ? 'text-red-600' : 'text-dark'}`}>{seatHeadline}</p>
 
           {showSeatMap && (
             /* Phone: every seat shares one row, however many there are.
                Desktop: fixed-size seats that wrap inside the narrow stub. */
             <ul
-              className="mt-3 grid gap-1 lg:flex lg:flex-wrap"
+              className="mt-3 grid gap-0.5 lg:gap-1 lg:flex lg:flex-wrap"
               style={{ gridTemplateColumns: `repeat(${totalSeats}, minmax(0, 1fr))` }}
               aria-hidden="true"
             >
@@ -474,7 +501,7 @@ export default function TripCountdownCard({
                     <Seat
                       size={22}
                       weight="fill"
-                      className={`h-auto w-full max-w-[26px] lg:h-[22px] lg:w-[22px] ${taken ? 'text-dark/15' : 'text-primary'}`}
+                      className={`h-auto w-full max-w-[26px] lg:h-[22px] lg:w-[22px] ${taken ? 'text-dark/25' : 'text-primary'}`}
                     />
                     {!taken && isAlmostFull && !isFull && (
                       <span className="absolute inset-0 rounded-full bg-red-400/30 animate-ping" />
@@ -486,14 +513,28 @@ export default function TripCountdownCard({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onCtaClick}
-          className={`group/btn inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-6 py-3.5 font-button font-semibold text-white shadow-warm transition-all hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${game.nudge ? 'ring-4 ring-primary/40 scale-[1.03] animate-pulse' : ''}`}
+        {/* Phones already have the sticky booking bar, so here the button
+            only appears as the payoff once the plane has taken off. Desktop
+            has no sticky bar, so it is always there. */}
+        <motion.div
+          key={String(departed)}
+          initial={departed && !reduceMotion ? { opacity: 0, y: 10 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className={`relative ${departed ? '' : 'hidden lg:block'}`}
         >
-          {ctaLabel}
-          {!isFull && <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />}
-        </button>
+          {departed && (
+            <span aria-hidden="true" className="absolute inset-0 rounded-md bg-primary/45 animate-ping" />
+          )}
+          <button
+            type="button"
+            onClick={onCtaClick}
+            className="group/btn relative inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-6 py-3.5 font-button font-semibold text-white shadow-warm transition-colors hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {ctaLabel}
+            {!isFull && <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />}
+          </button>
+        </motion.div>
       </div>
     </section>
   );
