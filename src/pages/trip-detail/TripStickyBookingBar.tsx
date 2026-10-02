@@ -1,6 +1,8 @@
 import Button from '../../components/ui/Button';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
 import { formatDate, formatPrice, specialOfferDaysLeft } from '../../utils/utils-index';
+import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Clock, Sparkle, Gift } from '@phosphor-icons/react';
 
 /** The "Save ₹X" + "PLUS ₹Y OFFER" badge pair — identical in both the
@@ -58,6 +60,17 @@ export default function TripStickyBookingBar({
   remaining,
   onBook,
 }: TripStickyBookingBarProps) {
+  // The countdown card's plane flies along this button once and lands; after
+  // that the button keeps a flash-and-wipe going (see TripCountdownCard).
+  const reduceMotion = useReducedMotion();
+  const [planeLanded, setPlaneLanded] = useState(false);
+  useEffect(() => {
+    const onLanded = (e: Event) => setPlaneLanded(Boolean((e as CustomEvent<boolean>).detail));
+    window.addEventListener('ulaa:plane-landed', onLanded);
+    return () => window.removeEventListener('ulaa:plane-landed', onLanded);
+  }, []);
+  const animateButton = planeLanded && !reduceMotion;
+
   // Save = strikeThroughPrice - activePrice (marketing "was ₹X" price vs
   // what they pay). PLUS OFFER = trip.price - activePrice (actual regular
   // price vs what they pay) — same formula and gating as TripCard/
@@ -73,7 +86,10 @@ export default function TripStickyBookingBar({
   const showPlusOffer = showSpecialOfferPromo && plusOfferAmount != null && plusOfferAmount > 0 && plusOfferAmount !== saveAmount;
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-background-warm shadow-warm-lg px-3 py-2.5">
+    <div
+      data-sticky-booking-bar
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-background-warm shadow-warm-lg px-3 py-2.5"
+    >
       <div className="flex items-center justify-between gap-2">
         {/* Left: price + meta */}
         <div className="min-w-0 flex-1">
@@ -199,13 +215,33 @@ export default function TripStickyBookingBar({
           variant="primary"
           size="sm"
           onClick={onBook}
-          className="!rounded-lg !px-4 !py-2 shrink-0 flex flex-col items-center !gap-0 leading-tight"
+          className="relative overflow-hidden !rounded-lg !px-4 !py-2 shrink-0 flex flex-col items-center !gap-0 leading-tight"
         >
-          <span className="text-sm font-bold whitespace-nowrap">
+          {animateButton && (
+            <>
+              {/* The plane has just flown along the button. It leaves a flash
+                  behind, then a slow wipe keeps going. */}
+              <motion.span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-white"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.35, 0] }}
+                transition={{ duration: 0.5 }}
+              />
+              <motion.span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 w-1/4 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                initial={{ left: '-30%' }}
+                animate={{ left: '130%' }}
+                transition={{ duration: 0.9, delay: 0.6, ease: 'easeInOut', repeat: Infinity, repeatDelay: 2.4 }}
+              />
+            </>
+          )}
+          <span className="relative text-sm font-bold whitespace-nowrap">
             {isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta}
           </span>
           {isAlmostFull && (
-            <span className="text-2xs font-normal text-white/85 mt-0.5">
+            <span className="relative text-2xs font-normal text-white/85 mt-0.5">
               Only {remaining} left!
             </span>
           )}

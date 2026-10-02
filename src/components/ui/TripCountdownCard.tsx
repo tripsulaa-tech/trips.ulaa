@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Seat } from '@phosphor-icons/react';
 
@@ -87,6 +88,8 @@ function PremiumPlane({ size = 40 }: { size?: number }) {
 
 const GOAL = 4; // catches the visitor can actually make
 const ROUND_LIMIT_MS = 15000; // too slow and it takes off without them
+const TEASE_MS = 5000; // the fifth "catch": it darts about, untouchable, this long
+const TEASE_DWELL_MS = 650; // how long it sits at each stop while teasing
 
 // idle: waiting for the first tap
 // playing: tap it, it hops, it speeds up
@@ -135,10 +138,11 @@ function usePlaneGame(stopCount: number, reduceMotion: boolean | null) {
     return () => clearTimeout(t);
   }, [reduceMotion]);
 
-  // The plane hops on its own, a little quicker with every catch.
+  // The plane hops on its own, a little quicker with every catch. In the
+  // final "teasing" beat it darts about much faster, and can't be tapped.
   useEffect(() => {
-    if (phase !== 'playing' || reduceMotion) return;
-    const dwell = Math.max(900, 1500 - (runCatches - 1) * 250);
+    if ((phase !== 'playing' && phase !== 'teasing') || reduceMotion) return;
+    const dwell = phase === 'teasing' ? TEASE_DWELL_MS : Math.max(900, 1500 - (runCatches - 1) * 250);
     const t = setTimeout(() => setPos((p) => nextPos(p, stopCount)), dwell);
     return () => clearTimeout(t);
   }, [phase, runCatches, pos.idx, stopCount, reduceMotion]);
@@ -150,19 +154,20 @@ function usePlaneGame(stopCount: number, reduceMotion: boolean | null) {
     return () => clearTimeout(t);
   }, [phase, startedAt, reduceMotion]);
 
-  // The tease: one beat of "one more!" and then it's gone.
+  // The tease: the plane darts around for a few seconds, untouchable, and
+  // then it's gone. (With reduced motion it doesn't dart, so just a short beat.)
   useEffect(() => {
     if (phase !== 'teasing') return;
-    const t = setTimeout(() => setPhase('departed'), 1300);
+    const t = setTimeout(() => setPhase('departed'), reduceMotion ? 1300 : TEASE_MS);
     return () => clearTimeout(t);
-  }, [phase]);
+  }, [phase, reduceMotion]);
 
   const onClick = () => {
     if (!introDone || stopCount < 2) return;
     if (phase === 'teasing' || phase === 'departed') return;
     const fresh = phase !== 'playing';
     const n = fresh ? 1 : runCatches + 1;
-    setSpin((s) => s + 360);
+    setSpin((s) => s + 1); // only keys the burst of gold dots; the plane doesn't spin
     if (fresh) setStartedAt(Date.now());
     setRunCatches(n);
     setPos((p) => nextPos(p, stopCount));
@@ -179,7 +184,7 @@ function usePlaneGame(stopCount: number, reduceMotion: boolean | null) {
   if (phase === 'playing') {
     hint = ['', 'Got one! 1 of 4', 'Faster now. 2 of 4', 'Three down. 3 of 4'][runCatches] ?? '';
   } else if (phase === 'teasing') {
-    hint = 'One more… wait, it\'s taking off!';
+    hint = 'Too fast! It\'s getting away…';
   }
 
   return { introDone, phase, pos, runCatches, spin, hint, onClick, chaseAgain };
@@ -189,6 +194,82 @@ const BURST = Array.from({ length: 10 }, (_, i) => {
   const a = (i / 10) * Math.PI * 2;
   return { x: Math.cos(a) * 38, y: Math.sin(a) * 38 };
 });
+
+// Matches the card's own lg breakpoint, where it flips from stacked to side-by-side.
+const DESKTOP_QUERY = '(min-width: 1024px)';
+
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(DESKTOP_QUERY);
+    const onChange = () => setIsDesktop(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isDesktop;
+}
+
+// Phones: the flight path as dense keyframes, in the section's own coordinates.
+interface FlyPath {
+  x: number[];
+  y: number[];
+  rotate: number[];
+  times: number[];
+}
+
+const FLIGHT_MS = 3200;
+
+/** Fired on window when the plane touches the sticky booking button (detail: true)
+ *  and when it is reset (detail: false). TripStickyBookingBar listens for it. */
+export const PLANE_LANDED_EVENT = 'ulaa:plane-landed';
+
+type Pt = { x: number; y: number };
+
+// Smooth a few waypoints into a curve (Catmull-Rom), then turn it into
+// keyframes: position, a heading that follows the curve, and even pacing.
+function buildFlight(waypoints: Pt[]): FlyPath {
+  const pts = [waypoints[0], ...waypoints, waypoints[waypoints.length - 1]];
+  const samples: Pt[] = [];
+  const STEPS = 14;
+  for (let i = 1; i < pts.length - 2; i++) {
+    const [p0, p1, p2, p3] = [pts[i - 1], pts[i], pts[i + 1], pts[i + 2]];
+    for (let k = 0; k < STEPS; k++) {
+      const t = k / STEPS;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const f = (a: number, b: number, c: number, d: number) =>
+        0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+      samples.push({ x: f(p0.x, p1.x, p2.x, p3.x), y: f(p0.y, p1.y, p2.y, p3.y) });
+    }
+  }
+  samples.push(waypoints[waypoints.length - 1]);
+
+  const rotate: number[] = [];
+  const dist: number[] = [0];
+  let prev = 0;
+  samples.forEach((p, i) => {
+    const a = samples[Math.max(0, i - 1)];
+    const b = samples[Math.min(samples.length - 1, i + 1)];
+    let ang = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+    if (i > 0) {
+      while (ang - prev > 180) ang -= 360;
+      while (ang - prev < -180) ang += 360;
+    }
+    prev = ang;
+    rotate.push(ang);
+    if (i > 0) dist.push(dist[i - 1] + Math.hypot(p.x - samples[i - 1].x, p.y - samples[i - 1].y));
+  });
+  const total = dist[dist.length - 1] || 1;
+  return {
+    x: samples.map((p) => p.x),
+    y: samples.map((p) => p.y),
+    rotate,
+    times: dist.map((d) => d / total),
+  };
+}
 
 /* ───────────────────────── Card ───────────────────────── */
 
@@ -226,6 +307,62 @@ export default function TripCountdownCard({
     [destination],
   );
   const game = usePlaneGame(stops.length, reduceMotion);
+  const isDesktop = useIsDesktop();
+  const planeRef = useRef<HTMLButtonElement>(null);
+  const [fly, setFly] = useState<FlyPath | null>(null);
+  // Phones already have the sticky booking bar. If it is somehow missing,
+  // the card falls back to showing its own button.
+  const [noStickyBar, setNoStickyBar] = useState(false);
+
+  const departedNow = game.phase === 'departed';
+  const facing = game.pos.facing;
+
+  // Phones: once the plane takes off, it loops down the screen and lands on
+  // the sticky booking bar. Everything here is in viewport coordinates.
+  useLayoutEffect(() => {
+    if (!departedNow || isDesktop || reduceMotion) return;
+    const plane = planeRef.current;
+    const btn = document.querySelector<HTMLElement>('[data-sticky-booking-bar] button');
+    if (!plane || !btn) {
+      setNoStickyBar(true);
+      return;
+    }
+    const pr = plane.getBoundingClientRect();
+    const br = btn.getBoundingClientRect();
+    const W = window.innerWidth;
+    const start = { x: pr.left + pr.width / 2, y: pr.top + pr.height / 2 };
+    const btnY = br.top + br.height / 2;
+    const dy = btnY - start.y;
+    const endX = br.right - 18;
+
+    // Down the right edge, back across the screen, around the left side,
+    // then straight along the button. If the card is already low on the
+    // screen there is no room for the loop, so it just drops in.
+    const waypoints: Pt[] =
+      dy > 200
+        ? [
+            start,
+            { x: W - 10, y: start.y + dy * 0.14 },
+            { x: W * 0.72, y: start.y + dy * 0.4 },
+            { x: W * 0.26, y: start.y + dy * 0.62 },
+            { x: 36, y: start.y + dy * 0.82 },
+            { x: 60, y: btnY },
+            { x: br.left + 20, y: btnY },
+            { x: endX, y: btnY },
+          ]
+        : [start, { x: br.left - 20, y: btnY }, { x: br.left + 40, y: btnY }, { x: endX, y: btnY }];
+    setFly(buildFlight(waypoints));
+    // Leaving the departed state (chase again, resize) clears the flight.
+    return () => {
+      setFly(null);
+      window.dispatchEvent(new CustomEvent(PLANE_LANDED_EVENT, { detail: false }));
+    };
+  }, [departedNow, isDesktop, reduceMotion, facing]);
+
+  // The plane has landed: tell the sticky booking bar to start its animation.
+  const onLanded = () => {
+    window.dispatchEvent(new CustomEvent(PLANE_LANDED_EVENT, { detail: true }));
+  };
 
   useEffect(() => {
     const target = startDate ? new Date(`${startDate}T00:00:00`).getTime() : null;
@@ -298,9 +435,11 @@ export default function TripCountdownCard({
   }
 
   const departed = game.phase === 'departed';
+  const flyingDown = departed && !isDesktop && !reduceMotion && !noStickyBar;
   const showPips = game.phase === 'playing' || game.phase === 'teasing';
 
   return (
+    <>
     <section
       aria-label="Time until this trip starts"
       className="relative overflow-hidden rounded-2xl shadow-[0_24px_50px_-24px_rgba(45,33,24,0.55)] flex flex-col lg:flex-row"
@@ -324,6 +463,10 @@ export default function TripCountdownCard({
         />
 
         <div className="relative">
+          {/* Desktop: countdown on the left, the "catch the flight" message
+              in the free space to its right. Mobile: they stack. */}
+          <div className="xl:flex xl:items-center xl:gap-8">
+          <div className="min-w-0 xl:flex-1">
           <p className="text-sm sm:text-base text-white/75">
             {urgent ? 'Wheels up' : 'Wheels up on'} <span className="text-white font-semibold">{departure}</span>
           </p>
@@ -407,9 +550,17 @@ export default function TripCountdownCard({
             )}
           </div>
 
+          </div>
+
           {/* The punchline: you can't chase this flight, you book it. */}
           {stops.length >= 2 && departed && (
-            <div className="mt-5" aria-live="polite">
+            <motion.div
+              className="mt-5 xl:mt-0 xl:w-80 xl:shrink-0 xl:border-l xl:border-white/15 xl:pl-7"
+              aria-live="polite"
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3, ease: 'easeOut' }}
+            >
               {/* Script carries the feeling, sans carries the instruction */}
               <p className="font-script text-2xl sm:text-3xl leading-tight text-[#E9C77B]">Want to catch the flight?</p>
               <p className="mt-1.5 max-w-xl text-base sm:text-lg leading-relaxed text-white/90">
@@ -423,8 +574,9 @@ export default function TripCountdownCard({
               >
                 Chase the plane again
               </button>
-            </div>
+            </motion.div>
           )}
+          </div>
 
           {/* The route. The plane flies it once on load, then it's a game. */}
           {stops.length >= 2 && (
@@ -459,6 +611,7 @@ export default function TripCountdownCard({
               })}
 
               <motion.button
+                ref={planeRef}
                 type="button"
                 aria-label="Catch the plane"
                 onClick={game.onClick}
@@ -467,11 +620,15 @@ export default function TripCountdownCard({
                 initial={reduceMotion ? false : { left: '0%' }}
                 animate={
                   departed
-                    ? { left: '118%', y: -40, opacity: 0 }
+                    ? flyingDown
+                      ? // Phones: a copy of the plane takes over and dives to the button
+                        { left: `${(game.pos.idx / (stops.length - 1)) * 100}%`, y: 0, opacity: 0 }
+                      : // Desktop: it keeps flying off to the right
+                        { left: '118%', y: -40, opacity: 0 }
                     : { left: `${(game.pos.idx / (stops.length - 1)) * 100}%`, y: 0, opacity: 1 }
                 }
                 transition={
-                  reduceMotion
+                  reduceMotion || flyingDown
                     ? { duration: 0 }
                     : departed
                       ? { duration: 1.1, ease: 'easeIn' }
@@ -488,7 +645,6 @@ export default function TripCountdownCard({
                   className="relative flex"
                   animate={{
                     scaleX: game.pos.facing,
-                    rotate: game.spin,
                     y: game.introDone && game.phase === 'idle' && !reduceMotion ? [0, -4, 0] : 0,
                   }}
                   transition={{
@@ -587,7 +743,7 @@ export default function TripCountdownCard({
           initial={departed && !reduceMotion ? { opacity: 0, y: 10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
-          className={`relative ${departed ? '' : 'hidden lg:block'}`}
+          className={`relative ${departed && noStickyBar ? '' : 'hidden lg:block'}`}
         >
           <button
             type="button"
@@ -599,15 +755,17 @@ export default function TripCountdownCard({
                 keeps a slow shine going. Nothing spills outside the button. */}
             {departed && !reduceMotion && (
               <>
-                <motion.span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-                  initial={{ left: '-14%', opacity: 0 }}
-                  animate={{ left: '102%', opacity: [0, 1, 1, 1] }}
-                  transition={{ duration: 0.9, delay: 0.7, ease: 'easeIn' }}
-                >
-                  <PremiumPlane size={26} />
-                </motion.span>
+                {isDesktop && (
+                  <motion.span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-1/2 -translate-y-1/2"
+                    initial={{ left: '-14%', opacity: 0 }}
+                    animate={{ left: '102%', opacity: [0, 1, 1, 1] }}
+                    transition={{ duration: 0.9, delay: 0.7, ease: 'easeIn' }}
+                  >
+                    <PremiumPlane size={26} />
+                  </motion.span>
+                )}
                 <motion.span
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-0 bg-white"
@@ -637,6 +795,32 @@ export default function TripCountdownCard({
           </button>
         </motion.div>
       </div>
+
     </section>
+
+      {/* Phones only: the plane leaves the route, loops down the screen and
+          flies along the sticky "Pack Your Bags" bar, then fades out. It is
+          portalled to <body> so no ancestor can clip or offset it. */}
+      {flyingDown &&
+        fly &&
+        createPortal(
+          <motion.div
+            aria-hidden="true"
+            className="pointer-events-none fixed left-0 top-0 z-[60] -ml-6 -mt-6 flex h-12 w-12 items-center justify-center"
+            initial={{ x: fly.x[0], y: fly.y[0], rotate: fly.rotate[0], opacity: 1 }}
+            animate={{ x: fly.x, y: fly.y, rotate: fly.rotate, opacity: [1, 1, 0] }}
+            transition={{
+              x: { duration: FLIGHT_MS / 1000, ease: 'linear', times: fly.times },
+              y: { duration: FLIGHT_MS / 1000, ease: 'linear', times: fly.times },
+              rotate: { duration: FLIGHT_MS / 1000, ease: 'linear', times: fly.times },
+              opacity: { duration: FLIGHT_MS / 1000, ease: 'linear', times: [0, 0.92, 1] },
+            }}
+            onAnimationComplete={onLanded}
+          >
+            <PremiumPlane size={40} />
+          </motion.div>,
+          document.body,
+        )}
+    </>
   );
 }
