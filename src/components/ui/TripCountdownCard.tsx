@@ -32,6 +32,12 @@ const MAX_SEAT_ICONS = 20;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
+const ordinal = (n: number) => {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return `${n}th`;
+  return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'}`;
+};
+
 /* ───────────────────────── Plane ───────────────────────── */
 
 /**
@@ -275,16 +281,21 @@ export default function TripCountdownCard({
 
   const showSeatMap = totalSeats > 0 && totalSeats <= MAX_SEAT_ICONS;
   const takenSeats = Math.max(0, totalSeats - remainingSeats);
-  // Deliberately not "Only 1 seat left": the hero chip and the sticky bar
-  // already say that. The stub shows the same fact as a count, next to the map.
-  const seatHeadline =
-    totalSeats > 0
-      ? isFull
-        ? `All ${totalSeats} seats taken`
-        : `${takenSeats} of ${totalSeats} seats taken`
-      : isFull
-        ? 'Sold out'
-        : `${remainingSeats} seat${remainingSeats === 1 ? '' : 's'} left`;
+  // Scarcity first, social proof second: "Only 1 seat left" is the line that
+  // makes people move, and "14 are already in" is why it feels worth moving for.
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const seatHeadline = isFull
+    ? 'Sold out'
+    : isAlmostFull
+      ? `Only ${plural(remainingSeats, 'seat')} left`
+      : `${plural(remainingSeats, 'seat')} still open`;
+  let seatSub: string | null = null;
+  if (totalSeats > 0 && takenSeats > 0) {
+    if (isFull) seatSub = `All ${totalSeats} seats are taken`;
+    else if (remainingSeats === 1) seatSub = `${takenSeats} travellers are already in. Be the ${ordinal(totalSeats)}.`;
+    else if (isAlmostFull) seatSub = `${takenSeats} travellers are already in. Join them.`;
+    else seatSub = `${takenSeats} traveller${takenSeats === 1 ? ' is' : 's are'} already in`;
+  }
 
   const departed = game.phase === 'departed';
   const showPips = game.phase === 'playing' || game.phase === 'teasing';
@@ -484,7 +495,8 @@ export default function TripCountdownCard({
         />
 
         <div>
-          <p className={`font-semibold text-lg ${isAlmostFull || isFull ? 'text-red-600' : 'text-dark'}`}>{seatHeadline}</p>
+          <p className={`font-semibold text-lg ${isAlmostFull && !isFull ? 'text-red-600' : 'text-dark'}`}>{seatHeadline}</p>
+          {seatSub && <p className="mt-0.5 text-sm text-dark-muted">{seatSub}</p>}
 
           {showSeatMap && (
             /* Phone: every seat shares one row, however many there are.
@@ -523,16 +535,51 @@ export default function TripCountdownCard({
           transition={{ duration: 0.35, ease: 'easeOut' }}
           className={`relative ${departed ? '' : 'hidden lg:block'}`}
         >
-          {departed && (
-            <span aria-hidden="true" className="absolute inset-0 rounded-md bg-primary/45 animate-ping" />
-          )}
           <button
             type="button"
             onClick={onCtaClick}
-            className="group/btn relative inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-6 py-3.5 font-button font-semibold text-white shadow-warm transition-colors hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="group/btn relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-primary px-6 py-3.5 font-button font-semibold text-white shadow-warm transition-colors hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            {ctaLabel}
-            {!isFull && <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />}
+            {/* The payoff, all inside the button: the plane that just left the
+                route sweeps across it and lands on the arrow, then the button
+                keeps a slow shine going. Nothing spills outside the button. */}
+            {departed && !reduceMotion && (
+              <>
+                <motion.span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 -translate-y-1/2"
+                  initial={{ left: '-14%', opacity: 0 }}
+                  animate={{ left: '102%', opacity: [0, 1, 1, 1] }}
+                  transition={{ duration: 0.9, delay: 0.7, ease: 'easeIn' }}
+                >
+                  <PremiumPlane size={26} />
+                </motion.span>
+                <motion.span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 bg-white"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 0.35, 0] }}
+                  transition={{ duration: 0.5, delay: 1.5 }}
+                />
+                <motion.span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 w-1/4 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                  initial={{ left: '-30%' }}
+                  animate={{ left: '130%' }}
+                  transition={{ duration: 0.9, delay: 2.4, ease: 'easeInOut', repeat: Infinity, repeatDelay: 2.4 }}
+                />
+              </>
+            )}
+            <span className="relative">{ctaLabel}</span>
+            {!isFull && (
+              <motion.span
+                className="relative flex"
+                animate={departed && !reduceMotion ? { x: [0, 5, 0] } : { x: 0 }}
+                transition={{ duration: 0.8, delay: 2.4, repeat: Infinity, repeatDelay: 2.5 }}
+              >
+                <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
+              </motion.span>
+            )}
           </button>
         </motion.div>
       </div>
