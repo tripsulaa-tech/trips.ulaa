@@ -139,8 +139,8 @@ export default function TripHero({
         <span className="flex items-center gap-2"><Calendar size={16} className={icon} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
         <span className="flex items-center gap-2"><Clock size={16} className={icon} /> {trip.duration}</span>
         {isAlmostFull && !isFull ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary text-dark font-button font-semibold text-xs px-2.5 py-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-dark animate-pulse motion-reduce:animate-none" aria-hidden="true" />
+          <span className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-secondary text-dark font-button font-semibold text-xs sm:text-sm px-2.5 py-1 sm:px-3.5 sm:py-1.5">
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-dark animate-pulse motion-reduce:animate-none" aria-hidden="true" />
             {seatsLeft === 1 ? 'Only 1 seat left' : `Only ${seatsLeft} seats left`} — hurry!
           </span>
         ) : (

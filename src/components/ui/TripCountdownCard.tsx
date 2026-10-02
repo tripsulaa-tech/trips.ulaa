@@ -335,18 +335,19 @@ export default function TripCountdownCard({
     const dy = btnY - start.y;
     const endX = br.right - 18;
 
-    // Down the right edge, back across the screen, around the left side,
-    // then straight along the button. If the card is already low on the
+    // Out past the right edge, a long diagonal sweep to the left, down the
+    // middle-left of the screen, then curving into the button and along it. If the card is already low on the
     // screen there is no room for the loop, so it just drops in.
     const waypoints: Pt[] =
       dy > 200
         ? [
             start,
-            { x: W - 10, y: start.y + dy * 0.14 },
-            { x: W * 0.72, y: start.y + dy * 0.4 },
-            { x: W * 0.26, y: start.y + dy * 0.62 },
-            { x: 36, y: start.y + dy * 0.82 },
-            { x: 60, y: btnY },
+            { x: W - 14, y: start.y + dy * 0.1 },
+            { x: W * 0.8, y: start.y + dy * 0.22 },
+            { x: W * 0.55, y: start.y + dy * 0.32 },
+            { x: W * 0.4, y: start.y + dy * 0.5 },
+            { x: W * 0.37, y: start.y + dy * 0.72 },
+            { x: W * 0.47, y: btnY },
             { x: br.left + 20, y: btnY },
             { x: endX, y: btnY },
           ]
@@ -465,8 +466,8 @@ export default function TripCountdownCard({
         <div className="relative">
           {/* Desktop: countdown on the left, the "catch the flight" message
               in the free space to its right. Mobile: they stack. */}
-          <div className="xl:flex xl:items-center xl:gap-8">
-          <div className="min-w-0 xl:flex-1">
+          <div className="xl:flex xl:items-center xl:gap-10">
+          <div className={`min-w-0 ${departed && stops.length >= 2 ? 'xl:flex-none' : 'xl:flex-1'}`}>
           <p className="text-sm sm:text-base text-white/75">
             {urgent ? 'Wheels up' : 'Wheels up on'} <span className="text-white font-semibold">{departure}</span>
           </p>
@@ -555,7 +556,7 @@ export default function TripCountdownCard({
           {/* The punchline: you can't chase this flight, you book it. */}
           {stops.length >= 2 && departed && (
             <motion.div
-              className="mt-5 xl:mt-0 xl:w-80 xl:shrink-0 xl:border-l xl:border-white/15 xl:pl-7"
+              className="mt-5 xl:mt-0 xl:min-w-0 xl:max-w-[26rem] xl:flex-1 xl:border-l xl:border-white/15 xl:pl-9"
               aria-live="polite"
               initial={reduceMotion ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
