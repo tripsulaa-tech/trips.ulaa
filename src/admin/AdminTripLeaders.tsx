@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -8,6 +9,8 @@ import {
   EyeSlash as EyeOff,
   CaretUp as ChevronUp,
   CaretDown as ChevronDown,
+  ArrowLeft,
+  CheckCircle,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
@@ -38,8 +41,31 @@ const emptyForm: TripLeaderForm = {
   name: '', photo: '', designation: '', description: '', social_links: [], is_published: true,
 };
 
+// Set by the Add/Edit Trip modal's Trip Leader tab (AdminTrips →
+// openLeadersFromTrip) when it sends the admin here mid-edit. `returnTo`
+// is where to go back to; `editLeaderId` / `createLeader` say which modal to
+// open straight away.
+interface ReturnTo { path: string; label: string; tripTitle: string }
+interface LeadersNavState { returnTo?: ReturnTo; editLeaderId?: string; createLeader?: boolean }
+
 export default function AdminTripLeaders() {
   const confirm = useConfirm();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const navState = location.state as LeadersNavState | null;
+  const [returnTo] = useState<ReturnTo | null>(navState?.returnTo ?? null);
+  const pendingOpenRef = useRef<{ editLeaderId?: string; create?: boolean } | null>(
+    navState?.editLeaderId || navState?.createLeader
+      ? { editLeaderId: navState.editLeaderId, create: navState.createLeader }
+      : null
+  );
+  // Shown after a successful save while a trip edit is waiting.
+  const [savedPrompt, setSavedPrompt] = useState<{ leaderId: string; created: boolean; name: string } | null>(null);
+
+  const goBackToTrip = (assignLeaderId?: string) => {
+    if (!returnTo) return;
+    navigate(returnTo.path, { state: { resumeTripDraft: true, assignLeaderId } });
+  };
   const [items, setItems] = useState<TripLeader[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -74,6 +100,24 @@ export default function AdminTripLeaders() {
     setModalOpen(true);
   };
 
+  // Arrived from a trip's Trip Leader tab: open the requested leader's edit
+  // modal (or the add modal) once the list has loaded, then drop the one-shot
+  // flags from the history state (keeping returnTo so the banner survives a
+  // refresh and the modal doesn't reopen on one).
+  useEffect(() => {
+    const pending = pendingOpenRef.current;
+    if (!pending || loading) return;
+    pendingOpenRef.current = null;
+    if (pending.editLeaderId) {
+      const leader = items.find(t => t.id === pending.editLeaderId);
+      if (leader) openEdit(leader);
+    } else if (pending.create) {
+      openCreate();
+    }
+    navigate(location.pathname, { replace: true, state: returnTo ? { returnTo } : null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, loading]);
+
   const closeModal = () => {
     photoDiscard.discardIfUnsaved(form.photo);
     setModalOpen(false);
@@ -82,14 +126,13 @@ export default function AdminTripLeaders() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      if (editing) {
-        await updateTripLeader(editing.id, form);
-      } else {
-        await createTripLeader({ ...form, sort_order: items.length });
-      }
+      const saved = editing
+        ? await updateTripLeader(editing.id, form)
+        : await createTripLeader({ ...form, sort_order: items.length });
       photoDiscard.markCommitted();
       setModalOpen(false);
       load();
+      if (returnTo) setSavedPrompt({ leaderId: saved.id, created: !editing, name: form.name });
     } catch {
       alert('Failed to save.');
     } finally {
@@ -132,6 +175,16 @@ export default function AdminTripLeaders() {
   return (
     <AdminLayout title="Trip Leaders" subtitle="Manage the directory of trip leaders that can be assigned to individual trips." scrollRestorationReady={!loading}>
       <div className="space-y-6">
+        {returnTo && (
+          <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-primary/30 bg-primary/5 px-4 py-3">
+            <p className="text-sm text-dark min-w-0">
+              You're editing a leader for <strong className="break-words">{returnTo.tripTitle}</strong>. Your unsaved trip changes are kept.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => goBackToTrip()}>
+              <ArrowLeft size={16} aria-hidden="true" /> {returnTo.label}
+            </Button>
+          </div>
+        )}
         <div className="flex justify-between items-center">
           <p className="text-dark-muted">{items.length} trip leaders</p>
           <div className="hidden sm:block">
@@ -349,6 +402,30 @@ export default function AdminTripLeaders() {
           <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeModal}>Cancel</Button>
           <Button variant="primary" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleSave} loading={saving}>
             {editing ? 'Save Changes' : 'Add Trip Leader'}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* "Done — go back?" popup, only when this visit came from a trip. */}
+      <Modal
+        isOpen={!!savedPrompt && !!returnTo}
+        onClose={() => setSavedPrompt(null)}
+        title={savedPrompt?.created ? 'Trip leader added' : 'Trip leader updated'}
+        size="sm"
+      >
+        <div className="flex items-start gap-3">
+          <CheckCircle size={28} weight="fill" className="text-green-600 flex-shrink-0" aria-hidden="true" />
+          <p className="text-sm text-dark">
+            {savedPrompt?.created
+              ? <><strong>{savedPrompt.name}</strong> was added and will be selected as the leader for </>
+              : <>Your changes to <strong>{savedPrompt?.name}</strong> are saved. Ready to go back to </>}
+            <strong>{returnTo?.tripTitle}</strong>?
+          </p>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <Button variant="outline" size="md" className="flex-1" onClick={() => setSavedPrompt(null)}>Stay here</Button>
+          <Button variant="primary" size="md" className="flex-1" onClick={() => goBackToTrip(savedPrompt?.created ? savedPrompt.leaderId : undefined)}>
+            {returnTo?.label ?? 'Back to trip'}
           </Button>
         </div>
       </Modal>

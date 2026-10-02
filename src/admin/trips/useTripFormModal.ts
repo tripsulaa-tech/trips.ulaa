@@ -15,6 +15,18 @@ import { scrollToTextMatch } from '../../utils/scroll';
 
 export { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
+// Where the half-edited trip is parked while the admin hops over to
+// Admin → Trip Leaders to fix a leader's details (see stashDraftForLeaderDetour).
+// sessionStorage, so it survives the route change (and a refresh) but is gone
+// when the tab closes.
+const LEADER_DETOUR_DRAFT_KEY = 'ulaa_trip_draft_leader_detour';
+
+interface LeaderDetourDraft {
+  tripId: string | null;
+  form: TripForm;
+  initialUrls: string[];
+}
+
 /** Owns the Add/Edit Trip modal end-to-end: the TripForm state itself,
  *  opening it (blank or pre-filled from a trip), the in-modal field
  *  search, saving, closing (with orphaned-upload cleanup), and the
@@ -116,6 +128,68 @@ export function useTripFormModal(load: () => void) {
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalSearch, modalOpen]);
+
+  // ---- Trip Leader detour -------------------------------------------------
+  // The Trip Leader tab can send the admin to Admin → Trip Leaders to edit
+  // (or add) a leader. That's a different route, so this page unmounts and the
+  // open modal would lose everything typed so far. Before leaving, the whole
+  // form is parked in sessionStorage; on return, resumeLeaderDraft() puts the
+  // modal back exactly as it was (and scrolls to the Trip Leader section).
+  // Returns false if it couldn't be saved, so the caller can stay put instead
+  // of silently losing work.
+  const stashDraftForLeaderDetour = (): boolean => {
+    try {
+      const draft: LeaderDetourDraft = {
+        tripId: editingTrip?.id ?? null,
+        form,
+        initialUrls: Array.from(initialModalUrlsRef.current),
+      };
+      sessionStorage.setItem(LEADER_DETOUR_DRAFT_KEY, JSON.stringify(draft));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const pendingLeaderScrollRef = useRef(false);
+
+  // Re-opens the modal from the parked draft. `trips` is the loaded trips
+  // list (to find the trip being edited); `assignLeaderId`, when given (a
+  // leader just created), is selected on the restored form.
+  const resumeLeaderDraft = (trips: UpcomingTrip[], assignLeaderId?: string): boolean => {
+    let draft: LeaderDetourDraft | null = null;
+    try {
+      const raw = sessionStorage.getItem(LEADER_DETOUR_DRAFT_KEY);
+      draft = raw ? (JSON.parse(raw) as LeaderDetourDraft) : null;
+      sessionStorage.removeItem(LEADER_DETOUR_DRAFT_KEY);
+    } catch {
+      draft = null;
+    }
+    if (!draft) return false;
+    const trip = draft.tripId ? trips.find(t => t.id === draft!.tripId) : null;
+    if (draft.tripId && !trip) return false; // the trip was deleted meanwhile
+    setEditingTrip(trip ?? null);
+    setForm(assignLeaderId ? { ...draft.form, trip_leader_id: assignLeaderId } : draft.form);
+    initialModalUrlsRef.current = new Set(draft.initialUrls);
+    setModalSearch('');
+    setModalSearchNoMatch(false);
+    pendingLeaderScrollRef.current = true;
+    setModalOpen(true);
+    return true;
+  };
+
+  // After a resume, bring the Trip Leader section into view once the modal
+  // has rendered.
+  useEffect(() => {
+    if (!modalOpen || !pendingLeaderScrollRef.current) return;
+    pendingLeaderScrollRef.current = false;
+    const timeout = setTimeout(() => {
+      scrollToTextMatch(modalBodyRef.current, 'Assign Trip Leader', 'label', {
+        getStickyOffset: c => c.querySelector<HTMLElement>('[data-sticky-toolbar]')?.getBoundingClientRect().height ?? 0,
+      });
+    }, 450);
+    return () => clearTimeout(timeout);
+  }, [modalOpen]);
 
   const openCreate = () => {
     setEditingTrip(null);
@@ -302,5 +376,6 @@ export function useTripFormModal(load: () => void) {
     importInputRef, handleImportInputChange,
     handleExportTemplate,
     tripLeaders,
+    stashDraftForLeaderDetour, resumeLeaderDraft,
   };
 }

@@ -18,6 +18,7 @@ import {
   Question,
   ShieldCheck,
   RocketLaunch,
+  PencilSimple,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
@@ -67,6 +68,10 @@ interface AdminTripFormModalProps {
   // AdminTripLeaders.tsx — offered as an "assign from directory" picker on
   // the Trip Leader tab so the admin doesn't have to retype the same bio.
   tripLeaders: TripLeader[];
+  // Jumps to Admin → Trip Leaders to edit the given leader (or add a new one)
+  // and brings the admin back to this modal, with everything typed so far
+  // still in place, afterwards. See AdminTrips' openLeadersFromTrip.
+  onManageLeader: (target: { leaderId?: string; create?: boolean }) => void;
 }
 
 /** The Add/Edit Trip modal — every field on the trip form, laid out across
@@ -115,7 +120,7 @@ function ageSummary(min: number | '', max: number | ''): string {
 export default function AdminTripFormModal({
   modalOpen, closeModal, editingTrip, form, setForm,
   modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef,
-  saving, handleSave, commitGroupBulletDraft, actualRevenue, tripLeaders,
+  saving, handleSave, commitGroupBulletDraft, actualRevenue, tripLeaders, onManageLeader,
 }: AdminTripFormModalProps) {
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
 
@@ -1193,6 +1198,13 @@ export default function AdminTripFormModal({
               <p className="text-xs text-dark-muted mt-1.5">
                 Optional. Leader details come from Admin → Trip Leaders and update here automatically.
               </p>
+              <button
+                type="button"
+                onClick={() => onManageLeader({ create: true })}
+                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                <Plus size={13} aria-hidden="true" /> Add a new trip leader
+              </button>
             </div>
             {(() => {
               const leader = tripLeaders.find(l => l.id === form.trip_leader_id);
@@ -1213,6 +1225,14 @@ export default function AdminTripFormModal({
                       {leader.description && (
                         <p className="text-dark-muted text-xs mt-0.5 whitespace-pre-line line-clamp-3">{leader.description}</p>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => onManageLeader({ leaderId: leader.id })}
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
+                      >
+                        <PencilSimple size={13} aria-hidden="true" /> Edit this leader
+                      </button>
+                      <p className="text-2xs text-dark-muted mt-1">Your unsaved trip changes are kept — you'll be brought back here.</p>
                     </div>
                   </div>
                 </div>

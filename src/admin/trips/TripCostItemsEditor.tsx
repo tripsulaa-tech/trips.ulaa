@@ -177,8 +177,10 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                   <div className="col-span-12 md:col-span-6 flex items-center justify-between gap-3 rounded-md bg-background-warm px-3 py-2">
                     <div className="min-w-0">
                       <p className="text-2xs text-dark-muted">Cost</p>
-                      <p className="text-base font-semibold text-dark leading-tight">{formatPrice(r.amount)}</p>
-                      {showFormula && <p className="text-2xs text-dark-muted">{r.qty} × {formatPrice(it.rate as number)}</p>}
+                      <p className="flex flex-wrap items-baseline gap-x-2 leading-tight">
+                        <span className="text-base font-semibold text-dark">{formatPrice(r.amount)}</span>
+                        {showFormula && <span className="text-2xs text-dark-muted whitespace-nowrap">{r.qty} × {formatPrice(it.rate as number)}</span>}
+                      </p>
                     </div>
                     <button
                       type="button"

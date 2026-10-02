@@ -50,6 +50,7 @@ export default function AdminTrips() {
     importInputRef, handleImportInputChange,
     handleExportTemplate,
     tripLeaders,
+    stashDraftForLeaderDetour, resumeLeaderDraft,
   } = useTripFormModal(load);
 
   const openEditFromView = (trip: UpcomingTrip) => {
@@ -72,6 +73,44 @@ export default function AdminTrips() {
     pendingEditIdRef.current = null;
     const trip = trips.find(t => t.id === pendingId);
     if (trip) openEdit(trip);
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trips, loading]);
+
+  // Trip Leader tab → "Edit this leader" / "Add a new leader": parks the
+  // half-edited trip, then opens Admin → Trip Leaders with a way back.
+  // Replacing the current history entry's state first means the browser Back
+  // button also lands on the restored modal, not on a blank trips list.
+  const openLeadersFromTrip = (target: { leaderId?: string; create?: boolean }) => {
+    if (!stashDraftForLeaderDetour()) {
+      window.alert('Could not keep your unsaved changes while leaving this page. Please save the trip first, then edit the leader.');
+      return;
+    }
+    navigate(location.pathname, { replace: true, state: { resumeTripDraft: true } });
+    navigate('/admin/trip-leaders', {
+      state: {
+        returnTo: {
+          path: location.pathname,
+          label: 'Back to trip',
+          tripTitle: form.title || (editingTrip ? editingTrip.title : 'your new trip'),
+        },
+        editLeaderId: target.leaderId,
+        createLeader: target.create,
+      },
+    });
+  };
+
+  // Coming back from Trip Leaders: reopen the trip the admin was editing.
+  const resumeRef = useRef<{ assignLeaderId?: string } | null>(
+    (location.state as { resumeTripDraft?: boolean; assignLeaderId?: string } | null)?.resumeTripDraft
+      ? { assignLeaderId: (location.state as { assignLeaderId?: string }).assignLeaderId }
+      : null
+  );
+  useEffect(() => {
+    const pending = resumeRef.current;
+    if (!pending || loading) return;
+    resumeRef.current = null;
+    resumeLeaderDraft(trips, pending.assignLeaderId);
     navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trips, loading]);
@@ -113,6 +152,7 @@ export default function AdminTrips() {
         commitGroupBulletDraft={commitGroupBulletDraft}
         actualRevenue={revenueByTripId(editingTrip?.id)}
         tripLeaders={tripLeaders}
+        onManageLeader={openLeadersFromTrip}
       />
 
       <AdminTripViewModal

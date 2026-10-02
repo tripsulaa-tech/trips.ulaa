@@ -20,6 +20,12 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
   // Nothing to price from: no trip price and no package has its own price.
   if (base.active == null && !cfg.packages.some(hasOwnPrice)) return null;
 
+  // The cheapest/entry package (listed first, e.g. Basic) is what the
+  // highlighted one is compared against: "Just ₹500 more than Basic".
+  const entry = cfg.packages[0];
+  const entryPrice = packageQuote(entry, cfg, base).price;
+  const hasHighlight = cfg.packages.some(p => p.highlight);
+
   return (
     <section id="packages" className="scroll-mt-44">
       <SectionTitle
@@ -36,31 +42,39 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
           // Premium); the others always show the regular trip price.
           const quote = packageQuote(pkg, cfg, base);
           const earlyBird = quote.isEarlyBird;
+          const popular = !!pkg.highlight;
+          const gap = popular && pkg.id !== entry.id && quote.price != null && entryPrice != null ? quote.price - entryPrice : 0;
+          const tick = popular ? 'text-[#B8860B]' : 'text-primary';
           return (
             <div
               key={pkg.id}
-              className={`relative flex flex-col rounded-lg p-6 bg-background-warm ${pkg.highlight ? 'ring-2 ring-primary' : ''}`}
+              className={`relative flex flex-col rounded-lg p-6 ${popular ? 'popular-gold-card' : 'bg-background-warm border-2 border-transparent'}`}
             >
-              {pkg.highlight && (
-                <span className="absolute -top-3 left-6 inline-flex items-center gap-1 bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full">
+              {popular && (
+                <span className="absolute -top-3 left-6 inline-flex items-center gap-1 popular-gold-badge text-xs font-semibold px-3 py-1 rounded-full">
                   <Star size={12} weight="fill" aria-hidden="true" /> Most popular
                 </span>
               )}
               <h3 className="font-display text-xl font-bold text-dark">{pkg.name}</h3>
               {pkg.description && <p className="text-sm text-dark-muted mt-1">{pkg.description}</p>}
               <p className="mt-3 font-display text-3xl font-bold text-primary">
-                {packagePriceLabel(quote, formatPrice)}
+                <span className={popular ? 'premium-gold-text' : undefined}>{packagePriceLabel(quote, formatPrice)}</span>
                 <span className="text-sm font-normal text-dark-muted"> / person</span>
               </p>
-              {earlyBird && <p className="text-xs font-semibold text-primary mt-1">Early-bird price</p>}
+              {gap > 0 && (
+                <p className="text-xs font-semibold text-[#8A6508] mt-1">
+                  Just {formatPrice(gap)} more than {entry.name}
+                </p>
+              )}
+              {earlyBird && <p className={`text-xs font-semibold mt-1 ${popular ? 'text-[#8A6508]' : 'text-primary'}`}>Early-bird price</p>}
               <ul className="mt-4 space-y-2 text-sm text-dark flex-1">
                 <li className="flex items-start gap-2">
-                  <CheckCircle size={18} weight="fill" className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
+                  <CheckCircle size={18} weight="fill" className={`${tick} shrink-0 mt-0.5`} aria-hidden="true" />
                   <span>Everything in the trip</span>
                 </li>
                 {extras.map(o => (
                   <li key={o.id} className="flex items-start gap-2">
-                    <CheckCircle size={18} weight="fill" className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
+                    <CheckCircle size={18} weight="fill" className={`${tick} shrink-0 mt-0.5`} aria-hidden="true" />
                     <span>
                       <span className="font-medium">{o.name}</span>
                       {o.description && <span className="text-dark-muted"> — {o.description}</span>}
@@ -68,7 +82,14 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
                   </li>
                 ))}
               </ul>
-              <Button onClick={() => onChoose(pkg.id)} fullWidth className="mt-5">
+              <Button
+                onClick={() => onChoose(pkg.id)}
+                fullWidth
+                // With a highlighted package, the others step back to an
+                // outline button so the recommended choice stands out.
+                variant={hasHighlight && !popular ? 'outline' : 'primary'}
+                className={`mt-5 ${popular ? 'popular-gold-btn' : ''}`}
+              >
                 {buttonLabels.primaryCta}
               </Button>
             </div>
