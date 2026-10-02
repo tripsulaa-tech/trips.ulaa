@@ -5,6 +5,11 @@ import { resolveCostItem } from '../../utils/tripFinance';
 import { formatPrice } from '../../utils/utils-index';
 import { inputClass } from './useTripFormModal';
 
+// Layout: one card per cost line (Name + a 3-button "Charged" switch on top;
+// Rate, People and the worked-out ₹ result below), a clear total bar, and
+// quick-add chips. Labels are kept as <label> because the modal's "Search
+// fields" box scans them.
+//
 // Generic "Other Trip Costs" editor for the Finances & Profit tab.
 //
 // Every line is just: Name + How it's charged + Rate (+ headcount when only
@@ -66,6 +71,8 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
 
   const total = items.reduce((sum, it) => sum + resolveCostItem(it, travelerCount, optionCounts).amount, 0);
 
+  const rupee = <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-dark-muted pointer-events-none" aria-hidden="true">₹</span>;
+
   return (
     <div className="md:col-span-2 space-y-3">
       <div>
@@ -77,83 +84,115 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
         </p>
       </div>
 
+      {items.length === 0 && (
+        <p className="rounded-md border-2 border-dashed border-background-warm bg-background px-4 py-5 text-center text-xs text-dark-muted">
+          No costs added yet. Tap a quick-add button below, or add a custom line.
+        </p>
+      )}
+
       {items.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {items.map(it => {
             const r = resolveCostItem(it, travelerCount, optionCounts);
             const linkedOption = it.basis === 'per_selected' && it.option_id ? options.find(o => o.id === it.option_id) : undefined;
             const overCount = it.basis === 'per_selected' && !it.option_id && (it.quantity || 0) > travelerCount && travelerCount > 0;
+            const showFormula = it.basis !== 'fixed' && it.rate != null && it.rate > 0;
             return (
-              <div key={it.id} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end bg-background-warm rounded-lg p-3">
-                <div className="col-span-1 md:col-span-3">
-                  <label htmlFor={`ci-name-${it.id}`} className="block text-sm font-medium text-dark mb-1">Name</label>
-                  <input
-                    id={`ci-name-${it.id}`}
-                    value={it.name}
-                    onChange={e => update(it.id, { name: e.target.value })}
-                    className={inputClass}
-                    placeholder="e.g. Jatayu"
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-3">
-                  <label htmlFor={`ci-basis-${it.id}`} className="block text-sm font-medium text-dark mb-1">Charged</label>
-                  <Select
-                    inputId={`ci-basis-${it.id}`}
-                    value={it.basis}
-                    onChange={val => update(it.id, { basis: val as TripCostBasis })}
-                    options={BASIS_OPTIONS}
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label htmlFor={`ci-rate-${it.id}`} className="block text-sm font-medium text-dark mb-1">
-                    {it.basis === 'fixed' ? 'Amount (₹)' : <><span className="sm:hidden">Rate (₹)</span><span className="hidden sm:inline">Rate / person (₹)</span></>}
-                  </label>
-                  <input
-                    id={`ci-rate-${it.id}`}
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    value={it.rate ?? ''}
-                    onChange={e => update(it.id, { rate: e.target.value === '' ? null : +e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor={`ci-qty-${it.id}`} className="block text-sm font-medium text-dark mb-1">People</label>
-                  {it.basis === 'per_selected' && it.option_id ? (
-                    <div id={`ci-qty-${it.id}`} className="px-3 py-2 text-sm text-dark">
-                      {r.qty} <span className="text-dark-muted text-xs">counted</span>
-                    </div>
-                  ) : it.basis === 'per_selected' ? (
+              <div key={it.id} className="rounded-md border-2 border-background-warm bg-white p-3 shadow-sm space-y-3">
+                <div className="grid grid-cols-12 gap-x-3 gap-y-3 items-end">
+                  <div className="col-span-12 md:col-span-5">
+                    <label htmlFor={`ci-name-${it.id}`} className="block text-sm font-medium text-dark mb-1">Name</label>
                     <input
-                      id={`ci-qty-${it.id}`}
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      value={it.quantity ?? ''}
-                      onChange={e => update(it.id, { quantity: e.target.value === '' ? null : +e.target.value })}
+                      id={`ci-name-${it.id}`}
+                      value={it.name}
+                      onChange={e => update(it.id, { name: e.target.value })}
                       className={inputClass}
-                      placeholder={`of ${travelerCount}`}
+                      placeholder="e.g. Jatayu"
                     />
-                  ) : (
-                    <div id={`ci-qty-${it.id}`} className="px-3 py-2 text-sm text-dark-muted">
-                      {it.basis === 'fixed' ? '—' : `${travelerCount} (all)`}
+                  </div>
+                  <div className="col-span-12 md:col-span-7">
+                    <label htmlFor={`ci-basis-${it.id}`} className="block text-sm font-medium text-dark mb-1">Charged</label>
+                    <div role="group" aria-label="How this cost is charged" className="grid grid-cols-3 gap-0.5 rounded-md bg-background-warm p-0.5">
+                      {BASIS_OPTIONS.map((b, i) => {
+                        const on = it.basis === b.value;
+                        return (
+                          <button
+                            key={b.value}
+                            id={i === 0 ? `ci-basis-${it.id}` : undefined}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => update(it.id, { basis: b.value })}
+                            className={`rounded px-2 py-2 text-xs sm:text-sm font-medium transition-colors ${on ? 'bg-primary text-white shadow-sm' : 'text-dark hover:bg-white'}`}
+                          >
+                            {b.label}
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
+                  </div>
                 </div>
-                <div className="col-span-2 md:col-span-2 flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-dark">{formatPrice(r.amount)}</span>
-                  <button
-                    type="button"
-                    onClick={() => remove(it.id)}
-                    className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
-                    aria-label={`Remove ${it.name || 'cost line'}`}
-                  >
-                    <Trash2 size={13} aria-hidden="true" />
-                  </button>
+
+                <div className="grid grid-cols-12 gap-x-3 gap-y-3 items-end">
+                  <div className="col-span-6 md:col-span-3">
+                    <label htmlFor={`ci-rate-${it.id}`} className="block text-sm font-medium text-dark mb-1">
+                      {it.basis === 'fixed' ? 'Amount (₹)' : <><span className="sm:hidden">Rate (₹)</span><span className="hidden sm:inline">Rate / person (₹)</span></>}
+                    </label>
+                    <div className="relative">
+                      {rupee}
+                      <input
+                        id={`ci-rate-${it.id}`}
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        value={it.rate ?? ''}
+                        onChange={e => update(it.id, { rate: e.target.value === '' ? null : +e.target.value })}
+                        className={`${inputClass} pl-7`}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-6 md:col-span-3">
+                    <label htmlFor={`ci-qty-${it.id}`} className="block text-sm font-medium text-dark mb-1">People</label>
+                    {it.basis === 'per_selected' && it.option_id ? (
+                      <div id={`ci-qty-${it.id}`} className="rounded-md bg-background-warm px-3 py-2 text-sm text-dark">
+                        {r.qty} <span className="text-dark-muted text-xs">counted</span>
+                      </div>
+                    ) : it.basis === 'per_selected' ? (
+                      <input
+                        id={`ci-qty-${it.id}`}
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        value={it.quantity ?? ''}
+                        onChange={e => update(it.id, { quantity: e.target.value === '' ? null : +e.target.value })}
+                        className={inputClass}
+                        placeholder={`of ${travelerCount}`}
+                      />
+                    ) : (
+                      <div id={`ci-qty-${it.id}`} className="rounded-md bg-background-warm px-3 py-2 text-sm text-dark-muted">
+                        {it.basis === 'fixed' ? 'Not needed' : `${travelerCount} (all)`}
+                      </div>
+                    )}
+                  </div>
+                  <div className="col-span-12 md:col-span-6 flex items-center justify-between gap-3 rounded-md bg-background-warm px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-2xs text-dark-muted">Cost</p>
+                      <p className="text-base font-semibold text-dark leading-tight">{formatPrice(r.amount)}</p>
+                      {showFormula && <p className="text-2xs text-dark-muted">{r.qty} × {formatPrice(it.rate as number)}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => remove(it.id)}
+                      className="p-2 rounded-md text-primary/70 hover:text-primary hover:bg-white transition-colors flex-shrink-0"
+                      aria-label={`Remove ${it.name || 'cost line'}`}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
+
                 {it.basis === 'per_selected' && options.length > 0 && (
-                  <div className="col-span-2 md:col-span-12 flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 border-t border-background-warm pt-3">
                     <label htmlFor={`ci-opt-${it.id}`} className="text-sm font-medium text-dark">Headcount from:</label>
                     <div className="w-full sm:w-64">
                       <Select
@@ -171,39 +210,42 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                   </div>
                 )}
                 {overCount && (
-                  <p className="col-span-2 md:col-span-12 text-xs text-amber-700">
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                     {it.quantity} people selected, but only {travelerCount} are booked.
                   </p>
                 )}
               </div>
             );
           })}
-          <div className="flex justify-between text-sm px-3 pt-2 border-t border-background-warm">
-            <span className="font-medium text-dark">Other Trip Costs total</span>
-            <span className="text-primary font-semibold">{formatPrice(total)}</span>
+
+          <div className="flex items-center justify-between rounded-md bg-primary/10 px-4 py-3">
+            <span className="text-sm font-medium text-dark">Other Trip Costs total</span>
+            <span className="text-lg text-primary font-semibold">{formatPrice(total)}</span>
           </div>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-sm font-medium text-dark">Quick add:</span>
-        {PRESETS.map(p => (
+      <div className="rounded-md border-2 border-dashed border-background-warm p-3 space-y-2">
+        <p className="text-sm font-medium text-dark">Quick add</p>
+        <div className="flex flex-wrap gap-2 items-center">
+          {PRESETS.map(p => (
+            <button
+              key={p.name}
+              type="button"
+              onClick={() => add(p)}
+              className="text-xs font-medium px-3 py-1.5 rounded-md border-2 border-background-warm bg-background text-dark hover:border-primary/50 hover:bg-primary/5 transition-colors"
+            >
+              + {p.name}
+            </button>
+          ))}
           <button
-            key={p.name}
             type="button"
-            onClick={() => add(p)}
-            className="text-xs font-medium px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background text-dark hover:border-primary/50 hover:bg-primary/5 transition-colors"
+            onClick={() => add()}
+            className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors"
           >
-            + {p.name}
+            <Plus size={13} aria-hidden="true" /> Custom line
           </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => add()}
-          className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors"
-        >
-          <Plus size={13} aria-hidden="true" /> Custom line
-        </button>
+        </div>
       </div>
     </div>
   );

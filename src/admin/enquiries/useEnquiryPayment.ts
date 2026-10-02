@@ -4,7 +4,7 @@ import {
   getPaymentsForEnquiry, generatePendingInvoice, addAddonCharge,
 } from '../../services/api';
 import type { Enquiry, UpcomingTrip, Payment } from '../../types/types-index';
-import { validatePaymentForm } from './AdminEnquiryCommon';
+import { validatePaymentForm, reconcilePaymentType } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { useAlert } from '../../components/ui/useAlert';
 
@@ -131,6 +131,16 @@ export function useEnquiryPayment(params: {
     try {
       setSavingPayment(true);
       let updated: Enquiry = paymentTarget;
+      // Final label from what this payment actually does (Balance when it
+      // clears what's owed, Installment when it doesn't, etc.) — the same
+      // rule PaymentFormFields applies live, re-applied here so the saved
+      // ledger row can never disagree with the amounts.
+      const savedType = reconcilePaymentType(
+        paymentForm.payment_type,
+        thisPayment,
+        totalAmount,
+        paymentTarget.amount_paid || 0,
+      ) as 'full_payment' | 'advance' | 'balance' | 'installment';
 
       if (isExtraCharge) {
         // Total Amount is disabled in the UI for this type — addAddonCharge
@@ -161,7 +171,7 @@ export function useEnquiryPayment(params: {
         if (thisPayment > 0) {
           // Not addon in this branch (handled above), so this is
           // always one of the four types generatePendingInvoice accepts.
-          await generatePendingInvoice(paymentTarget.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment, paymentForm.notes.trim() || undefined);
+          await generatePendingInvoice(paymentTarget.id, savedType, thisPayment, paymentForm.notes.trim() || undefined);
         }
       } else {
         updated = await recordPayment(paymentTarget, {
@@ -180,7 +190,7 @@ export function useEnquiryPayment(params: {
           // profile-only edit (total/package/food with no payment amount).
           // Not addon in this branch (handled above), so this is
           // always one of the four types recordPayment's override accepts.
-          type: thisPayment > 0 ? (paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment') : undefined,
+          type: thisPayment > 0 ? (savedType) : undefined,
         });
       }
 

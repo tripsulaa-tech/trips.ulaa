@@ -13,11 +13,15 @@ import { formatPrice } from '../../utils/utils-index';
 import MethodReferenceFields from './MethodReferenceFields';
 import {
   parseNonNegative, PACKAGE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS,
-  availablePaymentTypeOptions, computeDiscountedTotal,
+  availablePaymentTypeOptions, computeDiscountedTotal, reconcilePaymentType,
   REFUND_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS,
 } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import PaymentHistoryList from './PaymentHistoryList';
+
+// If a payment would leave no more than this many rupees still owed, the form
+// asks the admin whether they meant to settle the whole balance.
+const NEAR_BALANCE_THRESHOLD = 100;
 
 export type PaymentErrors = Partial<Record<
   'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr',
@@ -60,6 +64,50 @@ export default function PaymentFormFields({
   // (general) enquiry — see getTripChildFareAmount's doc comment.
   const tripChildFareAmount = enquiry.trip_id ? getTripChildFareAmount(enquiry.trip_id) : undefined;
   const isChildFare = paymentForm.payment_type === 'addon' && paymentForm.notes === 'Child fare';
+
+  // Keeps Payment Type in step with the amount typed: exactly what's still
+  // owed becomes 'Balance', less than that 'Installment' (and, on a first
+  // payment, the full total becomes 'Full Payment', less 'Advance'). Runs
+  // whenever the amount, total, discount or package changes. Picking a type
+  // by hand still works — see the Payment Type Select below.
+  const alreadyPaidNow = enquiry.amount_paid || 0;
+  const [autoSwitch, setAutoSwitch] = useState<{ type: PaymentForm['payment_type']; text: string } | null>(null);
+  const AUTO_SWITCH_TEXT: Partial<Record<PaymentForm['payment_type'], string>> = {
+    balance: 'Switched to Balance — this payment clears the full amount owed.',
+    installment: 'Switched to Installment — this is less than the balance owed.',
+    full_payment: 'Switched to Full Payment — this payment covers the whole total.',
+    advance: 'Switched to Advance — this is less than the full total.',
+  };
+  const updateForm = (patch: (f: PaymentForm) => PaymentForm) => {
+    const edited = patch(paymentForm);
+    const nextType = reconcilePaymentType(
+      edited.payment_type,
+      edited.amount_paid === '' ? 0 : Number(edited.amount_paid),
+      edited.total_amount === '' ? null : Number(edited.total_amount),
+      alreadyPaidNow,
+    );
+    if (nextType !== edited.payment_type) {
+      setAutoSwitch({ type: nextType, text: AUTO_SWITCH_TEXT[nextType] ?? '' });
+      setPaymentForm({ ...edited, payment_type: nextType });
+    } else {
+      setPaymentForm(edited);
+    }
+  };
+
+  // Amount limit: a normal payment (anything but Add-on) can't be more than
+  // what's still owed — the balance once something's been paid, otherwise the
+  // whole total. Typing past it snaps back to that figure.
+  const totalNum = paymentForm.total_amount === '' ? null : Number(paymentForm.total_amount);
+  const remainingOwed = totalNum == null ? null : Math.max(0, totalNum - alreadyPaidNow);
+  const capApplies = paymentForm.payment_type !== 'addon' && remainingOwed != null && remainingOwed > 0;
+  const capLabel = alreadyPaidNow > 0 ? 'balance owed' : 'total amount';
+  const [cappedAtRaw, setCappedAt] = useState<number | null>(null);
+  // Only show the 'snapped back' note while it still matches the current limit.
+  const cappedAt = cappedAtRaw != null && cappedAtRaw === remainingOwed ? cappedAtRaw : null;
+  const amountNow = paymentForm.amount_paid === '' ? 0 : Number(paymentForm.amount_paid);
+  // Left after this payment — small but not zero means it's probably a near miss.
+  const leftAfter = capApplies ? (remainingOwed as number) - amountNow : null;
+  const nearMiss = capApplies && amountNow > 0 && leftAfter != null && leftAfter > 0 && leftAfter <= NEAR_BALANCE_THRESHOLD;
   // space-y-4 in non-compact mode reproduces the original stacked spacing
   // for these two fields; grid+gap-4 in compact mode sits them side by side.
   const pairClass = compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-4';
@@ -97,7 +145,7 @@ export default function PaymentFormFields({
             onChange={val => {
               const packageType = val as Enquiry['package_type'];
               const suggested = getTripPrice(enquiry.trip_id, packageType);
-              setPaymentForm(f => ({
+              updateForm(f => ({
                 ...f,
                 package_type: packageType,
                 total_amount: enquiry.trip_id
@@ -133,7 +181,7 @@ export default function PaymentFormFields({
               disabled={paymentForm.payment_type === 'addon' || pricingLocked}
               onChange={e => {
                 const discount = parseNonNegative(e.target.value);
-                setPaymentForm(f => ({ ...f, discount_amount: discount, total_amount: computeDiscountedTotal(listPrice, discount) ?? f.total_amount }));
+                updateForm(f => ({ ...f, discount_amount: discount, total_amount: computeDiscountedTotal(listPrice, discount) ?? f.total_amount }));
               }}
               className={`${fieldClass} ${(paymentForm.payment_type === 'addon' || pricingLocked) ? 'opacity-60 cursor-not-allowed' : ''}`}
               placeholder={paymentForm.payment_type === 'addon' ? 'Updates automatically' : 'e.g. 1000'}
@@ -173,7 +221,7 @@ export default function PaymentFormFields({
             min={0}
             value={paymentForm.payment_type === 'addon' ? '' : paymentForm.total_amount}
             disabled={paymentForm.payment_type === 'addon'}
-            onChange={e => setPaymentForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
+            onChange={e => updateForm(f => ({ ...f, total_amount: parseNonNegative(e.target.value) }))}
             className={`${fieldClass} ${paymentForm.payment_type === 'addon' ? 'opacity-60 cursor-not-allowed' : ''}`}
             placeholder={paymentForm.payment_type === 'addon' ? 'Updates automatically' : 'e.g. 15000'}
           />
@@ -189,9 +237,19 @@ export default function PaymentFormFields({
             id={`${idPrefix}-amount-paid`}
             type="number"
             min={0}
+            max={capApplies ? (remainingOwed as number) : undefined}
             value={paymentForm.amount_paid}
             disabled={isChildFare}
-            onChange={e => setPaymentForm(f => ({ ...f, amount_paid: parseNonNegative(e.target.value) }))}
+            onChange={e => {
+              const typed = parseNonNegative(e.target.value);
+              if (capApplies && typed !== '' && typed > (remainingOwed as number)) {
+                setCappedAt(remainingOwed as number);
+                updateForm(f => ({ ...f, amount_paid: remainingOwed as number }));
+              } else {
+                setCappedAt(null);
+                updateForm(f => ({ ...f, amount_paid: typed }));
+              }
+            }}
             aria-invalid={!!paymentErrors.amount_paid}
             aria-describedby={paymentErrors.amount_paid ? `${idPrefix}-amount-paid-error` : (isChildFare ? `${idPrefix}-amount-paid-childfare-hint` : undefined)}
             className={`${fieldClass} ${isChildFare ? 'opacity-60 cursor-not-allowed' : ''}`}
@@ -201,6 +259,27 @@ export default function PaymentFormFields({
             <p id={`${idPrefix}-amount-paid-childfare-hint`} className="text-2xs text-dark-muted mt-1">
               Locked to the trip's Child Fare Amount. Change it under Edit Trip → Finances & Profit.
             </p>
+          )}
+          {capApplies && !isChildFare && (
+            <p className={`text-2xs mt-1 ${cappedAt != null ? 'text-amber-700 font-medium' : 'text-dark-muted'}`}>
+              {cappedAt != null
+                ? `Can't be more than the ${capLabel} — set to ${formatPrice(cappedAt)}.`
+                : `Up to ${formatPrice(remainingOwed as number)} (${capLabel}).`}
+            </p>
+          )}
+          {nearMiss && !isChildFare && (
+            <div role="status" className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>
+                Only <span className="font-semibold">{formatPrice(leftAfter as number)}</span> would still be owed after this. Did you mean the full {formatPrice(remainingOwed as number)}?
+              </span>
+              <button
+                type="button"
+                onClick={() => { setCappedAt(null); updateForm(f => ({ ...f, amount_paid: remainingOwed as number })); }}
+                className="font-semibold underline underline-offset-2 hover:text-amber-900"
+              >
+                Use {formatPrice(remainingOwed as number)}
+              </button>
+            </div>
           )}
           {paymentErrors.amount_paid && <p id={`${idPrefix}-amount-paid-error`} role="alert" className={paymentErrorClass}>{paymentErrors.amount_paid}</p>}
         </div>
@@ -215,6 +294,7 @@ export default function PaymentFormFields({
             value={paymentForm.payment_type}
             onChange={val => {
               const type = val as PaymentForm['payment_type'];
+              setAutoSwitch(null);
               setPaymentForm(f => {
                 // 'Full Payment' means the whole total is being collected
                 // right now — only offered when nothing's been paid yet
@@ -232,6 +312,9 @@ export default function PaymentFormFields({
             }}
             options={availablePaymentTypeOptions(paymentForm, enquiry.amount_paid || 0)}
           />
+          {autoSwitch && autoSwitch.type === paymentForm.payment_type && autoSwitch.text && (
+            <p className="text-2xs text-green-700 mt-1" role="status">{autoSwitch.text}</p>
+          )}
           {paymentForm.payment_type === 'addon' && (
             <>
               <p className="text-2xs text-dark-muted mt-1">

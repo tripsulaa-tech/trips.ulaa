@@ -239,6 +239,36 @@ export function availablePaymentTypeOptions(paymentForm: PaymentForm, alreadyPai
   return options.filter(o => o.value !== 'balance');
 }
 
+// Picks the label a payment SHOULD carry from what it actually does, so the
+// admin never has to guess between Installment and Balance (or Advance and
+// Full Payment):
+//  - nothing paid yet: the whole total in one go = 'Full Payment', anything
+//    less = 'Advance'.
+//  - something already paid: exactly what's still owed = 'Balance' (the
+//    payment that finishes the booking), anything less = 'Installment'.
+// Add-on is never touched (it raises the total instead of paying toward it),
+// and nothing changes while the amount is blank/zero, the total isn't known,
+// or the payment would overshoot (validatePaymentForm reports that). Used
+// live in PaymentFormFields as the admin types, and again at save time so
+// every entry point lands on the same label.
+export function reconcilePaymentType(
+  type: PaymentForm['payment_type'],
+  thisPayment: number,
+  total: number | null,
+  alreadyPaid: number
+): PaymentForm['payment_type'] {
+  if (type !== 'full_payment' && type !== 'advance' && type !== 'balance' && type !== 'installment') return type;
+  if (!(thisPayment > 0) || total == null || !(total > 0)) return type;
+  if (alreadyPaid <= 0) {
+    if (thisPayment === total) return 'full_payment';
+    return thisPayment < total ? 'advance' : type;
+  }
+  const owed = total - alreadyPaid;
+  if (owed <= 0) return type;
+  if (thisPayment === owed) return 'balance';
+  return thisPayment < owed ? 'installment' : type;
+}
+
 // Field-level errors for the Track Payment form (formerly AdminPaymentModal,
 // now retired — see AdminEnquiries.tsx), keyed by the field each message
 // should render under. Shared by both handleSavePayment call sites

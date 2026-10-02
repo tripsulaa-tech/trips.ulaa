@@ -36,7 +36,7 @@ import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { sendBookingEmail, bookingEmailPreview } from '../../utils/bookingEmail';
 import Modal from '../../components/ui/Modal';
 import { formatPrice } from '../../utils/utils-index';
-import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, computeDiscountedTotal, getTripPrice as getTripPriceCommon, getTripChildFareAmount as getTripChildFareAmountCommon } from './AdminEnquiryCommon';
+import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, reconcilePaymentType, computeDiscountedTotal, getTripPrice as getTripPriceCommon, getTripChildFareAmount as getTripChildFareAmountCommon } from './AdminEnquiryCommon';
 import type { PaymentForm, InvoiceAction } from './AdminEnquiryCommon';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
@@ -456,6 +456,16 @@ export default function AdminEnquiryDetail() {
       setSavingPayment(true);
       let updated = enquiry;
 
+      // Final label from what this payment actually does — same rule as the
+      // live switch in PaymentFormFields, re-applied so the saved row can
+      // never disagree with the amounts.
+      const savedType = reconcilePaymentType(
+        paymentForm.payment_type,
+        thisPayment,
+        totalAmount,
+        enquiry.amount_paid || 0,
+      ) as 'full_payment' | 'advance' | 'balance' | 'installment';
+
       if (isExtraCharge) {
         updated = await recordPayment(enquiry, {
           amount_paid: enquiry.amount_paid || 0,
@@ -487,7 +497,7 @@ export default function AdminEnquiryDetail() {
         if (thisPayment > 0) {
           // Not addon in this branch (handled above), so this is
           // always one of the four types generatePendingInvoice accepts.
-          await generatePendingInvoice(enquiry.id, paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment', thisPayment, paymentForm.notes.trim() || undefined);
+          await generatePendingInvoice(enquiry.id, savedType, thisPayment, paymentForm.notes.trim() || undefined);
         }
       } else {
         updated = await recordPayment(enquiry, {
@@ -502,7 +512,7 @@ export default function AdminEnquiryDetail() {
           notes: paymentForm.notes.trim() || undefined,
           // Not addon in this branch (handled above), so this is
           // always one of the four types recordPayment's override accepts.
-          type: thisPayment > 0 ? (paymentForm.payment_type as 'full_payment' | 'advance' | 'balance' | 'installment') : undefined,
+          type: thisPayment > 0 ? (savedType) : undefined,
         });
       }
 
