@@ -52,7 +52,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20 py-2">
           <Link to="/" onClick={handleLogoClick} className="flex items-center gap-3 group">
             <img
-              src="/ULAA-logo.png"
+              src="/ULAA-logo-Header.png"
               alt="Ulaa Logo"
               className="h-14 sm:h-16 w-auto transition-transform duration-300 group-hover:scale-105"
             />
