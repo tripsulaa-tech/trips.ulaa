@@ -1,7 +1,7 @@
 import { supabase } from '../../supabase';
 import { formatPrice } from '../../../utils/utils-index';
 import type { Enquiry, Payment } from '../../../types/types-index';
-import { PAYMENT_TYPE_LOG_LABEL, computeAutoStatus, computeBookingStatus, refreshJourneyStage, autoSendBookingEmail } from './shared';
+import { PAYMENT_TYPE_LOG_LABEL, computeAutoStatus, computeBookingStatus, refreshJourneyStage } from './shared';
 import { logActivity } from './activity';
 
 // =============================================
@@ -75,10 +75,45 @@ export async function recordPayment(
     ? (completesTotal ? 'full_payment' : 'advance')
     : (completesTotal ? 'balance' : 'installment'));
 
-  if (delta !== 0) {
+  // A pending add-on invoice is already part of total_amount, so the balance
+  // owed (and therefore the amount the admin enters here) includes it. Money
+  // that covers it has to settle that invoice too: mark it paid and record
+  // only the rest as this transaction. Otherwise the add-on stays "Pending"
+  // on a fully paid booking, or, if marked paid afterwards, is counted twice.
+  // Oldest first; an add-on is only settled when the payment covers it fully.
+  let remaining = delta;
+  const settledAddons: { amount: number; invoice_number: string | null }[] = [];
+  if (delta > 0) {
+    const { data: pendingAddons, error: pendingError } = await supabase
+      .from('payments')
+      .select('id, amount, invoice_number')
+      .eq('enquiry_id', current.id)
+      .eq('status', 'pending')
+      .eq('payment_type', 'addon')
+      .order('created_at', { ascending: true });
+    if (pendingError) throw pendingError;
+    for (const addon of pendingAddons ?? []) {
+      const addonAmount = Number(addon.amount);
+      if (remaining < addonAmount) break;
+      const { error: settleError } = await supabase
+        .from('payments')
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          ...(payment.payment_method ? { payment_method: payment.payment_method } : {}),
+          ...(payment.utr_number ? { utr_number: payment.utr_number } : {}),
+        })
+        .eq('id', addon.id);
+      if (settleError) throw settleError;
+      remaining -= addonAmount;
+      settledAddons.push({ amount: addonAmount, invoice_number: addon.invoice_number });
+    }
+  }
+
+  if (remaining !== 0) {
     const { error: paymentError } = await supabase.from('payments').insert({
       enquiry_id: current.id,
-      amount: delta,
+      amount: remaining,
       payment_type: invoiceType,
       payment_method: payment.payment_method,
       utr_number: payment.utr_number || null,
@@ -125,25 +160,23 @@ export async function recordPayment(
     .eq('id', current.id);
   if (error) throw error;
   const updated = await refreshJourneyStage(current.id);
-  if (delta !== 0) {
+  for (const addon of settledAddons) {
     await logActivity(
       current.id,
-      delta > 0 ? `${PAYMENT_TYPE_LOG_LABEL[invoiceType] || invoiceType} received` : 'Payment adjusted',
-      `${formatPrice(Math.abs(delta))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
+      'Invoice marked paid',
+      `addon · ${formatPrice(addon.amount)}${addon.invoice_number ? ` · ${addon.invoice_number}` : ''}`
+    );
+  }
+  if (remaining !== 0) {
+    await logActivity(
+      current.id,
+      remaining > 0 ? `${PAYMENT_TYPE_LOG_LABEL[invoiceType] || invoiceType} received` : 'Payment adjusted',
+      `${formatPrice(Math.abs(remaining))}${payment.payment_method ? ` · ${payment.payment_method}` : ''}`
     );
   }
 
-  // Auto-send the booking confirmation email whenever real money actually
-  // comes in — advance, installment, balance, or full payment alike — so
-  // the customer gets an updated receipt (with the fresh payment ledger and
-  // remaining-balance figure baked in) without the admin having to remember
-  // to hit "Send Booking Email" manually every time. Skipped for
-  // delta <= 0 (profile-only edits, negative adjustments) — see
-  // autoSendBookingEmail in shared.ts for the email-on-file check and the
-  // best-effort try/catch (a failed send must never fail the payment save).
-  if (delta > 0) {
-    await autoSendBookingEmail(updated, await getPaymentsForEnquiry(current.id));
-  }
+  // No email goes out here: confirmation emails are sent manually by the
+  // admin (see the "Email Booking Confirmation" actions), never automatically.
 
   // Discount isn't a ledger transaction (nothing moves in `payments`), so
   // the logActivity call above — gated on delta !== 0 — never fires for a

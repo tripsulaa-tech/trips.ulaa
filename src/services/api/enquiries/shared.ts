@@ -1,6 +1,5 @@
 import { supabase } from '../../supabase';
-import type { Enquiry, JourneyStage, Payment } from '../../../types/types-index';
-import { sendBookingEmail } from '../../../utils/bookingEmail';
+import type { Enquiry, JourneyStage } from '../../../types/types-index';
 
 // =============================================
 // Shared internals for the enquiries/* modules
@@ -43,22 +42,11 @@ export const PAYMENT_TYPE_LOG_LABEL: Record<string, string> = {
   refund: 'Refund',
 };
 
-// Single call site every real-money-collected path (recordPayment,
-// addAddonCharge's collectedNow branch, markInvoicePaid)
-// goes through to fire off an updated booking-confirmation receipt. No-ops
-// silently when the enquiry has no email on file, and swallows any send
-// failure (edge function not deployed, Resend rejection, etc.) rather than
-// letting it bubble up — a failed auto-send must never fail the payment
-// save itself; the admin can still trigger it manually from the row's
-// kebab menu.
-export async function autoSendBookingEmail(enquiry: Enquiry, payments: Payment[]): Promise<void> {
-  if (!enquiry.email) return;
-  try {
-    await sendBookingEmail(enquiry, payments);
-  } catch (err) {
-    console.error('Auto-send booking email failed:', err);
-  }
-}
+// NOTE: booking-confirmation emails are NOT sent automatically any more.
+// Recording a payment, collecting an add-on or marking an invoice paid only
+// updates the ledger; the admin sends the email themselves, on demand, from
+// the enquiry row's menu, the details popup or the enquiry detail page
+// (all of which call sendBookingEmail in utils/bookingEmail.ts directly).
 
 // Pure derivation of the single "Booking Journey" stage shown in the admin
 // table, from the same underlying columns computeAutoStatus/

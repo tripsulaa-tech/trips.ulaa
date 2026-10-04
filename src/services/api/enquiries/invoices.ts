@@ -1,9 +1,8 @@
 import { supabase } from '../../supabase';
 import { formatPrice } from '../../../utils/utils-index';
 import type { Enquiry, Payment } from '../../../types/types-index';
-import { PAYMENT_TYPE_LOG_LABEL, refreshJourneyStage, autoSendBookingEmail } from './shared';
+import { PAYMENT_TYPE_LOG_LABEL, refreshJourneyStage } from './shared';
 import { logActivity } from './activity';
-import { getPaymentsForEnquiry } from './payments';
 
 // =============================================
 // Enquiries — invoices
@@ -70,13 +69,7 @@ export async function addAddonCharge(
   if (error) throw error;
   const updated = await refreshJourneyStage(data.id);
   await logActivity(current.id, 'Add-on added', `${formatPrice(amount)}${options?.collectedNow ? ' · collected' : ' · pending'}`);
-  // Only when the add-on was actually collected on the spot — a pending
-  // add-on invoice hasn't moved any money yet, so there's nothing to
-  // confirm receipt of (see markInvoicePaid for when that money comes in
-  // later instead).
-  if (options?.collectedNow) {
-    await autoSendBookingEmail(updated, await getPaymentsForEnquiry(current.id));
-  }
+  // No email goes out here: confirmation emails are sent manually by the admin.
   return updated;
 }
 
@@ -109,10 +102,7 @@ export async function markInvoicePaid(
     .select()
     .single();
   if (error) throw error;
-  const updated = await refreshJourneyStage(data.enquiry_id);
+  await refreshJourneyStage(data.enquiry_id);
   await logActivity(data.enquiry_id, 'Invoice marked paid', `${data.payment_type} · ${formatPrice(data.amount)}${data.invoice_number ? ` · ${data.invoice_number}` : ''}`);
-  // The money for a pending invoice actually lands here, not at creation
-  // time — see autoSendBookingEmail in shared.ts.
-  await autoSendBookingEmail(updated, await getPaymentsForEnquiry(data.enquiry_id));
   return data;
 }
