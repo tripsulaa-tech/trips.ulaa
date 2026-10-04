@@ -24,7 +24,7 @@ import PaymentHistoryList from './PaymentHistoryList';
 const NEAR_BALANCE_THRESHOLD = 100;
 
 export type PaymentErrors = Partial<Record<
-  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr',
+  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr' | 'notes',
   string
 >>;
 
@@ -421,15 +421,23 @@ export default function PaymentFormFields({
       })()}
 
       <div>
-        <label htmlFor={`${idPrefix}-notes`} className="block text-sm font-medium text-dark mb-1">Notes (optional)</label>
+        <label htmlFor={`${idPrefix}-notes`} className="block text-sm font-medium text-dark mb-1">
+          {paymentForm.payment_type === 'addon' ? 'Add-on details' : 'Notes (optional)'}
+        </label>
         <input
           id={`${idPrefix}-notes`}
           type="text"
           value={paymentForm.notes}
           onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
           className={fieldClass}
-          placeholder="Any additional context for this payment"
+          placeholder={paymentForm.payment_type === 'addon' ? 'What is this add-on? e.g. Hotel upgrade, Extra night, Child fare' : 'Any additional context for this payment'}
         />
+        {paymentErrors.notes && (
+          <p className="text-2xs text-red-600 mt-1" role="alert">{paymentErrors.notes}</p>
+        )}
+        {paymentForm.payment_type === 'addon' && !paymentErrors.notes && (
+          <p className="text-2xs text-dark-muted mt-1">Shown next to this charge in the invoice list, the invoice PDF and the booking email.</p>
+        )}
       </div>
 
       <PaymentHistoryList

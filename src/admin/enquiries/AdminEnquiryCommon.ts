@@ -276,7 +276,7 @@ export function reconcilePaymentType(
 // the final save-time gate — one source of truth so the two screens can
 // never drift on what counts as a valid payment.
 type PaymentFormErrors = Partial<Record<
-  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_utr' | 'refund_method',
+  'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_utr' | 'refund_method' | 'notes',
   string
 >>;
 
@@ -302,6 +302,11 @@ export function validatePaymentForm(
     errors.amount_paid = isExtraCharge
       ? 'Enter an extra charge amount greater than zero.'
       : 'Enter an amount greater than zero for the pending invoice.';
+  }
+
+  // An add-on is a line on the customer's invoice, so it has to say what it is.
+  if (isExtraCharge && !paymentForm.notes.trim()) {
+    errors.notes = 'Say what this add-on is for (it appears on the invoice).';
   }
 
   // Money is actually changing hands right now (not a pending invoice)
@@ -517,7 +522,9 @@ export function followUpStatus(e: Enquiry): { label: string; color: string; icon
 
 // Whether a Booking Follow-up reminder can be set on this enquiry right
 // now — CRM spec section 8B: only after the booking has started (past
-// Advance Pending) and while it's still active. Mirrors
+// Advance Pending) and while it's still active. Not offered once the
+// traveller is Fully Paid or Checked In (nothing left to chase); a reminder
+// that was already set before that still shows, so it can be cleared. Mirrors
 // canSetFollowUp() above on the opposite side of the same row's
 // lifecycle — the two windows never overlap, enforced by the DB check
 // constraints in add_booking_follow_up.sql and the clearing logic in
@@ -526,7 +533,6 @@ export function canSetBookingFollowUp(e: Enquiry): boolean {
   return e.booking_state === 'active' && (
     e.journey_stage === 'advance_pending' || e.journey_stage === 'advance_paid'
     || e.journey_stage === 'confirmed' || e.journey_stage === 'balance_pending'
-    || e.journey_stage === 'fully_paid' || e.journey_stage === 'checked_in'
   );
 }
 

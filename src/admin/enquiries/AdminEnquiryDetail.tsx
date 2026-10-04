@@ -34,8 +34,9 @@ import {
 import type { ActivityLogEntry, CancellationReason, ClosedReason, Enquiry, Payment, UpcomingTrip } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { sendBookingEmail, bookingEmailPreview } from '../../utils/bookingEmail';
+import { bookingEmailStatFromLog } from '../../services/api/enquiries/activity';
 import Modal from '../../components/ui/Modal';
-import { formatPrice } from '../../utils/utils-index';
+import { formatDate, formatPrice } from '../../utils/utils-index';
 import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, reconcilePaymentType, computeDiscountedTotal, getTripPrice as getTripPriceCommon, getTripChildFareAmount as getTripChildFareAmountCommon } from './AdminEnquiryCommon';
 import type { PaymentForm, InvoiceAction } from './AdminEnquiryCommon';
 import ContactOutcomeModal from './AdminContactOutcomeModal';
@@ -769,8 +770,20 @@ export default function AdminEnquiryDetail() {
     if (!enquiry) return;
     setInvoiceBusyAction('email');
     try {
+      const prev = bookingEmailStatFromLog(activityLog);
+      if (prev) {
+        const again = await confirm({
+          title: 'Send again?',
+          message: `This booking email was already sent ${prev.count} time${prev.count === 1 ? '' : 's'} (last on ${formatDate(prev.lastSentAt, { day: 'numeric', month: 'short', year: 'numeric' })}). Send it again?`,
+          confirmLabel: 'Send again',
+          variant: 'default',
+        });
+        if (!again) return;
+      }
       const rows = await getPaymentsForEnquiry(enquiry.id);
       await sendBookingEmail(enquiry, rows);
+      // Pull in the entry that send just wrote so the badge updates at once.
+      getActivityLog(enquiry.id).then(setActivityLog).catch(err => console.error(err));
       alert('Booking confirmation email sent.');
     } catch (err) {
       console.error(err);
@@ -929,6 +942,7 @@ export default function AdminEnquiryDetail() {
           onDownloadInvoice={enquiry.booking_id ? handleDownloadInvoice : undefined}
           onShareInvoice={enquiry.booking_id ? handleShareInvoice : undefined}
           onEmailBooking={enquiry.booking_id && enquiry.email ? handleSendBookingEmail : undefined}
+          emailStat={bookingEmailStatFromLog(activityLog)}
           onPreviewEmail={enquiry.booking_id && enquiry.email ? handlePreviewEmail : undefined}
           invoiceBusyAction={invoiceBusyAction}
         />

@@ -1,6 +1,7 @@
 import type { Enquiry, Payment } from '../types/types-index';
 import { invoiceAsFile } from './invoicePdf';
 import { supabase } from '../services/supabase';
+import { logActivity, BOOKING_EMAIL_ACTION } from '../services/api/enquiries/activity';
 import { formatDate, formatPrice, slugify } from './utils-index';
 import { PAYMENT_TYPE_LABEL } from './pdf/invoice/shared';
 
@@ -28,7 +29,8 @@ function paymentRows(payments: Payment[]): PaymentRow[] {
   return payments
     .filter(p => p.status === 'paid' && p.payment_type !== 'refund')
     .map(p => ({
-      label: `${PAYMENT_TYPE_LABEL[p.payment_type] ?? p.payment_type} Received`,
+      // An add-on says what it was for, e.g. "Add-on (Hotel upgrade) Received".
+      label: `${PAYMENT_TYPE_LABEL[p.payment_type] ?? p.payment_type}${p.payment_type === 'addon' && p.notes?.trim() ? ` (${p.notes.trim()})` : ''} Received`,
       amount: formatPrice(p.amount),
     }));
 }
@@ -393,4 +395,8 @@ export async function sendBookingEmail(enquiry: Enquiry, payments: Payment[]): P
 
   if (error) throw error;
   if (data?.error) throw new Error(typeof data.error === 'string' ? data.error : 'Failed to send email');
+
+  // Only reached when the send succeeded: one timeline entry per email, so the
+  // admin screens can show whether (and how many times) it has gone out.
+  await logActivity(enquiry.id, BOOKING_EMAIL_ACTION, to);
 }

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { SignIn as LogIn, FilePdf, CircleNotch } from '@phosphor-icons/react';
+import { SignIn as LogIn, FilePdf, CircleNotch, EnvelopeSimple } from '@phosphor-icons/react';
 import Modal from '../../components/ui/Modal';
 import FoodMark from '../../components/ui/FoodMark';
 import { useAlert } from '../../components/ui/useAlert';
-import { getEnquiries, checkInEnquiry, undoCheckInEnquiry } from '../../services/api';
+import { useConfirm } from '../../components/ui/useConfirm';
+import { getEnquiries, checkInEnquiry, undoCheckInEnquiry, getPaymentsForEnquiry, getBookingEmailStats } from '../../services/api';
+import type { BookingEmailStat } from '../../services/api/enquiries/activity';
+import { sendBookingEmail } from '../../utils/bookingEmail';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { isBooked } from '../enquiries/AdminEnquiriesShared';
 import { foodBadge, foodPreferenceKey } from '../enquiries/AdminEnquiryCommon';
@@ -33,11 +36,16 @@ const smallBtn =
  *  time it opens, so a booking made a minute ago still shows. */
 export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckInModalProps) {
   const alert = useAlert();
+  const confirm = useConfirm();
   // null = still loading. The parent remounts this component (via `key`)
   // each time a different trip is opened, so state always starts fresh and
   // every open re-fetches.
   const [result, setResult] = useState<{ booked: Enquiry[]; error: boolean } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Per-traveller "how many booking emails have gone out" (see
+  // getBookingEmailStats). Loaded after the list; missing = never emailed.
+  const [emailStats, setEmailStats] = useState<Record<string, BookingEmailStat>>({});
+  const [emailBusyId, setEmailBusyId] = useState<string | null>(null);
 
   const tripId = trip?.id;
   useEffect(() => {
@@ -46,12 +54,14 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
     getEnquiries()
       .then(all => {
         if (cancelled) return;
-        setResult({
-          error: false,
-          booked: all
-            .filter(e => e.trip_id === tripId && isBooked(e))
-            .sort((a, b) => a.full_name.localeCompare(b.full_name)),
-        });
+        const booked = all
+          .filter(e => e.trip_id === tripId && isBooked(e))
+          .sort((a, b) => a.full_name.localeCompare(b.full_name));
+        setResult({ error: false, booked });
+        // Best-effort: a failure here just leaves the badges at "Not emailed".
+        getBookingEmailStats(booked.map(e => e.id))
+          .then(stats => { if (!cancelled) setEmailStats(stats); })
+          .catch(err => console.error(err));
       })
       .catch(err => {
         console.error(err);
@@ -81,6 +91,33 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
       await alert({ title: 'Download', message: 'Could not create the traveller list. Please try again.' });
     } finally {
       setDownloading(false);
+    }
+  };
+
+  // Manual send of the booking confirmation + invoice. Nothing is emailed
+  // automatically; this button is how it goes out. Asks first if this person
+  // has already been emailed, so a double-click or a re-send is deliberate.
+  const sendEmail = async (e: Enquiry) => {
+    if (!e.email || emailBusyId) return;
+    const prev = emailStats[e.id];
+    if (prev) {
+      const again = await confirm({
+        title: 'Send again?',
+        message: `${e.full_name} was already emailed ${prev.count} time${prev.count === 1 ? '' : 's'} (last on ${formatDate(prev.lastSentAt, { day: 'numeric', month: 'short', year: 'numeric' })}). Send the booking email again?`,
+        confirmLabel: 'Send again',
+        variant: 'default',
+      });
+      if (!again) return;
+    }
+    setEmailBusyId(e.id);
+    try {
+      await sendBookingEmail(e, await getPaymentsForEnquiry(e.id));
+      setEmailStats(m => ({ ...m, [e.id]: { count: (m[e.id]?.count ?? 0) + 1, lastSentAt: new Date().toISOString() } }));
+    } catch (err) {
+      console.error(err);
+      await alert({ title: 'Email', message: 'Failed to send the booking email. Please try again.' });
+    } finally {
+      setEmailBusyId(null);
     }
   };
 
@@ -147,6 +184,8 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
                 const premium = isPremiumPackage(e.package_name);
                 const busy = busyId === e.id;
                 const canCheckIn = e.journey_stage === 'fully_paid' && !e.is_no_show;
+                const emailStat = emailStats[e.id];
+                const emailing = emailBusyId === e.id;
                 return (
                   <li key={e.id} className="flex items-start gap-3 px-3 py-3">
                     <span className="w-6 shrink-0 pt-0.5 text-xs text-dark-muted text-right">{i + 1}</span>
@@ -216,6 +255,27 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
                       <span className={`text-2xs whitespace-nowrap ${due > 0 ? 'text-amber-700 font-medium' : 'text-dark-muted'}`}>
                         {due > 0 ? `${formatPrice(due)} due` : 'Fully paid'}
                       </span>
+                      {/* Booking email: status chip + the manual send button */}
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          title={emailStat ? `Last sent ${formatDate(emailStat.lastSentAt, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'No booking email sent yet'}
+                          className={`text-2xs whitespace-nowrap ${emailStat ? 'text-green-700 font-medium' : 'text-dark-muted'}`}
+                        >
+                          {emailStat
+                            ? `Emailed ×${emailStat.count} · ${formatDate(emailStat.lastSentAt, { day: 'numeric', month: 'short' })}`
+                            : 'Not emailed'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => sendEmail(e)}
+                          disabled={!e.email || !!emailBusyId}
+                          title={e.email ? (emailStat ? 'Send the booking email again' : 'Email booking confirmation & invoice') : 'No email address on file'}
+                          aria-label={`Email booking confirmation to ${e.full_name}`}
+                          className="w-7 h-7 flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-primary disabled:hover:border-primary/30 transition-colors"
+                        >
+                          {emailing ? <CircleNotch size={14} weight="bold" className="animate-spin" aria-hidden="true" /> : <EnvelopeSimple size={14} aria-hidden="true" />}
+                        </button>
+                      </div>
                     </div>
                   </li>
                 );

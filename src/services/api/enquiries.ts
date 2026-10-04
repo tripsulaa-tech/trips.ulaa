@@ -18,6 +18,7 @@ export {
 export {
   logActivity,
   getActivityLog,
+  getBookingEmailStats,
 } from './enquiries/activity';
 
 export {

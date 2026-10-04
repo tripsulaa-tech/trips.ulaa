@@ -97,6 +97,9 @@ export default function AdminEnquiryInvoicesCard({
                       <td className="px-5 py-3 text-dark text-xs font-mono whitespace-nowrap">{inv.invoice_number || '—'}</td>
                       <td className="px-4 py-3 min-w-[140px]">
                         <p className="text-dark text-sm">{INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type}</p>
+                        {inv.payment_type === 'addon' && inv.notes && (
+                          <p className="text-dark text-xs font-medium">{inv.notes}</p>
+                        )}
                         {(inv.payment_method || inv.utr_number) && (
                           <p className="text-dark-muted text-2xs">
                             {inv.payment_method || ''}{inv.payment_method && inv.utr_number ? ' · ' : ''}{inv.utr_number ? `UTR ${inv.utr_number}` : ''}
@@ -162,6 +165,9 @@ export default function AdminEnquiryInvoicesCard({
                       {isRefund ? '− ' : ''}{formatPrice(Math.abs(inv.amount))}
                     </span>
                   </div>
+                  {inv.payment_type === 'addon' && inv.notes && (
+                    <p className="text-dark text-xs font-medium">{inv.notes}</p>
+                  )}
                   {(inv.payment_method || inv.utr_number) && (
                     <p className="text-dark-muted text-2xs">
                       {inv.payment_method || ''}{inv.payment_method && inv.utr_number ? ' · ' : ''}{inv.utr_number ? `UTR ${inv.utr_number}` : ''}

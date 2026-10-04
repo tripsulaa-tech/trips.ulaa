@@ -75,7 +75,10 @@ export function renderPaymentTable(ctx: InvoicePdfCtx, payments: Payment[]): voi
     cursor.y += 30;
   } else {
     payments.forEach((p, i) => {
-      const rowH = 24;
+      // An add-on row carries its name (what it was for) as a small second
+      // line under "Add-on", so that row is a little taller.
+      const addonName = p.payment_type === 'addon' && p.notes ? p.notes.trim() : '';
+      const rowH = addonName ? 34 : 24;
 
       // If a break happens here, redraw the table header on the new page
       // so a reader who lands mid-table on page 2 still sees column
@@ -105,6 +108,18 @@ export function renderPaymentTable(ctx: InvoicePdfCtx, payments: Payment[]): voi
       doc.text(val(p.invoice_number), colInvoice + 8, textY);
       doc.text(fdate(p.paid_at), colDate, textY);
       doc.text(PAYMENT_TYPE_LABEL[p.payment_type] ?? p.payment_type, colType, textY);
+      if (addonName) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(7.5);
+        setText(COLORS.darkMuted);
+        // The Type column is narrow, so wrap to its width and keep one line
+        // (with an ellipsis if it runs long) so it can't touch the next column.
+        const nameLines: string[] = doc.splitTextToSize(sanitizeForPdf(addonName), colMethod - colType - 8);
+        doc.text(nameLines.length > 1 ? `${nameLines[0].replace(/\s+\S*$/, '')}\u2026` : nameLines[0], colType, textY + 10);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        setText(COLORS.dark);
+      }
 
       const methodLines = doc.splitTextToSize(val(p.payment_method), 55);
       doc.text(methodLines[0], colMethod, textY);

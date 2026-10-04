@@ -43,6 +43,9 @@ interface AdminEnquiryHeaderCardProps {
   // there's a booking (same gate as Download/Share above) and an email
   // address on file, so callers only pass it when both hold.
   onEmailBooking?: () => void;
+  // How many booking emails have gone out so far (null = none yet), shown
+  // beside the Email button. Comes from the activity log.
+  emailStat?: { count: number; lastSentAt: string } | null;
   // Opens a read-only preview of that same booking-confirmation email
   // (subject/recipient/rendered HTML) without sending anything — lets the
   // admin check it looks right before using the Email button above. Same
@@ -56,7 +59,7 @@ interface AdminEnquiryHeaderCardProps {
 export default function AdminEnquiryHeaderCard({
   enquiry, busyAction, busyStatus, busyFollowUp, bookingIdCopied, onCopyBookingId,
   onAdvance, onMarkNotInterested, onOpenFollowUp, rowActions,
-  onDownloadInvoice, onShareInvoice, onEmailBooking, onPreviewEmail, invoiceBusyAction,
+  onDownloadInvoice, onShareInvoice, onEmailBooking, onPreviewEmail, invoiceBusyAction, emailStat,
 }: AdminEnquiryHeaderCardProps) {
   const jb = journeyBadge(enquiry);
   const nma = nextManualAction(enquiry);
@@ -253,6 +256,14 @@ export default function AdminEnquiryHeaderCard({
               >
                 <Eye size={15} aria-hidden="true" />
               </button>
+            )}
+            {onEmailBooking && (
+              <span
+                className={`text-2xs font-medium whitespace-nowrap ${emailStat ? 'text-green-700' : 'text-dark-muted'}`}
+                title={emailStat ? `Last sent ${formatDate(emailStat.lastSentAt, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'No booking email sent yet'}
+              >
+                {emailStat ? `Emailed ×${emailStat.count} · ${formatDate(emailStat.lastSentAt, { day: 'numeric', month: 'short' })}` : 'Not emailed'}
+              </span>
             )}
             {onEmailBooking && (
               <button

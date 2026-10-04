@@ -38,3 +38,51 @@ export async function getActivityLog(enquiryId: string): Promise<ActivityLogEntr
   if (error) throw error;
   return data || [];
 }
+
+// =============================================
+// Booking-email tracking
+// =============================================
+// Booking confirmation emails go out only when an admin sends one (see
+// sendBookingEmail in utils/bookingEmail.ts). Each successful send writes one
+// activity_log row with this action and the recipient address as details, so
+// "was it sent, how many times, and when last" is just a count over those
+// rows, with no extra table or column. The rows are immutable, so the history
+// can't be edited after the fact. "Sent" means the email provider accepted
+// it, not that it was delivered or opened.
+export const BOOKING_EMAIL_ACTION = 'Booking email sent';
+
+export interface BookingEmailStat {
+  count: number;
+  lastSentAt: string;
+}
+
+/** Same count/last-sent figures from an activity log that's already loaded
+ *  (the enquiry detail page), or null when nothing has been sent. */
+export function bookingEmailStatFromLog(rows: ActivityLogEntry[]): BookingEmailStat | null {
+  const sent = rows.filter(r => r.action === BOOKING_EMAIL_ACTION);
+  if (sent.length === 0) return null;
+  const lastSentAt = sent.reduce((latest, r) => (r.created_at > latest ? r.created_at : latest), sent[0].created_at);
+  return { count: sent.length, lastSentAt };
+}
+
+/** Email-sent stats for many enquiries at once, keyed by enquiry id. An
+ *  enquiry that was never emailed is simply absent from the result. */
+export async function getBookingEmailStats(enquiryIds: string[]): Promise<Record<string, BookingEmailStat>> {
+  const stats: Record<string, BookingEmailStat> = {};
+  const CHUNK = 100; // keeps the request URL a sane length
+  for (let i = 0; i < enquiryIds.length; i += CHUNK) {
+    const { data, error } = await supabase
+      .from('activity_log')
+      .select('enquiry_id, created_at')
+      .eq('action', BOOKING_EMAIL_ACTION)
+      .in('enquiry_id', enquiryIds.slice(i, i + CHUNK));
+    if (error) throw error;
+    for (const row of data || []) {
+      const existing = stats[row.enquiry_id];
+      stats[row.enquiry_id] = existing
+        ? { count: existing.count + 1, lastSentAt: row.created_at > existing.lastSentAt ? row.created_at : existing.lastSentAt }
+        : { count: 1, lastSentAt: row.created_at };
+    }
+  }
+  return stats;
+}

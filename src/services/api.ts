@@ -51,6 +51,7 @@ export {
 
 export {
   getActivityLog,
+  getBookingEmailStats,
   submitEnquiry,
   submitContactEnquiry,
   submitGroupEnquiry,
