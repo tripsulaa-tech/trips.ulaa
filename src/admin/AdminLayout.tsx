@@ -21,6 +21,11 @@ import {
   Images,
   Calculator,
   Receipt,
+  Palette,
+  Compass,
+  Globe,
+  UsersThree,
+  ChartLineUp,
 } from '@phosphor-icons/react';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/useAuth';
@@ -29,6 +34,7 @@ import PushNotificationToggle from './PushNotificationToggle';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import type { TripHighlightIconType } from '../constants/tripHighlightIcons';
+import { useBranding } from '../hooks/useBranding';
 
 interface AdminNavItemDef {
   to: string;
@@ -52,57 +58,86 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   Reports: { to: '/admin/reports', icon: BarChart3 },
   'Rate Calculator': { to: '/admin/creator-rate-calculator', icon: Calculator },
   'Invoice Generator': { to: '/admin/invoice-generator', icon: Receipt },
+  Branding: { to: '/admin/branding', icon: Palette },
 };
 
-const DEFAULT_TOP_LEVEL_ORDER = ['Dashboard', 'Upcoming Trips', 'Completed Trips', 'Home Page', 'About Page', 'Enquiries', 'Waitlist', 'Travellers', 'Reports', 'Rate Calculator', 'Invoice Generator'];
-const DEFAULT_GROUP_CHILDREN_ORDER = ['Trip Leaders'];
+// Sidebar layout, grouped by default: "Dashboard" stays a standalone link at
+// the top, and everything else lives in a collapsible section so the list
+// stays short instead of one long scrolling column. The admin can still drag
+// any item to reorder it, or into a different section — the groups themselves
+// (names/icons/order) are fixed, only which items sit where is remembered.
+interface NavGroupDef {
+  id: string;
+  label: string;
+  icon: TripHighlightIconType;
+  items: string[];
+}
 
-// "Dashboard" is the one item that renders as an expandable group (it's the
-// only item other tabs can be dropped into) — everything else is a plain
-// link, wherever the admin has dragged it to.
-const GROUP_LABEL = 'Dashboard';
+const DEFAULT_TOP_ITEMS = ['Dashboard'];
+
+const NAV_GROUPS: NavGroupDef[] = [
+  { id: 'trips', label: 'Trips', icon: Compass, items: ['Upcoming Trips', 'Completed Trips', 'Trip Leaders'] },
+  { id: 'website', label: 'Website', icon: Globe, items: ['Home Page', 'About Page', 'Branding'] },
+  { id: 'customers', label: 'Customers', icon: UsersThree, items: ['Enquiries', 'Waitlist', 'Travellers'] },
+  { id: 'business', label: 'Business', icon: ChartLineUp, items: ['Reports', 'Rate Calculator', 'Invoice Generator'] },
+];
 
 interface NavOrder {
-  topLevel: string[];
-  groupChildren: string[];
+  top: string[];
+  groups: Record<string, string[]>;
 }
 
-const NAV_ORDER_STORAGE_KEY = 'admin-sidebar-order';
+// New key (v2) on purpose: the old flat "admin-sidebar-order" layout would
+// otherwise override the new grouped default for everyone who had ever
+// opened the admin.
+const NAV_ORDER_STORAGE_KEY = 'admin-sidebar-order-v2';
 
 function defaultNavOrder(): NavOrder {
-  return { topLevel: [...DEFAULT_TOP_LEVEL_ORDER], groupChildren: [...DEFAULT_GROUP_CHILDREN_ORDER] };
+  return {
+    top: [...DEFAULT_TOP_ITEMS],
+    groups: Object.fromEntries(NAV_GROUPS.map(g => [g.id, [...g.items]])),
+  };
 }
 
-// Reads the admin's saved drag-and-drop order, dropping any labels that no
-// longer exist (e.g. a page was removed in a later update) and appending
-// any new ones (e.g. a page was added) into their default spot — so a
-// stale saved order never hides a real nav item.
+// Reads the admin's saved arrangement, dropping any labels that no longer
+// exist (e.g. a page was removed in a later update) and putting any new ones
+// back into their default spot — so a stale saved order never hides a real
+// nav item.
 function loadNavOrder(): NavOrder {
   try {
     const raw = window.localStorage.getItem(NAV_ORDER_STORAGE_KEY);
     if (!raw) return defaultNavOrder();
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed?.topLevel) || !Array.isArray(parsed?.groupChildren)) return defaultNavOrder();
+    if (!Array.isArray(parsed?.top) || typeof parsed?.groups !== 'object' || !parsed.groups) return defaultNavOrder();
 
     const known = new Set(Object.keys(NAV_ITEM_DEFS));
     const seen = new Set<string>();
-    const dedupeKnown = (labels: unknown[]) =>
-      labels.filter((l): l is string => typeof l === 'string' && known.has(l) && !seen.has(l) && (seen.add(l), true));
+    const dedupeKnown = (labels: unknown): string[] =>
+      Array.isArray(labels)
+        ? labels.filter((l): l is string => typeof l === 'string' && known.has(l) && !seen.has(l) && (seen.add(l), true))
+        : [];
 
-    const topLevel = dedupeKnown(parsed.topLevel);
-    const groupChildren = dedupeKnown(parsed.groupChildren);
+    const order: NavOrder = { top: dedupeKnown(parsed.top), groups: {} };
+    for (const g of NAV_GROUPS) order.groups[g.id] = dedupeKnown(parsed.groups[g.id]);
 
     for (const label of known) {
       if (seen.has(label)) continue;
-      (DEFAULT_GROUP_CHILDREN_ORDER.includes(label) ? groupChildren : topLevel).push(label);
+      const home = NAV_GROUPS.find(g => g.items.includes(label));
+      (home ? order.groups[home.id] : order.top).push(label);
     }
 
-    if (!topLevel.includes(GROUP_LABEL)) topLevel.unshift(GROUP_LABEL);
-    return { topLevel, groupChildren };
+    if (!order.top.includes(GROUP_FALLBACK_TOP) && !Object.values(order.groups).some(l => l.includes(GROUP_FALLBACK_TOP))) {
+      order.top.unshift(GROUP_FALLBACK_TOP);
+    }
+    return order;
   } catch {
     return defaultNavOrder();
   }
 }
+
+// Dashboard must always be reachable somewhere; this is where it goes if a
+// corrupted saved order somehow lost it.
+const GROUP_FALLBACK_TOP = 'Dashboard';
 
 function saveNavOrder(order: NavOrder) {
   try {
@@ -154,28 +189,47 @@ interface SidebarContentProps {
 }
 
 interface DragTarget {
-  list: 'top' | 'child';
+  /** 'top' for the ungrouped list, otherwise a NAV_GROUPS id. */
+  list: string;
   label?: string;
 }
 
 function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onToggleCollapse, guardNavigate }: SidebarContentProps) {
   const location = useLocation();
+  const { urls: brand } = useBranding();
   const [navOrder, setNavOrder] = useState<NavOrder>(loadNavOrder);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
-    [GROUP_LABEL]: navOrder.groupChildren.some(
-      label => location.pathname === NAV_ITEM_DEFS[label].to || location.pathname.startsWith(`${NAV_ITEM_DEFS[label].to}/`)
-    ),
-  }));
+
+  const isItemActive = (label: string) => {
+    const { to } = NAV_ITEM_DEFS[label];
+    return location.pathname === to || location.pathname.startsWith(`${to}/`);
+  };
+  const groupHasActive = (groupId: string, order: NavOrder = navOrder) =>
+    (order.groups[groupId] ?? []).some(isItemActive);
+
+  // Sections start collapsed, except the one holding the current page.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(NAV_GROUPS.map(g => [g.id, groupHasActive(g.id)]))
+  );
+
+  // Navigating (sidebar link, dashboard quick action, back button, ...) into
+  // a page that lives in a collapsed section opens that section. Adjusted
+  // during render rather than in an effect to avoid an extra render pass.
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
+  if (location.pathname !== prevPathname) {
+    setPrevPathname(location.pathname);
+    const home = NAV_GROUPS.find(g => groupHasActive(g.id));
+    if (home && !openGroups[home.id]) setOpenGroups(prev => ({ ...prev, [home.id]: true }));
+  }
+
   const [draggedLabel, setDraggedLabel] = useState<string | null>(null);
-  // Every row (top-level item, group header, group child, plus the two
-  // drop-only zones below) registers its wrapper element + what dropping
-  // there means, keyed by a unique row id. Hit-tested by Y position on
-  // every pointer move — this is what makes dragging work with touch as
-  // well as a mouse, since native HTML5 drag-and-drop (draggable /
-  // ondragstart) never fires from touch gestures on mobile browsers.
+  // Every row (item, plus each section's end-of-list drop slot) registers its
+  // wrapper element + what dropping there means, keyed by a unique row id.
+  // Hit-tested by Y position on every pointer move — this is what makes
+  // dragging work with touch as well as a mouse, since native HTML5
+  // drag-and-drop never fires from touch gestures on mobile browsers.
   const rowsRef = useRef<Map<string, { el: HTMLElement; target: DragTarget }>>(new Map());
 
-  const toggleGroup = (label: string) => setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
+  const toggleGroup = (id: string) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
 
   const updateOrder = (updater: (order: NavOrder) => NavOrder) => {
     setNavOrder(prev => {
@@ -185,16 +239,18 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
     });
   };
 
-  // Keyboard equivalent of the pointer-drag reordering above — moves
-  // `label` one slot up/down within its own list (top-level or group
-  // children) and announces the result, since a purely visual reorder
-  // wouldn't otherwise be perceivable to a screen reader user driving
-  // this via the keyboard.
+  const listOf = (order: NavOrder, list: string) => (list === 'top' ? order.top : order.groups[list] ?? []);
+  const withList = (order: NavOrder, list: string, items: string[]): NavOrder =>
+    list === 'top' ? { ...order, top: items } : { ...order, groups: { ...order.groups, [list]: items } };
+
+  // Keyboard equivalent of the pointer-drag reordering below — moves `label`
+  // one slot up/down within its own list and announces the result, since a
+  // purely visual reorder wouldn't otherwise be perceivable to a screen
+  // reader user driving this via the keyboard.
   const [moveAnnouncement, setMoveAnnouncement] = useState('');
-  const moveItem = (label: string, list: 'top' | 'child', direction: -1 | 1) => {
-    const key = list === 'top' ? 'topLevel' : 'groupChildren';
+  const moveItem = (label: string, list: string, direction: -1 | 1) => {
     updateOrder(prev => {
-      const arr = [...prev[key]];
+      const arr = [...listOf(prev, list)];
       const from = arr.indexOf(label);
       if (from === -1) return prev;
       const to = from + direction;
@@ -204,7 +260,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       }
       [arr[from], arr[to]] = [arr[to], arr[from]];
       setMoveAnnouncement(`${label} moved to position ${to + 1} of ${arr.length}.`);
-      return { ...prev, [key]: arr };
+      return withList(prev, list, arr);
     });
   };
 
@@ -214,18 +270,19 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
   // targetLabel is omitted. Called live as the pointer moves, so a drag
   // reorders in real time rather than only on release.
   const draggedLabelRef = useRef<string | null>(null);
-  const moveDraggedTo = (targetList: 'top' | 'child', targetLabel?: string) => {
+  const moveDraggedTo = (targetList: string, targetLabel?: string) => {
     const dragged = draggedLabelRef.current;
     if (!dragged || dragged === targetLabel) return;
-    if (dragged === GROUP_LABEL && targetList === 'child') return; // can't nest the group inside itself
 
     updateOrder(prev => {
-      const topLevel = prev.topLevel.filter(l => l !== dragged);
-      const groupChildren = prev.groupChildren.filter(l => l !== dragged);
-      const dest = targetList === 'top' ? topLevel : groupChildren;
+      const next: NavOrder = {
+        top: prev.top.filter(l => l !== dragged),
+        groups: Object.fromEntries(Object.entries(prev.groups).map(([id, items]) => [id, items.filter(l => l !== dragged)])),
+      };
+      const dest = [...listOf(next, targetList)];
       const insertAt = targetLabel ? dest.indexOf(targetLabel) : -1;
       dest.splice(insertAt === -1 ? dest.length : insertAt, 0, dragged);
-      return { topLevel, groupChildren };
+      return withList(next, targetList, dest);
     });
   };
 
@@ -283,10 +340,8 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
   // iOS Safari pops up its text-selection "callout" menu, Android shows a
   // save/inspect context menu, and both browsers may kick off a native
   // element drag (ghost image). Any one of these swallows the touch and
-  // makes the handle feel completely dead — matching "long pressed and
-  // tried to move but nothing happens". touch-action / select-none alone
-  // don't stop these, so they're suppressed explicitly below.
-  const GripHandle = ({ label, list, size = 14 }: { label: string; list: 'top' | 'child'; size?: number }) => (
+  // makes the handle feel completely dead, so they're suppressed explicitly.
+  const renderGrip = (label: string, list: string, size = 14) => (
     <span
       onPointerDown={startDrag(label)}
       onContextMenu={e => e.preventDefault()}
@@ -310,43 +365,36 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
     </span>
   );
 
-  // Shared row shell for a top-level nav item — used both for a plain link
-  // and for the header row of the expandable "Dashboard" group, which is
-  // otherwise identical apart from its `end` matching, active-state padding,
-  // and an optional trailing chevron button.
-  const TopNavRow = ({
-    label, to, end, Icon, activePadding, trailing,
-  }: {
-    label: string;
-    to: string;
-    end?: boolean;
-    Icon: TripHighlightIconType;
-    activePadding: string;
-    trailing?: React.ReactNode;
-  }) => (
-    <div
-      ref={el => { if (el) rowsRef.current.set(label, { el, target: { list: 'top', label } }); else rowsRef.current.delete(label); }}
-      className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
-    >
-      {!collapsed && <GripHandle label={label} list="top" />}
-      <NavLink
-        to={to}
-        end={end}
-        onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
-        title={collapsed ? label : undefined}
-        aria-label={collapsed ? label : undefined}
-        className={({ isActive }) => `
-          flex-1 flex items-center gap-3 py-3 rounded-md text-sm font-medium transition-all min-w-0
-          ${collapsed ? 'justify-center px-0' : activePadding}
-          ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
-        `}
+  // One nav link row. `nested` rows sit inside a section (slightly smaller);
+  // the collapsed icon rail renders every row flat and icon-only.
+  const renderRow = (label: string, list: string, nested: boolean) => {
+    const { to, icon: Icon } = NAV_ITEM_DEFS[label];
+    return (
+      <div
+        key={to}
+        ref={el => { if (el) rowsRef.current.set(label, { el, target: { list, label } }); else rowsRef.current.delete(label); }}
+        className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
       >
-        <Icon size={18} className="shrink-0" aria-hidden="true" />
-        {!collapsed && <span className="truncate">{label}</span>}
-      </NavLink>
-      {trailing}
-    </div>
-  );
+        {!collapsed && renderGrip(label, list, nested ? 13 : 14)}
+        <NavLink
+          to={to}
+          end={label === 'Dashboard'}
+          onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
+          title={collapsed ? label : undefined}
+          aria-label={collapsed ? label : undefined}
+          className={({ isActive }) => `
+            flex-1 flex items-center rounded-md text-sm font-medium transition-all min-w-0
+            ${nested ? 'gap-2.5 py-2.5 px-2' : 'gap-3 py-3 px-3'}
+            ${collapsed ? '!justify-center !px-0 !gap-0 !py-3' : ''}
+            ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
+          `}
+        >
+          <Icon size={nested && !collapsed ? 16 : 18} className="shrink-0" aria-hidden="true" />
+          {!collapsed && <span className="truncate">{label}</span>}
+        </NavLink>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -356,9 +404,9 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       <div className={`relative pt-6 pb-4 flex items-center ${collapsed ? 'flex-col gap-3 px-2' : 'justify-center px-6'}`}>
         <Link to="/" className="inline-block shrink-0" onClick={guardNavigate}>
           {collapsed ? (
-            <img src="/favicon.svg" alt="Ulaa" className="h-11 w-11" />
+            <img src={brand.admin_icon} alt="Ulaa" className="h-11 w-11 object-contain" />
           ) : (
-            <img src="/ULAA.svg" alt="Ulaa" className="h-32" />
+            <img src={brand.admin_logo} alt="Ulaa" className="h-32 max-w-full object-contain" />
           )}
         </Link>
         {/* Collapse/expand toggle — desktop only; the mobile drawer always
@@ -390,84 +438,62 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       </div>
 
       <nav className={`flex-1 space-y-1 overflow-y-auto app-scroll ${collapsed ? 'px-2' : 'px-4'}`}>
-        {navOrder.topLevel.map(label => {
-          const { to, icon: Icon } = NAV_ITEM_DEFS[label];
+        {/* Ungrouped items (Dashboard by default). */}
+        {navOrder.top.map(label => renderRow(label, 'top', false))}
 
-          if (label !== GROUP_LABEL) {
+        {NAV_GROUPS.map(group => {
+          const items = navOrder.groups[group.id] ?? [];
+
+          // Collapsed icon rail has no room for section headers, so every
+          // section's items are shown flat, with a thin divider between
+          // sections to keep the grouping visible.
+          if (collapsed) {
+            if (items.length === 0) return null;
             return (
-              <TopNavRow key={to} label={label} to={to} Icon={Icon} activePadding="px-3" />
+              <div key={group.id} className="pt-2 mt-2 border-t border-background-warm space-y-1">
+                {items.map(label => renderRow(label, group.id, false))}
+              </div>
             );
           }
 
-          // "Dashboard" — the one item that renders as an expandable group.
-          // Collapsed rail has no room for a nested list, so it falls back
-          // to a plain link there; only the expanded sidebar shows the
-          // expand/collapse and accepts drops into/out of the group.
-          const isOpen = !collapsed && (openGroups[GROUP_LABEL] ?? false);
+          // While dragging, every section opens so an item can be dropped
+          // into any of them, even one that was collapsed.
+          const isOpen = !!draggedLabel || (openGroups[group.id] ?? false);
+          const hasActive = items.some(isItemActive);
+          const GroupIcon = group.icon;
 
           return (
-            <div key={to}>
-              <TopNavRow
-                label={label}
-                to={to}
-                end
-                Icon={Icon}
-                activePadding="px-2"
-                trailing={!collapsed && (
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(GROUP_LABEL)}
-                    aria-label={isOpen ? `Collapse ${label}` : `Expand ${label}`}
-                    aria-expanded={isOpen}
-                    className="shrink-0 p-2.5 mr-1 rounded-md text-dark-muted hover:bg-background-warm hover:text-primary transition-colors"
-                  >
-                    <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                  </button>
-                )}
-              />
+            <div key={group.id} className="pt-1">
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.id)}
+                aria-expanded={isOpen}
+                aria-controls={`admin-nav-group-${group.id}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-background-warm hover:text-primary ${
+                  hasActive && !isOpen ? 'text-primary' : 'text-dark-muted'
+                }`}
+              >
+                <GroupIcon size={16} className="shrink-0" aria-hidden="true" />
+                <span className="flex-1 text-left truncate">{group.label}</span>
+                <ChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+              </button>
 
               {isOpen && (
-                <div
-                  ref={el => { if (el) rowsRef.current.set('__GROUP_END__', { el, target: { list: 'child' } }); else rowsRef.current.delete('__GROUP_END__'); }}
-                  className="mt-1 ml-4 pl-3 py-1 space-y-1 border-l border-background-warm min-h-[8px]"
-                >
-                  {navOrder.groupChildren.map(childLabel => {
-                    const child = NAV_ITEM_DEFS[childLabel];
-                    return (
-                      <div
-                        key={child.to}
-                        ref={el => { if (el) rowsRef.current.set(childLabel, { el, target: { list: 'child', label: childLabel } }); else rowsRef.current.delete(childLabel); }}
-                        className={`flex items-center gap-1 rounded-md ${draggedLabel === childLabel ? 'opacity-40' : ''}`}
-                      >
-                        <GripHandle label={childLabel} list="child" size={13} />
-                        <NavLink
-                          to={child.to}
-                          onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
-                          className={({ isActive }) => `
-                            flex-1 flex items-center gap-2.5 py-2.5 px-2 rounded-md text-sm font-medium transition-all min-w-0
-                            ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
-                          `}
-                        >
-                          <child.icon size={16} className="shrink-0" aria-hidden="true" />
-                          <span className="truncate">{childLabel}</span>
-                        </NavLink>
-                      </div>
-                    );
-                  })}
+                <div id={`admin-nav-group-${group.id}`} className="mt-1 ml-4 pl-3 py-1 space-y-1 border-l border-background-warm">
+                  {items.map(label => renderRow(label, group.id, true))}
+                  {/* End-of-section drop slot — lets an item be dropped at
+                      the bottom of (or into an empty) section. */}
+                  {draggedLabel && (
+                    <div
+                      ref={el => { if (el) rowsRef.current.set(`__END_${group.id}__`, { el, target: { list: group.id } }); else rowsRef.current.delete(`__END_${group.id}__`); }}
+                      className="h-8 rounded-md border-2 border-dashed border-primary/30"
+                    />
+                  )}
                 </div>
               )}
             </div>
           );
         })}
-
-        {/* Trailing drop zone — lets a dragged group child be un-nested
-            back to the top level by dragging it below the last item. */}
-        {!collapsed && draggedLabel && (
-          <div
-            ref={el => { if (el) rowsRef.current.set('__TOP_END__', { el, target: { list: 'top' } }); else rowsRef.current.delete('__TOP_END__'); }}
-            className="h-10 rounded-md border-2 border-dashed border-primary/30"
-          />
-        )}
       </nav>
 
       <div className={`p-4 border-t border-background-warm ${collapsed ? 'px-2' : ''}`}>

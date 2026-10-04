@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import Button from '../ui/Button';
 import { useAuth } from '../../context/useAuth';
+import { useBranding } from '../../hooks/useBranding';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -21,6 +22,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { urls: brand } = useBranding();
 
   // Close the mobile menu whenever the route changes. Adjusted during render
   // (rather than in an effect) to avoid an extra cascading render.
@@ -52,7 +54,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20 py-2">
           <Link to="/" onClick={handleLogoClick} className="flex items-center gap-3 group">
             <img
-              src="/ULAA-logo-Header.png"
+              src={brand.header_logo}
               alt="Ulaa Logo"
               className="h-14 sm:h-16 w-auto transition-transform duration-300 group-hover:scale-105"
             />

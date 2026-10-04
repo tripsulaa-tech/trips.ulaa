@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import InstallAppBanner from '../components/ui/InstallAppBanner';
 import BottomNav from '../components/layout/BottomNav';
 import { scrollToInstant } from '../utils/scroll';
+import BrandingFavicon from '../components/layout/BrandingFavicon';
 
 // The browser's own back/forward scroll restoration tries to remember and
 // replay scroll positions per history entry, which fights with our own
@@ -134,6 +135,7 @@ const AdminHomePage = lazy(() => import('../admin/AdminHomePage'));
 const AdminTripLeaders = lazy(() => import('../admin/AdminTripLeaders'));
 const AdminCreatorRateCalculator = lazy(() => import('../admin/AdminCreatorRateCalculator'));
 const AdminInvoiceGenerator = lazy(() => import('../admin/AdminInvoiceGenerator'));
+const AdminBranding = lazy(() => import('../admin/AdminBranding'));
 
 const PageLoader = () => (
   <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
@@ -164,6 +166,7 @@ export default function AppRouter() {
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
+        <BrandingFavicon />
         <InstallAppBanner />
         <PersistentBottomNav />
         <Suspense fallback={<PageLoader />}>
@@ -219,6 +222,9 @@ export default function AppRouter() {
             } />
             <Route path="/admin/invoice-generator" element={
               <ProtectedRoute><AdminInvoiceGenerator /></ProtectedRoute>
+            } />
+            <Route path="/admin/branding" element={
+              <ProtectedRoute><AdminBranding /></ProtectedRoute>
             } />
 
             {/* 404 */}

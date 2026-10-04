@@ -14,6 +14,7 @@ import { getSiteContent } from '../../services/api';
 import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
 import type { BottomNavItemConfig } from '../../types/types-index';
+import { useBranding } from '../../hooks/useBranding';
 
 const WHATSAPP_NUMBER = '916381336772';
 
@@ -45,6 +46,7 @@ const socialItems = [
 ];
 
 export default function Footer() {
+  const { urls: brand } = useBranding();
   const year = new Date().getFullYear();
 
   // Mirrors the same admin-configurable tabs used by the mobile BottomNav
@@ -87,7 +89,7 @@ export default function Footer() {
           {/* Logo */}
           <Link to="/" className="inline-block">
             <img
-              src="/ULAA-logo-Footer.png"
+              src={brand.footer_logo}
               alt="Ulaa — Unseen. Local. Adventures. Activities."
               className="w-full max-w-[260px] mx-auto h-auto -mb-3"
             />
@@ -185,7 +187,7 @@ export default function Footer() {
           <div>
             <Link to="/" className="inline-block">
               <img
-                src="/ULAA-logo-Footer.png"
+                src={brand.footer_logo}
                 alt="Ulaa — Unseen. Local. Adventures. Activities."
                 className="w-full max-w-[210px] h-auto"
               />

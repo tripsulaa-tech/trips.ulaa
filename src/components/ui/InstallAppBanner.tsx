@@ -11,6 +11,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
+import { useBranding } from '../../hooks/useBranding';
 
 // iOS Safari (and, since they all relay to Safari's share sheet, Chrome/Edge/
 // Firefox on iOS too) never fires `beforeinstallprompt` — Apple doesn't
@@ -115,6 +116,7 @@ export default function InstallAppBanner() {
   const [showIosSteps, setShowIosSteps] = useState(false);
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  const { urls: brand } = useBranding();
   const ios = isIos();
   const iosBrowser = ios ? getIosBrowser() : null;
 
@@ -129,7 +131,7 @@ export default function InstallAppBanner() {
   return (
     <div className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:left-auto sm:right-4 sm:w-80 z-[60] flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
       <img
-        src={isAdmin ? '/icons/admin/icon-192.png' : '/icons/user/icon-192.png'}
+        src={isAdmin ? '/icons/admin/icon-192.png' : brand.app_icon}
         alt=""
         className="h-10 w-10 shrink-0 rounded-lg"
       />
