@@ -60,6 +60,17 @@ export default function PaymentFormFields({
   // Only meaningful when a trip is linked — no-trip (general) enquiries
   // have no list price, so they keep the old free-typed Total Amount field.
   const listPrice = enquiry.trip_id ? getTripPrice(enquiry.trip_id, paymentForm.package_type) : undefined;
+  // Once a trip is completed it drops out of the upcoming-trips list, so
+  // getTripPrice() has no list price to discount from and used to return
+  // undefined — the Discount field then saved discount_amount but left
+  // total_amount untouched, so the balance never moved (and the "Trip
+  // Amount" tile, which adds the discount back, over-reported). In that case
+  // work back to the list price from what's already saved on the enquiry
+  // (total + the discount it already had), so applying a discount still
+  // lowers the total by the right amount.
+  const savedListPrice = enquiry.trip_id && enquiry.total_amount != null
+    ? enquiry.total_amount + (enquiry.discount_amount || 0)
+    : undefined;
   // Child Fare is priced off this trip's configured rate, not a no-trip
   // (general) enquiry — see getTripChildFareAmount's doc comment.
   const tripChildFareAmount = enquiry.trip_id ? getTripChildFareAmount(enquiry.trip_id) : undefined;
@@ -181,7 +192,7 @@ export default function PaymentFormFields({
               disabled={paymentForm.payment_type === 'addon' || pricingLocked}
               onChange={e => {
                 const discount = parseNonNegative(e.target.value);
-                updateForm(f => ({ ...f, discount_amount: discount, total_amount: computeDiscountedTotal(listPrice, discount) ?? f.total_amount }));
+                updateForm(f => ({ ...f, discount_amount: discount, total_amount: computeDiscountedTotal(listPrice ?? savedListPrice, discount) ?? f.total_amount }));
               }}
               className={`${fieldClass} ${(paymentForm.payment_type === 'addon' || pricingLocked) ? 'opacity-60 cursor-not-allowed' : ''}`}
               placeholder={paymentForm.payment_type === 'addon' ? 'Updates automatically' : 'e.g. 1000'}

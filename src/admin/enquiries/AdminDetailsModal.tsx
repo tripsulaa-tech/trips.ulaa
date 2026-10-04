@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
   CheckCircle as CheckCircle2,
   FileText,
@@ -8,19 +9,66 @@ import {
   Plus,
   Users,
   User,
+  Phone as PhoneIcon,
+  Briefcase,
+  Buildings as Building2,
+  CalendarBlank as CalendarDays,
+  Globe,
+  Package,
+  Bird,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import FoodMark from '../../components/ui/FoodMark';
-import { ContactQuickLinks } from '../../components/ui/DataTableChrome';
+import { WhatsAppIcon } from '../../components/icons/WhatsAppIcon';
 import {
   PACKAGE_CONFIG, INVOICE_TYPE_LABEL, SOURCE_CONFIG, foodBadge, foodPreferenceKey,
 } from './AdminEnquiryCommon';
 import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
 import type { Enquiry, Payment } from '../../types/types-index';
 import type { InvoiceAction } from './AdminEnquiryCommon';
-import { formatDate, formatPrice, formatTime } from '../../utils/utils-index';
+import { formatDate, formatPrice, formatTime, getWhatsAppLink } from '../../utils/utils-index';
+import { formatPhone } from '../../utils/formatPhone';
 import { isPremiumPackage } from '../../utils/tripOptions';
+
+// Same icon-chip + label/value look as the "Traveller & Trip" card on the
+// full enquiry page (AdminEnquiryTravellerCard): a round tinted icon, a muted
+// label, and a bold value. When `href` is given the icon itself is the
+// tap-to-call / tap-to-email / WhatsApp link, as on that card.
+const ICON_CHIP_CLASS = 'w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0';
+const ICON_LINK_CLASS = `${ICON_CHIP_CLASS} hover:bg-primary hover:text-white transition-colors`;
+
+function InfoItem({ icon, label, href, linkTitle, external, children }: {
+  icon: ReactNode;
+  label: string;
+  href?: string;
+  linkTitle?: string;
+  external?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 min-w-0">
+      {href ? (
+        <a
+          href={href}
+          title={linkTitle}
+          aria-label={linkTitle}
+          target={external ? '_blank' : undefined}
+          rel={external ? 'noopener noreferrer' : undefined}
+          className={ICON_LINK_CLASS}
+        >
+          {icon}
+        </a>
+      ) : (
+        <span className={ICON_CHIP_CLASS}>{icon}</span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-dark-muted text-xs">{label}</p>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function DetailsModal({
   detailsTarget,
@@ -92,17 +140,41 @@ export default function DetailsModal({
                   <p className="text-dark-muted text-xs">Booking ID</p>
                   <p className="text-dark text-sm font-mono truncate">{detailsTarget.booking_id}</p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button variant="outline" size="sm" onClick={() => onDownloadInvoice(detailsTarget)} disabled={invoiceBusy?.id === detailsTarget.id && invoiceBusy.action === 'download'}>
-                    <FileText size={14} aria-hidden="true" /> Invoice
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => onShareInvoice(detailsTarget)} disabled={invoiceBusy?.id === detailsTarget.id && invoiceBusy.action === 'share'}>
-                    <Share2 size={14} aria-hidden="true" /> Share
-                  </Button>
+                {/* Icon-only on purpose: three labelled buttons didn't fit
+                    beside the Booking ID on a phone and overlapped it. Each
+                    button's disabled check is scoped to its own action. */}
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onDownloadInvoice(detailsTarget)}
+                    disabled={invoiceBusy?.id === detailsTarget.id && invoiceBusy.action === 'download'}
+                    title="Download invoice"
+                    aria-label="Download invoice"
+                    className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
+                  >
+                    <FileText size={18} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onShareInvoice(detailsTarget)}
+                    disabled={invoiceBusy?.id === detailsTarget.id && invoiceBusy.action === 'share'}
+                    title="Share invoice"
+                    aria-label="Share invoice"
+                    className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
+                  >
+                    <Share2 size={18} aria-hidden="true" />
+                  </button>
                   {detailsTarget.email && (
-                    <Button variant="outline" size="sm" onClick={() => onSendBookingEmail(detailsTarget)} disabled={invoiceBusy?.id === detailsTarget.id && invoiceBusy.action === 'email'}>
-                      <EnvelopeSimple size={14} aria-hidden="true" /> Email
-                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => onSendBookingEmail(detailsTarget)}
+                      disabled={invoiceBusy?.id === detailsTarget.id && invoiceBusy.action === 'email'}
+                      title="Email booking confirmation"
+                      aria-label="Email booking confirmation"
+                      className="p-2 -m-1 text-primary hover:text-primary-dark disabled:opacity-50"
+                    >
+                      <EnvelopeSimple size={18} aria-hidden="true" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -217,64 +289,109 @@ export default function DetailsModal({
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
-              <div>
-                <p className="text-dark-muted text-xs">Email</p>
-                <p className="text-dark truncate">{detailsTarget.email}</p>
+            {/* Traveller & Trip details — same theme as the card on the
+                full enquiry page. */}
+            <div className="divide-y divide-background-warm">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-3 pb-4">
+                <InfoItem
+                  icon={<PhoneIcon size={15} aria-hidden="true" />}
+                  label="Phone"
+                  href={detailsTarget.phone ? `tel:${detailsTarget.phone}` : undefined}
+                  linkTitle={`Call ${detailsTarget.full_name}`}
+                >
+                  <p className="text-dark text-sm font-semibold whitespace-nowrap">{detailsTarget.phone ? formatPhone(detailsTarget.phone) : '—'}</p>
+                </InfoItem>
+                <InfoItem
+                  icon={<EnvelopeSimple size={15} aria-hidden="true" />}
+                  label="Email"
+                  href={detailsTarget.email ? `mailto:${detailsTarget.email}` : undefined}
+                  linkTitle={`Email ${detailsTarget.full_name}`}
+                >
+                  <p title={detailsTarget.email || undefined} className="text-dark text-sm font-semibold truncate">{detailsTarget.email || '—'}</p>
+                </InfoItem>
               </div>
-              <div>
-                <p className="text-dark-muted text-xs">Phone</p>
-                <p className="text-dark truncate">{detailsTarget.phone}</p>
+
+              {/* Trip — spelled out explicitly, including the no-trip
+                  case, instead of only being inferable from which Trip
+                  filter group the admin happens to be scoped to. */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
+                <InfoItem icon={<Briefcase size={15} aria-hidden="true" />} label="Trip">
+                  <p title={detailsTarget.trip_id ? detailsTarget.trip_title : undefined} className="text-dark text-sm font-semibold truncate">
+                    {detailsTarget.trip_id ? detailsTarget.trip_title : (
+                      <span className="text-dark-muted italic font-normal">
+                        {isGeneralContactMessage(detailsTarget) ? 'None — Contact Us message' : 'None — logged without a trip'}
+                      </span>
+                    )}
+                  </p>
+                </InfoItem>
+                <InfoItem icon={<User size={15} aria-hidden="true" />} label="Age">
+                  <p className="text-dark text-sm font-semibold truncate">{detailsTarget.age ?? '—'}</p>
+                </InfoItem>
               </div>
-              <div className="col-span-2 sm:col-span-3">
-                <ContactQuickLinks phone={detailsTarget.phone} email={detailsTarget.email} name={detailsTarget.full_name} tripTitle={detailsTarget.trip_title} size="md" />
+
+              <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
+                <InfoItem icon={<Building2 size={15} aria-hidden="true" />} label="City">
+                  <p className="text-dark text-sm font-semibold truncate">{detailsTarget.city || '—'}</p>
+                </InfoItem>
+                <InfoItem
+                  icon={<FoodMark type={detailsTarget.food_preference === 'veg' || detailsTarget.food_preference === 'non_veg' ? detailsTarget.food_preference : 'not_set'} size={12} />}
+                  label="Food Preference"
+                >
+                  <p className={`text-sm font-semibold truncate flex items-center gap-1 ${
+                    detailsTarget.food_preference === 'veg' ? 'text-green-700' : detailsTarget.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark'
+                  }`}>
+                    {(detailsTarget.food_preference === 'veg' || detailsTarget.food_preference === 'non_veg') && <FoodMark type={detailsTarget.food_preference} size={11} />}
+                    {detailsTarget.food_preference === 'veg' ? 'Veg' : detailsTarget.food_preference === 'non_veg' ? 'Non-veg' : '—'}
+                  </p>
+                </InfoItem>
               </div>
-              {/* Trip (3.8) — spelled out explicitly, including the
-                  no-trip case, instead of only being inferable from
-                  which Trip filter group the admin happens to be
-                  scoped to. */}
-              <div className="col-span-2 sm:col-span-3">
-                <p className="text-dark-muted text-xs">Trip</p>
-                <p className="text-dark truncate">
-                  {detailsTarget.trip_id ? detailsTarget.trip_title : (
-                    <span className="text-dark-muted italic">
-                      {isGeneralContactMessage(detailsTarget) ? 'None — Contact Us message' : 'None — logged without a trip'}
-                    </span>
-                  )}
-                </p>
+
+              <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
+                <InfoItem icon={<CalendarDays size={15} aria-hidden="true" />} label="Date & Time">
+                  <p className="text-dark text-sm font-semibold truncate">{formatDate(detailsTarget.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  <p className="text-dark-muted text-xs truncate">{formatTime(detailsTarget.created_at)}</p>
+                </InfoItem>
+                <InfoItem icon={<Globe size={15} aria-hidden="true" />} label="Source">
+                  <p className="text-dark text-sm font-semibold truncate">{srcCfg.label}</p>
+                </InfoItem>
               </div>
-              <div>
-                <p className="text-dark-muted text-xs">City</p>
-                <p className="text-dark truncate">{detailsTarget.city || '—'}</p>
-              </div>
-              <div>
-                <p className="text-dark-muted text-xs">Age</p>
-                <p className="text-dark truncate">{detailsTarget.age ?? '—'}</p>
-              </div>
-              <div>
-                <p className="text-dark-muted text-xs">Source</p>
-                <p className="text-dark truncate inline-flex items-center gap-1">
-                  <srcCfg.icon size={12} className="shrink-0" aria-hidden="true" /> {srcCfg.label}
-                </p>
-              </div>
-              <div>
-                <p className="text-dark-muted text-xs">Package</p>
-                <p className="text-dark truncate">
-                  {detailsTarget.package_name ? <span className={`font-semibold ${isPremiumPackage(detailsTarget.package_name) ? 'premium-gold-text' : 'text-primary'}`}>{detailsTarget.package_name}</span> : null}
-                  {detailsTarget.package_name ? <span className="text-dark-muted text-xs"> · {PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}</span> : PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}
-                </p>
-              </div>
-              <div>
-                <p className="text-dark-muted text-xs">Date &amp; Time</p>
-                <p className="text-dark truncate">
-                  {formatDate(detailsTarget.created_at, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(detailsTarget.created_at)}
-                </p>
+
+              <div className="grid grid-cols-2 gap-x-3 gap-y-3 pt-4 items-center">
+                <InfoItem
+                  icon={detailsTarget.package_type === 'early_bird' ? <Bird size={15} aria-hidden="true" /> : <Package size={15} aria-hidden="true" />}
+                  label="Package"
+                >
+                  <p className="text-dark text-sm font-semibold truncate">{PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}</p>
+                </InfoItem>
+                {/* Trip package (Basic / Premium / ...) — what the traveller
+                    chose to do, separate from the early-bird/normal price
+                    tier above. Only shown when one was picked. */}
+                {detailsTarget.package_name && (
+                  <InfoItem icon={<Package size={15} aria-hidden="true" />} label="Trip Package">
+                    <p className="text-dark text-sm font-semibold truncate">
+                      {isPremiumPackage(detailsTarget.package_name)
+                        ? <span className="premium-gold-text">{detailsTarget.package_name}</span>
+                        : detailsTarget.package_name}
+                    </p>
+                  </InfoItem>
+                )}
+                {detailsTarget.phone && (
+                  <InfoItem
+                    icon={<WhatsAppIcon size={15} aria-hidden="true" />}
+                    label="WhatsApp"
+                    href={getWhatsAppLink(detailsTarget.phone, `Hi ${detailsTarget.full_name.trim().split(/\s+/)[0]}, following up on your ${detailsTarget.trip_title ? `${detailsTarget.trip_title} ` : ''}enquiry with Ulaa — `)}
+                    linkTitle={`Message ${detailsTarget.full_name} on WhatsApp`}
+                    external
+                  >
+                    <p className="text-dark text-sm font-semibold whitespace-nowrap">{formatPhone(detailsTarget.phone)}</p>
+                  </InfoItem>
+                )}
               </div>
             </div>
             {detailsTarget.message && (
-              <div>
-                <p className="text-dark-muted text-xs mb-1">Notes</p>
-                <p className="text-dark text-sm bg-background-warm rounded-md px-3 py-2.5">{detailsTarget.message}</p>
+              <div className="pt-4 border-t border-background-warm">
+                <p className="text-dark-muted text-xs mb-1">Message</p>
+                <p className="text-dark text-sm whitespace-pre-wrap">{detailsTarget.message}</p>
               </div>
             )}
           </div>
