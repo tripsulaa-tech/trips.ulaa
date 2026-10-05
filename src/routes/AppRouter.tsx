@@ -136,6 +136,7 @@ const AdminHomePage = lazy(() => import('../admin/AdminHomePage'));
 const AdminTripLeaders = lazy(() => import('../admin/AdminTripLeaders'));
 const AdminCreatorRateCalculator = lazy(() => import('../admin/AdminCreatorRateCalculator'));
 const AdminInvoiceGenerator = lazy(() => import('../admin/AdminInvoiceGenerator'));
+const AdminTravelCards = lazy(() => import('../admin/AdminTravelCards'));
 const AdminBranding = lazy(() => import('../admin/AdminBranding'));
 
 const PageLoader = () => (
@@ -226,6 +227,9 @@ export default function AppRouter() {
             } />
             <Route path="/admin/invoice-generator" element={
               <ProtectedRoute><AdminInvoiceGenerator /></ProtectedRoute>
+            } />
+            <Route path="/admin/travel-cards" element={
+              <ProtectedRoute><AdminTravelCards /></ProtectedRoute>
             } />
             <Route path="/admin/branding" element={
               <ProtectedRoute><AdminBranding /></ProtectedRoute>
