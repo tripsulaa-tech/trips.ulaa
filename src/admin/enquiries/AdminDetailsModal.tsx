@@ -357,24 +357,30 @@ export default function DetailsModal({
               </div>
 
               <div className="grid grid-cols-2 gap-x-3 gap-y-3 pt-4 items-center">
+                {/* One Package item, same logic as the CRM list: the trip
+                    package the traveller chose (Basic / Premium / ...) on
+                    top, price tier (Early Bird / Normal) underneath. Trips
+                    without packages just show the tier. */}
                 <InfoItem
                   icon={detailsTarget.package_type === 'early_bird' ? <Bird size={15} aria-hidden="true" /> : <Package size={15} aria-hidden="true" />}
                   label="Package"
                 >
-                  <p className="text-dark text-sm font-semibold truncate">{PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}</p>
-                </InfoItem>
-                {/* Trip package (Basic / Premium / ...) — what the traveller
-                    chose to do, separate from the early-bird/normal price
-                    tier above. Only shown when one was picked. */}
-                {detailsTarget.package_name && (
-                  <InfoItem icon={<Package size={15} aria-hidden="true" />} label="Trip Package">
-                    <p className="text-dark text-sm font-semibold truncate">
-                      {isPremiumPackage(detailsTarget.package_name)
-                        ? <span className="premium-gold-text">{detailsTarget.package_name}</span>
-                        : detailsTarget.package_name}
+                  {detailsTarget.package_name && (
+                    <p
+                      title="Trip package this traveller chose"
+                      className={`text-sm font-semibold truncate ${isPremiumPackage(detailsTarget.package_name) ? 'premium-gold-text' : 'text-primary'}`}
+                    >
+                      {detailsTarget.package_name}
                     </p>
-                  </InfoItem>
-                )}
+                  )}
+                  <p className={`truncate ${
+                    detailsTarget.package_name
+                      ? `text-xs ${detailsTarget.package_type === 'early_bird' ? 'text-purple-700 font-semibold' : 'text-dark-muted'}`
+                      : `text-sm font-semibold ${detailsTarget.package_type === 'early_bird' ? 'text-purple-700' : 'text-dark'}`
+                  }`}>
+                    {PACKAGE_CONFIG[detailsTarget.package_type || 'normal'].label}
+                  </p>
+                </InfoItem>
                 {detailsTarget.phone && (
                   <InfoItem
                     icon={<WhatsAppIcon size={15} aria-hidden="true" />}
