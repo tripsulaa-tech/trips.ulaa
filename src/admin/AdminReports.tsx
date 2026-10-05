@@ -51,12 +51,12 @@ import {
 import AdminLayout from './AdminLayout';
 import FoodMark from '../components/ui/FoodMark';
 import Select from '../components/ui/Select';
-import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getAllPayments } from '../services/api';
-import type { Enquiry, UpcomingTrip, CompletedTrip, Payment, TripFinance } from '../types/types-index';
+import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getAllPayments, getTripFinanceSnapshots } from '../services/api';
+import type { Enquiry, UpcomingTrip, CompletedTrip, Payment, TripFinance, TripFinanceSnapshot, TripRevenueSnapshot } from '../types/types-index';
 import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
-import { computeTripFinanceSummary } from '../utils/tripFinance';
+import { computeTripFinanceSummary, emptyTripFinance } from '../utils/tripFinance';
 import { countOptionSelections } from '../utils/tripOptions';
 import { downloadTripExcelReport, downloadAllTripsExcelReport } from '../utils/tripExcelReport';
 
@@ -333,11 +333,39 @@ function ReportsSkeleton() {
   );
 }
 
+// One trip with finances, rolled up against its bookings. Revenue comes from
+// live bookings while they exist, otherwise from the saved copy kept after
+// the trip finished (trip_finance_snapshots.trip_revenue).
+interface FinanceSource {
+  id: string;
+  title: string;
+  startDate: string;
+  finance: TripFinance;
+  saved: TripRevenueSnapshot | null;
+}
+
+function buildFinanceTrip(src: FinanceSource, enquiries: Enquiry[]) {
+  const tripBookings = enquiries.filter(e => e.trip_id === src.id && isBooked(e));
+  const rev: TripRevenueSnapshot = tripBookings.length === 0 && src.saved
+    ? src.saved
+    : {
+        bookedCount: tripBookings.length,
+        totalRevenue: tripBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0),
+        childFareCount: tripBookings.filter(e => e.has_child_addon).length,
+        optionCounts: countOptionSelections(tripBookings),
+      };
+  const summary = computeTripFinanceSummary(src.finance, rev.bookedCount, rev.totalRevenue, rev.childFareCount, rev.optionCounts);
+  // finance is the raw Finances-tab record, kept next to the rolled-up
+  // summary so the Excel export can itemize the cost lines.
+  return { id: src.id, title: src.title, startDate: src.startDate, finance: src.finance, ...summary };
+}
+
 export default function AdminReports() {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [upcomingTrips, setUpcomingTrips] = useState<UpcomingTrip[]>([]);
   const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [snapshots, setSnapshots] = useState<TripFinanceSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>(() => loadPersisted<PersistedReportsFilters>(PERIOD_STORAGE_KEY).period ?? 'all');
   const [tripId, setTripId] = useState<string>(() => loadPersisted<PersistedReportsFilters>(PERIOD_STORAGE_KEY).tripId ?? ALL_TRIPS);
@@ -348,12 +376,21 @@ export default function AdminReports() {
   }, [period, tripId]);
 
   useEffect(() => {
-    Promise.all([getEnquiries(), getAllUpcomingTripsAdmin(), getAllCompletedTripsAdmin(), getAllPayments()])
-      .then(([allEnquiries, upcoming, completed, allPayments]) => {
+    Promise.all([
+      getEnquiries(),
+      getAllUpcomingTripsAdmin(),
+      getAllCompletedTripsAdmin(),
+      getAllPayments(),
+      // Saved finance of finished trips (Trip Finance tab). Optional: if the
+      // table isn't there yet, the export just covers upcoming trips.
+      getTripFinanceSnapshots().catch(() => [] as TripFinanceSnapshot[]),
+    ])
+      .then(([allEnquiries, upcoming, completed, allPayments, snaps]) => {
         setEnquiries(allEnquiries);
         setUpcomingTrips(upcoming);
         setCompletedTrips(completed);
         setPayments(allPayments);
+        setSnapshots(snaps);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -612,38 +649,42 @@ export default function AdminReports() {
   // roll up (emptyTripFinance would just report 100% margin, which is
   // wrong, not "no data").
   const financeByTrip = useMemo(() => {
-    const relevantTrips = tripId === ALL_TRIPS ? upcomingTrips : upcomingTrips.filter(t => t.id === tripId);
-    return relevantTrips
-      .filter(t => !!t.trip_finance)
-      .map(t => {
-        // Real revenue for this trip: sum of what each booked enquiry was
-        // actually invoiced for (total_amount), not bookedCount x listed
-        // price — bookings routinely differ from the regular price
-        // (early-bird, group/manual discounts, one-off deals), so a flat
-        // per-head multiply would silently misstate revenue. Enquiries
-        // that are booked but have no total_amount set yet (price not
-        // finalized) contribute 0 to revenue, same as everywhere else on
-        // this page treats an unset total_amount.
-        const tripBookings = enquiries.filter(e => e.trip_id === t.id && isBooked(e));
-        const totalRevenue = tripBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0);
-        const childFareCount = tripBookings.filter(e => e.has_child_addon).length;
-        const summary = computeTripFinanceSummary(t.trip_finance, tripBookings.length, totalRevenue, childFareCount, countOptionSelections(tripBookings));
-        return {
-          id: t.id,
-          title: t.title || t.destination,
-          startDate: t.start_date,
-          // Raw Finances-tab record, kept alongside the rolled-up summary
-          // fields so the Excel export can itemize ulaaCosts/organiserCosts
-          // (ad spend, agency payment, organiser's own entry ticket, etc.)
-          // instead of only showing the two totals. Non-null: this map only
-          // runs over trips the `.filter(t => !!t.trip_finance)` above
-          // already kept.
-          finance: t.trip_finance as TripFinance,
-          ...summary,
-        };
-      })
-      .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
-  }, [upcomingTrips, enquiries, tripId]);
+    // Upcoming trips use their live record; finished trips (upcoming row
+    // already gone) use the saved copy in trip_finance_snapshots, so a
+    // completed trip's Finances & Profit stays in Reports for good.
+    const upcomingIds = new Set(upcomingTrips.map(t => t.id));
+    const sources: FinanceSource[] = [
+      ...upcomingTrips
+        .filter(t => !!t.trip_finance)
+        .map(t => ({ id: t.id, title: t.title || t.destination, startDate: t.start_date, finance: t.trip_finance as TripFinance, saved: null })),
+      ...snapshots
+        .filter(sn => !upcomingIds.has(sn.trip_id) && !!sn.trip_finance)
+        .map(sn => ({ id: sn.trip_id, title: sn.title, startDate: sn.trip_date ?? '', finance: sn.trip_finance as TripFinance, saved: sn.trip_revenue })),
+    ];
+    return sources
+      .filter(src => tripId === ALL_TRIPS || src.id === tripId)
+      .map(src => buildFinanceTrip(src, enquiries))
+      .sort((x, y) => (x.startDate || '').localeCompare(y.startDate || ''));
+  }, [upcomingTrips, snapshots, enquiries, tripId]);
+
+  // Excel export: same trips as above, plus the trip picked in the dropdown
+  // even before its finances are entered (costs then show as 0). "All Trips"
+  // still covers only trips that have finances.
+  const exportTrips = useMemo(() => {
+    if (tripId === ALL_TRIPS || financeByTrip.some(t => t.id === tripId)) return financeByTrip;
+    const up = upcomingTrips.find(t => t.id === tripId);
+    const done = completedTrips.find(t => t.id === tripId);
+    const snap = snapshots.find(sn => sn.trip_id === tripId);
+    const title = up?.title ?? done?.title ?? snap?.title;
+    if (!title) return financeByTrip;
+    return [buildFinanceTrip({
+      id: tripId,
+      title,
+      startDate: up?.start_date ?? done?.trip_date ?? snap?.trip_date ?? '',
+      finance: emptyTripFinance,
+      saved: snap?.trip_revenue ?? null,
+    }, enquiries)];
+  }, [financeByTrip, upcomingTrips, completedTrips, snapshots, enquiries, tripId]);
 
   const financeTotals = useMemo(() => {
     return financeByTrip.reduce(
@@ -712,7 +753,7 @@ export default function AdminReports() {
   // show a different profit/outstanding picture for a trip than the rest of
   // the page depending on which period happens to be selected when it's
   // clicked.
-  const buildExcelRowForTrip = (t: (typeof financeByTrip)[number]) => {
+  const buildExcelRowForTrip = (t: (typeof exportTrips)[number]) => {
     const tripBookings = enquiries.filter(e => e.trip_id === t.id && isBooked(e));
     const vegCount = tripBookings.filter(e => e.food_preference === 'veg').length;
     const nonVegCount = tripBookings.filter(e => e.food_preference === 'non_veg').length;
@@ -763,15 +804,15 @@ export default function AdminReports() {
       );
     }
 
-    // Organiser Costs breakdown — these four raw fields are simply summed
-    // into organiserCosts (no per-traveler math involved), so they're read
-    // straight off the trip's finance record.
-    const organiserCostBreakdown: { label: string; amount: number }[] = [
-      { label: f.organiser_name ? `Organiser Travel Cost — ${f.organiser_name}` : 'Organiser Travel Cost', amount: f.organiser_travel_cost || 0 },
-      { label: 'Organiser Agency Payment', amount: f.organiser_agency_payment || 0 },
-      { label: 'Organiser Misc Expense', amount: f.organiser_misc_expense || 0 },
-      { label: "Organiser's Own Entry Ticket", amount: f.organiser_own_entry_ticket || 0 },
-    ];
+    // Organiser Costs breakdown — one line per organiser expense, already
+    // resolved by computeTripFinanceSummary (legacy fields folded in), so the
+    // sheet's line items keep summing to organiserCosts.
+    const organiserCostBreakdown: { label: string; amount: number }[] = t.organiserItems.map(c => ({
+      label: c.name
+        ? (f.organiser_name ? `${c.name} — ${f.organiser_name}` : c.name)
+        : 'Organiser Expense',
+      amount: c.amount,
+    }));
 
     return {
       tripTitle: t.title,
@@ -791,13 +832,13 @@ export default function AdminReports() {
   };
 
   // Only trips with a Finances tab filled in have anything to put in the
-  // cost/profit half of the sheet (see financeByTrip above), so this export
+  // cost/profit half of the sheet (see exportTrips above), so this export
   // is scoped to those same trips — same reasoning, not a separate rule.
   // A specific trip picked in the Trip dropdown exports as one sheet; "All
   // Trips" exports one sheet per trip so nothing gets flattened away.
   const handleExportExcel = async () => {
-    if (financeByTrip.length === 0) return;
-    const rows = financeByTrip.map(buildExcelRowForTrip);
+    if (exportTrips.length === 0) return;
+    const rows = exportTrips.map(buildExcelRowForTrip);
     if (tripId === ALL_TRIPS) {
       await downloadAllTripsExcelReport(rows);
     } else {
@@ -849,7 +890,7 @@ export default function AdminReports() {
                 variant="pill"
               />
             </div>
-            {!loading && financeByTrip.length > 0 && (
+            {!loading && exportTrips.length > 0 && (
               <motion.button
                 type="button"
                 onClick={handleExportExcel}

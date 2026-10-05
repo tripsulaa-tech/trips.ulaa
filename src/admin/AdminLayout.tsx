@@ -26,6 +26,7 @@ import {
   Globe,
   UsersThree,
   ChartLineUp,
+  Coins,
 } from '@phosphor-icons/react';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/useAuth';
@@ -49,6 +50,7 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   Dashboard: { to: '/admin/dashboard', icon: Home },
   'Upcoming Trips': { to: '/admin/trips', icon: Briefcase },
   'Completed Trips': { to: '/admin/albums', icon: BookOpen },
+  'Trip Finance': { to: '/admin/trip-finance', icon: Coins },
   'Home Page': { to: '/admin/home', icon: Images },
   'About Page': { to: '/admin/about', icon: FileText },
   'Trip Leaders': { to: '/admin/trip-leaders', icon: Users },
@@ -76,7 +78,7 @@ interface NavGroupDef {
 const DEFAULT_TOP_ITEMS = ['Dashboard'];
 
 const NAV_GROUPS: NavGroupDef[] = [
-  { id: 'trips', label: 'Trips', icon: Compass, items: ['Upcoming Trips', 'Completed Trips', 'Trip Leaders'] },
+  { id: 'trips', label: 'Trips', icon: Compass, items: ['Upcoming Trips', 'Completed Trips', 'Trip Finance', 'Trip Leaders'] },
   { id: 'website', label: 'Website', icon: Globe, items: ['Home Page', 'About Page', 'Branding'] },
   { id: 'customers', label: 'Customers', icon: UsersThree, items: ['Enquiries', 'Waitlist', 'Travellers'] },
   { id: 'business', label: 'Business', icon: ChartLineUp, items: ['Reports', 'Rate Calculator', 'Invoice Generator'] },

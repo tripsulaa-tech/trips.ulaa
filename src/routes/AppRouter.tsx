@@ -125,6 +125,7 @@ const AdminLogin = lazy(() => import('../admin/AdminLogin'));
 const AdminDashboard = lazy(() => import('../admin/AdminDashboard'));
 const AdminTrips = lazy(() => import('../admin/AdminTrips'));
 const AdminAlbums = lazy(() => import('../admin/AdminAlbums'));
+const AdminTripFinance = lazy(() => import('../admin/AdminTripFinance'));
 const AdminEnquiries = lazy(() => import('../admin/enquiries/AdminEnquiries'));
 const AdminEnquiryDetail = lazy(() => import('../admin/enquiries/AdminEnquiryDetail'));
 const AdminTravellers = lazy(() => import('../admin/travellers/AdminTravellers'));
@@ -192,6 +193,9 @@ export default function AppRouter() {
             } />
             <Route path="/admin/albums" element={
               <ProtectedRoute><AdminAlbums /></ProtectedRoute>
+            } />
+            <Route path="/admin/trip-finance" element={
+              <ProtectedRoute><AdminTripFinance /></ProtectedRoute>
             } />
             <Route path="/admin/enquiries" element={
               <ProtectedRoute><AdminEnquiries /></ProtectedRoute>

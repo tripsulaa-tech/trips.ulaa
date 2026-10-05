@@ -37,12 +37,11 @@ import TripHighlightIconPicker from '../../components/ui/TripHighlightIconPicker
 import MeetingPointMapPicker from '../../components/ui/MeetingPointMapPicker';
 import { COVER_IMAGE_TARGET_SIZE_BYTES } from '../../services/api';
 import type { UpcomingTrip, TripLeader } from '../../types/types-index';
-import { slugify, formatPrice } from '../../utils/utils-index';
-import { computeTripFinanceSummary } from '../../utils/tripFinance';
+import { slugify } from '../../utils/utils-index';
 import type { TripRevenue } from './useTripFinanceData';
 import { computeDuration, type TripForm } from './tripFormTypes';
 import { inputClass } from './useTripFormModal';
-import TripCostItemsEditor from './TripCostItemsEditor';
+import TripFinanceEditor from './TripFinanceEditor';
 import TripPackagesEditor from './TripPackagesEditor';
 
 interface AdminTripFormModalProps {
@@ -84,16 +83,12 @@ interface AdminTripFormModalProps {
 // Responsive grids for groups of short fields (numbers, amounts, short text),
 // so boxes don't stretch to half the modal for a value like "8000":
 //   FIELD_GRID_4 (groups of 4): 2 per row on phones/tablets, 4 on desktop.
-//   FIELD_GRID_3 (groups of 3 or 5): 2 per row on phones, 3 on tablets/desktop.
 // Labels reserve two lines below `lg` so a wrapped label never pushes its
 // input out of line with the input next to it.
 const FIELD_GRID_BASE =
   'md:col-span-2 grid gap-x-3 sm:gap-x-4 gap-y-4 items-start ' +
   '[&>div>label]:flex [&>div>label]:items-end [&>div>label]:min-h-10 sm:[&>div>label]:min-h-0';
 const FIELD_GRID_4 = `${FIELD_GRID_BASE} grid-cols-2 md:grid-cols-4`;
-const FIELD_GRID_3 = `${FIELD_GRID_BASE} grid-cols-2 sm:grid-cols-3`;
-// 5 short boxes: 2 per row on phones, 3 on tablets, all 5 on wide desktop.
-const FIELD_GRID_5 = `${FIELD_GRID_BASE} grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`;
 // Same as FIELD_GRID_4 but without md:col-span-2, for use inside a nested box.
 const FIELD_GRID_4_NESTED = FIELD_GRID_4.replace('md:col-span-2 ', '');
 
@@ -451,274 +446,13 @@ export default function AdminTripFormModal({
             />
           </TabPanel>
           <TabPanel label="Finances & Profit" icon={<ChartLineUp size={15} />}>
-            <div className="md:col-span-2 bg-amber-50 border border-amber-200 rounded-md p-3">
-              <p className="text-xs text-amber-800">
-                Internal record only — none of this is ever shown on the public site. Use it to track what this trip costs to run and what it earns.
-              </p>
-            </div>
-
-            <div className="md:col-span-2">
-              <h4 className="text-sm font-semibold text-dark mb-1">Ulaa's Costs</h4>
-              <p className="text-xs text-dark-muted -mt-0.5 mb-2">What Ulaa spends on this trip: ads, tickets, kits, transport, stay, food and more. One line per cost.</p>
-            </div>
-            <TripCostItemsEditor
-              embedded
-              items={form.trip_finance.cost_items || []}
-              travelerCount={actualRevenue ? actualRevenue.bookedCount : form.seats_booked}
+            <TripFinanceEditor
+              finance={form.trip_finance}
+              onChange={trip_finance => setForm(f => ({ ...f, trip_finance }))}
               options={form.trip_options.options}
-              optionCounts={actualRevenue?.optionCounts ?? {}}
-              onChange={cost_items => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, cost_items } }))}
+              revenue={actualRevenue ?? null}
+              estimate={{ seats: form.seats_booked, price: Number(form.price) || 0 }}
             />
-
-            <div className="md:col-span-2 pt-2 border-t border-background-warm">
-              <h4 className="text-sm font-semibold text-dark mb-1">On-Ground Agency (paid by Ulaa)</h4>
-              <p className="text-xs text-dark-muted -mt-0.5 mb-2">Local agency that runs the trip.</p>
-            </div>
-            <div className={FIELD_GRID_3}>
-              <div>
-                <label htmlFor="trip-agency-name" className="block text-sm font-medium text-dark mb-1">Name</label>
-                <input
-                  id="trip-agency-name"
-                  value={form.trip_finance.agency_name}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, agency_name: e.target.value } }))}
-                  className={inputClass}
-                  placeholder="e.g. Spiti Adventures"
-                />
-              </div>
-              <div>
-                <label htmlFor="trip-agency-amount-type" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Payment Type" short="Pay Type" /></label>
-                <Select
-                  inputId="trip-agency-amount-type"
-                  value={form.trip_finance.agency_amount_type}
-                  onChange={val => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, agency_amount_type: val as 'fixed' | 'per_traveler' } }))}
-                  options={[
-                    { value: 'fixed', label: 'Fixed lump sum' },
-                    { value: 'per_traveler', label: 'Per traveler' },
-                  ]}
-                />
-                <p id="trip-agency-type-hint" className="text-xs text-dark-muted mt-1">Fixed total, or a rate per traveler.</p>
-              </div>
-              <div>
-                <label htmlFor="trip-agency-amount" className="block text-sm font-medium text-dark mb-1">
-                  <ShortLabel
-                    full={`Amount Paid (₹${form.trip_finance.agency_amount_type === 'per_traveler' ? ' per person' : ' total'})`}
-                    short={form.trip_finance.agency_amount_type === 'per_traveler' ? 'Per Person (₹)' : 'Total (₹)'}
-                  />
-                </label>
-                <input
-                  id="trip-agency-amount"
-                  type="number"
-                  min={0}
-                  value={form.trip_finance.agency_amount ?? ''}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, agency_amount: e.target.value === '' ? null : +e.target.value } }))}
-                  aria-describedby="trip-agency-amount-hint"
-                  className={inputClass}
-                  placeholder="e.g. 29300"
-                />
-              </div>
-              <p id="trip-agency-amount-hint" className="col-span-2 sm:col-span-3 text-xs text-dark-muted -mt-1">Example: traveler pays ₹39,999, agency gets ₹29,300.</p>
-            </div>
-
-            <div className="md:col-span-2 pt-2 border-t border-background-warm">
-              <h4 className="text-sm font-semibold text-dark mb-1">Child Fare</h4>
-              <p className="text-xs text-dark-muted -mt-0.5 mb-2">
-                One flat rate for the whole trip, used for every child add-on. Once set, the add-on amount auto-fills and stays locked.
-              </p>
-            </div>
-            <div className={FIELD_GRID_4}>
-              <div>
-                <label htmlFor="trip-child-fare-amount" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Amount (₹)" short="Amount (₹)" /></label>
-                <input
-                  id="trip-child-fare-amount"
-                  type="number"
-                  min={0}
-                  value={form.trip_finance.child_fare_amount ?? ''}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_amount: e.target.value === '' ? null : +e.target.value } }))}
-                  aria-describedby="trip-child-fare-amount-hint"
-                  className={inputClass}
-                  placeholder="e.g. 8000"
-                />
-                <p id="trip-child-fare-amount-hint" className="text-xs text-dark-muted mt-1">
-                  Charged to the traveler per child.
-                </p>
-              </div>
-              <div>
-                <label htmlFor="trip-child-fare-vendor" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Vendor Amount (₹)" short="Vendor (₹)" /></label>
-                <input
-                  id="trip-child-fare-vendor"
-                  type="number"
-                  min={0}
-                  value={form.trip_finance.child_fare_vendor_amount ?? ''}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_vendor_amount: e.target.value === '' ? null : +e.target.value } }))}
-                  aria-describedby="trip-child-fare-vendor-hint"
-                  className={inputClass}
-                  placeholder="e.g. 7000"
-                />
-                <p id="trip-child-fare-vendor-hint" className="text-xs text-dark-muted mt-1">
-                  Ulaa pays the agency per child. Separate from the adult rate.
-                </p>
-              </div>
-              <div>
-                <label htmlFor="trip-child-fare-entry-ticket" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Entry Ticket Cost (₹)" short="Entry Ticket (₹)" /></label>
-                <input
-                  id="trip-child-fare-entry-ticket"
-                  type="number"
-                  min={0}
-                  value={form.trip_finance.child_fare_entry_ticket_cost ?? ''}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_entry_ticket_cost: e.target.value === '' ? null : +e.target.value } }))}
-                  className={inputClass}
-                  placeholder="Per child"
-                />
-              </div>
-              <div>
-                <label htmlFor="trip-child-fare-kit" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Kit Cost (₹)" short="Kit (₹)" /></label>
-                <input
-                  id="trip-child-fare-kit"
-                  type="number"
-                  min={0}
-                  value={form.trip_finance.child_fare_kit_cost ?? ''}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, child_fare_kit_cost: e.target.value === '' ? null : +e.target.value } }))}
-                  aria-describedby="trip-child-fare-kit-hint"
-                  className={inputClass}
-                  placeholder="Per child"
-                />
-                <p id="trip-child-fare-kit-hint" className="text-xs text-dark-muted mt-1">
-                  Enter 0 only if no kit is given.
-                </p>
-              </div>
-            </div>
-
-            <div className="md:col-span-2 pt-2 border-t border-background-warm">
-              <h4 className="text-sm font-semibold text-dark mb-1">Trip Organiser's Expenses</h4>
-              <p className="text-xs text-dark-muted -mt-0.5 mb-2">
-                What the on-ground organiser spends. Enter actual amounts; they are not multiplied by traveler count.
-              </p>
-            </div>
-            <div className={FIELD_GRID_5}>
-              <div>
-                <label htmlFor="trip-organiser-name" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Name" short="Name" /></label>
-                <input
-                  id="trip-organiser-name"
-                  value={form.trip_finance.organiser_name}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_name: e.target.value } }))}
-                  className={inputClass}
-                  placeholder="e.g. Rahul"
-                  aria-describedby="trip-organiser-name-hint"
-                />
-                <p id="trip-organiser-name-hint" className="text-xs text-dark-muted mt-1">Person running the trip on the ground.</p>
-              </div>
-              <div>
-                <label htmlFor="trip-organiser-travel" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Travel Tickets (₹)" short="Travel (₹)" /></label>
-                <input
-                  id="trip-organiser-travel"
-                  type="number"
-                  min={0}
-                  value={form.trip_finance.organiser_travel_cost ?? ''}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_travel_cost: e.target.value === '' ? null : +e.target.value } }))}
-                  aria-describedby="trip-organiser-travel-hint"
-                  className={inputClass}
-                  placeholder="Flight / train / bus"
-                />
-                <p id="trip-organiser-travel-hint" className="text-xs text-dark-muted mt-1">Own fare to and from the trip.</p>
-              </div>
-              <div>
-                <label htmlFor="trip-organiser-agency" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Agency Payment (₹)" short="Agency (₹)" /></label>
-                <input
-                  id="trip-organiser-agency"
-                  type="number"
-                  min={0}
-                  value={form.trip_finance.organiser_agency_payment ?? ''}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_agency_payment: e.target.value === '' ? null : +e.target.value } }))}
-                  aria-describedby="trip-organiser-agency-hint"
-                  className={inputClass}
-                  placeholder="If any"
-                />
-                <p id="trip-organiser-agency-hint" className="text-xs text-dark-muted mt-1">Separate from the agency amount above. Leave blank or 0 if none.</p>
-              </div>
-              <div>
-                <label htmlFor="trip-organiser-misc" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Miscellaneous (₹)" short="Misc (₹)" /></label>
-                <input
-                  id="trip-organiser-misc"
-                  type="number"
-                  min={0}
-                  value={form.trip_finance.organiser_misc_expense ?? ''}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_misc_expense: e.target.value === '' ? null : +e.target.value } }))}
-                  className={inputClass}
-                  placeholder="Transport, food, tips"
-                  aria-describedby="trip-organiser-misc-hint"
-                />
-                <p id="trip-organiser-misc-hint" className="text-xs text-dark-muted mt-1">Other on-ground costs not listed above.</p>
-              </div>
-              <div>
-                <label htmlFor="trip-organiser-own-entry-ticket" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Own Entry Ticket (₹)" short="Own Ticket (₹)" /></label>
-                <input
-                  id="trip-organiser-own-entry-ticket"
-                  type="number"
-                  min={0}
-                  value={form.trip_finance.organiser_own_entry_ticket ?? ''}
-                  onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, organiser_own_entry_ticket: e.target.value === '' ? null : +e.target.value } }))}
-                  aria-describedby="trip-organiser-own-entry-ticket-hint"
-                  className={inputClass}
-                  placeholder="Personal ticket"
-                />
-                <p id="trip-organiser-own-entry-ticket-hint" className="text-xs text-dark-muted mt-1">Separate from traveler entry tickets.</p>
-              </div>
-            </div>
-            <div className="md:col-span-2">
-              <label htmlFor="trip-finance-notes" className="block text-sm font-medium text-dark mb-1">Notes</label>
-              <textarea
-                id="trip-finance-notes"
-                value={form.trip_finance.notes}
-                onChange={e => setForm(f => ({ ...f, trip_finance: { ...f.trip_finance, notes: e.target.value } }))}
-                rows={3}
-                className={`${inputClass} resize-none`}
-                placeholder="Payment terms, receipts, anything worth remembering about this trip's money"
-                aria-describedby="trip-finance-notes-hint"
-              />
-              <p id="trip-finance-notes-hint" className="text-xs text-dark-muted mt-1">Internal only. Not shown to travelers.</p>
-            </div>
-
-            {(() => {
-              // Prefer real revenue (sum of actual bookings' total_amount)
-              // whenever we have it. Falls back to booked seats x regular
-              // price only while that fetch is loading or for a brand-new
-              // trip with nothing booked yet — see useTripFinanceData.
-              const usingReal = !!actualRevenue;
-              const s = actualRevenue
-                ? computeTripFinanceSummary(form.trip_finance, actualRevenue.bookedCount, actualRevenue.totalRevenue, actualRevenue.childFareCount, actualRevenue.optionCounts)
-                : computeTripFinanceSummary(form.trip_finance, form.seats_booked, (Number(form.price) || 0) * form.seats_booked);
-              return (
-                <div className="md:col-span-2 bg-background-warm/60 rounded-md p-4 space-y-1.5 text-sm">
-                  <h4 className="text-sm font-semibold text-dark mb-1">Profit Summary <span className="font-normal text-dark-muted text-xs">
-                    {usingReal
-                      ? `(${s.travelerCount} real booking${s.travelerCount === 1 ? '' : 's'}, actual invoiced amounts)`
-                      : `(estimate: ${s.travelerCount} seats × regular price; no bookings yet)`}
-                  </span></h4>
-                  <div className="flex justify-between"><span className="text-dark-muted">Total Revenue</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
-                  <div className="flex justify-between border-t border-background-warm pt-1.5"><span className="text-dark-muted">Ulaa's Total Costs</span><span className="text-dark font-medium">{formatPrice(s.ulaaCosts)}</span></div>
-                  <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Cost</span><span className="text-dark-muted">{formatPrice(s.agencyCost)}</span></div>
-                  {s.costItems.map(c => (
-                    <div key={c.id} className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">{c.name || 'Unnamed cost'}{c.basis !== 'fixed' ? ` (${c.qty} × ${formatPrice(c.rate)})` : ''}</span><span className="text-dark-muted">{formatPrice(c.amount)}</span></div>
-                  ))}
-                  {s.childFareCount > 0 && (
-                    <>
-                      <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Child Fare Costs ({s.childFareCount})</span><span className="text-dark-muted">{formatPrice(s.childFareCosts)}</span></div>
-                      <div className="flex justify-between pl-8 text-xs"><span className="text-dark-muted">Vendor</span><span className="text-dark-muted">{formatPrice(s.childFareVendorCost)}</span></div>
-                      <div className="flex justify-between pl-8 text-xs"><span className="text-dark-muted">Entry Ticket</span><span className="text-dark-muted">{formatPrice(s.childFareEntryTicketCost)}</span></div>
-                      <div className="flex justify-between pl-8 text-xs"><span className="text-dark-muted">Kit</span><span className="text-dark-muted">{formatPrice(s.childFareKitCost)}</span></div>
-                    </>
-                  )}
-                  <div className="flex justify-between border-t border-background-warm pt-1.5"><span className="text-dark-muted">Trip Organiser's Expenses</span><span className="text-dark font-medium">{formatPrice(s.organiserCosts)}</span></div>
-                  <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Travel Tickets</span><span className="text-dark-muted">{formatPrice(form.trip_finance.organiser_travel_cost || 0)}</span></div>
-                  <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Payment</span><span className="text-dark-muted">{formatPrice(form.trip_finance.organiser_agency_payment || 0)}</span></div>
-                  <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Miscellaneous</span><span className="text-dark-muted">{formatPrice(form.trip_finance.organiser_misc_expense || 0)}</span></div>
-                  <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Own Entry Ticket</span><span className="text-dark-muted">{formatPrice(form.trip_finance.organiser_own_entry_ticket || 0)}</span></div>
-                  <div className="flex justify-between border-t border-background-warm pt-1.5"><span className="text-dark-muted">Total Costs</span><span className="text-dark font-medium">{formatPrice(s.totalCosts)}</span></div>
-                  <div className="flex justify-between border-t-2 border-primary/30 pt-1.5 text-base"><span className="font-semibold text-dark">Net Profit</span><span className={`font-bold ${s.netProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{formatPrice(s.netProfit)}</span></div>
-                  <div className="flex justify-between text-xs"><span className="text-dark-muted">Profit per Traveler</span><span className="text-dark-muted">{formatPrice(Math.round(s.profitPerPerson))}</span></div>
-                </div>
-              );
-            })()}
           </TabPanel>
           <TabPanel label="Media" icon={<Images size={15} />}>
             <div className="md:col-span-2 space-y-3">

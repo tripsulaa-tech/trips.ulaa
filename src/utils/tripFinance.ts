@@ -5,7 +5,7 @@
 // read-only Trip Details view. Kept separate from utils-index.ts so the
 // public bundle doesn't need to think about this at all — it's purely an
 // admin concern.
-import type { TripFinance, TripCostItem } from '../types/types-index';
+import type { TripFinance, TripCostItem, TripOrganiserExpense } from '../types/types-index';
 
 export const emptyTripFinance: TripFinance = {
   agency_name: '',
@@ -16,39 +16,74 @@ export const emptyTripFinance: TripFinance = {
   child_fare_entry_ticket_cost: null,
   child_fare_kit_cost: null,
   organiser_name: '',
-  organiser_travel_cost: null,
-  organiser_agency_payment: null,
-  organiser_misc_expense: null,
-  organiser_own_entry_ticket: null,
+  organiser_expenses: [],
   cost_items: [],
   notes: '',
 };
 
 // Ad spend, entry tickets and traveler kits used to be their own inputs; they
-// are now ordinary cost lines. This turns any value still stored in the old
-// fields into the matching line (ad spend = lump sum, entry ticket / kit =
-// per traveler) and clears the old field, so old trips keep their exact
-// totals and re-saving a trip migrates it. Safe to call repeatedly — once the
-// old fields are empty it returns the record unchanged.
+// are now ordinary cost lines. The same goes for the organiser's travel
+// tickets, agency payment, miscellaneous spend and own entry ticket, which are
+// now organiser expense lines. This turns any value still stored in the old
+// fields into the matching line and clears the old field, so old trips keep
+// their exact totals and re-saving a trip migrates it. Safe to call
+// repeatedly — once the old fields are empty it returns the record unchanged.
 export function foldLegacyCosts(finance: TripFinance): TripFinance {
-  const ad = finance.ad_spend || 0;
-  const entry = finance.entry_ticket_cost_per_person || 0;
-  const kit = finance.kit_cost_per_person || 0;
-  if (!ad && !entry && !kit) {
-    if (finance.ad_spend == null && finance.entry_ticket_cost_per_person == null && finance.kit_cost_per_person == null) return finance;
-    return { ...finance, ad_spend: null, entry_ticket_cost_per_person: null, kit_cost_per_person: null };
+  let out = finance;
+
+  const ad = out.ad_spend || 0;
+  const entry = out.entry_ticket_cost_per_person || 0;
+  const kit = out.kit_cost_per_person || 0;
+  if (ad || entry || kit) {
+    const legacy: TripCostItem[] = [];
+    if (ad) legacy.push({ id: 'legacy_ad_spend', name: 'Ad / Promotion Spend', basis: 'fixed', rate: ad, quantity: null });
+    if (entry) legacy.push({ id: 'legacy_entry_ticket', name: 'Entry Ticket', basis: 'per_traveler', rate: entry, quantity: null });
+    if (kit) legacy.push({ id: 'legacy_kit', name: 'Traveler Kit', basis: 'per_traveler', rate: kit, quantity: null });
+    out = {
+      ...out,
+      ad_spend: null,
+      entry_ticket_cost_per_person: null,
+      kit_cost_per_person: null,
+      cost_items: [...legacy, ...(out.cost_items || [])],
+    };
+  } else if (out.ad_spend != null || out.entry_ticket_cost_per_person != null || out.kit_cost_per_person != null) {
+    out = { ...out, ad_spend: null, entry_ticket_cost_per_person: null, kit_cost_per_person: null };
   }
-  const legacy: TripCostItem[] = [];
-  if (ad) legacy.push({ id: 'legacy_ad_spend', name: 'Ad / Promotion Spend', basis: 'fixed', rate: ad, quantity: null });
-  if (entry) legacy.push({ id: 'legacy_entry_ticket', name: 'Entry Ticket', basis: 'per_traveler', rate: entry, quantity: null });
-  if (kit) legacy.push({ id: 'legacy_kit', name: 'Traveler Kit', basis: 'per_traveler', rate: kit, quantity: null });
-  return {
-    ...finance,
-    ad_spend: null,
-    entry_ticket_cost_per_person: null,
-    kit_cost_per_person: null,
-    cost_items: [...legacy, ...(finance.cost_items || [])],
-  };
+
+  const travel = out.organiser_travel_cost || 0;
+  const agency = out.organiser_agency_payment || 0;
+  const misc = out.organiser_misc_expense || 0;
+  const ownTicket = out.organiser_own_entry_ticket || 0;
+  const hasLegacyKeys = out.organiser_travel_cost != null || out.organiser_agency_payment != null
+    || out.organiser_misc_expense != null || out.organiser_own_entry_ticket != null;
+  if (hasLegacyKeys) {
+    const legacy: TripOrganiserExpense[] = [];
+    if (travel) legacy.push({ id: 'legacy_org_travel', name: 'Travel Tickets', amount: travel });
+    if (agency) legacy.push({ id: 'legacy_org_agency', name: 'Agency Payment', amount: agency });
+    if (misc) legacy.push({ id: 'legacy_org_misc', name: 'Miscellaneous', amount: misc });
+    if (ownTicket) legacy.push({ id: 'legacy_org_own_ticket', name: 'Own Entry Ticket', amount: ownTicket });
+    out = {
+      ...out,
+      organiser_travel_cost: null,
+      organiser_agency_payment: null,
+      organiser_misc_expense: null,
+      organiser_own_entry_ticket: null,
+      organiser_expenses: [...legacy, ...(out.organiser_expenses || [])],
+    };
+  }
+  return out;
+}
+
+// One resolved organiser expense line.
+export interface ResolvedOrganiserExpense {
+  id: string;
+  name: string;
+  amount: number;
+}
+
+// Organiser expenses are actual amounts — never multiplied by traveler count.
+export function resolveOrganiserExpense(item: TripOrganiserExpense): ResolvedOrganiserExpense {
+  return { id: item.id, name: item.name, amount: Math.max(0, item.amount || 0) };
 }
 
 // One resolved cost line: how many units it applies to and what it comes to.
@@ -98,7 +133,8 @@ interface TripFinanceSummary {
   costItems: ResolvedCostItem[];  // each generic cost line, resolved (rate x qty)
   costItemsTotal: number;         // sum of costItems
   ulaaCosts: number;              // agencyCost + childFareCosts + costItemsTotal (ads, entry tickets, kits... are cost lines)
-  organiserCosts: number;         // organiser travel + organiser agency payment + misc + organiser's own entry ticket
+  organiserItems: ResolvedOrganiserExpense[]; // each organiser expense line, resolved
+  organiserCosts: number;         // sum of organiserItems (travel tickets, agency payment, misc, own entry ticket... are expense lines)
   totalCosts: number;             // ulaaCosts + organiserCosts
   netProfit: number;              // totalRevenue - totalCosts
   profitPerPerson: number;        // netProfit / travelerCount (0 if no travelers)
@@ -151,7 +187,8 @@ export function computeTripFinanceSummary(
   const costItems = (f.cost_items || []).map(item => resolveCostItem(item, travelers, optionCounts));
   const costItemsTotal = costItems.reduce((sum, c) => sum + c.amount, 0);
   const ulaaCosts = agencyCost + childFareCosts + costItemsTotal;
-  const organiserCosts = (f.organiser_travel_cost || 0) + (f.organiser_agency_payment || 0) + (f.organiser_misc_expense || 0) + (f.organiser_own_entry_ticket || 0);
+  const organiserItems = (f.organiser_expenses || []).map(resolveOrganiserExpense);
+  const organiserCosts = organiserItems.reduce((sum, c) => sum + c.amount, 0);
   const totalCosts = ulaaCosts + organiserCosts;
   const netProfit = revenue - totalCosts;
 
@@ -168,6 +205,7 @@ export function computeTripFinanceSummary(
     costItems,
     costItemsTotal,
     ulaaCosts,
+    organiserItems,
     organiserCosts,
     totalCosts,
     netProfit,

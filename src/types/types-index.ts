@@ -102,12 +102,27 @@ export interface TripFinance {
   child_fare_entry_ticket_cost: number | null;   // per-child entry ticket cost (can differ from the adult rate above)
   child_fare_kit_cost: number | null;            // per-child welcome-kit cost (can differ from the adult rate above; not always 0)
   organiser_name: string;                      // person running the trip on-ground
-  organiser_travel_cost: number | null;        // organiser's own flight/train/bus tickets
-  organiser_agency_payment: number | null;      // amount the organiser separately pays the agency (varies, entered manually)
-  organiser_misc_expense: number | null;        // organiser's miscellaneous on-ground spend
-  organiser_own_entry_ticket: number | null;    // the organiser's own personal entry ticket, separate from the per-traveler entry tickets above
+  // LEGACY — the organiser's four dedicated inputs are now ordinary lines in
+  // `organiser_expenses` (Travel Tickets, Agency Payment, Miscellaneous, Own
+  // Entry Ticket). Old records may still carry a value here;
+  // foldLegacyCosts() (utils/tripFinance.ts) converts it into an expense
+  // line on read, so nothing new writes to these.
+  organiser_travel_cost?: number | null;
+  organiser_agency_payment?: number | null;
+  organiser_misc_expense?: number | null;
+  organiser_own_entry_ticket?: number | null;
+  organiser_expenses?: TripOrganiserExpense[];  // what the on-ground organiser spends, one line per expense. Missing = none.
   cost_items?: TripCostItem[];                  // generic extra cost lines (transport, stay, food, optional activities...). Missing = none.
   notes: string;                                // free-text notes (payment terms, receipts, etc.)
+}
+
+// One expense line for the Trip Organiser. Same idea as a TripCostItem but
+// simpler: an organiser spends actual amounts, so there is no rate x people
+// maths — each line is just a name and the amount spent.
+export interface TripOrganiserExpense {
+  id: string;                  // stable key for the editor row
+  name: string;                // e.g. "Travel Tickets", "Miscellaneous"
+  amount: number | null;       // ₹ actually spent
 }
 
 // One generic cost line on a trip. `basis` decides how `rate` is multiplied:
@@ -354,6 +369,45 @@ export interface UpcomingTrip {
   banner_has_text?: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Admin-only frozen copy of a trip's money data, kept in the separate
+// trip_finance_snapshots table (NOT on completed_trips — that table is
+// publicly readable for published albums). Lets the Trip Finance tab keep
+// showing a trip's Finances & Profit and Pricing after its upcoming_trips row
+// has been deleted. See add_trip_finance_snapshots.sql.
+export interface TripPricingSnapshot {
+  price?: number | null;
+  early_bird_price?: number | null;
+  early_bird_deadline?: string | null;
+  strike_through_price?: number | null;
+  advance_amount?: number | null;
+  special_offer_name?: string | null;
+  special_offer_price?: number | null;
+  special_offer_date?: string | null;
+  special_offer_end_date?: string | null;
+  trip_options?: TripOptionsConfig | null;
+}
+
+// Same shape useTripFinanceData's TripRevenue produces from live enquiries.
+export interface TripRevenueSnapshot {
+  bookedCount: number;
+  totalRevenue: number;
+  childFareCount: number;
+  optionCounts: Record<string, number>;
+}
+
+export interface TripFinanceSnapshot {
+  trip_id: string;
+  title: string;
+  destination?: string | null;
+  trip_date?: string | null;
+  total_seats?: number | null;
+  seats_booked?: number | null;
+  trip_finance: TripFinance | null;
+  trip_pricing: TripPricingSnapshot | null;
+  trip_revenue: TripRevenueSnapshot | null;
+  captured_at: string;
 }
 
 export interface CompletedTrip {

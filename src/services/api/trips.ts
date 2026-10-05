@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import type { UpcomingTrip, CompletedTrip } from '../../types/types-index';
+import type { UpcomingTrip, CompletedTrip, TripFinanceSnapshot } from '../../types/types-index';
 import { getStoragePathFromUrl, deleteImageByUrl } from './shared';
 
 // =============================================
@@ -254,6 +254,21 @@ export async function getTripDeletionImpact(tripId: string): Promise<{ enquiries
 //    (a single failed/missing file doesn't block the rest of the cascade).
 //  - the trip row itself is deleted last, once everything above succeeds.
 export async function deleteUpcomingTripCascade(trip: UpcomingTrip): Promise<void> {
+  // Keep the trip's Finances & Profit, Pricing, availability and final revenue
+  // in the admin-only snapshot table before the trip row (and its enquiries,
+  // which revenue is derived from) go away. The DB decides what is worth
+  // keeping (started, or has finance / paid bookings — see
+  // freeze_trip_finance). For a trip that has started a failure here BLOCKS
+  // the delete, so a finished trip's money data can never be lost silently.
+  // A trigger on upcoming_trips saves it again at the moment of deletion.
+  const started = !!trip.start_date && trip.start_date <= new Date().toLocaleDateString('en-CA');
+  try {
+    await freezeTripFinance(trip.id);
+  } catch (err) {
+    if (started) throw new Error("Couldn't save this trip's finance record, so it was not deleted. Try again.", { cause: err });
+    console.error(err);
+  }
+
   const [{ error: enquiryErr }, { error: waitlistErr }] = await Promise.all([
     supabase
       .from('enquiries')
@@ -276,6 +291,37 @@ export async function deleteUpcomingTripCascade(trip: UpcomingTrip): Promise<voi
   );
 
   await deleteUpcomingTrip(trip.id);
+}
+
+// =============================================
+// Trip Finance snapshots (admin-only)
+// =============================================
+// Copies an upcoming trip's Finances & Profit, Pricing and current revenue
+// into trip_finance_snapshots (DB function freeze_trip_finance). No-op when
+// the upcoming_trips row no longer exists, so an existing snapshot is never
+// overwritten with nothing.
+export async function freezeTripFinance(tripId: string): Promise<void> {
+  const { error } = await supabase.rpc('freeze_trip_finance', { p_trip_id: tripId });
+  if (error) throw error;
+}
+
+export async function getTripFinanceSnapshots(): Promise<TripFinanceSnapshot[]> {
+  const { data, error } = await supabase.from('trip_finance_snapshots').select('*');
+  if (error) throw error;
+  return data || [];
+}
+
+// Saves the edited Finances & Profit of a trip whose upcoming_trips row no
+// longer exists (a finished trip), straight into its snapshot row. Creates the
+// row when there isn't one yet (a trip from before snapshots existed). Only the
+// columns passed are written, so pricing/revenue already saved are untouched.
+export async function saveTripFinanceSnapshot(
+  snapshot: Pick<TripFinanceSnapshot, 'trip_id' | 'title'> & Partial<TripFinanceSnapshot>,
+): Promise<void> {
+  const { error } = await supabase
+    .from('trip_finance_snapshots')
+    .upsert(snapshot, { onConflict: 'trip_id' });
+  if (error) throw error;
 }
 
 // =============================================

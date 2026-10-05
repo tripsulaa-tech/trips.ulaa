@@ -1,6 +1,6 @@
 import type { TripForm } from './tripFormTypes';
 import { emptyEndBanner, emptyForm, computeDuration } from './tripFormTypes';
-import type { TripFinance, TripCostItem, TripCostBasis, TripOptionsConfig, TripOption, TripPackage } from '../../types/types-index';
+import type { TripFinance, TripCostItem, TripOrganiserExpense, TripCostBasis, TripOptionsConfig, TripOption, TripPackage } from '../../types/types-index';
 import { emptyTripFinance } from '../../utils/tripFinance';
 import { emptyTripOptions, newOptionId } from '../../utils/tripOptions';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
@@ -102,12 +102,14 @@ export const handleExportTemplate = () => {
       child_fare_vendor_amount: '<Vendor Amount Ulaa pays the agency per child, in INR, or "">',
       child_fare_entry_ticket_cost: '<Entry Ticket Cost per child, in INR, or "">',
       child_fare_kit_cost: '<Kit Cost per child, in INR (0 only if no kit is given), or "">',
-      // Trip Organiser's Expenses — actual amounts, not multiplied by traveler count
+      // Trip Organiser's Expenses — one line per expense, actual amounts, not multiplied by traveler count
       organiser_name: '<Organiser Name, the person running the trip on the ground, or "">',
-      organiser_travel_cost: '<Travel Tickets (organiser\'s own fare) in INR, or "">',
-      organiser_agency_payment: '<Agency Payment by the organiser, separate from agency_amount, in INR, or "">',
-      organiser_misc_expense: '<Miscellaneous on-ground costs in INR, or "">',
-      organiser_own_entry_ticket: '<Own Entry Ticket in INR, or "">',
+      organiser_expenses: [
+        {
+          name: '<Expense name, e.g. "Travel Tickets", "Agency Payment", "Miscellaneous", "Own Entry Ticket">',
+          amount: '<Actual amount spent in INR (not multiplied by traveler count)>',
+        },
+      ],
       notes: '<Internal notes — payment terms, receipts, or "">',
     },
 
@@ -294,6 +296,8 @@ const asIconKey = (v: unknown): string => {
 const COST_BASES: TripCostBasis[] = ['fixed', 'per_traveler', 'per_selected'];
 let costIdCounter = 0;
 const newCostItemId = () => `ci_${Date.now().toString(36)}_${(costIdCounter++).toString(36)}`;
+let organiserExpenseIdCounter = 0;
+const newOrganiserExpenseId = () => `oe_${Date.now().toString(36)}_${(organiserExpenseIdCounter++).toString(36)}`;
 
 // The template links packages (and cost lines) to options by a short local
 // id such as "water". Real ids are generated here, and every link is
@@ -345,6 +349,13 @@ function parseTripFinance(raw: unknown, optionIdMap: Record<string, string>): Tr
         option_id: optionIdMap[asStr(c?.option_id)] ?? null,
       };
     });
+  const organiserExpenses: TripOrganiserExpense[] = asArr(f.organiser_expenses)
+    .filter(c => !isPlaceholder(c?.name))
+    .map(c => ({
+      id: newOrganiserExpenseId(),
+      name: asStr(c?.name),
+      amount: asNumOrNull(c?.amount),
+    }));
   return {
     agency_name: asStr(f.agency_name),
     agency_amount_type: f.agency_amount_type === 'per_traveler' ? 'per_traveler' : 'fixed',
@@ -354,10 +365,7 @@ function parseTripFinance(raw: unknown, optionIdMap: Record<string, string>): Tr
     child_fare_entry_ticket_cost: asNumOrNull(f.child_fare_entry_ticket_cost),
     child_fare_kit_cost: asNumOrNull(f.child_fare_kit_cost),
     organiser_name: asStr(f.organiser_name),
-    organiser_travel_cost: asNumOrNull(f.organiser_travel_cost),
-    organiser_agency_payment: asNumOrNull(f.organiser_agency_payment),
-    organiser_misc_expense: asNumOrNull(f.organiser_misc_expense),
-    organiser_own_entry_ticket: asNumOrNull(f.organiser_own_entry_ticket),
+    organiser_expenses: organiserExpenses,
     cost_items: costItems,
     notes: asStr(f.notes),
   };

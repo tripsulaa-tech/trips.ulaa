@@ -7,6 +7,7 @@ import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy'
 import { parseTerms } from '../../utils/parseTerms';
 import { formatDate, formatAgeRange, formatPrice } from '../../utils/utils-index';
 import { computeTripFinanceSummary } from '../../utils/tripFinance';
+import TripFinanceBreakdown from './TripFinanceBreakdown';
 import type { TripRevenue } from './useTripFinanceData';
 import type { UpcomingTrip } from '../../types/types-index';
 
@@ -361,39 +362,7 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
                     const s = actualRevenue
                       ? computeTripFinanceSummary(trip.trip_finance, actualRevenue.bookedCount, actualRevenue.totalRevenue, actualRevenue.childFareCount, actualRevenue.optionCounts)
                       : computeTripFinanceSummary(trip.trip_finance, trip.seats_booked, (trip.price || 0) * trip.seats_booked);
-                    return (
-                      <>
-                        <div className="flex justify-between"><span className="text-dark-muted">Total Revenue ({s.travelerCount} booked{usingReal ? '' : ', est.'})</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
-                        <div className="flex justify-between"><span className="text-dark-muted">Ulaa's Total Costs</span><span className="text-dark">{formatPrice(s.ulaaCosts)}</span></div>
-                        <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Cost</span><span className="text-dark-muted">{formatPrice(s.agencyCost)}</span></div>
-                        {s.costItems.map(c => (
-                          <div key={c.id} className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">{c.name || 'Unnamed cost'}{c.basis !== 'fixed' ? ` (${c.qty} × ${formatPrice(c.rate)})` : ''}</span><span className="text-dark-muted">{formatPrice(c.amount)}</span></div>
-                        ))}
-                        {s.childFareCount > 0 && (
-                          <>
-                            <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Child Fare Costs ({s.childFareCount})</span><span className="text-dark-muted">{formatPrice(s.childFareCosts)}</span></div>
-                            <div className="flex justify-between pl-8 text-xs"><span className="text-dark-muted">Vendor</span><span className="text-dark-muted">{formatPrice(s.childFareVendorCost)}</span></div>
-                            <div className="flex justify-between pl-8 text-xs"><span className="text-dark-muted">Entry Ticket</span><span className="text-dark-muted">{formatPrice(s.childFareEntryTicketCost)}</span></div>
-                            <div className="flex justify-between pl-8 text-xs"><span className="text-dark-muted">Kit</span><span className="text-dark-muted">{formatPrice(s.childFareKitCost)}</span></div>
-                          </>
-                        )}
-                        <div className="flex justify-between"><span className="text-dark-muted">Trip Organiser's Expenses</span><span className="text-dark">{formatPrice(s.organiserCosts)}</span></div>
-                        <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Travel Tickets</span><span className="text-dark-muted">{formatPrice(trip.trip_finance.organiser_travel_cost || 0)}</span></div>
-                        <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Payment</span><span className="text-dark-muted">{formatPrice(trip.trip_finance.organiser_agency_payment || 0)}</span></div>
-                        <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Miscellaneous</span><span className="text-dark-muted">{formatPrice(trip.trip_finance.organiser_misc_expense || 0)}</span></div>
-                        <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Own Entry Ticket</span><span className="text-dark-muted">{formatPrice(trip.trip_finance.organiser_own_entry_ticket || 0)}</span></div>
-                        <div className="flex justify-between border-t border-background-warm pt-1.5 text-base"><span className="font-semibold text-dark">Net Profit</span><span className={`font-bold ${s.netProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{formatPrice(s.netProfit)}</span></div>
-                        {trip.trip_finance.agency_name && (
-                          <p className="text-xs text-dark-muted pt-1">Agency: {trip.trip_finance.agency_name}</p>
-                        )}
-                        {trip.trip_finance.organiser_name && (
-                          <p className="text-xs text-dark-muted">Trip Organiser: {trip.trip_finance.organiser_name}</p>
-                        )}
-                        {trip.trip_finance.notes && (
-                          <p className="text-xs text-dark-muted pt-1 whitespace-pre-wrap">{trip.trip_finance.notes}</p>
-                        )}
-                      </>
-                    );
+                    return <TripFinanceBreakdown finance={trip.trip_finance} summary={s} estimated={!usingReal} />;
                   })()}
                 </div>
               </details>

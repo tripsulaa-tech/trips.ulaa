@@ -83,6 +83,27 @@ create table public.completed_trips (
 );
 
 -- ----------------------------------------------------------------------------
+-- trip_finance_snapshots
+-- ----------------------------------------------------------------------------
+-- Admin-only frozen copy of a trip's Finances & Profit, Pricing and revenue,
+-- so the Admin > Trips > Trip Finance tab still has it after the
+-- upcoming_trips row is deleted. Deliberately NOT columns on completed_trips
+-- (that table has a public read policy). trip_id is not a FK for the same
+-- reason enquiries.trip_id isn't. See add_trip_finance_snapshots.sql.
+create table public.trip_finance_snapshots (
+  trip_id        uuid primary key,
+  title          text not null,
+  destination    text,
+  trip_date      date,
+  total_seats    integer,
+  seats_booked   integer,
+  trip_finance   jsonb,
+  trip_pricing   jsonb,
+  trip_revenue   jsonb,
+  captured_at    timestamptz not null default now()
+);
+
+-- ----------------------------------------------------------------------------
 -- upcoming_trips
 -- ----------------------------------------------------------------------------
 create table public.upcoming_trips (
@@ -1498,6 +1519,119 @@ begin
 end;
 $$;
 
+create or replace function public.trip_revenue_snapshot(p_trip_id uuid)
+returns jsonb
+language sql
+stable
+as $function$
+  select jsonb_build_object(
+    'bookedCount',    count(*),
+    'totalRevenue',   coalesce(sum(e.total_amount), 0),
+    'childFareCount', count(*) filter (where coalesce(e.has_child_addon, false)),
+    'optionCounts',   coalesce((
+      select jsonb_object_agg(o.opt, o.cnt)
+      from (
+        select opt, count(*) as cnt
+        from (
+          select distinct b.id as booking_id, unnest(b.selected_option_ids) as opt
+          from public.enquiries b
+          where b.trip_id = p_trip_id
+            and b.deleted_at is null
+            and b.cancelled_at is null
+            and b.amount_paid > 0
+        ) d
+        group by opt
+      ) o
+    ), '{}'::jsonb)
+  )
+  from public.enquiries e
+  where e.trip_id = p_trip_id
+    and e.deleted_at is null
+    and e.cancelled_at is null
+    and e.amount_paid > 0;
+$function$;
+
+-- Copies the current finance + pricing + revenue of an upcoming trip into its
+-- snapshot row. Called (a) when a trip starts (sync_started_trip_albums), (b)
+-- from the Trip Finance tab while the upcoming row still exists, and (c)
+-- right before an upcoming trip is deleted. No-op if the trip row is gone, so
+-- an old snapshot is never overwritten with nothing.
+create or replace function public.freeze_trip_finance(p_trip_id uuid)
+returns void
+language plpgsql
+as $function$
+begin
+  insert into public.trip_finance_snapshots (
+    trip_id, title, destination, trip_date, total_seats, seats_booked,
+    trip_finance, trip_pricing, trip_revenue, captured_at
+  )
+  select
+    ut.id, ut.title, ut.destination, ut.start_date, ut.total_seats, ut.seats_booked,
+    ut.trip_finance,
+    jsonb_build_object(
+      'price', ut.price,
+      'early_bird_price', ut.early_bird_price,
+      'early_bird_deadline', ut.early_bird_deadline,
+      'strike_through_price', ut.strike_through_price,
+      'advance_amount', ut.advance_amount,
+      'special_offer_name', ut.special_offer_name,
+      'special_offer_price', ut.special_offer_price,
+      'special_offer_date', ut.special_offer_date,
+      'special_offer_end_date', ut.special_offer_end_date,
+      'trip_options', ut.trip_options
+    ),
+    public.trip_revenue_snapshot(ut.id),
+    now()
+  from public.upcoming_trips ut
+  where ut.id = p_trip_id
+    and (
+      ut.start_date <= current_date
+      or ut.trip_finance is not null
+      or exists (
+        select 1 from public.enquiries b
+        where b.trip_id = ut.id
+          and b.deleted_at is null and b.cancelled_at is null and b.amount_paid > 0
+      )
+    )
+  on conflict (trip_id) do update set
+    title        = excluded.title,
+    destination  = excluded.destination,
+    trip_date    = excluded.trip_date,
+    total_seats  = coalesce(excluded.total_seats, public.trip_finance_snapshots.total_seats),
+    seats_booked = coalesce(excluded.seats_booked, public.trip_finance_snapshots.seats_booked),
+    trip_finance = coalesce(excluded.trip_finance, public.trip_finance_snapshots.trip_finance),
+    trip_pricing = excluded.trip_pricing,
+    trip_revenue = case
+      when coalesce((excluded.trip_revenue->>'bookedCount')::int, 0) = 0
+       and coalesce((public.trip_finance_snapshots.trip_revenue->>'bookedCount')::int, 0) > 0
+        then public.trip_finance_snapshots.trip_revenue
+      else excluded.trip_revenue
+    end,
+    captured_at  = excluded.captured_at;
+end;
+$function$;
+
+grant execute on function public.trip_revenue_snapshot(uuid) to authenticated;
+grant execute on function public.freeze_trip_finance(uuid) to authenticated;
+
+-- Always save the finance copy before an upcoming trip is deleted.
+create or replace function public.keep_trip_finance_before_delete()
+returns trigger
+language plpgsql
+as $function$
+begin
+  perform public.freeze_trip_finance(old.id);
+  return old;
+end;
+$function$;
+
+drop trigger if exists keep_trip_finance_before_delete on public.upcoming_trips;
+create trigger keep_trip_finance_before_delete
+  before delete on public.upcoming_trips
+  for each row execute function public.keep_trip_finance_before_delete();
+
+-- Carry finance over automatically when a trip starts. Same function as
+-- before, with one extra step at the end.
 -- Copies any upcoming_trips row whose start_date has passed into
 -- completed_trips (as unpublished, ready for the admin to fill in a story /
 -- publish), then un-publishes it from upcoming_trips. Not wired to a DB
@@ -1506,6 +1640,8 @@ create or replace function public.sync_started_trip_albums()
 returns void
 language plpgsql
 as $function$
+declare
+  started record;
 begin
   insert into public.completed_trips (
     id, title, destination, slug, trip_date, description,
@@ -1528,8 +1664,18 @@ begin
      set status = 'draft'
    where start_date <= current_date
      and status <> 'draft';
+
+  -- NEW: freeze finance for every trip that has started and has no snapshot yet.
+  for started in
+    select ut.id from public.upcoming_trips ut
+    where ut.start_date <= current_date
+      and not exists (select 1 from public.trip_finance_snapshots s where s.trip_id = ut.id)
+  loop
+    perform public.freeze_trip_finance(started.id);
+  end loop;
 end;
 $function$;
+
 
 -- AFTER trigger on enquiries: recomputes seats_booked for whichever trip
 -- was affected (insert/update/delete) using recompute_trip_seats() above,
@@ -1703,6 +1849,7 @@ create event trigger rls_auto_enable_trigger
 
 alter table public.completed_trips enable row level security;
 alter table public.upcoming_trips enable row level security;
+alter table public.trip_finance_snapshots enable row level security;
 alter table public.enquiries enable row level security;
 alter table public.payments enable row level security;
 alter table public.activity_log enable row level security;
@@ -1726,6 +1873,10 @@ create policy "Admin all upcoming trips" on public.upcoming_trips
   for all using (auth.role() = 'authenticated');
 create policy "Public read upcoming trips" on public.upcoming_trips
   for select using (status in ('coming_soon', 'published'));
+
+-- trip_finance_snapshots — admin only, no public policy.
+create policy "Admin all trip finance snapshots" on public.trip_finance_snapshots
+  for all using (auth.role() = 'authenticated');
 
 -- enquiries — public can only insert (submit the enquiry form); everything
 -- else (read/update/delete) requires an authenticated admin session.
