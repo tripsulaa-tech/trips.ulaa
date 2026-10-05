@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getEnquiries, updateEnquiryDetails, deleteEnquiry } from '../../services/api';
 import type { Enquiry } from '../../types/types-index';
 import { buildTravellerContacts, contactMatchesQuery } from './travellerContacts';
+import { findMergeConflicts } from './travellerMerge';
 import type { TravellerContact } from './travellerContacts';
 import type { TravellerEditForm } from './AdminEditTravellerModal';
 import { useAlert } from '../../components/ui/useAlert';
@@ -47,6 +48,12 @@ export function useTravellers() {
   const [editTarget, setEditTarget] = useState<TravellerContact | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Merge Contacts modal — see AdminMergeTravellerModal.tsx. `mergeTarget`
+  // is the contact whose Merge button was pressed; the admin then picks the
+  // contact to merge it with inside the modal.
+  const [mergeTarget, setMergeTarget] = useState<TravellerContact | null>(null);
+  const [merging, setMerging] = useState(false);
+
   // Tracks which contact's delete is in flight (by key) so only that
   // card's button shows a loading state, same pattern as
   // useEnquiryLifecycle's per-row `updating`.
@@ -64,7 +71,7 @@ export function useTravellers() {
 
   const contacts = useMemo(
     () => allContacts
-      .filter(c => (repeatOnly ? c.tripCount > 1 : true))
+      .filter(c => (repeatOnly ? c.joinedTripCount > 1 : true))
       .filter(c => contactMatchesQuery(c, searchQuery)),
     [allContacts, repeatOnly, searchQuery]
   );
@@ -90,7 +97,8 @@ export function useTravellers() {
   }, [searchQuery, repeatOnly, page]);
 
   const kpis = useMemo(() => {
-    // Distinct trips across every contact — a group booking or several
+    // Distinct trips travellers actually joined (an enquiry that never became
+    // a booking doesn't count) — a group booking or several
     // separate contacts enquiring about the same trip should count that
     // trip once, not once per contact. Falls back to trip_title (or the
     // enquiry id for a no-specific-trip entry) via the same tripKey shape
@@ -98,11 +106,11 @@ export function useTravellers() {
     // the same trip collapse to one key here too.
     const distinctTripKeys = new Set<string>();
     for (const c of allContacts) {
-      for (const t of c.trips) distinctTripKeys.add(t.key);
+      for (const t of c.trips) if (t.joined) distinctTripKeys.add(t.key);
     }
     return {
       total: allContacts.length,
-      repeat: allContacts.filter(c => c.tripCount > 1).length,
+      repeat: allContacts.filter(c => c.joinedTripCount > 1).length,
       tripsBooked: distinctTripKeys.size,
       cancelledTrips: allContacts.reduce((sum, c) => sum + c.trips.filter(t => t.allCancelled).length, 0),
     };
@@ -157,6 +165,56 @@ export function useTravellers() {
     }
   };
 
+  // Merges two contacts into one by rewriting name/phone/email/city on every
+  // enquiry behind `other` so it matches `keep` — buildTravellerContacts()
+  // then collapses them into a single contact on its own (it groups by
+  // phone). Trips, payments and invoices are untouched. Done one row at a
+  // time (not Promise.all) so that if a row is rejected we know exactly how
+  // many moved and can say so, rather than leaving the admin guessing.
+  // Blank email/city are never written over real values: they're only sent
+  // when there's something to send.
+  const handleMerge = async (keep: TravellerContact, other: TravellerContact) => {
+    const conflicts = findMergeConflicts(keep, other);
+    if (conflicts.length > 0) {
+      await alert(`Both contacts already have an active enquiry for: ${conflicts.join(', ')}. Cancel or delete the duplicate first, then merge.`);
+      return;
+    }
+    const name = keep.fullName !== 'Unnamed traveller' ? keep.fullName : other.fullName;
+    const email = keep.email || other.email;
+    const city = keep.city || other.city;
+    const fields: { full_name: string; phone: string; email?: string; city?: string } = {
+      full_name: name,
+      phone: keep.phone,
+    };
+    if (email) fields.email = email;
+    if (city) fields.city = city;
+
+    setMerging(true);
+    let moved = 0;
+    let lastError: unknown = null;
+    for (const row of other.rows) {
+      try {
+        await updateEnquiryDetails(row.id, row, fields);
+        moved += 1;
+      } catch (err) {
+        console.error(err);
+        lastError = err;
+      }
+    }
+    setMerging(false);
+    load();
+    if (lastError) {
+      await alert(
+        `Moved ${moved} of ${other.rows.length} enquiries. ` +
+        (lastError instanceof Error && lastError.message === 'DUPLICATE_ENQUIRY'
+          ? 'The rest clash with an existing enquiry for the same trip — cancel or delete the duplicate, then merge again.'
+          : 'The rest failed to update — try merging again.')
+      );
+      return;
+    }
+    setMergeTarget(null);
+  };
+
   // Permanently removes every enquiry row behind this contact — i.e. their
   // entire booking/payment history across every trip, not just one. Each
   // row's seat (if any) is released by deleteEnquiry itself, same as a
@@ -190,6 +248,10 @@ export function useTravellers() {
     handleSaveEdit,
     deletingKey,
     handleDelete,
+    allContacts,
+    mergeTarget, setMergeTarget,
+    merging,
+    handleMerge,
     totalCount: allContacts.length,
     searchQuery, setSearchQuery,
     repeatOnly, setRepeatOnly,

@@ -7,6 +7,7 @@ import { useTravellers, TRAVELLERS_PAGE_SIZE } from './useTravellers';
 import AdminTravellerCard from './AdminTravellerCard';
 import AdminTravellersDesktopTable from './AdminTravellersDesktopTable';
 import AdminEditTravellerModal from './AdminEditTravellerModal';
+import AdminMergeTravellerModal from './AdminMergeTravellerModal';
 
 // Shared by both the mobile filter card and the desktop bar above the
 // table — same button, just two different places to sit depending on
@@ -49,14 +50,18 @@ export default function AdminTravellers() {
     handleSaveEdit,
     deletingKey,
     handleDelete,
+    allContacts,
+    mergeTarget, setMergeTarget,
+    merging,
+    handleMerge,
   } = useTravellers();
 
   const { pageItems, totalPages, safePage, rangeStart, rangeEnd } = paginate(contacts, page, TRAVELLERS_PAGE_SIZE);
 
   const KPI_CARDS = [
     { label: 'Contacts', value: kpis.total, sub: 'Everyone we have a phone number for', icon: AddressBook },
-    { label: 'Repeat Travellers', value: kpis.repeat, sub: '2+ trips or enquiries logged', icon: Repeat },
-    { label: 'Trips', value: kpis.tripsBooked, sub: 'Distinct trips across every contact', icon: Briefcase },
+    { label: 'Repeat Travellers', value: kpis.repeat, sub: 'Joined 2 or more trips', icon: Repeat },
+    { label: 'Trips', value: kpis.tripsBooked, sub: 'Distinct trips travellers joined', icon: Briefcase },
     { label: 'Cancelled Bookings', value: kpis.cancelledTrips, sub: 'Bookings that fell through', icon: XCircle },
   ] as const;
 
@@ -107,6 +112,7 @@ export default function AdminTravellers() {
                   key={contact.key}
                   contact={contact}
                   onEdit={() => setEditTarget(contact)}
+                  onMerge={() => setMergeTarget(contact)}
                   onDelete={() => handleDelete(contact)}
                   deleting={deletingKey === contact.key}
                 />
@@ -125,6 +131,7 @@ export default function AdminTravellers() {
               totalPages={totalPages}
               setPage={setPage}
               onEdit={setEditTarget}
+              onMerge={setMergeTarget}
               onDelete={handleDelete}
               deletingKey={deletingKey}
             />
@@ -144,6 +151,15 @@ export default function AdminTravellers() {
         onClose={() => setEditTarget(null)}
         onSave={handleSaveEdit}
         saving={savingEdit}
+      />
+
+      <AdminMergeTravellerModal
+        key={mergeTarget?.key ?? 'none'}
+        source={mergeTarget}
+        allContacts={allContacts}
+        onClose={() => { if (!merging) setMergeTarget(null); }}
+        onMerge={handleMerge}
+        merging={merging}
       />
     </AdminLayout>
   );

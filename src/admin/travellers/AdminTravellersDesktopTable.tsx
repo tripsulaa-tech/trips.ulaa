@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import {
   Phone, Envelope as Mail, MapPin, Repeat,
-  PencilSimple as Edit2, Trash as Trash2,
+  PencilSimple as Edit2, Trash as Trash2, ArrowsMerge,
+  CaretUp as ChevronUp, CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
 import { TableHeaderBar, TablePagination } from '../../components/ui/DataTableChrome';
 import { formatDate, getInitials, getWhatsAppLink } from '../../utils/utils-index';
@@ -18,6 +20,7 @@ interface AdminTravellersDesktopTableProps {
   totalPages: number;
   setPage: (page: number) => void;
   onEdit: (contact: TravellerContact) => void;
+  onMerge: (contact: TravellerContact) => void;
   onDelete: (contact: TravellerContact) => void;
   deletingKey: string | null;
 }
@@ -32,8 +35,17 @@ interface AdminTravellersDesktopTableProps {
  *  the mobile card. */
 export default function AdminTravellersDesktopTable({
   pageItems, rangeStart, rangeEnd, total, searchQuery, setSearchQuery,
-  safePage, totalPages, setPage, onEdit, onDelete, deletingKey,
+  safePage, totalPages, setPage, onEdit, onMerge, onDelete, deletingKey,
 }: AdminTravellersDesktopTableProps) {
+  // Which contacts have their "+N more" trips opened out (by contact key).
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const toggleExpanded = (key: string) =>
+    setExpandedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+
   return (
     <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
       <TableHeaderBar
@@ -62,7 +74,8 @@ export default function AdminTravellersDesktopTable({
             {pageItems.map(contact => {
               const latestTrip = contact.trips[0];
               const badge = latestTrip ? journeyBadge(latestTrip.representative) : undefined;
-              const extraTripTitles = contact.trips.slice(1).map(t => t.tripTitle).join(', ');
+              const extraTrips = contact.trips.slice(1);
+              const isExpanded = expandedKeys.has(contact.key);
               return (
                 <tr key={contact.key} className="hover:bg-background/50">
                   <td className="px-4 py-4">
@@ -73,9 +86,9 @@ export default function AdminTravellersDesktopTable({
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="font-medium text-dark truncate max-w-[160px]">{contact.fullName}</p>
-                          {contact.tripCount > 1 && (
+                          {contact.joinedTripCount > 1 && (
                             <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
-                              <Repeat size={9} aria-hidden="true" /> {contact.tripCount} trips
+                              <Repeat size={9} aria-hidden="true" /> {contact.joinedTripCount} trips
                             </span>
                           )}
                         </div>
@@ -116,10 +129,44 @@ export default function AdminTravellersDesktopTable({
                       <span className="inline-flex items-center gap-1"><MapPin size={12} aria-hidden="true" /> {contact.city}</span>
                     ) : '—'}
                   </td>
-                  <td className="px-4 py-4 text-dark-muted max-w-[200px]">
+                  <td className="px-4 py-4 text-dark-muted max-w-[220px]">
                     <p className="truncate">{latestTrip ? latestTrip.tripTitle : 'No trip on file'}</p>
-                    {contact.trips.length > 1 && (
-                      <p className="text-xs text-dark-muted/70 truncate" title={extraTripTitles}>+{contact.trips.length - 1} more</p>
+                    {extraTrips.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(contact.key)}
+                        aria-expanded={isExpanded}
+                        aria-label={isExpanded ? `Hide ${contact.fullName}'s other trips` : `Show ${contact.fullName}'s ${extraTrips.length} other trip${extraTrips.length === 1 ? '' : 's'}`}
+                        className="inline-flex items-center gap-0.5 text-xs text-primary hover:underline"
+                      >
+                        {isExpanded ? 'Show less' : `+${extraTrips.length} more`}
+                        {isExpanded ? <ChevronUp size={11} aria-hidden="true" /> : <ChevronDown size={11} aria-hidden="true" />}
+                      </button>
+                    )}
+                    {isExpanded && (
+                      <ul className="mt-2 space-y-1.5">
+                        {extraTrips.map(trip => {
+                          const tripBadge = journeyBadge(trip.representative);
+                          return (
+                            <li key={trip.key} className="bg-background-warm/50 rounded-md px-2 py-1.5">
+                              <p className="text-xs font-button font-semibold text-dark break-words">{trip.tripTitle}</p>
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                <span className={`text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${tripBadge.color}`}>
+                                  {tripBadge.label}
+                                </span>
+                                {trip.seatCount > 1 && (
+                                  <span className="text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-200 text-dark-muted">
+                                    Group of {trip.seatCount}
+                                  </span>
+                                )}
+                                {trip.departureDate && (
+                                  <span className="text-2xs text-dark-muted">{formatDate(trip.departureDate)}</span>
+                                )}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
                     )}
                   </td>
                   <td className="px-4 py-4 text-center">
@@ -138,6 +185,15 @@ export default function AdminTravellersDesktopTable({
                         className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"
                       >
                         <Edit2 size={16} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onMerge(contact)}
+                        title="Merge with another contact"
+                        aria-label={`Merge ${contact.fullName} with another contact`}
+                        className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"
+                      >
+                        <ArrowsMerge size={16} aria-hidden="true" />
                       </button>
                       <button
                         type="button"

@@ -21,6 +21,11 @@ export type TravellerTripGroup = {
   // journeyBadge() rather than inventing a second status vocabulary here.
   representative: Enquiry;
   allCancelled: boolean;
+  // True only once the person actually joined this trip: a booking exists
+  // (booking_id is assigned when the first payment lands) and it hasn't been
+  // cancelled. A trip that was only enquired about is false — it still shows
+  // in the history, but doesn't count towards "N trips" or repeat travellers.
+  joined: boolean;
   latestCreatedAt: string;
 };
 
@@ -38,7 +43,11 @@ export type TravellerContact = {
   emergencyContact?: string;
   foodPreference?: 'veg' | 'non_veg' | null;
   trips: TravellerTripGroup[];
+  // Every trip/enquiry on file, joined or not (history, Edit/Delete wording).
   tripCount: number;
+  // Only the trips this person actually joined — what the "N trips" badge,
+  // the Repeat Travellers filter and the summary cards use.
+  joinedTripCount: number;
   // Earliest created_at across every row for this contact — the date they
   // first became a contact (their very first enquiry), regardless of
   // which trip it was for. Drives the Contact Book's "1, 2, 3..." serial
@@ -147,6 +156,7 @@ export function buildTravellerContacts(enquiries: Enquiry[]): TravellerContact[]
           totalAmount: tripRows.reduce((sum, r) => sum + (r.total_amount || 0), 0),
           representative,
           allCancelled,
+          joined: tripRows.some(r => !!r.booking_id && !r.cancelled_at),
           latestCreatedAt: sortedByRecency[0].created_at,
         };
       })
@@ -165,6 +175,7 @@ export function buildTravellerContacts(enquiries: Enquiry[]): TravellerContact[]
       foodPreference: rows.find(r => r.food_preference)?.food_preference || null,
       trips,
       tripCount: trips.length,
+      joinedTripCount: trips.filter(t => t.joined).length,
       registeredAt,
       lastActivityAt,
       rows,

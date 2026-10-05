@@ -165,15 +165,20 @@ export default function AdminEnquiryJourneyCard({
                 <p className="text-green-700 text-sm font-bold">{formatPrice(paidAmount)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
-              <span className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 inline-flex items-center justify-center shrink-0">
-                <Clock size={17} aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-dark-muted text-2xs">Balance</p>
-                <p className="text-amber-600 text-sm font-bold">{formatPrice(pendingAmount)}</p>
+            {/* Only shown while something is still owed — at ₹0 it was just a
+                lonely tile wrapping onto its own row; the "100% Paid" badge
+                above already says the balance is cleared. */}
+            {pendingAmount > 0 && (
+              <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
+                <span className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 inline-flex items-center justify-center shrink-0">
+                  <Clock size={17} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-dark-muted text-2xs">Balance</p>
+                  <p className="text-amber-600 text-sm font-bold">{formatPrice(pendingAmount)}</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className={`grid gap-2 ${enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' ? 'grid-cols-2' : 'grid-cols-1'}`}>

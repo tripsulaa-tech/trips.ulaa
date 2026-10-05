@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Phone, Envelope as Mail, MapPin, Repeat,
-  PencilSimple as Edit2, Trash as Trash2,
+  PencilSimple as Edit2, Trash as Trash2, ArrowsMerge,
   CaretUp as ChevronUp, CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
 import { formatDate, getInitials, getWhatsAppLink } from '../../utils/utils-index';
@@ -26,11 +26,13 @@ import type { TravellerContact } from './travellerContacts';
 export default function AdminTravellerCard({
   contact,
   onEdit,
+  onMerge,
   onDelete,
   deleting,
 }: {
   contact: TravellerContact;
   onEdit: () => void;
+  onMerge: () => void;
   onDelete: () => void;
   deleting: boolean;
 }) {
@@ -48,9 +50,9 @@ export default function AdminTravellerCard({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className="text-sm font-medium text-dark truncate">{contact.fullName}</p>
-              {contact.tripCount > 1 && (
+              {contact.joinedTripCount > 1 && (
                 <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
-                  <Repeat size={9} aria-hidden="true" /> {contact.tripCount} trips
+                  <Repeat size={9} aria-hidden="true" /> {contact.joinedTripCount} trips
                 </span>
               )}
             </div>
@@ -144,6 +146,15 @@ export default function AdminTravellerCard({
             className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"
           >
             <Edit2 size={16} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={onMerge}
+            title="Merge with another contact"
+            aria-label={`Merge ${contact.fullName} with another contact`}
+            className="p-2 rounded hover:bg-background text-dark-muted hover:text-primary transition-colors"
+          >
+            <ArrowsMerge size={16} aria-hidden="true" />
           </button>
           <button
             type="button"

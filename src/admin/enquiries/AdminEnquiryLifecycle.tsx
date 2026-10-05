@@ -95,6 +95,13 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
     : activeIndex * stepPercent;
   const displayPercent = Math.round(barPercent);
 
+  // Fully Paid is the *current* stage until the trip is completed, which
+  // used to read "In Progress" even with a ₹0 balance — confusing, since the
+  // money side is finished. Once the total is fully received, show it as
+  // Done and mark the Completed step as "Next" (the only thing left is
+  // pressing Complete Trip).
+  const paymentSettled = effectiveStatus === 'fully_paid' && totalAmount > 0 && paidAmount >= totalAmount;
+
   return (
     <div className="relative bg-background-warm/60 border border-background-warm rounded-lg px-4 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-5">
       {/* Faint decorative glow in the corner — purely cosmetic, sits behind
@@ -141,8 +148,11 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
           screens instead of squeezing 5 labels unreadably tight. */}
       <div className="relative mt-1 flex items-start justify-between gap-1 overflow-x-auto scrollbar-hide">
         {BOOKING_LIFECYCLE_STEPS.map((step, i) => {
-          const isDone = i < activeIndex;
           const isActive = i === activeIndex;
+          // Completed is the last step — nothing comes after it, so once a booking
+          // is there it's Done (it used to read "In Progress" forever).
+          const isDone = i < activeIndex || (isActive && (step.key === 'completed' || (step.key === 'fully_paid' && paymentSettled)));
+          const isNext = paymentSettled && i === activeIndex + 1;
           const Icon = step.icon;
           return (
             <div key={step.key} aria-current={isActive ? 'step' : undefined} className="flex flex-col items-center gap-1.5 flex-1 min-w-[4.5rem]">
@@ -156,11 +166,11 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
               >
                 <Icon size={15} weight={isDone || isActive ? 'bold' : 'regular'} aria-hidden="true" />
               </span>
-              <span className={`text-2xs sm:text-2xs font-button font-bold uppercase tracking-wide text-center leading-tight ${isActive ? 'text-primary' : isDone ? 'text-dark' : 'text-dark-muted/60'}`}>
+              <span className={`text-2xs sm:text-2xs font-button font-bold uppercase tracking-wide text-center leading-tight ${isDone ? 'text-dark' : isActive || isNext ? 'text-primary' : 'text-dark-muted/60'}`}>
                 {step.label}
               </span>
               <span className="text-dark-muted text-2xs sm:text-2xs whitespace-nowrap">
-                {isDone ? 'Done' : isActive ? 'In Progress' : 'Pending'}
+                {isDone ? 'Done' : isActive ? 'In Progress' : isNext ? 'Next' : 'Pending'}
               </span>
             </div>
           );

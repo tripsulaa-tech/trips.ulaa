@@ -156,10 +156,22 @@ export default function AdminEnquiryHeaderCard({
                 grouped it visually with those instead). */}
             {enquiry.booking_id && (
               <div className="mt-1.5 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
-                <p className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold ${isCancelled(enquiry) ? 'text-red-600' : 'text-green-600'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCancelled(enquiry) ? 'bg-red-600' : 'bg-green-600'}`} aria-hidden="true" />
-                  {isCancelled(enquiry) ? 'Cancelled' : 'Active Enquiry'}
-                </p>
+                {/* Cancelled wins; otherwise a finished trip reads "Trip
+                    Completed" (neutral) instead of "Active Enquiry", which
+                    only meant "not cancelled" and was misleading once the
+                    trip was over. */}
+                {(() => {
+                  const cancelled = isCancelled(enquiry);
+                  const finished = !cancelled && (enquiry.booking_status === 'completed' || enquiry.journey_stage === 'completed');
+                  const tone = cancelled ? 'text-red-600' : finished ? 'text-dark-muted' : 'text-green-600';
+                  const dot = cancelled ? 'bg-red-600' : finished ? 'bg-dark-muted' : 'bg-green-600';
+                  return (
+                    <p className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold ${tone}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} aria-hidden="true" />
+                      {cancelled ? 'Cancelled' : finished ? 'Trip Completed' : 'Active Enquiry'}
+                    </p>
+                  );
+                })()}
                 <p className="text-dark-muted text-2xs">· Created on {formatDate(enquiry.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
               </div>
             )}

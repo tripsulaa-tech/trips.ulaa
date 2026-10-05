@@ -147,7 +147,14 @@ export function useEditEnquiry(params: {
         city: editForm.city || null,
         age: editForm.age === '' ? null : Number(editForm.age),
         trip_id: editForm.trip_id || null,
-        trip_title: editForm.trip_id ? (newTrip?.title ?? null) : null,
+        // `trips` only holds UPCOMING trips, so for an enquiry whose trip has
+        // since been completed `newTrip` is undefined — writing
+        // `newTrip?.title ?? null` here used to blank the saved trip name
+        // (while trip_id stayed set) every time such an enquiry was edited.
+        // Only touch trip_title when the admin actually picked a different trip.
+        ...(editForm.trip_id !== (editTarget.trip_id || '')
+          ? { trip_title: newTrip?.title ?? null }
+          : {}),
         food_preference: editForm.food_preference || null,
         source: editForm.source,
         package_type: finalPackageType,
