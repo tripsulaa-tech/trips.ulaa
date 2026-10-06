@@ -27,7 +27,7 @@ import {
 import { JourneyLifecycleLegend } from './AdminEnquiryLifecycle';
 import { useMarkInvoicePaid } from './useMarkInvoicePaid';
 import { useEnquiryData } from './useEnquiryData';
-import { useEnquiryFilters, ENQUIRIES_PAGE_SIZE } from './useEnquiryFilters';
+import { useEnquiryFilters } from './useEnquiryFilters';
 import { useEnquirySelection } from './useEnquirySelection';
 import { useEnquiryLifecycle } from './useEnquiryLifecycle';
 import { useAddEnquiry } from './useAddEnquiry';
@@ -82,7 +82,7 @@ export default function AdminEnquiries() {
     followUpDueOnly, setFollowUpDueOnly,
     searchQuery, setSearchQuery, trimmedSearch,
     selectedTripKey, setSelectedTripKey,
-    currentPage, setCurrentPage,
+    currentPage, setCurrentPage, pageSize: enquiriesPageSize,
     sortKey, sortDir, handleSort,
     activeFilterCount,
     clearAllFilters,
@@ -580,7 +580,7 @@ export default function AdminEnquiries() {
     safePage: enquiriesSafePage,
     rangeStart: enquiriesRangeStart,
     rangeEnd: enquiriesRangeEnd,
-  } = paginate(sortedFiltered, currentPage, ENQUIRIES_PAGE_SIZE);
+  } = paginate(sortedFiltered, currentPage, enquiriesPageSize);
 
   const counts = {
     all: scopedEnquiries.length,
@@ -929,8 +929,55 @@ export default function AdminEnquiries() {
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading enquiries...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-lg shadow-card">
-            <p className="font-display text-xl text-dark-muted">No enquiries found.</p>
+          <div className="bg-white rounded-lg shadow-card p-4 sm:p-6">
+            {/* Search stays visible (the table's own search bar goes with the table), so a no-match
+                search can be edited or cleared right here. Mobile already has its own bar above. */}
+            <div className="relative hidden sm:block max-w-md mb-6">
+              <label htmlFor="enq-empty-search" className="sr-only">Search name, phone, email, or trip</label>
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
+              <input
+                id="enq-empty-search"
+                type="text"
+                value={searchQuery}
+                onChange={ev => setSearchQuery(ev.target.value)}
+                placeholder="Search name, phone, email, trip..."
+                className="w-full pl-10 pr-10 py-2.5 rounded-lg border-2 border-background-warm bg-white font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-dark p-1"
+                  aria-label="Clear search"
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            <div className="text-center py-8">
+              <p className="font-display text-xl text-dark-muted">
+                {trimmedSearch || activeFilterCount > 0 ? 'No enquiries match your search or filters.' : 'No enquiries found.'}
+              </p>
+              {(trimmedSearch || activeFilterCount > 0) && (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  {trimmedSearch && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="text-xs font-button font-semibold px-3 py-2 rounded-md border border-background-warm text-dark hover:border-primary/30 transition-colors"
+                    >
+                      Clear search
+                    </button>
+                  )}
+                  {activeFilterCount > 0 && (
+                    <button
+                      onClick={clearAllFilters}
+                      className="text-xs font-button font-semibold px-3 py-2 rounded-md border border-primary/30 text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <>
@@ -979,7 +1026,7 @@ export default function AdminEnquiries() {
             <AdminEnquiriesDesktopTable
               paginatedEnquiries={paginatedEnquiries}
               enquiriesSafePage={enquiriesSafePage}
-              pageSize={ENQUIRIES_PAGE_SIZE}
+              pageSize={enquiriesPageSize}
               enquiriesRangeStart={enquiriesRangeStart}
               enquiriesRangeEnd={enquiriesRangeEnd}
               enquiriesTotalPages={enquiriesTotalPages}

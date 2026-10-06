@@ -6,12 +6,13 @@
 
 import { formatPrice } from '../utils-index';
 import { sanitizeForPdf } from '../pdfText';
+import { SITE_HOST } from '../../constants/site';
 
 export type RGB = readonly [number, number, number];
 
 export const BRAND_BASE = {
   name: 'Ulaa',
-  website: 'www.ulaatrips.com',
+  website: SITE_HOST,
   instagram: '@ulaa.trips',
   email: 'trips.ulaa@gmail.com',
   phone: '+91 63813 36772',

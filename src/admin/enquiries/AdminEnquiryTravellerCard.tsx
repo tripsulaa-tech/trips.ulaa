@@ -27,6 +27,7 @@ import {
 import { getCitySuggestions, getEmailSuggestions } from './AdminEnquiriesShared';
 import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
 import { useSuggestionField } from '../useSuggestionField';
+import { realEmail } from '../../utils/placeholderEmail';
 
 // Phosphor doesn't ship a real WhatsApp glyph (ChatCircle/ChatsCircle are
 // generic speech-bubble icons, not the recognizable WhatsApp mark) — same
@@ -205,9 +206,9 @@ export default function AdminEnquiryTravellerCard({
           </div>
         </div>
         <div className="flex items-center gap-2.5 min-w-0">
-          {!editing && enquiry.email ? (
+          {!editing && realEmail(enquiry.email) ? (
             <a
-              href={`mailto:${enquiry.email}`}
+              href={`mailto:${realEmail(enquiry.email)}`}
               title={`Email ${enquiry.full_name}`}
               aria-label={`Email ${enquiry.full_name}`}
               className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0 hover:bg-primary hover:text-white transition-colors"
@@ -237,7 +238,7 @@ export default function AdminEnquiryTravellerCard({
                 {emailSuggestField.open && <SuggestionDropdown items={emailSuggestField.suggestions} onSelect={emailSuggestField.select} />}
               </>
             ) : (
-              <p title={enquiry.email} className="text-dark text-sm font-semibold truncate">{enquiry.email}</p>
+              <p title={realEmail(enquiry.email)} className="text-dark text-sm font-semibold truncate">{realEmail(enquiry.email) || 'No email'}</p>
             )}
           </div>
         </div>

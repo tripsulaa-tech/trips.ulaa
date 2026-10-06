@@ -3,6 +3,7 @@ import { submitWaitlist } from '../../services/api';
 import { useAlert } from '../../components/ui/useAlert';
 import type { UpcomingTrip } from '../../types/types-index';
 import { type WaitlistForm, emptyWaitlistForm } from './waitlistShared';
+import { NO_EMAIL_PLACEHOLDER } from '../../utils/placeholderEmail';
 
 /** Owns the "Add to Waitlist" modal — logs a signup an admin took over the
  *  phone/WhatsApp directly, the same way Enquiries lets an admin log a
@@ -52,7 +53,7 @@ export function useAddWaitlistModal(allTrips: UpcomingTrip[], load: () => void, 
       await submitWaitlist({
         full_name: form.full_name.trim(),
         phone: form.phone.trim(),
-        email: form.email.trim() || 'not-provided@ulaa.local',
+        email: form.email.trim() || NO_EMAIL_PLACEHOLDER,
         age: form.age === '' ? undefined : form.age,
         city: form.city.trim() || undefined,
         emergency_contact: form.emergency_contact.trim() || undefined,

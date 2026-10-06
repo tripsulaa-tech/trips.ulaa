@@ -36,6 +36,7 @@ import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { sendBookingEmail, bookingEmailPreview } from '../../utils/bookingEmail';
 import { bookingEmailStatFromLog } from '../../services/api/enquiries/activity';
 import Modal from '../../components/ui/Modal';
+import { whatsAppUrl } from '../../utils/formatPhone';
 import { formatDate, formatPrice } from '../../utils/utils-index';
 import { availablePaymentTypeOptions, getTripPricingForPackage, isNotInterested, canSetFollowUp, canCancelBooking, validatePaymentForm, reconcilePaymentType, computeDiscountedTotal, getTripPrice as getTripPriceCommon, getTripChildFareAmount as getTripChildFareAmountCommon } from './AdminEnquiryCommon';
 import type { PaymentForm, InvoiceAction } from './AdminEnquiryCommon';
@@ -53,6 +54,7 @@ import { useEditEnquiry } from './useEditEnquiry';
 import AdminEnquiryCancelModal from './AdminEnquiryCancelModal';
 import AdminEnquiryNotInterestedModal from './AdminEnquiryNotInterestedModal';
 import AdminEnquiryFollowUpModal from './AdminEnquiryFollowUpModal';
+import { realEmail } from '../../utils/placeholderEmail';
 
 const emptyPaymentForm: PaymentForm = {
   package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '',
@@ -750,8 +752,7 @@ export default function AdminEnquiryDetail() {
           `Amount paid: ${formatPrice(enquiry.amount_paid || 0)}${enquiry.total_amount ? ` of ${formatPrice(enquiry.total_amount)}` : ''}\n` +
           `The invoice PDF has been downloaded — please attach it to this chat.`
         );
-        const digits = (enquiry.phone || '').replace(/\D/g, '');
-        window.open(`https://wa.me/${digits}?text=${text}`, '_blank', 'noopener,noreferrer');
+        window.open(whatsAppUrl(enquiry.phone, text), '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
@@ -941,9 +942,9 @@ export default function AdminEnquiryDetail() {
           rowActions={rowActions}
           onDownloadInvoice={enquiry.booking_id ? handleDownloadInvoice : undefined}
           onShareInvoice={enquiry.booking_id ? handleShareInvoice : undefined}
-          onEmailBooking={enquiry.booking_id && enquiry.email ? handleSendBookingEmail : undefined}
+          onEmailBooking={enquiry.booking_id && realEmail(enquiry.email) ? handleSendBookingEmail : undefined}
           emailStat={bookingEmailStatFromLog(activityLog)}
-          onPreviewEmail={enquiry.booking_id && enquiry.email ? handlePreviewEmail : undefined}
+          onPreviewEmail={enquiry.booking_id && realEmail(enquiry.email) ? handlePreviewEmail : undefined}
           invoiceBusyAction={invoiceBusyAction}
         />
 

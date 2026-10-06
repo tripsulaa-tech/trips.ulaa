@@ -15,6 +15,7 @@ import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
 import type { BottomNavItemConfig } from '../../types/types-index';
 import { useBranding } from '../../hooks/useBranding';
+import { SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 
 const WHATSAPP_NUMBER = '916381336772';
 
@@ -175,7 +176,7 @@ export default function Footer() {
             Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> for the fearless women of India.
           </p>
           <p className="mt-2 text-xs text-cream/50">
-            © {year} Ulaa · <a href="https://www.ulaatrips.com" className="hover:text-secondary transition-colors">www.ulaatrips.com</a> · All rights reserved.
+            © {year} Ulaa · <a href={SITE_ORIGIN} className="hover:text-secondary transition-colors">{SITE_HOST}</a> · All rights reserved.
           </p>
         </div>
       </div>
@@ -282,7 +283,7 @@ export default function Footer() {
             Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> for the fearless women of India.
           </span>
           <span className="h-3.5 w-px bg-white/15" />
-          <span>© {year} Ulaa · <a href="https://www.ulaatrips.com" className="hover:text-secondary transition-colors">www.ulaatrips.com</a> · All rights reserved.</span>
+          <span>© {year} Ulaa · <a href={SITE_ORIGIN} className="hover:text-secondary transition-colors">{SITE_HOST}</a> · All rights reserved.</span>
         </div>
       </div>
     </footer>

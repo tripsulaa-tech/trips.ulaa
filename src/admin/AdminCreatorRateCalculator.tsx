@@ -340,7 +340,7 @@ function renderFormattedPreview(text: string): (string | ReactNode)[] {
 const PREVIEW_SAMPLE_ASSETS: CreatorRateAsset[] = [
   { asset: '1 Non-Collab Reel', min: 5050, max: 5050, pricing_logic: 'Base Reel Rate' },
   { asset: '1 Collab Tag Reel', min: 5550, max: 6050, pricing_logic: '1.1–1.2× Non-Collab Reel' },
-  { asset: '1 Feed Post', min: 1500, max: 2000, pricing_logic: '0.3–0.5× Reel' },
+  { asset: '1 Feed Post', min: 1500, max: 2000, pricing_logic: '0.3–0.4× Reel' },
   { asset: '1 Story', min: 1000, max: 2000, pricing_logic: '0.2–0.4× Reel' },
   { asset: '1 Month Ad Rights', min: 1500, max: 1500, pricing_logic: '0.3× Reel' },
 ];
@@ -400,7 +400,7 @@ export default function AdminCreatorRateCalculator() {
     const assets: CreatorRateAsset[] = [
       { asset: '1 Non-Collab Reel', min: floorTo50(minReelRate), max: ceilTo50(maxReelRate), pricing_logic: 'Base Reel Rate' },
       { asset: '1 Collab Tag Reel', min: floorTo50(maxReelRate), max: ceilTo50(1.2 * maxReelRate), pricing_logic: '1.1–1.2× Non-Collab Reel' },
-      { asset: '1 Feed Post', min: floorTo50(0.3 * minReelRate), max: ceilTo50(0.4 * maxReelRate), pricing_logic: '0.3–0.5× Reel' },
+      { asset: '1 Feed Post', min: floorTo50(0.3 * minReelRate), max: ceilTo50(0.4 * maxReelRate), pricing_logic: '0.3–0.4× Reel' },
       { asset: '1 Story', min: floorTo50(0.2 * minReelRate), max: ceilTo50(0.4 * maxReelRate), pricing_logic: '0.2–0.4× Reel' },
       { asset: '1 Month Ad Rights', min: floorTo50(0.3 * minReelRate), max: ceilTo50(0.3 * maxReelRate), pricing_logic: '0.3× Reel' },
     ];

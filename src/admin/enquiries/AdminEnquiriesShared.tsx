@@ -19,6 +19,7 @@ import {
 } from '../../utils/formValidation';
 import { INDIAN_CITIES } from '../../constants/indianCities';
 import { COMMON_EMAIL_DOMAINS } from '../../constants/emailDomains';
+import { NO_EMAIL_PLACEHOLDER } from '../../utils/placeholderEmail';
 
 // Same rows-shown cap the public BookingForm uses for its City / Email-
 // domain suggestion dropdowns (see MAX_SUGGESTIONS there) — kept in sync
@@ -76,7 +77,7 @@ export function phoneSignature(phone: string | null | undefined): string | null 
 // email don't get flagged as duplicates of each other.
 export function emailSignature(email: string | null | undefined): string | null {
   const trimmed = (email || '').trim().toLowerCase();
-  if (!trimmed || trimmed === 'not-provided@ulaa.local') return null;
+  if (!trimmed || trimmed === NO_EMAIL_PLACEHOLDER) return null;
   return trimmed;
 }
 

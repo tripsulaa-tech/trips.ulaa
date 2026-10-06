@@ -3,6 +3,7 @@ import { getPaymentsForEnquiry } from '../../services/api';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { sendBookingEmail } from '../../utils/bookingEmail';
+import { whatsAppUrl } from '../../utils/formatPhone';
 import { formatPrice } from '../../utils/utils-index';
 import { useAlert } from '../../components/ui/useAlert';
 import type { InvoiceAction } from './AdminEnquiryCommon';
@@ -102,8 +103,7 @@ export function useEnquiryDetailsModal() {
           `Amount paid: ${formatPrice(e.amount_paid || 0)}${e.total_amount ? ` of ${formatPrice(e.total_amount)}` : ''}\n` +
           `The invoice PDF has been downloaded — please attach it to this chat.`
         );
-        const digits = (e.phone || '').replace(/\D/g, '');
-        window.open(`https://wa.me/${digits}?text=${text}`, '_blank', 'noopener,noreferrer');
+        window.open(whatsAppUrl(e.phone, text), '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
       // AbortError just means the admin cancelled the native share sheet —

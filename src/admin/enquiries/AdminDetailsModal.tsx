@@ -30,6 +30,7 @@ import type { InvoiceAction } from './AdminEnquiryCommon';
 import { formatDate, formatPrice, formatTime, getWhatsAppLink } from '../../utils/utils-index';
 import { formatPhone } from '../../utils/formatPhone';
 import { isPremiumPackage } from '../../utils/tripOptions';
+import { realEmail } from '../../utils/placeholderEmail';
 
 // Same icon-chip + label/value look as the "Traveller & Trip" card on the
 // full enquiry page (AdminEnquiryTravellerCard): a round tinted icon, a muted
@@ -164,7 +165,7 @@ export default function DetailsModal({
                   >
                     <Share2 size={18} aria-hidden="true" />
                   </button>
-                  {detailsTarget.email && (
+                  {realEmail(detailsTarget.email) && (
                     <button
                       type="button"
                       onClick={() => onSendBookingEmail(detailsTarget)}

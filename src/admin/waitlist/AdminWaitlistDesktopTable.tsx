@@ -19,6 +19,7 @@ import {
   QueueRankBadge, ConvertedProgressBadge, SeatAvailabilityBadges,
   ConvertedStatusBadges, ConvertedBookingLinks, WaitlistStatusControl,
 } from './WaitlistRowBits';
+import { realEmail } from '../../utils/placeholderEmail';
 
 interface AdminWaitlistDesktopTableProps {
   paginatedEntries: WaitlistEntry[];
@@ -64,6 +65,7 @@ export default function AdminWaitlistDesktopTable({
     <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
       <TableHeaderBar
         title="Waitlist details"
+        pageSizeKey="waitlist"
         rangeStart={waitlistRangeStart}
         rangeEnd={waitlistRangeEnd}
         total={totalFiltered}
@@ -101,7 +103,7 @@ export default function AdminWaitlistDesktopTable({
                     <QueueRankBadge entry={e} queueRank={queueRank} />
                     <ConvertedProgressBadge entry={e} />
                   </p>
-                  <p className="text-dark-muted text-xs truncate md:hidden">{e.email}</p>
+                  <p className="text-dark-muted text-xs truncate md:hidden">{realEmail(e.email) || 'No email'}</p>
                   {e.age && (
                     <p className="text-dark-muted text-xs mt-0.5">{e.age} yrs</p>
                   )}
@@ -153,12 +155,12 @@ export default function AdminWaitlistDesktopTable({
                   <SeatAvailabilityBadges entry={e} seatsAvailable={seatsAvailable} />
                 </td>
                 <td className="px-4 py-4 text-dark-muted hidden md:table-cell">
-                  <p className="flex items-center gap-1 text-xs"><Mail size={11} className="shrink-0" aria-hidden="true" /> {e.email}</p>
+                  <p className="flex items-center gap-1 text-xs"><Mail size={11} className="shrink-0" aria-hidden="true" /> {realEmail(e.email) || 'No email'}</p>
                   <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" aria-hidden="true" /> {e.phone}</p>
                   {e.city && <p className="text-xs mt-0.5">{e.city}</p>}
                   {e.emergency_contact && <p className="text-xs mt-0.5">Emergency: {e.emergency_contact}</p>}
                   <div className="mt-1.5">
-                    <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
+                    <ContactQuickLinks phone={e.phone} email={realEmail(e.email)} name={e.full_name} tripTitle={e.trip_title} />
                   </div>
                 </td>
                 <td className="px-4 py-4 text-dark-muted hidden lg:table-cell whitespace-nowrap">

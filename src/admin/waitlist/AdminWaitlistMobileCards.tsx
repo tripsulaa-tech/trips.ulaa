@@ -19,6 +19,7 @@ import {
   QueueRankBadge, ConvertedProgressBadge, SeatAvailabilityBadges,
   ConvertedStatusBadges, ConvertedBookingLinks, WaitlistStatusControl,
 } from './WaitlistRowBits';
+import { realEmail } from '../../utils/placeholderEmail';
 
 interface AdminWaitlistMobileCardsProps {
   paginatedEntries: WaitlistEntry[];
@@ -93,9 +94,9 @@ export default function AdminWaitlistMobileCards({
                     <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
                       <Mail size={10} aria-hidden="true" />
                     </span>
-                    <span className="truncate">{e.email}</span>
+                    <span className="truncate">{realEmail(e.email) || 'No email'}</span>
                   </p>
-                  <ContactQuickLinks phone={e.phone} email={e.email} name={e.full_name} tripTitle={e.trip_title} />
+                  <ContactQuickLinks phone={e.phone} email={realEmail(e.email)} name={e.full_name} tripTitle={e.trip_title} />
                 </div>
                 <p className="flex items-center gap-1.5">
                   <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">

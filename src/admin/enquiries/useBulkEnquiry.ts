@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createManualEnquiry, getAllUpcomingTripsAdmin } from '../../services/api';
 import type { CompletedTrip, Enquiry, UpcomingTrip } from '../../types/types-index';
 import { useAlert } from '../../components/ui/useAlert';
+import { NO_EMAIL_PLACEHOLDER } from '../../utils/placeholderEmail';
 
 // Sentinel trip_id value meaning "not one of the trips in the list below" —
 // picked for a batch of people from a trip that's already wrapped up (or
@@ -170,7 +171,7 @@ export function useBulkEnquiry(params: {
           await createManualEnquiry({
             full_name: entry.name,
             phone: entry.phone,
-            email: entry.email || 'not-provided@ulaa.local',
+            email: entry.email || NO_EMAIL_PLACEHOLDER,
             trip_id: tripId,
             trip_title: tripTitle,
             source: form.source,

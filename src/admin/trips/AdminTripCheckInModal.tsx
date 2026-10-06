@@ -14,6 +14,7 @@ import { foodBadge, foodPreferenceKey } from '../enquiries/AdminEnquiryCommon';
 import { isPremiumPackage } from '../../utils/tripOptions';
 import { formatDate, formatPrice } from '../../utils/utils-index';
 import { formatPhone } from '../../utils/formatPhone';
+import { realEmail } from '../../utils/placeholderEmail';
 
 interface AdminTripCheckInModalProps {
   trip: UpcomingTrip | null;
@@ -98,7 +99,7 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
   // automatically; this button is how it goes out. Asks first if this person
   // has already been emailed, so a double-click or a re-send is deliberate.
   const sendEmail = async (e: Enquiry) => {
-    if (!e.email || emailBusyId) return;
+    if (!realEmail(e.email) || emailBusyId) return;
     const prev = emailStats[e.id];
     if (prev) {
       const again = await confirm({
@@ -268,8 +269,8 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
                         <button
                           type="button"
                           onClick={() => sendEmail(e)}
-                          disabled={!e.email || !!emailBusyId}
-                          title={e.email ? (emailStat ? 'Send the booking email again' : 'Email booking confirmation & invoice') : 'No email address on file'}
+                          disabled={!realEmail(e.email) || !!emailBusyId}
+                          title={realEmail(e.email) ? (emailStat ? 'Send the booking email again' : 'Email booking confirmation & invoice') : 'No email address on file'}
                           aria-label={`Email booking confirmation to ${e.full_name}`}
                           className="w-7 h-7 flex items-center justify-center rounded-md border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-primary disabled:hover:border-primary/30 transition-colors"
                         >

@@ -10,6 +10,7 @@ import { renderDetails } from './pdf/invoice/details';
 import { renderPriceCards } from './pdf/invoice/priceCards';
 import { renderPaymentTable } from './pdf/invoice/paymentTable';
 import { renderFooterAndPageNumbers } from './pdf/invoice/footer';
+import { SITE_ORIGIN } from '../constants/site';
 
 // =============================================================================
 // Invoice generation — drawn as a real, native vector PDF (jsPDF text/shape
@@ -56,7 +57,6 @@ import { renderFooterAndPageNumbers } from './pdf/invoice/footer';
  * on record. Returns the assembled doc; downloadInvoicePdf() and
  * invoiceAsFile() both just call this and then export it differently.
  */
-const SITE_ORIGIN = 'https://www.ulaatrips.com';
 
 /** Public trip-details URL for the enquiry's trip. Prefers the trip's real
  *  (frozen) slug looked up by trip_id; falls back to slugify(title), which

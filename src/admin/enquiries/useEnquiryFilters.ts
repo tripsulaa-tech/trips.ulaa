@@ -7,6 +7,7 @@ import { formatDate } from '../../utils/utils-index';
 import { computeTripFinanceSummary } from '../../utils/tripFinance';
 import { countOptionSelections } from '../../utils/tripOptions';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
+import { useAdminPageSize } from '../../hooks/useAdminPageSize';
 
 export type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status' | 'follow_up';
 
@@ -81,9 +82,6 @@ function financeSummaryByTrip(allTrips: UpcomingTrip[], allEnquiries: Enquiry[])
 }
 
 type FilterPanelKey = 'trip' | 'query' | 'journey' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null;
-
-// Table pagination — 50 rows per page, matching the reference table design.
-export const ENQUIRIES_PAGE_SIZE = 10;
 
 /** Owns every filter/search/sort/pagination knob for the enquiries list —
  *  Lead Status, Booking Journey, Payment, Booked, Group, Food, Package,
@@ -163,7 +161,8 @@ export function useEnquiryFilters() {
   // filters, trip scope, or search term change. Done during render
   // (comparing against the previous filter signature) rather than in an
   // effect — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const filterSignature = `${filter}|${journeyFilter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${packageFilter}|${sourceFilter}|${followUpDueOnly}|${selectedTripKey}|${trimmedSearch}`;
+  const [pageSize] = useAdminPageSize('enquiries');
+  const filterSignature = `${pageSize}|${filter}|${journeyFilter}|${payFilter}|${bookedFilter}|${groupFilter}|${foodFilter}|${packageFilter}|${sourceFilter}|${followUpDueOnly}|${selectedTripKey}|${trimmedSearch}`;
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
   if (filterSignature !== prevFilterSignature) {
     setPrevFilterSignature(filterSignature);
@@ -331,7 +330,7 @@ export function useEnquiryFilters() {
     searchQuery, setSearchQuery, trimmedSearch,
     selectedTripKey, setSelectedTripKey,
     openFilterPanel, setOpenFilterPanel,
-    currentPage, setCurrentPage,
+    currentPage, setCurrentPage, pageSize,
     sortKey, sortDir, handleSort,
     activeFilterCount,
     clearAllFilters,

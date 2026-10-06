@@ -13,6 +13,7 @@ import {
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import type { SortDirection } from './dataTableUtils';
+import { useAdminPageSize, PAGE_SIZE_OPTIONS } from '../../hooks/useAdminPageSize';
 
 // Shared "table card" header — title + live "Showing X–Y of N" subtitle on
 // the left, search bar aligned to the right in the same row. Used by both
@@ -34,6 +35,25 @@ interface TableHeaderBarProps {
   // (not just disabled) on pages that don't wire it up.
   onExport?: () => void;
   exportLabel?: string;
+  // Optional — pass the table's page-size key (see useAdminPageSize) to show a "Rows" selector.
+  pageSizeKey?: string;
+}
+
+function PageSizeSelect({ storeKey }: { storeKey: string }) {
+  const [size, setSize] = useAdminPageSize(storeKey);
+  return (
+    <label className="flex items-center gap-1.5 text-xs text-dark-muted shrink-0">
+      <span className="hidden sm:inline">Rows</span>
+      <select
+        value={size}
+        onChange={e => setSize(Number(e.target.value))}
+        aria-label="Rows per page"
+        className="py-1.5 pl-2 pr-6 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+      >
+        {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+      </select>
+    </label>
+  );
 }
 
 export function TableHeaderBar({
@@ -47,6 +67,7 @@ export function TableHeaderBar({
   searchPlaceholder = 'Search...',
   onExport,
   exportLabel = 'Export CSV',
+  pageSizeKey,
 }: TableHeaderBarProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-5 pt-4 sm:pt-5 pb-4">
@@ -78,6 +99,7 @@ export function TableHeaderBar({
             </button>
           )}
         </div>
+        {pageSizeKey && <PageSizeSelect storeKey={pageSizeKey} />}
         {onExport && (
           <button
             onClick={onExport}

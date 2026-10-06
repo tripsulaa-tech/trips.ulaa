@@ -6,11 +6,9 @@ import { formatDate, downloadCsv } from '../../utils/utils-index';
 import type { WaitlistEntry, CompletedTrip } from '../../types/types-index';
 import { foodBadge, hasSeatOpen, messageWithoutFoodBreakdown, seatsNeeded, convertedCount } from './waitlistShared';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
+import { useAdminPageSize } from '../../hooks/useAdminPageSize';
 
 export type WaitlistSortKey = 'name' | 'group' | 'food' | 'trip' | 'joined' | 'status';
-
-// Table pagination — 10 rows per page.
-const WAITLIST_PAGE_SIZE = 10;
 
 // Persisted the same way as the Enquiries page's filters (see
 // useEnquiryFilters.ts and utils/sessionState.ts) so switching admin tabs
@@ -126,19 +124,20 @@ export function useWaitlistFilters(
     }
   }) : filtered;
 
+  const [waitlistPageSize] = useAdminPageSize('waitlist');
   const {
     pageItems: paginatedEntries,
     totalPages: waitlistTotalPages,
     safePage: waitlistSafePage,
     rangeStart: waitlistRangeStart,
     rangeEnd: waitlistRangeEnd,
-  } = paginate(sortedFiltered, currentPage, WAITLIST_PAGE_SIZE);
+  } = paginate(sortedFiltered, currentPage, waitlistPageSize);
 
   // Land back on page 1 whenever the filters or search term change, so the
   // admin never gets stuck on a page that no longer has any rows. Done
   // during render (comparing against the previous filter signature) rather
   // than in an effect — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const filterSignature = `${statusFilter}|${tripFilter}|${trimmedSearch}`;
+  const filterSignature = `${waitlistPageSize}|${statusFilter}|${tripFilter}|${trimmedSearch}`;
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
   if (filterSignature !== prevFilterSignature) {
     setPrevFilterSignature(filterSignature);

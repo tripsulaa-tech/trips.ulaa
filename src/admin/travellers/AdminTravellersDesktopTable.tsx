@@ -50,6 +50,7 @@ export default function AdminTravellersDesktopTable({
     <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
       <TableHeaderBar
         title="Contact Book"
+        pageSizeKey="travellers"
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         total={total}

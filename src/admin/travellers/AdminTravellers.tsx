@@ -3,7 +3,7 @@ import AdminLayout from '../AdminLayout';
 import { KpiCards, KpiCarousel } from '../../components/ui/KpiCards';
 import { TableHeaderBar, TablePagination } from '../../components/ui/DataTableChrome';
 import { paginate } from '../../components/ui/dataTableUtils';
-import { useTravellers, TRAVELLERS_PAGE_SIZE } from './useTravellers';
+import { useTravellers } from './useTravellers';
 import AdminTravellerCard from './AdminTravellerCard';
 import AdminTravellersDesktopTable from './AdminTravellersDesktopTable';
 import AdminEditTravellerModal from './AdminEditTravellerModal';
@@ -43,7 +43,7 @@ export default function AdminTravellers() {
     totalCount,
     searchQuery, setSearchQuery,
     repeatOnly, setRepeatOnly,
-    page, setPage,
+    page, setPage, pageSize,
     kpis,
     editTarget, setEditTarget,
     savingEdit,
@@ -56,7 +56,7 @@ export default function AdminTravellers() {
     handleMerge,
   } = useTravellers();
 
-  const { pageItems, totalPages, safePage, rangeStart, rangeEnd } = paginate(contacts, page, TRAVELLERS_PAGE_SIZE);
+  const { pageItems, totalPages, safePage, rangeStart, rangeEnd } = paginate(contacts, page, pageSize);
 
   const KPI_CARDS = [
     { label: 'Contacts', value: kpis.total, sub: 'Everyone we have a phone number for', icon: AddressBook },

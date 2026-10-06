@@ -41,6 +41,7 @@ import {
 import type { InvoiceAction } from './AdminEnquiryCommon';
 import { isGeneralContactMessage, groupColorFor } from './enquiryGrouping';
 import { paymentStatus, paymentBalance, paymentFilterKey, refundStatus } from './AdminEnquiriesShared';
+import { realEmail } from '../../utils/placeholderEmail';
 
 // Phosphor doesn't ship a real WhatsApp glyph (ChatCircle/ChatsCircle are
 // generic speech-bubble icons, not the recognizable WhatsApp mark) — same
@@ -257,9 +258,9 @@ export default function AdminEnquiriesMobileCards({
                       </div>
                     </div>
                     <div className="flex items-center gap-2.5 min-w-0">
-                      {e.email ? (
+                      {realEmail(e.email) ? (
                         <a
-                          href={`mailto:${e.email}`}
+                          href={`mailto:${realEmail(e.email)}`}
                           title={`Email ${e.full_name}`}
                           aria-label={`Email ${e.full_name}`}
                           className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center shrink-0 hover:bg-primary hover:text-white transition-colors"
@@ -274,7 +275,7 @@ export default function AdminEnquiriesMobileCards({
                       )}
                       <div className="min-w-0">
                         <p className="text-dark-muted text-xs">Email</p>
-                        <p className="text-dark text-sm truncate">{e.email}</p>
+                        <p className="text-dark text-sm truncate">{realEmail(e.email) || 'No email'}</p>
                       </div>
                     </div>
                   </div>
@@ -487,7 +488,7 @@ export default function AdminEnquiriesMobileCards({
                         >
                           <Share2 size={16}  aria-hidden="true" />
                         </button>
-                        {e.email && (
+                        {realEmail(e.email) && (
                           <button
                             onClick={() => handleSendBookingEmail(e)}
                             disabled={invoiceBusy?.id === e.id && invoiceBusy.action === 'email'}

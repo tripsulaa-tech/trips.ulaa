@@ -11,6 +11,7 @@ import {
   templateToText,
   type BookingEmailTemplate,
 } from './bookingEmailTemplate';
+import { SITE_ORIGIN } from '../constants/site';
 
 // Same calculation as AdminEnquiriesShared's paymentBalance() — duplicated
 // (rather than imported) so this utils/ module doesn't reach up into the
@@ -119,12 +120,12 @@ function escapeHtml(str: string): string {
 // own dark-mode inversion to a mail's colors regardless of the
 // color-scheme meta tags in <head>, which would otherwise make a
 // dark-wordmark logo vanish against an auto-darkened background.
-const LOGO_URL = 'https://www.ulaatrips.com/ULAA-logo.png';
+const LOGO_URL = `${SITE_ORIGIN}/ULAA-logo.png`;
 // Dark-mode variant made for the email sign-off (light lettering on a transparent
 // background, file: public/ULAA-logo-mail-dark.png), shown instead of LOGO_URL in
 // clients that support prefers-color-scheme — see the .logo-dark rule in <style>.
 // The site's footer logo is left as it was.
-const LOGO_FOOTER_URL = 'https://www.ulaatrips.com/ULAA-logo-mail-dark.png';
+const LOGO_FOOTER_URL = `${SITE_ORIGIN}/ULAA-logo-mail-dark.png`;
 
 /** Rich, production-ready HTML email — table-based layout, inline styles,
  *  and a bulletproof VML button for Outlook. One fixed light-mode design
@@ -173,7 +174,7 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[], t: Booking
                 </td>
               </tr>`
     : '';
-  const tripLinkHref = f.tripUrl ?? `https://www.ulaatrips.com`;
+  const tripLinkHref = f.tripUrl ?? SITE_ORIGIN;
 
   // One row per real payment received so far (Advance, Installment,
   // Balance, Full Payment — whatever the ledger actually contains), rather

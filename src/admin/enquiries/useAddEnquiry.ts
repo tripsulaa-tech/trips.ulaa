@@ -10,6 +10,7 @@ import type { EnquiryForm, WaitlistPersonForm } from './AdminEnquiriesShared';
 import { buildTravellerContacts } from '../travellers/travellerContacts';
 import type { TravellerContact } from '../travellers/travellerContacts';
 import { useAlert } from '../../components/ui/useAlert';
+import { NO_EMAIL_PLACEHOLDER, realEmail } from '../../utils/placeholderEmail';
 
 /** Owns the "Log an Enquiry" modal — its form state, the waitlist-conversion
  *  handoff (both the single-seat and multi-seat "group" flows), possible-
@@ -118,7 +119,7 @@ export function useAddEnquiry(params: {
       ...emptyForm,
       full_name: incoming.full_name,
       phone: incoming.phone,
-      email: incoming.email || '',
+      email: realEmail(incoming.email),
       age: incoming.age ?? '',
       city: incoming.city ?? '',
       food_preference: incoming.food_preference ?? '',
@@ -139,7 +140,7 @@ export function useAddEnquiry(params: {
             {
               full_name: incoming.full_name,
               phone: incoming.phone,
-              email: incoming.email || '',
+              email: realEmail(incoming.email),
               age: incoming.age ?? '',
               city: incoming.city ?? '',
               food_preference: incoming.food_preference ?? '',
@@ -273,7 +274,7 @@ export function useAddEnquiry(params: {
         const created = await createManualEnquiry({
           full_name: p.full_name.trim(),
           phone: p.phone.trim(),
-          email: p.email.trim() || 'not-provided@ulaa.local',
+          email: p.email.trim() || NO_EMAIL_PLACEHOLDER,
           age: p.age === '' ? undefined : p.age,
           city: p.city.trim() || undefined,
           trip_id: form.trip_id || undefined,
@@ -350,7 +351,7 @@ export function useAddEnquiry(params: {
       const created = await createManualEnquiry({
         full_name: form.full_name.trim(),
         phone: form.phone.trim(),
-        email: form.email.trim() || 'not-provided@ulaa.local',
+        email: form.email.trim() || NO_EMAIL_PLACEHOLDER,
         age: form.age === '' ? undefined : form.age,
         city: form.city.trim() || undefined,
         trip_id: form.trip_id || undefined,

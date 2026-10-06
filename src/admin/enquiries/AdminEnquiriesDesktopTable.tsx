@@ -30,6 +30,7 @@ import {
   paymentStatus, paymentBalance, paymentFilterKey, refundStatus, seatStatus,
 } from './AdminEnquiriesShared';
 import type { EnquirySortKey } from './useEnquiryFilters';
+import { realEmail } from '../../utils/placeholderEmail';
 
 interface AdminEnquiriesDesktopTableProps {
   // Data for the current page
@@ -135,6 +136,7 @@ export default function AdminEnquiriesDesktopTable({
     <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
       <TableHeaderBar
         title="Enquiry details"
+        pageSizeKey="enquiries"
         rangeStart={enquiriesRangeStart}
         rangeEnd={enquiriesRangeEnd}
         total={totalFiltered}
@@ -239,7 +241,7 @@ export default function AdminEnquiriesDesktopTable({
                           </span>
                         )}
                       </p>
-                      <p className="text-dark-muted text-xs truncate sm:hidden">{e.email}</p>
+                      <p className="text-dark-muted text-xs truncate sm:hidden">{realEmail(e.email) || 'No email'}</p>
                     </button>
                   </td>
                   <td className="px-2 py-4 whitespace-nowrap">
@@ -267,7 +269,7 @@ export default function AdminEnquiriesDesktopTable({
                     </span>
                   </td>
                   <td className="px-4 py-4 text-dark-muted hidden sm:table-cell">
-                    <p className="text-xs truncate">{e.email}</p>
+                    <p className="text-xs truncate">{realEmail(e.email) || 'No email'}</p>
                     <p className="text-xs mt-0.5">{e.phone}</p>
                   </td>
                   <td className="px-4 py-4 text-dark-muted hidden lg:table-cell truncate">

@@ -9,8 +9,8 @@ import { useAlert } from '../../components/ui/useAlert';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity } from '../../utils/formValidation';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
+import { useAdminPageSize } from '../../hooks/useAdminPageSize';
 
-export const TRAVELLERS_PAGE_SIZE = 10;
 
 // Persisted the same way as the Enquiries page's filters (see
 // useEnquiryFilters.ts and utils/sessionState.ts) so switching admin tabs
@@ -82,7 +82,8 @@ export function useTravellers() {
   // signature), not in an effect — same convention as
   // useEnquiryFilters.ts's currentPage reset, see
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const filterSignature = `${repeatOnly}|${searchQuery.trim().toLowerCase()}`;
+  const [pageSize] = useAdminPageSize('travellers');
+  const filterSignature = `${pageSize}|${repeatOnly}|${searchQuery.trim().toLowerCase()}`;
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
   if (filterSignature !== prevFilterSignature) {
     setPrevFilterSignature(filterSignature);
@@ -255,7 +256,7 @@ export function useTravellers() {
     totalCount: allContacts.length,
     searchQuery, setSearchQuery,
     repeatOnly, setRepeatOnly,
-    page, setPage,
+    page, setPage, pageSize,
     kpis,
   };
 }

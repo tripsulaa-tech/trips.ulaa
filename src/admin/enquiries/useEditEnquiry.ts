@@ -8,6 +8,7 @@ import { useAlert } from '../../components/ui/useAlert';
 import {
   validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity, validateOptionalAge,
 } from '../../utils/formValidation';
+import { realEmail } from '../../utils/placeholderEmail';
 
 /** Owns the Edit Details modal — same fields/behaviour as the one on the
  *  single-enquiry detail page, reached from this row's kebab menu instead.
@@ -44,7 +45,7 @@ export function useEditEnquiry(params: {
   const openEdit = (enquiry: Enquiry) => {
     setEditForm({
       full_name: enquiry.full_name || '',
-      email: enquiry.email || '',
+      email: realEmail(enquiry.email),
       phone: enquiry.phone || '',
       city: enquiry.city || '',
       age: enquiry.age ?? '',

@@ -15,6 +15,7 @@ import {
   setCachedBookingEmailTemplate,
   type BookingEmailTemplate,
 } from '../utils/bookingEmailTemplate';
+import { SITE_ORIGIN } from '../constants/site';
 
 // Logo Studio → "Email": the wording of the booking confirmation email that goes to
 // travellers (Enquiries → Email booking confirmation). The layout, payment table and
@@ -225,7 +226,7 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
     if (!html) return html;
     return html
       .replace('@media (prefers-color-scheme: dark)', dark ? '@media all' : '@media not all')
-      .replace('https://www.ulaatrips.com/ULAA-logo-mail-dark.png', `${window.location.origin}/ULAA-logo-mail-dark.png`);
+      .replace(`${SITE_ORIGIN}/ULAA-logo-mail-dark.png`, `${window.location.origin}/ULAA-logo-mail-dark.png`);
   };
 
   const set = useCallback(<K extends keyof BookingEmailTemplate>(key: K, value: BookingEmailTemplate[K]) => {

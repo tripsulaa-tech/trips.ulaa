@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
+import { SITE_ORIGIN } from '../constants/site';
 
 // Fallback OG/Twitter image — the same one index.html ships as the
 // site-wide default, used whenever a page doesn't have its own (a trip or
 // album with no cover image yet, say).
-const DEFAULT_IMAGE = 'https://www.ulaatrips.com/ULAA-logo.png';
+const DEFAULT_IMAGE = `${SITE_ORIGIN}/ULAA-logo.png`;
 
 interface PageMetaOptions {
   /** Full document title for this page, e.g. "Upcoming Trips | Ulaa Trips". */

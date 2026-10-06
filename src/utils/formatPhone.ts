@@ -11,3 +11,24 @@ export function formatPhone(phone: string | null | undefined): string {
   if (digits.length !== 10) return raw;
   return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
 }
+
+/** Country code assumed for numbers saved without one (the whole business is India-based).
+ *  Change it here only; every WhatsApp link goes through toWhatsAppNumber below. */
+export const DEFAULT_COUNTRY_CODE = '91';
+
+/** Digits-only number for a wa.me link, which needs the country code:
+ *  "87789 11368", "08778911368" and "+91 87789 11368" all become "918778911368".
+ *  Numbers that already look international (more than 10 digits after any leading 0) are kept as typed.
+ *  Returns '' when there is no usable number. */
+export function toWhatsAppNumber(phone: string | null | undefined): string {
+  let digits = (phone || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+  if (digits.length === 10) return DEFAULT_COUNTRY_CODE + digits;
+  return digits;
+}
+
+/** wa.me link with a prefilled message. With no number it opens WhatsApp's own chat picker. */
+export function whatsAppUrl(phone: string | null | undefined, text: string): string {
+  return `https://wa.me/${toWhatsAppNumber(phone)}?text=${text}`;
+}

@@ -5,6 +5,7 @@ import { formatDate } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
 import { loadContainImage } from '../../pdfImageLoading';
 import { BRAND_BASE, COLORS_BASE, type RGB } from '../shared';
+import { SITE_ORIGIN } from '../../../constants/site';
 
 // =============================================================================
 // Values shared across the invoice-PDF modules (shared.ts, context.ts,
@@ -136,7 +137,7 @@ export function loadFooterBanner(): Promise<{ dataUrl: string; ratio: number } |
 export const FOOTER_BANNER_LINKS: { x1: number; y1: number; x2: number; y2: number; url: string }[] = [
   { x1: 415 / 1254, y1: 78 / 252, x2: 585 / 1254, y2: 132 / 252, url: 'https://instagram.com/ulaa.trips' },
   { x1: 600 / 1254, y1: 78 / 252, x2: 780 / 1254, y2: 132 / 252, url: 'https://wa.me/916381336772?text=' + encodeURIComponent('Hi! I am interested in Ulaa trips.') },
-  { x1: 795 / 1254, y1: 78 / 252, x2: 1030 / 1254, y2: 132 / 252, url: 'https://www.ulaatrips.com' },
+  { x1: 795 / 1254, y1: 78 / 252, x2: 1030 / 1254, y2: 132 / 252, url: SITE_ORIGIN },
 ];
 
 export type { RGB };
