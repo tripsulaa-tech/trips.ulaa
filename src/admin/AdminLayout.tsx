@@ -21,7 +21,6 @@ import {
   Images,
   Calculator,
   Receipt,
-  Palette,
   Swatches,
   Compass,
   Globe,
@@ -63,7 +62,6 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   Reports: { to: '/admin/reports', icon: BarChart3 },
   'Rate Calculator': { to: '/admin/creator-rate-calculator', icon: Calculator },
   'Invoice Generator': { to: '/admin/invoice-generator', icon: Receipt },
-  Branding: { to: '/admin/branding', icon: Palette },
   'Logo Studio': { to: '/admin/logo-studio', icon: Swatches },
 };
 
@@ -88,7 +86,7 @@ const NAV_GROUPS: NavGroupDef[] = [
   { id: 'trips', label: 'Trips', icon: Compass, items: ['Upcoming Trips', 'Completed Trips', 'Trip Leaders', 'Travel Cards'] },
   { id: 'customers', label: 'Customers', icon: UsersThree, items: ['Enquiries', 'Waitlist', 'Travellers'] },
   { id: 'business', label: 'Business', icon: ChartLineUp, items: ['Trip Finance', 'Invoice Generator', 'Reports', 'Rate Calculator'] },
-  { id: 'website', label: 'Website', icon: Globe, items: ['Home Page', 'About Page', 'Branding', 'Logo Studio'] },
+  { id: 'website', label: 'Website', icon: Globe, items: ['Home Page', 'About Page', 'Logo Studio'] },
 ];
 
 interface NavOrder {

@@ -1,14 +1,17 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { DownloadSimple, ArrowCounterClockwise, Warning } from '@phosphor-icons/react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { DownloadSimple, ArrowCounterClockwise, Warning, Copy, ClipboardText, Check } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
+import LogoStudioSiteLogos from './LogoStudioSiteLogos';
 
 // Admin → Logo Studio: pick a ready-made logo, tweak its colours and download it.
 //
 // Each logo is built from transparent single-colour layers (public/logo-layers/*.png,
 // all the same size within one artwork so they stack exactly). Each layer is tinted
 // with the chosen colour using only its alpha channel, then the layers are composited
-// over the background colour. Nothing is stored: every visit starts from a pre-design.
+// over the background colour. Nothing about the design is stored: every visit starts
+// from a pre-design. The "Site logos" tab (LogoStudioSiteLogos) is where a finished
+// logo, or any uploaded image, is chosen for the header, footer, admin and so on.
 
 type LogoColorKey = 'background' | 'sun' | 'lettering' | 'landscape' | 'tamil';
 type LogoColors = Record<LogoColorKey, string>;
@@ -30,10 +33,10 @@ const DESIGNS: DesignDef[] = [
   {
     id: 'classic',
     layers: [
-      { key: 'sun', src: '/logo-layers/sun.png' },
-      { key: 'lettering', src: '/logo-layers/lettering.png' },
-      { key: 'landscape', src: '/logo-layers/landscape.png' },
-      { key: 'tamil', src: '/logo-layers/tamil.png' },
+      { key: 'sun', src: '/logo-layers/classic-sun.png' },
+      { key: 'lettering', src: '/logo-layers/classic-lettering.png' },
+      { key: 'landscape', src: '/logo-layers/classic-landscape.png' },
+      { key: 'tamil', src: '/logo-layers/classic-tamil.png' },
     ],
   },
   {
@@ -46,7 +49,6 @@ const DESIGNS: DesignDef[] = [
   },
 ];
 
-const ALL_LAYER_SRCS = Array.from(new Set(DESIGNS.flatMap(d => d.layers.map(l => l.src))));
 
 const COLOR_FIELDS: { key: LogoColorKey; label: string }[] = [
   { key: 'background', label: 'Background' },
@@ -106,13 +108,21 @@ const FORMAT_OPTIONS: { value: 'png' | 'jpg'; label: string }[] = [
   { value: 'jpg', label: 'JPG' },
 ];
 
+// Size = longest side of the downloaded image, margin included. The classic
+// artwork is 3900 px wide, so Max is its full resolution; the header artwork is
+// smaller (about 870 px) and is scaled up beyond that.
 const SIZES = [
   { value: 400, label: 'Small · 400 px' },
   { value: 800, label: 'Medium · 800 px' },
-  { value: 1254, label: 'Full · 1254 px' },
+  { value: 1600, label: 'Large · 1600 px' },
+  { value: 3000, label: 'HD · 3000 px' },
+  { value: 4000, label: 'Max · 4000 px' },
 ];
 
 const PREVIEW_SIZE = 800;
+// Layers are also kept pre-shrunk to this size and used for the preview and any
+// small export, so repainting while a colour is dragged stays instant.
+const SMALL_SOURCE = 1400;
 
 const CHECKER =
   'bg-[length:16px_16px] bg-[linear-gradient(45deg,#e9e4dc_25%,transparent_25%,transparent_75%,#e9e4dc_75%),linear-gradient(45deg,#e9e4dc_25%,#fff_25%,#fff_75%,#e9e4dc_75%)] [background-position:0_0,8px_8px]';
@@ -128,47 +138,6 @@ interface Bounds {
   h: number;
 }
 
-/** The smallest rectangle (in layer pixels) that contains every visible pixel of the design. */
-function computeBounds(images: Record<string, HTMLImageElement>, design: DesignDef): Bounds | null {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -1;
-  let maxY = -1;
-  let full: Bounds | null = null;
-  const scratch = document.createElement('canvas');
-  for (const layer of design.layers) {
-    const img = images[layer.src];
-    if (!img) return null;
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
-    full = { x: 0, y: 0, w, h };
-    scratch.width = w;
-    scratch.height = h;
-    const c = scratch.getContext('2d', { willReadFrequently: true });
-    if (!c) return full;
-    c.clearRect(0, 0, w, h);
-    c.drawImage(img, 0, 0);
-    let data: Uint8ClampedArray;
-    try {
-      data = c.getImageData(0, 0, w, h).data;
-    } catch {
-      return full;
-    }
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        if (data[(y * w + x) * 4 + 3] > 12) {
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-      }
-    }
-  }
-  if (maxX < 0) return full;
-  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
-}
-
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -178,27 +147,73 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+type Source = HTMLImageElement | HTMLCanvasElement;
+
+interface LoadedDesign {
+  full: Record<string, Source>;
+  fullBounds: Bounds;
+  small: Record<string, Source>;
+  smallBounds: Bounds;
+}
+
+/** Loads a design's layers (all cropped to the same artwork box, so the box is simply
+ *  the layer size) and makes a pre-shrunk copy of each for the preview. */
+async function loadDesign(design: DesignDef): Promise<LoadedDesign> {
+  const imgs = await Promise.all(design.layers.map(l => loadImage(l.src)));
+  const w = imgs[0].naturalWidth;
+  const h = imgs[0].naturalHeight;
+  const k = Math.min(1, SMALL_SOURCE / Math.max(w, h));
+  const sw = Math.max(1, Math.round(w * k));
+  const sh = Math.max(1, Math.round(h * k));
+  const full: Record<string, Source> = {};
+  const small: Record<string, Source> = {};
+  design.layers.forEach((layer, i) => {
+    full[layer.src] = imgs[i];
+    const c = document.createElement('canvas');
+    c.width = sw;
+    c.height = sh;
+    const ctx = c.getContext('2d');
+    if (ctx) {
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(imgs[i], 0, 0, sw, sh);
+    }
+    small[layer.src] = c;
+  });
+  return { full, fullBounds: { x: 0, y: 0, w, h }, small, smallBounds: { x: 0, y: 0, w: sw, h: sh } };
+}
+
+/** Big exports use the full-resolution layers; small ones the pre-shrunk copies. */
+function pickSource(ld: LoadedDesign, outSide: number) {
+  return outSide <= SMALL_SOURCE
+    ? { images: ld.small, bounds: ld.smallBounds }
+    : { images: ld.full, bounds: ld.fullBounds };
+}
+
 /** Paints the logo onto `canvas`. The logo is cropped to its artwork `bounds`,
  *  `marginPct` % of its longest side is added around it, and the result is scaled
  *  so its longest side is `longSide` px. Each layer is tinted by drawing it, then
  *  filling the colour with `source-in` so only the layer's own opaque pixels keep
- *  the colour. */
+ *  the colour. With `square` the logo is centred on a square canvas (for icons). */
 function renderLogo(
   canvas: HTMLCanvasElement,
-  images: Record<string, HTMLImageElement>,
+  images: Record<string, Source>,
   design: DesignDef,
   colors: LogoColors,
   longSide: number,
   withBackground: boolean,
   bounds: Bounds,
   marginPct: number,
+  square = false,
 ) {
   const margin = (marginPct / 100) * Math.max(bounds.w, bounds.h);
   const totalW = bounds.w + margin * 2;
   const totalH = bounds.h + margin * 2;
-  const scale = longSide / Math.max(totalW, totalH);
-  const width = Math.max(1, Math.round(totalW * scale));
-  const height = Math.max(1, Math.round(totalH * scale));
+  const side = Math.max(totalW, totalH);
+  const boxW = square ? side : totalW;
+  const boxH = square ? side : totalH;
+  const scale = longSide / Math.max(boxW, boxH);
+  const width = Math.max(1, Math.round(boxW * scale));
+  const height = Math.max(1, Math.round(boxH * scale));
 
   canvas.width = width;
   canvas.height = height;
@@ -218,8 +233,8 @@ function renderLogo(
   t.imageSmoothingQuality = 'high';
   ctx.imageSmoothingQuality = 'high';
 
-  const dx = margin * scale;
-  const dy = margin * scale;
+  const dx = ((boxW - bounds.w) / 2) * scale;
+  const dy = ((boxH - bounds.h) / 2) * scale;
   const dw = bounds.w * scale;
   const dh = bounds.h * scale;
 
@@ -242,11 +257,22 @@ export default function AdminLogoStudio() {
   const [colors, setColors] = useState<LogoColors>({ ...PREDESIGNS[0].colors });
   const [margin, setMargin] = useState<MarginId>('medium');
   const [format, setFormat] = useState<'png' | 'jpg'>('png');
-  const [size, setSize] = useState<number>(1254);
+  const [size, setSize] = useState<number>(3000);
   const [transparent, setTransparent] = useState(false);
+  // Colour last copied with a tile's copy button, ready to paste into any other colour.
+  const [copiedColor, setCopiedColor] = useState<string | null>(null);
+  const [justCopied, setJustCopied] = useState<LogoColorKey | null>(null);
 
-  const [images, setImages] = useState<Record<string, HTMLImageElement> | null>(null);
+  const [loaded, setLoaded] = useState<Partial<Record<DesignId, LoadedDesign>>>({});
+  const requestedRef = useRef<Set<DesignId>>(new Set());
   const [imageError, setImageError] = useState(false);
+
+  const [tab, setTab] = useState<'design' | 'site'>('design');
+  const siteDirtyRef = useRef(false);
+  const hasUnsavedChanges = useCallback(() => siteDirtyRef.current, []);
+  const handleSiteDirty = useCallback((dirty: boolean) => {
+    siteDirtyRef.current = dirty;
+  }, []);
 
   const previewRef = useRef<HTMLCanvasElement>(null);
   const formatId = useId();
@@ -255,43 +281,70 @@ export default function AdminLogoStudio() {
   const pre = PREDESIGNS.find(p => p.id === preId) ?? PREDESIGNS[0];
   const design = DESIGNS.find(d => d.id === pre.design) ?? DESIGNS[0];
   const marginPct = MARGINS.find(m => m.value === margin)?.pct ?? 0;
-  const bounds = useMemo(() => (images ? computeBounds(images, design) : null), [images, design]);
+  const ld = loaded[design.id] ?? null;
   const colorFields = COLOR_FIELDS.filter(f => !(f.key === 'tamil' && design.id === 'header'));
   const colorsChanged = !sameColors(colors, pre.colors);
 
   // JPG can't hold transparency, so it always includes the background.
   const withBackground = format === 'jpg' || !transparent;
 
+  // Load a design's layers the first time it is shown (not all designs up front,
+  // to keep memory use down with the large artwork).
   useEffect(() => {
-    let cancelled = false;
-    Promise.all(ALL_LAYER_SRCS.map(src => loadImage(src)))
-      .then(loaded => {
-        if (cancelled) return;
-        setImages(Object.fromEntries(ALL_LAYER_SRCS.map((src, i) => [src, loaded[i]])));
-      })
-      .catch(() => {
-        if (!cancelled) setImageError(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (requestedRef.current.has(design.id)) return;
+    requestedRef.current.add(design.id);
+    loadDesign(design)
+      .then(result => setLoaded(prev => ({ ...prev, [design.id]: result })))
+      .catch(() => setImageError(true));
+  }, [design]);
 
   // Repaint the preview whenever the logo, a colour, the margin or the background option changes.
   useEffect(() => {
-    if (!images || !bounds || !previewRef.current) return;
-    renderLogo(previewRef.current, images, design, colors, PREVIEW_SIZE, withBackground, bounds, marginPct);
-  }, [images, bounds, design, colors, withBackground, marginPct]);
+    if (!ld || !previewRef.current) return;
+    renderLogo(previewRef.current, ld.small, design, colors, PREVIEW_SIZE, withBackground, ld.smallBounds, marginPct);
+  }, [ld, design, colors, withBackground, marginPct]);
+
+  const copyColor = (key: LogoColorKey) => {
+    const hex = colors[key];
+    setCopiedColor(hex);
+    setJustCopied(key);
+    window.setTimeout(() => setJustCopied(k => (k === key ? null : k)), 1500);
+    void navigator.clipboard?.writeText(hex).catch(() => {});
+  };
+
+  const pasteColor = (key: LogoColorKey) => {
+    if (!copiedColor) return;
+    setColors(c => (c[key] === copiedColor ? c : { ...c, [key]: copiedColor }));
+  };
 
   const choosePre = (p: PreDesign) => {
     setPreId(p.id);
     setColors({ ...p.colors });
   };
 
-  const handleDownload = () => {
-    if (!images || !bounds) return;
+  // The logo as shown in the preview, for the "Use studio logo" buttons. Wide
+  // logos are transparent with a small margin; icons are the logo centred on a
+  // square tile in the studio's background colour (so they read on any tab bar).
+  const makeLogoFile = async (kind: 'wide' | 'square'): Promise<File | null> => {
+    if (!ld) return null;
     const canvas = document.createElement('canvas');
-    renderLogo(canvas, images, design, colors, size, withBackground, bounds, marginPct);
+    if (kind === 'square') {
+      const src = pickSource(ld, 512);
+      renderLogo(canvas, src.images, design, colors, 512, true, src.bounds, 8, true);
+    } else {
+      const src = pickSource(ld, 1600);
+      renderLogo(canvas, src.images, design, colors, 1600, false, src.bounds, 4);
+    }
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+    const name = `ulaa-${kind === 'square' ? 'icon' : 'logo'}-${pre.id}.png`;
+    return blob ? new File([blob], name, { type: 'image/png' }) : null;
+  };
+
+  const handleDownload = () => {
+    if (!ld) return;
+    const canvas = document.createElement('canvas');
+    const src = pickSource(ld, size);
+    renderLogo(canvas, src.images, design, colors, size, withBackground, src.bounds, marginPct);
     const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
     canvas.toBlob(
       blob => {
@@ -314,8 +367,33 @@ export default function AdminLogoStudio() {
   };
 
   return (
-    <AdminLayout title="Logo Studio" subtitle="Pick a logo, adjust the colours and download it">
+    <AdminLayout
+      title="Logo Studio"
+      subtitle="Design the logo, download it, and choose the logos the site uses"
+      hasUnsavedChanges={hasUnsavedChanges}
+    >
       <div className="bg-white rounded-md border border-background-warm shadow-card">
+        <div role="tablist" aria-label="Logo Studio sections" className="flex gap-2 px-4 pt-4 sm:px-6 sm:pt-6">
+          {([
+            ['design', 'Design & download'],
+            ['site', 'Site logos'],
+          ] as const).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className={`min-h-[40px] rounded-full px-4 text-sm font-medium transition-colors ${
+                tab === id ? 'bg-primary text-white' : 'bg-background-warm text-dark hover:bg-background-warm/70'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div role="tabpanel" hidden={tab !== 'design'}>
         <div className="p-4 sm:p-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] items-start">
           {/* Preview */}
           <section aria-label="Logo preview">
@@ -388,24 +466,56 @@ export default function AdminLogoStudio() {
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {colorFields.map(f => (
-                  <label
-                    key={f.key}
-                    className="flex items-center gap-2.5 rounded-md border-2 border-background-warm px-2 py-1.5 cursor-pointer hover:border-primary/50 transition-colors focus-within:border-primary"
-                  >
-                    <input
-                      type="color"
-                      value={colors[f.key]}
-                      onChange={e => {
-                        const hex = e.target.value.toLowerCase();
-                        setColors(c => (c[f.key] === hex ? c : { ...c, [f.key]: hex }));
-                      }}
-                      aria-label={`${f.label} colour`}
-                      className="h-8 w-8 shrink-0 cursor-pointer rounded border border-black/10 bg-transparent p-0"
-                    />
-                    <span className="text-xs font-medium text-dark leading-tight">{f.label}</span>
-                  </label>
-                ))}
+                {colorFields.map(f => {
+                  const value = colors[f.key];
+                  const canPaste = !!copiedColor && copiedColor !== value;
+                  return (
+                    <div
+                      key={f.key}
+                      className="rounded-md border-2 border-background-warm px-2 py-1.5 space-y-1.5 focus-within:border-primary transition-colors"
+                    >
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="color"
+                          value={value}
+                          onChange={e => {
+                            const hex = e.target.value.toLowerCase();
+                            setColors(c => (c[f.key] === hex ? c : { ...c, [f.key]: hex }));
+                          }}
+                          aria-label={`${f.label} colour`}
+                          className="h-8 w-8 shrink-0 cursor-pointer rounded border border-black/10 bg-transparent p-0"
+                        />
+                        <span className="text-xs font-medium text-dark leading-tight">{f.label}</span>
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <span className="flex-1 min-w-0 font-mono text-2xs uppercase text-dark-muted">{value}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyColor(f.key)}
+                          aria-label={`Copy ${f.label} colour code`}
+                          title="Copy colour code"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-background-warm text-dark hover:bg-background-warm transition-colors"
+                        >
+                          {justCopied === f.key ? (
+                            <Check size={14} className="text-primary" aria-hidden="true" />
+                          ) : (
+                            <Copy size={14} aria-hidden="true" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => pasteColor(f.key)}
+                          disabled={!canPaste}
+                          aria-label={`Paste copied colour into ${f.label}`}
+                          title={copiedColor ? `Paste ${copiedColor.toUpperCase()}` : 'Copy a colour first'}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-background-warm text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                        >
+                          <ClipboardText size={14} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </section>
 
@@ -461,7 +571,7 @@ export default function AdminLogoStudio() {
               <button
                 type="button"
                 onClick={handleDownload}
-                disabled={!images || !bounds}
+                disabled={!ld}
                 className="inline-flex w-full items-center justify-center gap-2 px-4 py-2 min-h-[44px] rounded-md bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60"
               >
                 <DownloadSimple size={16} aria-hidden="true" />
@@ -469,6 +579,11 @@ export default function AdminLogoStudio() {
               </button>
             </div>
           </div>
+        </div>
+        </div>
+
+        <div role="tabpanel" hidden={tab !== 'site'}>
+          <LogoStudioSiteLogos makeLogoFile={makeLogoFile} onDirtyChange={handleSiteDirty} />
         </div>
       </div>
     </AdminLayout>

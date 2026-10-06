@@ -1,0 +1,349 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Upload, ArrowCounterClockwise, Warning, Sparkle } from '@phosphor-icons/react';
+import AdminEditorFooter from './AdminEditorFooter';
+import { getSiteContent, upsertSiteContent, uploadImage, deleteImageByUrl } from '../services/api';
+import {
+  BRANDING_KEY,
+  BRANDING_DEFAULTS,
+  EMPTY_BRANDING,
+  applyBranding,
+  normalizeBranding,
+  type BrandingContent,
+  type BrandingSlot,
+} from '../hooks/useBranding';
+
+// Logo Studio → "Site logos": choose which images the site uses for its header,
+// footer, browser tab, install prompt and admin panel. Logo slots can take the
+// logo currently shown in the studio in one tap; icons are uploaded. Each slot is
+// stored in the `branding` site_content row (see hooks/useBranding.ts); leaving a
+// slot on "default" falls back to the file bundled in /public.
+
+const BUCKET = 'ulaa';
+const MAX_BYTES = 2 * 1024 * 1024; // 2MB — logos/icons never need more
+const ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico';
+
+interface SlotConfig {
+  slot: BrandingSlot;
+  label: string;
+  group: 'public' | 'admin';
+  description: string;
+  /** Every spot can be filled straight from the studio's current logo:
+   *  wide logos stay transparent, icons are centred on a square tile. */
+  studio: 'wide' | 'square';
+  /** Background the preview sits on, so a light logo isn't invisible. */
+  preview: 'checker' | 'dark';
+  previewClass: string;
+}
+
+const SLOTS: SlotConfig[] = [
+  {
+    slot: 'header_logo',
+    label: 'Header logo',
+    group: 'public',
+    description: 'Top-left of every public page.',
+    studio: 'wide',
+    preview: 'checker',
+    previewClass: 'h-20',
+  },
+  {
+    slot: 'footer_logo',
+    label: 'Footer logo',
+    group: 'public',
+    description: 'Site footer, on a dark background — use the light Footer look.',
+    studio: 'wide',
+    preview: 'dark',
+    previewClass: 'h-20',
+  },
+  {
+    slot: 'favicon',
+    label: 'Browser tab icon',
+    group: 'public',
+    description: 'Square PNG or SVG, at least 64×64 px. Browsers cache it, so a change can take a day to show.',
+    studio: 'square',
+    preview: 'checker',
+    previewClass: 'h-12 w-12',
+  },
+  {
+    slot: 'app_icon',
+    label: 'Install prompt icon',
+    group: 'public',
+    description: 'Square PNG, at least 192×192 px. Shown in the “Install the Ulaa app” popup.',
+    studio: 'square',
+    preview: 'checker',
+    previewClass: 'h-16 w-16',
+  },
+  {
+    slot: 'admin_logo',
+    label: 'Admin logo',
+    group: 'admin',
+    description: 'Top of the admin sidebar and the admin sign-in page.',
+    studio: 'wide',
+    preview: 'checker',
+    previewClass: 'h-24',
+  },
+  {
+    slot: 'admin_icon',
+    label: 'Admin sidebar icon',
+    group: 'admin',
+    description: 'Square PNG or SVG, at least 64×64 px. Shown when the sidebar is collapsed.',
+    studio: 'square',
+    preview: 'checker',
+    previewClass: 'h-12 w-12',
+  },
+];
+
+const CHECKER =
+  'bg-[length:16px_16px] bg-[linear-gradient(45deg,#e9e4dc_25%,transparent_25%,transparent_75%,#e9e4dc_75%),linear-gradient(45deg,#e9e4dc_25%,#fff_25%,#fff_75%,#e9e4dc_75%)] [background-position:0_0,8px_8px]';
+
+const BTN_PRIMARY =
+  'inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60';
+const BTN_OUTLINE =
+  'inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md border-2 border-background-warm text-dark text-sm font-medium hover:bg-background-warm transition-colors disabled:opacity-60';
+
+// Unique storage path per upload (module-level so the timestamp is never read while rendering).
+function uploadPath(slot: BrandingSlot, fileName: string) {
+  return `branding/${slot}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, '-')}`;
+}
+
+function isStorageUrl(url: string) {
+  return !!url && url.includes(`/${BUCKET}/branding/`);
+}
+
+function SlotCard({
+  config,
+  value,
+  busy,
+  onUpload,
+  onUseStudio,
+  onReset,
+}: {
+  config: SlotConfig;
+  value: string;
+  busy: boolean;
+  onUpload: (file: File) => void;
+  onUseStudio: () => void;
+  onReset: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const shown = value || BRANDING_DEFAULTS[config.slot];
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (fileRef.current) fileRef.current.value = '';
+    if (file) onUpload(file);
+  };
+
+  return (
+    <div className="rounded-lg border-2 border-background-warm bg-white p-4 space-y-3">
+      <div>
+        <h3 className="text-sm font-semibold text-dark">
+          {config.label}
+          <span className="ml-2 text-2xs font-normal text-dark-muted">{value ? 'Custom' : 'Default'}</span>
+        </h3>
+        <p className="text-xs text-dark-muted mt-0.5">{config.description}</p>
+      </div>
+
+      <div
+        className={`flex items-center justify-center rounded-md border border-background-warm p-3 min-h-[96px] ${
+          config.preview === 'dark' ? 'bg-dark' : CHECKER
+        }`}
+      >
+        <img src={shown} alt={`${config.label} preview`} className={`${config.previewClass} w-auto max-w-full object-contain`} />
+      </div>
+
+      <input ref={fileRef} type="file" accept={ACCEPT} onChange={handleFile} className="hidden" />
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={onUseStudio} disabled={busy} className={BTN_PRIMARY}>
+          <Sparkle size={14} aria-hidden="true" />
+          {busy ? 'Working…' : 'Use studio logo'}
+        </button>
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className={BTN_OUTLINE}>
+          <Upload size={14} aria-hidden="true" />
+          {value ? 'Replace file' : 'Upload file'}
+        </button>
+        {value && (
+          <button type="button" onClick={onReset} disabled={busy} className={BTN_OUTLINE}>
+            <ArrowCounterClockwise size={14} aria-hidden="true" />
+            Default
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function LogoStudioSiteLogos({
+  makeLogoFile,
+  onDirtyChange,
+}: {
+  /** Renders the logo currently shown in the studio as a PNG (wide, or a square icon tile). */
+  makeLogoFile: (kind: 'wide' | 'square') => Promise<File | null>;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
+  const [draft, setDraft] = useState<BrandingContent>({ ...EMPTY_BRANDING });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [busySlot, setBusySlot] = useState<BrandingSlot | null>(null);
+
+  // What's actually in the database right now, and every file uploaded in
+  // this editing session — used on save/discard to delete files that ended
+  // up unused instead of leaving orphans in storage.
+  const savedRef = useRef<BrandingContent>({ ...EMPTY_BRANDING });
+  const sessionUploadsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    getSiteContent<unknown>(BRANDING_KEY)
+      .then(data => {
+        const loaded = normalizeBranding(data);
+        savedRef.current = loaded;
+        setDraft(loaded);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const hasUnsavedChanges = useCallback(
+    () => JSON.stringify(draft) !== JSON.stringify(savedRef.current),
+    [draft],
+  );
+
+  useEffect(() => {
+    onDirtyChange(hasUnsavedChanges());
+  }, [draft, saved, hasUnsavedChanges, onDirtyChange]);
+
+  const setSlot = (slot: BrandingSlot, url: string) => {
+    setSaved(false);
+    setDraft(d => ({ ...d, [slot]: url }));
+  };
+
+  const uploadFor = async (slot: BrandingSlot, file: File) => {
+    const isIco = /\.ico$/i.test(file.name);
+    if (!file.type.startsWith('image/') && !isIco) {
+      alert('Please choose an image file (PNG, JPG, WebP, SVG or ICO).');
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      alert('That file is larger than 2MB. Please upload a smaller version.');
+      return;
+    }
+    try {
+      setBusySlot(slot);
+      const url = await uploadImage(BUCKET, file, uploadPath(slot, file.name), MAX_BYTES);
+      sessionUploadsRef.current.add(url);
+      setSlot(slot, url);
+    } catch {
+      alert(`Failed to upload. Make sure the Supabase storage bucket "${BUCKET}" exists and is public.`);
+    } finally {
+      setBusySlot(null);
+    }
+  };
+
+  const applyStudioLogo = async (config: SlotConfig) => {
+    const slot = config.slot;
+    setBusySlot(slot);
+    const file = await makeLogoFile(config.studio).catch(() => null);
+    setBusySlot(null);
+    if (!file) {
+      alert('Could not create the logo image. Please try again.');
+      return;
+    }
+    await uploadFor(slot, file);
+  };
+
+  const cleanupUnused = async (keep: BrandingContent, previous: BrandingContent) => {
+    const keepUrls = new Set(Object.values(keep).filter(Boolean));
+    const candidates = new Set<string>([...sessionUploadsRef.current, ...Object.values(previous).filter(Boolean)]);
+    await Promise.all(
+      [...candidates]
+        .filter(url => isStorageUrl(url) && !keepUrls.has(url))
+        .map(url => deleteImageByUrl(BUCKET, url).catch(() => {})),
+    );
+    sessionUploadsRef.current = new Set();
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await upsertSiteContent(BRANDING_KEY, draft);
+      applyBranding(draft);
+      await cleanupUnused(draft, savedRef.current);
+      savedRef.current = { ...draft };
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 3000);
+    } catch {
+      alert('Failed to save the site logos. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDiscard = async () => {
+    if (hasUnsavedChanges() && !window.confirm('Discard your unsaved changes?')) return;
+    await cleanupUnused(savedRef.current, { ...EMPTY_BRANDING });
+    setDraft({ ...savedRef.current });
+    setSaved(false);
+  };
+
+  if (loading) {
+    return (
+      <div role="status" className="text-center py-16 text-dark-muted">
+        Loading…
+      </div>
+    );
+  }
+
+  const renderGroup = (group: SlotConfig['group'], title: string) => (
+    <section className="space-y-3" aria-label={title}>
+      <h2 className="text-sm font-semibold text-dark">{title}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {SLOTS.filter(s => s.group === group).map(config => (
+          <SlotCard
+            key={config.slot}
+            config={config}
+            value={draft[config.slot]}
+            busy={busySlot === config.slot}
+            onUpload={file => void uploadFor(config.slot, file)}
+            onUseStudio={() => void applyStudioLogo(config)}
+            onReset={() => setSlot(config.slot, '')}
+          />
+        ))}
+      </div>
+    </section>
+  );
+
+  return (
+    <>
+      <div className="p-4 sm:p-6 space-y-8">
+        <p className="text-xs text-dark-muted">
+          “Use studio logo” puts the logo from the Design tab, in its current colours, into that spot: logos keep a
+          transparent background and icons sit on a square tile in the background colour. Pick the Footer look first
+          for the footer. Nothing changes on the site until you press Save.
+        </p>
+
+        {renderGroup('public', 'Public website')}
+
+        <div className="flex items-start gap-3 rounded-md bg-background-warm/60 border border-background-warm p-3 text-xs text-dark-muted">
+          <Warning size={16} className="shrink-0 mt-0.5 text-primary" aria-hidden="true" />
+          <p>
+            The icon a phone shows on the home screen after installing Ulaa, and the image in WhatsApp/Instagram
+            link previews, come from static files in
+            <code className="mx-1 px-1 rounded bg-white">public/icons</code>
+            and need a code update to change.
+          </p>
+        </div>
+
+        {renderGroup('admin', 'Admin panel')}
+      </div>
+
+      <AdminEditorFooter
+        onSave={handleSave}
+        saving={saving}
+        saved={saved}
+        onSecondaryAction={handleDiscard}
+        secondaryLabel="Discard Changes"
+        secondaryLabelMobile="Discard"
+      />
+    </>
+  );
+}
