@@ -287,16 +287,19 @@ function renderLogo(
   bounds: Bounds,
   marginPct: number,
   square = false,
+  fit?: { w: number; h: number },
 ) {
   const margin = (marginPct / 100) * Math.max(bounds.w, bounds.h);
   const totalW = bounds.w + margin * 2;
   const totalH = bounds.h + margin * 2;
   const side = Math.max(totalW, totalH);
-  const boxW = square ? side : totalW;
-  const boxH = square ? side : totalH;
-  const scale = longSide / Math.max(boxW, boxH);
-  const width = Math.max(1, Math.round(boxW * scale));
-  const height = Math.max(1, Math.round(boxH * scale));
+  // With `fit` the canvas is exactly that size and the logo (with its margin) is scaled up or
+  // down, keeping its shape, until it touches the edges; any spare room is background.
+  const boxW = fit ? fit.w / Math.min(fit.w / totalW, fit.h / totalH) : square ? side : totalW;
+  const boxH = fit ? fit.h / Math.min(fit.w / totalW, fit.h / totalH) : square ? side : totalH;
+  const scale = fit ? Math.min(fit.w / totalW, fit.h / totalH) : longSide / Math.max(boxW, boxH);
+  const width = fit ? Math.max(1, Math.round(fit.w)) : Math.max(1, Math.round(boxW * scale));
+  const height = fit ? Math.max(1, Math.round(fit.h)) : Math.max(1, Math.round(boxH * scale));
 
   canvas.width = width;
   canvas.height = height;
@@ -344,12 +347,29 @@ function buildVectorSvg(
   withBackground: boolean,
   bounds: Bounds,
   marginPct: number,
+  fit?: { w: number; h: number },
 ): string {
   const margin = (marginPct / 100) * Math.max(bounds.w, bounds.h);
-  const side = Math.max(bounds.w, bounds.h) + margin * 2;
+  const totalW = bounds.w + margin * 2;
+  const totalH = bounds.h + margin * 2;
+  const n = (v: number) => v.toFixed(2);
+  if (fit) {
+    // Same layout as renderLogo's fit mode: scaled to touch the edges, centred.
+    const s = Math.min(fit.w / totalW, fit.h / totalH);
+    const ox = (fit.w - bounds.w * s) / 2;
+    const oy = (fit.h - bounds.h * s) / 2;
+    const fitted = design.layers
+      .map(layer => {
+        const v = vectors[layer.src];
+        return `<path transform="translate(${n(ox)} ${n(oy)}) scale(${((bounds.w / v.w) * s).toFixed(6)})" fill="${colors[layer.key]}" fill-rule="evenodd" d="${v.d}"/>`;
+      })
+      .join('');
+    const fbg = withBackground ? `<rect x="0" y="0" width="${fit.w}" height="${fit.h}" fill="${colors.background}"/>` : '';
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${fit.w}" height="${fit.h}" viewBox="0 0 ${fit.w} ${fit.h}">${fbg}${fitted}</svg>`;
+  }
+  const side = Math.max(totalW, totalH);
   const dx = (side - bounds.w) / 2;
   const dy = (side - bounds.h) / 2;
-  const n = (v: number) => v.toFixed(2);
   const paths = design.layers
     .map(layer => {
       const v = vectors[layer.src];
@@ -517,20 +537,16 @@ export default function AdminLogoStudio() {
     // fitted and centred in the middle; any extra room is background (or transparent).
     const outW = isCustom ? cw : size;
     const outH = isCustom ? ch : size;
-    const side = Math.min(outW, outH);
+    // Custom sizes fill the whole width × height (logo keeps its shape); presets stay square.
+    const fit = isCustom ? { w: outW, h: outH } : undefined;
+    const side = isCustom ? Math.max(outW, outH) : size;
     const fileName = `ulaa-logo-${pre.id}-${isCustom ? `${outW}x${outH}` : size}${format !== 'jpg' && transparent ? '-transparent' : ''}.${format}`;
     const src = pickSource(ld, side);
     // SVG / PDF use the traced vector layers when the design has them; otherwise
     // they carry the high-resolution picture instead.
-    const square = format === 'svg' || format === 'pdf'
-      ? ld.vectors && buildVectorSvg(ld.vectors, design, colors, side, withBackground, ld.fullBounds, marginPct)
+    const svg = format === 'svg' || format === 'pdf'
+      ? ld.vectors && buildVectorSvg(ld.vectors, design, colors, side, withBackground, ld.fullBounds, marginPct, fit)
       : null;
-    const n = (v: number) => (Math.round(v * 100) / 100).toString();
-    const svg = square && outW !== outH
-      ? `<svg xmlns="http://www.w3.org/2000/svg" width="${outW}" height="${outH}" viewBox="0 0 ${outW} ${outH}">${
-          withBackground ? `<rect width="${outW}" height="${outH}" fill="${colors.background}"/>` : ''
-        }<g transform="translate(${n((outW - side) / 2)} ${n((outH - side) / 2)})">${square}</g></svg>`
-      : square;
     try {
       if (format === 'svg' && svg) {
         saveBlob(new Blob([svg], { type: 'image/svg+xml' }), fileName);
@@ -538,19 +554,7 @@ export default function AdminLogoStudio() {
       }
       const canvas = document.createElement('canvas');
       if (!svg) {
-        const logo = outW === outH ? canvas : document.createElement('canvas');
-        renderLogo(logo, src.images, design, colors, side, withBackground, src.bounds, marginPct, true);
-        if (logo !== canvas) {
-          canvas.width = outW;
-          canvas.height = outH;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) throw new Error('Canvas is not supported in this browser.');
-          if (withBackground) {
-            ctx.fillStyle = colors.background;
-            ctx.fillRect(0, 0, outW, outH);
-          }
-          ctx.drawImage(logo, Math.round((outW - logo.width) / 2), Math.round((outH - logo.height) / 2));
-        }
+        renderLogo(canvas, src.images, design, colors, side, withBackground, src.bounds, marginPct, true, fit);
       }
       if (format === 'pdf') {
         saveBlob(await svgToPdfBlob(svg, canvas, outW, outH), fileName);
@@ -779,7 +783,7 @@ export default function AdminLogoStudio() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick sizes">
-                    {([['Square 1:1', 1200, 1200], ['Wide 1200 × 630', 1200, 630], ['Banner 1500 × 500', 1500, 500], ['Story 1080 × 1920', 1080, 1920]] as const).map(([label, w, h]) => (
+                    {([['Site logo 893 × 663', 893, 663], ['Square 1:1', 1200, 1200], ['Wide 1200 × 630', 1200, 630], ['Banner 1500 × 500', 1500, 500], ['Story 1080 × 1920', 1080, 1920]] as const).map(([label, w, h]) => (
                       <button
                         key={label}
                         type="button"
@@ -791,7 +795,7 @@ export default function AdminLogoStudio() {
                     ))}
                   </div>
                   {customValid ? (
-                    <p className="text-xs text-dark-muted">Downloads at {cw} × {ch} px. The logo is centred with the margin above; the rest is background colour (or transparent).</p>
+                    <p className="text-xs text-dark-muted">Downloads at {cw} × {ch} px. The logo fills this size as far as its shape allows (margin above included) and is centred; any spare room is background colour (or transparent).</p>
                   ) : (
                     <p role="alert" className="text-xs text-red-600">Each side must be {CUSTOM_MIN} to {CUSTOM_MAX} px, and the whole image no more than {CUSTOM_MAX_PIXELS / 1_000_000} million pixels.</p>
                   )}

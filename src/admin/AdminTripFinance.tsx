@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CaretDown, MagnifyingGlass, PencilSimple } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import TripFinanceBreakdown from './trips/TripFinanceBreakdown';
@@ -21,6 +21,7 @@ import {
 import { computeTripFinanceSummary, emptyTripFinance, foldLegacyCosts } from '../utils/tripFinance';
 import { countOptionSelections } from '../utils/tripOptions';
 import { formatDate, formatPrice } from '../utils/utils-index';
+import { scrollToTextMatch } from '../utils/scroll';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import type {
   CompletedTrip,
@@ -72,6 +73,22 @@ const pricingFromTrip = (t: UpcomingTrip): TripPricingSnapshot => ({
   special_offer_end_date: t.special_offer_end_date ?? null,
   trip_options: t.trip_options ?? null,
 });
+
+/** Finds a typed value (e.g. a cost line named "Food") in the dialog's inputs and scrolls to it. */
+function scrollToInputValue(container: HTMLElement, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  const match = Array.from(container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea'))
+    .find(el => el.type !== 'number' && el.value.toLowerCase().includes(q));
+  if (!match) return false;
+  const box = container.getBoundingClientRect();
+  const at = match.getBoundingClientRect();
+  container.scrollTo({ top: container.scrollTop + (at.top - box.top) - container.clientHeight / 2 + match.clientHeight / 2, behavior: 'smooth' });
+  const prev = match.style.backgroundColor;
+  match.style.transition = 'background-color 0.3s ease';
+  match.style.backgroundColor = '#FDE9D9';
+  window.setTimeout(() => { match.style.backgroundColor = prev; }, 1500);
+  return true;
+}
 
 const fmtDate = (d: string) => formatDate(d, { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -151,6 +168,10 @@ export default function AdminTripFinance() {
   const [pricingDraft, setPricingDraft] = useState<PricingDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  // "Search fields" box in the Add/Edit finances dialog, same idea as the Edit Trip dialog's.
+  const [modalSearch, setModalSearch] = useState('');
+  const [modalSearchNoMatch, setModalSearchNoMatch] = useState(false);
+  const modalBodyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +216,8 @@ export default function AdminTripFinance() {
     // A finished trip's pricing, seats and packages live only here.
     setPricingDraft(row.hasUpcomingRow ? null : pricingDraftFrom(row.pricing, row.totalSeats, row.seatsBooked ?? row.revenue?.bookedCount ?? null));
     setSaveError('');
+    setModalSearch('');
+    setModalSearchNoMatch(false);
     setEditingId(row.id);
   };
 
@@ -232,6 +255,21 @@ export default function AdminTripFinance() {
       setSaving(false);
     }
   };
+
+  // Jumps to the first matching section, field label or typed cost-line name as the admin types.
+  useEffect(() => {
+    if (!editingId) return;
+    const timeout = window.setTimeout(() => {
+      const query = modalSearch.trim();
+      const container = modalBodyRef.current;
+      if (!query || !container) {
+        setModalSearchNoMatch(false);
+        return;
+      }
+      setModalSearchNoMatch(!(scrollToTextMatch(container, query, 'label, h4, h5') || scrollToInputValue(container, query)));
+    }, modalSearch.trim() ? 350 : 0);
+    return () => window.clearTimeout(timeout);
+  }, [modalSearch, editingId]);
 
   const counts = useMemo(() => ({
     all: rows.length,
@@ -408,6 +446,21 @@ export default function AdminTripFinance() {
         size="2xl"
         mobileFullScreen
         compactHeader
+        bodyRef={modalBodyRef}
+        headerContent={
+          <div className="relative w-full sm:max-w-xs">
+            <label htmlFor="finance-field-search" className="sr-only">Search fields</label>
+            <MagnifyingGlass size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
+            <input
+              id="finance-field-search"
+              type="text"
+              value={modalSearch}
+              onChange={e => setModalSearch(e.target.value)}
+              placeholder="Search fields..."
+              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+            />
+          </div>
+        }
         footer={
           <div className="space-y-2">
             {saveError && <p role="alert" className="text-xs text-red-600">{saveError}</p>}
@@ -418,6 +471,9 @@ export default function AdminTripFinance() {
           </div>
         }
       >
+        {modalSearchNoMatch && (
+          <p role="status" className="text-xs text-red-500 -mt-2 mb-3">No matching field found for "{modalSearch}".</p>
+        )}
         {editingRow && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {pricingDraft && (
