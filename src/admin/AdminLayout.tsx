@@ -81,11 +81,14 @@ interface NavGroupDef {
 
 const DEFAULT_TOP_ITEMS = ['Dashboard'];
 
+// Sections follow the day-to-day workflow: run the trips, look after the
+// people booking them, handle the money, and finally the public website and
+// its branding (touched least often, so it sits last).
 const NAV_GROUPS: NavGroupDef[] = [
-  { id: 'trips', label: 'Trips', icon: Compass, items: ['Upcoming Trips', 'Completed Trips', 'Trip Finance', 'Trip Leaders', 'Travel Cards'] },
-  { id: 'website', label: 'Website', icon: Globe, items: ['Home Page', 'About Page', 'Branding', 'Logo Studio'] },
+  { id: 'trips', label: 'Trips', icon: Compass, items: ['Upcoming Trips', 'Completed Trips', 'Trip Leaders', 'Travel Cards'] },
   { id: 'customers', label: 'Customers', icon: UsersThree, items: ['Enquiries', 'Waitlist', 'Travellers'] },
-  { id: 'business', label: 'Business', icon: ChartLineUp, items: ['Reports', 'Rate Calculator', 'Invoice Generator'] },
+  { id: 'business', label: 'Business', icon: ChartLineUp, items: ['Trip Finance', 'Invoice Generator', 'Reports', 'Rate Calculator'] },
+  { id: 'website', label: 'Website', icon: Globe, items: ['Home Page', 'About Page', 'Branding', 'Logo Studio'] },
 ];
 
 interface NavOrder {
@@ -93,10 +96,10 @@ interface NavOrder {
   groups: Record<string, string[]>;
 }
 
-// New key (v2) on purpose: the old flat "admin-sidebar-order" layout would
-// otherwise override the new grouped default for everyone who had ever
-// opened the admin.
-const NAV_ORDER_STORAGE_KEY = 'admin-sidebar-order-v2';
+// Bumped (v3) on purpose whenever the default arrangement changes: a saved
+// order from an older version would otherwise keep overriding the new layout
+// for everyone who had ever opened the admin.
+const NAV_ORDER_STORAGE_KEY = 'admin-sidebar-order-v3';
 
 function defaultNavOrder(): NavOrder {
   return {
