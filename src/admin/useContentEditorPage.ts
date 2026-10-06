@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction, RefObject } from 'react';
 import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
 import { collectStorageUrls } from '../utils/utils-index';
 import { useSectionTabChrome } from './useSectionTabChrome';
+import { readDraft, writeDraft, clearDraft } from '../hooks/useSessionDraft';
 
 // Shared by every "single site_content record, edited on its own admin
 // page" screen (About, Founder, Why Ulaa, ...): load-on-mount with a
@@ -97,7 +98,9 @@ export function useContentEditorPage<T>({
     getSiteContent<unknown>(contentKey)
       .then(data => {
         const merged = mergeWithDefaults(data);
-        setContent(merged);
+        // Unsaved edits from an earlier visit in this browser tab come back as they were left.
+        const draft = readDraft<unknown>(`content.${contentKey}`);
+        setContent(draft ? mergeWithDefaults(draft) : merged);
         savedUrlsRef.current = collectStorageUrls(merged, storageBucket);
         savedContentRef.current = JSON.stringify(merged);
       })
@@ -113,6 +116,13 @@ export function useContentEditorPage<T>({
 
   const hasUnsavedChanges = () => JSON.stringify(content) !== savedContentRef.current;
 
+  // Keep the unsaved edits while they differ from what is saved.
+  useEffect(() => {
+    if (loading) return;
+    if (JSON.stringify(content) !== savedContentRef.current) writeDraft(`content.${contentKey}`, content);
+    else clearDraft(`content.${contentKey}`);
+  }, [content, loading, contentKey]);
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -126,6 +136,7 @@ export function useContentEditorPage<T>({
       }
       savedUrlsRef.current = newUrls;
       savedContentRef.current = JSON.stringify(content);
+      clearDraft(`content.${contentKey}`);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {

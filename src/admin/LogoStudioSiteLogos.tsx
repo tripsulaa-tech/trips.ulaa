@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Upload, ArrowCounterClockwise, Warning, Sparkle } from '@phosphor-icons/react';
 import AdminEditorFooter from './AdminEditorFooter';
+import { readDraft, writeDraft, clearDraft } from '../hooks/useSessionDraft';
 import { getSiteContent, upsertSiteContent, uploadImage, deleteImageByUrl } from '../services/api';
 import type { StudioKind } from './AdminLogoStudio';
 import {
@@ -51,7 +52,7 @@ const SLOTS: SlotConfig[] = [
     description: 'Top-left of every public page.',
     studio: 'wide',
     preview: 'checker',
-    previewClass: 'h-20',
+    previewClass: 'h-10',
   },
   {
     slot: 'footer_logo',
@@ -60,7 +61,7 @@ const SLOTS: SlotConfig[] = [
     description: 'Site footer, on a dark background — use the light Footer look.',
     studio: 'wide',
     preview: 'dark',
-    previewClass: 'h-20',
+    previewClass: 'h-10',
   },
   {
     slot: 'favicon',
@@ -69,7 +70,7 @@ const SLOTS: SlotConfig[] = [
     description: 'Square PNG or SVG, at least 64×64 px. Browsers cache it, so a change can take a day to show.',
     studio: 'square',
     preview: 'checker',
-    previewClass: 'h-12 w-12',
+    previewClass: 'h-10 w-10',
   },
   {
     slot: 'app_icon',
@@ -78,7 +79,7 @@ const SLOTS: SlotConfig[] = [
     description: 'Square PNG, at least 192×192 px. Shown in the “Install the Ulaa app” popup.',
     studio: 'square',
     preview: 'checker',
-    previewClass: 'h-16 w-16',
+    previewClass: 'h-10 w-10',
   },
   {
     slot: 'admin_logo',
@@ -87,7 +88,7 @@ const SLOTS: SlotConfig[] = [
     description: 'Top of the admin sidebar and the admin sign-in page.',
     studio: 'wide',
     preview: 'checker',
-    previewClass: 'h-24',
+    previewClass: 'h-10',
   },
   {
     slot: 'admin_icon',
@@ -96,7 +97,7 @@ const SLOTS: SlotConfig[] = [
     description: 'Square PNG or SVG, at least 64×64 px. Shown when the sidebar is collapsed.',
     studio: 'square',
     preview: 'checker',
-    previewClass: 'h-12 w-12',
+    previewClass: 'h-10 w-10',
   },
   {
     slot: 'badge_art',
@@ -107,7 +108,7 @@ const SLOTS: SlotConfig[] = [
     maxBytes: CARD_MAX_BYTES,
     defaultLayers: ['/travel-card/badge-background.png', '/travel-card/badge-logo.png'],
     preview: 'checker',
-    previewClass: 'h-32 w-32 rounded-full',
+    previewClass: 'h-16 w-16 rounded-full',
   },
   {
     slot: 'card_front_art',
@@ -118,7 +119,7 @@ const SLOTS: SlotConfig[] = [
     maxBytes: CARD_MAX_BYTES,
     defaultLayers: ['/travel-card/background.jpg', '/travel-card/overlay.png'],
     preview: 'checker',
-    previewClass: 'h-56 rounded-lg',
+    previewClass: 'h-20 rounded-md',
   },
   {
     slot: 'card_back_art',
@@ -129,7 +130,7 @@ const SLOTS: SlotConfig[] = [
     maxBytes: CARD_MAX_BYTES,
     defaultLayers: ['/travel-card/back-background.png', '/travel-card/back-overlay.png'],
     preview: 'checker',
-    previewClass: 'h-56 rounded-lg',
+    previewClass: 'h-20 rounded-md',
   },
 ];
 
@@ -137,9 +138,9 @@ const CHECKER =
   'bg-[length:16px_16px] bg-[linear-gradient(45deg,#e9e4dc_25%,transparent_25%,transparent_75%,#e9e4dc_75%),linear-gradient(45deg,#e9e4dc_25%,#fff_25%,#fff_75%,#e9e4dc_75%)] [background-position:0_0,8px_8px]';
 
 const BTN_PRIMARY =
-  'inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60';
+  'inline-flex items-center gap-1 px-2.5 py-1 min-h-[30px] rounded-md bg-primary text-white text-xs font-medium hover:bg-primary-dark transition-colors disabled:opacity-60';
 const BTN_OUTLINE =
-  'inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md border-2 border-background-warm text-dark text-sm font-medium hover:bg-background-warm transition-colors disabled:opacity-60';
+  'inline-flex items-center gap-1 px-2.5 py-1 min-h-[30px] rounded-md border-2 border-background-warm text-dark text-xs font-medium hover:bg-background-warm transition-colors disabled:opacity-60';
 
 // Unique storage path per upload (module-level so the timestamp is never read while rendering).
 function uploadPath(slot: BrandingSlot, fileName: string) {
@@ -175,17 +176,17 @@ function SlotCard({
   };
 
   return (
-    <div className="rounded-lg border-2 border-background-warm bg-white p-4 space-y-3">
+    <div className="rounded-lg border-2 border-background-warm bg-white p-2.5 space-y-2">
       <div>
-        <h3 className="text-sm font-semibold text-dark">
+        <h3 className="text-xs font-semibold text-dark">
           {config.label}
           <span className="ml-2 text-2xs font-normal text-dark-muted">{value ? 'Custom' : 'Default'}</span>
         </h3>
-        <p className="text-xs text-dark-muted mt-0.5">{config.description}</p>
+        <p className="text-2xs text-dark-muted mt-0.5 line-clamp-2" title={config.description}>{config.description}</p>
       </div>
 
       <div
-        className={`flex items-center justify-center rounded-md border border-background-warm p-3 min-h-[96px] ${
+        className={`flex items-center justify-center rounded-md border border-background-warm p-2 min-h-[64px] ${
           config.preview === 'dark' ? 'bg-dark' : CHECKER
         }`}
       >
@@ -206,18 +207,18 @@ function SlotCard({
       </div>
 
       <input ref={fileRef} type="file" accept={ACCEPT} onChange={handleFile} className="hidden" />
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
         <button type="button" onClick={onUseStudio} disabled={busy} className={BTN_PRIMARY}>
-          <Sparkle size={14} aria-hidden="true" />
+          <Sparkle size={12} aria-hidden="true" />
           {busy ? 'Working…' : 'Use studio logo'}
         </button>
         <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className={BTN_OUTLINE}>
-          <Upload size={14} aria-hidden="true" />
-          {value ? 'Replace file' : 'Upload file'}
+          <Upload size={12} aria-hidden="true" />
+          {value ? 'Replace' : 'Upload'}
         </button>
         {value && (
           <button type="button" onClick={onReset} disabled={busy} className={BTN_OUTLINE}>
-            <ArrowCounterClockwise size={14} aria-hidden="true" />
+            <ArrowCounterClockwise size={12} aria-hidden="true" />
             Default
           </button>
         )}
@@ -251,7 +252,14 @@ export default function LogoStudioSiteLogos({
       .then(data => {
         const loaded = normalizeBranding(data);
         savedRef.current = loaded;
-        setDraft(loaded);
+        // Unsaved choices from an earlier visit in this browser tab come back as they were left.
+        const kept = readDraft<{ draft: Partial<BrandingContent>; uploads: string[] }>('logoStudio.site');
+        if (kept) {
+          sessionUploadsRef.current = new Set(kept.uploads ?? []);
+          setDraft({ ...loaded, ...kept.draft });
+        } else {
+          setDraft(loaded);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -265,6 +273,15 @@ export default function LogoStudioSiteLogos({
   useEffect(() => {
     onDirtyChange(hasUnsavedChanges());
   }, [draft, saved, hasUnsavedChanges, onDirtyChange]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (JSON.stringify(draft) !== JSON.stringify(savedRef.current)) {
+      writeDraft('logoStudio.site', { draft, uploads: [...sessionUploadsRef.current] });
+    } else {
+      clearDraft('logoStudio.site');
+    }
+  }, [draft, loading]);
 
   const setSlot = (slot: BrandingSlot, url: string) => {
     setSaved(false);
@@ -324,6 +341,7 @@ export default function LogoStudioSiteLogos({
       applyBranding(draft);
       await cleanupUnused(draft, savedRef.current);
       savedRef.current = { ...draft };
+      clearDraft('logoStudio.site');
       setSaved(true);
       window.setTimeout(() => setSaved(false), 3000);
     } catch {
@@ -349,9 +367,9 @@ export default function LogoStudioSiteLogos({
   }
 
   const renderGroup = (group: SlotConfig['group'], title: string) => (
-    <section className="space-y-3" aria-label={title}>
-      <h2 className="text-sm font-semibold text-dark">{title}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <section className="space-y-1.5" aria-label={title}>
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-dark-muted">{title}</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
         {SLOTS.filter(s => s.group === group).map(config => (
           <SlotCard
             key={config.slot}
@@ -369,25 +387,27 @@ export default function LogoStudioSiteLogos({
 
   return (
     <>
-      <div className="p-4 sm:p-6 space-y-8">
-        <p className="text-xs text-dark-muted">
-          “Use studio logo” puts the logo from the Design tab, in its current colours, into that spot: logos keep a
-          transparent background and icons sit on a square tile in the background colour. Pick the Footer look first
-          for the footer. Badge and card artwork is made at its own size in the studio's background colour; the Travel Cards page
-          uses it for previews, downloads and A3 print sheets. Nothing changes on the site until you press Save.
-        </p>
+      <div className="p-3 sm:p-4 space-y-3">
+        <details className="rounded-md bg-background-warm/60 border border-background-warm px-2.5 py-1.5 text-2xs text-dark-muted">
+          <summary className="cursor-pointer text-xs font-semibold text-dark">How “Use studio logo” works</summary>
+          <div className="mt-1.5 space-y-1.5">
+            <p>
+              It puts the logo from the Design tab, in its current colours, into that spot: logos keep a transparent
+              background and icons sit on a square tile in the background colour. Pick the Footer look first for the
+              footer. Badge and card artwork is made at its own size in the studio's background colour; the Travel Cards
+              page uses it for previews, downloads and A3 print sheets. Nothing changes on the site until you press Save.
+            </p>
+            <p className="flex items-start gap-1.5">
+              <Warning size={13} className="shrink-0 mt-0.5 text-primary" aria-hidden="true" />
+              <span>
+                The home-screen icon after installing Ulaa, and the image in WhatsApp/Instagram link previews, come from
+                static files in <code className="px-1 rounded bg-white">public/icons</code> and need a code update to change.
+              </span>
+            </p>
+          </div>
+        </details>
 
         {renderGroup('public', 'Public website')}
-
-        <div className="flex items-start gap-3 rounded-md bg-background-warm/60 border border-background-warm p-3 text-xs text-dark-muted">
-          <Warning size={16} className="shrink-0 mt-0.5 text-primary" aria-hidden="true" />
-          <p>
-            The icon a phone shows on the home screen after installing Ulaa, and the image in WhatsApp/Instagram
-            link previews, come from static files in
-            <code className="mx-1 px-1 rounded bg-white">public/icons</code>
-            and need a code update to change.
-          </p>
-        </div>
 
         {renderGroup('admin', 'Admin panel')}
 

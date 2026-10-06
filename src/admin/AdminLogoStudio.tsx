@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { DownloadSimple, ArrowCounterClockwise, Warning, Copy, ClipboardText, Check } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import ColorPicker, { type ColorSwatch } from '../components/ui/ColorPicker';
-import Select from '../components/ui/Select';
 import LogoStudioSiteLogos from './LogoStudioSiteLogos';
 import LogoStudioMailEditor from './LogoStudioMailEditor';
 
@@ -78,6 +77,8 @@ const COLOR_FIELDS: { key: LogoColorKey; label: string }[] = [
 interface PreDesign {
   id: string;
   name: string;
+  /** Short label under the small thumbnail. */
+  short: string;
   thumb: string;
   /** Background of the thumbnail tile, so light logos stay visible. */
   tile: string;
@@ -97,6 +98,7 @@ const PREDESIGNS: PreDesign[] = [
   {
     id: 'header',
     name: 'Header',
+    short: 'Header',
     thumb: '/logo-presets/header.png',
     tile: '#f6f2ea',
     design: 'header',
@@ -105,6 +107,7 @@ const PREDESIGNS: PreDesign[] = [
   {
     id: 'invoice',
     name: 'Invoice',
+    short: 'Invoice',
     thumb: '/logo-presets/invoice.png',
     tile: '#f6f2ea',
     design: 'classic',
@@ -113,6 +116,7 @@ const PREDESIGNS: PreDesign[] = [
   {
     id: 'footer',
     name: 'Footer',
+    short: 'Footer',
     thumb: '/logo-presets/footer.png',
     tile: '#2d2118',
     design: 'classic',
@@ -121,6 +125,7 @@ const PREDESIGNS: PreDesign[] = [
   {
     id: 'tshirt',
     name: 'T-shirt back',
+    short: 'T-shirt',
     thumb: '/logo-presets/tshirt.png',
     tile: '#f6f2ea',
     design: 'tshirt',
@@ -129,6 +134,7 @@ const PREDESIGNS: PreDesign[] = [
   {
     id: 'tshirt-dark',
     name: 'T-shirt back · dark',
+    short: 'T-shirt dark',
     thumb: '/logo-presets/tshirt-dark.png',
     tile: '#2d2118',
     design: 'tshirt',
@@ -147,20 +153,21 @@ const MARGINS: { value: MarginId; label: string; pct: number }[] = [
 const FORMAT_OPTIONS: { value: Format; label: string }[] = [
   { value: 'png', label: 'PNG' },
   { value: 'jpg', label: 'JPG' },
-  { value: 'svg', label: 'SVG (vector)' },
-  { value: 'pdf', label: 'PDF (vector)' },
+  { value: 'svg', label: 'SVG' },
+  { value: 'pdf', label: 'PDF' },
 ];
 
 // Size = side of the square (1:1) downloaded image, margin included. The classic
 // artwork is 3900 px wide, so Max is its full resolution; the header artwork is
 // smaller (about 870 px) and is scaled up beyond that.
+// Size 0 = custom (width × height); it is a button of its own beside the presets.
 const SIZES = [
-  { value: 400, label: 'Small · 400 × 400 px' },
-  { value: 800, label: 'Medium · 800 × 800 px' },
-  { value: 1600, label: 'Large · 1600 × 1600 px' },
-  { value: 3000, label: 'HD · 3000 × 3000 px' },
-  { value: 4000, label: 'Max · 4000 × 4000 px' },
-  { value: 0, label: 'Custom size…' },
+  { value: 400, label: '400' },
+  { value: 800, label: '800' },
+  { value: 1600, label: '1600' },
+  { value: 3000, label: '3000' },
+  { value: 4000, label: '4000' },
+  { value: 0, label: 'Custom' },
 ];
 
 // Custom size limits (px per side, and total pixels so the browser can still draw it).
@@ -179,6 +186,15 @@ const CHECKER =
 function sameColors(a: LogoColors, b: LogoColors) {
   return (Object.keys(a) as LogoColorKey[]).every(k => a[k] === b[k]);
 }
+
+/** Custom-size framing: zoom (1 = whole logo fits) and a shift as a fraction of the canvas size.
+ *  Anything pushed past the canvas edge is cropped away. */
+interface View {
+  zoom: number;
+  x: number;
+  y: number;
+}
+const DEFAULT_VIEW: View = { zoom: 1, x: 0, y: 0 };
 
 interface Bounds {
   x: number;
@@ -288,6 +304,7 @@ function renderLogo(
   marginPct: number,
   square = false,
   fit?: { w: number; h: number },
+  view: View = DEFAULT_VIEW,
 ) {
   const margin = (marginPct / 100) * Math.max(bounds.w, bounds.h);
   const totalW = bounds.w + margin * 2;
@@ -297,7 +314,8 @@ function renderLogo(
   // down, keeping its shape, until it touches the edges; any spare room is background.
   const boxW = fit ? fit.w / Math.min(fit.w / totalW, fit.h / totalH) : square ? side : totalW;
   const boxH = fit ? fit.h / Math.min(fit.w / totalW, fit.h / totalH) : square ? side : totalH;
-  const scale = fit ? Math.min(fit.w / totalW, fit.h / totalH) : longSide / Math.max(boxW, boxH);
+  const baseScale = fit ? Math.min(fit.w / totalW, fit.h / totalH) : longSide / Math.max(boxW, boxH);
+  const scale = fit ? baseScale * view.zoom : baseScale;
   const width = fit ? Math.max(1, Math.round(fit.w)) : Math.max(1, Math.round(boxW * scale));
   const height = fit ? Math.max(1, Math.round(fit.h)) : Math.max(1, Math.round(boxH * scale));
 
@@ -319,8 +337,8 @@ function renderLogo(
   t.imageSmoothingQuality = 'high';
   ctx.imageSmoothingQuality = 'high';
 
-  const dx = ((boxW - bounds.w) / 2) * scale;
-  const dy = ((boxH - bounds.h) / 2) * scale;
+  const dx = fit ? (width - bounds.w * scale) / 2 + view.x * width : ((boxW - bounds.w) / 2) * scale;
+  const dy = fit ? (height - bounds.h * scale) / 2 + view.y * height : ((boxH - bounds.h) / 2) * scale;
   const dw = bounds.w * scale;
   const dh = bounds.h * scale;
 
@@ -348,6 +366,7 @@ function buildVectorSvg(
   bounds: Bounds,
   marginPct: number,
   fit?: { w: number; h: number },
+  view: View = DEFAULT_VIEW,
 ): string {
   const margin = (marginPct / 100) * Math.max(bounds.w, bounds.h);
   const totalW = bounds.w + margin * 2;
@@ -355,9 +374,9 @@ function buildVectorSvg(
   const n = (v: number) => v.toFixed(2);
   if (fit) {
     // Same layout as renderLogo's fit mode: scaled to touch the edges, centred.
-    const s = Math.min(fit.w / totalW, fit.h / totalH);
-    const ox = (fit.w - bounds.w * s) / 2;
-    const oy = (fit.h - bounds.h * s) / 2;
+    const s = Math.min(fit.w / totalW, fit.h / totalH) * view.zoom;
+    const ox = (fit.w - bounds.w * s) / 2 + view.x * fit.w;
+    const oy = (fit.h - bounds.h * s) / 2 + view.y * fit.h;
     const fitted = design.layers
       .map(layer => {
         const v = vectors[layer.src];
@@ -365,7 +384,7 @@ function buildVectorSvg(
       })
       .join('');
     const fbg = withBackground ? `<rect x="0" y="0" width="${fit.w}" height="${fit.h}" fill="${colors.background}"/>` : '';
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${fit.w}" height="${fit.h}" viewBox="0 0 ${fit.w} ${fit.h}">${fbg}${fitted}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${fit.w}" height="${fit.h}" viewBox="0 0 ${fit.w} ${fit.h}" overflow="hidden">${fbg}${fitted}</svg>`;
   }
   const side = Math.max(totalW, totalH);
   const dx = (side - bounds.w) / 2;
@@ -407,16 +426,37 @@ function saveBlob(blob: Blob, fileName: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+
+/** useState that survives leaving the page: kept in sessionStorage for this browser tab only. */
+function useSessionState<T>(key: string, initial: T): [T, (v: T | ((prev: T) => T)) => void] {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const raw = window.sessionStorage.getItem(key);
+      if (raw !== null) {
+        const parsed = JSON.parse(raw) as T;
+        return typeof initial === 'object' && initial !== null ? ({ ...initial, ...parsed } as T) : parsed;
+      }
+    } catch { /* storage unavailable: use the default */ }
+    return initial;
+  });
+  useEffect(() => {
+    try { window.sessionStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
+  }, [key, value]);
+  return [value, setValue];
+}
+
 export default function AdminLogoStudio() {
-  const [preId, setPreId] = useState<string>(PREDESIGNS[0].id);
-  const [colors, setColors] = useState<LogoColors>({ ...PREDESIGNS[0].colors });
-  const [margin, setMargin] = useState<MarginId>('medium');
-  const [format, setFormat] = useState<Format>('png');
-  const [size, setSize] = useState<number>(3000);
+  const [preId, setPreId] = useSessionState<string>('logoStudio.pre', PREDESIGNS[0].id);
+  const [colors, setColors] = useSessionState<LogoColors>('logoStudio.colors', { ...PREDESIGNS[0].colors });
+  const [margin, setMargin] = useSessionState<MarginId>('logoStudio.margin', 'medium');
+  const [format, setFormat] = useSessionState<Format>('logoStudio.format', 'png');
+  const [size, setSize] = useSessionState<number>('logoStudio.size', 3000);
   // Typed as text so a half-typed number is never rewritten under the cursor. Size 0 = custom.
-  const [customW, setCustomW] = useState('1200');
-  const [customH, setCustomH] = useState('630');
-  const [transparent, setTransparent] = useState(false);
+  const [customW, setCustomW] = useSessionState('logoStudio.customW', '1200');
+  const [customH, setCustomH] = useSessionState('logoStudio.customH', '630');
+  const [transparent, setTransparent] = useSessionState('logoStudio.transparent', false);
+  // Framing for custom sizes: zoom and drag-to-position (the part outside the frame is cropped).
+  const [view, setView] = useSessionState<View>('logoStudio.view', DEFAULT_VIEW);
   // Colour last copied with a tile's copy button, ready to paste into any other colour.
   const [copiedColor, setCopiedColor] = useState<string | null>(null);
   const [justCopied, setJustCopied] = useState<LogoColorKey | null>(null);
@@ -425,7 +465,7 @@ export default function AdminLogoStudio() {
   const requestedRef = useRef<Set<DesignId>>(new Set());
   const [imageError, setImageError] = useState(false);
 
-  const [tab, setTab] = useState<'design' | 'site' | 'mail'>('design');
+  const [tab, setTab] = useSessionState<'design' | 'site' | 'mail'>('logoStudio.tab', 'design');
   const siteDirtyRef = useRef(false);
   const mailDirtyRef = useRef(false);
   const hasUnsavedChanges = useCallback(() => siteDirtyRef.current || mailDirtyRef.current, []);
@@ -437,8 +477,18 @@ export default function AdminLogoStudio() {
   }, []);
 
   const previewRef = useRef<HTMLCanvasElement>(null);
-  const formatId = useId();
-  const sizeId = useId();
+
+  // On a desktop-sized window the Design tab fits the screen exactly (no page scroll).
+  // Small or short windows keep normal scrolling so nothing gets cut off.
+  const [fitScreen, setFitScreen] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px) and (min-height: 640px)');
+    const update = () => setFitScreen(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  const lockHeight = fitScreen && (tab === 'design' || tab === 'mail');
 
   const pre = PREDESIGNS.find(p => p.id === preId) ?? PREDESIGNS[0];
   const design = DESIGNS.find(d => d.id === pre.design) ?? DESIGNS[0];
@@ -463,11 +513,45 @@ export default function AdminLogoStudio() {
       .catch(() => setImageError(true));
   }, [design]);
 
+  const isCustom = size === 0;
+  const cw = Math.round(Number(customW));
+  const ch = Math.round(Number(customH));
+  const customValid = cw >= CUSTOM_MIN && cw <= CUSTOM_MAX && ch >= CUSTOM_MIN && ch <= CUSTOM_MAX && cw * ch <= CUSTOM_MAX_PIXELS;
+  // The preview takes the shape of the chosen custom size, so what you see is what you download.
+  const previewCustom = isCustom && customValid;
+
   // Repaint the preview whenever the logo, a colour, the margin or the background option changes.
   useEffect(() => {
     if (!ld || !previewRef.current) return;
-    renderLogo(previewRef.current, ld.small, design, colors, PREVIEW_SIZE, withBackground, ld.smallBounds, marginPct, true);
-  }, [ld, design, colors, withBackground, marginPct]);
+    if (previewCustom) {
+      const k = PREVIEW_SIZE / Math.max(cw, ch);
+      const fit = { w: Math.max(1, Math.round(cw * k)), h: Math.max(1, Math.round(ch * k)) };
+      renderLogo(previewRef.current, ld.small, design, colors, PREVIEW_SIZE, withBackground, ld.smallBounds, marginPct, true, fit, view);
+    } else {
+      renderLogo(previewRef.current, ld.small, design, colors, PREVIEW_SIZE, withBackground, ld.smallBounds, marginPct, true);
+    }
+  }, [ld, design, colors, withBackground, marginPct, previewCustom, cw, ch, view]);
+
+  // Drag the preview to choose which part of the logo stays inside the custom frame.
+  const dragRef = useRef<{ px: number; py: number; vx: number; vy: number } | null>(null);
+  const onPreviewDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!previewCustom) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { px: e.clientX, py: e.clientY, vx: view.x, vy: view.y };
+  };
+  const onPreviewMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const d = dragRef.current;
+    const c = previewRef.current;
+    if (!d || !c) return;
+    const r = c.getBoundingClientRect();
+    // The canvas is letterboxed (object-contain); find the size it is really drawn at.
+    const shown = Math.min(r.width / c.width, r.height / c.height);
+    const dw = c.width * shown;
+    const dh = c.height * shown;
+    const lim = (v: number) => Math.max(-1.5, Math.min(1.5, v));
+    setView(v => ({ ...v, x: lim(d.vx + (e.clientX - d.px) / dw), y: lim(d.vy + (e.clientY - d.py) / dh) }));
+  };
+  const onPreviewUp = () => { dragRef.current = null; };
 
   const copyColor = (key: LogoColorKey) => {
     const hex = colors[key];
@@ -526,11 +610,6 @@ export default function AdminLogoStudio() {
     return blob ? new File([blob], name, { type: 'image/png' }) : null;
   };
 
-  const isCustom = size === 0;
-  const cw = Math.round(Number(customW));
-  const ch = Math.round(Number(customH));
-  const customValid = cw >= CUSTOM_MIN && cw <= CUSTOM_MAX && ch >= CUSTOM_MIN && ch <= CUSTOM_MAX && cw * ch <= CUSTOM_MAX_PIXELS;
-
   const handleDownload = async () => {
     if (!ld || (isCustom && !customValid)) return;
     // Output size: a square preset, or any width × height. The logo (with its margin) is
@@ -545,7 +624,7 @@ export default function AdminLogoStudio() {
     // SVG / PDF use the traced vector layers when the design has them; otherwise
     // they carry the high-resolution picture instead.
     const svg = format === 'svg' || format === 'pdf'
-      ? ld.vectors && buildVectorSvg(ld.vectors, design, colors, side, withBackground, ld.fullBounds, marginPct, fit)
+      ? ld.vectors && buildVectorSvg(ld.vectors, design, colors, side, withBackground, ld.fullBounds, marginPct, fit, view)
       : null;
     try {
       if (format === 'svg' && svg) {
@@ -554,7 +633,7 @@ export default function AdminLogoStudio() {
       }
       const canvas = document.createElement('canvas');
       if (!svg) {
-        renderLogo(canvas, src.images, design, colors, side, withBackground, src.bounds, marginPct, true, fit);
+        renderLogo(canvas, src.images, design, colors, side, withBackground, src.bounds, marginPct, true, fit, view);
       }
       if (format === 'pdf') {
         saveBlob(await svgToPdfBlob(svg, canvas, outW, outH), fileName);
@@ -584,14 +663,20 @@ export default function AdminLogoStudio() {
     }
   };
 
+  const chip = (on: boolean) =>
+    `min-h-[30px] rounded-md border-2 px-2 text-xs font-medium transition-colors ${
+      on ? 'border-primary bg-primary/5 text-primary' : 'border-background-warm text-dark hover:border-primary/50'
+    }`;
+
   return (
     <AdminLayout
       title="Logo Studio"
       subtitle="Design the logo, choose the logos the site uses, and edit the booking email"
       hasUnsavedChanges={hasUnsavedChanges}
+      fixedHeight={lockHeight}
     >
-      <div className="bg-white rounded-md border border-background-warm shadow-card">
-        <div role="tablist" aria-label="Logo Studio sections" className="flex gap-2 px-4 pt-4 sm:px-6 sm:pt-6">
+      <div className={`bg-white rounded-md border border-background-warm shadow-card ${lockHeight ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : ''}`}>
+        <div role="tablist" aria-label="Logo Studio sections" className={`flex gap-2 px-4 sm:px-6 ${lockHeight ? 'pt-3' : 'pt-4 sm:pt-6'}`}>
           {([
             ['design', 'Design & download'],
             ['site', 'Site logos'],
@@ -603,7 +688,7 @@ export default function AdminLogoStudio() {
               role="tab"
               aria-selected={tab === id}
               onClick={() => setTab(id)}
-              className={`min-h-[40px] rounded-md px-4 text-sm font-medium transition-colors ${
+              className={`min-h-[36px] rounded-md px-4 text-sm font-medium transition-colors ${
                 tab === id ? 'bg-primary text-white' : 'bg-background-warm text-dark hover:bg-background-warm/70'
               }`}
             >
@@ -612,14 +697,15 @@ export default function AdminLogoStudio() {
           ))}
         </div>
 
-        <div role="tabpanel" hidden={tab !== 'design'}>
-        <div className="p-4 sm:p-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] items-start">
-          {/* Preview */}
-          <section aria-label="Logo preview">
+        <div role="tabpanel" hidden={tab !== 'design'} className={lockHeight ? 'flex-1 min-h-0' : ''}>
+        <div className={`p-4 sm:p-6 grid gap-4 lg:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] items-start ${lockHeight ? 'h-full !py-3 items-stretch' : ''}`}>
+          {/* Preview: same top edge as the controls; shrinks to fit the screen */}
+          <section aria-label="Logo preview" className={lockHeight ? 'min-h-0 h-full' : ''}>
             <div
-              className={`rounded-md border border-background-warm overflow-hidden ${
+              className={`rounded-md border border-background-warm overflow-hidden ${lockHeight ? 'h-full flex items-center justify-center' : ''} ${
                 withBackground ? '' : CHECKER
               }`}
+              style={withBackground && !previewCustom ? { backgroundColor: colors.background } : previewCustom ? { backgroundColor: '#ece6dc' } : undefined}
             >
               {imageError ? (
                 <div role="alert" className="flex items-start gap-3 p-6 text-sm text-dark-muted">
@@ -635,16 +721,24 @@ export default function AdminLogoStudio() {
                   ref={previewRef}
                   role="img"
                   aria-label="Ulaa logo preview"
-                  className="block w-full h-auto"
+                  onPointerDown={onPreviewDown}
+                  onPointerMove={onPreviewMove}
+                  onPointerUp={onPreviewUp}
+                  onPointerCancel={onPreviewUp}
+                  title={previewCustom ? 'Drag to move the logo inside the frame' : undefined}
+                  style={previewCustom ? { touchAction: 'none' } : undefined}
+                  className={`${lockHeight ? 'block max-h-full max-w-full h-full w-full object-contain' : 'block w-full h-auto'} ${
+                    previewCustom ? 'cursor-grab active:cursor-grabbing' : ''
+                  }`}
                 />
               )}
             </div>
           </section>
 
           {/* Controls */}
-          <div className="space-y-6">
+          <div className={`space-y-3 ${lockHeight ? 'h-full min-h-0 overflow-hidden flex flex-col' : ''}`}>
             <section aria-label="Logo">
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-5 gap-1.5">
                 {PREDESIGNS.map(p => {
                   const active = p.id === preId;
                   return (
@@ -653,24 +747,25 @@ export default function AdminLogoStudio() {
                       type="button"
                       onClick={() => choosePre(p)}
                       aria-pressed={active}
-                      className={`rounded-md border-2 p-1.5 text-center transition-colors ${
+                      title={p.name}
+                      className={`rounded-md border-2 p-1 text-center transition-colors ${
                         active ? 'border-primary bg-primary/5' : 'border-background-warm hover:border-primary/50'
                       }`}
                     >
                       <span
-                        className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded border border-black/5 p-2"
+                        className="flex h-10 items-center justify-center overflow-hidden rounded-sm border border-black/5 p-1"
                         style={{ backgroundColor: p.tile }}
                       >
                         <img src={p.thumb} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
                       </span>
-                      <span className="mt-1.5 block text-xs font-semibold text-dark">{p.name}</span>
+                      <span className="mt-1 block truncate text-2xs font-semibold text-dark">{p.short}</span>
                     </button>
                   );
                 })}
               </div>
             </section>
 
-            <section aria-labelledby="logo-colours-heading" className="space-y-3">
+            <section aria-labelledby="logo-colours-heading" className="space-y-1.5">
               <div className="flex items-center justify-between gap-3">
                 <h2 id="logo-colours-heading" className="text-sm font-semibold text-dark">Colours</h2>
                 {colorsChanged && (
@@ -684,38 +779,39 @@ export default function AdminLogoStudio() {
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 {colorFields.map(f => {
                   const value = colors[f.key];
                   const canPaste = !!copiedColor && copiedColor !== value;
                   return (
                     <div
                       key={f.key}
-                      className="rounded-md border-2 border-background-warm px-2 py-1.5 space-y-1.5 focus-within:border-primary transition-colors"
+                      className="rounded-md border-2 border-background-warm px-1.5 py-1 focus-within:border-primary transition-colors"
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-1.5">
                         <ColorPicker
                           value={value}
                           label={f.label}
                           swatches={BRAND_COLORS}
                           swatchesLabel="Logo colours"
+                          sizeClass="h-5 w-5"
                           onChange={hex => setColors(c => (c[f.key] === hex ? c : { ...c, [f.key]: hex }))}
                         />
-                        <span className="text-xs font-medium text-dark leading-tight">{f.label}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="flex-1 min-w-0 font-mono text-2xs uppercase text-dark-muted">{value}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-2xs font-medium text-dark leading-tight">{f.label}</span>
+                          <span className="block font-mono text-2xs uppercase text-dark-muted leading-tight">{value}</span>
+                        </span>
                         <button
                           type="button"
                           onClick={() => copyColor(f.key)}
                           aria-label={`Copy ${f.label} colour code`}
                           title="Copy colour code"
-                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-background-warm text-dark hover:bg-background-warm transition-colors"
+                          className="inline-flex h-5 w-5 items-center justify-center rounded border border-background-warm text-dark hover:bg-background-warm transition-colors"
                         >
                           {justCopied === f.key ? (
-                            <Check size={14} className="text-primary" aria-hidden="true" />
+                            <Check size={11} className="text-primary" aria-hidden="true" />
                           ) : (
-                            <Copy size={14} aria-hidden="true" />
+                            <Copy size={11} aria-hidden="true" />
                           )}
                         </button>
                         <button
@@ -724,9 +820,9 @@ export default function AdminLogoStudio() {
                           disabled={!canPaste}
                           aria-label={`Paste copied colour into ${f.label}`}
                           title={copiedColor ? `Paste ${copiedColor.toUpperCase()}` : 'Copy a colour first'}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-background-warm text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                          className="inline-flex h-5 w-5 items-center justify-center rounded border border-background-warm text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
                         >
-                          <ClipboardText size={14} aria-hidden="true" />
+                          <ClipboardText size={11} aria-hidden="true" />
                         </button>
                       </div>
                     </div>
@@ -735,82 +831,86 @@ export default function AdminLogoStudio() {
               </div>
             </section>
 
-            <section aria-labelledby="logo-download-heading" className="space-y-4">
+            <section aria-labelledby="logo-download-heading" className="space-y-2">
               <h2 id="logo-download-heading" className="text-sm font-semibold text-dark">Download</h2>
 
-              <div>
-                <p id="logo-margin-label" className="block text-xs font-medium text-dark mb-1">Margin gap</p>
-                <div role="group" aria-labelledby="logo-margin-label" className="grid grid-cols-4 gap-2">
+              <div className="flex items-center gap-2">
+                <span id="logo-margin-label" className="w-14 shrink-0 text-xs font-medium text-dark">Margin</span>
+                <div role="group" aria-labelledby="logo-margin-label" className="grid flex-1 grid-cols-4 gap-1.5">
                   {MARGINS.map(m => (
-                    <button
-                      key={m.value}
-                      type="button"
-                      onClick={() => setMargin(m.value)}
-                      aria-pressed={margin === m.value}
-                      className={`min-h-[40px] rounded-md border-2 text-sm font-medium transition-colors ${
-                        margin === m.value
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-background-warm text-dark hover:border-primary/50'
-                      }`}
-                    >
+                    <button key={m.value} type="button" onClick={() => setMargin(m.value)} aria-pressed={margin === m.value} className={chip(margin === m.value)}>
                       {m.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor={formatId} className="block text-xs font-medium text-dark mb-1">Format</label>
-                  <Select<Format> inputId={formatId} value={format} onChange={setFormat} options={FORMAT_OPTIONS} />
+              <div className="flex items-center gap-2">
+                <span id="logo-format-label" className="w-14 shrink-0 text-xs font-medium text-dark">Format</span>
+                <div role="group" aria-labelledby="logo-format-label" className="grid flex-1 grid-cols-4 gap-1.5">
+                  {FORMAT_OPTIONS.map(o => (
+                    <button key={o.value} type="button" onClick={() => setFormat(o.value)} aria-pressed={format === o.value} className={chip(format === o.value)}>
+                      {o.label}
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <label htmlFor={sizeId} className="block text-xs font-medium text-dark mb-1">Size</label>
-                  <Select<number> inputId={sizeId} value={size} onChange={setSize} options={SIZES} />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span id="logo-size-label" className="w-14 shrink-0 text-xs font-medium text-dark">Size px</span>
+                <div role="group" aria-labelledby="logo-size-label" className="grid flex-1 grid-cols-6 gap-1.5">
+                  {SIZES.map(o => (
+                    <button key={o.value} type="button" onClick={() => setSize(o.value)} aria-pressed={size === o.value} className={`${chip(size === o.value)} !px-0 ${o.value === 0 ? 'col-span-2' : ''}`}>
+                      {o.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {isCustom && (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="logo-custom-w" className="block text-xs font-medium text-dark mb-1">Width (px)</label>
-                      <input id="logo-custom-w" inputMode="numeric" value={customW} onChange={e => setCustomW(e.target.value.replace(/\D/g, '').slice(0, 5))} aria-invalid={!customValid} className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background text-sm text-dark focus:border-primary outline-none transition-colors" />
-                    </div>
-                    <div>
-                      <label htmlFor="logo-custom-h" className="block text-xs font-medium text-dark mb-1">Height (px)</label>
-                      <input id="logo-custom-h" inputMode="numeric" value={customH} onChange={e => setCustomH(e.target.value.replace(/\D/g, '').slice(0, 5))} aria-invalid={!customValid} className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background text-sm text-dark focus:border-primary outline-none transition-colors" />
-                    </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <input aria-label="Width in pixels" placeholder="Width" inputMode="numeric" value={customW} onChange={e => setCustomW(e.target.value.replace(/\D/g, '').slice(0, 5))} aria-invalid={!customValid} className="w-full min-w-0 px-2 py-1 rounded-md border-2 border-background-warm bg-background text-xs text-dark focus:border-primary outline-none transition-colors" />
+                    <span className="text-xs text-dark-muted">×</span>
+                    <input aria-label="Height in pixels" placeholder="Height" inputMode="numeric" value={customH} onChange={e => setCustomH(e.target.value.replace(/\D/g, '').slice(0, 5))} aria-invalid={!customValid} className="w-full min-w-0 px-2 py-1 rounded-md border-2 border-background-warm bg-background text-xs text-dark focus:border-primary outline-none transition-colors" />
                   </div>
-                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick sizes">
-                    {([['Site logo 893 × 663', 893, 663], ['Square 1:1', 1200, 1200], ['Wide 1200 × 630', 1200, 630], ['Banner 1500 × 500', 1500, 500], ['Story 1080 × 1920', 1080, 1920]] as const).map(([label, w, h]) => (
+                  <div className="flex flex-wrap gap-1" role="group" aria-label="Quick sizes">
+                    {([['Site logo', 893, 663], ['Square', 1200, 1200], ['Wide', 1200, 630], ['Banner', 1500, 500], ['Story', 1080, 1920]] as const).map(([label, w, h]) => (
                       <button
                         key={label}
                         type="button"
+                        title={`${w} × ${h}`}
                         onClick={() => { setCustomW(String(w)); setCustomH(String(h)); }}
-                        className="px-2.5 py-1 rounded-md border-2 border-background-warm text-xs font-medium text-dark hover:border-primary/50 transition-colors"
+                        className="px-2 py-0.5 rounded-md border border-background-warm text-2xs font-medium text-dark hover:border-primary/50 transition-colors"
                       >
                         {label}
                       </button>
                     ))}
                   </div>
-                  {customValid ? (
-                    <p className="text-xs text-dark-muted">Downloads at {cw} × {ch} px. The logo fills this size as far as its shape allows (margin above included) and is centred; any spare room is background colour (or transparent).</p>
-                  ) : (
-                    <p role="alert" className="text-xs text-red-600">Each side must be {CUSTOM_MIN} to {CUSTOM_MAX} px, and the whole image no more than {CUSTOM_MAX_PIXELS / 1_000_000} million pixels.</p>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="logo-zoom" className="w-14 shrink-0 text-xs font-medium text-dark">Zoom</label>
+                    <input id="logo-zoom" type="range" min={50} max={300} step={5} value={Math.round(view.zoom * 100)} onChange={e => setView(v => ({ ...v, zoom: Number(e.target.value) / 100 }))} className="flex-1 min-w-0 accent-primary" />
+                    <span className="w-9 text-right font-mono text-2xs text-dark-muted">{Math.round(view.zoom * 100)}%</span>
+                    <button type="button" onClick={() => setView(DEFAULT_VIEW)} disabled={view.zoom === 1 && view.x === 0 && view.y === 0} title="Reset zoom and position" aria-label="Reset zoom and position" className="inline-flex h-6 w-6 items-center justify-center rounded border border-background-warm text-dark hover:bg-background-warm disabled:opacity-30">
+                      <ArrowCounterClockwise size={12} aria-hidden="true" />
+                    </button>
+                  </div>
+                  <p className="text-2xs text-dark-muted">Preview shows the {cw} × {ch} px frame. Drag the logo to position it; zoom in to crop the edges.</p>
+                  {!customValid && (
+                    <p role="alert" className="text-2xs text-red-600">Each side must be {CUSTOM_MIN} to {CUSTOM_MAX} px, and the whole image no more than {CUSTOM_MAX_PIXELS / 1_000_000} million pixels.</p>
                   )}
                 </div>
               )}
 
               {(format === 'svg' || format === 'pdf') && ld && !ld.vectors && (
-                <p className="text-xs text-dark-muted">
-                  This logo has no traced vector layers yet, so its {format.toUpperCase()} holds a high-resolution picture. Run
-                  {' '}<code className="px-1 rounded bg-background-warm">scripts/trace-logo-layers.mjs</code> to make it true vector.
+                <p className="text-2xs text-dark-muted">
+                  No traced vector layers yet, so this {format.toUpperCase()} holds a high-resolution picture
+                  (<code className="px-1 rounded bg-background-warm">scripts/trace-logo-layers.mjs</code> makes it true vector).
                 </p>
               )}
 
               {format !== 'jpg' && (
-                <label className="flex items-center gap-2 text-sm text-dark cursor-pointer">
+                <label className="flex items-center gap-2 text-xs text-dark cursor-pointer">
                   <input
                     type="checkbox"
                     checked={transparent}
@@ -822,12 +922,12 @@ export default function AdminLogoStudio() {
               )}
             </section>
 
-            <div className="sticky bottom-0 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 bg-white/95 backdrop-blur border-t border-background-warm sm:border-0 sm:bg-transparent">
+            <div className={`${lockHeight ? 'mt-auto' : 'sticky bottom-0'} -mx-4 sm:mx-0 px-4 sm:px-0 py-2 bg-white/95 backdrop-blur border-t border-background-warm sm:border-0 sm:bg-transparent`}>
               <button
                 type="button"
                 onClick={handleDownload}
                 disabled={!ld || (isCustom && !customValid)}
-                className="inline-flex w-full items-center justify-center gap-2 px-4 py-2 min-h-[44px] rounded-md bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-2 px-4 py-2 min-h-[40px] rounded-md bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60"
               >
                 <DownloadSimple size={16} aria-hidden="true" />
                 Download logo
@@ -841,8 +941,8 @@ export default function AdminLogoStudio() {
           <LogoStudioSiteLogos makeLogoFile={makeLogoFile} onDirtyChange={handleSiteDirty} />
         </div>
 
-        <div role="tabpanel" hidden={tab !== 'mail'}>
-          <LogoStudioMailEditor onDirtyChange={handleMailDirty} />
+        <div role="tabpanel" hidden={tab !== 'mail'} className={lockHeight ? 'flex-1 min-h-0' : ''}>
+          <LogoStudioMailEditor onDirtyChange={handleMailDirty} fit={lockHeight && tab === 'mail'} />
         </div>
       </div>
     </AdminLayout>

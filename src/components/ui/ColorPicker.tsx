@@ -77,9 +77,11 @@ interface ColorPickerProps {
   value: string;
   onChange: (hex: string) => void;
   label: string;
+  /** Size classes for the swatch button (default h-8 w-8). */
+  sizeClass?: string;
 }
 
-export default function ColorPicker({ value, onChange, label, swatches = THEME_SWATCHES, swatchesLabel = 'Theme colours' }: ColorPickerProps) {
+export default function ColorPicker({ value, onChange, label, swatches = THEME_SWATCHES, swatchesLabel = 'Theme colours', sizeClass = 'h-8 w-8' }: ColorPickerProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -158,7 +160,7 @@ export default function ColorPicker({ value, onChange, label, swatches = THEME_S
         aria-haspopup="dialog"
         aria-expanded={open}
         style={{ backgroundColor: value }}
-        className={`h-8 w-8 shrink-0 rounded-md border-2 outline-none transition-colors ${open ? 'border-primary' : 'border-background-warm hover:border-primary/50'}`}
+        className={`${sizeClass} shrink-0 rounded-md border-2 outline-none transition-colors ${open ? 'border-primary' : 'border-background-warm hover:border-primary/50'}`}
       />
 
       {open && createPortal(
