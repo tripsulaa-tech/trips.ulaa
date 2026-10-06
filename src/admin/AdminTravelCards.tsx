@@ -5,33 +5,45 @@
 //  - Trip leaders: the Trip Leaders directory; the leader assigned to the
 //    chosen trip is listed first.
 //  - Back card: the five text lines on the back are editable.
+//  - Travelers / Trip leaders / Back card each also have an A3 print-sheet panel
+//    (see CardSheetPanel.tsx).
+//  - Badge: the round ULAA badge. One common design, so like the back card
+//    there is no list: download a single PNG or A3 print sheets.
 // The card artwork is drawn in utils/travelCard.ts.
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowCounterClockwise, Check, CircleNotch, DownloadSimple as Download, IdentificationCard, PencilSimple, X } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, CaretLeft, CaretRight, Check, CircleNotch, DownloadSimple as Download, IdentificationCard, PencilSimple, X } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
+import CardSheetPanel, { CutGuideShapes } from './CardSheetPanel';
 import { useAlert } from '../components/ui/useAlert';
 import { getEnquiries, getUpcomingTrips, getAllTripLeadersAdmin } from '../services/api';
 import { isBooked } from './enquiries/AdminEnquiriesShared';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { formatDate } from '../utils/utils-index';
 import type { Enquiry, TripLeader, UpcomingTrip } from '../types/types-index';
-import { DEFAULT_BACK_CARD_TEXT, type BackCardText, type TravelCardRole } from '../utils/travelCard';
+import { DEFAULT_BACK_CARD_TEXT, GUIDE_NOTE, MARKS_GAP_HINT, MIN_GAP_FOR_MARKS_MM, badgeCutGuides, cutGuideOptions, isCutGuides, layoutBadgeSheet, planBadgeSheets, type BackCardText, type CardSheetItem, type CutGuides, type TravelCardRole } from '../utils/travelCard';
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-type CardTab = 'traveler' | 'leader' | 'back';
+type CardTab = 'traveler' | 'leader' | 'back' | 'badge';
 const TABS: { id: CardTab; label: string }[] = [
   { id: 'traveler', label: 'Travelers' },
   { id: 'leader', label: 'Trip leaders' },
   { id: 'back', label: 'Back card' },
+  { id: 'badge', label: 'Badge' },
 ];
 
 // Edits made here only change what is printed on the cards. They are kept in
 // this browser and never written back to a booking or the trip leader record.
 const NAMES_KEY = 'ulaa-travel-card-names-v1';
 const BACK_KEY = 'ulaa-travel-card-back-v1';
+const BADGE_KEY = 'ulaa-travel-card-badge-v1';
+
+// Badge print settings are kept as the text typed, so a half-typed number
+// ("5" on the way to "58") is never rewritten under the admin's cursor.
+interface BadgePrintInputs { diameterMm: string; gapMm: string; quantity: string; guides: CutGuides }
+const DEFAULT_BADGE_INPUTS: BadgePrintInputs = { diameterMm: '58', gapMm: '4', quantity: '', guides: 'outline' };
 
 function readStorage<T>(key: string, fallback: T): T {
   try {
@@ -83,6 +95,11 @@ export default function AdminTravelCards() {
   const [backText, setBackText] = useState<BackCardText>(() => readStorage<BackCardText>(BACK_KEY, DEFAULT_BACK_CARD_TEXT));
   const [backPreviewUrl, setBackPreviewUrl] = useState<string | null>(null);
   const [backBusy, setBackBusy] = useState(false);
+  const [badgePreviewUrl, setBadgePreviewUrl] = useState<string | null>(null);
+  const [badgeSettings, setBadgeSettings] = useState<BadgePrintInputs>(() => readStorage<BadgePrintInputs>(BADGE_KEY, DEFAULT_BADGE_INPUTS));
+  const [badgeBusy, setBadgeBusy] = useState<'single' | 'sheets' | null>(null);
+  const [previewSheet, setPreviewSheet] = useState(0);
+  const [includeLeader, setIncludeLeader] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -135,7 +152,7 @@ export default function AdminTravelCards() {
 
   // Live preview of the front card for the person being looked at.
   useEffect(() => {
-    if (!previewName || tab === 'back') return;
+    if (!previewName || tab === 'back' || tab === 'badge') return;
     let cancelled = false;
     let url: string | null = null;
     import('../utils/travelCard')
@@ -175,6 +192,25 @@ export default function AdminTravelCards() {
       if (url) URL.revokeObjectURL(url);
     };
   }, [tab, backText]);
+
+  // The badge is the same for everyone, so it is drawn once when the tab opens.
+  useEffect(() => {
+    if (tab !== 'badge') return;
+    let cancelled = false;
+    let url: string | null = null;
+    import('../utils/travelCard')
+      .then(async m => {
+        const blob = await m.renderBadgeBlob();
+        if (cancelled) return;
+        url = URL.createObjectURL(blob);
+        setBadgePreviewUrl(url);
+      })
+      .catch(err => console.error(err));
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [tab]);
 
   const resetListState = () => {
     setUnticked(new Set());
@@ -277,6 +313,80 @@ export default function AdminTravelCards() {
     }
   };
 
+  // What goes on the A3 sheets: each ticked person once (with any edited
+  // name), or the common back card.
+  // On the Travelers tab the trip's assigned leader can be printed alongside
+  // the travelers (their card says TRIP LEADER).
+  const tripLeader = tab === 'traveler' ? leaders.find(l => l.id === trip?.trip_leader_id) ?? null : null;
+  const sheetItems = useMemo<CardSheetItem[]>(() => {
+    const list: CardSheetItem[] = selected.map(p => ({ kind: 'front', name: displayName(p), role }));
+    if (tripLeader && includeLeader) {
+      list.push({ kind: 'front', name: nameOverrides[`leader:${tripLeader.id}`]?.trim() || tripLeader.name, role: 'leader' });
+    }
+    return list;
+    // displayName reads nameOverrides, so list it rather than the function
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, nameOverrides, role, tripLeader, includeLeader]);
+  const backSheetItems = useMemo<CardSheetItem[]>(() => [{ kind: 'back', text: backText }], [backText]);
+
+  const badgeDiameter = Number(badgeSettings.diameterMm);
+  const badgeGap = Number(badgeSettings.gapMm);
+  const badgeSizeValid = badgeDiameter >= 20 && badgeDiameter <= 250 && badgeGap >= 0 && badgeGap <= 30;
+  const badgePlan = useMemo(
+    () => (badgeSizeValid ? planBadgeSheets({ diameterMm: badgeDiameter, gapMm: badgeGap }, 1) : { perSheet: 0, sheets: 0, tooManySheets: false }),
+    [badgeSizeValid, badgeDiameter, badgeGap],
+  );
+  // Blank quantity means "one full sheet".
+  const badgeQuantity = Math.floor(Number(badgeSettings.quantity)) > 0 ? Math.floor(Number(badgeSettings.quantity)) : badgePlan.perSheet;
+  const badgeSheets = badgePlan.perSheet > 0 ? Math.ceil(badgeQuantity / badgePlan.perSheet) : 0;
+  const badgeTooMany = badgeSheets > 100;
+  const badgeGuides: CutGuides = isCutGuides(badgeSettings.guides) ? badgeSettings.guides : 'outline';
+  // Where each badge sits on an A3 sheet (mm), for the sheet preview below.
+  const badgeSlots = useMemo(
+    () => (badgeSizeValid ? layoutBadgeSheet({ diameterMm: badgeDiameter, gapMm: badgeGap }) : []),
+    [badgeSizeValid, badgeDiameter, badgeGap],
+  );
+  const sheetIndex = Math.min(previewSheet, Math.max(0, badgeSheets - 1));
+  const badgesOnPreviewSheet = Math.max(0, Math.min(badgeSlots.length, badgeQuantity - sheetIndex * badgeSlots.length));
+
+  const setBadgeGuides = (value: string) => {
+    if (!isCutGuides(value)) return;
+    const next = { ...badgeSettings, guides: value };
+    setBadgeSettings(next);
+    writeStorage(BADGE_KEY, next);
+  };
+  const setBadgeField = (key: 'diameterMm' | 'gapMm' | 'quantity', value: string) => {
+    const next = { ...badgeSettings, [key]: value.replace(/[^\d.]/g, '') };
+    setBadgeSettings(next);
+    writeStorage(BADGE_KEY, next);
+  };
+  const downloadBadgeSingle = async () => {
+    if (badgeBusy) return;
+    setBadgeBusy('single');
+    try {
+      const { downloadBadge } = await import('../utils/travelCard');
+      await downloadBadge();
+    } catch (err) {
+      console.error(err);
+      await alert({ title: 'Badge', message: 'Could not create the badge. Please try again.' });
+    } finally {
+      setBadgeBusy(null);
+    }
+  };
+  const downloadBadgeA3 = async () => {
+    if (badgeBusy || badgePlan.perSheet === 0 || badgeTooMany) return;
+    setBadgeBusy('sheets');
+    try {
+      const { downloadBadgeSheets } = await import('../utils/travelCard');
+      await downloadBadgeSheets({ diameterMm: badgeDiameter, gapMm: badgeGap, guides: badgeGuides }, badgeQuantity);
+    } catch (err) {
+      console.error(err);
+      await alert({ title: 'Badge print sheets', message: err instanceof Error ? err.message : 'Could not create the print sheets. Please try again.' });
+    } finally {
+      setBadgeBusy(null);
+    }
+  };
+
   const tripSelect = (
     <div className="bg-white rounded-lg p-4 shadow-card space-y-3">
       <label htmlFor="travel-card-trip" className="block text-sm font-medium text-dark">
@@ -302,14 +412,14 @@ export default function AdminTravelCards() {
     ? 'No trip leaders yet. Add them under Trips › Trip Leaders.'
     : `No one has booked ${trip ? `“${trip.title}”` : 'this trip'} yet. A traveler appears here once their payment is recorded.`;
 
-  const fontNote = customFont === false && (
+  const fontNote = customFont === false && tab !== 'badge' && (
     <p className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-2">
       Using a stand-in script font. Add <span className="font-mono">RasleyHeights.ttf</span> to <span className="font-mono">public/travel-card/fonts/</span> to match the design.
     </p>
   );
 
   return (
-    <AdminLayout title="Travel Cards" subtitle="Name tags for travelers and trip leaders, plus the back of the card" scrollRestorationReady={!loading}>
+    <AdminLayout title="Travel Cards" subtitle="Name tags, trip leader cards, the back of the card and the ULAA badge" scrollRestorationReady={!loading}>
       <div className="space-y-4">
         <div role="tablist" aria-label="Card type" className="inline-flex flex-wrap gap-1 bg-white rounded-full p-1 shadow-card">
           {TABS.map(t => (
@@ -330,7 +440,7 @@ export default function AdminTravelCards() {
 
         <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
           <div className="space-y-4 min-w-0">
-            {tab !== 'back' && tripSelect}
+            {(tab === 'traveler' || tab === 'leader') && tripSelect}
 
             {showList && (
               <div className="bg-white rounded-lg shadow-card">
@@ -424,6 +534,123 @@ export default function AdminTravelCards() {
               </div>
             )}
 
+            {showList && people.length > 0 && (
+              <CardSheetPanel
+                items={sheetItems}
+                copies={false}
+                fileName={n => (role === 'leader' ? `ULAA-Trip-Leader-Cards-A3-${n}pcs.pdf` : `ULAA-Travel-Cards-A3-${n}pcs.pdf`)}
+                emptyMessage={tab === 'traveler' && tripLeader && includeLeader ? undefined : 'Tick at least one person above to lay their cards out on A3 sheets.'}
+              >
+                {tab === 'traveler' && (
+                  <label className={`flex items-start gap-2 text-sm ${tripLeader ? 'text-dark cursor-pointer' : 'text-dark-muted'}`}>
+                    <input
+                      type="checkbox"
+                      checked={!!tripLeader && includeLeader}
+                      disabled={!tripLeader}
+                      onChange={e => setIncludeLeader(e.target.checked)}
+                      className="w-4 h-4 mt-0.5 accent-primary shrink-0"
+                    />
+                    <span>
+                      {tripLeader
+                        ? <>Also print the trip leader's card <span className="text-dark-muted">({nameOverrides[`leader:${tripLeader.id}`]?.trim() || tripLeader.name})</span></>
+                        : 'No trip leader is assigned to this trip, so there is no leader card to add.'}
+                    </span>
+                  </label>
+                )}
+              </CardSheetPanel>
+            )}
+
+            {tab === 'badge' && (
+              <div className="bg-white rounded-lg p-4 shadow-card space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-dark">The ULAA badge</p>
+                  <Button size="sm" variant="outline" onClick={downloadBadgeSingle} disabled={!!badgeBusy}>
+                    {badgeBusy === 'single' ? <CircleNotch size={16} weight="bold" className="animate-spin" aria-hidden="true" /> : <Download size={16} aria-hidden="true" />}
+                    <span className="ml-2">{badgeBusy === 'single' ? 'Preparing…' : 'Download single badge (PNG)'}</span>
+                  </Button>
+                </div>
+                <p className="text-xs text-dark-muted">One common design for everyone. Download it once, or set up A3 sheets with many badges on each for printing.</p>
+
+                <div className="border-t border-background-warm pt-4 space-y-4">
+                  <p className="text-sm font-medium text-dark">A3 print sheets</p>
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <div>
+                      <label htmlFor="badge-size" className="block text-sm font-medium text-dark mb-1">Badge size (mm)</label>
+                      <input id="badge-size" inputMode="decimal" value={badgeSettings.diameterMm} onChange={e => setBadgeField('diameterMm', e.target.value)} className={inputClass} />
+                    </div>
+                    <div>
+                      <label htmlFor="badge-gap" className="block text-sm font-medium text-dark mb-1">Gap between (mm)</label>
+                      <input id="badge-gap" inputMode="decimal" value={badgeSettings.gapMm} onChange={e => setBadgeField('gapMm', e.target.value)} className={inputClass} />
+                    </div>
+                    <div>
+                      <label htmlFor="badge-qty" className="block text-sm font-medium text-dark mb-1">Number of badges</label>
+                      <input id="badge-qty" inputMode="numeric" value={badgeSettings.quantity} placeholder={badgePlan.perSheet ? `${badgePlan.perSheet} (1 sheet)` : ''} onChange={e => setBadgeField('quantity', e.target.value)} className={inputClass} />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="badge-guides" className="block text-sm font-medium text-dark mb-1">Cut guides</label>
+                    <Select inputId="badge-guides" value={badgeGuides} onChange={setBadgeGuides} options={cutGuideOptions('badge')} />
+                    {badgeGuides === 'marks' && badgeGap < MIN_GAP_FOR_MARKS_MM && <p className="text-xs text-amber-800 mt-1">{MARKS_GAP_HINT}</p>}
+                  </div>
+                  {!badgeSizeValid ? (
+                    <p role="alert" className="text-xs text-red-600">Badge size must be 20 to 250 mm and the gap 0 to 30 mm.</p>
+                  ) : badgePlan.perSheet === 0 ? (
+                    <p role="alert" className="text-xs text-red-600">That size does not fit on an A3 sheet.</p>
+                  ) : (
+                    <p className="text-sm text-dark bg-background-warm rounded-md px-3 py-2">
+                      <span className="font-semibold">{badgePlan.perSheet}</span> badges fit on one A3 sheet.
+                      {' '}{badgeQuantity} badge{badgeQuantity === 1 ? '' : 's'} = <span className="font-semibold">{badgeSheets}</span> sheet{badgeSheets === 1 ? '' : 's'}.
+                    </p>
+                  )}
+                  {badgeTooMany && <p role="alert" className="text-xs text-red-600">That is more than 100 sheets. Please download in smaller batches.</p>}
+
+                  {badgeSlots.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-dark">Sheet preview</p>
+                        <div className="flex items-center gap-1 text-xs text-dark-muted">
+                          {badgeSheets > 1 && (
+                            <button type="button" onClick={() => setPreviewSheet(Math.max(0, sheetIndex - 1))} disabled={sheetIndex === 0} aria-label="Previous sheet" className="p-1.5 rounded-md hover:bg-background-warm disabled:opacity-40 disabled:cursor-not-allowed"><CaretLeft size={14} weight="bold" aria-hidden="true" /></button>
+                          )}
+                          <span>Sheet {sheetIndex + 1} of {Math.max(1, badgeSheets)} · {badgesOnPreviewSheet} badge{badgesOnPreviewSheet === 1 ? '' : 's'}</span>
+                          {badgeSheets > 1 && (
+                            <button type="button" onClick={() => setPreviewSheet(Math.min(badgeSheets - 1, sheetIndex + 1))} disabled={sheetIndex >= badgeSheets - 1} aria-label="Next sheet" className="p-1.5 rounded-md hover:bg-background-warm disabled:opacity-40 disabled:cursor-not-allowed"><CaretRight size={14} weight="bold" aria-hidden="true" /></button>
+                          )}
+                        </div>
+                      </div>
+                      <svg
+                        viewBox="0 0 297 420"
+                        role="img"
+                        aria-label={`A3 sheet ${sheetIndex + 1} of ${Math.max(1, badgeSheets)} with ${badgesOnPreviewSheet} badges`}
+                        className="w-full max-w-[300px] bg-white border border-background-warm rounded-sm shadow-card"
+                      >
+                        <rect x="10" y="10" width="277" height="400" fill="none" stroke="#d8cdbd" strokeWidth="0.4" strokeDasharray="2 2" />
+                        {badgeSlots.slice(0, badgesOnPreviewSheet).map((slot, i) => (
+                          <g key={i}>
+                            {badgePreviewUrl
+                              ? <image href={badgePreviewUrl} x={slot.x} y={slot.y} width={badgeDiameter} height={badgeDiameter} />
+                              : <circle cx={slot.x + badgeDiameter / 2} cy={slot.y + badgeDiameter / 2} r={badgeDiameter / 2} fill="#f6ebdc" stroke="#e44d2e" strokeWidth="0.6" />}
+                            <CutGuideShapes shapes={badgeCutGuides(slot, badgeDiameter, badgeGap, badgeGuides)} />
+                          </g>
+                        ))}
+                      </svg>
+                      <p className="text-xs text-dark-muted">The dashed line is the 10 mm unprinted border. {badgeGuides !== 'none' && GUIDE_NOTE}</p>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button size="sm" onClick={downloadBadgeA3} disabled={!!badgeBusy || badgePlan.perSheet === 0 || badgeTooMany || !badgeSizeValid}>
+                      {badgeBusy === 'sheets' ? <CircleNotch size={16} weight="bold" className="animate-spin" aria-hidden="true" /> : <Download size={16} aria-hidden="true" />}
+                      <span className="ml-2">{badgeBusy === 'sheets' ? 'Preparing…' : 'Download A3 print sheets (PDF)'}</span>
+                    </Button>
+                    {badgeSettings.quantity && badgePlan.perSheet > 0 && (
+                      <button type="button" onClick={() => setBadgeField('quantity', '')} className="text-xs font-button font-semibold text-dark-muted hover:text-primary">Fill one sheet</button>
+                    )}
+                  </div>
+                  <p className="text-xs text-dark-muted">A3 is 297 × 420 mm with a 10 mm unprinted border. Print at 100% (actual size) so the badges come out the size you set. Badges are packed as tightly as fits, and the last sheet holds the remainder.</p>
+                </div>
+              </div>
+            )}
+
             {tab === 'back' && (
               <div className="bg-white rounded-lg p-4 shadow-card space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -459,11 +686,19 @@ export default function AdminTravelCards() {
                 <p className="text-xs text-dark-muted">The logo, QR code and icons are part of the card artwork and stay as they are. Changes are saved in this browser.</p>
               </div>
             )}
+
+            {tab === 'back' && (
+              <CardSheetPanel items={backSheetItems} copies fileName={n => `ULAA-Card-Back-A3-${n}pcs.pdf`} />
+            )}
           </div>
 
           <aside className="bg-white rounded-lg p-4 shadow-card lg:sticky lg:top-4" aria-label="Card preview">
-            <p className="text-sm font-medium text-dark mb-3">{tab === 'back' ? 'Back preview' : 'Preview'}</p>
-            {tab === 'back' ? (
+            <p className="text-sm font-medium text-dark mb-3">{tab === 'back' ? 'Back preview' : tab === 'badge' ? 'Badge preview' : 'Preview'}</p>
+            {tab === 'badge' ? (
+              badgePreviewUrl
+                ? <img src={badgePreviewUrl} alt="The ULAA badge" className="w-full max-w-[260px] mx-auto rounded-full shadow-card" />
+                : <div className="flex justify-center py-12"><CircleNotch size={28} className="animate-spin text-dark-muted" aria-hidden="true" /></div>
+            ) : tab === 'back' ? (
               backPreviewUrl
                 ? <img src={backPreviewUrl} alt="Back of the travel card" className="w-full max-w-[260px] mx-auto rounded-lg shadow-card" />
                 : <div className="flex justify-center py-12"><CircleNotch size={28} className="animate-spin text-dark-muted" aria-hidden="true" /></div>
