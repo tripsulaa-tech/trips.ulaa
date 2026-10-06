@@ -44,7 +44,7 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
           const earlyBird = quote.isEarlyBird;
           const popular = !!pkg.highlight;
           const gap = popular && pkg.id !== entry.id && quote.price != null && entryPrice != null ? quote.price - entryPrice : 0;
-          const tick = popular ? 'text-[#B8860B]' : 'text-primary';
+          const tick = popular ? 'text-gold-dark' : 'text-primary';
           return (
             <div
               key={pkg.id}
@@ -62,11 +62,11 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
                 <span className="text-sm font-normal text-dark-muted"> / person</span>
               </p>
               {gap > 0 && (
-                <p className="text-xs font-semibold text-[#8A6508] mt-1">
+                <p className="text-xs font-semibold text-gold-deep mt-1">
                   Just {formatPrice(gap)} more than {entry.name}
                 </p>
               )}
-              {earlyBird && <p className={`text-xs font-semibold mt-1 ${popular ? 'text-[#8A6508]' : 'text-primary'}`}>Early-bird price</p>}
+              {earlyBird && <p className={`text-xs font-semibold mt-1 ${popular ? 'text-gold-deep' : 'text-primary'}`}>Early-bird price</p>}
               <ul className="mt-4 space-y-2 text-sm text-dark flex-1">
                 <li className="flex items-start gap-2">
                   <CheckCircle size={18} weight="fill" className={`${tick} shrink-0 mt-0.5`} aria-hidden="true" />

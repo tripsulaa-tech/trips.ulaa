@@ -9,6 +9,7 @@ import { BRAND, MARGIN, CONTENT_W, COLORS, money, heroMoneyRupee, rgbToHex, load
 import { formatDateRange, formatAgeRange, formatDate, getActivePrice, getStrikeThroughPrice, publicSeatsLeft } from '../../utils-index';
 import { withBasicPricing } from '../../tripOptions';
 
+import { RESPONSE_TIME } from '../../../constants/site';
 /** Renders "Trip Leader & Booking" — founder bio, booking-form summary
  *  card, and the "Need Help?" contact bar. Extracted from
  *  tripItineraryPdf.ts. */
@@ -429,7 +430,7 @@ import { withBasicPricing } from '../../tripOptions';
     setText(COLORS.darkMuted);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.6);
-    const noteLines: string[] = doc.splitTextToSize("No payment required to enquire. We'll contact you within 24 hours.", innerW - 20);
+    const noteLines: string[] = doc.splitTextToSize(`No payment required to enquire. We'll contact you ${RESPONSE_TIME}.`, innerW - 20);
     const firstLineW = doc.getTextWidth(noteLines[0]);
     await drawLucideIcon(BadgeCheck, cardCX - firstLineW / 2 - 12, ry + 3, 10, COLORS.green);
     noteLines.forEach((line, i) => {

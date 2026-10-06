@@ -1,5 +1,6 @@
 import type { AboutContent } from '../types/types-index';
 
+import { RESPONSE_TIME } from './site';
 export const DEFAULT_ABOUT: AboutContent = {
   // 1. Hero Banner
   hero: {
@@ -94,7 +95,7 @@ export const DEFAULT_ABOUT: AboutContent = {
     subheading: 'One booking. Countless unforgettable moments.',
     steps: [
       { heading: 'Discover Your Trip', description: 'Browse our carefully curated calendar of upcoming women-only trips across India and beyond.', icon: 'compass' },
-      { heading: 'Book Your Spot', description: 'Reserve your seat with a simple booking form. Our team confirms within 24 hours.', icon: 'ticket' },
+      { heading: 'Book Your Spot', description: `Reserve your seat with a simple booking form. Our team confirms ${RESPONSE_TIME}.`, icon: 'ticket' },
       { heading: 'Prepare & Connect', description: 'Get your trip kit, connect with your travel sisters in our WhatsApp group, and pack your excitement.', icon: 'backpack' },
       { heading: 'Live the Experience', description: 'Arrive, explore, laugh, push boundaries, and soak in every single moment.', icon: 'plane' },
       { heading: 'Come Home Changed', description: 'Return with new friends, new stories, and a version of yourself you didn\'t know existed.', icon: 'heart' },

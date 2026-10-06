@@ -5,6 +5,7 @@ import SpecialOfferPopup from '../sections/home/SpecialOfferPopup';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { usePageMeta } from '../hooks/usePageMeta';
 
+import { SITE_NAME, BRAND_MOTTO, SITE_DESCRIPTION } from '../constants/site';
 const WhyULAA = lazy(() => import('../sections/home/WhyULAA'));
 const UpcomingTripsPreview = lazy(() => import('../sections/home/UpcomingTripsPreview'));
 const CompletedTripsPreview = lazy(() => import('../sections/home/CompletedTripsPreview'));
@@ -22,8 +23,8 @@ export default function HomePage() {
   useScrollRestoration('/', true);
 
   usePageMeta({
-    title: 'Ulaa Trips — Unseen. Local. Adventures. Activities.',
-    description: "Ulaa Trips — Unseen. Local. Adventures. Activities. Girls-only travel community organizing curated trips to India's hidden destinations.",
+    title: `${SITE_NAME} — ${BRAND_MOTTO}`,
+    description: `${SITE_NAME} — ${BRAND_MOTTO} ${SITE_DESCRIPTION}`,
     path: '/',
   });
 

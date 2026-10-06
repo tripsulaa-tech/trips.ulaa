@@ -5,6 +5,7 @@
 import type { CSSProperties } from 'react';
 import type { CoverImageCrop } from '../types/types-index';
 
+import { WHATSAPP_DEFAULT_MESSAGE } from '../constants/site';
 /** Format a number as Indian Rupees, e.g. 39999 -> "₹39,999" */
 export function formatPrice(amount: number): string {
   return `₹${amount.toLocaleString('en-IN')}`;
@@ -265,7 +266,7 @@ export function getWhatsAppLink(phone: string, message?: string): string {
   // (see the phone input patterns in BookingForm/WaitlistForm), which
   // would otherwise produce a broken link.
   const digitsOnly = phone.replace(/\D/g, '');
-  const encoded = encodeURIComponent(message || 'Hi! I am interested in Ulaa trips.');
+  const encoded = encodeURIComponent(message || WHATSAPP_DEFAULT_MESSAGE);
   return `https://wa.me/${digitsOnly}?text=${encoded}`;
 }
 

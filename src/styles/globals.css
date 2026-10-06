@@ -114,6 +114,9 @@
   --color-background-warm: #F2EBE0;
   --color-white: #FFFFFF;
   --color-gold: #C8962A;
+  --color-gold-dark: #B8860B;
+  --color-gold-deep: #8A6508;
+  --color-footer: #271E18;
   --color-cream: #FAF7F2;
 
   --font-display: 'Inter', system-ui, sans-serif;
@@ -489,14 +492,14 @@ button, .btn {
   border: 2px solid transparent;
   background:
     linear-gradient(#FFFDF8, #FFFDF8) padding-box,
-    conic-gradient(from var(--premium-angle), #B8860B, #F7E08F, #C8962A, #FFF6CC, #B8860B, #E9C25A, #B8860B) border-box;
+    conic-gradient(from var(--premium-angle), var(--color-gold-dark), #F7E08F, var(--color-gold), #FFF6CC, var(--color-gold-dark), #E9C25A, var(--color-gold-dark)) border-box;
   animation: premium-border-spin 3.5s linear infinite;
   transition: box-shadow 0.25s ease;
 }
 .premium-gold-border--selected {
   background:
     linear-gradient(#FBF1E1, #FBF1E1) padding-box,
-    conic-gradient(from var(--premium-angle), #B8860B, #F7E08F, #C8962A, #FFF6CC, #B8860B, #E9C25A, #B8860B) border-box;
+    conic-gradient(from var(--premium-angle), var(--color-gold-dark), #F7E08F, var(--color-gold), #FFF6CC, var(--color-gold-dark), #E9C25A, var(--color-gold-dark)) border-box;
   box-shadow: 0 0 14px rgba(200, 150, 42, 0.35);
 }
 .premium-gold-border:hover {
@@ -516,18 +519,18 @@ button, .btn {
   border: 2px solid transparent;
   background:
     linear-gradient(160deg, #FFFAEA 0%, #FCF2D9 100%) padding-box,
-    conic-gradient(from var(--premium-angle), #B8860B, #E0B23C, #C8962A, #D9A82E, #B8860B, #E0B23C, #B8860B) border-box;
+    conic-gradient(from var(--premium-angle), var(--color-gold-dark), #E0B23C, var(--color-gold), #D9A82E, var(--color-gold-dark), #E0B23C, var(--color-gold-dark)) border-box;
   box-shadow: 0 6px 22px rgba(200, 150, 42, 0.22);
   animation: premium-border-spin 3.5s linear infinite;
 }
 .popular-gold-badge {
-  background-image: linear-gradient(100deg, #B8860B 0%, #E9C25A 35%, #F7E08F 50%, #D4A017 70%, #B8860B 100%);
+  background-image: linear-gradient(100deg, var(--color-gold-dark) 0%, #E9C25A 35%, #F7E08F 50%, #D4A017 70%, var(--color-gold-dark) 100%);
   color: #3B2A00;
   box-shadow: 0 2px 8px rgba(184, 134, 11, 0.35);
 }
 .popular-gold-btn {
-  background-image: linear-gradient(100deg, #B8860B 0%, #E2B94A 45%, #F2D77E 55%, #D4A017 100%);
-  border-color: #B8860B;
+  background-image: linear-gradient(100deg, var(--color-gold-dark) 0%, #E2B94A 45%, #F2D77E 55%, #D4A017 100%);
+  border-color: var(--color-gold-dark);
   color: #3B2A00;
 }
 .popular-gold-btn:hover {

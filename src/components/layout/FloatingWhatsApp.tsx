@@ -22,7 +22,7 @@ export default function FloatingWhatsApp() {
         )}
       </AnimatePresence>
       <motion.a
-        href={getWhatsAppLink(WHATSAPP_NUMBER, 'Hi! I am interested in Ulaa travel experiences.')}
+        href={getWhatsAppLink(WHATSAPP_NUMBER)}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"

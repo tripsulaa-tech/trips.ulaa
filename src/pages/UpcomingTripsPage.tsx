@@ -17,6 +17,7 @@ import { getActivePrice, specialOfferDaysLeft } from '../utils/utils-index';
 import type { UpcomingTrip } from '../types/types-index';
 
 
+import { pageTitle } from '../constants/site';
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1600&q=80';
 
 // Module-level (not inline) so useMonthFilteredTrips' memoization gets a
@@ -57,7 +58,7 @@ export default function UpcomingTripsPage() {
   useScrollRestoration('/trips', !loading);
 
   usePageMeta({
-    title: 'Upcoming Trips | Ulaa Trips',
+    title: pageTitle('Upcoming Trips'),
     description: "Handpicked, girls-only adventures to India's most beautiful hidden destinations. Browse upcoming trips and book your seat.",
     path: '/trips',
   });

@@ -22,6 +22,7 @@ import {
   Gift,
 } from '@phosphor-icons/react';
 
+import { RESPONSE_TIME } from '../../constants/site';
 interface TripConfidenceBookingSectionProps {
   trip: UpcomingTrip;
   buttonLabels: ButtonLabelsConfig;
@@ -304,7 +305,7 @@ export default function TripConfidenceBookingSection({
           <div className="flex items-start justify-center gap-1.5 text-xs text-dark-muted mt-4">
             <BadgeCheck size={14} className="text-green-600 shrink-0 mt-0.5" />
             <span className="text-left max-w-[15.5rem]">
-              No payment required to enquire. We'll contact you within 24 hours.
+              No payment required to enquire. We'll contact you {RESPONSE_TIME}.
             </span>
           </div>
         </div>

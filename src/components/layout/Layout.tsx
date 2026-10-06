@@ -77,7 +77,7 @@ export default function Layout({ children }: LayoutProps) {
           footer. Colored to match the footer background so this spacer
           reads as part of the footer instead of a visible gap between it
           and the bottom nav bar. */}
-      <div className="h-28 lg:hidden bg-[#271e18]" aria-hidden="true" />
+      <div className="h-28 lg:hidden bg-footer" aria-hidden="true" />
       <FloatingWhatsApp />
       <ScrollToTopButton />
     </div>

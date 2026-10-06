@@ -41,6 +41,7 @@ import type {
   CompletedTrip,
 } from '../types/types-index';
 
+import { BRAND_MOTTO, SITE_SHORT_NAME, pageTitle } from '../constants/site';
 const MeetTheFounder = lazy(() => import('../sections/home/MeetTheFounder'));
 
 // "have_you_ever" items store an icon-library key chosen in the admin
@@ -73,8 +74,8 @@ export default function AboutPage() {
   useScrollRestoration('/about', true);
 
   usePageMeta({
-    title: 'About Us | Ulaa Trips',
-    description: "Unseen. Local. Adventures. Activities. — a girls-only travel revolution. Learn who we are and why women travel with Ulaa.",
+    title: pageTitle('About Us'),
+    description: `${BRAND_MOTTO} — a girls-only travel revolution. Learn who we are and why women travel with ${SITE_SHORT_NAME}.`,
     path: '/about',
   });
 

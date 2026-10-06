@@ -5,6 +5,9 @@ import { isBookingDraftDirty } from '../../utils/bookingDraft';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../../types/types-index';
 import { getPackageBase } from '../../utils/tripOptions';
 
+// How long the success message stays up before the booking modal closes itself.
+const SUCCESS_CLOSE_DELAY_MS = 3000;
+
 interface TripBookingModalProps {
   trip: UpcomingTrip;
   buttonLabels: ButtonLabelsConfig;
@@ -74,7 +77,7 @@ export default function TripBookingModal({
         tripOptions={trip.trip_options}
         packageBase={getPackageBase(trip)}
         initialPackageId={initialPackageId}
-        onSuccess={() => setTimeout(onClose, 3000)}
+        onSuccess={() => setTimeout(onClose, SUCCESS_CLOSE_DELAY_MS)}
       />
     </Modal>
   );

@@ -22,39 +22,9 @@ import { subscribeToTable } from '../services/realtime';
 import type { CompletedTrip } from '../types/types-index';
 import { formatDate, formatBatchLabel, PLACEHOLDER_IMAGE, getVisitorId } from '../utils/utils-index';
 import { fadeUp } from '../utils/animation';
+import { DEMO_ALBUM } from '../dev/demoData';
 
-const DEMO_ALBUM: CompletedTrip = {
-  id: '1', title: 'Magical Meghalaya',
-  destination: 'Meghalaya', slug: 'magical-meghalaya',
-  trip_date: '2024-10-15',
-  description: 'We explored the wettest place on Earth — living root bridges, crystal clear rivers, and the warmth of Khasi culture.',
-  story: `It started with 14 women, two Innova Crystas, and a shared dream to see the living root bridges of Meghalaya before the world discovered them.
-
-The morning we left Guwahati, it was raining — which, we would soon learn, is essentially the default weather of Meghalaya. But rather than dampen spirits, the rain felt like nature's welcome.
-
-Our first stop was Cherrapunji — the wettest place on Earth, and for good reason. Waterfalls erupted from every cliff face. The Seven Sisters Falls was at full throttle, a curtain of white noise that silenced every conversation.
-
-The highlight? The Double Decker Living Root Bridge. A two-hour trek through dense forest, over handmade bamboo bridges, across rushing streams. By the time we saw it — a bridge grown entirely from the roots of a rubber tree over 500 years — there wasn't a dry eye among us.
-
-The nights were spent in a small homestay run by a Khasi grandmother who cooked the most extraordinary rice and smoked pork. She laughed when we told her this was our favorite meal on any Ulaa trip.
-
-Meghalaya reminded us why we travel — not for Instagram, but for the moments that change you.`,
-  participants: 14,
-  cover_image: 'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=1200&q=80',
-  gallery_images: [
-    'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=800&q=80',
-    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
-    'https://images.unsplash.com/photo-1598091381862-6a65b2a36ab4?w=800&q=80',
-    'https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?w=800&q=80',
-    'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?w=800&q=80',
-    'https://images.unsplash.com/photo-1519922639192-e73293ca430e?w=800&q=80',
-    'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&q=80',
-    'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80',
-    'https://images.unsplash.com/photo-1591017403997-beeee1ec6981?w=800&q=80',
-  ],
-  is_published: true, likes_count: 0, created_at: '', updated_at: '',
-};
-
+import { pageTitle } from '../constants/site';
 export default function AlbumPage() {
   const { slug } = useParams<{ slug: string }>();
   const [album, setAlbum] = useState<CompletedTrip | null>(null);
@@ -74,7 +44,7 @@ export default function AlbumPage() {
   // own once it arrives — so sharing an album link renders that album's
   // title and cover photo instead of the site-wide default.
   usePageMeta({
-    title: album ? `${album.title} | Ulaa Trips` : 'Completed Trips | Ulaa Trips',
+    title: pageTitle(album ? album.title : 'Completed Trips'),
     description: album?.description,
     image: album?.cover_image,
     path: `/completed-trips/${slug ?? ''}`,
@@ -83,6 +53,8 @@ export default function AlbumPage() {
   useEffect(() => {
     if (!slug) return;
     getCompletedTripBySlug(slug)
+      // An unknown slug (or a failed request) leaves `album` null, which
+      // renders the not-found state below. The sample album is dev-only.
       .then(data => setAlbum(data || DEMO_ALBUM))
       .catch(() => setAlbum(DEMO_ALBUM))
       .finally(() => setLoading(false));

@@ -34,7 +34,7 @@ import { validateEmail, validateFullName, validateOptionalPhone } from '../utils
 import { fadeUp } from '../utils/animation';
 import contactImg from '../assets/hero.webp';
 
-import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, INSTAGRAM_URL, WHATSAPP_NUMBER } from '../constants/site';
+import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, INSTAGRAM_HANDLE, INSTAGRAM_URL, RESPONSE_TIME, WHATSAPP_NUMBER, pageTitle } from '../constants/site';
 import { CONTACT_MESSAGE_MAX_LENGTH } from '../constants/limits';
 
 interface ContactForm {
@@ -99,7 +99,7 @@ export default function ContactPage() {
   useScrollRestoration('/contact', true);
 
   usePageMeta({
-    title: 'Contact Us | Ulaa Trips',
+    title: pageTitle('Contact Us'),
     description: "Got questions, custom plans, or just want to say hi? Reach the Ulaa team on WhatsApp, email or Instagram.",
     path: '/contact',
   });
@@ -309,7 +309,7 @@ export default function ContactPage() {
                   <p className="font-display font-bold text-dark mt-4">Follow on Instagram</p>
                   <p className="text-dark-muted text-sm mt-1">Travel updates & stories</p>
                   <span className="mt-4 flex items-end justify-between gap-2">
-                    <span className="font-semibold text-dark text-sm group-hover:text-primary transition-colors">@ulaa.trips</span>
+                    <span className="font-semibold text-dark text-sm group-hover:text-primary transition-colors">@{INSTAGRAM_HANDLE}</span>
                     <ArrowRight size={18} className="shrink-0 text-dark-muted group-hover:text-primary group-hover:translate-x-1 transition-all" />
                   </span>
                 </a>
@@ -390,13 +390,13 @@ export default function ContactPage() {
                     </motion.div>
                     <h4 className="font-display text-xl sm:text-2xl font-bold text-dark mb-2">Message sent!</h4>
                     <p className="text-dark-muted max-w-sm mx-auto">
-                      Thanks for reaching out — we'll get back to you within 24 hours.
+                      Thanks for reaching out — we'll get back to you {RESPONSE_TIME}.
                     </p>
 
                     <div className="mt-6 bg-background-warm/60 rounded-xl p-4 text-left max-w-sm mx-auto space-y-2">
                       <p className="text-sm font-semibold text-dark">What happens next</p>
                       <p className="text-sm text-dark-muted">1. We read every message ourselves — no bots.</p>
-                      <p className="text-sm text-dark-muted">2. You'll hear back by email or WhatsApp, usually within a few hours.</p>
+                      <p className="text-sm text-dark-muted">2. You'll hear back by email or WhatsApp, {RESPONSE_TIME}.</p>
                     </div>
 
                     <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
@@ -423,7 +423,7 @@ export default function ContactPage() {
                       size="lg"
                       label="Drop us a line"
                       title="Send us a message"
-                      subtitle="Fill this in and we'll get back to you within a few hours."
+                      subtitle={`Fill this in and we'll get back to you ${RESPONSE_TIME}.`}
                       rule
                       rulePosition="before"
                     />

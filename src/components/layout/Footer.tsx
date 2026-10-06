@@ -15,7 +15,7 @@ import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
 import type { BottomNavItemConfig } from '../../types/types-index';
 import { useBranding } from '../../hooks/useBranding';
-import { SITE_HOST, SITE_ORIGIN, CONTACT_EMAIL, CONTACT_PHONE_E164, CONTACT_PHONE_DISPLAY, INSTAGRAM_URL, WHATSAPP_NUMBER } from '../../constants/site';
+import { SITE_HOST, SITE_ORIGIN, SITE_SHORT_NAME, BRAND_MOTTO, CONTACT_EMAIL, CONTACT_PHONE_E164, CONTACT_PHONE_DISPLAY, INSTAGRAM_URL, WHATSAPP_NUMBER, FOOTER_TAGLINE, FOOTER_TAGLINE_SUB, FOOTER_BLURB, FOOTER_REGION, FOOTER_REGION_LONG, FOOTER_SIGNOFF } from '../../constants/site';
 
 const socialItems = [
   {
@@ -89,16 +89,16 @@ export default function Footer() {
           <Link to="/" className="inline-block">
             <img
               src={brand.footer_logo}
-              alt="Ulaa — Unseen. Local. Adventures. Activities."
+              alt={`${SITE_SHORT_NAME} — ${BRAND_MOTTO}`}
               className="w-full max-w-[260px] mx-auto h-auto -mb-3"
             />
           </Link>
 
           {/* Tagline */}
           <p className="mt-4 text-cream/60 text-base leading-relaxed">
-            Girls-only travel experiences
+            {FOOTER_TAGLINE}
             <br />
-            Discover hidden destinations together.
+            {FOOTER_TAGLINE_SUB}
           </p>
 
         {/* Social icons */}
@@ -165,16 +165,16 @@ export default function Footer() {
           <span className="h-6 w-px bg-white/10 shrink-0" />
           <div className="flex items-center gap-1 text-2xs sm:text-2xs text-cream/95 whitespace-nowrap shrink-0">
             <MapPin className="w-3.5 h-3.5 text-secondary shrink-0" strokeWidth={1.75} />
-            India
+            {FOOTER_REGION}
           </div>
         </div>
 
           {/* Bottom */}
           <p className="mt-8 text-sm text-cream/60 flex items-center justify-center gap-1.5">
-            Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> for the fearless women of India.
+            Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> {FOOTER_SIGNOFF}
           </p>
           <p className="mt-2 text-xs text-cream/50">
-            © {year} Ulaa · <a href={SITE_ORIGIN} className="hover:text-secondary transition-colors">{SITE_HOST}</a> · All rights reserved.
+            © {year} {SITE_SHORT_NAME} · <a href={SITE_ORIGIN} className="hover:text-secondary transition-colors">{SITE_HOST}</a> · All rights reserved.
           </p>
         </div>
       </div>
@@ -187,12 +187,12 @@ export default function Footer() {
             <Link to="/" className="inline-block">
               <img
                 src={brand.footer_logo}
-                alt="Ulaa — Unseen. Local. Adventures. Activities."
+                alt={`${SITE_SHORT_NAME} — ${BRAND_MOTTO}`}
                 className="w-full max-w-[210px] h-auto"
               />
             </Link>
             <p className="mt-3 text-cream/60 text-base leading-relaxed max-w-sm">
-              A girls-only travel community for curated trips to India's most beautiful hidden destinations.
+              {FOOTER_BLURB}
             </p>
           </div>
 
@@ -248,7 +248,7 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-2.5 text-cream/90">
                 <MapPin className="w-4 h-4 text-secondary shrink-0 mt-0.5" strokeWidth={1.75} />
-                India — Explore Everywhere
+                {FOOTER_REGION_LONG}
               </li>
             </ul>
           </div>
@@ -278,10 +278,10 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="relative max-w-[1344px] mx-auto mt-8 pt-5 border-t border-white/10 flex items-center justify-center gap-3 text-sm text-cream/60">
           <span className="flex items-center gap-1.5">
-            Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> for the fearless women of India.
+            Made with <Heart className="w-3.5 h-3.5 text-secondary fill-secondary" /> {FOOTER_SIGNOFF}
           </span>
           <span className="h-3.5 w-px bg-white/15" />
-          <span>© {year} Ulaa · <a href={SITE_ORIGIN} className="hover:text-secondary transition-colors">{SITE_HOST}</a> · All rights reserved.</span>
+          <span>© {year} {SITE_SHORT_NAME} · <a href={SITE_ORIGIN} className="hover:text-secondary transition-colors">{SITE_HOST}</a> · All rights reserved.</span>
         </div>
       </div>
     </footer>

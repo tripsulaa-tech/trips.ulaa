@@ -36,6 +36,7 @@ import TripSpecialOfferPopup from './trip-detail/TripSpecialOfferPopup';
 import { useIsDesktop } from './trip-detail/tripDetailUtils';
 import { Compass } from '@phosphor-icons/react';
 
+import { pageTitle } from '../constants/site';
 export default function TripDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
@@ -131,7 +132,7 @@ export default function TripDetailPage() {
   // once it arrives — so sharing a trip link renders that trip's title and
   // cover photo instead of the site-wide default.
   usePageMeta({
-    title: trip ? `${trip.title} | Ulaa Trips` : 'Upcoming Trips | Ulaa Trips',
+    title: pageTitle(trip ? trip.title : 'Upcoming Trips'),
     description: trip?.description,
     image: trip?.cover_image,
     path: `/trips/${slug ?? ''}`,

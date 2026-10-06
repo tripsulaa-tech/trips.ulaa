@@ -6,21 +6,10 @@ import {
 import SectionTitle from '../../components/ui/SectionTitle';
 import GalleryViewer from '../../components/ui/GalleryViewer';
 import { getGalleryImages } from '../../services/api';
-
-const FALLBACK_IMAGES = [
-  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=500&q=80',
-  'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=400&q=80',
-  'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?w=500&q=80',
-  'https://images.unsplash.com/photo-1598091381862-6a65b2a36ab4?w=400&q=80',
-  'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=500&q=80',
-  'https://images.unsplash.com/photo-1519922639192-e73293ca430e?w=400&q=80',
-  'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=500&q=80',
-  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&q=80',
-  'https://images.unsplash.com/photo-1591017403997-beeee1ec6981?w=500&q=80',
-];
+import { DEMO_GALLERY_IMAGES } from '../../dev/demoData';
 
 export default function GalleryPreview() {
-  const [images, setImages] = useState<string[]>(FALLBACK_IMAGES);
+  const [images, setImages] = useState<string[]>([]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -29,15 +18,24 @@ export default function GalleryPreview() {
       .then(data => {
         if (data.length > 0) {
           setImages(data.map(img => img.image_url).slice(0, 9));
+        } else {
+          setImages(DEMO_GALLERY_IMAGES);
         }
       })
-      .catch(console.error);
+      .catch(err => {
+        console.error(err);
+        setImages(DEMO_GALLERY_IMAGES);
+      });
   }, []);
 
   const open = (i: number) => {
     setSelectedIndex(i);
     setLightboxOpen(true);
   };
+
+  // No gallery photos uploaded yet (or still loading): render nothing
+  // instead of stock placeholder photos.
+  if (images.length === 0) return null;
 
   return (
     <section className="pt-12 pb-12 sm:py-12 px-4 sm:px-6 lg:px-8 bg-background">
