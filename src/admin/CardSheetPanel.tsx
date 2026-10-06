@@ -8,6 +8,8 @@ import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
 import { useAlert } from '../components/ui/useAlert';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
+import LengthField from '../components/ui/LengthField';
+import { formatLength, useLengthUnit } from '../utils/lengthUnits';
 import {
   GUIDE_NOTE, MARKS_GAP_HINT, MIN_GAP_FOR_MARKS_MM, cardCutGuides, cardSheetItemKey, cutGuideOptions, isCutGuides, planCardSheets,
   type CardSheetItem, type CutGuides, type GuideShape,
@@ -60,6 +62,7 @@ interface CardSheetPanelProps {
 export default function CardSheetPanel({ items, copies, fileName, emptyMessage, fixedCount, children }: CardSheetPanelProps) {
   const alert = useAlert();
   const [inputs, setInputs] = useState<SheetInputs>(loadInputs);
+  const [unit] = useLengthUnit();
   const [quantity, setQuantity] = useState('');
   const [previewSheet, setPreviewSheet] = useState(0);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
@@ -164,14 +167,8 @@ export default function CardSheetPanel({ items, copies, fileName, emptyMessage, 
         <>
           {children}
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="sheet-card-width" className="block text-sm font-medium text-dark mb-1">Card width (mm)</label>
-              <input id="sheet-card-width" inputMode="decimal" value={inputs.widthMm} onChange={e => setField('widthMm', e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label htmlFor="sheet-gap" className="block text-sm font-medium text-dark mb-1">Gap between (mm)</label>
-              <input id="sheet-gap" inputMode="decimal" value={inputs.gapMm} onChange={e => setField('gapMm', e.target.value)} className={inputClass} />
-            </div>
+            <LengthField id="sheet-card-width" label="Card width" valueMm={inputs.widthMm} onChangeMm={v => setField('widthMm', v)} />
+            <LengthField id="sheet-gap" label="Gap between" valueMm={inputs.gapMm} onChangeMm={v => setField('gapMm', v)} />
             {copies && fixedCount === undefined && (
               <div>
                 <label htmlFor="sheet-quantity" className="block text-sm font-medium text-dark mb-1">Number of cards</label>
@@ -199,7 +196,7 @@ export default function CardSheetPanel({ items, copies, fileName, emptyMessage, 
             <p role="alert" className="text-xs text-red-600">That size does not fit on an A3 sheet.</p>
           ) : (
             <p className="text-sm text-dark bg-background-warm rounded-md px-3 py-2">
-              Cards print {Math.round(widthMm * 10) / 10} × {Math.round((layout?.cardHeight ?? 0) * 10) / 10} mm.
+              Cards print {formatLength(widthMm, unit)} × {formatLength(layout?.cardHeight ?? 0, unit)} {unit}.
               {' '}<span className="font-semibold">{perSheet}</span> fit on one {pageLabel} sheet.
               {' '}{total} {noun(total)} = <span className="font-semibold">{sheets}</span> sheet{sheets === 1 ? '' : 's'}.
             </p>

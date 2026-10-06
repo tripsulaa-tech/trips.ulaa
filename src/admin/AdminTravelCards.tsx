@@ -15,6 +15,7 @@ import { ArrowCounterClockwise, CaretLeft, CaretRight, Check, CircleNotch, Downl
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
+import LengthField from '../components/ui/LengthField';
 import CardSheetPanel, { CutGuideShapes } from './CardSheetPanel';
 import { useAlert } from '../components/ui/useAlert';
 import { getEnquiries, getUpcomingTrips, getAllTripLeadersAdmin } from '../services/api';
@@ -590,14 +591,8 @@ export default function AdminTravelCards() {
                 <div className="border-t border-background-warm pt-4 space-y-4">
                   <p className="text-sm font-medium text-dark">A3 print sheets</p>
                   <div className="grid sm:grid-cols-3 gap-3">
-                    <div>
-                      <label htmlFor="badge-size" className="block text-sm font-medium text-dark mb-1">Badge size (mm)</label>
-                      <input id="badge-size" inputMode="decimal" value={badgeSettings.diameterMm} onChange={e => setBadgeField('diameterMm', e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label htmlFor="badge-gap" className="block text-sm font-medium text-dark mb-1">Gap between (mm)</label>
-                      <input id="badge-gap" inputMode="decimal" value={badgeSettings.gapMm} onChange={e => setBadgeField('gapMm', e.target.value)} className={inputClass} />
-                    </div>
+                    <LengthField id="badge-size" label="Badge size" valueMm={badgeSettings.diameterMm} onChangeMm={v => setBadgeField('diameterMm', v)} />
+                    <LengthField id="badge-gap" label="Gap between" valueMm={badgeSettings.gapMm} onChangeMm={v => setBadgeField('gapMm', v)} />
                     <div>
                       <label htmlFor="badge-qty" className="block text-sm font-medium text-dark mb-1">Number of badges</label>
                       <input id="badge-qty" inputMode="numeric" value={badgeSettings.quantity} placeholder={badgePlan.perSheet ? `${badgePlan.perSheet} (1 sheet)` : ''} onChange={e => setBadgeField('quantity', e.target.value)} className={inputClass} />

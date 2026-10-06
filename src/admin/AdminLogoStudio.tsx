@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { DownloadSimple, ArrowCounterClockwise, Warning, Copy, ClipboardText, Check } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
+import ColorPicker from '../components/ui/ColorPicker';
 import Select from '../components/ui/Select';
 import LogoStudioSiteLogos from './LogoStudioSiteLogos';
 
@@ -108,15 +109,15 @@ const FORMAT_OPTIONS: { value: 'png' | 'jpg'; label: string }[] = [
   { value: 'jpg', label: 'JPG' },
 ];
 
-// Size = longest side of the downloaded image, margin included. The classic
+// Size = side of the square (1:1) downloaded image, margin included. The classic
 // artwork is 3900 px wide, so Max is its full resolution; the header artwork is
 // smaller (about 870 px) and is scaled up beyond that.
 const SIZES = [
-  { value: 400, label: 'Small · 400 px' },
-  { value: 800, label: 'Medium · 800 px' },
-  { value: 1600, label: 'Large · 1600 px' },
-  { value: 3000, label: 'HD · 3000 px' },
-  { value: 4000, label: 'Max · 4000 px' },
+  { value: 400, label: 'Small · 400 × 400 px' },
+  { value: 800, label: 'Medium · 800 × 800 px' },
+  { value: 1600, label: 'Large · 1600 × 1600 px' },
+  { value: 3000, label: 'HD · 3000 × 3000 px' },
+  { value: 4000, label: 'Max · 4000 × 4000 px' },
 ];
 
 const PREVIEW_SIZE = 800;
@@ -301,7 +302,7 @@ export default function AdminLogoStudio() {
   // Repaint the preview whenever the logo, a colour, the margin or the background option changes.
   useEffect(() => {
     if (!ld || !previewRef.current) return;
-    renderLogo(previewRef.current, ld.small, design, colors, PREVIEW_SIZE, withBackground, ld.smallBounds, marginPct);
+    renderLogo(previewRef.current, ld.small, design, colors, PREVIEW_SIZE, withBackground, ld.smallBounds, marginPct, true);
   }, [ld, design, colors, withBackground, marginPct]);
 
   const copyColor = (key: LogoColorKey) => {
@@ -344,7 +345,7 @@ export default function AdminLogoStudio() {
     if (!ld) return;
     const canvas = document.createElement('canvas');
     const src = pickSource(ld, size);
-    renderLogo(canvas, src.images, design, colors, size, withBackground, src.bounds, marginPct);
+    renderLogo(canvas, src.images, design, colors, size, withBackground, src.bounds, marginPct, true);
     const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
     canvas.toBlob(
       blob => {
@@ -474,19 +475,14 @@ export default function AdminLogoStudio() {
                       key={f.key}
                       className="rounded-md border-2 border-background-warm px-2 py-1.5 space-y-1.5 focus-within:border-primary transition-colors"
                     >
-                      <label className="flex items-center gap-2.5 cursor-pointer">
-                        <input
-                          type="color"
+                      <div className="flex items-center gap-2.5">
+                        <ColorPicker
                           value={value}
-                          onChange={e => {
-                            const hex = e.target.value.toLowerCase();
-                            setColors(c => (c[f.key] === hex ? c : { ...c, [f.key]: hex }));
-                          }}
-                          aria-label={`${f.label} colour`}
-                          className="h-8 w-8 shrink-0 cursor-pointer rounded border border-black/10 bg-transparent p-0"
+                          label={f.label}
+                          onChange={hex => setColors(c => (c[f.key] === hex ? c : { ...c, [f.key]: hex }))}
                         />
                         <span className="text-xs font-medium text-dark leading-tight">{f.label}</span>
-                      </label>
+                      </div>
                       <div className="flex items-center gap-1">
                         <span className="flex-1 min-w-0 font-mono text-2xs uppercase text-dark-muted">{value}</span>
                         <button
