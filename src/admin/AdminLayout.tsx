@@ -22,6 +22,7 @@ import {
   Calculator,
   Receipt,
   Palette,
+  Swatches,
   Compass,
   Globe,
   UsersThree,
@@ -63,6 +64,7 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
   'Rate Calculator': { to: '/admin/creator-rate-calculator', icon: Calculator },
   'Invoice Generator': { to: '/admin/invoice-generator', icon: Receipt },
   Branding: { to: '/admin/branding', icon: Palette },
+  'Logo Studio': { to: '/admin/logo-studio', icon: Swatches },
 };
 
 // Sidebar layout, grouped by default: "Dashboard" stays a standalone link at
@@ -81,7 +83,7 @@ const DEFAULT_TOP_ITEMS = ['Dashboard'];
 
 const NAV_GROUPS: NavGroupDef[] = [
   { id: 'trips', label: 'Trips', icon: Compass, items: ['Upcoming Trips', 'Completed Trips', 'Trip Finance', 'Trip Leaders', 'Travel Cards'] },
-  { id: 'website', label: 'Website', icon: Globe, items: ['Home Page', 'About Page', 'Branding'] },
+  { id: 'website', label: 'Website', icon: Globe, items: ['Home Page', 'About Page', 'Branding', 'Logo Studio'] },
   { id: 'customers', label: 'Customers', icon: UsersThree, items: ['Enquiries', 'Waitlist', 'Travellers'] },
   { id: 'business', label: 'Business', icon: ChartLineUp, items: ['Reports', 'Rate Calculator', 'Invoice Generator'] },
 ];

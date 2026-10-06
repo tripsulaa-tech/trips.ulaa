@@ -51,11 +51,13 @@ interface CardSheetPanelProps {
   fileName: (count: number) => string;
   /** Shown instead of the panel body when there is nothing to print. */
   emptyMessage?: string;
+  /** When set, exactly this many copies are printed and the quantity box is hidden (e.g. matching the Travelers sheets). */
+  fixedCount?: number;
   /** Extra controls shown above the card size inputs (e.g. "include the trip leader"). */
   children?: ReactNode;
 }
 
-export default function CardSheetPanel({ items, copies, fileName, emptyMessage, children }: CardSheetPanelProps) {
+export default function CardSheetPanel({ items, copies, fileName, emptyMessage, fixedCount, children }: CardSheetPanelProps) {
   const alert = useAlert();
   const [inputs, setInputs] = useState<SheetInputs>(loadInputs);
   const [quantity, setQuantity] = useState('');
@@ -76,7 +78,7 @@ export default function CardSheetPanel({ items, copies, fileName, emptyMessage, 
 
   // Blank quantity means "one full sheet" for the repeated back card.
   const typedQuantity = Math.floor(Number(quantity));
-  const total = copies ? (typedQuantity > 0 ? typedQuantity : perSheet) : items.length;
+  const total = copies ? (fixedCount ?? (typedQuantity > 0 ? typedQuantity : perSheet)) : items.length;
   const sheets = perSheet > 0 ? Math.ceil(total / perSheet) : 0;
   const tooMany = sheets > 100;
   const sheetIndex = Math.min(previewSheet, Math.max(0, sheets - 1));
@@ -170,7 +172,7 @@ export default function CardSheetPanel({ items, copies, fileName, emptyMessage, 
               <label htmlFor="sheet-gap" className="block text-sm font-medium text-dark mb-1">Gap between (mm)</label>
               <input id="sheet-gap" inputMode="decimal" value={inputs.gapMm} onChange={e => setField('gapMm', e.target.value)} className={inputClass} />
             </div>
-            {copies && (
+            {copies && fixedCount === undefined && (
               <div>
                 <label htmlFor="sheet-quantity" className="block text-sm font-medium text-dark mb-1">Number of cards</label>
                 <input

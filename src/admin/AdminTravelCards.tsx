@@ -65,6 +65,8 @@ interface CardPerson {
   note?: string;      // small grey text after the name
 }
 
+const NO_PEOPLE: CardPerson[] = [];
+
 const BACK_FIELDS: { key: keyof BackCardText; label: string; hint?: string }[] = [
   { key: 'topLine', label: 'Small line above the headline', hint: 'Shown in capitals.' },
   { key: 'headline', label: 'Headline' },
@@ -100,6 +102,7 @@ export default function AdminTravelCards() {
   const [badgeBusy, setBadgeBusy] = useState<'single' | 'sheets' | null>(null);
   const [previewSheet, setPreviewSheet] = useState(0);
   const [includeLeader, setIncludeLeader] = useState(true);
+  const [backMatchTravelers, setBackMatchTravelers] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,29 +124,30 @@ export default function AdminTravelCards() {
   const trip = trips.find(t => t.id === tripId);
   const role: TravelCardRole = tab === 'leader' ? 'leader' : 'traveler';
 
-  const people: CardPerson[] = useMemo(() => {
-    if (tab === 'traveler') {
-      return (tripId
-        ? enquiries.filter(e => e.trip_id === tripId && isBooked(e)).sort((a, b) => a.full_name.localeCompare(b.full_name))
-        : []
-      ).map(e => ({
-        key: e.id,
-        name: e.full_name,
-        note: e.group_size && e.group_size > 1 ? `Group ${e.group_seq}/${e.group_size}` : undefined,
+  // Both lists are always built (not just for the open tab) so the Back card
+  // tab can follow the Travelers selection.
+  const travelerPeople: CardPerson[] = useMemo(
+    () => (tripId
+      ? enquiries.filter(e => e.trip_id === tripId && isBooked(e)).sort((a, b) => a.full_name.localeCompare(b.full_name))
+      : []
+    ).map(e => ({
+      key: e.id,
+      name: e.full_name,
+      note: e.group_size && e.group_size > 1 ? `Group ${e.group_seq}/${e.group_size}` : undefined,
+    })),
+    [enquiries, tripId],
+  );
+  const leaderPeople: CardPerson[] = useMemo(() => {
+    const assigned = trip?.trip_leader_id ?? null;
+    return [...leaders]
+      .sort((a, b) => Number(b.id === assigned) - Number(a.id === assigned) || a.name.localeCompare(b.name))
+      .map(l => ({
+        key: `leader:${l.id}`,
+        name: l.name,
+        note: l.id === assigned ? 'Leads this trip' : l.designation || undefined,
       }));
-    }
-    if (tab === 'leader') {
-      const assigned = trip?.trip_leader_id ?? null;
-      return [...leaders]
-        .sort((a, b) => Number(b.id === assigned) - Number(a.id === assigned) || a.name.localeCompare(b.name))
-        .map(l => ({
-          key: `leader:${l.id}`,
-          name: l.name,
-          note: l.id === assigned ? 'Leads this trip' : l.designation || undefined,
-        }));
-    }
-    return [];
-  }, [tab, tripId, trip, enquiries, leaders]);
+  }, [leaders, trip]);
+  const people: CardPerson[] = tab === 'traveler' ? travelerPeople : tab === 'leader' ? leaderPeople : NO_PEOPLE;
 
   const displayName = (p: CardPerson) => nameOverrides[p.key]?.trim() || p.name;
   const selected = useMemo(() => people.filter(p => !unticked.has(p.key)), [people, unticked]);
@@ -221,7 +225,11 @@ export default function AdminTravelCards() {
   const chooseTab = (next: CardTab) => {
     if (next === tab) return;
     setTab(next);
-    resetListState();
+    // Ticks are kept when switching tabs (each person has their own key) so the
+    // Back card tab can match what was ticked on Travelers.
+    setPreviewKey(null);
+    setPreviewUrl(null);
+    setEditingKey(null);
   };
   const chooseTrip = (id: string) => {
     setTripId(id);
@@ -317,7 +325,13 @@ export default function AdminTravelCards() {
   // name), or the common back card.
   // On the Travelers tab the trip's assigned leader can be printed alongside
   // the travelers (their card says TRIP LEADER).
-  const tripLeader = tab === 'traveler' ? leaders.find(l => l.id === trip?.trip_leader_id) ?? null : null;
+  const tripLeaderRecord = leaders.find(l => l.id === trip?.trip_leader_id) ?? null;
+  const tripLeader = tab === 'traveler' ? tripLeaderRecord : null;
+  // How many cards the Travelers sheets print: the ticked travelers plus the
+  // trip leader when included. The Back card tab can print the same number.
+  const tickedTravelers = travelerPeople.filter(p => !unticked.has(p.key)).length;
+  const leaderCards = tripLeaderRecord && includeLeader ? 1 : 0;
+  const matchingCount = tickedTravelers + leaderCards;
   const sheetItems = useMemo<CardSheetItem[]>(() => {
     const list: CardSheetItem[] = selected.map(p => ({ kind: 'front', name: displayName(p), role }));
     if (tripLeader && includeLeader) {
@@ -390,7 +404,9 @@ export default function AdminTravelCards() {
   const tripSelect = (
     <div className="bg-white rounded-lg p-4 shadow-card space-y-3">
       <label htmlFor="travel-card-trip" className="block text-sm font-medium text-dark">
-        Trip{tab === 'leader' ? <span className="text-dark-muted font-normal"> (optional, shows who leads it)</span> : null}
+        Trip
+        {tab === 'leader' ? <span className="text-dark-muted font-normal"> (optional, shows who leads it)</span> : null}
+        {tab === 'back' ? <span className="text-dark-muted font-normal"> (sets how many back cards to print)</span> : null}
       </label>
       <Select
         inputId="travel-card-trip"
@@ -440,7 +456,7 @@ export default function AdminTravelCards() {
 
         <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
           <div className="space-y-4 min-w-0">
-            {(tab === 'traveler' || tab === 'leader') && tripSelect}
+            {tripSelect}
 
             {showList && (
               <div className="bg-white rounded-lg shadow-card">
@@ -688,7 +704,27 @@ export default function AdminTravelCards() {
             )}
 
             {tab === 'back' && (
-              <CardSheetPanel items={backSheetItems} copies fileName={n => `ULAA-Card-Back-A3-${n}pcs.pdf`} />
+              <CardSheetPanel
+                items={backSheetItems}
+                copies
+                fixedCount={backMatchTravelers && matchingCount > 0 ? matchingCount : undefined}
+                fileName={n => `ULAA-Card-Back-A3-${n}pcs.pdf`}
+              >
+                <label className={`flex items-start gap-2 text-sm ${matchingCount > 0 ? 'text-dark cursor-pointer' : 'text-dark-muted'}`}>
+                  <input
+                    type="checkbox"
+                    checked={backMatchTravelers && matchingCount > 0}
+                    disabled={matchingCount === 0}
+                    onChange={e => setBackMatchTravelers(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 accent-primary shrink-0"
+                  />
+                  <span>
+                    {matchingCount > 0
+                      ? <>One back card for every card on the Travelers sheets <span className="text-dark-muted">({tickedTravelers} traveler{tickedTravelers === 1 ? '' : 's'}{leaderCards ? ' + trip leader' : ''} = {matchingCount})</span></>
+                      : 'Choose a trip above (with booked travelers ticked on the Travelers tab) to print one back card for each traveler. Or set a number below.'}
+                  </span>
+                </label>
+              </CardSheetPanel>
             )}
           </div>
 
