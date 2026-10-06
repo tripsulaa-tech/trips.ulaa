@@ -28,6 +28,7 @@ import LeafIcon from '../icons/LeafIcon';
 import { hasPackages, packageOptionIds, seatPackageAssignments, noPackageBase, type PackageBase } from '../../utils/tripOptions';
 import KeyboardNavSuggestionDropdown from './KeyboardNavSuggestionDropdown';
 import { handleSuggestionKeyDown } from './suggestionKeyNav';
+import { CONTACT_PHONE_DISPLAY } from '../../constants/site';
 
 // How many rows to show at once in the City / Email-domain suggestion
 // dropdowns — enough to be useful without the list itself needing to
@@ -766,7 +767,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             type="tel"
             inputMode="tel"
             {...register('phone', { required: 'Phone number is required', validate: validatePhone })}
-            placeholder="+91 63813 36772"
+            placeholder={CONTACT_PHONE_DISPLAY}
             autoComplete="tel"
             aria-invalid={!!errors.phone}
             aria-describedby={errors.phone ? `${ids.phone}-error` : undefined}

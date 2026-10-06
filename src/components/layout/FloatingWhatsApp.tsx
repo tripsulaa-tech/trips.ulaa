@@ -2,8 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
-
-const WHATSAPP_NUMBER = '916381336772';
+import { WHATSAPP_NUMBER } from '../../constants/site';
 
 export default function FloatingWhatsApp() {
   const [hovered, setHovered] = useState(false);

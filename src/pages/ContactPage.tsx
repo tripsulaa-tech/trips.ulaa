@@ -34,7 +34,7 @@ import { validateEmail, validateFullName, validateOptionalPhone } from '../utils
 import { fadeUp } from '../utils/animation';
 import contactImg from '../assets/hero.webp';
 
-import { CONTACT_EMAIL, INSTAGRAM_URL, WHATSAPP_NUMBER } from '../constants/site';
+import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, INSTAGRAM_URL, WHATSAPP_NUMBER } from '../constants/site';
 import { CONTACT_MESSAGE_MAX_LENGTH } from '../constants/limits';
 
 interface ContactForm {
@@ -275,7 +275,7 @@ export default function ContactPage() {
                   <p className="font-display font-bold text-dark mt-4">WhatsApp (Fastest)</p>
                   <p className="text-dark-muted text-sm mt-1">Chat with us directly</p>
                   <span className="mt-4 flex items-end justify-between gap-2">
-                    <span className="font-semibold text-dark text-sm break-all">+91 63813 36772</span>
+                    <span className="font-semibold text-dark text-sm break-all">{CONTACT_PHONE_DISPLAY}</span>
                     <ArrowRight size={18} className="shrink-0 text-dark-muted group-hover:text-primary group-hover:translate-x-1 transition-all" />
                   </span>
                 </a>

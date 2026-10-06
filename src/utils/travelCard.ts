@@ -10,6 +10,7 @@
 
 import { drawCover, getTravelCardArt, loadArtImage } from './travelCardArt';
 import { MAX_PRINT_SHEETS } from '../constants/limits';
+import { INSTAGRAM_HANDLE, CONTACT_PHONE_DISPLAY } from '../constants/site';
 
 export const CARD_WIDTH = 1276;
 export const CARD_HEIGHT = 2031;
@@ -236,8 +237,8 @@ export const DEFAULT_BACK_CARD_TEXT: BackCardText = {
   topLine: 'Our Next',
   headline: 'Adventure Awaits.',
   scanLine: 'Scan to explore ULAA',
-  instagram: 'ulaa.trips',
-  phone: '+91 63813 36772',
+  instagram: INSTAGRAM_HANDLE,
+  phone: CONTACT_PHONE_DISPLAY,
 };
 
 // Measured from the final back-card design.
