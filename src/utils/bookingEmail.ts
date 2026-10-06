@@ -4,6 +4,13 @@ import { supabase } from '../services/supabase';
 import { logActivity, BOOKING_EMAIL_ACTION } from '../services/api/enquiries/activity';
 import { formatDate, formatPrice, slugify } from './utils-index';
 import { PAYMENT_TYPE_LABEL } from './pdf/invoice/shared';
+import {
+  getCachedBookingEmailTemplate,
+  loadBookingEmailTemplate,
+  templateToHtml,
+  templateToText,
+  type BookingEmailTemplate,
+} from './bookingEmailTemplate';
 
 // Same calculation as AdminEnquiriesShared's paymentBalance() — duplicated
 // (rather than imported) so this utils/ module doesn't reach up into the
@@ -64,7 +71,7 @@ interface BookingEmailFields {
   bookingId: string | null;
 }
 
-function bookingEmailFields(enquiry: Enquiry, payments: Payment[]): BookingEmailFields {
+function bookingEmailFields(enquiry: Enquiry, payments: Payment[], t: BookingEmailTemplate): BookingEmailFields {
   const tripName = enquiry.trip_title || 'your trip';
   const balance = remainingBalance(enquiry);
   const isFullyPaid = balance != null && balance <= 0;
@@ -72,7 +79,14 @@ function bookingEmailFields(enquiry: Enquiry, payments: Payment[]): BookingEmail
   const deadlineText = enquiry.balance_due_date ? formatDate(enquiry.balance_due_date, { month: 'short' }) : 'TBD';
   return {
     to: enquiry.email || '',
-    subject: `${isFullyPaid ? 'Full Payment Received' : 'Booking Confirmed'} - ${tripName}`,
+    subject: templateToText(isFullyPaid ? t.subjectFull : t.subjectConfirmed, {
+      trip: tripName,
+      name: enquiry.full_name,
+      booking_id: enquiry.booking_id || '',
+      total: formatPrice(enquiry.amount_paid || 0),
+      balance: balanceText,
+      deadline: deadlineText,
+    }),
     tripName,
     rows: paymentRows(payments),
     totalPaidText: formatPrice(enquiry.amount_paid || 0),
@@ -97,7 +111,6 @@ function escapeHtml(str: string): string {
 // reads as the same brand family as the site and the invoice PDF. Email
 // clients can't read CSS custom properties reliably, so these are the same
 // values inlined directly instead of referenced as variables.
-const BRAND_COLOR = '#A85A2A'; // --color-primary
 
 // Hosted logo asset — same file the public site's navbar and the invoice
 // PDF already use. Wrapped in an explicit white card wherever it's placed
@@ -120,10 +133,24 @@ const LOGO_FOOTER_URL = 'https://www.ulaatrips.com/ULAA-logo-Footer.png';
  *  `color-scheme`/`supported-color-schemes` below tell the handful of
  *  clients that do support a dark mode (Apple Mail, Outlook.com) to render
  *  this in light mode rather than auto-inverting it. */
-function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[]): string {
-  const f = bookingEmailFields(enquiry, payments);
+function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[], t: BookingEmailTemplate): string {
+  const f = bookingEmailFields(enquiry, payments, t);
+  const BRAND_COLOR = t.accentColour;
+  const vars = {
+    name: enquiry.full_name,
+    trip: f.tripName,
+    booking_id: f.bookingId || '',
+    total: f.totalPaidText,
+    balance: f.balanceText,
+    deadline: f.deadlineText,
+  };
+  const words = (text: string) => templateToHtml(text, vars);
+  const lw = t.logoWidth;
+  const logoHtml = t.logoUrl
+    ? `<img src="${t.logoUrl}" width="${lw}" alt="Ulaa" style="display: block; width: ${lw}px; max-width: ${lw}px; height: auto;">`
+    : `<img src="${LOGO_URL}" width="${lw}" alt="Ulaa" class="logo-light" style="display: block; width: ${lw}px; max-width: ${lw}px; height: auto;">
+                          <img src="${LOGO_FOOTER_URL}" width="${lw}" alt="Ulaa" class="logo-dark" style="display: none; width: ${lw}px; max-width: ${lw}px; height: auto;">`;
   const trip = escapeHtml(f.tripName);
-  const name = escapeHtml(enquiry.full_name);
   const bookingIdRow = f.bookingId
     ? `
               <tr>
@@ -176,10 +203,8 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[]): string {
                         <td align="right" style="padding: 10px 0 0; font-family: Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 700; color: #2D2118;">${f.deadlineText}</td>
                       </tr>`;
 
-  const paymentInfoLabel = f.isFullyPaid ? 'Payment Complete' : 'Payment Information';
-  const paymentInfoText = f.isFullyPaid
-    ? `Payment for this booking has been received in full &mdash; <strong>${f.totalPaidText}</strong> paid in total. Thank you!`
-    : `Please note that advance/installment payments are non-refundable, as they are used to confirm your booking. The remaining balance of <strong>${f.balanceText}</strong> must be paid on or before <strong>${f.deadlineText}</strong>.`;
+  const paymentInfoLabel = words(f.isFullyPaid ? t.paymentLabelFull : t.paymentLabelPartial);
+  const paymentInfoText = words(f.isFullyPaid ? t.paymentNoteFull : t.paymentNotePartial);
 
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -226,7 +251,7 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[]): string {
 </head>
 <body style="margin: 0; padding: 0; background-color: #F2EBE0;">
 <div style="display: none; max-height: 0; overflow: hidden; font-size: 1px; line-height: 1px; color: #F2EBE0; opacity: 0;">
-  Your booking for ${trip} is confirmed — booking ID ${f.bookingId ? escapeHtml(f.bookingId) : 'attached'}.
+  ${words(t.preheader)}
 </div>
 <center style="width: 100%; background-color: #F2EBE0;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F2EBE0;">
@@ -236,7 +261,7 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[]): string {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="email-container" style="width: 600px; max-width: 600px;">
           <tr>
             <td align="center" style="padding: 4px 4px 26px;">
-              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 16px; letter-spacing: 0.01em; color: #8A7864;">Your next adventure is waiting</p>
+              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 16px; letter-spacing: 0.01em; color: #8A7864;">${words(t.tagline)}</p>
             </td>
           </tr>
 
@@ -246,16 +271,16 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[]): string {
 
                 <tr>
                   <td class="mobile-padding" align="center" style="padding: 40px 40px 4px;">
-                    <p style="margin: 0 0 10px; font-family: Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: ${BRAND_COLOR};">Booking Confirmed</p>
+                    <p style="margin: 0 0 10px; font-family: Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: ${BRAND_COLOR};">${words(t.badge)}</p>
                     <h1 class="trip-title" style="margin: 0 0 18px; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; line-height: 1.3; font-weight: 700; color: #2D2118;">${trip}</h1>
                   </td>
                 </tr>
 
                 <tr>
                   <td class="mobile-padding" style="padding: 0 40px;">
-                    <p style="margin: 0 0 14px; font-family: Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #2D2118;">Dear ${name},</p>
-                    <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #2D2118;">Thank you for choosing Ulaa. We're delighted to have you join us on our ${trip}.</p>
-                    <p style="margin: 14px 0 0; font-family: Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #2D2118;">Your booking is confirmed. Please find your invoice attached for your reference.</p>
+                    <p style="margin: 0 0 14px; font-family: Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #2D2118;">${words(t.greeting)}</p>
+                    <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #2D2118;">${words(t.intro)}</p>
+                    <p style="margin: 14px 0 0; font-family: Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #2D2118;">${words(t.confirmLine)}</p>
                   </td>
                 </tr>
 ${bookingIdRow}
@@ -302,19 +327,19 @@ ${paymentRowsHtml}${summaryRowsHtml}
                     <!--[if mso]>
                     <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${tripLinkHref}" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="12%" strokecolor="${BRAND_COLOR}" fillcolor="${BRAND_COLOR}">
                     <w:anchorlock/>
-                    <center style="color:#ffffff;font-family:Helvetica, Arial, sans-serif;font-size:15px;font-weight:bold;">View Trip Details &#8594;</center>
+                    <center style="color:#ffffff;font-family:Helvetica, Arial, sans-serif;font-size:15px;font-weight:bold;">${words(t.buttonLabel)} &#8594;</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="${tripLinkHref}" target="_blank" style="display: inline-block; background-color: ${BRAND_COLOR}; color: #FFFFFF; font-family: Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; text-decoration: none; padding: 14px 40px; border-radius: 8px; mso-hide: all;">View Trip Details &#8594;</a>
+                    <a href="${tripLinkHref}" target="_blank" style="display: inline-block; background-color: ${BRAND_COLOR}; color: #FFFFFF; font-family: Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; text-decoration: none; padding: 14px 40px; border-radius: 8px; mso-hide: all;">${words(t.buttonLabel)} &#8594;</a>
                     <!--<![endif]-->
                   </td>
                 </tr>
 
                 <tr>
                   <td class="mobile-padding" style="padding: 24px 40px 16px; border-top: 1px solid #EEE6D8;">
-                    <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #2D2118;">We look forward to welcoming you on the trip.</p>
-                    <p style="margin: 14px 0 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #2D2118;">Best regards,<br>Team Ulaa</p>
+                    <p style="margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #2D2118;">${words(t.closingLine)}</p>
+                    <p style="margin: 14px 0 0; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #2D2118;">${words(t.signOff)}</p>
                   </td>
                 </tr>
 
@@ -322,9 +347,8 @@ ${paymentRowsHtml}${summaryRowsHtml}
                   <td class="mobile-padding" align="left" style="padding: 0 40px 32px; text-align: left;">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-                        <td bgcolor="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #EEE6D8; border-radius: 10px; padding: 10px 22px;">
-                          <img src="${LOGO_URL}" width="110" alt="Ulaa" class="logo-light" style="display: block; width: 110px; max-width: 110px; height: auto;">
-                          <img src="${LOGO_FOOTER_URL}" width="110" alt="Ulaa" class="logo-dark" style="display: none; width: 110px; max-width: 110px; height: auto;">
+                        <td style="padding: 0;">
+${logoHtml}
                         </td>
                       </tr>
                     </table>
@@ -361,8 +385,31 @@ async function fileToBase64(file: File): Promise<string> {
  *  "preview before you send" view. Safe to call as often as needed (no
  *  network/edge-function calls, no invoice PDF generation). */
 export function bookingEmailPreview(enquiry: Enquiry, payments: Payment[]): { to: string; subject: string; html: string } {
-  const { to, subject } = bookingEmailFields(enquiry, payments);
-  return { to, subject, html: buildBookingEmailHtml(enquiry, payments) };
+  const t = getCachedBookingEmailTemplate();
+  void loadBookingEmailTemplate(); // refresh for the next preview if it was edited elsewhere
+  const { to, subject } = bookingEmailFields(enquiry, payments, t);
+  return { to, subject, html: buildBookingEmailHtml(enquiry, payments, t) };
+}
+
+/** A made-up booking rendered with the given wording, for the Logo Studio email editor's live preview. */
+export function bookingEmailSample(t: BookingEmailTemplate, fullyPaid: boolean): { subject: string; html: string } {
+  const enquiry = {
+    id: 'sample',
+    full_name: 'Priya Sharma',
+    email: 'priya@example.com',
+    trip_title: 'Sri Lanka: Girls-Only Luxury Escape',
+    booking_id: 'ULA-1042',
+    total_amount: 45000,
+    amount_paid: fullyPaid ? 45000 : 15000,
+    balance_due_date: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
+  } as unknown as Enquiry;
+  const payments: Payment[] = [
+    { id: 'p1', enquiry_id: 'sample', amount: 15000, payment_type: 'advance', paid_at: '', created_at: '', status: 'paid' },
+    ...(fullyPaid
+      ? [{ id: 'p2', enquiry_id: 'sample', amount: 30000, payment_type: 'balance' as const, paid_at: '', created_at: '', status: 'paid' as const }]
+      : []),
+  ];
+  return { subject: bookingEmailFields(enquiry, payments, t).subject, html: buildBookingEmailHtml(enquiry, payments, t) };
 }
 
 /** Sends the booking confirmation for real, via the `send-booking-email`
@@ -376,10 +423,11 @@ export function bookingEmailPreview(enquiry: Enquiry, payments: Payment[]): { to
  *  index.ts for one-time setup. Until that's done, this will throw and the
  *  caller's catch block will surface the error. */
 export async function sendBookingEmail(enquiry: Enquiry, payments: Payment[]): Promise<void> {
-  const { to, subject } = bookingEmailFields(enquiry, payments);
+  const template = await loadBookingEmailTemplate(); // always the latest saved wording
+  const { to, subject } = bookingEmailFields(enquiry, payments, template);
   if (!to) throw new Error('This enquiry has no email address on file.');
 
-  const html = buildBookingEmailHtml(enquiry, payments);
+  const html = buildBookingEmailHtml(enquiry, payments, template);
   const pdfFile = await invoiceAsFile(enquiry, payments);
   const attachmentBase64 = await fileToBase64(pdfFile);
 

@@ -4,6 +4,7 @@ import AdminLayout from './AdminLayout';
 import ColorPicker, { type ColorSwatch } from '../components/ui/ColorPicker';
 import Select from '../components/ui/Select';
 import LogoStudioSiteLogos from './LogoStudioSiteLogos';
+import LogoStudioMailEditor from './LogoStudioMailEditor';
 
 // Admin → Logo Studio: pick a ready-made logo, tweak its colours and download it.
 //
@@ -394,11 +395,15 @@ export default function AdminLogoStudio() {
   const requestedRef = useRef<Set<DesignId>>(new Set());
   const [imageError, setImageError] = useState(false);
 
-  const [tab, setTab] = useState<'design' | 'site'>('design');
+  const [tab, setTab] = useState<'design' | 'site' | 'mail'>('design');
   const siteDirtyRef = useRef(false);
-  const hasUnsavedChanges = useCallback(() => siteDirtyRef.current, []);
+  const mailDirtyRef = useRef(false);
+  const hasUnsavedChanges = useCallback(() => siteDirtyRef.current || mailDirtyRef.current, []);
   const handleSiteDirty = useCallback((dirty: boolean) => {
     siteDirtyRef.current = dirty;
+  }, []);
+  const handleMailDirty = useCallback((dirty: boolean) => {
+    mailDirtyRef.current = dirty;
   }, []);
 
   const previewRef = useRef<HTMLCanvasElement>(null);
@@ -538,7 +543,7 @@ export default function AdminLogoStudio() {
   return (
     <AdminLayout
       title="Logo Studio"
-      subtitle="Design the logo, download it, and choose the logos the site uses"
+      subtitle="Design the logo, choose the logos the site uses, and edit the booking email"
       hasUnsavedChanges={hasUnsavedChanges}
     >
       <div className="bg-white rounded-md border border-background-warm shadow-card">
@@ -546,6 +551,7 @@ export default function AdminLogoStudio() {
           {([
             ['design', 'Design & download'],
             ['site', 'Site logos'],
+            ['mail', 'Email'],
           ] as const).map(([id, label]) => (
             <button
               key={id}
@@ -757,6 +763,10 @@ export default function AdminLogoStudio() {
 
         <div role="tabpanel" hidden={tab !== 'site'}>
           <LogoStudioSiteLogos makeLogoFile={makeLogoFile} onDirtyChange={handleSiteDirty} />
+        </div>
+
+        <div role="tabpanel" hidden={tab !== 'mail'}>
+          <LogoStudioMailEditor onDirtyChange={handleMailDirty} />
         </div>
       </div>
     </AdminLayout>
