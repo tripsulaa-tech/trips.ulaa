@@ -15,14 +15,12 @@ import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
 import type { BottomNavItemConfig } from '../../types/types-index';
 import { useBranding } from '../../hooks/useBranding';
-import { SITE_HOST, SITE_ORIGIN } from '../../constants/site';
-
-const WHATSAPP_NUMBER = '916381336772';
+import { SITE_HOST, SITE_ORIGIN, CONTACT_EMAIL, CONTACT_PHONE_E164, CONTACT_PHONE_DISPLAY, INSTAGRAM_URL, WHATSAPP_NUMBER } from '../../constants/site';
 
 const socialItems = [
   {
     label: 'Instagram',
-    href: 'https://www.instagram.com/ulaa.trips?igsh=MXhpbHdwOXhmamZsZw==',
+    href: INSTAGRAM_URL,
     external: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -40,7 +38,7 @@ const socialItems = [
   },
   {
     label: 'Email',
-    href: 'mailto:trips.ulaa@gmail.com',
+    href: `mailto:${CONTACT_EMAIL}`,
     external: false,
     icon: <Mail className="w-5 h-5" />,
   },
@@ -150,19 +148,19 @@ export default function Footer() {
         {/* Contact box */}
         <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.03] py-3.5 px-3 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
           <a
-            href="mailto:trips.ulaa@gmail.com"
+            href={`mailto:${CONTACT_EMAIL}`}
             className="flex items-center gap-1 text-2xs sm:text-2xs text-cream/95 hover:text-secondary transition-colors whitespace-nowrap shrink-0"
           >
             <Mail className="w-3.5 h-3.5 text-secondary shrink-0" strokeWidth={1.75} />
-            trips.ulaa@gmail.com
+            {CONTACT_EMAIL}
           </a>
           <span className="h-6 w-px bg-white/10 shrink-0" />
           <a
-            href="tel:+916381336772"
+            href={`tel:${CONTACT_PHONE_E164}`}
             className="flex items-center gap-1 text-2xs sm:text-2xs text-cream/95 hover:text-secondary transition-colors whitespace-nowrap shrink-0"
           >
             <Phone className="w-3.5 h-3.5 text-secondary shrink-0" strokeWidth={1.75} />
-            +91 63813 36772
+            {CONTACT_PHONE_DISPLAY}
           </a>
           <span className="h-6 w-px bg-white/10 shrink-0" />
           <div className="flex items-center gap-1 text-2xs sm:text-2xs text-cream/95 whitespace-nowrap shrink-0">
@@ -232,20 +230,20 @@ export default function Footer() {
             <ul className="mt-4 space-y-5 text-base">
               <li>
                 <a
-                  href="mailto:trips.ulaa@gmail.com"
+                  href={`mailto:${CONTACT_EMAIL}`}
                   className="flex items-center gap-2.5 text-cream/90 hover:text-secondary transition-colors"
                 >
                   <Mail className="w-4 h-4 text-secondary shrink-0" strokeWidth={1.75} />
-                  trips.ulaa@gmail.com
+                  {CONTACT_EMAIL}
                 </a>
               </li>
               <li>
                 <a
-                  href="tel:+916381336772"
+                  href={`tel:${CONTACT_PHONE_E164}`}
                   className="flex items-center gap-2.5 text-cream/90 hover:text-secondary transition-colors"
                 >
                   <Phone className="w-4 h-4 text-secondary shrink-0" strokeWidth={1.75} />
-                  +91 63813 36772
+                  {CONTACT_PHONE_DISPLAY}
                 </a>
               </li>
               <li className="flex items-start gap-2.5 text-cream/90">

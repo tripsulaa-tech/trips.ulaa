@@ -2,13 +2,14 @@ import { Sparkle, TextAa, TextAlignLeft, Image as ImageIcon } from '@phosphor-ic
 import ImageUploadField from '../../components/ui/ImageUploadField';
 import type { WhyUlaaContent } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
+import { CONTENT_LIMITS } from '../../constants/limits';
 
 // Real card is a 4:3 tile with a dark scrim + title + description stacked at
 // the bottom (see WhyULAA.tsx on the live site) — the preview below mirrors
 // that exact markup so an admin can trust what they see here without
 // bouncing to the homepage to check.
-const TITLE_SOFT_LIMIT = 24;
-const DESCRIPTION_SOFT_LIMIT = 95;
+const TITLE_SOFT_LIMIT = CONTENT_LIMITS.whyUlaa.title;
+const DESCRIPTION_SOFT_LIMIT = CONTENT_LIMITS.whyUlaa.description;
 
 export default function WhyUlaaSection({
   content,

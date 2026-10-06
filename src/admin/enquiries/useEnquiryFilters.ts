@@ -8,6 +8,7 @@ import { computeTripFinanceSummary } from '../../utils/tripFinance';
 import { countOptionSelections } from '../../utils/tripOptions';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
 import { useAdminPageSize } from '../../hooks/useAdminPageSize';
+import { realEmail } from '../../utils/placeholderEmail';
 
 export type EnquirySortKey = 'name' | 'group' | 'food' | 'source' | 'date' | 'package' | 'payment' | 'status' | 'follow_up';
 
@@ -286,7 +287,7 @@ export function useEnquiryFilters() {
     sortedFiltered.forEach((e, idx) => lines.push(csvRow([
       e.full_name,
       e.phone,
-      e.email,
+      realEmail(e.email),
       e.age ?? '',
       e.city ?? '',
       e.trip_id ? (e.trip_title ?? '') : 'General (No Trip)',

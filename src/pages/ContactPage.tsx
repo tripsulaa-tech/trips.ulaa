@@ -34,6 +34,9 @@ import { validateEmail, validateFullName, validateOptionalPhone } from '../utils
 import { fadeUp } from '../utils/animation';
 import contactImg from '../assets/hero.webp';
 
+import { CONTACT_EMAIL, INSTAGRAM_URL, WHATSAPP_NUMBER } from '../constants/site';
+import { CONTACT_MESSAGE_MAX_LENGTH } from '../constants/limits';
+
 interface ContactForm {
   name: string;
   email: string;
@@ -41,10 +44,8 @@ interface ContactForm {
   message: string;
 }
 
-const WHATSAPP_NUMBER = '916381336772';
-const EMAIL = 'trips.ulaa@gmail.com';
-const INSTAGRAM_URL = 'https://www.instagram.com/ulaa.trips?igsh=MXhpbHdwOXhmamZsZw==';
-const MESSAGE_SOFT_LIMIT = 500;
+const EMAIL = CONTACT_EMAIL;
+const MESSAGE_SOFT_LIMIT = CONTACT_MESSAGE_MAX_LENGTH;
 
 // Three reassurance chips under the hero copy.
 const HERO_CHIPS = [

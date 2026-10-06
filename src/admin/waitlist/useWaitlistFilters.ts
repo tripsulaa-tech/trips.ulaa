@@ -7,6 +7,7 @@ import type { WaitlistEntry, CompletedTrip } from '../../types/types-index';
 import { foodBadge, hasSeatOpen, messageWithoutFoodBreakdown, seatsNeeded, convertedCount } from './waitlistShared';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
 import { useAdminPageSize } from '../../hooks/useAdminPageSize';
+import { realEmail } from '../../utils/placeholderEmail';
 
 export type WaitlistSortKey = 'name' | 'group' | 'food' | 'trip' | 'joined' | 'status';
 
@@ -175,7 +176,7 @@ export function useWaitlistFilters(
     const rows = sortedFiltered.map(e => [
       e.full_name,
       e.phone,
-      e.email,
+      realEmail(e.email),
       e.age ?? '',
       e.city ?? '',
       e.trip_title ?? '',

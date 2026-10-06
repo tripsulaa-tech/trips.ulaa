@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { TIMING } from '../constants/limits';
 
 // =============================================
 // Lightweight, no-dependency bot mitigation for public forms
@@ -15,7 +16,7 @@ import { useEffect, useRef } from 'react';
 // real, slightly-fast human) rather than fail closed.
 // =============================================
 
-const MIN_FILL_MS = 1200;
+const MIN_FILL_MS = TIMING.botMinFillMs;
 
 export function useBotTrap() {
   // Date.now() is impure and can't be called during render, so the mount

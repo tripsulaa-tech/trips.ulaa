@@ -24,6 +24,8 @@
 // against Vercel's current Middleware docs when you deploy, since this
 // wasn't run against a live deployment.
 
+import { SITE_ORIGIN } from './src/constants/site';
+
 export const config = {
   matcher: ['/trips/:path*', '/completed-trips/:path*'],
 };
@@ -33,7 +35,7 @@ const CRAWLER_UA =
 
 const SUPABASE_URL = 'https://wephglgonrmtcmhfbjqe.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ryp0WUqL5_dg5v6gpo_zqw__Ibz6M5O';
-const SITE_URL = 'https://www.ulaatrips.com';
+const SITE_URL = SITE_ORIGIN;
 const DEFAULT_IMAGE = `${SITE_URL}/ULAA-logo.png`;
 const DEFAULT_DESCRIPTION =
   "Girls-only travel community organizing curated trips to India's hidden destinations.";

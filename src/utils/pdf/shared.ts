@@ -6,16 +6,16 @@
 
 import { formatPrice } from '../utils-index';
 import { sanitizeForPdf } from '../pdfText';
-import { SITE_HOST } from '../../constants/site';
+import { SITE_HOST, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, INSTAGRAM_HANDLE } from '../../constants/site';
 
 export type RGB = readonly [number, number, number];
 
 export const BRAND_BASE = {
   name: 'Ulaa',
   website: SITE_HOST,
-  instagram: '@ulaa.trips',
-  email: 'trips.ulaa@gmail.com',
-  phone: '+91 63813 36772',
+  instagram: `@${INSTAGRAM_HANDLE}`,
+  email: CONTACT_EMAIL,
+  phone: CONTACT_PHONE_DISPLAY,
 };
 
 export const COLORS_BASE = {

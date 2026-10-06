@@ -63,6 +63,7 @@ import {
   deleteInvoiceGeneratorInvoice,
 } from '../services/api';
 import type { InvoiceGeneratorRecord } from '../types/types-index';
+import { TIMING } from '../constants/limits';
 
 import { readDraft, stableStringify, useDraftKeeper } from '../hooks/useSessionDraft';
 const BANK_FIELDS: { key: keyof InvoiceGeneratorBankDetails; label: string; placeholder: string }[] = [
@@ -81,7 +82,7 @@ const withoutNumber = (d: InvoiceGeneratorData): InvoiceGeneratorData => ({ ...d
 
 // Debounce for the live preview rebuild — typing a full sentence
 // shouldn't rebuild+re-render a PDF on every keystroke.
-const PREVIEW_DEBOUNCE_MS = 500;
+const PREVIEW_DEBOUNCE_MS = TIMING.invoicePreviewDebounceMs;
 
 export default function AdminInvoiceGenerator() {
   const alert = useAlert();

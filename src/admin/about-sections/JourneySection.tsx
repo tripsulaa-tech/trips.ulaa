@@ -1,6 +1,7 @@
 import { Plus, Trash as Trash2, Sparkle, TextAa, TextAlignLeft } from '@phosphor-icons/react';
 import TripHighlightIconPicker from '../../components/ui/TripHighlightIconPicker';
 import type { AboutContent, AboutJourneyStep } from '../../types/types-index';
+import { CONTENT_LIMITS } from '../../constants/limits';
 import {
   inputClass,
   labelClass,
@@ -15,8 +16,8 @@ import {
 
 // Soft limits matching the step's footprint on the public page (heading
 // text-base, description text-sm capped to a ~200px column).
-const HEADING_SOFT_LIMIT = 30;
-const DESCRIPTION_SOFT_LIMIT = 85;
+const HEADING_SOFT_LIMIT = CONTENT_LIMITS.journey.heading;
+const DESCRIPTION_SOFT_LIMIT = CONTENT_LIMITS.journey.description;
 
 export default function JourneySection({
   content,

@@ -1,6 +1,7 @@
 import { Plus, Trash as Trash2, Sparkle, TextAa, TextAlignLeft, Image as ImageIcon } from '@phosphor-icons/react';
 import ImageUploadField from '../../components/ui/ImageUploadField';
 import type { AboutContent, AboutWhyDifferentCard } from '../../types/types-index';
+import { CONTENT_LIMITS } from '../../constants/limits';
 import {
   inputClass,
   iconLabelClass,
@@ -15,8 +16,8 @@ import {
 // Soft limits matching the card's real-world footprint on the public page
 // (aspect-[4/3] tile, heading text-sm sm:text-base, description text-xs) —
 // same treatment as the Home Page editor's Why Ulaa cards.
-const HEADING_SOFT_LIMIT = 26;
-const DESCRIPTION_SOFT_LIMIT = 85;
+const HEADING_SOFT_LIMIT = CONTENT_LIMITS.whyDifferent.heading;
+const DESCRIPTION_SOFT_LIMIT = CONTENT_LIMITS.whyDifferent.description;
 
 export default function WhyDifferentSection({
   content,

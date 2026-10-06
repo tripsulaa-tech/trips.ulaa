@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { TIMING } from '../constants/limits';
 
 // How often to explicitly ask the browser to re-check /sw.js for changes
 // while the tab is open (ms). Browsers only check an already-registered SW
@@ -11,7 +12,7 @@ import { useEffect, useState } from 'react';
 // toast feel like it took forever to show up after a Vercel deploy — the
 // tab was simply waiting out the rest of its interval before it even asked
 // the browser to look for a new /sw.js.
-const CHECK_INTERVAL_MS = 4_000;
+const CHECK_INTERVAL_MS = TIMING.versionCheckIntervalMs;
 
 /**
  * Detects when a newer build of the site has been deployed while the user

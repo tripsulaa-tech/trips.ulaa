@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { collectStorageUrls } from '../utils/utils-index';
 import { deleteImageByUrl } from '../services/api';
+import { TIMING } from '../constants/limits';
 
 // Unsaved-work keeper for the admin editors. While an editor differs from what is saved, its
 // draft is written to sessionStorage (so it survives switching admin pages and a refresh, but
@@ -17,7 +18,7 @@ import { deleteImageByUrl } from '../services/api';
 
 const PREFIX = 'ulaa.draft.';
 const LEDGER_KEY = 'ulaa.draftUploads';
-const ABANDONED_AFTER_MS = 24 * 60 * 60 * 1000;
+const ABANDONED_AFTER_MS = TIMING.draftExpiryMs;
 const DEFAULT_BUCKET = 'ulaa';
 
 interface Envelope<T> {
