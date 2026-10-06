@@ -53,6 +53,8 @@ import { formatPrice, formatDate, getWhatsAppLink } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { getCreatorRateCalculations, saveCreatorRateCalculation, deleteCreatorRateCalculation, getSiteContent, upsertSiteContent } from '../services/api';
 import type { CreatorRateCalculation, CreatorRateAsset } from '../types/types-index';
+import DraftConflictNotice from './DraftConflictNotice';
+import { lookupDraft, readDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
 
 // ---- Model Settings tab, columns A:B (Niche → CPV Benchmark) ----
 const NICHE_CPV_BENCHMARKS: { niche: string; cpv: number }[] = [
@@ -149,6 +151,32 @@ function scrollElementIntoView(el: HTMLElement, offset: number) {
 const DEFAULT_CREATOR_NAME = 'Jini';
 const DEFAULT_INSTAGRAM_HANDLE = '@justjini_';
 const DEFAULT_PHONE = '6383336772';
+
+// Kept for this browser tab while they differ from a fresh calculator / the saved template, so
+// leaving the page (or refreshing) and coming back finds them as they were left.
+const INPUTS_DRAFT_KEY = 'creator-rate-inputs';
+const TEMPLATE_DRAFT_KEY = 'creator-rate-template';
+
+interface CalculatorInputs {
+  creatorName: string; instagramHandle: string; phone: string; notes: string;
+  followerCount: string; reelViews: string[]; niche: string;
+}
+interface TemplateDraft { variants: MessageTemplateVariant[]; defaultVariantId: string }
+
+/** The saved message template as the editor holds it (falling back to the built-in wording). */
+function templateDraftFrom(content: CreatorRateMessageTemplateContent | null): TemplateDraft {
+  if (content?.variants?.length) {
+    return {
+      variants: content.variants,
+      defaultVariantId: content.variants.some(v => v.id === content.defaultVariantId) ? content.defaultVariantId : content.variants[0].id,
+    };
+  }
+  if (content?.template) {
+    // Pre-variants shape — migrate the single saved template into one "Default" variant.
+    return { variants: [{ id: DEFAULT_VARIANT_ID, name: 'Default', template: content.template }], defaultVariantId: DEFAULT_VARIANT_ID };
+  }
+  return { variants: DEFAULT_MESSAGE_TEMPLATE_VARIANTS, defaultVariantId: DEFAULT_VARIANT_ID };
+}
 
 // Pulls every view-count-looking token out of pasted text, so a Reel field
 // can accept a whole column copied from Instagram Insights or a
@@ -321,16 +349,31 @@ export default function AdminCreatorRateCalculator() {
   const alert = useAlert();
   const confirm = useConfirm();
 
+  // Starts from the calculator contents kept for this tab (if any), otherwise a fresh calculator.
+  const [keptInputs] = useState(() => readDraft<Partial<CalculatorInputs>>(INPUTS_DRAFT_KEY));
+
   // ---- Identity (saved alongside the calculation, optional) ----
-  const [creatorName, setCreatorName] = useState(DEFAULT_CREATOR_NAME);
-  const [instagramHandle, setInstagramHandle] = useState(DEFAULT_INSTAGRAM_HANDLE);
-  const [phone, setPhone] = useState(DEFAULT_PHONE);
-  const [notes, setNotes] = useState('');
+  const [creatorName, setCreatorName] = useState(keptInputs?.creatorName ?? DEFAULT_CREATOR_NAME);
+  const [instagramHandle, setInstagramHandle] = useState(keptInputs?.instagramHandle ?? DEFAULT_INSTAGRAM_HANDLE);
+  const [phone, setPhone] = useState(keptInputs?.phone ?? DEFAULT_PHONE);
+  const [notes, setNotes] = useState(keptInputs?.notes ?? '');
 
   // ---- Calculator inputs ----
-  const [followerCount, setFollowerCount] = useState<string>('');
-  const [reelViews, setReelViews] = useState<string[]>(Array(REEL_COUNT).fill(''));
-  const [niche, setNiche] = useState<string>(NICHE_OPTIONS[0].value);
+  const [followerCount, setFollowerCount] = useState<string>(keptInputs?.followerCount ?? '');
+  const [reelViews, setReelViews] = useState<string[]>(
+    Array.isArray(keptInputs?.reelViews) && keptInputs.reelViews.length === REEL_COUNT ? keptInputs.reelViews : Array(REEL_COUNT).fill(''),
+  );
+  const [niche, setNiche] = useState<string>(keptInputs?.niche ?? NICHE_OPTIONS[0].value);
+  // What "nothing to keep" looks like: a fresh calculator (or, after Save, the calculation just saved).
+  const [inputsBase, setInputsBase] = useState(() => stableStringify({
+    creatorName: DEFAULT_CREATOR_NAME, instagramHandle: DEFAULT_INSTAGRAM_HANDLE, phone: DEFAULT_PHONE, notes: '',
+    followerCount: '', reelViews: Array(REEL_COUNT).fill(''), niche: NICHE_OPTIONS[0].value,
+  } satisfies CalculatorInputs));
+  const inputsValue = useMemo<CalculatorInputs>(
+    () => ({ creatorName, instagramHandle, phone, notes, followerCount, reelViews, niche }),
+    [creatorName, instagramHandle, phone, notes, followerCount, reelViews, niche],
+  );
+  useDraftKeeper({ key: INPUTS_DRAFT_KEY, value: inputsValue, base: inputsBase });
   const reelInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const followers = Number(followerCount) || 0;
@@ -464,6 +507,7 @@ export default function AdminCreatorRateCalculator() {
         notes: notes.trim() || null,
       });
       setHistory(prev => [saved, ...prev]);
+      setInputsBase(stableStringify(inputsValue));
       await alert({ message: 'Calculation saved.', variant: 'success' });
     } catch (err) {
       console.error(err);
@@ -594,6 +638,10 @@ export default function AdminCreatorRateCalculator() {
   const [defaultVariantId, setDefaultVariantId] = useState<string>(DEFAULT_VARIANT_ID);
   const [templateExpanded, setTemplateExpanded] = useState(() => readSessionFlag(TEMPLATE_EXPANDED_KEY));
   const [templateEditing, setTemplateEditing] = useState(false);
+  // The saved template the draft is measured against (null until loaded), and a kept draft held
+  // back because the saved template changed after the draft was started.
+  const [templateBase, setTemplateBase] = useState<string | null>(null);
+  const [heldTemplate, setHeldTemplate] = useState<TemplateDraft | null>(null);
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
   const templateTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
@@ -707,23 +755,35 @@ export default function AdminCreatorRateCalculator() {
     });
   };
 
+  const applyTemplate = (t: TemplateDraft) => {
+    setTemplateVariants(t.variants);
+    setDefaultVariantId(t.defaultVariantId);
+  };
+
   useEffect(() => {
     (async () => {
       try {
-        const content = await getSiteContent<CreatorRateMessageTemplateContent>(RATE_MESSAGE_TEMPLATE_KEY);
-        if (content?.variants?.length) {
-          setTemplateVariants(content.variants);
-          setDefaultVariantId(content.variants.some(v => v.id === content.defaultVariantId) ? content.defaultVariantId : content.variants[0].id);
-        } else if (content?.template) {
-          // Pre-variants shape — migrate the single saved template into one "Default" variant.
-          setTemplateVariants([{ id: DEFAULT_VARIANT_ID, name: 'Default', template: content.template }]);
-          setDefaultVariantId(DEFAULT_VARIANT_ID);
+        const saved = templateDraftFrom(await getSiteContent<CreatorRateMessageTemplateContent>(RATE_MESSAGE_TEMPLATE_KEY));
+        const base = stableStringify(saved);
+        // Template edits from an earlier visit in this browser tab come back as they were left,
+        // unless the saved template changed since — then they are held back (heldTemplate).
+        const { draft, stale } = lookupDraft<TemplateDraft>(TEMPLATE_DRAFT_KEY, base);
+        applyTemplate(draft ?? saved);
+        if (draft) {
+          setTemplateExpanded(true);
+          setTemplateEditing(true);
         }
+        setHeldTemplate(stale);
+        setTemplateBase(base);
       } catch (err) {
         console.error(err);
       }
     })();
   }, []);
+
+  // Keep the template edits while they differ from the saved template (paused while one is on hold).
+  const templateValue = useMemo<TemplateDraft>(() => ({ variants: templateVariants, defaultVariantId }), [templateVariants, defaultVariantId]);
+  useDraftKeeper({ key: TEMPLATE_DRAFT_KEY, value: templateValue, base: heldTemplate ? null : templateBase });
 
   // ---- Preview: shows a variant fully filled in, in a popup, so an admin
   // can check the wording actually reads right before saving it. Uses
@@ -744,7 +804,13 @@ export default function AdminCreatorRateCalculator() {
   const handleSaveMessageTemplate = async () => {
     setTemplateSaving(true);
     try {
+      // Someone may have saved the template since this page was opened; check before overwriting.
+      const current = await getSiteContent<CreatorRateMessageTemplateContent>(RATE_MESSAGE_TEMPLATE_KEY).then(templateDraftFrom).catch(() => null);
+      if (current && templateBase !== null && stableStringify(current) !== templateBase) {
+        if (!window.confirm('The saved message template changed after you opened this page. Saving now replaces those newer changes with what is on your screen. Save anyway?')) return;
+      }
       await upsertSiteContent(RATE_MESSAGE_TEMPLATE_KEY, { variants: templateVariants, defaultVariantId } satisfies CreatorRateMessageTemplateContent);
+      setTemplateBase(stableStringify(templateValue));
       setTemplateSaved(true);
       setTemplateEditing(false);
       window.setTimeout(() => setTemplateSaved(false), 2000);
@@ -1032,6 +1098,14 @@ export default function AdminCreatorRateCalculator() {
               </p>
             </motion.div>
           </>
+        )}
+
+        {heldTemplate && (
+          <DraftConflictNotice
+            subject="the message template"
+            onRestore={() => { applyTemplate(heldTemplate); setTemplateExpanded(true); setTemplateEditing(true); setHeldTemplate(null); }}
+            onDiscard={() => { discardDraft(TEMPLATE_DRAFT_KEY); setHeldTemplate(null); }}
+          />
         )}
 
         {/* ---- Message template — edited here, not per saved calculation.

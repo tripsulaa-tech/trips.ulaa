@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   createUpcomingTrip, updateUpcomingTrip, getAllTripLeadersAdmin, deleteImageByUrl,
 } from '../../services/api';
@@ -12,6 +12,9 @@ import { emptyTripOptions, cleanTripOptions } from '../../utils/tripOptions';
 import { emptyEndBanner, emptyForm, computeDuration, type TripForm } from './tripFormTypes';
 import { handleExportTemplate, parseImportedTripForm } from './tripTemplateIO';
 import { scrollToTextMatch } from '../../utils/scroll';
+import {
+  useDraftKeeper, modalDraftBase, resolveModalDraft, settleDraft, discardDraft, type ModalDraftValue,
+} from '../../hooks/useSessionDraft';
 
 export { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
@@ -26,6 +29,59 @@ interface LeaderDetourDraft {
   form: TripForm;
   initialUrls: string[];
 }
+
+/** The form as built from a saved trip — what "Edit trip" opens with, and what a kept draft of that
+ *  trip is measured against. */
+function tripToForm(trip: UpcomingTrip): TripForm {
+  return {
+    title: trip.title, destination: trip.destination,
+    start_date: trip.start_date, end_date: trip.end_date,
+    duration: computeDuration(trip.start_date, trip.end_date) || trip.duration, description: trip.description,
+    itinerary: trip.itinerary || [],
+    not_included: trip.not_included || [],
+    meeting_point: trip.meeting_point || '',
+    meeting_point_map_url: trip.meeting_point_map_url || '',
+    meeting_time: trip.meeting_time || '', meeting_terminal: trip.meeting_terminal || '',
+    meeting_details: trip.meeting_details || '',
+    faqs: trip.faqs || [], total_seats: trip.total_seats, seats_booked: trip.seats_booked || 0,
+    min_age: trip.min_age ?? '', max_age: trip.max_age ?? '',
+    price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
+    early_bird_deadline: trip.early_bird_deadline || '',
+    strike_through_price: trip.strike_through_price ?? '',
+    advance_amount: trip.advance_amount ?? '',
+    special_offer_name: trip.special_offer_name || '',
+    special_offer_price: trip.special_offer_price ?? '',
+    special_offer_date: trip.special_offer_date || '',
+    special_offer_end_date: trip.special_offer_end_date || '',
+    card_feature_tags: trip.card_feature_tags || [],
+    trip_type: trip.trip_type || '',
+    cover_image: trip.cover_image || '',
+    cover_image_crop: trip.cover_image_crop || null,
+    hero_mobile_image: trip.hero_mobile_image || '',
+    status: trip.status,
+    terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
+    cancellation_policy: trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY,
+    // Extended
+    highlight_cards: trip.highlight_cards || [],
+    accommodation_description: trip.accommodation_description || '',
+    accommodation_photos: trip.accommodation_photos || [],
+    included_groups: trip.included_groups || [],
+    gallery_items: trip.gallery_items || [],
+    gallery_description: trip.gallery_description || '',
+    fashion_photos: trip.fashion_photos || [],
+    fashion_description: trip.fashion_description || '',
+    things_to_carry_items: trip.things_to_carry_items || [],
+    trip_leader_id: trip.trip_leader_id || '',
+    confidence_items: trip.confidence_items || [],
+    confidence_description: trip.confidence_description || '',
+    meeting_address: trip.meeting_address || '',
+    end_banner: trip.end_banner || emptyEndBanner,
+    trip_finance: foldLegacyCosts(trip.trip_finance || emptyTripFinance),
+    trip_options: trip.trip_options || emptyTripOptions,
+  };
+}
+
+const TRIP_DRAFT_KEY = 'trip-form';
 
 /** Owns the Add/Edit Trip modal end-to-end: the TripForm state itself,
  *  opening it (blank or pre-filled from a trip), the in-modal field
@@ -45,6 +101,11 @@ export function useTripFormModal(load: () => void) {
   const [editingTrip, setEditingTrip] = useState<UpcomingTrip | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<TripForm>(emptyForm);
+  // The form as it was when the pop-up opened (blank, or built from the saved trip): what the
+  // kept draft is measured against.
+  const [baseline, setBaseline] = useState<TripForm | null>(null);
+  // A kept draft whose trip changed after the draft was started: held until the admin chooses.
+  const [heldDraft, setHeldDraft] = useState<{ recordId: string | null; form: TripForm; baseline: TripForm } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   // The Trip Leaders directory (Admin → Trip Leaders), loaded once so the
@@ -92,6 +153,53 @@ export function useTripFormModal(load: () => void) {
     }
     initialModalUrlsRef.current = new Set();
     setModalOpen(false);
+    discardDraft(TRIP_DRAFT_KEY);
+  };
+
+  // Keep the pop-up's unsaved edits while they differ from where it started, so leaving the
+  // page (or refreshing) and coming back finds the pop-up as it was left.
+  const draftValue = useMemo<ModalDraftValue<TripForm>>(() => ({ recordId: editingTrip?.id ?? null, form }), [editingTrip, form]);
+  useDraftKeeper({
+    key: TRIP_DRAFT_KEY,
+    value: draftValue,
+    base: modalOpen && baseline ? modalDraftBase(editingTrip?.id ?? null, baseline) : null,
+  });
+
+  const openFromDraft = (trips: UpcomingTrip[], recordId: string | null, draftForm: TripForm, draftBaseline: TripForm) => {
+    setEditingTrip(recordId ? trips.find(t => t.id === recordId) ?? null : null);
+    setForm({ ...emptyForm, ...draftForm });
+    setBaseline(draftBaseline);
+    initialModalUrlsRef.current = collectTripFormUrls(draftBaseline);
+    setModalSearch('');
+    setModalSearchNoMatch(false);
+    setModalOpen(true);
+  };
+
+  /** Reopens the pop-up as it was left, if an unsaved draft is kept for this tab. Returns true
+   *  when it reopened (or put a draft on hold because the trip changed meanwhile). */
+  const resumeKeptDraft = (trips: UpcomingTrip[]): boolean => {
+    const result = resolveModalDraft<TripForm>(TRIP_DRAFT_KEY, id => {
+      if (id === null) return emptyForm;
+      const trip = trips.find(t => t.id === id);
+      return trip ? tripToForm(trip) : null;
+    });
+    if (result.status === 'none') return false;
+    if (result.status === 'stale') {
+      setHeldDraft({ recordId: result.recordId, form: result.form, baseline: result.baseline });
+      return true;
+    }
+    openFromDraft(trips, result.recordId, result.form, result.baseline);
+    return true;
+  };
+
+  const restoreHeldDraft = (trips: UpcomingTrip[]) => {
+    if (!heldDraft) return;
+    openFromDraft(trips, heldDraft.recordId, heldDraft.form, heldDraft.baseline);
+    setHeldDraft(null);
+  };
+  const discardHeldDraft = () => {
+    discardDraft(TRIP_DRAFT_KEY);
+    setHeldDraft(null);
   };
 
   // Scans every field label / section heading currently rendered inside the
@@ -170,6 +278,7 @@ export function useTripFormModal(load: () => void) {
     if (draft.tripId && !trip) return false; // the trip was deleted meanwhile
     setEditingTrip(trip ?? null);
     setForm(assignLeaderId ? { ...draft.form, trip_leader_id: assignLeaderId } : draft.form);
+    setBaseline(trip ? tripToForm(trip) : emptyForm);
     initialModalUrlsRef.current = new Set(draft.initialUrls);
     setModalSearch('');
     setModalSearchNoMatch(false);
@@ -197,59 +306,16 @@ export function useTripFormModal(load: () => void) {
     setModalSearchNoMatch(false);
     const initialForm = emptyForm;
     setForm(initialForm);
+    setBaseline(initialForm);
     initialModalUrlsRef.current = collectTripFormUrls(initialForm);
     setModalOpen(true);
   };
 
   const openEdit = (trip: UpcomingTrip) => {
     setEditingTrip(trip);
-    const editForm: TripForm = {
-      title: trip.title, destination: trip.destination,
-      start_date: trip.start_date, end_date: trip.end_date,
-      duration: computeDuration(trip.start_date, trip.end_date) || trip.duration, description: trip.description,
-      itinerary: trip.itinerary || [],
-      not_included: trip.not_included || [],
-      meeting_point: trip.meeting_point || '',
-      meeting_point_map_url: trip.meeting_point_map_url || '',
-      meeting_time: trip.meeting_time || '', meeting_terminal: trip.meeting_terminal || '',
-      meeting_details: trip.meeting_details || '',
-      faqs: trip.faqs || [], total_seats: trip.total_seats, seats_booked: trip.seats_booked || 0,
-      min_age: trip.min_age ?? '', max_age: trip.max_age ?? '',
-      price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
-      early_bird_deadline: trip.early_bird_deadline || '',
-      strike_through_price: trip.strike_through_price ?? '',
-      advance_amount: trip.advance_amount ?? '',
-      special_offer_name: trip.special_offer_name || '',
-      special_offer_price: trip.special_offer_price ?? '',
-      special_offer_date: trip.special_offer_date || '',
-      special_offer_end_date: trip.special_offer_end_date || '',
-      card_feature_tags: trip.card_feature_tags || [],
-      trip_type: trip.trip_type || '',
-      cover_image: trip.cover_image || '',
-      cover_image_crop: trip.cover_image_crop || null,
-      hero_mobile_image: trip.hero_mobile_image || '',
-      status: trip.status,
-      terms_and_conditions: trip.terms_and_conditions || DEFAULT_TERMS_AND_CONDITIONS,
-      cancellation_policy: trip.cancellation_policy || DEFAULT_CANCELLATION_POLICY,
-      // Extended
-      highlight_cards: trip.highlight_cards || [],
-      accommodation_description: trip.accommodation_description || '',
-      accommodation_photos: trip.accommodation_photos || [],
-      included_groups: trip.included_groups || [],
-      gallery_items: trip.gallery_items || [],
-      gallery_description: trip.gallery_description || '',
-      fashion_photos: trip.fashion_photos || [],
-      fashion_description: trip.fashion_description || '',
-      things_to_carry_items: trip.things_to_carry_items || [],
-      trip_leader_id: trip.trip_leader_id || '',
-      confidence_items: trip.confidence_items || [],
-      confidence_description: trip.confidence_description || '',
-      meeting_address: trip.meeting_address || '',
-      end_banner: trip.end_banner || emptyEndBanner,
-      trip_finance: foldLegacyCosts(trip.trip_finance || emptyTripFinance),
-      trip_options: trip.trip_options || emptyTripOptions,
-    };
+    const editForm = tripToForm(trip);
     setForm(editForm);
+    setBaseline(editForm);
     initialModalUrlsRef.current = collectTripFormUrls(editForm);
     setModalSearch('');
     setModalSearchNoMatch(false);
@@ -324,6 +390,8 @@ export function useTripFormModal(load: () => void) {
       // All uploads are now committed to the DB — nothing to clean up on close.
       initialModalUrlsRef.current = new Set();
       setModalOpen(false);
+      // Photos that were uploaded and then replaced before saving are deleted now.
+      settleDraft(TRIP_DRAFT_KEY, collectTripFormUrls(form));
       load();
     } catch {
       alert('Failed to save trip.');
@@ -352,6 +420,8 @@ export function useTripFormModal(load: () => void) {
       const imported = parseImportedTripForm(raw);
       setEditingTrip(null);
       setForm(imported);
+      // Measured against the blank form: an imported template is unsaved work worth keeping.
+      setBaseline(emptyForm);
       initialModalUrlsRef.current = collectTripFormUrls(imported);
       setModalOpen(true);
     } catch {
@@ -377,5 +447,6 @@ export function useTripFormModal(load: () => void) {
     handleExportTemplate,
     tripLeaders,
     stashDraftForLeaderDetour, resumeLeaderDraft,
+    resumeKeptDraft, heldDraft, restoreHeldDraft, discardHeldDraft,
   };
 }

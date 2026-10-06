@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSectionTabChrome } from './useSectionTabChrome';
 import {
   getSiteContent, upsertSiteContent, deleteImageByUrl, getStoragePathFromUrl, deleteImage,
@@ -6,6 +6,7 @@ import {
   getAllTestimonialsAdmin, createTestimonial, updateTestimonial, deleteTestimonial,
 } from '../services/api';
 import { collectStorageUrls } from '../utils/utils-index';
+import { lookupDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
 import { DEFAULT_HOME_HERO, mergeWithDefaults as mergeHero } from '../constants/home-hero';
 import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
 import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../constants/founder';
@@ -55,6 +56,10 @@ interface UseAdminHomePageResult {
   hasUnsavedChanges: () => boolean;
   handleSave: () => Promise<void>;
   discardChanges: () => void;
+  /** A kept draft is on hold because the saved version changed after it was started. */
+  draftOnHold: boolean;
+  restoreHeldDraft: () => void;
+  discardHeldDraft: () => void;
 
   heroContent: HomeHeroContent;
   setHeroContent: React.Dispatch<React.SetStateAction<HomeHeroContent>>;
@@ -91,6 +96,42 @@ interface UseAdminHomePageResult {
   scrollBodyRef: React.RefObject<HTMLDivElement | null>;
 }
 
+/** Everything this page edits, as one object — the unit that is kept as a draft and compared
+ *  against the saved version. */
+interface HomeState {
+  hero: HomeHeroContent; why: WhyUlaaContent; founder: FounderContent; cta: CtaBannerContent;
+  testimonialsSection: TestimonialsSectionContent; gallery: GalleryImage[]; items: Testimonial[];
+  bottomNav: BottomNavItemConfig[]; buttonLabels: ButtonLabelsConfig;
+}
+
+const DRAFT_KEY = 'home-page';
+
+/** Reads the saved version of every part of the page from the database. */
+async function fetchSavedHomeState(): Promise<HomeState> {
+  const [heroData, whyData, founderData, ctaData, testimonialsSectionData, bottomNavData, buttonLabelsData, gallery, items] = await Promise.all([
+    getSiteContent<Partial<HomeHeroContent>>('home_hero'),
+    getSiteContent<Partial<WhyUlaaContent>>('why_ulaa'),
+    getSiteContent<Partial<FounderContent>>('founder'),
+    getSiteContent<Partial<CtaBannerContent>>('cta_banner'),
+    getSiteContent<Partial<TestimonialsSectionContent>>('testimonials_section'),
+    getSiteContent<BottomNavItemConfig[]>('bottom_nav'),
+    getSiteContent<Partial<ButtonLabelsConfig>>('button_labels'),
+    getGalleryImages(),
+    getAllTestimonialsAdmin(),
+  ]);
+  return {
+    hero: mergeHero(heroData),
+    why: (whyData as WhyUlaaContent | null) || DEFAULT_WHY_ULAA,
+    founder: mergeFounderWithDefaults(founderData),
+    cta: mergeCta(ctaData),
+    testimonialsSection: { ...DEFAULT_TESTIMONIALS_SECTION, ...testimonialsSectionData },
+    bottomNav: bottomNavData && bottomNavData.length > 0 ? bottomNavData : DEFAULT_BOTTOM_NAV_ITEMS,
+    buttonLabels: buttonLabelsData?.primaryCta ? (buttonLabelsData as ButtonLabelsConfig) : DEFAULT_BUTTON_LABELS,
+    gallery,
+    items,
+  };
+}
+
 function makeTempId() {
   return `new-${crypto.randomUUID()}`;
 }
@@ -119,11 +160,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   // Full snapshot of the last-loaded/last-saved state, for the "Discard
   // changes" secondary action — deep-cloned on every read so callers can't
   // mutate it by reference.
-  const savedStateRef = useRef<{
-    hero: HomeHeroContent; why: WhyUlaaContent; founder: FounderContent; cta: CtaBannerContent;
-    testimonialsSection: TestimonialsSectionContent; gallery: GalleryImage[]; items: Testimonial[];
-    bottomNav: BottomNavItemConfig[]; buttonLabels: ButtonLabelsConfig;
-  } | null>(null);
+  const savedStateRef = useRef<HomeState | null>(null);
 
   const snapshot = (
     hero: HomeHeroContent, why: WhyUlaaContent, founder: FounderContent, cta: CtaBannerContent,
@@ -138,52 +175,67 @@ export function useAdminHomePage(): UseAdminHomePageResult {
     })),
   });
 
+  const [draftBase, setDraftBase] = useState<string | null>(null);
+  const [heldDraft, setHeldDraft] = useState<HomeState | null>(null);
+
+  const applyState = (st: HomeState) => {
+    setHeroContent(st.hero);
+    setWhyContent(st.why);
+    setFounderContent(st.founder);
+    setCtaContent(st.cta);
+    setTestimonialsSectionContent(st.testimonialsSection);
+    setGalleryImages(st.gallery);
+    setTestimonials(st.items);
+    setBottomNavItems(st.bottomNav);
+    setButtonLabels(st.buttonLabels);
+  };
+
   useEffect(() => {
-    Promise.all([
-      getSiteContent<Partial<HomeHeroContent>>('home_hero'),
-      getSiteContent<Partial<WhyUlaaContent>>('why_ulaa'),
-      getSiteContent<Partial<FounderContent>>('founder'),
-      getSiteContent<Partial<CtaBannerContent>>('cta_banner'),
-      getSiteContent<Partial<TestimonialsSectionContent>>('testimonials_section'),
-      getSiteContent<BottomNavItemConfig[]>('bottom_nav'),
-      getSiteContent<Partial<ButtonLabelsConfig>>('button_labels'),
-      getGalleryImages(),
-      getAllTestimonialsAdmin(),
-    ]).then(([heroData, whyData, founderData, ctaData, testimonialsSectionData, bottomNavData, buttonLabelsData, gallery, items]) => {
-      const hero = mergeHero(heroData);
-      const why = (whyData as WhyUlaaContent | null) || DEFAULT_WHY_ULAA;
-      const founder = mergeFounderWithDefaults(founderData);
-      const cta = mergeCta(ctaData);
-      const testimonialsSection = { ...DEFAULT_TESTIMONIALS_SECTION, ...testimonialsSectionData };
-      const bottomNav = bottomNavData && bottomNavData.length > 0 ? bottomNavData : DEFAULT_BOTTOM_NAV_ITEMS;
-      const buttonLabels = buttonLabelsData?.primaryCta ? (buttonLabelsData as ButtonLabelsConfig) : DEFAULT_BUTTON_LABELS;
+    fetchSavedHomeState().then(saved => {
+      const base = stableStringify(saved);
+      // Unsaved edits from an earlier visit in this browser tab come back as they were left,
+      // unless the saved version changed since — then they are held back (see heldDraft).
+      const { draft, stale } = lookupDraft<HomeState>(DRAFT_KEY, base);
+      applyState(draft ?? saved);
+      setHeldDraft(stale);
 
-      setHeroContent(hero);
-      setWhyContent(why);
-      setFounderContent(founder);
-      setCtaContent(cta);
-      setTestimonialsSectionContent(testimonialsSection);
-      setGalleryImages(gallery);
-      setTestimonials(items);
-      setBottomNavItems(bottomNav);
-      setButtonLabels(buttonLabels);
-
-      originalGalleryRef.current = gallery;
-      originalTestimonialsRef.current = items;
+      originalGalleryRef.current = saved.gallery;
+      originalTestimonialsRef.current = saved.items;
       savedUrlsRef.current = new Set([
-        ...collectStorageUrls(hero, STORAGE_BUCKET),
-        ...collectStorageUrls(why, STORAGE_BUCKET),
-        ...collectStorageUrls(founder, STORAGE_BUCKET),
-        ...collectStorageUrls(cta, STORAGE_BUCKET),
+        ...collectStorageUrls(saved.hero, STORAGE_BUCKET),
+        ...collectStorageUrls(saved.why, STORAGE_BUCKET),
+        ...collectStorageUrls(saved.founder, STORAGE_BUCKET),
+        ...collectStorageUrls(saved.cta, STORAGE_BUCKET),
       ]);
-      savedContentRef.current = snapshot(hero, why, founder, cta, testimonialsSection, gallery, items, bottomNav, buttonLabels);
-      savedStateRef.current = { hero, why, founder, cta, testimonialsSection, gallery, items, bottomNav, buttonLabels };
+      savedContentRef.current = snapshot(saved.hero, saved.why, saved.founder, saved.cta, saved.testimonialsSection, saved.gallery, saved.items, saved.bottomNav, saved.buttonLabels);
+      savedStateRef.current = saved;
+      setDraftBase(base);
     }).catch(() => {
       // Leave the defaults in place — same fallback behavior as every
-      // single-page content editor this replaces.
+      // single-page content editor this replaces. With nothing to compare a draft against,
+      // none is kept or restored this visit.
     }).finally(() => setLoading(false));
     // Runs once on mount only, like every content-editor page this replaces.
   }, []);
+
+  const workingState = useMemo<HomeState>(() => ({
+    hero: heroContent, why: whyContent, founder: founderContent, cta: ctaContent,
+    testimonialsSection: testimonialsSectionContent, gallery: galleryImages, items: testimonials,
+    bottomNav: bottomNavItems, buttonLabels,
+  }), [heroContent, whyContent, founderContent, ctaContent, testimonialsSectionContent, galleryImages, testimonials, bottomNavItems, buttonLabels]);
+
+  // Keep the unsaved edits while they differ from what is saved (paused while a draft is on hold).
+  useDraftKeeper({ key: DRAFT_KEY, value: workingState, base: heldDraft ? null : draftBase, bucket: STORAGE_BUCKET });
+
+  const restoreHeldDraft = () => {
+    if (!heldDraft) return;
+    applyState(heldDraft);
+    setHeldDraft(null);
+  };
+  const discardHeldDraft = () => {
+    discardDraft(DRAFT_KEY);
+    setHeldDraft(null);
+  };
 
   const hasUnsavedChanges = () =>
     snapshot(heroContent, whyContent, founderContent, ctaContent, testimonialsSectionContent, galleryImages, testimonials, bottomNavItems, buttonLabels) !== savedContentRef.current;
@@ -195,6 +247,13 @@ export function useAdminHomePage(): UseAdminHomePageResult {
     }
     try {
       setSaving(true);
+
+      // Someone may have saved this page since it was opened here; check before overwriting.
+      const current = await fetchSavedHomeState().catch(() => null);
+      if (current && draftBase !== null && stableStringify(current) !== draftBase) {
+        const overwrite = window.confirm('The saved version of the Home Page changed after you opened it. Saving now replaces those newer changes with what is on your screen. Save anyway?');
+        if (!overwrite) return;
+      }
 
       await Promise.all([
         upsertSiteContent('home_hero', heroContent),
@@ -293,6 +352,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
         testimonialsSection: testimonialsSectionContent, gallery: resolvedGallery, items: resolvedTestimonials,
         bottomNav: bottomNavItems, buttonLabels,
       };
+      setDraftBase(stableStringify(savedStateRef.current));
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -305,23 +365,16 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   // Reverts every field back to the last-loaded/last-saved state (not to
   // hardcoded defaults — unlike the single-content pages this replaces,
   // "reset to defaults" would be destructive here since it'd wipe the
-  // gallery/testimonials lists too). Any image uploaded to storage since
-  // the last save but never committed is simply left as a harmless orphan,
-  // same trade-off the rest of this codebase already accepts (see e.g.
-  // HeroBannerSection's cancel path).
+  // gallery/testimonials lists too). Images uploaded since the last save that the saved
+  // version doesn't use are deleted, so discarding doesn't leave files behind in storage.
   const discardChanges = () => {
     const s = savedStateRef.current;
     if (!s) return;
-    const clone = JSON.parse(JSON.stringify(s)) as typeof s;
-    setHeroContent(clone.hero);
-    setWhyContent(clone.why);
-    setFounderContent(clone.founder);
-    setCtaContent(clone.cta);
-    setTestimonialsSectionContent(clone.testimonialsSection);
-    setGalleryImages(clone.gallery);
-    setTestimonials(clone.items);
-    setBottomNavItems(clone.bottomNav);
-    setButtonLabels(clone.buttonLabels);
+    const keep = collectStorageUrls(s, STORAGE_BUCKET);
+    for (const url of collectStorageUrls(workingState, STORAGE_BUCKET)) {
+      if (!keep.has(url)) deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
+    }
+    applyState(JSON.parse(JSON.stringify(s)) as HomeState);
   };
 
   // Tab bar / scroll-spy / page-search chrome — shared with
@@ -336,6 +389,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
 
   return {
     loading, saving, saved, hasUnsavedChanges, handleSave, discardChanges,
+    draftOnHold: heldDraft !== null, restoreHeldDraft, discardHeldDraft,
     heroContent, setHeroContent,
     whyContent, setWhyContent,
     founderContent, setFounderContent,

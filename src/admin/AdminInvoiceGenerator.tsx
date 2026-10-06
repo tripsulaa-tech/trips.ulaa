@@ -23,7 +23,7 @@
 // it's the real generated PDF, shown in an <iframe>, rebuilt (debounced)
 // on every change. What the admin sees while typing is exactly what they
 // get when they download.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
@@ -64,6 +64,7 @@ import {
 } from '../services/api';
 import type { InvoiceGeneratorRecord } from '../types/types-index';
 
+import { readDraft, stableStringify, useDraftKeeper } from '../hooks/useSessionDraft';
 const BANK_FIELDS: { key: keyof InvoiceGeneratorBankDetails; label: string; placeholder: string }[] = [
   { key: 'accountNumber', label: 'Account Number', placeholder: 'e.g. 423801505983' },
   { key: 'ifscCode', label: 'IFSC Code', placeholder: 'e.g. ICIC0004238' },
@@ -72,6 +73,12 @@ const BANK_FIELDS: { key: keyof InvoiceGeneratorBankDetails; label: string; plac
   { key: 'gpayNumber', label: 'GPAY No.', placeholder: 'e.g. 6383336772' },
 ];
 
+// The invoice being composed is kept for this browser tab while it differs from a fresh form, so
+// leaving the page (or refreshing) and coming back finds it as it was left. The invoice number is
+// left out on purpose: it is only a preview that is looked up again every time the page opens.
+const INVOICE_DRAFT_KEY = 'invoice-generator';
+const withoutNumber = (d: InvoiceGeneratorData): InvoiceGeneratorData => ({ ...d, invoiceNumber: '' });
+
 // Debounce for the live preview rebuild — typing a full sentence
 // shouldn't rebuild+re-render a PDF on every keystroke.
 const PREVIEW_DEBOUNCE_MS = 500;
@@ -79,7 +86,15 @@ const PREVIEW_DEBOUNCE_MS = 500;
 export default function AdminInvoiceGenerator() {
   const alert = useAlert();
   const confirm = useConfirm();
-  const [data, setData] = useState<InvoiceGeneratorData>(() => defaultInvoiceGeneratorData());
+  // Starts from the invoice kept for this tab (if any), otherwise a fresh form.
+  const [data, setData] = useState<InvoiceGeneratorData>(() => {
+    const kept = readDraft<Partial<InvoiceGeneratorData>>(INVOICE_DRAFT_KEY);
+    return withoutNumber({ ...defaultInvoiceGeneratorData(), ...kept } as InvoiceGeneratorData);
+  });
+  // What "nothing to keep" looks like: a fresh form (or, after Save, the invoice just saved).
+  const [draftBase, setDraftBase] = useState(() => stableStringify(withoutNumber(defaultInvoiceGeneratorData())));
+  const draftValue = useMemo(() => withoutNumber(data), [data]);
+  useDraftKeeper({ key: INVOICE_DRAFT_KEY, value: draftValue, base: draftBase });
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
 
@@ -202,6 +217,8 @@ export default function AdminInvoiceGenerator() {
       // previewed, but this stays correct even in the rare case another
       // admin saved one in between and the series moved on).
       setField('invoiceNumber', saved.invoice_number);
+      // Saved: nothing left to keep for this tab.
+      setDraftBase(stableStringify(withoutNumber(data)));
       await alert({ message: 'Invoice saved.', variant: 'success' });
     } catch (err) {
       console.error('Failed to save invoice', err);

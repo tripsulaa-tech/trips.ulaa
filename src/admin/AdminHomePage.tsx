@@ -1,6 +1,7 @@
 import ContentEditorShell from './ContentEditorShell';
 import { useConfirm } from '../components/ui/useConfirm';
 import { useAdminHomePage, SECTION_TITLES } from './useAdminHomePage';
+import DraftConflictNotice from './DraftConflictNotice';
 import HeroBannerSection from './home-sections/HeroBannerSection';
 import WhyUlaaSection from './home-sections/WhyUlaaSection';
 import TestimonialsSection from './home-sections/TestimonialsSection';
@@ -24,6 +25,7 @@ export default function AdminHomePage() {
   const confirm = useConfirm();
   const {
     loading, saving, saved, hasUnsavedChanges, handleSave, discardChanges,
+    draftOnHold, restoreHeldDraft, discardHeldDraft,
     heroContent, setHeroContent,
     whyContent, setWhyContent,
     founderContent, setFounderContent,
@@ -72,6 +74,7 @@ export default function AdminHomePage() {
       saving={saving}
       saved={saved}
       onSecondaryAction={handleDiscard}
+      notice={draftOnHold ? <DraftConflictNotice subject="the Home Page" onRestore={restoreHeldDraft} onDiscard={discardHeldDraft} /> : undefined}
     >
       <HeroBannerSection
         content={heroContent}

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Upload, ArrowCounterClockwise, Warning } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import AdminEditorFooter from './AdminEditorFooter';
+import DraftConflictNotice from './DraftConflictNotice';
+import { lookupDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
 import { getSiteContent, upsertSiteContent, uploadImage, deleteImageByUrl } from '../services/api';
 import {
   BRANDING_KEY,
@@ -18,6 +20,7 @@ import {
 // leaving a slot empty falls back to the file bundled in /public.
 
 const BUCKET = 'ulaa';
+const DRAFT_KEY = 'branding';
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB — logos/icons never need more
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico';
 
@@ -201,17 +204,28 @@ export default function AdminBranding() {
   // up unused instead of leaving orphans in storage.
   const savedRef = useRef<BrandingContent>({ ...EMPTY_BRANDING });
   const sessionUploadsRef = useRef<Set<string>>(new Set());
+  // Saved version the draft is measured against (null until loaded), and a kept draft that is
+  // on hold because the saved version changed after it was started.
+  const [draftBase, setDraftBase] = useState<string | null>(null);
+  const [heldDraft, setHeldDraft] = useState<BrandingContent | null>(null);
 
   useEffect(() => {
     getSiteContent<unknown>(BRANDING_KEY)
       .then(data => {
         const loaded = normalizeBranding(data);
+        const base = stableStringify(loaded);
+        // Unsaved changes from an earlier visit in this browser tab come back as they were left.
+        const { draft: kept, stale } = lookupDraft<BrandingContent>(DRAFT_KEY, base);
         savedRef.current = loaded;
-        setDraft(loaded);
+        setDraft(kept ? normalizeBranding(kept) : loaded);
+        setHeldDraft(stale ? normalizeBranding(stale) : null);
+        setDraftBase(base);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useDraftKeeper({ key: DRAFT_KEY, value: draft, base: heldDraft ? null : draftBase, bucket: BUCKET });
 
   const hasUnsavedChanges = () => JSON.stringify(draft) !== JSON.stringify(savedRef.current);
 
@@ -234,10 +248,16 @@ export default function AdminBranding() {
   const handleSave = async () => {
     try {
       setSaving(true);
+      // Someone may have saved branding since this page was opened; check before overwriting.
+      const current = await getSiteContent<unknown>(BRANDING_KEY).then(normalizeBranding).catch(() => null);
+      if (current && draftBase !== null && stableStringify(current) !== draftBase) {
+        if (!window.confirm('The saved branding changed after you opened this page. Saving now replaces those newer changes with what is on your screen. Save anyway?')) return;
+      }
       await upsertSiteContent(BRANDING_KEY, draft);
       applyBranding(draft);
       await cleanupUnused(draft, savedRef.current);
       savedRef.current = { ...draft };
+      setDraftBase(stableStringify(draft));
       setSaved(true);
       window.setTimeout(() => setSaved(false), 3000);
     } catch {
@@ -249,7 +269,7 @@ export default function AdminBranding() {
 
   const handleDiscard = async () => {
     if (hasUnsavedChanges() && !window.confirm('Discard your unsaved changes?')) return;
-    await cleanupUnused(savedRef.current, { ...EMPTY_BRANDING });
+    await cleanupUnused(savedRef.current, draft);
     setDraft({ ...savedRef.current });
     setSaved(false);
   };
@@ -290,6 +310,13 @@ export default function AdminBranding() {
     >
       <div className="bg-white rounded-md border border-background-warm shadow-card">
         <div className="p-4 sm:p-6 space-y-8">
+          {heldDraft && (
+            <DraftConflictNotice
+              subject="the branding"
+              onRestore={() => { setDraft(heldDraft); setHeldDraft(null); }}
+              onDiscard={() => { discardDraft(DRAFT_KEY); setHeldDraft(null); }}
+            />
+          )}
           {renderGroup('public', 'Public Website', 'Header, footer and browser/app icons that visitors see.')}
 
           <div className="flex items-start gap-3 rounded-md bg-background-warm/60 border border-background-warm p-3 text-xs text-dark-muted">

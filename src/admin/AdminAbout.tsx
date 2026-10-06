@@ -1,5 +1,6 @@
 import ContentEditorShell from './ContentEditorShell';
 import { useContentEditorPage } from './useContentEditorPage';
+import DraftConflictNotice from './DraftConflictNotice';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
 import { useConfirm } from '../components/ui/useConfirm';
 import type {
@@ -61,6 +62,9 @@ export default function AdminAbout() {
     scrollBodyRef,
     hasUnsavedChanges,
     handleSave,
+    draftOnHold,
+    restoreHeldDraft,
+    discardHeldDraft,
   } = useContentEditorPage<AboutContent>({
     contentKey: 'about',
     defaultContent: DEFAULT_ABOUT,
@@ -217,6 +221,7 @@ export default function AdminAbout() {
       saving={saving}
       saved={saved}
       onSecondaryAction={resetToDefault}
+      notice={draftOnHold ? <DraftConflictNotice subject="the About page" onRestore={restoreHeldDraft} onDiscard={discardHeldDraft} /> : undefined}
     >
         <HeroSection content={content.hero} setHero={setHero} sectionRef={el => { setSectionRef(0, el); }} />
         <OurStorySection content={content.our_story} setStory={setStory} sectionRef={el => { setSectionRef(1, el); }} />

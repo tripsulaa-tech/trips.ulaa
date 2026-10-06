@@ -119,20 +119,39 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
       : id === 'Payment note' ? (fullyPaid ? t.paymentLabelFull : t.paymentLabelPartial)
       : id === 'Button and sign-off' ? t.buttonLabel
       : '';
-    // Longest fixed piece of the line (fill-in values and ** marks are not in the text as typed).
-    const probe = text.replace(/\*\*/g, '').split(/\{[^}]*\}/).sort((a, b) => b.length - a.length)[0]?.trim();
-    if (!probe) {
+    // Fixed pieces of the line (fill-in values and ** marks are not in the text as typed), longest first.
+    // If none of the typed wording is found (heavily reworded), try the original wording, then fall back
+    // to a proportional position so the jump never silently does nothing.
+    const pieces = (line: string) =>
+      line.replace(/\*\*/g, '').split(/\{[^}]*\}/).map(x => x.trim()).filter(x => x.length >= 3).sort((a, b) => b.length - a.length);
+    const original = normalizeBookingEmailTemplate({});
+    const originalText =
+      id === 'Top of the email' ? original.tagline
+      : id === 'Message' ? original.greeting
+      : id === 'Payment note' ? (fullyPaid ? original.paymentLabelFull : original.paymentLabelPartial)
+      : id === 'Button and sign-off' ? original.buttonLabel
+      : '';
+    const candidates = [...pieces(text), ...pieces(originalText)];
+    if (candidates.length === 0) {
       win.scrollTo({ top: 0, behavior });
       return;
     }
     const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-      const el = n.parentElement;
-      if (!el || !(n.nodeValue ?? '').toLowerCase().includes(probe.toLowerCase()) || el.getClientRects().length === 0) continue;
-      const top = el.getBoundingClientRect().top + win.scrollY - 24;
-      win.scrollTo({ top: Math.max(0, top), behavior });
-      return;
+    const nodes: Text[] = [];
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n as Text);
+    for (const probe of candidates) {
+      const needle = probe.toLowerCase();
+      for (const n of nodes) {
+        const el = n.parentElement;
+        if (!el || !(n.nodeValue ?? '').toLowerCase().includes(needle) || el.getClientRects().length === 0) continue;
+        const top = el.getBoundingClientRect().top + win.scrollY - 24;
+        win.scrollTo({ top: Math.max(0, top), behavior });
+        return;
+      }
     }
+    const idx = Math.max(0, GROUPS.findIndex(g => g.title === id));
+    const max = doc.documentElement.scrollHeight - win.innerHeight;
+    win.scrollTo({ top: Math.max(0, (max * idx) / GROUPS.length), behavior });
   };
   const wireSync = (i: number) => {
     const win = cmpRefs.current[i]?.contentWindow;
@@ -279,6 +298,20 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
 
   const group = GROUPS.find(g => g.title === section);
   const SECTION_CHIPS = [...GROUPS.map(g => g.title), 'style'];
+  const chipId = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  // Arrow keys / Home / End move between the email sections.
+  const onChipsKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const i = Math.max(0, SECTION_CHIPS.indexOf(section));
+    let next = i;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % SECTION_CHIPS.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + SECTION_CHIPS.length) % SECTION_CHIPS.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = SECTION_CHIPS.length - 1;
+    else return;
+    e.preventDefault();
+    chooseSection(SECTION_CHIPS[next]);
+    window.requestAnimationFrame(() => document.getElementById(`mail-section-${chipId(SECTION_CHIPS[next])}`)?.focus());
+  };
   const chipLabel = (t: string) => (t === 'style' ? 'Colour & logo' : t);
   const frame = fit ? 'h-full min-h-0' : 'h-[560px]';
 
@@ -286,13 +319,15 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
     <div className={fit ? 'h-full min-h-0 flex flex-col' : ''}>
       <div className={`p-4 sm:p-6 grid gap-4 lg:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] ${fit ? 'flex-1 min-h-0 !py-3 items-stretch' : 'items-start'}`}>
         <div className={`min-w-0 space-y-3 ${fit ? 'min-h-0 overflow-y-auto app-scroll pr-1' : ''}`}>
-          <div role="tablist" aria-label="Email sections" className="flex flex-wrap gap-1.5">
+          <div role="tablist" aria-label="Email sections" onKeyDown={onChipsKeyDown} className="flex flex-wrap gap-1.5">
             {SECTION_CHIPS.map(t => (
               <button
                 key={t}
                 type="button"
                 role="tab"
+                id={`mail-section-${chipId(t)}`}
                 aria-selected={section === t}
+                tabIndex={section === t ? 0 : -1}
                 onClick={() => chooseSection(t)}
                 className={`min-h-[30px] rounded-md border-2 px-2.5 text-xs font-medium transition-colors ${
                   section === t ? 'border-primary bg-primary/5 text-primary' : 'border-background-warm text-dark hover:border-primary/50'

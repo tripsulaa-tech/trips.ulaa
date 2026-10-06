@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CaretDown, MagnifyingGlass, PencilSimple } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
+import DraftConflictNotice from './DraftConflictNotice';
 import TripFinanceBreakdown from './trips/TripFinanceBreakdown';
 import TripPricingSummary from './trips/TripPricingSummary';
 import TripFinanceEditor from './trips/TripFinanceEditor';
@@ -22,6 +23,9 @@ import { computeTripFinanceSummary, emptyTripFinance, foldLegacyCosts } from '..
 import { countOptionSelections } from '../utils/tripOptions';
 import { formatDate, formatPrice } from '../utils/utils-index';
 import { scrollToTextMatch } from '../utils/scroll';
+import {
+  useDraftKeeper, modalDraftBase, resolveModalDraft, clearDraft, discardDraft, type ModalDraftValue,
+} from '../hooks/useSessionDraft';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import type {
   CompletedTrip,
@@ -150,6 +154,20 @@ function buildRows(
   return rows.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 }
 
+const FINANCE_DRAFT_KEY = 'trip-finance-form';
+
+/** Everything the Finances & Profit pop-up edits for one trip. */
+interface FinanceForm { finance: TripFinance; pricing: PricingDraft | null }
+
+/** The pop-up's contents as built from the saved row — what a kept draft is measured against. */
+function financeFormFor(row: TripFinanceRow): FinanceForm {
+  return {
+    finance: foldLegacyCosts(row.finance ?? emptyTripFinance),
+    // A finished trip's pricing, seats and packages live only here.
+    pricing: row.hasUpcomingRow ? null : pricingDraftFrom(row.pricing, row.totalSeats, row.seatsBooked ?? row.revenue?.bookedCount ?? null),
+  };
+}
+
 /** Admin → Trips → Trip Finance. One place for every trip's Finances & Profit
  *  and Pricing — upcoming and completed — so the numbers don't disappear once
  *  a trip has finished and its upcoming-trip row is gone. */
@@ -168,6 +186,10 @@ export default function AdminTripFinance() {
   const [pricingDraft, setPricingDraft] = useState<PricingDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  // The pop-up's contents as they were when it opened: what the kept draft is measured against.
+  const [baseline, setBaseline] = useState<FinanceForm | null>(null);
+  // A kept draft whose trip's finances changed after the draft was started: held until chosen.
+  const [heldDraft, setHeldDraft] = useState<{ recordId: string | null; form: FinanceForm; baseline: FinanceForm } | null>(null);
   // "Search fields" box in the Add/Edit finances dialog, same idea as the Edit Trip dialog's.
   const [modalSearch, setModalSearch] = useState('');
   const [modalSearchNoMatch, setModalSearchNoMatch] = useState(false);
@@ -212,14 +234,54 @@ export default function AdminTripFinance() {
   const editingRow = rows.find(r => r.id === editingId) ?? null;
 
   const openEdit = (row: TripFinanceRow) => {
-    setDraft(foldLegacyCosts(row.finance ?? emptyTripFinance));
-    // A finished trip's pricing, seats and packages live only here.
-    setPricingDraft(row.hasUpcomingRow ? null : pricingDraftFrom(row.pricing, row.totalSeats, row.seatsBooked ?? row.revenue?.bookedCount ?? null));
+    const form = financeFormFor(row);
+    openWithForm(row.id, form, form);
+  };
+
+  const openWithForm = (rowId: string, form: FinanceForm, formBaseline: FinanceForm) => {
+    setDraft(form.finance);
+    setPricingDraft(form.pricing);
+    setBaseline(formBaseline);
     setSaveError('');
     setModalSearch('');
     setModalSearchNoMatch(false);
-    setEditingId(row.id);
+    setEditingId(rowId);
   };
+
+  const closeEdit = () => {
+    setEditingId(null);
+    discardDraft(FINANCE_DRAFT_KEY);
+  };
+
+  // Reopens the pop-up as it was left when this page is opened again in the same browser tab
+  // (or puts the draft on hold if the trip's finances changed since the draft was started).
+  const resumeKeptDraft = () => {
+    const result = resolveModalDraft<FinanceForm>(FINANCE_DRAFT_KEY, id => {
+      const row = rows.find(r => r.id === id);
+      return row ? financeFormFor(row) : null;
+    });
+    if (result.status === 'none' || !result.recordId) return;
+    if (result.status === 'stale') setHeldDraft(result);
+    else openWithForm(result.recordId, result.form, result.baseline);
+  };
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (loading || resumedRef.current) return;
+    resumedRef.current = true;
+    resumeKeptDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, rows]);
+
+  // Keep the pop-up's unsaved edits while they differ from where it started.
+  const draftValue = useMemo<ModalDraftValue<FinanceForm>>(
+    () => ({ recordId: editingId, form: { finance: draft, pricing: pricingDraft } }),
+    [editingId, draft, pricingDraft],
+  );
+  useDraftKeeper({
+    key: FINANCE_DRAFT_KEY,
+    value: draftValue,
+    base: editingId && baseline ? modalDraftBase(editingId, baseline) : null,
+  });
 
   // Upcoming trip still exists -> its own trip_finance is the source of truth
   // (same field the Edit Trip modal writes), and the saved copy is refreshed
@@ -248,6 +310,7 @@ export default function AdminTripFinance() {
         setSnapshots(await getTripFinanceSnapshots());
       }
       setEditingId(null);
+      clearDraft(FINANCE_DRAFT_KEY);
     } catch (err) {
       console.error(err);
       setSaveError('Could not save. Check your connection and try again.');
@@ -307,6 +370,17 @@ export default function AdminTripFinance() {
 
   return (
     <AdminLayout title="Trip Finance" scrollRestorationReady={!loading}>
+      {heldDraft && (
+        <DraftConflictNotice
+          className="mb-4"
+          subject={`the finances of "${rows.find(r => r.id === heldDraft.recordId)?.title ?? 'this trip'}"`}
+          onRestore={() => {
+            if (heldDraft.recordId) openWithForm(heldDraft.recordId, heldDraft.form, heldDraft.baseline);
+            setHeldDraft(null);
+          }}
+          onDiscard={() => { discardDraft(FINANCE_DRAFT_KEY); setHeldDraft(null); }}
+        />
+      )}
       <div className="space-y-5">
         {needsMigration && (
           <div role="alert" className="rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm p-3">
@@ -441,7 +515,7 @@ export default function AdminTripFinance() {
 
       <Modal
         isOpen={!!editingRow}
-        onClose={() => !saving && setEditingId(null)}
+        onClose={() => !saving && closeEdit()}
         title={editingRow ? `${pricingDraft ? 'Pricing, Finances & Profit' : 'Finances & Profit'} — ${editingRow.title}` : 'Finances & Profit'}
         size="2xl"
         mobileFullScreen
@@ -465,7 +539,7 @@ export default function AdminTripFinance() {
           <div className="space-y-2">
             {saveError && <p role="alert" className="text-xs text-red-600">{saveError}</p>}
             <div className="flex gap-3">
-              <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={() => setEditingId(null)} disabled={saving}>Cancel</Button>
+              <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeEdit} disabled={saving}>Cancel</Button>
               <Button variant="primary" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={saveEdit} loading={saving}>Save Changes</Button>
             </div>
           </div>

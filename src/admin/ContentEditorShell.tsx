@@ -40,6 +40,7 @@ export default function ContentEditorShell({
   saving,
   saved,
   onSecondaryAction,
+  notice,
   children,
 }: {
   title: string;
@@ -66,6 +67,8 @@ export default function ContentEditorShell({
   saving: boolean;
   saved: boolean;
   onSecondaryAction: () => void;
+  /** Optional banner shown above the sections (e.g. the saved-version-changed notice). */
+  notice?: ReactNode;
   children: ReactNode;
 }) {
   if (loading) {
@@ -179,6 +182,7 @@ export default function ContentEditorShell({
           {pageSearchNoMatch && (
             <p role="alert" className="text-xs text-red-500 px-4 sm:px-6 pt-3 sm:pt-4">No matching field found for "{pageSearch}".</p>
           )}
+          {notice && <div className="px-4 sm:px-6 pt-3 sm:pt-4">{notice}</div>}
           <div className={bodyClassName}>
             {children}
           </div>

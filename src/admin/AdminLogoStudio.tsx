@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { DownloadSimple, ArrowCounterClockwise, Warning, Copy, ClipboardText, Check } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import ColorPicker, { type ColorSwatch } from '../components/ui/ColorPicker';
@@ -195,6 +195,41 @@ interface View {
   y: number;
 }
 const DEFAULT_VIEW: View = { zoom: 1, x: 0, y: 0 };
+const VIEW_LIMIT = 1.5;
+const clampView = (v: number) => Math.max(-VIEW_LIMIT, Math.min(VIEW_LIMIT, v));
+
+type StudioTab = 'design' | 'site' | 'mail';
+const TABS: ReadonlyArray<readonly [StudioTab, string]> = [
+  ['design', 'Design & download'],
+  ['site', 'Site logos'],
+  ['mail', 'Email'],
+];
+
+/** Whole-pixel offset field: typed text is kept as typed while focused, and applied once it is a valid number. */
+function PxField({ label, valuePx, maxPx, onCommit }: { label: string; valuePx: number; maxPx: number; onCommit: (px: number) => void }) {
+  const [text, setText] = useState<string | null>(null);
+  const shown = text ?? String(valuePx);
+  return (
+    <label className="flex flex-1 min-w-0 items-center gap-1.5 text-xs font-medium text-dark">
+      <span className="shrink-0">{label}</span>
+      <input
+        inputMode="numeric"
+        value={shown}
+        aria-label={`${label} offset in pixels`}
+        onFocus={e => e.currentTarget.select()}
+        onChange={e => {
+          const raw = e.target.value.replace(/[^\d-]/g, '').slice(0, 6);
+          setText(raw);
+          const n = Number(raw);
+          if (raw !== '' && raw !== '-' && Number.isFinite(n)) onCommit(Math.max(-maxPx, Math.min(maxPx, n)));
+        }}
+        onBlur={() => setText(null)}
+        className="w-full min-w-0 px-2 py-1 rounded-md border-2 border-background-warm bg-background text-xs text-dark focus:border-primary outline-none transition-colors"
+      />
+      <span className="text-2xs text-dark-muted">px</span>
+    </label>
+  );
+}
 
 interface Bounds {
   x: number;
@@ -465,7 +500,20 @@ export default function AdminLogoStudio() {
   const requestedRef = useRef<Set<DesignId>>(new Set());
   const [imageError, setImageError] = useState(false);
 
-  const [tab, setTab] = useSessionState<'design' | 'site' | 'mail'>('logoStudio.tab', 'design');
+  const [tab, setTab] = useSessionState<StudioTab>('logoStudio.tab', 'design');
+  // Arrow keys / Home / End move between the three sections, as a tab list should.
+  const onTabsKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const i = TABS.findIndex(([id]) => id === tab);
+    let next = i;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % TABS.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + TABS.length) % TABS.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = TABS.length - 1;
+    else return;
+    e.preventDefault();
+    setTab(TABS[next][0]);
+    window.requestAnimationFrame(() => document.getElementById(`logo-tab-${TABS[next][0]}`)?.focus());
+  };
   const siteDirtyRef = useRef(false);
   const mailDirtyRef = useRef(false);
   const hasUnsavedChanges = useCallback(() => siteDirtyRef.current || mailDirtyRef.current, []);
@@ -548,10 +596,23 @@ export default function AdminLogoStudio() {
     const shown = Math.min(r.width / c.width, r.height / c.height);
     const dw = c.width * shown;
     const dh = c.height * shown;
-    const lim = (v: number) => Math.max(-1.5, Math.min(1.5, v));
-    setView(v => ({ ...v, x: lim(d.vx + (e.clientX - d.px) / dw), y: lim(d.vy + (e.clientY - d.py) / dh) }));
+    setView(v => ({ ...v, x: clampView(d.vx + (e.clientX - d.px) / dw), y: clampView(d.vy + (e.clientY - d.py) / dh) }));
   };
   const onPreviewUp = () => { dragRef.current = null; };
+  // Keyboard equivalent of dragging: arrows nudge 1% of the frame (Shift = 5%), + / - zoom, 0 resets.
+  const onPreviewKey = (e: ReactKeyboardEvent<HTMLCanvasElement>) => {
+    if (!previewCustom) return;
+    const step = e.shiftKey ? 0.05 : 0.01;
+    if (e.key === 'ArrowLeft') setView(v => ({ ...v, x: clampView(v.x - step) }));
+    else if (e.key === 'ArrowRight') setView(v => ({ ...v, x: clampView(v.x + step) }));
+    else if (e.key === 'ArrowUp') setView(v => ({ ...v, y: clampView(v.y - step) }));
+    else if (e.key === 'ArrowDown') setView(v => ({ ...v, y: clampView(v.y + step) }));
+    else if (e.key === '+' || e.key === '=') setView(v => ({ ...v, zoom: Math.min(3, Math.round((v.zoom + 0.05) * 100) / 100) }));
+    else if (e.key === '-' || e.key === '_') setView(v => ({ ...v, zoom: Math.max(0.5, Math.round((v.zoom - 0.05) * 100) / 100) }));
+    else if (e.key === '0') setView(DEFAULT_VIEW);
+    else return;
+    e.preventDefault();
+  };
 
   const copyColor = (key: LogoColorKey) => {
     const hex = colors[key];
@@ -676,17 +737,15 @@ export default function AdminLogoStudio() {
       fixedHeight={lockHeight}
     >
       <div className={`bg-white rounded-md border border-background-warm shadow-card ${lockHeight ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : ''}`}>
-        <div role="tablist" aria-label="Logo Studio sections" className={`flex gap-2 px-4 sm:px-6 ${lockHeight ? 'pt-3' : 'pt-4 sm:pt-6'}`}>
-          {([
-            ['design', 'Design & download'],
-            ['site', 'Site logos'],
-            ['mail', 'Email'],
-          ] as const).map(([id, label]) => (
+        <div role="tablist" aria-label="Logo Studio sections" onKeyDown={onTabsKeyDown} className={`flex flex-wrap gap-2 px-4 sm:px-6 ${lockHeight ? 'pt-3' : 'pt-4 sm:pt-6'}`}>
+          {TABS.map(([id, label]) => (
             <button
               key={id}
               type="button"
               role="tab"
+              id={`logo-tab-${id}`}
               aria-selected={tab === id}
+              tabIndex={tab === id ? 0 : -1}
               onClick={() => setTab(id)}
               className={`min-h-[36px] rounded-md px-4 text-sm font-medium transition-colors ${
                 tab === id ? 'bg-primary text-white' : 'bg-background-warm text-dark hover:bg-background-warm/70'
@@ -719,8 +778,10 @@ export default function AdminLogoStudio() {
               ) : (
                 <canvas
                   ref={previewRef}
-                  role="img"
-                  aria-label="Ulaa logo preview"
+                  role={previewCustom ? 'group' : 'img'}
+                  aria-label={previewCustom ? 'Ulaa logo preview. Use arrow keys to move the logo, plus and minus to zoom, 0 to reset.' : 'Ulaa logo preview'}
+                  tabIndex={previewCustom ? 0 : undefined}
+                  onKeyDown={onPreviewKey}
                   onPointerDown={onPreviewDown}
                   onPointerMove={onPreviewMove}
                   onPointerUp={onPreviewUp}
@@ -728,7 +789,7 @@ export default function AdminLogoStudio() {
                   title={previewCustom ? 'Drag to move the logo inside the frame' : undefined}
                   style={previewCustom ? { touchAction: 'none' } : undefined}
                   className={`${lockHeight ? 'block max-h-full max-w-full h-full w-full object-contain' : 'block w-full h-auto'} ${
-                    previewCustom ? 'cursor-grab active:cursor-grabbing' : ''
+                    previewCustom ? 'cursor-grab active:cursor-grabbing focus:outline-none focus-visible:ring-2 focus-visible:ring-primary' : ''
                   }`}
                 />
               )}
@@ -895,7 +956,11 @@ export default function AdminLogoStudio() {
                       <ArrowCounterClockwise size={12} aria-hidden="true" />
                     </button>
                   </div>
-                  <p className="text-2xs text-dark-muted">Preview shows the {cw} × {ch} px frame. Drag the logo to position it; zoom in to crop the edges.</p>
+                  <div className="flex items-center gap-2">
+                    <PxField label="X" valuePx={Math.round(view.x * cw)} maxPx={Math.round(VIEW_LIMIT * cw)} onCommit={px => setView(v => ({ ...v, x: clampView(px / cw) }))} />
+                    <PxField label="Y" valuePx={Math.round(view.y * ch)} maxPx={Math.round(VIEW_LIMIT * ch)} onCommit={px => setView(v => ({ ...v, y: clampView(px / ch) }))} />
+                  </div>
+                  <p className="text-2xs text-dark-muted">Preview shows the {cw} × {ch} px frame. Drag the logo, use the arrow keys, or type an exact X / Y shift in pixels (0 = centred); zoom in to crop the edges.</p>
                   {!customValid && (
                     <p role="alert" className="text-2xs text-red-600">Each side must be {CUSTOM_MIN} to {CUSTOM_MAX} px, and the whole image no more than {CUSTOM_MAX_PIXELS / 1_000_000} million pixels.</p>
                   )}

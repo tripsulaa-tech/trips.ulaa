@@ -35,6 +35,7 @@ import NotificationsPanel from './NotificationsPanel';
 import PushNotificationToggle from './PushNotificationToggle';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
+import { sweepAbandonedDraftUploads, discardAllDrafts, hasAnyDraft } from '../hooks/useSessionDraft';
 import type { TripHighlightIconType } from '../constants/tripHighlightIcons';
 import { useBranding } from '../hooks/useBranding';
 
@@ -98,6 +99,31 @@ interface NavOrder {
 // order from an older version would otherwise keep overriding the new layout
 // for everyone who had ever opened the admin.
 const NAV_ORDER_STORAGE_KEY = 'admin-sidebar-order-v3';
+
+// Which sidebar sections the admin has expanded. Every admin page renders its
+// own AdminLayout, so the sidebar remounts on each navigation; without this the
+// open sections reset to just the current page's section. A section stays open
+// until the admin closes it themselves.
+const NAV_OPEN_GROUPS_KEY = 'admin-sidebar-open-groups';
+
+function loadOpenGroups(): Record<string, boolean> {
+  try {
+    const raw = window.localStorage.getItem(NAV_OPEN_GROUPS_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, boolean>;
+  } catch {
+    // Storage unavailable or corrupt — fall back to defaults.
+  }
+  return {};
+}
+
+function saveOpenGroups(open: Record<string, boolean>) {
+  try {
+    window.localStorage.setItem(NAV_OPEN_GROUPS_KEY, JSON.stringify(open));
+  } catch {
+    // Storage unavailable — sections still work for this page view.
+  }
+}
 
 function defaultNavOrder(): NavOrder {
   return {
@@ -213,10 +239,12 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
   const groupHasActive = (groupId: string, order: NavOrder = navOrder) =>
     (order.groups[groupId] ?? []).some(isItemActive);
 
-  // Sections start collapsed, except the one holding the current page.
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(NAV_GROUPS.map(g => [g.id, groupHasActive(g.id)]))
-  );
+  // Sections the admin opened stay open (remembered across pages and visits)
+  // until they close them; the section holding the current page is always open.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const saved = loadOpenGroups();
+    return Object.fromEntries(NAV_GROUPS.map(g => [g.id, saved[g.id] === true || groupHasActive(g.id)]));
+  });
 
   // Navigating (sidebar link, dashboard quick action, back button, ...) into
   // a page that lives in a collapsed section opens that section. Adjusted
@@ -225,7 +253,11 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
   if (location.pathname !== prevPathname) {
     setPrevPathname(location.pathname);
     const home = NAV_GROUPS.find(g => groupHasActive(g.id));
-    if (home && !openGroups[home.id]) setOpenGroups(prev => ({ ...prev, [home.id]: true }));
+    if (home && !openGroups[home.id]) {
+      const next = { ...openGroups, [home.id]: true };
+      setOpenGroups(next);
+      saveOpenGroups(next);
+    }
   }
 
   const [draggedLabel, setDraggedLabel] = useState<string | null>(null);
@@ -236,7 +268,11 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
   // drag-and-drop never fires from touch gestures on mobile browsers.
   const rowsRef = useRef<Map<string, { el: HTMLElement; target: DragTarget }>>(new Map());
 
-  const toggleGroup = (id: string) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleGroup = (id: string) => {
+    const next = { ...openGroups, [id]: !openGroups[id] };
+    setOpenGroups(next);
+    saveOpenGroups(next);
+  };
 
   const updateOrder = (updater: (order: NavOrder) => NavOrder) => {
     setNavOrder(prev => {
@@ -534,6 +570,11 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
   // `scrollRestorationReady={!loading}` so this waits for the page's real
   // height before restoring, not a shorter loading skeleton's.
   useScrollRestoration(location.pathname, scrollRestorationReady);
+  // Once per admin page load: delete images that belonged to drafts whose tab was closed without
+  // saving or discarding them (see useSessionDraft).
+  useEffect(() => {
+    sweepAbandonedDraftUploads();
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const mobileCloseBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -619,15 +660,20 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
   // (which isn't available under the plain BrowserRouter this app uses).
   const guardNavigate = (e: React.MouseEvent) => {
     if (!hasUnsavedChanges || !hasUnsavedChanges()) return;
-    if (!window.confirm('You have unsaved changes that will be lost. Leave this page anyway?')) {
+    // Every page that reports unsaved changes also keeps them as a draft for this browser tab,
+    // so leaving is safe; what the admin should know is that nothing is on the live site yet.
+    if (!window.confirm('You have unsaved changes. They stay in this browser tab so you can come back to them, but they are not on the live site until you save. Leave this page anyway?')) {
       e.preventDefault();
     }
   };
 
   const handleSignOut = async () => {
-    if (hasUnsavedChanges?.() && !window.confirm('You have unsaved changes that will be lost. Sign out anyway?')) {
+    if ((hasUnsavedChanges?.() || hasAnyDraft()) && !window.confirm('You have unsaved changes. Signing out discards them. Sign out anyway?')) {
       return;
     }
+    // Nothing unsaved should outlive the session: drop every draft this tab holds, and the
+    // images uploaded only for them.
+    discardAllDrafts();
     await signOut();
     navigate('/admin');
   };

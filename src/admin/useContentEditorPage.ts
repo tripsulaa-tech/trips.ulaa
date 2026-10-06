@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction, RefObject } from 'react';
 import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services/api';
 import { collectStorageUrls } from '../utils/utils-index';
 import { useSectionTabChrome } from './useSectionTabChrome';
-import { readDraft, writeDraft, clearDraft } from '../hooks/useSessionDraft';
+import { lookupDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
 
 // Shared by every "single site_content record, edited on its own admin
 // page" screen (About, Founder, Why Ulaa, ...): load-on-mount with a
@@ -65,6 +65,11 @@ interface UseContentEditorPageResult<T> {
 
   hasUnsavedChanges: () => boolean;
   handleSave: () => Promise<void>;
+
+  /** True while a kept draft is on hold because the saved version changed after it was started. */
+  draftOnHold: boolean;
+  restoreHeldDraft: () => void;
+  discardHeldDraft: () => void;
 }
 
 export function useContentEditorPage<T>({
@@ -93,21 +98,34 @@ export function useContentEditorPage<T>({
   // upload/edit.
   const savedUrlsRef = useRef<Set<string>>(new Set());
   const savedContentRef = useRef<string>('');
+  // The saved version the working copy is measured against (null until loaded), in the
+  // key-order-independent form the draft keeper compares with.
+  const [draftBase, setDraftBase] = useState<string | null>(null);
+  // A kept draft that started from an older saved version than the one just loaded. It waits
+  // here until the admin chooses, so Save can't overwrite the newer version by accident.
+  const [heldDraft, setHeldDraft] = useState<unknown>(null);
+  const draftKey = `content.${contentKey}`;
 
   useEffect(() => {
     getSiteContent<unknown>(contentKey)
       .then(data => {
         const merged = mergeWithDefaults(data);
-        // Unsaved edits from an earlier visit in this browser tab come back as they were left.
-        const draft = readDraft<unknown>(`content.${contentKey}`);
+        const base = stableStringify(merged);
+        // Unsaved edits from an earlier visit in this browser tab come back as they were left,
+        // unless the saved version changed since — then the draft is held back (see heldDraft).
+        const { draft, stale } = lookupDraft<unknown>(draftKey, base);
         setContent(draft ? mergeWithDefaults(draft) : merged);
+        setHeldDraft(stale);
         savedUrlsRef.current = collectStorageUrls(merged, storageBucket);
         savedContentRef.current = JSON.stringify(merged);
+        setDraftBase(base);
       })
       .catch(() => {
         setContent(defaultContent);
         savedUrlsRef.current = collectStorageUrls(defaultContent, storageBucket);
         savedContentRef.current = JSON.stringify(defaultContent);
+        // The saved version couldn't be read, so there is nothing to compare a draft against:
+        // no draft is kept or restored this visit.
       })
       .finally(() => setLoading(false));
     // Intentionally runs once on mount only, like every page this replaces.
@@ -116,16 +134,28 @@ export function useContentEditorPage<T>({
 
   const hasUnsavedChanges = () => JSON.stringify(content) !== savedContentRef.current;
 
-  // Keep the unsaved edits while they differ from what is saved.
-  useEffect(() => {
-    if (loading) return;
-    if (JSON.stringify(content) !== savedContentRef.current) writeDraft(`content.${contentKey}`, content);
-    else clearDraft(`content.${contentKey}`);
-  }, [content, loading, contentKey]);
+  // Keep the unsaved edits while they differ from what is saved (paused while a draft is on hold).
+  useDraftKeeper({ key: draftKey, value: content, base: heldDraft ? null : draftBase, bucket: storageBucket });
+
+  const restoreHeldDraft = () => {
+    if (!heldDraft) return;
+    setContent(mergeWithDefaults(heldDraft));
+    setHeldDraft(null);
+  };
+  const discardHeldDraft = () => {
+    discardDraft(draftKey);
+    setHeldDraft(null);
+  };
 
   const handleSave = async () => {
     try {
       setSaving(true);
+      // Someone may have saved this page since it was opened here; check before overwriting.
+      const current = await getSiteContent<unknown>(contentKey).catch(() => undefined);
+      if (current !== undefined && draftBase !== null && stableStringify(mergeWithDefaults(current)) !== draftBase) {
+        const overwrite = window.confirm('The saved version of this page changed after you opened it. Saving now replaces those newer changes with what is on your screen. Save anyway?');
+        if (!overwrite) return;
+      }
       await upsertSiteContent(contentKey, content);
       // Any image that was in the previously-saved content but isn't in
       // what we just saved (e.g. swapped for a new upload, or removed) is
@@ -136,7 +166,7 @@ export function useContentEditorPage<T>({
       }
       savedUrlsRef.current = newUrls;
       savedContentRef.current = JSON.stringify(content);
-      clearDraft(`content.${contentKey}`);
+      setDraftBase(stableStringify(content));
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -165,5 +195,8 @@ export function useContentEditorPage<T>({
     scrollBodyRef,
     hasUnsavedChanges,
     handleSave,
+    draftOnHold: heldDraft !== null,
+    restoreHeldDraft,
+    discardHeldDraft,
   };
 }

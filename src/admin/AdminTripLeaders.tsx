@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -25,6 +25,10 @@ import type { TripLeader, AboutFounderSocialLink } from '../types/types-index';
 import { slugify } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { usePhotoDiscardOnClose } from './usePhotoDiscardOnClose';
+import DraftConflictNotice from './DraftConflictNotice';
+import {
+  useDraftKeeper, modalDraftBase, resolveModalDraft, settleDraft, discardDraft, type ModalDraftValue,
+} from '../hooks/useSessionDraft';
 
 const STORAGE_BUCKET = 'ulaa';
 
@@ -40,6 +44,15 @@ interface TripLeaderForm {
 const emptyForm: TripLeaderForm = {
   name: '', photo: '', designation: '', description: '', social_links: [], is_published: true,
 };
+
+const LEADER_DRAFT_KEY = 'trip-leader-form';
+
+function leaderToForm(t: TripLeader): TripLeaderForm {
+  return {
+    name: t.name, photo: t.photo || '', designation: t.designation || '',
+    description: t.description, social_links: t.social_links || [], is_published: t.is_published,
+  };
+}
 
 // Set by the Add/Edit Trip modal's Trip Leader tab (AdminTrips →
 // openLeadersFromTrip) when it sends the admin here mid-edit. `returnTo`
@@ -72,6 +85,10 @@ export default function AdminTripLeaders() {
   const [editing, setEditing] = useState<TripLeader | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<TripLeaderForm>(emptyForm);
+  // The form as it was when the pop-up opened (blank, or built from the saved leader): what the
+  // kept draft is measured against; and a kept draft held back because the leader changed.
+  const [baseline, setBaseline] = useState<TripLeaderForm | null>(null);
+  const [heldDraft, setHeldDraft] = useState<{ recordId: string | null; form: TripLeaderForm; baseline: TripLeaderForm } | null>(null);
 
   const load = () => {
     getAllTripLeadersAdmin().then(setItems).catch(console.error).finally(() => setLoading(false));
@@ -86,41 +103,78 @@ export default function AdminTripLeaders() {
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyForm, is_published: true });
+    setBaseline({ ...emptyForm, is_published: true });
     photoDiscard.track('');
     setModalOpen(true);
   };
 
   const openEdit = (t: TripLeader) => {
     setEditing(t);
-    setForm({
-      name: t.name, photo: t.photo || '', designation: t.designation || '',
-      description: t.description, social_links: t.social_links || [], is_published: t.is_published,
-    });
+    const editForm = leaderToForm(t);
+    setForm(editForm);
+    setBaseline(editForm);
     photoDiscard.track(t.photo || '');
     setModalOpen(true);
   };
 
-  // Arrived from a trip's Trip Leader tab: open the requested leader's edit
-  // modal (or the add modal) once the list has loaded, then drop the one-shot
-  // flags from the history state (keeping returnTo so the banner survives a
-  // refresh and the modal doesn't reopen on one).
+  const openFromDraft = (recordId: string | null, draftForm: TripLeaderForm, draftBaseline: TripLeaderForm) => {
+    setEditing(recordId ? items.find(t => t.id === recordId) ?? null : null);
+    setForm(draftForm);
+    setBaseline(draftBaseline);
+    photoDiscard.track(draftBaseline.photo);
+    setModalOpen(true);
+  };
+
+  // Reopens the pop-up as it was left when this page is opened again in the same browser tab
+  // (or puts the draft on hold if the leader changed since the draft was started). Returns true
+  // when there was a kept draft.
+  const resumeKeptDraft = (): boolean => {
+    const result = resolveModalDraft<TripLeaderForm>(LEADER_DRAFT_KEY, id => {
+      if (id === null) return { ...emptyForm, is_published: true };
+      const leader = items.find(t => t.id === id);
+      return leader ? leaderToForm(leader) : null;
+    });
+    if (result.status === 'none') return false;
+    const merged = { ...emptyForm, ...result.form };
+    if (result.status === 'stale') setHeldDraft({ recordId: result.recordId, form: merged, baseline: result.baseline });
+    else openFromDraft(result.recordId, merged, result.baseline);
+    return true;
+  };
+
+  // Once the list has loaded, open (in priority order) the pop-up that was kept for this browser
+  // tab, or the leader a trip's Trip Leader tab asked for: its edit modal (or the add modal). The
+  // one-shot flags are then dropped from the history state (keeping returnTo so the banner
+  // survives a refresh and the modal doesn't reopen on one).
+  const startupDoneRef = useRef(false);
   useEffect(() => {
+    if (loading || startupDoneRef.current) return;
+    startupDoneRef.current = true;
     const pending = pendingOpenRef.current;
-    if (!pending || loading) return;
     pendingOpenRef.current = null;
-    if (pending.editLeaderId) {
-      const leader = items.find(t => t.id === pending.editLeaderId);
-      if (leader) openEdit(leader);
-    } else if (pending.create) {
-      openCreate();
+    if (!resumeKeptDraft() && pending) {
+      if (pending.editLeaderId) {
+        const leader = items.find(t => t.id === pending.editLeaderId);
+        if (leader) openEdit(leader);
+      } else if (pending.create) {
+        openCreate();
+      }
     }
-    navigate(location.pathname, { replace: true, state: returnTo ? { returnTo } : null });
+    if (pending) navigate(location.pathname, { replace: true, state: returnTo ? { returnTo } : null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, loading]);
+
+  // Keep the pop-up's unsaved edits while they differ from where it started.
+  const draftValue = useMemo<ModalDraftValue<TripLeaderForm>>(() => ({ recordId: editing?.id ?? null, form }), [editing, form]);
+  useDraftKeeper({
+    key: LEADER_DRAFT_KEY,
+    value: draftValue,
+    base: modalOpen && baseline ? modalDraftBase(editing?.id ?? null, baseline) : null,
+  });
 
   const closeModal = () => {
     photoDiscard.discardIfUnsaved(form.photo);
     setModalOpen(false);
+    discardDraft(LEADER_DRAFT_KEY);
   };
 
   const handleSave = async () => {
@@ -131,6 +185,8 @@ export default function AdminTripLeaders() {
         : await createTripLeader({ ...form, sort_order: items.length });
       photoDiscard.markCommitted();
       setModalOpen(false);
+      // Photos that were uploaded and then replaced before saving are deleted now.
+      settleDraft(LEADER_DRAFT_KEY, new Set(form.photo ? [form.photo] : []));
       load();
       if (returnTo) setSavedPrompt({ leaderId: saved.id, created: !editing, name: form.name });
     } catch {
@@ -175,6 +231,13 @@ export default function AdminTripLeaders() {
   return (
     <AdminLayout title="Trip Leaders" subtitle="Manage the directory of trip leaders that can be assigned to individual trips." scrollRestorationReady={!loading}>
       <div className="space-y-6">
+        {heldDraft && (
+          <DraftConflictNotice
+            subject={`the trip leader "${heldDraft.form.name || 'New trip leader'}"`}
+            onRestore={() => { openFromDraft(heldDraft.recordId, heldDraft.form, heldDraft.baseline); setHeldDraft(null); }}
+            onDiscard={() => { discardDraft(LEADER_DRAFT_KEY); setHeldDraft(null); }}
+          />
+        )}
         {returnTo && (
           <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-primary/30 bg-primary/5 px-4 py-3">
             <p className="text-sm text-dark min-w-0">

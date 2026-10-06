@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import {
   Envelope,
@@ -105,12 +105,12 @@ export default function ContactPage() {
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const { register, handleSubmit, watch, formState: { errors }, reset } = useForm<ContactForm>();
+  const { register, handleSubmit, control, formState: { errors }, reset } = useForm<ContactForm>();
   // Best-effort bot mitigation (honeypot field + minimum fill time) — see
   // src/utils/botProtection.ts.
   const { honeypotRef, isLikelyBot } = useBotTrap();
 
-  const messageLength = watch('message', '')?.length ?? 0;
+  const messageLength = useWatch({ control, name: 'message', defaultValue: '' })?.length ?? 0;
 
   const onSubmit = async (data: ContactForm) => {
     // Silently no-op on a likely-bot submission rather than surfacing an

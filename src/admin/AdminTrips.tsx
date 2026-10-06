@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
+import DraftConflictNotice from './DraftConflictNotice';
 import { useTripsData } from './trips/useTripsData';
 import { useTripActions } from './trips/useTripActions';
 import { useTripFormModal } from './trips/useTripFormModal';
@@ -52,6 +53,7 @@ export default function AdminTrips() {
     handleExportTemplate,
     tripLeaders,
     stashDraftForLeaderDetour, resumeLeaderDraft,
+    resumeKeptDraft, heldDraft, restoreHeldDraft, discardHeldDraft,
   } = useTripFormModal(load);
 
   const openEditFromView = (trip: UpcomingTrip) => {
@@ -59,22 +61,36 @@ export default function AdminTrips() {
     openEdit(trip);
   };
 
-  // Supports landing on this page with a request to jump straight into a
-  // specific trip's edit modal — used by the Dashboard's Upcoming Trips
-  // list, which links here with `state: { editTripId }` instead of just
-  // navigating to the (unrelated) trips list view. Waits for the trip data
-  // to finish loading, opens that trip's edit modal once, then clears the
-  // navigation state so refreshing or navigating back doesn't reopen it.
+  // What this page should open once the trips have loaded, in priority order:
+  //  1. coming back from Admin → Trip Leaders: the trip that was being edited (see
+  //     openLeadersFromTrip below);
+  //  2. an unsaved trip pop-up kept for this browser tab (leaving the page, or a refresh, no
+  //     longer loses a half-filled trip);
+  //  3. a request to jump straight into a specific trip's edit pop-up — used by the Dashboard's
+  //     Upcoming Trips list, which links here with `state: { editTripId }`.
+  // The navigation state is cleared afterwards so refreshing or going back doesn't reopen it.
   const pendingEditIdRef = useRef<string | null>(
     (location.state as { editTripId?: string } | null)?.editTripId ?? null
   );
+  const resumeRef = useRef<{ assignLeaderId?: string } | null>(
+    (location.state as { resumeTripDraft?: boolean; assignLeaderId?: string } | null)?.resumeTripDraft
+      ? { assignLeaderId: (location.state as { assignLeaderId?: string }).assignLeaderId }
+      : null
+  );
+  const startupDoneRef = useRef(false);
   useEffect(() => {
+    if (loading || startupDoneRef.current) return;
+    startupDoneRef.current = true;
+    const detour = resumeRef.current;
     const pendingId = pendingEditIdRef.current;
-    if (!pendingId || loading) return;
+    resumeRef.current = null;
     pendingEditIdRef.current = null;
-    const trip = trips.find(t => t.id === pendingId);
-    if (trip) openEdit(trip);
-    navigate(location.pathname, { replace: true, state: null });
+    const resumedFromLeaders = detour ? resumeLeaderDraft(trips, detour.assignLeaderId) : false;
+    if (!resumedFromLeaders && !resumeKeptDraft(trips) && pendingId) {
+      const trip = trips.find(t => t.id === pendingId);
+      if (trip) openEdit(trip);
+    }
+    if (detour || pendingId) navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trips, loading]);
 
@@ -101,23 +117,16 @@ export default function AdminTrips() {
     });
   };
 
-  // Coming back from Trip Leaders: reopen the trip the admin was editing.
-  const resumeRef = useRef<{ assignLeaderId?: string } | null>(
-    (location.state as { resumeTripDraft?: boolean; assignLeaderId?: string } | null)?.resumeTripDraft
-      ? { assignLeaderId: (location.state as { assignLeaderId?: string }).assignLeaderId }
-      : null
-  );
-  useEffect(() => {
-    const pending = resumeRef.current;
-    if (!pending || loading) return;
-    resumeRef.current = null;
-    resumeLeaderDraft(trips, pending.assignLeaderId);
-    navigate(location.pathname, { replace: true, state: null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trips, loading]);
-
   return (
     <AdminLayout title="Upcoming Trips" scrollRestorationReady={!loading}>
+      {heldDraft && (
+        <DraftConflictNotice
+          className="mb-4"
+          subject={`the trip "${heldDraft.form.title || 'New trip'}"`}
+          onRestore={() => restoreHeldDraft(trips)}
+          onDiscard={discardHeldDraft}
+        />
+      )}
       <AdminTripsTable
         trips={trips}
         loading={loading}

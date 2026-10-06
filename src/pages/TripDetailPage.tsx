@@ -82,9 +82,16 @@ export default function TripDetailPage() {
   // position (instant jumps, once per frame) for a few seconds while images
   // and fonts above it finish loading and shift the layout. Stops the moment
   // the visitor scrolls, touches, clicks or presses a key themselves.
+  const wantsCancellation = !loading && !!trip && location.hash === '#cancellation';
+  // Open the collapsed block during render (not in an effect) when the deep link arrives.
+  // Only on the moment the deep link starts applying, so closing it by hand stays closed.
+  const [prevWantsCancellation, setPrevWantsCancellation] = useState(false);
+  if (wantsCancellation !== prevWantsCancellation) {
+    setPrevWantsCancellation(wantsCancellation);
+    if (wantsCancellation) setCancellationOpen(true);
+  }
   useEffect(() => {
-    if (loading || !trip || location.hash !== '#cancellation') return;
-    setCancellationOpen(true);
+    if (!wantsCancellation) return;
     let cancelled = false;
     const root = document.documentElement;
     const pin = () => {
@@ -117,7 +124,7 @@ export default function TripDetailPage() {
       events.forEach((ev) => window.removeEventListener(ev, stop));
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [loading, trip, location.hash]);
+  }, [wantsCancellation]);
 
   // Falls back to a generic title/description while the trip is still
   // loading (or if the slug doesn't resolve), then swaps in the trip's own

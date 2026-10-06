@@ -10,7 +10,7 @@
 //  - Badge: the round ULAA badge. One common design, so like the back card
 //    there is no list: download a single PNG or A3 print sheets.
 // The card artwork is drawn in utils/travelCard.ts.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { ArrowCounterClockwise, CaretLeft, CaretRight, Check, CircleNotch, DownloadSimple as Download, IdentificationCard, PencilSimple, X } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
@@ -78,25 +78,45 @@ const BACK_FIELDS: { key: keyof BackCardText; label: string; hint?: string }[] =
   { key: 'phone', label: 'Phone number' },
 ];
 
+/** useState that survives leaving the page: kept in sessionStorage for this browser tab only. */
+function useSessionState<T>(key: string, initial: T, serialize: (v: T) => unknown = v => v, revive: (raw: unknown) => T = raw => raw as T): [T, Dispatch<SetStateAction<T>>] {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const raw = window.sessionStorage.getItem(key);
+      return raw === null ? initial : revive(JSON.parse(raw));
+    } catch {
+      return initial;
+    }
+  });
+  useEffect(() => {
+    try { window.sessionStorage.setItem(key, JSON.stringify(serialize(value))); } catch { /* storage unavailable */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, value]);
+  return [value, setValue];
+}
+
+const CARD_TABS: CardTab[] = ['traveler', 'leader', 'back', 'badge'];
+const reviveSet = (raw: unknown) => new Set<string>(Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : []);
+
 export default function AdminTravelCards() {
   const alert = useAlert();
-  const [tab, setTab] = useState<CardTab>('traveler');
+  const [tab, setTab] = useSessionState<CardTab>('travelCards.tab', 'traveler', v => v, raw => (CARD_TABS.includes(raw as CardTab) ? (raw as CardTab) : 'traveler'));
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [leaders, setLeaders] = useState<TripLeader[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [tripId, setTripId] = useState('');
+  const [tripId, setTripId] = useSessionState<string>('travelCards.tripId', '', v => v, raw => (typeof raw === 'string' ? raw : ''));
   // Everyone is ticked by default; this holds the ones the admin unticked.
-  const [unticked, setUnticked] = useState<Set<string>>(new Set());
+  const [unticked, setUnticked] = useSessionState<Set<string>>('travelCards.unticked', new Set(), v => [...v], reviveSet);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [customFont, setCustomFont] = useState<boolean | null>(null);
   const [nameOverrides, setNameOverrides] = useState<Record<string, string>>(() => readStorage<Record<string, string>>(NAMES_KEY, {}));
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
+  const [editingKey, setEditingKey] = useSessionState<string | null>('travelCards.editingKey', null, v => v, raw => (typeof raw === 'string' ? raw : null));
+  const [draft, setDraft] = useSessionState<string>('travelCards.nameDraft', '', v => v, raw => (typeof raw === 'string' ? raw : ''));
   const [backText, setBackText] = useState<BackCardText>(() => readStorage<BackCardText>(BACK_KEY, DEFAULT_BACK_CARD_TEXT));
   const [backPreviewUrl, setBackPreviewUrl] = useState<string | null>(null);
   const [backBusy, setBackBusy] = useState(false);

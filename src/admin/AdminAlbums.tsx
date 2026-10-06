@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -17,6 +17,10 @@ import DatePicker from '../components/ui/DatePicker';
 import { getAllCompletedTripsAdmin, createCompletedTrip, updateCompletedTrip, deleteCompletedTripCascade, getCompletedTripDeletionImpact, deleteImageByUrl, COVER_IMAGE_TARGET_SIZE_BYTES } from '../services/api';
 
 import { useConfirm } from '../components/ui/useConfirm';
+import DraftConflictNotice from './DraftConflictNotice';
+import {
+  useDraftKeeper, modalDraftBase, resolveModalDraft, settleDraft, discardDraft, type ModalDraftValue,
+} from '../hooks/useSessionDraft';
 import type { CompletedTrip } from '../types/types-index';
 import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
@@ -32,6 +36,20 @@ interface AlbumForm {
   cover_image: string;
   gallery_images: string[];
   is_published: boolean;
+}
+
+const ALBUM_DRAFT_KEY = 'album-form';
+
+const EMPTY_ALBUM_FORM: AlbumForm = {
+  title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false,
+};
+
+function albumToForm(album: CompletedTrip): AlbumForm {
+  return {
+    title: album.title, destination: album.destination, map_url: album.map_url || '', trip_date: album.trip_date,
+    description: album.description, batch: album.batch || '', participants: album.participants,
+    cover_image: album.cover_image || '', gallery_images: album.gallery_images || [], is_published: album.is_published,
+  };
 }
 
 type AlbumFormErrors = Partial<Record<'title' | 'destination' | 'trip_date' | 'description', string>>;
@@ -61,9 +79,12 @@ export default function AdminAlbums() {
   const [viewing, setViewing] = useState<CompletedTrip | null>(null);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<AlbumFormErrors>({});
-  const [form, setForm] = useState<AlbumForm>({
-    title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false,
-  });
+  const [form, setForm] = useState<AlbumForm>(EMPTY_ALBUM_FORM);
+  // The form as it was when the pop-up opened (blank, or built from the saved album): what the
+  // kept draft is measured against.
+  const [baseline, setBaseline] = useState<AlbumForm | null>(null);
+  // A kept draft whose album changed after the draft was started: held until the admin chooses.
+  const [heldDraft, setHeldDraft] = useState<{ recordId: string | null; form: AlbumForm; baseline: AlbumForm } | null>(null);
 
   const load = () => {
     getAllCompletedTripsAdmin().then(setAlbums).catch(console.error).finally(() => setLoading(false));
@@ -71,23 +92,82 @@ export default function AdminAlbums() {
 
   useEffect(() => { load(); }, []);
 
+  // Tracks the set of image URLs that were already in the form when the
+  // modal opened. Any storage URL present at close-time that was NOT in this
+  // snapshot was uploaded during the session but never saved — delete it
+  // best-effort so it doesn't sit around as an orphan in the bucket.
+  const initialModalUrlsRef = useRef<Set<string>>(new Set());
+
+  const collectAlbumFormUrls = (f: AlbumForm): Set<string> => {
+    const urls = new Set<string>();
+    const add = (u?: string) => { if (u) urls.add(u); };
+    add(f.cover_image);
+    f.gallery_images?.forEach(u => add(u));
+    return urls;
+  };
+
+  const STORAGE_BUCKET = 'ulaa';
+  const isStorageUrl = (url: string) => url.includes(`/object/public/${STORAGE_BUCKET}/`);
+
   const openCreate = () => {
     setEditing(null);
     setErrors({});
-    const emptyAlbumForm: AlbumForm = { title: '', destination: '', map_url: '', trip_date: '', description: '', batch: '', participants: 10, cover_image: '', gallery_images: [], is_published: false };
-    setForm(emptyAlbumForm);
-    initialModalUrlsRef.current = collectAlbumFormUrls(emptyAlbumForm);
+    setForm(EMPTY_ALBUM_FORM);
+    setBaseline(EMPTY_ALBUM_FORM);
+    initialModalUrlsRef.current = collectAlbumFormUrls(EMPTY_ALBUM_FORM);
     setModalOpen(true);
   };
 
   const openEdit = (album: CompletedTrip) => {
     setEditing(album);
     setErrors({});
-    const editForm: AlbumForm = { title: album.title, destination: album.destination, map_url: album.map_url || '', trip_date: album.trip_date, description: album.description, batch: album.batch || '', participants: album.participants, cover_image: album.cover_image || '', gallery_images: album.gallery_images || [], is_published: album.is_published };
+    const editForm = albumToForm(album);
     setForm(editForm);
+    setBaseline(editForm);
     initialModalUrlsRef.current = collectAlbumFormUrls(editForm);
     setModalOpen(true);
   };
+
+  const openFromDraft = (recordId: string | null, draftForm: AlbumForm, draftBaseline: AlbumForm) => {
+    setEditing(recordId ? albums.find(a => a.id === recordId) ?? null : null);
+    setErrors({});
+    setForm(draftForm);
+    setBaseline(draftBaseline);
+    initialModalUrlsRef.current = collectAlbumFormUrls(draftBaseline);
+    setModalOpen(true);
+  };
+
+  // Reopens the pop-up as it was left when this page is opened again in the same browser tab
+  // (or puts the draft on hold if the album changed since the draft was started).
+  const resumeKeptDraft = () => {
+    const result = resolveModalDraft<AlbumForm>(ALBUM_DRAFT_KEY, id => {
+      if (id === null) return EMPTY_ALBUM_FORM;
+      const album = albums.find(a => a.id === id);
+      return album ? albumToForm(album) : null;
+    });
+    if (result.status === 'none') return;
+    const merged = { ...EMPTY_ALBUM_FORM, ...result.form };
+    if (result.status === 'stale') {
+      setHeldDraft({ recordId: result.recordId, form: merged, baseline: result.baseline });
+      return;
+    }
+    openFromDraft(result.recordId, merged, result.baseline);
+  };
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (loading || resumedRef.current) return;
+    resumedRef.current = true;
+    resumeKeptDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, albums]);
+
+  // Keep the pop-up's unsaved edits while they differ from where it started.
+  const draftValue = useMemo<ModalDraftValue<AlbumForm>>(() => ({ recordId: editing?.id ?? null, form }), [editing, form]);
+  useDraftKeeper({
+    key: ALBUM_DRAFT_KEY,
+    value: draftValue,
+    base: modalOpen && baseline ? modalDraftBase(editing?.id ?? null, baseline) : null,
+  });
 
   const validate = (): AlbumFormErrors => {
     const next: AlbumFormErrors = {};
@@ -125,9 +205,11 @@ export default function AdminAlbums() {
       const data = { ...form, batch, ...(editing ? {} : { slug: slugify(slugSource) }) };
       if (editing) await updateCompletedTrip(editing.id, data);
       else await createCompletedTrip(data);
-      // All uploads committed to DB — nothing to clean up on close.
+      // All uploads committed to DB — nothing to clean up on close. Photos that were uploaded
+      // and then replaced before saving are deleted now.
       initialModalUrlsRef.current = new Set();
       setModalOpen(false);
+      settleDraft(ALBUM_DRAFT_KEY, collectAlbumFormUrls(form));
       load();
     } catch { alert('Failed to save. Please check your connection and try again.'); }
     finally { setSaving(false); }
@@ -154,23 +236,6 @@ export default function AdminAlbums() {
     load();
   };
 
-  // Tracks the set of image URLs that were already in the form when the
-  // modal opened. Any storage URL present at close-time that was NOT in this
-  // snapshot was uploaded during the session but never saved — delete it
-  // best-effort so it doesn't sit around as an orphan in the bucket.
-  const initialModalUrlsRef = useRef<Set<string>>(new Set());
-
-  const collectAlbumFormUrls = (f: AlbumForm): Set<string> => {
-    const urls = new Set<string>();
-    const add = (u?: string) => { if (u) urls.add(u); };
-    add(f.cover_image);
-    f.gallery_images?.forEach(u => add(u));
-    return urls;
-  };
-
-  const STORAGE_BUCKET = 'ulaa';
-  const isStorageUrl = (url: string) => url.includes(`/object/public/${STORAGE_BUCKET}/`);
-
   const closeModal = () => {
     const currentUrls = collectAlbumFormUrls(form);
     const initial = initialModalUrlsRef.current;
@@ -181,6 +246,7 @@ export default function AdminAlbums() {
     }
     initialModalUrlsRef.current = new Set();
     setModalOpen(false);
+    discardDraft(ALBUM_DRAFT_KEY);
   };
 
   // Live, as the admin types — recomputed on every render so a
@@ -191,6 +257,13 @@ export default function AdminAlbums() {
   return (
     <AdminLayout title="Completed Trips" scrollRestorationReady={!loading}>
       <div className="space-y-6">
+        {heldDraft && (
+          <DraftConflictNotice
+            subject={`the album "${heldDraft.form.title || 'New album'}"`}
+            onRestore={() => { openFromDraft(heldDraft.recordId, heldDraft.form, heldDraft.baseline); setHeldDraft(null); }}
+            onDiscard={() => { discardDraft(ALBUM_DRAFT_KEY); setHeldDraft(null); }}
+          />
+        )}
         <div className="flex justify-between items-center">
           <p className="text-dark-muted">{albums.length} albums</p>
           <div className="hidden sm:block">
