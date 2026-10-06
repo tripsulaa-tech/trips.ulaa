@@ -8,6 +8,8 @@
 // they can be edited. All coordinates are in the design's own 1276 x 2031
 // pixel space, measured from the final cards, so the output matches 1:1.
 
+import { drawCover, getTravelCardArt, inkOver, loadArtImage } from './travelCardArt';
+
 export const CARD_WIDTH = 1276;
 export const CARD_HEIGHT = 2031;
 
@@ -149,6 +151,9 @@ function fitName(ctx: CanvasRenderingContext2D, font: string, name: string) {
 export async function renderTravelCard(rawName: string, role: TravelCardRole = 'traveler'): Promise<HTMLCanvasElement> {
   const { bg, overlay, scriptFont } = await loadAssets();
   const name = rawName.replace(/\s+/g, ' ').trim();
+  // Artwork designed in Logo Studio replaces the bundled background + overlay.
+  const art = await getTravelCardArt();
+  const custom = art.front ? await loadArtImage(art.front) : null;
 
   const canvas = document.createElement('canvas');
   canvas.width = CARD_WIDTH;
@@ -159,12 +164,16 @@ export async function renderTravelCard(rawName: string, role: TravelCardRole = '
   ctx.save();
   roundedRectPath(ctx, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS);
   ctx.clip();
-  ctx.drawImage(bg, 0, 0, CARD_WIDTH, CARD_HEIGHT);
-  ctx.drawImage(overlay, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+  if (custom) {
+    drawCover(ctx, custom, CARD_WIDTH, CARD_HEIGHT);
+  } else {
+    ctx.drawImage(bg, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+    ctx.drawImage(overlay, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+  }
   ctx.restore();
 
   // Name (script)
-  ctx.fillStyle = INK;
+  ctx.fillStyle = custom ? inkOver(ctx, 140, 760, CARD_WIDTH - 280, 360, INK) : INK;
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'center';
   const { lines, lineHeight } = fitName(ctx, scriptFont, name);
@@ -265,6 +274,8 @@ function fitWidth(ctx: CanvasRenderingContext2D, text: string, size: number, max
 /** Renders the back of the card with the given text. */
 export async function renderTravelCardBack(text: BackCardText): Promise<HTMLCanvasElement> {
   const { bg, overlay, scriptFont } = await loadBackAssets();
+  const art = await getTravelCardArt();
+  const custom = art.back ? await loadArtImage(art.back) : null;
   const clean = (v: string) => v.replace(/\s+/g, ' ').trim();
   const topLine = clean(text.topLine).toUpperCase();
   const headline = clean(text.headline);
@@ -281,11 +292,15 @@ export async function renderTravelCardBack(text: BackCardText): Promise<HTMLCanv
   ctx.save();
   roundedRectPath(ctx, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS);
   ctx.clip();
-  ctx.drawImage(bg, 0, 0, CARD_WIDTH, CARD_HEIGHT);
-  ctx.drawImage(overlay, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+  if (custom) {
+    drawCover(ctx, custom, CARD_WIDTH, CARD_HEIGHT);
+  } else {
+    ctx.drawImage(bg, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+    ctx.drawImage(overlay, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+  }
   ctx.restore();
 
-  ctx.fillStyle = BACK_INK;
+  ctx.fillStyle = custom ? inkOver(ctx, 120, 650, CARD_WIDTH - 240, 1000, BACK_INK) : BACK_INK;
   ctx.textBaseline = 'alphabetic';
 
   // Small line above the headline
@@ -364,6 +379,8 @@ function loadBadgeAssets() {
 }
 
 async function renderBadgeCanvas(sizePx: number = BADGE_SIZE): Promise<HTMLCanvasElement> {
+  const art = await getTravelCardArt();
+  const custom = art.badge ? await loadArtImage(art.badge) : null;
   const { bg, logo } = await loadBadgeAssets();
   const canvas = document.createElement('canvas');
   canvas.width = sizePx;
@@ -371,6 +388,15 @@ async function renderBadgeCanvas(sizePx: number = BADGE_SIZE): Promise<HTMLCanva
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas is not supported in this browser.');
   ctx.imageSmoothingQuality = 'high';
+  if (custom) {
+    // Artwork designed in Logo Studio fills the round badge.
+    ctx.beginPath();
+    ctx.arc(sizePx / 2, sizePx / 2, sizePx / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    drawCover(ctx, custom, sizePx, sizePx);
+    return canvas;
+  }
   ctx.drawImage(bg, 0, 0, sizePx, sizePx);
   ctx.drawImage(logo, 0, 0, sizePx, sizePx);
   return canvas;

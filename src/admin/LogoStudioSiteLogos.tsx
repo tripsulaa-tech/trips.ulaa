@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Upload, ArrowCounterClockwise, Warning, Sparkle } from '@phosphor-icons/react';
 import AdminEditorFooter from './AdminEditorFooter';
 import { getSiteContent, upsertSiteContent, uploadImage, deleteImageByUrl } from '../services/api';
+import type { StudioKind } from './AdminLogoStudio';
 import {
   BRANDING_KEY,
   BRANDING_DEFAULTS,
@@ -13,23 +14,30 @@ import {
 } from '../hooks/useBranding';
 
 // Logo Studio → "Site logos": choose which images the site uses for its header,
-// footer, browser tab, install prompt and admin panel. Logo slots can take the
+// footer, browser tab, install prompt and admin panel, plus the Travel Cards badge,
+// card front and card back (drawn by utils/travelCard.ts). Logo slots can take the
 // logo currently shown in the studio in one tap; icons are uploaded. Each slot is
 // stored in the `branding` site_content row (see hooks/useBranding.ts); leaving a
 // slot on "default" falls back to the file bundled in /public.
 
 const BUCKET = 'ulaa';
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB — logos/icons never need more
+const CARD_MAX_BYTES = 8 * 1024 * 1024; // full card / badge artwork is larger
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico';
 
 interface SlotConfig {
   slot: BrandingSlot;
   label: string;
-  group: 'public' | 'admin';
+  group: 'public' | 'admin' | 'cards';
   description: string;
   /** Every spot can be filled straight from the studio's current logo:
-   *  wide logos stay transparent, icons are centred on a square tile. */
-  studio: 'wide' | 'square';
+   *  wide logos stay transparent, icons are centred on a square tile; the
+   *  Travel Cards pieces are laid out at their own proportions. */
+  studio: StudioKind;
+  /** Largest upload for this spot. */
+  maxBytes?: number;
+  /** Bundled files shown (stacked) while nothing custom is chosen. */
+  defaultLayers?: string[];
   /** Background the preview sits on, so a light logo isn't invisible. */
   preview: 'checker' | 'dark';
   previewClass: string;
@@ -90,6 +98,39 @@ const SLOTS: SlotConfig[] = [
     preview: 'checker',
     previewClass: 'h-12 w-12',
   },
+  {
+    slot: 'badge_art',
+    label: 'Badge',
+    group: 'cards',
+    description: 'The round badge on the Travel Cards page. The studio logo sits centred inside the circle.',
+    studio: 'badge',
+    maxBytes: CARD_MAX_BYTES,
+    defaultLayers: ['/travel-card/badge-background.png', '/travel-card/badge-logo.png'],
+    preview: 'checker',
+    previewClass: 'h-32 w-32 rounded-full',
+  },
+  {
+    slot: 'card_front_art',
+    label: 'Travel card front',
+    group: 'cards',
+    description: 'Logo above the name; the traveler’s name and role label are added on the Travel Cards page.',
+    studio: 'card-front',
+    maxBytes: CARD_MAX_BYTES,
+    defaultLayers: ['/travel-card/background.jpg', '/travel-card/overlay.png'],
+    preview: 'checker',
+    previewClass: 'h-56 rounded-lg',
+  },
+  {
+    slot: 'card_back_art',
+    label: 'Travel card back',
+    group: 'cards',
+    description: 'Replaces the whole back, QR code and icons included. Clear any back-card text you don’t need.',
+    studio: 'card-back',
+    maxBytes: CARD_MAX_BYTES,
+    defaultLayers: ['/travel-card/back-background.png', '/travel-card/back-overlay.png'],
+    preview: 'checker',
+    previewClass: 'h-56 rounded-lg',
+  },
 ];
 
 const CHECKER =
@@ -148,7 +189,20 @@ function SlotCard({
           config.preview === 'dark' ? 'bg-dark' : CHECKER
         }`}
       >
-        <img src={shown} alt={`${config.label} preview`} className={`${config.previewClass} w-auto max-w-full object-contain`} />
+        {!value && config.defaultLayers ? (
+          <span className={`relative inline-block ${config.previewClass} aspect-auto overflow-hidden`}>
+            {config.defaultLayers.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt={i === 0 ? `${config.label} preview` : ''}
+                className={`${i === 0 ? 'h-full w-auto' : 'absolute inset-0 h-full w-full'} max-w-none object-contain`}
+              />
+            ))}
+          </span>
+        ) : (
+          <img src={shown} alt={`${config.label} preview`} className={`${config.previewClass} w-auto max-w-full object-contain`} />
+        )}
       </div>
 
       <input ref={fileRef} type="file" accept={ACCEPT} onChange={handleFile} className="hidden" />
@@ -177,7 +231,7 @@ export default function LogoStudioSiteLogos({
   onDirtyChange,
 }: {
   /** Renders the logo currently shown in the studio as a PNG (wide, or a square icon tile). */
-  makeLogoFile: (kind: 'wide' | 'square') => Promise<File | null>;
+  makeLogoFile: (kind: StudioKind) => Promise<File | null>;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const [draft, setDraft] = useState<BrandingContent>({ ...EMPTY_BRANDING });
@@ -223,13 +277,14 @@ export default function LogoStudioSiteLogos({
       alert('Please choose an image file (PNG, JPG, WebP, SVG or ICO).');
       return;
     }
-    if (file.size > MAX_BYTES) {
-      alert('That file is larger than 2MB. Please upload a smaller version.');
+    const limit = SLOTS.find(s => s.slot === slot)?.maxBytes ?? MAX_BYTES;
+    if (file.size > limit) {
+      alert(`That file is larger than ${limit / (1024 * 1024)}MB. Please upload a smaller version.`);
       return;
     }
     try {
       setBusySlot(slot);
-      const url = await uploadImage(BUCKET, file, uploadPath(slot, file.name), MAX_BYTES);
+      const url = await uploadImage(BUCKET, file, uploadPath(slot, file.name), limit);
       sessionUploadsRef.current.add(url);
       setSlot(slot, url);
     } catch {
@@ -318,7 +373,8 @@ export default function LogoStudioSiteLogos({
         <p className="text-xs text-dark-muted">
           “Use studio logo” puts the logo from the Design tab, in its current colours, into that spot: logos keep a
           transparent background and icons sit on a square tile in the background colour. Pick the Footer look first
-          for the footer. Nothing changes on the site until you press Save.
+          for the footer. Badge and card artwork is made at its own size in the studio's background colour; the Travel Cards page
+          uses it for previews, downloads and A3 print sheets. Nothing changes on the site until you press Save.
         </p>
 
         {renderGroup('public', 'Public website')}
@@ -334,6 +390,8 @@ export default function LogoStudioSiteLogos({
         </div>
 
         {renderGroup('admin', 'Admin panel')}
+
+        {renderGroup('cards', 'Travel cards')}
       </div>
 
       <AdminEditorFooter

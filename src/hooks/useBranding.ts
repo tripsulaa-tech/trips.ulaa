@@ -21,7 +21,11 @@ export type BrandingSlot =
   | 'favicon'
   | 'app_icon'
   | 'admin_logo'
-  | 'admin_icon';
+  | 'admin_icon'
+  // Travel Cards page artwork designed in Logo Studio (empty = the files in /public/travel-card).
+  | 'badge_art'
+  | 'card_front_art'
+  | 'card_back_art';
 
 export type BrandingContent = Record<BrandingSlot, string>;
 
@@ -32,6 +36,9 @@ export const BRANDING_SLOTS: BrandingSlot[] = [
   'app_icon',
   'admin_logo',
   'admin_icon',
+  'badge_art',
+  'card_front_art',
+  'card_back_art',
 ];
 
 // Files bundled in /public that each slot falls back to.
@@ -42,6 +49,9 @@ export const BRANDING_DEFAULTS: BrandingContent = {
   app_icon: '/icons/user/icon-192.png',
   admin_logo: '/ULAA.svg',
   admin_icon: '/favicon.svg',
+  badge_art: '/travel-card/badge-background.png',
+  card_front_art: '/travel-card/background.jpg',
+  card_back_art: '/travel-card/back-background.png',
 };
 
 export const EMPTY_BRANDING: BrandingContent = {
@@ -51,6 +61,9 @@ export const EMPTY_BRANDING: BrandingContent = {
   app_icon: '',
   admin_logo: '',
   admin_icon: '',
+  badge_art: '',
+  card_front_art: '',
+  card_back_art: '',
 };
 
 const CACHE_KEY = 'ulaa:branding';
@@ -110,6 +123,24 @@ async function refresh() {
 /** Push freshly-saved branding into the store immediately (admin save). */
 export function applyBranding(next: BrandingContent) {
   setState(normalizeBranding(next));
+}
+
+/** The branding as it is right now (custom uploads only; '' = bundled default). */
+export function getBrandingState(): BrandingContent {
+  return state;
+}
+
+let freshAt = 0;
+let freshPending: Promise<void> | null = null;
+
+/** Makes sure the store has been fetched from the database recently (throttled), for code that
+ *  reads branding outside React, such as the Travel Cards renderer. */
+export function ensureBrandingFresh(): Promise<void> {
+  if (!freshPending || Date.now() - freshAt > 30_000) {
+    freshAt = Date.now();
+    freshPending = refresh();
+  }
+  return freshPending;
 }
 
 function subscribe(listener: () => void) {

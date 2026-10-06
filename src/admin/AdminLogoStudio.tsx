@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { DownloadSimple, ArrowCounterClockwise, Warning, Copy, ClipboardText, Check } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
-import ColorPicker from '../components/ui/ColorPicker';
+import ColorPicker, { type ColorSwatch } from '../components/ui/ColorPicker';
 import Select from '../components/ui/Select';
 import LogoStudioSiteLogos from './LogoStudioSiteLogos';
 
@@ -16,7 +16,10 @@ import LogoStudioSiteLogos from './LogoStudioSiteLogos';
 
 type LogoColorKey = 'background' | 'sun' | 'lettering' | 'landscape' | 'tamil';
 type LogoColors = Record<LogoColorKey, string>;
-type DesignId = 'classic' | 'header';
+type DesignId = 'classic' | 'header' | 'tshirt';
+type Format = 'png' | 'jpg' | 'svg' | 'pdf';
+/** What the "Use studio logo" buttons on the Site logos tab ask the studio to draw. */
+export type StudioKind = 'wide' | 'square' | 'badge' | 'card-front' | 'card-back';
 type MarginId = 'none' | 'small' | 'medium' | 'large';
 
 interface LayerDef {
@@ -26,6 +29,8 @@ interface LayerDef {
 
 interface DesignDef {
   id: DesignId;
+  /** Colour-box names for this design where they differ from the defaults. */
+  labels?: Partial<Record<LogoColorKey, string>>;
   /** Drawing order, bottom to top. All layers of a design share one canvas size. */
   layers: LayerDef[];
 }
@@ -46,6 +51,16 @@ const DESIGNS: DesignDef[] = [
       { key: 'sun', src: '/logo-layers/header-sun.png' },
       { key: 'lettering', src: '/logo-layers/header-lettering.png' },
       { key: 'landscape', src: '/logo-layers/header-landscape.png' },
+    ],
+  },
+  {
+    // T-shirt back print: sun + clouds + dots, palm/mountains scene, tagline.
+    id: 'tshirt',
+    labels: { sun: 'Sun & clouds', lettering: 'Tagline text' },
+    layers: [
+      { key: 'sun', src: '/logo-layers/tshirt-sun.png' },
+      { key: 'landscape', src: '/logo-layers/tshirt-landscape.png' },
+      { key: 'lettering', src: '/logo-layers/tshirt-lettering.png' },
     ],
   },
 ];
@@ -69,6 +84,14 @@ interface PreDesign {
   colors: LogoColors;
 }
 
+// The logo palette: the studio's colours start from these four and its picker offers them first.
+const BRAND_COLORS: ColorSwatch[] = [
+  { name: 'Beige', hex: '#f6f2ea' },
+  { name: 'Orange', hex: '#fe480a' },
+  { name: 'Brown', hex: '#72573e' },
+  { name: 'Dark brown', hex: '#2d2118' },
+];
+
 const PREDESIGNS: PreDesign[] = [
   {
     id: 'header',
@@ -82,9 +105,9 @@ const PREDESIGNS: PreDesign[] = [
     id: 'invoice',
     name: 'Invoice',
     thumb: '/logo-presets/invoice.png',
-    tile: '#ffffff',
+    tile: '#f6f2ea',
     design: 'classic',
-    colors: { background: '#ffffff', sun: '#ef4d25', lettering: '#2d221d', landscape: '#2d221d', tamil: '#2d221d' },
+    colors: { background: '#f6f2ea', sun: '#fe480a', lettering: '#2d2118', landscape: '#2d2118', tamil: '#2d2118' },
   },
   {
     id: 'footer',
@@ -93,6 +116,22 @@ const PREDESIGNS: PreDesign[] = [
     tile: '#2d2118',
     design: 'classic',
     colors: { background: '#2d2118', sun: '#fe480a', lettering: '#f6f2ea', landscape: '#72573e', tamil: '#f6f2ea' },
+  },
+  {
+    id: 'tshirt',
+    name: 'T-shirt back',
+    thumb: '/logo-presets/tshirt.png',
+    tile: '#f6f2ea',
+    design: 'tshirt',
+    colors: { background: '#f6f2ea', sun: '#fe480a', lettering: '#2d2118', landscape: '#2d2118', tamil: '#2d2118' },
+  },
+  {
+    id: 'tshirt-dark',
+    name: 'T-shirt back · dark',
+    thumb: '/logo-presets/tshirt-dark.png',
+    tile: '#2d2118',
+    design: 'tshirt',
+    colors: { background: '#2d2118', sun: '#fe480a', lettering: '#f6f2ea', landscape: '#f6f2ea', tamil: '#f6f2ea' },
   },
 ];
 
@@ -104,9 +143,11 @@ const MARGINS: { value: MarginId; label: string; pct: number }[] = [
   { value: 'large', label: 'L', pct: 15 },
 ];
 
-const FORMAT_OPTIONS: { value: 'png' | 'jpg'; label: string }[] = [
+const FORMAT_OPTIONS: { value: Format; label: string }[] = [
   { value: 'png', label: 'PNG' },
   { value: 'jpg', label: 'JPG' },
+  { value: 'svg', label: 'SVG (vector)' },
+  { value: 'pdf', label: 'PDF (vector)' },
 ];
 
 // Size = side of the square (1:1) downloaded image, margin included. The classic
@@ -150,7 +191,41 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 type Source = HTMLImageElement | HTMLCanvasElement;
 
+/** Loads `name.svg` beside a layer's `name.png`. Null when it is missing or is not a real SVG
+ *  (a host may answer a missing file with its HTML page). */
+async function loadVectorLayer(pngSrc: string): Promise<VectorLayer | null> {
+  try {
+    const res = await fetch(pngSrc.replace(/\.png$/i, '.svg'));
+    if (!res.ok) return null;
+    const root = new DOMParser().parseFromString(await res.text(), 'image/svg+xml').documentElement;
+    if (root.nodeName.toLowerCase() !== 'svg') return null;
+    const vb = (root.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number);
+    const d = Array.from(root.querySelectorAll('path')).map(el => el.getAttribute('d') ?? '').join(' ').trim();
+    if (vb.length !== 4 || !(vb[2] > 0) || !(vb[3] > 0) || !d) return null;
+    return { d, w: vb[2], h: vb[3] };
+  } catch {
+    return null;
+  }
+}
+
+async function loadVectors(design: DesignDef): Promise<Record<string, VectorLayer> | null> {
+  const found = await Promise.all(design.layers.map(l => loadVectorLayer(l.src)));
+  if (found.some(v => !v)) return null;
+  const out: Record<string, VectorLayer> = {};
+  design.layers.forEach((l, i) => { out[l.src] = found[i] as VectorLayer; });
+  return out;
+}
+
+/** A traced layer (public/logo-layers/*.svg): one path in the PNG's pixel coordinates. */
+interface VectorLayer {
+  d: string;
+  w: number;
+  h: number;
+}
+
 interface LoadedDesign {
+  /** Vector layers for SVG / PDF; null when any layer has no traced .svg yet. */
+  vectors: Record<string, VectorLayer> | null;
   full: Record<string, Source>;
   fullBounds: Bounds;
   small: Record<string, Source>;
@@ -160,7 +235,7 @@ interface LoadedDesign {
 /** Loads a design's layers (all cropped to the same artwork box, so the box is simply
  *  the layer size) and makes a pre-shrunk copy of each for the preview. */
 async function loadDesign(design: DesignDef): Promise<LoadedDesign> {
-  const imgs = await Promise.all(design.layers.map(l => loadImage(l.src)));
+  const [imgs, vectors] = await Promise.all([Promise.all(design.layers.map(l => loadImage(l.src))), loadVectors(design)]);
   const w = imgs[0].naturalWidth;
   const h = imgs[0].naturalHeight;
   const k = Math.min(1, SMALL_SOURCE / Math.max(w, h));
@@ -180,7 +255,7 @@ async function loadDesign(design: DesignDef): Promise<LoadedDesign> {
     }
     small[layer.src] = c;
   });
-  return { full, fullBounds: { x: 0, y: 0, w, h }, small, smallBounds: { x: 0, y: 0, w: sw, h: sh } };
+  return { vectors, full, fullBounds: { x: 0, y: 0, w, h }, small, smallBounds: { x: 0, y: 0, w: sw, h: sh } };
 }
 
 /** Big exports use the full-resolution layers; small ones the pre-shrunk copies. */
@@ -253,11 +328,62 @@ function renderLogo(
 }
 
 
+/** The logo as a square SVG, laid out exactly like renderLogo (margin, centred, 1:1). */
+function buildVectorSvg(
+  vectors: Record<string, VectorLayer>,
+  design: DesignDef,
+  colors: LogoColors,
+  size: number,
+  withBackground: boolean,
+  bounds: Bounds,
+  marginPct: number,
+): string {
+  const margin = (marginPct / 100) * Math.max(bounds.w, bounds.h);
+  const side = Math.max(bounds.w, bounds.h) + margin * 2;
+  const dx = (side - bounds.w) / 2;
+  const dy = (side - bounds.h) / 2;
+  const n = (v: number) => v.toFixed(2);
+  const paths = design.layers
+    .map(layer => {
+      const v = vectors[layer.src];
+      const k = bounds.w / v.w;
+      return `<path transform="translate(${n(dx)} ${n(dy)}) scale(${k.toFixed(6)})" fill="${colors[layer.key]}" fill-rule="evenodd" d="${v.d}"/>`;
+    })
+    .join('');
+  const bg = withBackground ? `<rect x="0" y="0" width="${n(side)}" height="${n(side)}" fill="${colors.background}"/>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${n(side)} ${n(side)}">${bg}${paths}</svg>`;
+}
+
+/** The SVG as a PDF page of the same square. 1 px = 0.75 pt (96 dpi), so it prints at the px size. */
+async function svgToPdfBlob(svg: string | null, canvas: HTMLCanvasElement, size: number): Promise<Blob> {
+  const [{ jsPDF }, { svg2pdf }] = await Promise.all([import('jspdf'), import('svg2pdf.js')]);
+  const pt = size * 0.75;
+  const doc = new jsPDF({ unit: 'pt', format: [pt, pt], orientation: 'portrait' });
+  if (svg) {
+    const el = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
+    await svg2pdf(el, doc, { x: 0, y: 0, width: pt, height: pt });
+  } else {
+    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pt, pt);
+  }
+  return doc.output('blob');
+}
+
+function saveBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export default function AdminLogoStudio() {
   const [preId, setPreId] = useState<string>(PREDESIGNS[0].id);
   const [colors, setColors] = useState<LogoColors>({ ...PREDESIGNS[0].colors });
   const [margin, setMargin] = useState<MarginId>('medium');
-  const [format, setFormat] = useState<'png' | 'jpg'>('png');
+  const [format, setFormat] = useState<Format>('png');
   const [size, setSize] = useState<number>(3000);
   const [transparent, setTransparent] = useState(false);
   // Colour last copied with a tile's copy button, ready to paste into any other colour.
@@ -283,7 +409,10 @@ export default function AdminLogoStudio() {
   const design = DESIGNS.find(d => d.id === pre.design) ?? DESIGNS[0];
   const marginPct = MARGINS.find(m => m.value === margin)?.pct ?? 0;
   const ld = loaded[design.id] ?? null;
-  const colorFields = COLOR_FIELDS.filter(f => !(f.key === 'tamil' && design.id === 'header'));
+  // Only the colours this design actually uses, named for it where it has its own wording.
+  const colorFields = COLOR_FIELDS
+    .filter(f => f.key === 'background' || design.layers.some(l => l.key === f.key))
+    .map(f => ({ ...f, label: design.labels?.[f.key] ?? f.label }));
   const colorsChanged = !sameColors(colors, pre.colors);
 
   // JPG can't hold transparency, so it always includes the background.
@@ -326,45 +455,84 @@ export default function AdminLogoStudio() {
   // The logo as shown in the preview, for the "Use studio logo" buttons. Wide
   // logos are transparent with a small margin; icons are the logo centred on a
   // square tile in the studio's background colour (so they read on any tab bar).
-  const makeLogoFile = async (kind: 'wide' | 'square'): Promise<File | null> => {
+  const makeLogoFile = async (kind: StudioKind): Promise<File | null> => {
     if (!ld) return null;
     const canvas = document.createElement('canvas');
     if (kind === 'square') {
       const src = pickSource(ld, 512);
       renderLogo(canvas, src.images, design, colors, 512, true, src.bounds, 8, true);
+    } else if (kind === 'badge') {
+      // Square, filled with the background colour; a generous margin keeps the logo clear of the round edge.
+      const src = pickSource(ld, 2000);
+      renderLogo(canvas, src.images, design, colors, 2000, true, src.bounds, 20, true);
+    } else if (kind === 'card-front' || kind === 'card-back') {
+      // Portrait card at the Travel Cards size (1276 × 2031): background colour with the logo in the
+      // upper area. The front keeps the space below for the name and role label; the back keeps it
+      // for its text lines.
+      canvas.width = 1276;
+      canvas.height = 2031;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.fillStyle = colors.background;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const src = pickSource(ld, 1600);
+      const logo = document.createElement('canvas');
+      renderLogo(logo, src.images, design, colors, 1600, false, src.bounds, 0);
+      const box = kind === 'card-front' ? { cy: 440, w: 900, h: 420 } : { cy: 400, w: 800, h: 320 };
+      const k = Math.min(box.w / logo.width, box.h / logo.height);
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(logo, (canvas.width - logo.width * k) / 2, box.cy - (logo.height * k) / 2, logo.width * k, logo.height * k);
     } else {
       const src = pickSource(ld, 1600);
       renderLogo(canvas, src.images, design, colors, 1600, false, src.bounds, 4);
     }
     const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-    const name = `ulaa-${kind === 'square' ? 'icon' : 'logo'}-${pre.id}.png`;
+    const name = `ulaa-${kind === 'wide' ? 'logo' : kind === 'square' ? 'icon' : kind}-${pre.id}.png`;
     return blob ? new File([blob], name, { type: 'image/png' }) : null;
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!ld) return;
-    const canvas = document.createElement('canvas');
+    const fileName = `ulaa-logo-${pre.id}-${size}${format !== 'jpg' && transparent ? '-transparent' : ''}.${format}`;
     const src = pickSource(ld, size);
-    renderLogo(canvas, src.images, design, colors, size, withBackground, src.bounds, marginPct, true);
-    const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
-    canvas.toBlob(
-      blob => {
-        if (!blob) {
-          alert('Could not create the image. Please try again.');
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ulaa-logo-${pre.id}-${size}${format === 'png' && transparent ? '-transparent' : ''}.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      },
-      mime,
-      0.95,
-    );
+    // SVG / PDF use the traced vector layers when the design has them; otherwise
+    // they carry the high-resolution picture instead.
+    const svg = format === 'svg' || format === 'pdf'
+      ? ld.vectors && buildVectorSvg(ld.vectors, design, colors, size, withBackground, ld.fullBounds, marginPct)
+      : null;
+    try {
+      if (format === 'svg' && svg) {
+        saveBlob(new Blob([svg], { type: 'image/svg+xml' }), fileName);
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      if (!svg) renderLogo(canvas, src.images, design, colors, size, withBackground, src.bounds, marginPct, true);
+      if (format === 'pdf') {
+        saveBlob(await svgToPdfBlob(svg, canvas, size), fileName);
+        return;
+      }
+      if (format === 'svg') {
+        const href = canvas.toDataURL('image/png');
+        const wrapped = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><image width="${size}" height="${size}" xlink:href="${href}" href="${href}"/></svg>`;
+        saveBlob(new Blob([wrapped], { type: 'image/svg+xml' }), fileName);
+        return;
+      }
+      const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+      canvas.toBlob(
+        blob => {
+          if (!blob) {
+            alert('Could not create the image. Please try again.');
+            return;
+          }
+          saveBlob(blob, fileName);
+        },
+        mime,
+        0.95,
+      );
+    } catch (err) {
+      console.error(err);
+      alert('Could not create the file. Please try again.');
+    }
   };
 
   return (
@@ -479,6 +647,8 @@ export default function AdminLogoStudio() {
                         <ColorPicker
                           value={value}
                           label={f.label}
+                          swatches={BRAND_COLORS}
+                          swatchesLabel="Logo colours"
                           onChange={hex => setColors(c => (c[f.key] === hex ? c : { ...c, [f.key]: hex }))}
                         />
                         <span className="text-xs font-medium text-dark leading-tight">{f.label}</span>
@@ -542,7 +712,7 @@ export default function AdminLogoStudio() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor={formatId} className="block text-xs font-medium text-dark mb-1">Format</label>
-                  <Select<'png' | 'jpg'> inputId={formatId} value={format} onChange={setFormat} options={FORMAT_OPTIONS} />
+                  <Select<Format> inputId={formatId} value={format} onChange={setFormat} options={FORMAT_OPTIONS} />
                 </div>
                 <div>
                   <label htmlFor={sizeId} className="block text-xs font-medium text-dark mb-1">Size</label>
@@ -550,7 +720,14 @@ export default function AdminLogoStudio() {
                 </div>
               </div>
 
-              {format === 'png' && (
+              {(format === 'svg' || format === 'pdf') && ld && !ld.vectors && (
+                <p className="text-xs text-dark-muted">
+                  This logo has no traced vector layers yet, so its {format.toUpperCase()} holds a high-resolution picture. Run
+                  {' '}<code className="px-1 rounded bg-background-warm">scripts/trace-logo-layers.mjs</code> to make it true vector.
+                </p>
+              )}
+
+              {format !== 'jpg' && (
                 <label className="flex items-center gap-2 text-sm text-dark cursor-pointer">
                   <input
                     type="checkbox"

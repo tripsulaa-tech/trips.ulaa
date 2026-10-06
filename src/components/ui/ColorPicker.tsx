@@ -8,6 +8,8 @@ import { useDropdownPosition } from '../../hooks/useDropdownPosition';
 // A swatch button opens a popover with a saturation/brightness area, a hue
 // slider, a hex box and the app's own theme colours as one-tap swatches.
 
+export interface ColorSwatch { name: string; hex: string }
+
 const THEME_SWATCHES: { name: string; hex: string }[] = [
   { name: 'Primary', hex: '#a85a2a' },
   { name: 'Primary light', hex: '#c4703a' },
@@ -61,15 +63,23 @@ function hsvToHex({ h, s, v }: Hsv) {
   return rgbToHex(f(5) * 255, f(3) * 255, f(1) * 255);
 }
 
+const isDarkHex = (hex: string) => {
+  const [r, g, b] = hexToRgb(hex);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
+};
+
 const isHex = (s: string) => /^#[0-9a-f]{6}$/i.test(s);
 
 interface ColorPickerProps {
+  /** One-tap colours shown in the popover; the app's theme colours when omitted. */
+  swatches?: ColorSwatch[];
+  swatchesLabel?: string;
   value: string;
   onChange: (hex: string) => void;
   label: string;
 }
 
-export default function ColorPicker({ value, onChange, label }: ColorPickerProps) {
+export default function ColorPicker({ value, onChange, label, swatches = THEME_SWATCHES, swatchesLabel = 'Theme colours' }: ColorPickerProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -223,9 +233,9 @@ export default function ColorPicker({ value, onChange, label }: ColorPickerProps
           </div>
 
           <div>
-            <p className="text-2xs font-medium text-dark-muted mb-1.5">Theme colours</p>
-            <div className="grid grid-cols-6 gap-1.5">
-              {THEME_SWATCHES.map(sw => (
+            <p className="text-2xs font-medium text-dark-muted mb-1.5">{swatchesLabel}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {swatches.map(sw => (
                 <button
                   key={sw.hex}
                   type="button"
@@ -233,9 +243,9 @@ export default function ColorPicker({ value, onChange, label }: ColorPickerProps
                   title={sw.name}
                   aria-label={`${sw.name} ${sw.hex.toUpperCase()}`}
                   style={{ backgroundColor: sw.hex }}
-                  className="relative flex h-6 w-full items-center justify-center rounded border border-dark/15 outline-none hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary transition-transform"
+                  className="relative flex h-7 w-7 items-center justify-center rounded border border-dark/15 outline-none hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary transition-transform"
                 >
-                  {value === sw.hex && <Check size={12} weight="bold" className={sw.hex === '#2d2118' || sw.hex === '#4a3728' ? 'text-white' : 'text-dark'} aria-hidden="true" />}
+                  {value === sw.hex && <Check size={12} weight="bold" className={isDarkHex(sw.hex) ? 'text-white' : 'text-dark'} aria-hidden="true" />}
                 </button>
               ))}
             </div>
