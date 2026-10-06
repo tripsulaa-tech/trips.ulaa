@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowCounterClockwise, UploadSimple } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Columns, UploadSimple } from '@phosphor-icons/react';
 import AdminEditorFooter from './AdminEditorFooter';
 import ColorPicker, { type ColorSwatch } from '../components/ui/ColorPicker';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
@@ -88,6 +88,7 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
   const [error, setError] = useState('');
   const [fullyPaid, setFullyPaid] = useState(false);
   const [darkPreview, setDarkPreview] = useState(false);
+  const [compare, setCompare] = useState(false);
   const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
   const logoInput = useRef<HTMLInputElement>(null);
   const logoDarkInput = useRef<HTMLInputElement>(null);
@@ -124,13 +125,13 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
   // The preview follows the Light/Dark switch instead of this computer's own setting: the
   // email's dark-mode rules are forced on or off, and the dark logo is loaded from this site
   // so it also shows before the site has been deployed.
-  const previewHtml = (() => {
+  const previewHtmlFor = (dark: boolean) => {
     const html = preview?.html ?? '';
     if (!html) return html;
     return html
-      .replace('@media (prefers-color-scheme: dark)', darkPreview ? '@media all' : '@media not all')
+      .replace('@media (prefers-color-scheme: dark)', dark ? '@media all' : '@media not all')
       .replace('https://www.ulaatrips.com/ULAA-logo-mail-dark.png', `${window.location.origin}/ULAA-logo-mail-dark.png`);
-  })();
+  };
 
   const set = useCallback(<K extends keyof BookingEmailTemplate>(key: K, value: BookingEmailTemplate[K]) => {
     setSaved(false);
@@ -314,7 +315,7 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         </div>
 
-        <section aria-label="Email preview" className="lg:sticky lg:top-4 space-y-3">
+        <section aria-label="Email preview" className={`space-y-3 ${compare ? 'lg:col-span-2' : 'lg:sticky lg:top-4'}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-dark">Preview</h2>
             <div role="group" aria-label="Preview as" className="grid grid-cols-2 gap-1.5">
@@ -333,29 +334,61 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
               ))}
             </div>
           </div>
-          <div role="group" aria-label="Preview appearance" className="grid grid-cols-2 gap-1.5 max-w-[220px]">
-            {([[false, 'Light mode'], [true, 'Dark mode']] as const).map(([value, label]) => (
-              <button
-                key={label}
-                type="button"
-                aria-pressed={darkPreview === value}
-                onClick={() => setDarkPreview(value)}
-                className={`min-h-[36px] px-3 rounded-md border-2 text-xs font-medium transition-colors ${
-                  darkPreview === value ? 'border-primary bg-primary/5 text-primary' : 'border-background-warm text-dark hover:border-primary/50'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div role="group" aria-label="Preview appearance" className="flex flex-wrap items-center gap-1.5">
+            {([[false, 'Light mode'], [true, 'Dark mode']] as const).map(([value, label]) => {
+              const on = !compare && darkPreview === value;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => { setCompare(false); setDarkPreview(value); }}
+                  className={`min-h-[36px] px-3 rounded-md border-2 text-xs font-medium transition-colors ${
+                    on ? 'border-primary bg-primary/5 text-primary' : 'border-background-warm text-dark hover:border-primary/50'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              aria-pressed={compare}
+              aria-label="Compare light and dark side by side"
+              title="Compare light and dark side by side"
+              onClick={() => setCompare(c => !c)}
+              className={`inline-flex items-center justify-center gap-1.5 min-h-[36px] px-3 rounded-md border-2 text-xs font-medium transition-colors ${
+                compare ? 'border-primary bg-primary/5 text-primary' : 'border-background-warm text-dark hover:border-primary/50'
+              }`}
+            >
+              <Columns size={16} aria-hidden="true" />
+              Compare
+            </button>
           </div>
           <p className="text-xs text-dark-muted truncate"><span className="font-medium text-dark">Subject:</span> {preview?.subject ?? '…'}</p>
-          <iframe
-            title="Booking confirmation email preview"
-            sandbox=""
-            srcDoc={previewHtml}
-            className="w-full h-[640px] rounded-md border border-background-warm bg-white"
-          />
-          {darkPreview && <p className="text-xs text-dark-muted">This is how email apps that support dark mode (such as Apple Mail) will show it. Some apps, like Gmail, darken emails in their own way.</p>}
+          {compare ? (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {([[false, 'Light mode'], [true, 'Dark mode']] as const).map(([dark, label]) => (
+                <figure key={label} className="m-0 space-y-1.5">
+                  <figcaption className="text-xs font-medium text-dark">{label}</figcaption>
+                  <iframe
+                    title={`Booking confirmation email preview, ${label.toLowerCase()}`}
+                    sandbox=""
+                    srcDoc={previewHtmlFor(dark)}
+                    className="w-full h-[640px] rounded-md border border-background-warm bg-white"
+                  />
+                </figure>
+              ))}
+            </div>
+          ) : (
+            <iframe
+              title="Booking confirmation email preview"
+              sandbox=""
+              srcDoc={previewHtmlFor(darkPreview)}
+              className="w-full h-[640px] rounded-md border border-background-warm bg-white"
+            />
+          )}
+          {(compare || darkPreview) && <p className="text-xs text-dark-muted">Dark mode is how email apps that support it (such as Apple Mail) will show the email. Some apps, like Gmail, darken emails in their own way.</p>}
           <p className="text-xs text-dark-muted">Shown with a sample traveller and payments. The real email uses each booking's details.</p>
         </section>
       </div>
