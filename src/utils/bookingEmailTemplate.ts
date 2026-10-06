@@ -26,6 +26,7 @@ export interface BookingEmailTemplate {
   signOff: string;
   accentColour: string;         // button, badge line and highlighted amounts
   logoUrl: string;              // https image shown at the bottom; empty = the Ulaa logo
+  logoDarkUrl: string;          // https image used instead in dark mode; empty = Ulaa's dark logo (or the logo above if you uploaded one)
   logoWidth: number;            // px, 60-240
 }
 
@@ -48,6 +49,7 @@ export const DEFAULT_BOOKING_EMAIL_TEMPLATE: BookingEmailTemplate = {
   signOff: 'Best regards,\nTeam Ulaa',
   accentColour: '#A85A2A',
   logoUrl: '',
+  logoDarkUrl: '',
   logoWidth: 110,
 };
 
@@ -69,9 +71,10 @@ export function normalizeBookingEmailTemplate(raw: unknown): BookingEmailTemplat
   const r = raw as Record<string, unknown>;
   // Emails can only show images from a public https address.
   if (typeof r.logoUrl === 'string' && /^https:\/\/[^\s"'<>]+$/.test(r.logoUrl.trim())) out.logoUrl = r.logoUrl.trim();
+  if (typeof r.logoDarkUrl === 'string' && /^https:\/\/[^\s"'<>]+$/.test(r.logoDarkUrl.trim())) out.logoDarkUrl = r.logoDarkUrl.trim();
   if (typeof r.logoWidth === 'number' && isFinite(r.logoWidth)) out.logoWidth = Math.round(Math.min(240, Math.max(60, r.logoWidth)));
   for (const key of Object.keys(out) as (keyof BookingEmailTemplate)[]) {
-    if (key === 'logoUrl' || key === 'logoWidth') continue;
+    if (key === 'logoUrl' || key === 'logoDarkUrl' || key === 'logoWidth') continue;
     const v = r[key];
     if (typeof v !== 'string') continue;
     if (key === 'accentColour') {

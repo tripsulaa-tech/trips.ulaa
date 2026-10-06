@@ -32,7 +32,7 @@ const SWATCHES: ColorSwatch[] = [
   { name: 'Dark brown', hex: '#2d2118' },
 ];
 
-type TextKey = Exclude<keyof BookingEmailTemplate, 'accentColour' | 'logoUrl' | 'logoWidth'>;
+type TextKey = Exclude<keyof BookingEmailTemplate, 'accentColour' | 'logoUrl' | 'logoDarkUrl' | 'logoWidth'>;
 
 interface FieldDef { key: TextKey; label: string; hint?: string; rows?: number }
 interface GroupDef { title: string; fields: FieldDef[] }
@@ -87,9 +87,11 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [fullyPaid, setFullyPaid] = useState(false);
+  const [darkPreview, setDarkPreview] = useState(false);
   const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
   const logoInput = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const logoDarkInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState<'' | 'logoUrl' | 'logoDarkUrl'>('');
   // Logos uploaded while editing, so ones that end up unused can be deleted on save.
   const sessionUploads = useRef<Set<string>>(new Set());
   const [base, setBase] = useState<BookingEmailTemplate>({ ...DEFAULT_BOOKING_EMAIL_TEMPLATE });
@@ -119,14 +121,26 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [draft, fullyPaid]);
 
+  // The preview follows the Light/Dark switch instead of this computer's own setting: the
+  // email's dark-mode rules are forced on or off, and the dark logo is loaded from this site
+  // so it also shows before the site has been deployed.
+  const previewHtml = (() => {
+    const html = preview?.html ?? '';
+    if (!html) return html;
+    return html
+      .replace('@media (prefers-color-scheme: dark)', darkPreview ? '@media all' : '@media not all')
+      .replace('https://www.ulaatrips.com/ULAA-logo-mail-dark.png', `${window.location.origin}/ULAA-logo-mail-dark.png`);
+  })();
+
   const set = useCallback(<K extends keyof BookingEmailTemplate>(key: K, value: BookingEmailTemplate[K]) => {
     setSaved(false);
     setError('');
     setDraft(d => ({ ...d, [key]: value }));
   }, []);
 
-  const chooseLogo = async (file: File | undefined) => {
+  const chooseLogo = async (which: 'logoUrl' | 'logoDarkUrl', file: File | undefined) => {
     if (logoInput.current) logoInput.current.value = '';
+    if (logoDarkInput.current) logoDarkInput.current.value = '';
     if (!file) return;
     if (!LOGO_ACCEPT.split(',').includes(file.type)) {
       setError('Please choose a PNG, JPG or WebP image. Email programs cannot show SVG logos.');
@@ -137,21 +151,21 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
       return;
     }
     try {
-      setUploading(true);
+      setUploading(which);
       setError('');
-      const url = await uploadImage(BUCKET, file, `branding/email_logo/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '-')}`, LOGO_MAX_BYTES);
+      const url = await uploadImage(BUCKET, file, `branding/email_logo/${which === 'logoDarkUrl' ? 'dark-' : ''}${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '-')}`, LOGO_MAX_BYTES);
       sessionUploads.current.add(url);
-      set('logoUrl', url);
+      set(which, url);
     } catch {
       setError(`Could not upload the logo. Make sure the storage bucket "${BUCKET}" exists and is public.`);
     } finally {
-      setUploading(false);
+      setUploading('');
     }
   };
 
   // Deletes uploaded logos that are no longer used by the saved email.
-  const cleanupLogos = async (keep: string, previous: string) => {
-    const unused = [...sessionUploads.current, previous].filter(u => isStorageUrl(u) && u !== keep);
+  const cleanupLogos = async (keep: string[], previous: string[]) => {
+    const unused = [...sessionUploads.current, ...previous].filter(u => isStorageUrl(u) && !keep.includes(u));
     await Promise.all([...new Set(unused)].map(u => deleteImageByUrl(BUCKET, u).catch(() => {})));
     sessionUploads.current = new Set();
   };
@@ -163,7 +177,7 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
       const clean = normalizeBookingEmailTemplate(draft);
       await upsertSiteContent(BOOKING_EMAIL_KEY, clean);
       setCachedBookingEmailTemplate(clean);
-      await cleanupLogos(clean.logoUrl, base.logoUrl);
+      await cleanupLogos([clean.logoUrl, clean.logoDarkUrl], [base.logoUrl, base.logoDarkUrl]);
       setBase(clean);
       setDraft(clean);
       setSaved(true);
@@ -247,23 +261,45 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
 
           <section className="space-y-3" aria-label="Logo">
             <h2 className="text-sm font-semibold text-dark">Logo</h2>
-            <p className="text-xs text-dark-muted">Shown at the bottom of the email. Use a PNG, JPG or WebP (up to 2MB); a logo on a transparent or white background works best.</p>
-            <input ref={logoInput} type="file" accept={LOGO_ACCEPT} className="hidden" onChange={e => void chooseLogo(e.target.files?.[0])} />
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center justify-center rounded-md border border-background-warm bg-white px-4 py-3 min-w-[140px]">
-                <img src={draft.logoUrl || '/ULAA-logo.png'} alt="Email logo" style={{ width: Math.min(draft.logoWidth, 160) }} className="max-w-full h-auto" />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => logoInput.current?.click()} disabled={uploading} className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md border-2 border-background-warm text-dark text-sm font-medium hover:bg-background-warm transition-colors disabled:opacity-60">
-                  <UploadSimple size={14} aria-hidden="true" />
-                  {uploading ? 'Uploading…' : draft.logoUrl ? 'Replace logo' : 'Upload logo'}
-                </button>
-                {draft.logoUrl && (
-                  <button type="button" onClick={() => set('logoUrl', '')} className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md border-2 border-background-warm text-dark text-sm font-medium hover:bg-background-warm transition-colors">
-                    <ArrowCounterClockwise size={14} aria-hidden="true" />
-                    Use Ulaa logo
+            <p className="text-xs text-dark-muted">Shown at the bottom of the email. Upload one logo for light mode and, if you like, a different one for dark mode (PNG, JPG or WebP, up to 2MB each). A dark-mode logo should have light lettering on a transparent background. If you upload only a light-mode logo, it is used in both modes.</p>
+            <input ref={logoInput} type="file" accept={LOGO_ACCEPT} className="hidden" onChange={e => void chooseLogo('logoUrl', e.target.files?.[0])} />
+            <input ref={logoDarkInput} type="file" accept={LOGO_ACCEPT} className="hidden" onChange={e => void chooseLogo('logoDarkUrl', e.target.files?.[0])} />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-dark">Light mode</p>
+                <div className="flex items-center justify-center rounded-md border border-background-warm bg-white px-4 py-3 min-w-[140px]">
+                  <img src={draft.logoUrl || '/ULAA-logo.png'} alt="Email logo, light mode" style={{ width: Math.min(draft.logoWidth, 160) }} className="max-w-full h-auto" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => logoInput.current?.click()} disabled={!!uploading} className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md border-2 border-background-warm text-dark text-sm font-medium hover:bg-background-warm transition-colors disabled:opacity-60">
+                    <UploadSimple size={14} aria-hidden="true" />
+                    {uploading === 'logoUrl' ? 'Uploading…' : draft.logoUrl ? 'Replace' : 'Upload'}
                   </button>
-                )}
+                  {draft.logoUrl && (
+                    <button type="button" onClick={() => set('logoUrl', '')} className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md border-2 border-background-warm text-dark text-sm font-medium hover:bg-background-warm transition-colors">
+                      <ArrowCounterClockwise size={14} aria-hidden="true" />
+                      Use Ulaa logo
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-dark">Dark mode</p>
+                <div className="flex items-center justify-center rounded-md border border-dark bg-[#2D2118] px-4 py-3 min-w-[140px]">
+                  <img src={draft.logoDarkUrl || (draft.logoUrl || '/ULAA-logo-mail-dark.png')} alt="Email logo, dark mode" style={{ width: Math.min(draft.logoWidth, 160) }} className="max-w-full h-auto" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => logoDarkInput.current?.click()} disabled={!!uploading} className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md border-2 border-background-warm text-dark text-sm font-medium hover:bg-background-warm transition-colors disabled:opacity-60">
+                    <UploadSimple size={14} aria-hidden="true" />
+                    {uploading === 'logoDarkUrl' ? 'Uploading…' : draft.logoDarkUrl ? 'Replace' : 'Upload'}
+                  </button>
+                  {draft.logoDarkUrl && (
+                    <button type="button" onClick={() => set('logoDarkUrl', '')} className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md border-2 border-background-warm text-dark text-sm font-medium hover:bg-background-warm transition-colors">
+                      <ArrowCounterClockwise size={14} aria-hidden="true" />
+                      Use Ulaa dark logo
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="max-w-xs">
@@ -297,13 +333,29 @@ export default function LogoStudioMailEditor({ onDirtyChange }: { onDirtyChange:
               ))}
             </div>
           </div>
+          <div role="group" aria-label="Preview appearance" className="grid grid-cols-2 gap-1.5 max-w-[220px]">
+            {([[false, 'Light mode'], [true, 'Dark mode']] as const).map(([value, label]) => (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={darkPreview === value}
+                onClick={() => setDarkPreview(value)}
+                className={`min-h-[36px] px-3 rounded-md border-2 text-xs font-medium transition-colors ${
+                  darkPreview === value ? 'border-primary bg-primary/5 text-primary' : 'border-background-warm text-dark hover:border-primary/50'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <p className="text-xs text-dark-muted truncate"><span className="font-medium text-dark">Subject:</span> {preview?.subject ?? '…'}</p>
           <iframe
             title="Booking confirmation email preview"
             sandbox=""
-            srcDoc={preview?.html ?? ''}
+            srcDoc={previewHtml}
             className="w-full h-[640px] rounded-md border border-background-warm bg-white"
           />
+          {darkPreview && <p className="text-xs text-dark-muted">This is how email apps that support dark mode (such as Apple Mail) will show it. Some apps, like Gmail, darken emails in their own way.</p>}
           <p className="text-xs text-dark-muted">Shown with a sample traveller and payments. The real email uses each booking's details.</p>
         </section>
       </div>

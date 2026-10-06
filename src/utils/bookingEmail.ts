@@ -120,10 +120,11 @@ function escapeHtml(str: string): string {
 // color-scheme meta tags in <head>, which would otherwise make a
 // dark-wordmark logo vanish against an auto-darkened background.
 const LOGO_URL = 'https://www.ulaatrips.com/ULAA-logo.png';
-// Dark-mode variant (same asset the site's own Footer.tsx and the
-// itinerary PDF cover use), shown instead of LOGO_URL in clients that
-// support prefers-color-scheme — see the .logo-dark rule in <style>.
-const LOGO_FOOTER_URL = 'https://www.ulaatrips.com/ULAA-logo-Footer.png';
+// Dark-mode variant made for the email sign-off (light lettering on a transparent
+// background, file: public/ULAA-logo-mail-dark.png), shown instead of LOGO_URL in
+// clients that support prefers-color-scheme — see the .logo-dark rule in <style>.
+// The site's footer logo is left as it was.
+const LOGO_FOOTER_URL = 'https://www.ulaatrips.com/ULAA-logo-mail-dark.png';
 
 /** Rich, production-ready HTML email — table-based layout, inline styles,
  *  and a bulletproof VML button for Outlook. One fixed light-mode design
@@ -146,10 +147,16 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[], t: Booking
   };
   const words = (text: string) => templateToHtml(text, vars);
   const lw = t.logoWidth;
-  const logoHtml = t.logoUrl
-    ? `<img src="${t.logoUrl}" width="${lw}" alt="Ulaa" style="display: block; width: ${lw}px; max-width: ${lw}px; height: auto;">`
-    : `<img src="${LOGO_URL}" width="${lw}" alt="Ulaa" class="logo-light" style="display: block; width: ${lw}px; max-width: ${lw}px; height: auto;">
-                          <img src="${LOGO_FOOTER_URL}" width="${lw}" alt="Ulaa" class="logo-dark" style="display: none; width: ${lw}px; max-width: ${lw}px; height: auto;">`;
+  // Light and dark logos are chosen separately in Logo Studio → Email. A custom light logo
+  // with no dark one is used in both modes; with nothing uploaded, Ulaa's own pair is used.
+  const lightLogo = t.logoUrl || LOGO_URL;
+  const darkLogo = t.logoDarkUrl || (t.logoUrl ? '' : LOGO_FOOTER_URL);
+  const logoImg = (src: string, cls: string, display: string) =>
+    `<img src="${src}" width="${lw}" alt="Ulaa"${cls ? ` class="${cls}"` : ''} style="display: ${display}; width: ${lw}px; max-width: ${lw}px; height: auto;">`;
+  const logoHtml = darkLogo
+    ? `${logoImg(lightLogo, 'logo-light', 'block')}
+                          ${logoImg(darkLogo, 'logo-dark', 'none')}`
+    : logoImg(lightLogo, '', 'block');
   const trip = escapeHtml(f.tripName);
   const bookingIdRow = f.bookingId
     ? `
@@ -212,8 +219,8 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[], t: Booking
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="color-scheme" content="light">
-<meta name="supported-color-schemes" content="light">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
 <!--[if mso]>
 <noscript>
 <xml>
@@ -243,9 +250,21 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[], t: Booking
      which is why it also sits inside its own white card below — that's
      the fallback for everyone this media query doesn't reach. */
   .logo-dark { display: none; }
+  /* Dark mode follows the app's own dark surface (the site footer: warm dark brown
+     #2D2118 with cream text and the orange accents), not a generic black-and-white
+     inversion. Only clients that honour prefers-color-scheme see this. */
   @media (prefers-color-scheme: dark) {
     .logo-light { display: none !important; }
     .logo-dark { display: block !important; }
+    body, center, [style*="background-color: #F2EBE0"] { background-color: #211912 !important; }
+    td[style*="background-color: #FFFFFF"] { background-color: #2D2118 !important; }
+    td[style*="background-color: #FAF7F2"], table[style*="background-color: #FAF7F2"] { background-color: #3A2B20 !important; }
+    td[style*="background-color: #FAF1E4"] { background-color: #3D2C1F !important; }
+    [style*="solid #E8DFD3"], [style*="solid #EEE6D8"], [style*="solid #F0E9DC"] { border-color: #4A3728 !important; }
+    p[style*="color: #2D2118"], h1[style*="color: #2D2118"], td[style*="color: #2D2118"] { color: #F8F4EC !important; }
+    p[style*="color: #4A3728"], p[style*="color: #6B5744"] { color: #DDD2C4 !important; }
+    p[style*="color: #8A7864"], td[style*="color: #8A7864"] { color: #BBAA92 !important; }
+    p[style*="color: ${BRAND_COLOR}"], span[style*="color: ${BRAND_COLOR}"], td[style*="color: ${BRAND_COLOR}"], a[style*="text-decoration: underline"] { color: #E39A4F !important; }
   }
 </style>
 </head>
