@@ -44,23 +44,3 @@ export function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, 
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
 }
-
-const DARK_INK = '#2e241e';
-const LIGHT_INK = '#f6f2ea';
-
-/** Text colour that reads on whatever artwork is under the given area of the canvas. */
-export function inkOver(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, fallback: string): string {
-  try {
-    const { data } = ctx.getImageData(x, y, w, h);
-    let sum = 0;
-    let n = 0;
-    for (let i = 0; i < data.length; i += 64) {
-      if (data[i + 3] < 128) continue;
-      sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-      n++;
-    }
-    return n === 0 ? fallback : sum / n > 140 ? DARK_INK : LIGHT_INK;
-  } catch {
-    return fallback;
-  }
-}

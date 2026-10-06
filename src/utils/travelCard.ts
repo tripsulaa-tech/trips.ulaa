@@ -8,14 +8,14 @@
 // they can be edited. All coordinates are in the design's own 1276 x 2031
 // pixel space, measured from the final cards, so the output matches 1:1.
 
-import { drawCover, getTravelCardArt, inkOver, loadArtImage } from './travelCardArt';
+import { drawCover, getTravelCardArt, loadArtImage } from './travelCardArt';
 
 export const CARD_WIDTH = 1276;
 export const CARD_HEIGHT = 2031;
 
 const ASSET_BASE = '/travel-card';
 const CARD_RADIUS = 58;            // rounded outer corners (outside is transparent)
-const INK = '#2E241E';             // name + label colour sampled from the design
+const INK = '#2d2118';             // name + label colour sampled from the design
 
 const NAME_CENTER_X = CARD_WIDTH / 2;
 const NAME_BASELINE_Y = 898;       // baseline of the script name
@@ -173,7 +173,7 @@ export async function renderTravelCard(rawName: string, role: TravelCardRole = '
   ctx.restore();
 
   // Name (script)
-  ctx.fillStyle = custom ? inkOver(ctx, 140, 760, CARD_WIDTH - 280, 360, INK) : INK;
+  ctx.fillStyle = INK;
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'center';
   const { lines, lineHeight } = fitName(ctx, scriptFont, name);
@@ -300,7 +300,7 @@ export async function renderTravelCardBack(text: BackCardText): Promise<HTMLCanv
   }
   ctx.restore();
 
-  ctx.fillStyle = custom ? inkOver(ctx, 120, 650, CARD_WIDTH - 240, 1000, BACK_INK) : BACK_INK;
+  ctx.fillStyle = BACK_INK;
   ctx.textBaseline = 'alphabetic';
 
   // Small line above the headline
