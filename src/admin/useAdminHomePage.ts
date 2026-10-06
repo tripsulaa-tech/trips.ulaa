@@ -18,8 +18,8 @@ import type {
   HomeHeroContent, WhyUlaaContent, FounderContent, CtaBannerContent,
   TestimonialsSectionContent, GalleryImage, Testimonial, BottomNavItemConfig, ButtonLabelsConfig,
 } from '../types/types-index';
+import { STORAGE_BUCKET } from '../constants/storage';
 
-const STORAGE_BUCKET = 'ulaa';
 
 // The public homepage's real section order (see src/pages/HomePage.tsx) —
 // Upcoming Trips and Completed Trips are skipped here since those are

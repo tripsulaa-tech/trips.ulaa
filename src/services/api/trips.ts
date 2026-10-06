@@ -1,6 +1,7 @@
 import { supabase } from '../supabase';
 import type { UpcomingTrip, CompletedTrip, TripFinanceSnapshot } from '../../types/types-index';
-import { getStoragePathFromUrl, deleteImageByUrl } from './shared';
+import { getStoragePathFromUrl, deleteImageByUrl } from './shared';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 // =============================================
 // Trip lifecycle
@@ -61,15 +62,15 @@ async function relocateStartedTripImages(): Promise<void> {
 // URL — or null if the URL couldn't be parsed or the move failed (caller
 // falls back to leaving the original URL as-is).
 async function moveImage(url: string, destFolder: string, fileNamePrefix?: string): Promise<string | null> {
-  const path = getStoragePathFromUrl('ulaa', url);
+  const path = getStoragePathFromUrl(STORAGE_BUCKET, url);
   if (!path) return null;
   const originalFilename = path.split('/').pop();
   if (!originalFilename) return null;
   const filename = fileNamePrefix ? `${fileNamePrefix}-${originalFilename}` : originalFilename;
   const newPath = `${destFolder}/${filename}`;
-  const { error } = await supabase.storage.from('ulaa').move(path, newPath);
+  const { error } = await supabase.storage.from(STORAGE_BUCKET).move(path, newPath);
   if (error) return null;
-  const { data } = supabase.storage.from('ulaa').getPublicUrl(newPath);
+  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(newPath);
   return data.publicUrl;
 }
 
@@ -192,9 +193,9 @@ async function deleteUpcomingTrip(id: string): Promise<void> {
 // =============================================
 // Trip deletion — cascade cleanup
 // =============================================
-// Bucket every trip-attached image lives in — see the bucket="ulaa" props
+// Bucket every trip-attached image lives in — see the bucket={STORAGE_BUCKET} props
 // throughout AdminTrips.tsx's upload fields.
-const TRIP_IMAGE_BUCKET = 'ulaa';
+const TRIP_IMAGE_BUCKET = STORAGE_BUCKET;
 
 // Pulls every image URL referenced anywhere on an upcoming trip (cover,
 // mobile hero, gallery, accommodation/fashion photo galleries, "Places

@@ -9,6 +9,7 @@
 // pixel space, measured from the final cards, so the output matches 1:1.
 
 import { drawCover, getTravelCardArt, loadArtImage } from './travelCardArt';
+import { MAX_PRINT_SHEETS } from '../constants/limits';
 
 export const CARD_WIDTH = 1276;
 export const CARD_HEIGHT = 2031;
@@ -509,7 +510,7 @@ function drawGuides(pdf: PdfDoc, shapes: GuideShape[]) {
 const A3_WIDTH_MM = 297;
 const A3_HEIGHT_MM = 420;
 const SHEET_MARGIN_MM = 10;     // unprinted border most printers need
-const MAX_SHEETS = 100;
+const MAX_SHEETS = MAX_PRINT_SHEETS;
 
 export interface BadgeSheetSettings {
   diameterMm: number;   // finished badge size, e.g. 58

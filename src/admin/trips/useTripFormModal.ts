@@ -15,6 +15,7 @@ import { scrollToTextMatch } from '../../utils/scroll';
 import {
   useDraftKeeper, modalDraftBase, resolveModalDraft, settleDraft, discardDraft, type ModalDraftValue,
 } from '../../hooks/useSessionDraft';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 export { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 
@@ -137,7 +138,6 @@ export function useTripFormModal(load: () => void) {
     return urls;
   };
 
-  const STORAGE_BUCKET = 'ulaa';
   const isStorageUrl = (url: string) => url.includes(`/object/public/${STORAGE_BUCKET}/`);
 
   // Closes the edit/create modal. Any image URLs that were uploaded during

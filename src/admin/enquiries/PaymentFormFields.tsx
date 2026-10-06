@@ -10,6 +10,7 @@ import { Baby, LockSimple, LockSimpleOpen } from '@phosphor-icons/react';
 import Select from '../../components/ui/Select';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
+import { PAYMENT_NEAR_BALANCE_RUPEES } from '../../constants/limits';
 import MethodReferenceFields from './MethodReferenceFields';
 import {
   parseNonNegative, PACKAGE_OPTIONS, GENERATE_INVOICE_STATUS_OPTIONS,
@@ -19,9 +20,9 @@ import {
 import type { PaymentForm } from './AdminEnquiryCommon';
 import PaymentHistoryList from './PaymentHistoryList';
 
-// If a payment would leave no more than this many rupees still owed, the form
+// If a payment would leave no more than PAYMENT_NEAR_BALANCE_RUPEES still owed, the form
 // asks the admin whether they meant to settle the whole balance.
-const NEAR_BALANCE_THRESHOLD = 100;
+const NEAR_BALANCE_THRESHOLD = PAYMENT_NEAR_BALANCE_RUPEES;
 
 export type PaymentErrors = Partial<Record<
   'amount_paid' | 'payment_method' | 'payment_utr' | 'refund_amount' | 'refund_method' | 'refund_utr' | 'notes',

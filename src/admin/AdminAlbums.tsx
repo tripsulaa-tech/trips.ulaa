@@ -24,6 +24,7 @@ import {
 import type { CompletedTrip } from '../types/types-index';
 import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
+import { STORAGE_BUCKET } from '../constants/storage';
 
 interface AlbumForm {
   title: string;
@@ -106,7 +107,6 @@ export default function AdminAlbums() {
     return urls;
   };
 
-  const STORAGE_BUCKET = 'ulaa';
   const isStorageUrl = (url: string) => url.includes(`/object/public/${STORAGE_BUCKET}/`);
 
   const openCreate = () => {
@@ -493,7 +493,7 @@ export default function AdminAlbums() {
               label="Cover Image"
               value={form.cover_image}
               onChange={url => setForm(f => ({ ...f, cover_image: url }))}
-              bucket="ulaa"
+              bucket={STORAGE_BUCKET}
               pathPrefix="album-covers"
               fileNamePrefix={editing ? editing.slug : (slugify(form.title) || undefined)}
               maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
@@ -505,7 +505,7 @@ export default function AdminAlbums() {
               label="Album Photos"
               value={form.gallery_images}
               onChange={urls => setForm(f => ({ ...f, gallery_images: urls }))}
-              bucket="ulaa"
+              bucket={STORAGE_BUCKET}
               // Folder name is the album's slug (e.g. "attapadi") rather than
               // its UUID, so storage stays human-readable. For an existing
               // album we use its saved slug; for a brand-new one (not saved

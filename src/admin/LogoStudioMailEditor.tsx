@@ -16,6 +16,7 @@ import {
   type BookingEmailTemplate,
 } from '../utils/bookingEmailTemplate';
 import { SITE_ORIGIN } from '../constants/site';
+import { STORAGE_BUCKET } from '../constants/storage';
 
 // Logo Studio → "Email": the wording of the booking confirmation email that goes to
 // travellers (Enquiries → Email booking confirmation). The layout, payment table and
@@ -23,7 +24,7 @@ import { SITE_ORIGIN } from '../constants/site';
 // accent colour can be changed here. A blank line means "use the default wording".
 // Wording is stored in the `booking_email_template` site_content row.
 
-const BUCKET = 'ulaa';
+const BUCKET = STORAGE_BUCKET;
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 const LOGO_ACCEPT = 'image/png,image/jpeg,image/webp';
 const isStorageUrl = (url: string) => !!url && url.includes(`/${BUCKET}/branding/`);

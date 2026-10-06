@@ -2,6 +2,7 @@ import { Sparkle, TextAa, TextAlignLeft } from '@phosphor-icons/react';
 import MultiImageUploadField from '../../components/ui/MultiImageUploadField';
 import type { AboutContent } from '../../types/types-index';
 import { inputClass, iconLabelClass, helperTextClass, previewLabelClass, previewBoxClass } from './shared';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 export default function CommunitySection({
   content,
@@ -80,7 +81,7 @@ export default function CommunitySection({
         label="Community Photos"
         value={content.photos}
         onChange={photos => setCommunity('photos', photos)}
-        bucket="ulaa"
+        bucket={STORAGE_BUCKET}
         pathPrefix="about/community"
         hint="Square, min 600×600px. Shown in a cropped grid."
         allowUrl

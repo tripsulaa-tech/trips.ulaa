@@ -14,12 +14,13 @@ import {
   type BrandingContent,
   type BrandingSlot,
 } from '../hooks/useBranding';
+import { STORAGE_BUCKET } from '../constants/storage';
 
 // Admin → Branding: upload/replace the site's logos and icons. Each slot is
 // stored in the `branding` site_content row (see hooks/useBranding.ts);
 // leaving a slot empty falls back to the file bundled in /public.
 
-const BUCKET = 'ulaa';
+const BUCKET = STORAGE_BUCKET;
 const DRAFT_KEY = 'branding';
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB — logos/icons never need more
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico';

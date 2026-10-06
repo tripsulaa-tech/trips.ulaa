@@ -20,3 +20,10 @@ export const TIMING = {
   /** A form submitted faster than this is treated as a bot. */
   botMinFillMs: 1200,
 } as const;
+
+/** Most A3/A4 print sheets one travel-card or badge download may produce. */
+export const MAX_PRINT_SHEETS = 100;
+
+/** If a payment would leave no more than this many rupees owed, the payment form asks
+ *  the admin whether they meant to settle the whole balance. */
+export const PAYMENT_NEAR_BALANCE_RUPEES = 100;

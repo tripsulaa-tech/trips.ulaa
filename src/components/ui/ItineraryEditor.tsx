@@ -9,6 +9,7 @@ import type { ItineraryDay } from '../../types/types-index';
 import MultiImageUploadField from './MultiImageUploadField';
 import TripHighlightIconPicker from './TripHighlightIconPicker';
 import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 interface ItineraryEditorProps {
   value: ItineraryDay[];
@@ -156,7 +157,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                   label={`Day ${day.day} Photos`}
                   value={day.images || []}
                   onChange={urls => updateDay(index, { images: urls })}
-                  bucket="ulaa"
+                  bucket={STORAGE_BUCKET}
                   pathPrefix={`trips/${tripSlug || 'new-trip'}/itinerary/day-${day.day}`}
                   allowUrl
                 />

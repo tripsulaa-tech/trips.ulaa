@@ -5,7 +5,7 @@ import { formatDate } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
 import { loadContainImage } from '../../pdfImageLoading';
 import { BRAND_BASE, COLORS_BASE, type RGB } from '../shared';
-import { SITE_ORIGIN, INSTAGRAM_URL, WHATSAPP_NUMBER } from '../../../constants/site';
+import { SITE_ORIGIN, INSTAGRAM_URL, WHATSAPP_NUMBER, BRAND_TAGLINE } from '../../../constants/site';
 
 // =============================================================================
 // Values shared across the invoice-PDF modules (shared.ts, context.ts,
@@ -26,7 +26,7 @@ export const COLORS = {
 
 export const BRAND = {
   ...BRAND_BASE,
-  tagline: 'GIRLS-ONLY TRAVEL COMMUNITY',
+  tagline: BRAND_TAGLINE.toUpperCase(),
   bottomTagline: 'Empowering women to explore, together.',
 };
 

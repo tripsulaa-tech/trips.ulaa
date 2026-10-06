@@ -2,6 +2,7 @@ import { TextAa, TextAlignLeft, Sparkle } from '@phosphor-icons/react';
 import ImageUploadField from '../../components/ui/ImageUploadField';
 import type { AboutContent } from '../../types/types-index';
 import { inputClass, iconLabelClass, helperTextClass, previewLabelClass, previewBoxClass } from './shared';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 export default function OurStorySection({
   content,
@@ -76,7 +77,7 @@ export default function OurStorySection({
         label="Story Image"
         value={content.image}
         onChange={url => setStory('image', url)}
-        bucket="ulaa"
+        bucket={STORAGE_BUCKET}
         pathPrefix="about/story"
         hint="Landscape, min 1000×880px. Shown in a cropped rounded panel."
         allowUrl

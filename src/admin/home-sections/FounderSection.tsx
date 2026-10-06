@@ -7,6 +7,7 @@ import { COVER_IMAGE_TARGET_SIZE_BYTES } from '../../services/api';
 import type { FounderContent, AboutFounderSocialLink } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { labelClass } from '../about-sections/shared';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 export default function FounderSection({
   content,
@@ -41,7 +42,7 @@ export default function FounderSection({
         label="Founder Photo"
         value={content.photo}
         onChange={url => setFounder('photo', url)}
-        bucket="ulaa"
+        bucket={STORAGE_BUCKET}
         pathPrefix="founder"
         maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
         hint="Square, min 600×600px, face centered."

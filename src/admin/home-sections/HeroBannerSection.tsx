@@ -16,8 +16,8 @@ import { uploadImage, deleteImageByUrl } from '../../services/api';
 import { DEFAULT_HOME_HERO } from '../../constants/home-hero';
 import type { HomeHeroContent, HomeHeroSlide } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
-const STORAGE_BUCKET = 'ulaa';
 
 export default function HeroBannerSection({
   content,

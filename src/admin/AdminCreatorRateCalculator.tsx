@@ -53,26 +53,11 @@ import { formatPrice, formatDate, getWhatsAppLink } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { getCreatorRateCalculations, saveCreatorRateCalculation, deleteCreatorRateCalculation, getSiteContent, upsertSiteContent } from '../services/api';
 import type { CreatorRateCalculation, CreatorRateAsset } from '../types/types-index';
+import { NICHE_CPV_BENCHMARKS, REEL_COUNT, VIEW_QUALITY_TIERS, RATE_ROUND_TO, RATE_CARD_ITEMS, DEFAULT_CREATOR, PREVIEW_SAMPLE_FOLLOWERS, PREVIEW_SAMPLE_RATES } from '../constants/creatorRate';
 import DraftConflictNotice from './DraftConflictNotice';
 import { lookupDraft, readDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
 
-// ---- Model Settings tab, columns A:B (Niche → CPV Benchmark) ----
-const NICHE_CPV_BENCHMARKS: { niche: string; cpv: number }[] = [
-  { niche: 'Finance / Fintech', cpv: 0.75 },
-  { niche: 'Tech', cpv: 0.65 },
-  { niche: 'Business / Entrepreneurship', cpv: 0.65 },
-  { niche: 'Beauty / Fashion', cpv: 0.475 },
-  { niche: 'Travel & Lifestyle', cpv: 0.5 },
-  { niche: 'Food', cpv: 0.375 },
-  { niche: 'Comedy / Entertainment', cpv: 0.25 },
-  { niche: 'Gaming', cpv: 0.25 },
-  { niche: 'Education', cpv: 0.5 },
-  { niche: 'Health / Wellness', cpv: 0.45 },
-];
-
 const NICHE_OPTIONS = NICHE_CPV_BENCHMARKS.map(n => ({ value: n.niche, label: n.niche }));
-
-const REEL_COUNT = 10;
 
 // Height of AdminLayout's sticky top bar (76px mobile / 92px desktop, plus
 // a little breathing room) — used whenever a collapsible section on this
@@ -148,9 +133,9 @@ function scrollElementIntoView(el: HTMLElement, offset: number) {
 // Default identity fields, so the common case (quoting the same test/house
 // creator) doesn't need retyping every time — still fully editable, and
 // Reset restores these rather than blanking them out.
-const DEFAULT_CREATOR_NAME = 'Jini';
-const DEFAULT_INSTAGRAM_HANDLE = '@justjini_';
-const DEFAULT_PHONE = '6383336772';
+const DEFAULT_CREATOR_NAME = DEFAULT_CREATOR.name;
+const DEFAULT_INSTAGRAM_HANDLE = DEFAULT_CREATOR.instagramHandle;
+const DEFAULT_PHONE = DEFAULT_CREATOR.phone;
 
 // Kept for this browser tab while they differ from a fresh calculator / the saved template, so
 // leaving the page (or refreshing) and coming back finds them as they were left.
@@ -204,23 +189,17 @@ function extractViewNumbers(text: string): number[] {
 // straight from the nested IF in that cell (equivalent to the lookup table
 // on Model Settings!D:E).
 function viewQualityMultiplier(ratio: number): number {
-  if (ratio < 0.2) return 0.25;
-  if (ratio < 0.4) return 0.4;
-  if (ratio < 0.6) return 0.6;
-  if (ratio < 0.8) return 0.8;
-  if (ratio < 1) return 0.9;
-  if (ratio < 1.25) return 0.92;
-  if (ratio < 1.5) return 0.96;
-  return 1;
+  const tier = VIEW_QUALITY_TIERS.find(t => t.below === undefined || ratio < t.below);
+  return tier ? tier.multiplier : 1;
 }
 
 // Excel FLOOR(x, 50) / CEILING(x, 50) — round down/up to the nearest ₹50,
 // used throughout the "Final Commercials" section of the sheet.
 function floorTo50(x: number): number {
-  return Math.floor(x / 50) * 50;
+  return Math.floor(x / RATE_ROUND_TO) * RATE_ROUND_TO;
 }
 function ceilTo50(x: number): number {
-  return Math.ceil(x / 50) * 50;
+  return Math.ceil(x / RATE_ROUND_TO) * RATE_ROUND_TO;
 }
 
 // Turns a saved calculation into a ready-to-send message — this is the
@@ -337,13 +316,11 @@ function renderFormattedPreview(text: string): (string | ReactNode)[] {
 // calculation to preview with yet (no follower count / Reel views entered)
 // — so Preview always has something concrete to show rather than blank
 // placeholders.
-const PREVIEW_SAMPLE_ASSETS: CreatorRateAsset[] = [
-  { asset: '1 Non-Collab Reel', min: 5050, max: 5050, pricing_logic: 'Base Reel Rate' },
-  { asset: '1 Collab Tag Reel', min: 5550, max: 6050, pricing_logic: '1.1–1.2× Non-Collab Reel' },
-  { asset: '1 Feed Post', min: 1500, max: 2000, pricing_logic: '0.3–0.4× Reel' },
-  { asset: '1 Story', min: 1000, max: 2000, pricing_logic: '0.2–0.4× Reel' },
-  { asset: '1 Month Ad Rights', min: 1500, max: 1500, pricing_logic: '0.3× Reel' },
-];
+const PREVIEW_SAMPLE_ASSETS: CreatorRateAsset[] = RATE_CARD_ITEMS.map((item, i) => ({
+  asset: item.asset,
+  ...PREVIEW_SAMPLE_RATES[i],
+  pricing_logic: item.logic,
+}));
 
 export default function AdminCreatorRateCalculator() {
   const alert = useAlert();
@@ -397,13 +374,13 @@ export default function AdminCreatorRateCalculator() {
     const maxReelRate = Math.min(followers, baseRate);
 
     // Rate Calculator!A22:D26 — Final Commercials table
-    const assets: CreatorRateAsset[] = [
-      { asset: '1 Non-Collab Reel', min: floorTo50(minReelRate), max: ceilTo50(maxReelRate), pricing_logic: 'Base Reel Rate' },
-      { asset: '1 Collab Tag Reel', min: floorTo50(maxReelRate), max: ceilTo50(1.2 * maxReelRate), pricing_logic: '1.1–1.2× Non-Collab Reel' },
-      { asset: '1 Feed Post', min: floorTo50(0.3 * minReelRate), max: ceilTo50(0.4 * maxReelRate), pricing_logic: '0.3–0.4× Reel' },
-      { asset: '1 Story', min: floorTo50(0.2 * minReelRate), max: ceilTo50(0.4 * maxReelRate), pricing_logic: '0.2–0.4× Reel' },
-      { asset: '1 Month Ad Rights', min: floorTo50(0.3 * minReelRate), max: ceilTo50(0.3 * maxReelRate), pricing_logic: '0.3× Reel' },
-    ];
+    const reelRate = { min: minReelRate, max: maxReelRate };
+    const assets: CreatorRateAsset[] = RATE_CARD_ITEMS.map(item => ({
+      asset: item.asset,
+      min: floorTo50(item.minMult * reelRate[item.minFrom]),
+      max: ceilTo50(item.maxMult * reelRate[item.maxFrom]),
+      pricing_logic: item.logic,
+    }));
 
     return { avgViews, viewFollowerRatio, nicheCpv, qualityMultiplier, baseRate, minReelRate, maxReelRate, assets };
   }, [followers, views, niche]);
@@ -797,7 +774,7 @@ export default function AdminCreatorRateCalculator() {
     const template = templateVariants.find(v => v.id === previewVariantId)?.template ?? templateVariants[0]?.template ?? '';
     const source: MessageTemplateSource = hasInputs
       ? { creator_name: creatorName.trim() || null, niche, follower_count: followers, final_commercials: result.assets }
-      : { creator_name: creatorName.trim() || DEFAULT_CREATOR_NAME, niche, follower_count: 10100, final_commercials: PREVIEW_SAMPLE_ASSETS };
+      : { creator_name: creatorName.trim() || DEFAULT_CREATOR_NAME, niche, follower_count: PREVIEW_SAMPLE_FOLLOWERS, final_commercials: PREVIEW_SAMPLE_ASSETS };
     return renderMessageTemplate(template, source);
   }, [templateVariants, previewVariantId, hasInputs, creatorName, niche, followers, result.assets]);
 

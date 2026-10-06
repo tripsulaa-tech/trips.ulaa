@@ -11,6 +11,7 @@ import { sanitizeForPdf } from '../../pdfText';
 import { matchThingsToCarryIconKey, type ThingsToCarryIconKey } from '../../../constants/thingsToCarryIconRules';
 import { fetchAsDataUrl, loadImageEl } from '../../pdfImageLoading';
 import { BRAND_BASE, COLORS_BASE, type RGB } from '../shared';
+import { BRAND_TAGLINE } from '../../../constants/site';
 export { tierLabel } from '../../../constants/cancellationPolicy';
 
 export type { RGB } from '../shared';
@@ -71,7 +72,7 @@ export function getThingsToCarryFallbackIcon(item: string): AnyIcon {
 // the closing slide — the same constants used in the site footer/contact page.
 export const BRAND = {
   ...BRAND_BASE,
-  tagline: 'Girls-Only Travel Community',
+  tagline: BRAND_TAGLINE,
 };
 
 // PowerPoint's default 16:9 widescreen slide size (13.333in × 7.5in),

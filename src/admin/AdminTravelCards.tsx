@@ -25,6 +25,7 @@ import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { formatDate } from '../utils/utils-index';
 import type { Enquiry, TripLeader, UpcomingTrip } from '../types/types-index';
 import { DEFAULT_BACK_CARD_TEXT, GUIDE_NOTE, MARKS_GAP_HINT, MIN_GAP_FOR_MARKS_MM, badgeCutGuides, cutGuideOptions, isCutGuides, layoutBadgeSheet, planBadgeSheets, type BackCardText, type CardSheetItem, type CutGuides, type TravelCardRole } from '../utils/travelCard';
+import { MAX_PRINT_SHEETS } from '../constants/limits';
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -389,7 +390,7 @@ export default function AdminTravelCards() {
   // Blank quantity means "one full sheet".
   const badgeQuantity = Math.floor(Number(badgeSettings.quantity)) > 0 ? Math.floor(Number(badgeSettings.quantity)) : badgePlan.perSheet;
   const badgeSheets = badgePlan.perSheet > 0 ? Math.ceil(badgeQuantity / badgePlan.perSheet) : 0;
-  const badgeTooMany = badgeSheets > 100;
+  const badgeTooMany = badgeSheets > MAX_PRINT_SHEETS;
   const badgeGuides: CutGuides = isCutGuides(badgeSettings.guides) ? badgeSettings.guides : 'outline';
   // Where each badge sits on an A3 sheet (mm), for the sheet preview below.
   const badgeSlots = useMemo(
@@ -675,7 +676,7 @@ export default function AdminTravelCards() {
                       {' '}{badgeQuantity} badge{badgeQuantity === 1 ? '' : 's'} = <span className="font-semibold">{badgeSheets}</span> sheet{badgeSheets === 1 ? '' : 's'}.
                     </p>
                   )}
-                  {badgeTooMany && <p role="alert" className="text-xs text-red-600">That is more than 100 sheets. Please download in smaller batches.</p>}
+                  {badgeTooMany && <p role="alert" className="text-xs text-red-600">That is more than {MAX_PRINT_SHEETS} sheets. Please download in smaller batches.</p>}
 
                   {badgeSlots.length > 0 && (
                     <div className="space-y-2">

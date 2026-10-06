@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button';
 import type { CtaBannerContent } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { labelClass } from '../about-sections/shared';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 export default function CtaBannerSection({
   content,
@@ -27,7 +28,7 @@ export default function CtaBannerSection({
         label="Background Image"
         value={content.image}
         onChange={url => setField('image', url)}
-        bucket="ulaa"
+        bucket={STORAGE_BUCKET}
         pathPrefix="cta-banner"
         hint="Wide landscape, min 1400×700px. Shown with a dark gradient overlay."
         allowUrl

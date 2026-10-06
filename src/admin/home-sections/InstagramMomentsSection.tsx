@@ -12,8 +12,8 @@ import { uploadImage, deleteImageByUrl } from '../../services/api';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { makeTempId } from '../useAdminHomePage';
 import type { GalleryImage } from '../../types/types-index';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
-const STORAGE_BUCKET = 'ulaa';
 
 export default function InstagramMomentsSection({
   images,
@@ -47,7 +47,7 @@ export default function InstagramMomentsSection({
       }
       setImages(prev => [...prev, ...newImages]);
     } catch {
-      alert('Failed to upload. Make sure the Supabase storage bucket "ulaa" exists and is public.');
+      alert(`Failed to upload. Make sure the Supabase storage bucket "${STORAGE_BUCKET}" exists and is public.`);
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';

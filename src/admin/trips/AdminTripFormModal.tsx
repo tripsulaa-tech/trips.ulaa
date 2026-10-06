@@ -43,6 +43,7 @@ import { computeDuration, type TripForm } from './tripFormTypes';
 import { inputClass } from './useTripFormModal';
 import TripFinanceEditor from './TripFinanceEditor';
 import TripPackagesEditor from './TripPackagesEditor';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 interface AdminTripFormModalProps {
   modalOpen: boolean;
@@ -464,7 +465,7 @@ export default function AdminTripFormModal({
                 // so it resets to null (falls back to centered, no zoom)
                 // rather than silently misapplying to the new one.
                 onChange={url => setForm(f => ({ ...f, cover_image: url, cover_image_crop: null }))}
-                bucket="ulaa"
+                bucket={STORAGE_BUCKET}
                 pathPrefix="trip-covers"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
@@ -482,7 +483,7 @@ export default function AdminTripFormModal({
                 label="Hero Banner Image (Mobile)"
                 value={form.hero_mobile_image}
                 onChange={url => setForm(f => ({ ...f, hero_mobile_image: url }))}
-                bucket="ulaa"
+                bucket={STORAGE_BUCKET}
                 pathPrefix="trip-covers/hero-mobile"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 maxSizeBytes={COVER_IMAGE_TARGET_SIZE_BYTES}
@@ -521,7 +522,7 @@ export default function AdminTripFormModal({
                       label=""
                       value={item.photo}
                       onChange={url => setForm(f => ({ ...f, gallery_items: f.gallery_items.map((it, idx) => idx === i ? { ...it, photo: url } : it) }))}
-                      bucket="ulaa"
+                      bucket={STORAGE_BUCKET}
                       pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/gallery`}
                       hint="4:3 landscape, e.g. 1200×900px. Shown in a cropped carousel."
                       aspectRatio="3/2"
@@ -543,7 +544,7 @@ export default function AdminTripFormModal({
                 label="Fashion Aesthetics (outfit inspiration photos)"
                 value={form.fashion_photos}
                 onChange={urls => setForm(f => ({ ...f, fashion_photos: urls }))}
-                bucket="ulaa"
+                bucket={STORAGE_BUCKET}
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/fashion`}
                 hint="Any orientation, min 800px on the shortest side. Shown uncropped in a grid."
                 allowUrl
@@ -796,7 +797,7 @@ export default function AdminTripFormModal({
                 label="Accommodation Photos"
                 value={form.accommodation_photos}
                 onChange={urls => setForm(f => ({ ...f, accommodation_photos: urls }))}
-                bucket="ulaa"
+                bucket={STORAGE_BUCKET}
                 pathPrefix={`trips/${editingTrip ? editingTrip.slug : (slugify(form.title) || 'new-trip')}/accommodation`}
                 hint="16:9 landscape, e.g. 1280×720px. Shown in cropped cards."
                 allowUrl
@@ -979,7 +980,7 @@ export default function AdminTripFormModal({
                 label="Banner Image"
                 value={form.end_banner.image}
                 onChange={url => setForm(f => ({ ...f, end_banner: { ...f.end_banner, image: url } }))}
-                bucket="ulaa"
+                bucket={STORAGE_BUCKET}
                 pathPrefix="trip-end-banners"
                 fileNamePrefix={editingTrip ? editingTrip.slug : (slugify(form.title) || undefined)}
                 hint="Wide landscape, min 1600×900px. Shown behind the closing banner text."

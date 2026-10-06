@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import fs from 'fs'
-import { SITE_ORIGIN, CONTACT_EMAIL, INSTAGRAM_URL, LOGO_URL } from './src/constants/site.ts'
+import { SITE_ORIGIN, CONTACT_EMAIL, INSTAGRAM_URL, LOGO_URL, BRAND_TAGLINE } from './src/constants/site.ts'
 
 // public/sw.js is copied into dist/ byte-for-byte by Vite (files in public/
 // aren't processed/hashed) — so its content is otherwise identical build to
@@ -31,13 +31,13 @@ function stampServiceWorker() {
 // Instagram link are edited in one place (HTML itself can't import from code).
 function siteConstantsInHtml(): Plugin {
   const values: Record<string, string> = {
-    SITE_ORIGIN, CONTACT_EMAIL, INSTAGRAM_URL, LOGO_URL,
+    SITE_ORIGIN, CONTACT_EMAIL, INSTAGRAM_URL, LOGO_URL, BRAND_TAGLINE,
   }
   return {
     name: 'site-constants-in-html',
     transformIndexHtml: {
       order: 'pre',
-      handler: html => html.replace(/%(SITE_ORIGIN|CONTACT_EMAIL|INSTAGRAM_URL|LOGO_URL)%/g, (_m, k: string) => values[k]),
+      handler: html => html.replace(/%(SITE_ORIGIN|CONTACT_EMAIL|INSTAGRAM_URL|LOGO_URL|BRAND_TAGLINE)%/g, (_m, k: string) => values[k]),
     },
   }
 }

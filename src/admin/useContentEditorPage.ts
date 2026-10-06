@@ -4,6 +4,7 @@ import { getSiteContent, upsertSiteContent, deleteImageByUrl } from '../services
 import { collectStorageUrls } from '../utils/utils-index';
 import { useSectionTabChrome } from './useSectionTabChrome';
 import { lookupDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
+import { STORAGE_BUCKET } from '../constants/storage';
 
 // Shared by every "single site_content record, edited on its own admin
 // page" screen (About, Founder, Why Ulaa, ...): load-on-mount with a
@@ -77,7 +78,7 @@ export function useContentEditorPage<T>({
   defaultContent,
   mergeWithDefaults,
   sectionCount: getSectionCount,
-  storageBucket = 'ulaa',
+  storageBucket = STORAGE_BUCKET,
 }: UseContentEditorPageOptions<T>): UseContentEditorPageResult<T> {
   const [content, setContent] = useState<T>(defaultContent);
   const sectionCount = getSectionCount(content);

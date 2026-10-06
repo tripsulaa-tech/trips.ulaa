@@ -15,6 +15,7 @@ import {
   GUIDE_NOTE, MARKS_GAP_HINT, MIN_GAP_FOR_MARKS_MM, cardCutGuides, cardSheetItemKey, cutGuideOptions, isCutGuides, planCardSheets,
   type CardSheetItem, type CutGuides, type GuideShape,
 } from '../utils/travelCard';
+import { MAX_PRINT_SHEETS } from '../constants/limits';
 
 /** Cut guides as SVG lines, for the on-screen sheet previews (mm units). */
 export function CutGuideShapes({ shapes }: { shapes: GuideShape[] }) {
@@ -95,7 +96,7 @@ export default function CardSheetPanel({ items, copies, fileName, emptyMessage, 
   const typedQuantity = Math.floor(Number(quantity));
   const total = copies ? (fixedCount ?? (typedQuantity > 0 ? typedQuantity : perSheet)) : items.length;
   const sheets = perSheet > 0 ? Math.ceil(total / perSheet) : 0;
-  const tooMany = sheets > 100;
+  const tooMany = sheets > MAX_PRINT_SHEETS;
   const sheetIndex = Math.min(previewSheet, Math.max(0, sheets - 1));
   const start = sheetIndex * perSheet;
   const onSheet = Math.max(0, Math.min(perSheet, total - start));
@@ -213,7 +214,7 @@ export default function CardSheetPanel({ items, copies, fileName, emptyMessage, 
               {' '}{total} {noun(total)} = <span className="font-semibold">{sheets}</span> sheet{sheets === 1 ? '' : 's'}.
             </p>
           )}
-          {tooMany && <p role="alert" className="text-xs text-red-600">That is more than 100 sheets. Please download in smaller batches.</p>}
+          {tooMany && <p role="alert" className="text-xs text-red-600">That is more than {MAX_PRINT_SHEETS} sheets. Please download in smaller batches.</p>}
 
           {layout && perSheet > 0 && items.length > 0 && (
             <div className="space-y-2">

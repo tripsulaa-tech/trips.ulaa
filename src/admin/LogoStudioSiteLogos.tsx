@@ -13,6 +13,7 @@ import {
   type BrandingContent,
   type BrandingSlot,
 } from '../hooks/useBranding';
+import { STORAGE_BUCKET } from '../constants/storage';
 
 // Logo Studio → "Site logos": choose which images the site uses for its header,
 // footer, browser tab, install prompt and admin panel, plus the Travel Cards badge,
@@ -21,7 +22,7 @@ import {
 // stored in the `branding` site_content row (see hooks/useBranding.ts); leaving a
 // slot on "default" falls back to the file bundled in /public.
 
-const BUCKET = 'ulaa';
+const BUCKET = STORAGE_BUCKET;
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB — logos/icons never need more
 const CARD_MAX_BYTES = 8 * 1024 * 1024; // full card / badge artwork is larger
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico';

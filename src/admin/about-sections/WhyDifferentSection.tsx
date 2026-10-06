@@ -12,6 +12,7 @@ import {
   itemCardHeaderClass,
   itemNumberBadgeClass,
 } from './shared';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 // Soft limits matching the card's real-world footprint on the public page
 // (aspect-[4/3] tile, heading text-sm sm:text-base, description text-xs) —
@@ -139,7 +140,7 @@ export default function WhyDifferentSection({
                       label=""
                       value={card.image ?? ''}
                       onChange={url => updateWhyCard(i, 'image', url)}
-                      bucket="ulaa"
+                      bucket={STORAGE_BUCKET}
                       pathPrefix={`about/why-different/card-${i + 1}`}
                       fileNamePrefix={`card-${i + 1}`}
                       aspectRatio="4/3"

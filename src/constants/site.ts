@@ -13,3 +13,4 @@ export const WHATSAPP_NUMBER = CONTACT_PHONE_E164.replace(/\D/g, '');
 export const INSTAGRAM_HANDLE = 'ulaa.trips';
 export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_HANDLE}`;
 export const LOGO_URL = `${SITE_ORIGIN}/ULAA-logo.png`;
+export const BRAND_TAGLINE = 'Girls-Only Travel Community';

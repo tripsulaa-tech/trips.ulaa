@@ -2,6 +2,7 @@ import { TextAa, TextAlignLeft } from '@phosphor-icons/react';
 import ImageUploadField from '../../components/ui/ImageUploadField';
 import type { AboutContent } from '../../types/types-index';
 import { inputClass, labelClass, iconLabelClass, helperTextClass, previewLabelClass } from './shared';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 export default function HeroSection({
   content,
@@ -23,7 +24,7 @@ export default function HeroSection({
           label="Banner Image (Desktop)"
           value={content.image}
           onChange={url => setHero('image', url)}
-          bucket="ulaa"
+          bucket={STORAGE_BUCKET}
           pathPrefix="about/hero"
           hint="Wide landscape, min 1920×1080px. Shown full-width on tablet and desktop."
           allowUrl
@@ -32,7 +33,7 @@ export default function HeroSection({
           label="Banner Image (Mobile)"
           value={content.mobile_image}
           onChange={url => setHero('mobile_image', url)}
-          bucket="ulaa"
+          bucket={STORAGE_BUCKET}
           pathPrefix="about/hero-mobile"
           hint="Portrait, min 1080×1350px. Shown on phones; falls back to the desktop banner if empty."
           allowUrl

@@ -22,6 +22,7 @@ import { slugify } from '../../utils/utils-index';
 import { makeTempId } from '../useAdminHomePage';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { usePhotoDiscardOnClose } from '../usePhotoDiscardOnClose';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 interface TestimonialForm {
   name: string;
@@ -36,7 +37,6 @@ const emptyForm: TestimonialForm = {
   name: '', photo: '', review: '', rating: 5, destination: '', is_published: true,
 };
 
-const STORAGE_BUCKET = 'ulaa';
 
 export default function TestimonialsSection({
   sectionText,

@@ -29,8 +29,8 @@ import DraftConflictNotice from './DraftConflictNotice';
 import {
   useDraftKeeper, modalDraftBase, resolveModalDraft, settleDraft, discardDraft, type ModalDraftValue,
 } from '../hooks/useSessionDraft';
+import { STORAGE_BUCKET } from '../constants/storage';
 
-const STORAGE_BUCKET = 'ulaa';
 
 interface TripLeaderForm {
   name: string;
@@ -396,7 +396,7 @@ export default function AdminTripLeaders() {
               label="Photo"
               value={form.photo}
               onChange={url => setForm(f => ({ ...f, photo: url }))}
-              bucket="ulaa"
+              bucket={STORAGE_BUCKET}
               pathPrefix="trip-leader-photos"
               fileNamePrefix={slugify(form.name) || undefined}
               hint="Square, min 600×600px, face centered."

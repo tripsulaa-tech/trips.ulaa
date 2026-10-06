@@ -3,6 +3,7 @@ import ImageUploadField from '../../components/ui/ImageUploadField';
 import type { WhyUlaaContent } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { CONTENT_LIMITS } from '../../constants/limits';
+import { STORAGE_BUCKET } from '../../constants/storage';
 
 // Real card is a 4:3 tile with a dark scrim + title + description stacked at
 // the bottom (see WhyULAA.tsx on the live site) — the preview below mirrors
@@ -129,7 +130,7 @@ export default function WhyUlaaSection({
                       label=""
                       value={feature.image}
                       onChange={url => updateFeature(index, { image: url })}
-                      bucket="ulaa"
+                      bucket={STORAGE_BUCKET}
                       pathPrefix="why-ulaa"
                       required
                       aspectRatio="4/3"
