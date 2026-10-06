@@ -627,6 +627,20 @@ export default function AdminLogoStudio() {
     setColors(c => (c[key] === copiedColor ? c : { ...c, [key]: copiedColor }));
   };
 
+  // Download options back to how the page first opens (colours have their own Reset).
+  const downloadChanged =
+    margin !== 'medium' || format !== 'png' || size !== 3000 || customW !== '1200' || customH !== '630' ||
+    transparent || view.zoom !== 1 || view.x !== 0 || view.y !== 0;
+  const resetDownload = () => {
+    setMargin('medium');
+    setFormat('png');
+    setSize(3000);
+    setCustomW('1200');
+    setCustomH('630');
+    setTransparent(false);
+    setView(DEFAULT_VIEW);
+  };
+
   const choosePre = (p: PreDesign) => {
     setPreId(p.id);
     setColors({ ...p.colors });
@@ -798,6 +812,8 @@ export default function AdminLogoStudio() {
 
           {/* Controls */}
           <div className={`space-y-3 ${lockHeight ? 'h-full min-h-0 overflow-hidden flex flex-col' : ''}`}>
+            {/* Scrolls on its own when the window is short, so the Download button below is always in view. */}
+            <div className={`space-y-3 ${lockHeight ? 'flex-1 min-h-0 overflow-y-auto app-scroll pr-1' : ''}`}>
             <section aria-label="Logo">
               <div className="grid grid-cols-5 gap-1.5">
                 {PREDESIGNS.map(p => {
@@ -893,7 +909,19 @@ export default function AdminLogoStudio() {
             </section>
 
             <section aria-labelledby="logo-download-heading" className="space-y-2">
-              <h2 id="logo-download-heading" className="text-sm font-semibold text-dark">Download</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="logo-download-heading" className="text-sm font-semibold text-dark">Download</h2>
+                {downloadChanged && (
+                  <button
+                    type="button"
+                    onClick={resetDownload}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                  >
+                    <ArrowCounterClockwise size={14} aria-hidden="true" />
+                    Reset
+                  </button>
+                )}
+              </div>
 
               <div className="flex items-center gap-2">
                 <span id="logo-margin-label" className="w-14 shrink-0 text-xs font-medium text-dark">Margin</span>
@@ -986,8 +1014,9 @@ export default function AdminLogoStudio() {
                 </label>
               )}
             </section>
+            </div>
 
-            <div className={`${lockHeight ? 'mt-auto' : 'sticky bottom-0'} -mx-4 sm:mx-0 px-4 sm:px-0 py-2 bg-white/95 backdrop-blur border-t border-background-warm sm:border-0 sm:bg-transparent`}>
+            <div className={`${lockHeight ? 'shrink-0 border-t' : 'sticky bottom-0'} -mx-4 sm:mx-0 px-4 sm:px-0 py-2 bg-white/95 backdrop-blur ${lockHeight ? 'border-background-warm' : 'border-t border-background-warm sm:border-0 sm:bg-transparent'}`}>
               <button
                 type="button"
                 onClick={handleDownload}
