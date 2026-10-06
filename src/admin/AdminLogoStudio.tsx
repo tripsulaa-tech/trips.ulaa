@@ -160,7 +160,13 @@ const SIZES = [
   { value: 1600, label: 'Large · 1600 × 1600 px' },
   { value: 3000, label: 'HD · 3000 × 3000 px' },
   { value: 4000, label: 'Max · 4000 × 4000 px' },
+  { value: 0, label: 'Custom size…' },
 ];
+
+// Custom size limits (px per side, and total pixels so the browser can still draw it).
+const CUSTOM_MIN = 16;
+const CUSTOM_MAX = 8000;
+const CUSTOM_MAX_PIXELS = 64_000_000;
 
 const PREVIEW_SIZE = 800;
 // Layers are also kept pre-shrunk to this size and used for the preview and any
@@ -356,15 +362,16 @@ function buildVectorSvg(
 }
 
 /** The SVG as a PDF page of the same square. 1 px = 0.75 pt (96 dpi), so it prints at the px size. */
-async function svgToPdfBlob(svg: string | null, canvas: HTMLCanvasElement, size: number): Promise<Blob> {
+async function svgToPdfBlob(svg: string | null, canvas: HTMLCanvasElement, width: number, height: number): Promise<Blob> {
   const [{ jsPDF }, { svg2pdf }] = await Promise.all([import('jspdf'), import('svg2pdf.js')]);
-  const pt = size * 0.75;
-  const doc = new jsPDF({ unit: 'pt', format: [pt, pt], orientation: 'portrait' });
+  const ptW = width * 0.75;
+  const ptH = height * 0.75;
+  const doc = new jsPDF({ unit: 'pt', format: [ptW, ptH], orientation: width > height ? 'landscape' : 'portrait' });
   if (svg) {
     const el = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
-    await svg2pdf(el, doc, { x: 0, y: 0, width: pt, height: pt });
+    await svg2pdf(el, doc, { x: 0, y: 0, width: ptW, height: ptH });
   } else {
-    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pt, pt);
+    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, ptW, ptH);
   }
   return doc.output('blob');
 }
@@ -386,6 +393,9 @@ export default function AdminLogoStudio() {
   const [margin, setMargin] = useState<MarginId>('medium');
   const [format, setFormat] = useState<Format>('png');
   const [size, setSize] = useState<number>(3000);
+  // Typed as text so a half-typed number is never rewritten under the cursor. Size 0 = custom.
+  const [customW, setCustomW] = useState('1200');
+  const [customH, setCustomH] = useState('630');
   const [transparent, setTransparent] = useState(false);
   // Colour last copied with a tile's copy button, ready to paste into any other colour.
   const [copiedColor, setCopiedColor] = useState<string | null>(null);
@@ -496,29 +506,59 @@ export default function AdminLogoStudio() {
     return blob ? new File([blob], name, { type: 'image/png' }) : null;
   };
 
+  const isCustom = size === 0;
+  const cw = Math.round(Number(customW));
+  const ch = Math.round(Number(customH));
+  const customValid = cw >= CUSTOM_MIN && cw <= CUSTOM_MAX && ch >= CUSTOM_MIN && ch <= CUSTOM_MAX && cw * ch <= CUSTOM_MAX_PIXELS;
+
   const handleDownload = async () => {
-    if (!ld) return;
-    const fileName = `ulaa-logo-${pre.id}-${size}${format !== 'jpg' && transparent ? '-transparent' : ''}.${format}`;
-    const src = pickSource(ld, size);
+    if (!ld || (isCustom && !customValid)) return;
+    // Output size: a square preset, or any width × height. The logo (with its margin) is
+    // fitted and centred in the middle; any extra room is background (or transparent).
+    const outW = isCustom ? cw : size;
+    const outH = isCustom ? ch : size;
+    const side = Math.min(outW, outH);
+    const fileName = `ulaa-logo-${pre.id}-${isCustom ? `${outW}x${outH}` : size}${format !== 'jpg' && transparent ? '-transparent' : ''}.${format}`;
+    const src = pickSource(ld, side);
     // SVG / PDF use the traced vector layers when the design has them; otherwise
     // they carry the high-resolution picture instead.
-    const svg = format === 'svg' || format === 'pdf'
-      ? ld.vectors && buildVectorSvg(ld.vectors, design, colors, size, withBackground, ld.fullBounds, marginPct)
+    const square = format === 'svg' || format === 'pdf'
+      ? ld.vectors && buildVectorSvg(ld.vectors, design, colors, side, withBackground, ld.fullBounds, marginPct)
       : null;
+    const n = (v: number) => (Math.round(v * 100) / 100).toString();
+    const svg = square && outW !== outH
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="${outW}" height="${outH}" viewBox="0 0 ${outW} ${outH}">${
+          withBackground ? `<rect width="${outW}" height="${outH}" fill="${colors.background}"/>` : ''
+        }<g transform="translate(${n((outW - side) / 2)} ${n((outH - side) / 2)})">${square}</g></svg>`
+      : square;
     try {
       if (format === 'svg' && svg) {
         saveBlob(new Blob([svg], { type: 'image/svg+xml' }), fileName);
         return;
       }
       const canvas = document.createElement('canvas');
-      if (!svg) renderLogo(canvas, src.images, design, colors, size, withBackground, src.bounds, marginPct, true);
+      if (!svg) {
+        const logo = outW === outH ? canvas : document.createElement('canvas');
+        renderLogo(logo, src.images, design, colors, side, withBackground, src.bounds, marginPct, true);
+        if (logo !== canvas) {
+          canvas.width = outW;
+          canvas.height = outH;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Canvas is not supported in this browser.');
+          if (withBackground) {
+            ctx.fillStyle = colors.background;
+            ctx.fillRect(0, 0, outW, outH);
+          }
+          ctx.drawImage(logo, Math.round((outW - logo.width) / 2), Math.round((outH - logo.height) / 2));
+        }
+      }
       if (format === 'pdf') {
-        saveBlob(await svgToPdfBlob(svg, canvas, size), fileName);
+        saveBlob(await svgToPdfBlob(svg, canvas, outW, outH), fileName);
         return;
       }
       if (format === 'svg') {
         const href = canvas.toDataURL('image/png');
-        const wrapped = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><image width="${size}" height="${size}" xlink:href="${href}" href="${href}"/></svg>`;
+        const wrapped = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${outW}" height="${outH}" viewBox="0 0 ${outW} ${outH}"><image width="${outW}" height="${outH}" xlink:href="${href}" href="${href}"/></svg>`;
         saveBlob(new Blob([wrapped], { type: 'image/svg+xml' }), fileName);
         return;
       }
@@ -726,6 +766,38 @@ export default function AdminLogoStudio() {
                 </div>
               </div>
 
+              {isCustom && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="logo-custom-w" className="block text-xs font-medium text-dark mb-1">Width (px)</label>
+                      <input id="logo-custom-w" inputMode="numeric" value={customW} onChange={e => setCustomW(e.target.value.replace(/\D/g, '').slice(0, 5))} aria-invalid={!customValid} className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background text-sm text-dark focus:border-primary outline-none transition-colors" />
+                    </div>
+                    <div>
+                      <label htmlFor="logo-custom-h" className="block text-xs font-medium text-dark mb-1">Height (px)</label>
+                      <input id="logo-custom-h" inputMode="numeric" value={customH} onChange={e => setCustomH(e.target.value.replace(/\D/g, '').slice(0, 5))} aria-invalid={!customValid} className="w-full px-3 py-2 rounded-md border-2 border-background-warm bg-background text-sm text-dark focus:border-primary outline-none transition-colors" />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick sizes">
+                    {([['Square 1:1', 1200, 1200], ['Wide 1200 × 630', 1200, 630], ['Banner 1500 × 500', 1500, 500], ['Story 1080 × 1920', 1080, 1920]] as const).map(([label, w, h]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => { setCustomW(String(w)); setCustomH(String(h)); }}
+                        className="px-2.5 py-1 rounded-md border-2 border-background-warm text-xs font-medium text-dark hover:border-primary/50 transition-colors"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {customValid ? (
+                    <p className="text-xs text-dark-muted">Downloads at {cw} × {ch} px. The logo is centred with the margin above; the rest is background colour (or transparent).</p>
+                  ) : (
+                    <p role="alert" className="text-xs text-red-600">Each side must be {CUSTOM_MIN} to {CUSTOM_MAX} px, and the whole image no more than {CUSTOM_MAX_PIXELS / 1_000_000} million pixels.</p>
+                  )}
+                </div>
+              )}
+
               {(format === 'svg' || format === 'pdf') && ld && !ld.vectors && (
                 <p className="text-xs text-dark-muted">
                   This logo has no traced vector layers yet, so its {format.toUpperCase()} holds a high-resolution picture. Run
@@ -750,7 +822,7 @@ export default function AdminLogoStudio() {
               <button
                 type="button"
                 onClick={handleDownload}
-                disabled={!ld}
+                disabled={!ld || (isCustom && !customValid)}
                 className="inline-flex w-full items-center justify-center gap-2 px-4 py-2 min-h-[44px] rounded-md bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60"
               >
                 <DownloadSimple size={16} aria-hidden="true" />
