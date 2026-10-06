@@ -435,10 +435,33 @@ export default function AdminTravelCards() {
     </p>
   );
 
+  const previewPanel = (
+    <>
+            <p className="text-sm font-medium text-dark mb-3">{tab === 'back' ? 'Back preview' : tab === 'badge' ? 'Badge preview' : 'Preview'}</p>
+            {tab === 'badge' ? (
+              badgePreviewUrl
+                ? <img src={badgePreviewUrl} alt="The ULAA badge" className="w-full max-w-[260px] mx-auto rounded-full shadow-card" />
+                : <div className="flex justify-center py-12"><CircleNotch size={28} className="animate-spin text-dark-muted" aria-hidden="true" /></div>
+            ) : tab === 'back' ? (
+              backPreviewUrl
+                ? <img src={backPreviewUrl} alt="Back of the travel card" className="w-full max-w-[260px] mx-auto rounded-lg shadow-card" />
+                : <div className="flex justify-center py-12"><CircleNotch size={28} className="animate-spin text-dark-muted" aria-hidden="true" /></div>
+            ) : previewUrl && previewName ? (
+              <img src={previewUrl} alt={`Card for ${previewName}`} className="w-full max-w-[260px] mx-auto rounded-lg shadow-card" />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-dark-muted text-sm">
+                <IdentificationCard size={40} aria-hidden="true" />
+                <p>{tab === 'leader' ? 'Trip leaders will show here.' : 'Choose a trip to see the card.'}</p>
+              </div>
+            )}
+            {fontNote}
+    </>
+  );
+
   return (
     <AdminLayout title="Travel Cards" subtitle="Name tags, trip leader cards, the back of the card and the ULAA badge" scrollRestorationReady={!loading}>
       <div className="space-y-4">
-        <div role="tablist" aria-label="Card type" className="inline-flex flex-wrap gap-1 bg-white rounded-full p-1 shadow-card">
+        <div role="tablist" aria-label="Card type" className="grid grid-cols-2 sm:inline-flex gap-1 bg-white rounded-3xl sm:rounded-full p-1.5 sm:p-1 shadow-card">
           {TABS.map(t => (
             <button
               key={t.id}
@@ -446,7 +469,7 @@ export default function AdminTravelCards() {
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => chooseTab(t.id)}
-              className={`px-4 py-1.5 rounded-full text-sm font-button font-semibold transition-colors ${
+              className={`px-4 py-2 sm:py-1.5 rounded-full text-center text-sm font-button font-semibold transition-colors ${
                 tab === t.id ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm'
               }`}
             >
@@ -458,6 +481,10 @@ export default function AdminTravelCards() {
         <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
           <div className="space-y-4 min-w-0">
             {tripSelect}
+
+            <div className="lg:hidden bg-white rounded-lg p-4 shadow-card" aria-label="Card preview">
+              {previewPanel}
+            </div>
 
             {showList && (
               <div className="bg-white rounded-lg shadow-card">
@@ -723,25 +750,8 @@ export default function AdminTravelCards() {
             )}
           </div>
 
-          <aside className="bg-white rounded-lg p-4 shadow-card lg:sticky lg:top-4" aria-label="Card preview">
-            <p className="text-sm font-medium text-dark mb-3">{tab === 'back' ? 'Back preview' : tab === 'badge' ? 'Badge preview' : 'Preview'}</p>
-            {tab === 'badge' ? (
-              badgePreviewUrl
-                ? <img src={badgePreviewUrl} alt="The ULAA badge" className="w-full max-w-[260px] mx-auto rounded-full shadow-card" />
-                : <div className="flex justify-center py-12"><CircleNotch size={28} className="animate-spin text-dark-muted" aria-hidden="true" /></div>
-            ) : tab === 'back' ? (
-              backPreviewUrl
-                ? <img src={backPreviewUrl} alt="Back of the travel card" className="w-full max-w-[260px] mx-auto rounded-lg shadow-card" />
-                : <div className="flex justify-center py-12"><CircleNotch size={28} className="animate-spin text-dark-muted" aria-hidden="true" /></div>
-            ) : previewUrl && previewName ? (
-              <img src={previewUrl} alt={`Card for ${previewName}`} className="w-full max-w-[260px] mx-auto rounded-lg shadow-card" />
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-dark-muted text-sm">
-                <IdentificationCard size={40} aria-hidden="true" />
-                <p>{tab === 'leader' ? 'Trip leaders will show here.' : 'Choose a trip to see the card.'}</p>
-              </div>
-            )}
-            {fontNote}
+          <aside className="hidden lg:block bg-white rounded-lg p-4 shadow-card lg:sticky lg:top-4" aria-label="Card preview">
+            {previewPanel}
           </aside>
         </div>
       </div>
