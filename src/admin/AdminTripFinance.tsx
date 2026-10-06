@@ -296,7 +296,7 @@ export default function AdminTripFinance() {
                 type="button"
                 onClick={() => setFilter(f.id)}
                 aria-pressed={filter === f.id}
-                className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                className={`px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   filter === f.id ? 'bg-primary text-white' : 'bg-white text-dark-muted hover:text-dark shadow-card'
                 }`}
               >

@@ -854,21 +854,21 @@ export default function AdminReports() {
             Business-wide rollups across Lead, Booking, Financial and Operational activity.
           </p>
           <div className="flex flex-wrap gap-2 shrink-0 items-center">
-            <div className="relative flex gap-1 shrink-0 items-center bg-white rounded-full p-1 shadow-card">
+            <div className="relative flex gap-1 shrink-0 items-center bg-white rounded-lg p-1 shadow-card">
               {PERIOD_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setPeriod(opt.value)}
                   aria-pressed={period === opt.value}
-                  className={`relative px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${
+                  className={`relative px-2.5 sm:px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${
                     period === opt.value ? 'text-white' : 'text-dark-muted hover:text-dark'
                   }`}
                 >
                   {period === opt.value && (
                     <motion.span
                       layoutId="reports-period-pill"
-                      className="absolute inset-0 bg-primary rounded-full"
+                      className="absolute inset-0 bg-primary rounded-md"
                       transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                     />
                   )}

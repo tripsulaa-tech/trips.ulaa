@@ -553,7 +553,7 @@ export default function AdminLogoStudio() {
               role="tab"
               aria-selected={tab === id}
               onClick={() => setTab(id)}
-              className={`min-h-[40px] rounded-full px-4 text-sm font-medium transition-colors ${
+              className={`min-h-[40px] rounded-md px-4 text-sm font-medium transition-colors ${
                 tab === id ? 'bg-primary text-white' : 'bg-background-warm text-dark hover:bg-background-warm/70'
               }`}
             >
