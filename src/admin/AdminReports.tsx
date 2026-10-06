@@ -888,6 +888,7 @@ export default function AdminReports() {
                 options={tripOptions}
                 size="sm"
                 variant="pill"
+                className="!rounded-lg"
               />
             </div>
             {!loading && exportTrips.length > 0 && (
@@ -897,7 +898,7 @@ export default function AdminReports() {
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.96 }}
                 title="Download a formatted per-trip Excel report (finance summary + per-person balances)"
-                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
+                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-dark-muted shadow-card hover:text-dark hover:shadow-card-hover transition-colors"
               >
                 <Download size={14} aria-hidden="true" />
                 <span className="sm:hidden">Excel</span>

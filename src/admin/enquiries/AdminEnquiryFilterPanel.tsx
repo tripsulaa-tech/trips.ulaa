@@ -75,7 +75,7 @@ function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`inline-flex shrink-0 items-center gap-1.5 h-9 ${tall ? 'sm:h-10' : 'sm:h-8'} px-3 rounded-full border-2 text-xs font-button font-semibold whitespace-nowrap transition-colors ${
+      className={`inline-flex shrink-0 items-center gap-1.5 h-9 ${tall ? 'sm:h-10' : 'sm:h-8'} px-3 rounded-lg border-2 text-xs font-button font-semibold whitespace-nowrap transition-colors ${
         selected
           ? 'bg-primary text-white border-primary'
           : `bg-white border-background-warm hover:border-primary/40 ${className || 'text-dark'} ${dim ? 'opacity-50' : ''}`

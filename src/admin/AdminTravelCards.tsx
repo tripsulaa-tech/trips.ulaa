@@ -17,6 +17,7 @@ import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
 import LengthField from '../components/ui/LengthField';
 import CardSheetPanel, { CutGuideShapes } from './CardSheetPanel';
+import { loadSharedSettings, saveSetting } from './travelCardSettings';
 import { useAlert } from '../components/ui/useAlert';
 import { getEnquiries, getUpcomingTrips, getAllTripLeadersAdmin } from '../services/api';
 import { isBooked } from './enquiries/AdminEnquiriesShared';
@@ -36,7 +37,7 @@ const TABS: { id: CardTab; label: string }[] = [
 ];
 
 // Edits made here only change what is printed on the cards. They are kept in
-// this browser and never written back to a booking or the trip leader record.
+// the database (shared by all admins) and never written back to a booking or the trip leader record.
 const NAMES_KEY = 'ulaa-travel-card-names-v1';
 const BACK_KEY = 'ulaa-travel-card-back-v1';
 const BADGE_KEY = 'ulaa-travel-card-badge-v1';
@@ -55,8 +56,9 @@ function readStorage<T>(key: string, fallback: T): T {
     return fallback;
   }
 }
+// Saved in this browser at once and for every admin shortly after (see travelCardSettings.ts).
 function writeStorage(key: string, value: unknown) {
-  try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable: edit lasts this visit only */ }
+  saveSetting(key, value);
 }
 
 // One row in a card list, whichever tab it belongs to.
@@ -104,6 +106,19 @@ export default function AdminTravelCards() {
   const [previewSheet, setPreviewSheet] = useState(0);
   const [includeLeader, setIncludeLeader] = useState(true);
   const [backMatchTravelers, setBackMatchTravelers] = useState(true);
+
+  // Bring in what other admins saved (it replaces the copy kept in this browser).
+  useEffect(() => {
+    let cancelled = false;
+    void loadSharedSettings([NAMES_KEY, BACK_KEY, BADGE_KEY]).then(remote => {
+      if (cancelled || !remote) return;
+      const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object';
+      if (isObj(remote[NAMES_KEY])) setNameOverrides(remote[NAMES_KEY] as Record<string, string>);
+      if (isObj(remote[BACK_KEY])) setBackText({ ...DEFAULT_BACK_CARD_TEXT, ...(remote[BACK_KEY] as Partial<BackCardText>) });
+      if (isObj(remote[BADGE_KEY])) setBadgeSettings({ ...DEFAULT_BADGE_INPUTS, ...(remote[BADGE_KEY] as Partial<BadgePrintInputs>) });
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -721,7 +736,7 @@ export default function AdminTravelCards() {
                     {f.hint && <p className="text-xs text-dark-muted mt-1">{f.hint}</p>}
                   </div>
                 ))}
-                <p className="text-xs text-dark-muted">The logo, QR code and icons are part of the card artwork and stay as they are. Changes are saved in this browser.</p>
+                <p className="text-xs text-dark-muted">The logo, QR code and icons are part of the card artwork and stay as they are. Changes are saved for all admins.</p>
               </div>
             )}
 

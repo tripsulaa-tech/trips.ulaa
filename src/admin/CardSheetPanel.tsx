@@ -9,6 +9,7 @@ import Select from '../components/ui/Select';
 import { useAlert } from '../components/ui/useAlert';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import LengthField from '../components/ui/LengthField';
+import { loadSharedSettings, saveSetting } from './travelCardSettings';
 import { formatLength, useLengthUnit } from '../utils/lengthUnits';
 import {
   GUIDE_NOTE, MARKS_GAP_HINT, MIN_GAP_FOR_MARKS_MM, cardCutGuides, cardSheetItemKey, cutGuideOptions, isCutGuides, planCardSheets,
@@ -30,7 +31,7 @@ export function CutGuideShapes({ shapes }: { shapes: GuideShape[] }) {
 }
 
 // Card size and gap are shared by every card type (they are the same physical
-// card), so they are remembered together in this browser.
+// card), so they are remembered together, for every admin.
 const SETTINGS_KEY = 'ulaa-travel-card-sheet-v1';
 interface SheetInputs { widthMm: string; gapMm: string; guides: CutGuides }
 const DEFAULT_INPUTS: SheetInputs = { widthMm: '54', gapMm: '4', guides: 'outline' };
@@ -62,6 +63,17 @@ interface CardSheetPanelProps {
 export default function CardSheetPanel({ items, copies, fileName, emptyMessage, fixedCount, children }: CardSheetPanelProps) {
   const alert = useAlert();
   const [inputs, setInputs] = useState<SheetInputs>(loadInputs);
+  // Bring in what other admins saved (it replaces the copy kept in this browser).
+  useEffect(() => {
+    let cancelled = false;
+    void loadSharedSettings([SETTINGS_KEY]).then(remote => {
+      const v = remote?.[SETTINGS_KEY];
+      if (cancelled || !v || typeof v !== 'object') return;
+      const merged = { ...DEFAULT_INPUTS, ...(v as Partial<SheetInputs>) };
+      setInputs({ ...merged, guides: isCutGuides(merged.guides) ? merged.guides : 'outline' });
+    });
+    return () => { cancelled = true; };
+  }, []);
   const [unit] = useLengthUnit();
   const [quantity, setQuantity] = useState('');
   const [previewSheet, setPreviewSheet] = useState(0);
@@ -136,7 +148,7 @@ export default function CardSheetPanel({ items, copies, fileName, emptyMessage, 
 
   const saveInputs = (next: SheetInputs) => {
     setInputs(next);
-    try { window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
+    saveSetting(SETTINGS_KEY, next);
   };
   const setField = (key: 'widthMm' | 'gapMm', value: string) => saveInputs({ ...inputs, [key]: value.replace(/[^\d.]/g, '') });
   const setGuides = (value: string) => { if (isCutGuides(value)) saveInputs({ ...inputs, guides: value }); };
