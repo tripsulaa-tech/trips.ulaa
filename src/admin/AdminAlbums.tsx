@@ -241,7 +241,7 @@ export default function AdminAlbums() {
 
                   <div className="flex flex-wrap items-center gap-1.5">
                     {album.batch && (
-                      <span className="text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
+                      <span className="text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-md whitespace-nowrap">
                         {formatBatchLabel(album.batch)}
                       </span>
                     )}
@@ -294,7 +294,7 @@ export default function AdminAlbums() {
                               {album.title}
                             </button>
                             {album.batch && (
-                              <span className="shrink-0 text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-full whitespace-nowrap">
+                              <span className="shrink-0 text-xs font-button font-medium text-primary bg-background-warm px-2 py-0.5 rounded-md whitespace-nowrap">
                                 <span className="sm:hidden">{formatBatchShortLabel(album.batch)}</span>
                                 <span className="hidden sm:inline">{formatBatchLabel(album.batch)}</span>
                               </span>
@@ -545,7 +545,7 @@ export default function AdminAlbums() {
                       <p className="text-xs font-medium text-dark-muted mb-1">Highlights</p>
                       <div className="flex flex-wrap gap-1.5">
                         {viewing.original_highlight_cards.map((h, i) => (
-                          <span key={i} className="text-xs bg-white text-dark px-2 py-1 rounded-full">{h.icon ? `${h.icon} ` : ''}{h.heading}</span>
+                          <span key={i} className="text-xs bg-white text-dark px-2 py-1 rounded-md">{h.icon ? `${h.icon} ` : ''}{h.heading}</span>
                         ))}
                       </div>
                     </div>
@@ -554,7 +554,7 @@ export default function AdminAlbums() {
                       <p className="text-xs font-medium text-dark-muted mb-1">Highlights</p>
                       <div className="flex flex-wrap gap-1.5">
                         {viewing.original_highlights.map((h, i) => (
-                          <span key={i} className="text-xs bg-white text-dark px-2 py-1 rounded-full">{h}</span>
+                          <span key={i} className="text-xs bg-white text-dark px-2 py-1 rounded-md">{h}</span>
                         ))}
                       </div>
                     </div>

@@ -1420,7 +1420,7 @@ export default function AdminCreatorRateCalculator() {
                                 <button
                                   type="button"
                                   onClick={() => handleCopyCalculation(h)}
-                                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-button font-semibold transition-colors ${
+                                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-button font-semibold transition-colors ${
                                     copiedId === h.id
                                       ? 'bg-primary/20 border-primary/40 text-primary-dark'
                                       : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/20'
@@ -1436,7 +1436,7 @@ export default function AdminCreatorRateCalculator() {
                                 <button
                                   type="button"
                                   onClick={() => handleShareCalculation(h)}
-                                  className="inline-flex items-center gap-1.5 rounded-full border bg-secondary/10 border-secondary/25 text-secondary hover:bg-secondary/20 hover:border-secondary/40 px-3 py-1.5 text-xs font-button font-semibold transition-colors"
+                                  className="inline-flex items-center gap-1.5 rounded-lg border bg-secondary/10 border-secondary/25 text-secondary hover:bg-secondary/20 hover:border-secondary/40 px-3 py-1.5 text-xs font-button font-semibold transition-colors"
                                   title={h.phone ? `Share via WhatsApp to ${h.phone}` : 'Share'}
                                 >
                                   <WhatsappLogo size={14} weight="fill" aria-hidden="true" /> Share
@@ -1446,7 +1446,7 @@ export default function AdminCreatorRateCalculator() {
                                 type="button"
                                 onClick={() => handleDelete(h.id)}
                                 disabled={deletingId === h.id}
-                                className="inline-flex items-center gap-1.5 rounded-full border border-transparent hover:border-red-200 hover:bg-red-50 px-3 py-1.5 text-xs font-button font-semibold text-dark-muted hover:text-red-600 transition-colors disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 px-3 py-1.5 text-xs font-button font-semibold text-dark-muted hover:text-red-600 transition-colors disabled:opacity-50"
                               >
                                 <Trash2 size={14} aria-hidden="true" /> Delete
                               </button>

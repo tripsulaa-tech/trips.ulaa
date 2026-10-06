@@ -357,7 +357,7 @@ export default function PaymentFormFields({
                   };
                 })}
                 aria-pressed={isChildFare}
-                className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors ${
+                className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-lg border-2 text-xs font-medium transition-colors ${
                   isChildFare
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-background-warm text-dark-muted hover:border-primary/40'

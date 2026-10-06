@@ -159,7 +159,7 @@ export function WaitlistStatusControl({ entry, idPrefix, updating, onStatusChang
       />
       {expiry && (
         <span
-          className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${expiryBadgeClassName} ${
+          className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${expiryBadgeClassName} ${
             expiry.overdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
           }`}
         >

@@ -376,7 +376,7 @@ export default function AdminTripFinance() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-dark">{r.title}</span>
-                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${r.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-primary/10 text-primary'}`}>
+                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${r.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-primary/10 text-primary'}`}>
                           {r.status === 'completed' ? 'Completed' : 'Upcoming'}
                         </span>
                       </div>

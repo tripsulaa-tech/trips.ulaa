@@ -178,7 +178,7 @@ export default function HeroBannerSection({
                     </span>
                     <span className="text-sm font-semibold text-dark whitespace-nowrap">Slide {i + 1}</span>
                     {!slide.active && (
-                      <span className="text-2xs font-medium text-dark-muted bg-background-warm rounded-full px-2 py-0.5 whitespace-nowrap">
+                      <span className="text-2xs font-medium text-dark-muted bg-background-warm rounded-md px-2 py-0.5 whitespace-nowrap">
                         Hidden
                       </span>
                     )}

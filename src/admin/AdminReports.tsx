@@ -928,7 +928,7 @@ export default function AdminReports() {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {lead.closedBreakdown.map(r => (
-                      <span key={r.label} className="inline-flex items-center gap-1.5 text-xs font-button font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-dark-muted">
+                      <span key={r.label} className="inline-flex items-center gap-1.5 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-slate-100 text-dark-muted">
                         {r.label} <span className="text-dark">{r.count}</span>
                       </span>
                     ))}

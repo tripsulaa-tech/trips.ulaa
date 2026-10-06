@@ -564,7 +564,7 @@ export default function AdminInvoiceGenerator() {
                 </span>
                 Saved Invoices
                 {!historyLoading && history.length > 0 && (
-                  <span className="text-2xs font-button font-semibold text-dark-muted bg-background-warm rounded-full px-2 py-0.5">{history.length}</span>
+                  <span className="text-2xs font-button font-semibold text-dark-muted bg-background-warm rounded-md px-2 py-0.5">{history.length}</span>
                 )}
               </h3>
               {historyExpanded ? <ChevronUp size={16} className="text-dark-muted shrink-0" aria-hidden="true" /> : <ChevronDown size={16} className="text-dark-muted shrink-0" aria-hidden="true" />}

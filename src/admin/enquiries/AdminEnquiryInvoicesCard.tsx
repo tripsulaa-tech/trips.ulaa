@@ -41,7 +41,7 @@ interface AdminEnquiryInvoicesCardProps {
 // cards, so status pills can't visually drift between the two layouts.
 function StatusPill({ isPending }: { isPending: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
+    <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 ${
       isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
     }`}>
       <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : 'Paid'}

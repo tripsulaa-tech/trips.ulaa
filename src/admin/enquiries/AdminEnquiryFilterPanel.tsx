@@ -338,7 +338,7 @@ export default function AdminEnquiryFilterPanel(p: AdminEnquiryFilterPanelProps)
                   type="button"
                   onClick={c.clear}
                   aria-label={`Remove filter ${c.label}`}
-                  className="inline-flex items-center gap-1 h-7 pl-2.5 pr-1.5 rounded-full bg-primary/10 text-primary text-xs font-button font-semibold max-w-full"
+                  className="inline-flex items-center gap-1 h-7 pl-2.5 pr-1.5 rounded-lg bg-primary/10 text-primary text-xs font-button font-semibold max-w-full"
                 >
                   <span className="truncate">{c.label}</span>
                   <X size={12} weight="bold" className="shrink-0" aria-hidden="true" />

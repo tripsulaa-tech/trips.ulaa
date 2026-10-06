@@ -130,15 +130,15 @@ export default function AdminTripsTable({
         <div className="bg-white rounded-lg shadow-card px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             <ClipboardList size={18} className="text-primary shrink-0" aria-hidden="true" />
-            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-full bg-green-50 text-green-700">
+            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-md bg-green-50 text-green-700">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" aria-hidden="true" />
               {publishedCount} Published
             </span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
+            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-md bg-amber-50 text-amber-700">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden="true" />
               {comingSoonCount} Coming Soon
             </span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-full bg-background-warm text-dark-muted">
+            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-md bg-background-warm text-dark-muted">
               <span className="w-1.5 h-1.5 rounded-full bg-dark-muted shrink-0" aria-hidden="true" />
               {draftCount} Draft
             </span>

@@ -264,7 +264,7 @@ export default function DetailsModal({
                                 {isRefund ? '\u2212 ' : ''}{formatPrice(Math.abs(inv.amount))}
                               </span>
                               <span
-                                className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${
                                   isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
                                 }`}
                               >

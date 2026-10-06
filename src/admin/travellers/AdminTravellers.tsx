@@ -17,7 +17,7 @@ function RepeatToggle({ active, onToggle }: { active: boolean; onToggle: () => v
     <button
       onClick={onToggle}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold px-3 py-1.5 rounded-full border-2 transition-colors ${
+      className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold px-3 py-1.5 rounded-lg border-2 transition-colors ${
         active
           ? 'bg-primary border-primary text-white'
           : 'border-background-warm text-dark-muted hover:border-primary/30'

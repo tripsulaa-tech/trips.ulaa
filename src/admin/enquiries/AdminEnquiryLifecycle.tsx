@@ -215,7 +215,7 @@ export function JourneyLifecycleLegend() {
           const cfg = JOURNEY_STAGE_CONFIG[key];
           return (
             <div key={key} className="flex items-center gap-1.5 shrink-0">
-              <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
+              <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${cfg.color}`}>
                 <cfg.icon size={11} className="shrink-0" aria-hidden="true" /> {cfg.label}
               </span>
               {i < LIFECYCLE_FLOW_STAGES.length - 1 && (
@@ -225,10 +225,10 @@ export function JourneyLifecycleLegend() {
           );
         })}
         <span className="text-dark-muted/60 text-2xs mx-1 shrink-0 whitespace-nowrap">or, at any point —</span>
-        <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.not_interested.color}`}>
+        <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.not_interested.color}`}>
           <UserMinus size={11} className="shrink-0" aria-hidden="true" /> Not Interested
         </span>
-        <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.cancelled.color}`}>
+        <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.cancelled.color}`}>
           <XCircle size={11} className="shrink-0" aria-hidden="true" /> Cancelled
         </span>
       </div>

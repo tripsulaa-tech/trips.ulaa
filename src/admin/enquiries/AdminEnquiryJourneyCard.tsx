@@ -108,7 +108,7 @@ export default function AdminEnquiryJourneyCard({
           {(discountAmount > 0 || addonsAmount > 0) && (
             <div className="flex flex-wrap items-center gap-2">
               {discountAmount > 0 && enquiry.discount_reason && (
-                <span className="inline-flex items-center gap-1 text-2xs font-button font-semibold text-green-700 bg-green-50 rounded-full px-2.5 py-1">
+                <span className="inline-flex items-center gap-1 text-2xs font-button font-semibold text-green-700 bg-green-50 rounded-md px-2.5 py-1">
                   <Tag size={11} aria-hidden="true" /> {enquiry.discount_reason}
                 </span>
               )}
