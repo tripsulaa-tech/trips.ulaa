@@ -461,7 +461,7 @@ export default function AdminTravelCards() {
   return (
     <AdminLayout title="Travel Cards" subtitle="Name tags, trip leader cards, the back of the card and the ULAA badge" scrollRestorationReady={!loading}>
       <div className="space-y-4">
-        <div role="tablist" aria-label="Card type" className="grid grid-cols-2 sm:inline-flex gap-1 bg-white rounded-3xl sm:rounded-full p-1.5 sm:p-1 shadow-card">
+        <div role="tablist" aria-label="Card type" className="grid grid-cols-2 sm:inline-flex gap-1 bg-white rounded-lg p-1.5 shadow-card">
           {TABS.map(t => (
             <button
               key={t.id}
@@ -469,7 +469,7 @@ export default function AdminTravelCards() {
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => chooseTab(t.id)}
-              className={`px-4 py-2 sm:py-1.5 rounded-full text-center text-sm font-button font-semibold transition-colors ${
+              className={`px-4 py-2 rounded-md text-center text-sm font-button font-semibold transition-colors ${
                 tab === t.id ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm'
               }`}
             >
