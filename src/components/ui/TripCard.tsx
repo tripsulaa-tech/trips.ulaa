@@ -12,9 +12,7 @@ import {
   CaretRight,
   Gift,
 } from '@phosphor-icons/react';
-import { useState } from 'react';
-import type { MouseEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft, formatDuration } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
@@ -22,7 +20,7 @@ import { hasPackages, withBasicPricing } from '../../utils/tripOptions';
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
-import EarlyBirdSeatsPrompt, { getEarlyBirdSeatsOffer } from './EarlyBirdSeatsPrompt';
+import { EarlyBirdSeatsStrip, getEarlyBirdSeatsOffer } from './EarlyBirdSeatsPrompt';
 
 interface TripCardProps {
   trip: UpcomingTrip;
@@ -90,20 +88,10 @@ function resolveFeatureTagIcon(label: string, iconKey: string): { Icon: TripHigh
 }
 
 export default function TripCard({ trip, index = 0 }: TripCardProps) {
-  const navigate = useNavigate();
-  const [earlyBirdPromptOpen, setEarlyBirdPromptOpen] = useState(false);
   // Seat-limited early bird ("first N travellers", set per trip by the admin):
-  // clicking the card shows a small heads-up banner first, then continues to
-  // the trip page. Null for every other trip, so those navigate as before.
+  // drives the badge, the seats strip and the strike-through price below. The
+  // heads-up popup itself lives on the trip details page, not on this card.
   const earlyBirdOffer = trip.status === 'coming_soon' ? null : getEarlyBirdSeatsOffer(trip);
-  const earlyBirdSoldOut = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0) === 0;
-  const handleCardClick = (e: MouseEvent) => {
-    if (!earlyBirdOffer || earlyBirdSoldOut) return;
-    // Let new-tab / new-window clicks behave normally.
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-    e.preventDefault();
-    setEarlyBirdPromptOpen(true);
-  };
   // Coming Soon trips (Admin → Upcoming Trips → Add/Edit Trip → Publish
   // tab) intentionally show only the cover image + title on the public
   // site — no price, dates, seats, or booking CTA — while the rest of the
@@ -206,15 +194,15 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
     // the whole card (separate offer-border-gradient-shift class, kept
     // distinct from the offer-badge-gradient-shift badge/banner colour) —
     // early-bird / plain cards are untouched.
-    <div className={showSpecialOfferPromo ? 'offer-border-gradient-shift rounded-2xl p-[3px] shadow-warm-lg h-full' : 'h-full'}>
+    <div className={showSpecialOfferPromo ? 'offer-border-gradient-shift rounded-2xl p-[3px] shadow-warm-lg' : ''}>
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05, duration: 0.3 }}
-        className={`group bg-white rounded-2xl ${showSpecialOfferPromo ? '' : 'border border-background-warm'} shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col overflow-hidden`}
+        className={`group bg-white rounded-2xl ${showSpecialOfferPromo ? '' : 'border border-background-warm'} shadow-warm hover:shadow-warm-lg transition-all duration-300 flex flex-col overflow-hidden`}
       >
       {/* Image */}
-      <Link to={`/trips/${trip.slug}`} onClick={handleCardClick} className="relative h-56 md:h-64 overflow-hidden block">
+      <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden block">
         {/*
           The hover-zoom (group-hover:scale-110) lives on this wrapper div
           rather than the <img> itself, because the saved cover_image_crop
@@ -253,7 +241,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           ) : isEarlyBird && (
             <span className="offer-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm-lg ring-1 ring-inset ring-white/15">
               <Fire size={14} weight="fill" className="text-yellow-300" />
-              Early Bird
+              Early Bird{earlyBirdOffer ? ` · ${earlyBirdOffer.totalSeats} seats` : ''}
             </span>
           )}
         </div>
@@ -427,13 +415,8 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 )}
               </p>
             </div>
-          ) : isEarlyBird && (earlySeatsLabel ? (
-            <div className="offer-gradient-shift flex items-center gap-1.5 rounded-lg px-3 py-2 mb-5 shadow-warm-lg ring-1 ring-inset ring-white/15">
-              <Timer size={14} className="text-white shrink-0" />
-              <p className="text-white text-2xs leading-tight font-bold">
-                {earlySeatsLabel}
-              </p>
-            </div>
+          ) : isEarlyBird && (earlySeatsLabel && earlyBirdOffer ? (
+            <EarlyBirdSeatsStrip total={earlyBirdOffer.totalSeats} left={earlyBirdOffer.seatsLeft} />
           ) : trip.early_bird_deadline && (
             <div className="offer-gradient-shift flex items-center gap-1.5 rounded-lg px-3 py-2 mb-5 shadow-warm-lg ring-1 ring-inset ring-white/15">
               <Timer size={14} className="text-white shrink-0" />
@@ -448,7 +431,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           ))}
         </div>
 
-        <Link to={`/trips/${trip.slug}`} onClick={handleCardClick}>
+        <Link to={`/trips/${trip.slug}`}>
           <Button
             variant={isFull ? 'outline' : 'primary'}
             size="sm"
@@ -461,14 +444,6 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         </Link>
       </div>
       </motion.div>
-      <EarlyBirdSeatsPrompt
-        isOpen={earlyBirdPromptOpen}
-        offer={earlyBirdOffer}
-        tripTitle={trip.title}
-        advanceAmount={trip.advance_amount}
-        onContinue={() => { setEarlyBirdPromptOpen(false); navigate(`/trips/${trip.slug}`); }}
-        onClose={() => setEarlyBirdPromptOpen(false)}
-      />
     </div>
   );
 }

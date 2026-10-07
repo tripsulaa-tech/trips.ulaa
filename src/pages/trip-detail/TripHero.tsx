@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
 import { PLACEHOLDER_IMAGE, formatDateRange, formatAgeRange, getCoverImageStyle, formatDuration } from '../../utils/utils-index';
-import { ArrowLeft, ArrowRight, CaretDown, MapPin, Calendar, Clock, Users, UserCheck, Sparkle } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CaretDown, MapPin, Calendar, Clock, Users, UserCheck, Sparkle, Fire } from '@phosphor-icons/react';
 
 interface TripHeroProps {
   trip: UpcomingTrip;
@@ -157,7 +157,8 @@ export default function TripHero({
             {trip.special_offer_name}
           </span>
         ) : isEarlyBird && (
-          <span className="flex items-center gap-1.5 bg-secondary text-dark text-xs font-button font-semibold px-3 py-1.5 rounded-md">
+          <span className="offer-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold px-3 py-1.5 rounded-md shadow-warm ring-1 ring-inset ring-white/15">
+            <Fire size={14} weight="fill" className="text-yellow-300" />
             Early Bird
           </span>
         ))}

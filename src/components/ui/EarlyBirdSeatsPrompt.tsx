@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Fire, ArrowRight, User, Lock, CheckCircle, Wallet } from '@phosphor-icons/react';
 import Modal from './Modal';
-import { getActivePrice, formatPrice } from '../../utils/utils-index';
+import { getActivePrice, getStrikeThroughPrice, formatPrice } from '../../utils/utils-index';
 import { withBasicPricing } from '../../utils/tripOptions';
 import type { UpcomingTrip } from '../../types/types-index';
 
@@ -13,7 +13,8 @@ export interface EarlyBirdSeatsOffer {
   seatsLeft: number;
   /** Early-bird price per person (Basic package when the trip has packages). */
   price: number;
-  /** Regular price it replaces, when known and higher. */
+  /** Crossed-out "was" price: the trip's own strike-through price if the admin
+   *  set one, otherwise the regular price. Same rule as the trip card. */
   regularPrice: number | null;
 }
 
@@ -36,8 +37,42 @@ export function getEarlyBirdSeatsOffer(trip: UpcomingTrip | null | undefined): E
     totalSeats: t.early_bird_seats as number,
     seatsLeft: earlyBirdSeatsLeft,
     price: activePrice,
-    regularPrice: t.price != null && t.price > activePrice ? t.price : null,
+    regularPrice: getStrikeThroughPrice(activePrice, t.price, true, trip.strike_through_price, false) ?? null,
   };
+}
+
+/** Caption for the card strip: "All 5 early-bird seats open · first 5 to pay",
+ *  "3 of 5 early-bird seats left · first 5 to pay", or the last-seat variant. */
+export function earlyBirdSeatsCaption(total: number, left: number): string {
+  if (left === 1) return 'Last early-bird seat! · first to pay gets it';
+  if (left === total) return `All ${total} early-bird seats open · first ${total} to pay`;
+  return `${left} of ${total} early-bird seats left · first ${total} to pay`;
+}
+
+/** Compact seat-tile strip for the trip card: same tiles as the banner, so
+ *  the card and the banner read as one system. */
+export function EarlyBirdSeatsStrip({ total, left }: { total: number; left: number }) {
+  const shown = Math.min(total, 12);
+  const shownTaken = Math.min(total - left, shown);
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2.5 mb-5">
+      <div className="flex flex-wrap justify-center gap-1" aria-hidden="true">
+        {Array.from({ length: shown }).map((_, i) => (
+          <span
+            key={i}
+            className={`w-6 h-6 rounded-md flex items-center justify-center ${
+              i < shownTaken ? 'bg-background-warm text-dark-muted/50' : 'bg-gradient-to-b from-orange-500 to-red-500 text-white'
+            }`}
+          >
+            <User size={13} weight="fill" />
+          </span>
+        ))}
+      </div>
+      <p className={`text-2xs leading-tight font-bold text-center ${left === 1 ? 'text-red-700' : 'text-orange-900'}`}>
+        {earlyBirdSeatsCaption(total, left)}
+      </p>
+    </div>
+  );
 }
 
 interface EarlyBirdSeatsPromptProps {

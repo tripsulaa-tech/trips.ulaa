@@ -3,7 +3,7 @@ import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
 import { formatDate, formatPrice, specialOfferDaysLeft, earlyBirdSeatsLabel } from '../../utils/utils-index';
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Clock, Sparkle, Gift } from '@phosphor-icons/react';
+import { Clock, Sparkle, Gift, Fire } from '@phosphor-icons/react';
 
 /** The "Save ₹X" + "PLUS ₹Y OFFER" badge pair — identical in both the
  *  advance_amount and no-advance_amount price layouts below, just at a
@@ -146,7 +146,8 @@ export default function TripStickyBookingBar({
                   </div>
                 ) : isEarlyBird && (
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span className="bg-secondary text-white text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                    <span className="offer-gradient-shift inline-flex items-center gap-1 text-white text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                      <Fire size={10} weight="fill" className="text-yellow-300" />
                       Early Bird
                     </span>
                     {earlyBirdSeatsLabel(trip) ? (
@@ -195,7 +196,8 @@ export default function TripStickyBookingBar({
                   ) : (
                     <>
                       {isEarlyBird && (
-                        <span className="bg-secondary text-white text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                        <span className="offer-gradient-shift inline-flex items-center gap-1 text-white text-2xs font-button font-bold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                          <Fire size={10} weight="fill" className="text-yellow-300" />
                           Early Bird
                         </span>
                       )}

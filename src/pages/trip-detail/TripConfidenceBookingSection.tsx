@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Sparkle,
   Gift,
+  Fire,
 } from '@phosphor-icons/react';
 
 import { RESPONSE_TIME } from '../../constants/site';
@@ -142,7 +143,8 @@ export default function TripConfidenceBookingSection({
                         {trip.special_offer_name}
                       </span>
                     ) : isEarlyBird && (
-                      <span className="bg-secondary text-white text-xs font-button font-semibold px-2.5 py-1 rounded-md">
+                      <span className="offer-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold px-2.5 py-1 rounded-md">
+                        <Fire size={12} weight="fill" className="text-yellow-300" />
                         Early Bird
                       </span>
                     )}

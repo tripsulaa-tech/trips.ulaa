@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, Fire, Seat } from '@phosphor-icons/react';
+import { ArrowRight, Fire, Seat, User } from '@phosphor-icons/react';
 
 interface TripCountdownCardProps {
   startDate: string | null | undefined;
@@ -13,9 +13,20 @@ interface TripCountdownCardProps {
   isAlmostFull: boolean;
   isFull: boolean;
   remainingSeats: number;
-  /** Seat-limited early bird still on: price + "3 of 5 early-bird seats left ·
-   *  first 5 to pay". Omit/null when there is no early bird to show. */
-  earlyBird?: { price: string; label: string; note?: string } | null;
+  /** Seat-limited early bird still on. Omit/null when there is no early bird
+   *  to show. Prices arrive already formatted (e.g. "₹1,799"). */
+  earlyBird?: {
+    price: string;
+    /** Crossed-out "was" price, when there is one. */
+    regularPrice?: string;
+    /** "₹700" — what the early bird saves against the crossed-out price. */
+    saving?: string;
+    totalSeats: number;
+    seatsLeft: number;
+    /** Advance to pay to lock the seat, and what remains after it. */
+    advance?: string;
+    balance?: string;
+  } | null;
 }
 
 interface RemainingTime {
@@ -439,6 +450,32 @@ export default function TripCountdownCard({
     else seatSub = `${takenSeats} traveller${takenSeats === 1 ? ' is' : 's are'} already in`;
   }
 
+  const seatMap = showSeatMap ? (
+            /* Phone: every seat shares one row, however many there are.
+               Desktop: fixed-size seats that wrap inside the narrow stub. */
+            <ul
+              className="mt-3 grid gap-0.5 lg:gap-1 lg:flex lg:flex-wrap"
+              style={{ gridTemplateColumns: `repeat(${totalSeats}, minmax(0, 1fr))` }}
+              aria-hidden="true"
+            >
+              {Array.from({ length: totalSeats }, (_, i) => {
+                const taken = i < takenSeats;
+                return (
+                  <li key={i} className="relative flex justify-center">
+                    <Seat
+                      size={22}
+                      weight="fill"
+                      className={`h-auto w-full max-w-[26px] lg:h-[22px] lg:w-[22px] ${taken ? 'text-dark/25' : 'text-primary'}`}
+                    />
+                    {!taken && isAlmostFull && !isFull && (
+                      <span className="absolute inset-0 rounded-full bg-red-400/30 animate-ping" />
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+  ) : null;
+
   const departed = game.phase === 'departed';
   const flyingDown = departed && !isDesktop && !reduceMotion && !noStickyBar;
   const showPips = game.phase === 'playing' || game.phase === 'teasing';
@@ -713,48 +750,62 @@ export default function TripCountdownCard({
           )}
           {seatSub && <p className="mt-0.5 text-sm text-dark-muted">{seatSub}</p>}
           {earlyBird && !isFull && (
-            <div className="offer-gradient-shift mt-2 rounded-lg px-3 py-2.5 shadow-warm-lg ring-1 ring-inset ring-white/15">
-              <p className="flex items-center gap-1.5 text-sm font-bold text-white">
-                <motion.span
-                  aria-hidden="true"
-                  className="inline-flex origin-bottom text-yellow-300"
-                  animate={reduceMotion ? undefined : { scale: [1, 1.18, 0.95, 1.12, 1], rotate: [0, -6, 5, -4, 0] }}
-                  transition={{ duration: 1.4, ease: 'easeInOut', repeat: Infinity }}
-                >
-                  <Fire size={16} weight="fill" />
-                </motion.span>
-                Early bird {earlyBird.price}
-              </p>
-              <p className="text-xs text-white/90 mt-0.5">{earlyBird.label}</p>
-              {earlyBird.note && <p className="text-2xs text-white/80 mt-1 leading-snug">{earlyBird.note}</p>}
+            <div className="offer-gradient-shift mt-2.5 rounded-lg px-3 py-2.5 text-white shadow-warm ring-1 ring-inset ring-white/15">
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-2xs font-button font-bold uppercase tracking-widest">
+                  <motion.span
+                    aria-hidden="true"
+                    className="inline-flex origin-bottom text-yellow-300"
+                    animate={reduceMotion ? undefined : { scale: [1, 1.18, 0.95, 1.12, 1], rotate: [0, -6, 5, -4, 0] }}
+                    transition={{ duration: 1.4, ease: 'easeInOut', repeat: Infinity }}
+                  >
+                    <Fire size={13} weight="fill" />
+                  </motion.span>
+                  Early bird
+                </p>
+                <span className="text-2xs font-semibold text-white/90">First {earlyBird.totalSeats} to pay</span>
+              </div>
+
+              <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
+                <span className="font-display text-2xl font-bold leading-none">{earlyBird.price}</span>
+                {earlyBird.regularPrice && (
+                  <span className="text-xs text-white/80 line-through">{earlyBird.regularPrice}</span>
+                )}
+                {earlyBird.saving && (
+                  <span className="rounded-full bg-white px-2 py-0.5 text-2xs font-button font-bold text-red-700">
+                    Save {earlyBird.saving}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="flex gap-0.5" aria-hidden="true">
+                  {Array.from({ length: Math.min(earlyBird.totalSeats, 12) }, (_, i) => {
+                    const taken = i < Math.min(earlyBird.totalSeats - earlyBird.seatsLeft, 12);
+                    return (
+                      <span
+                        key={i}
+                        className={`flex h-5 w-5 items-center justify-center rounded ${taken ? 'bg-white/25 text-white/60' : 'bg-white text-red-600'}`}
+                      >
+                        <User size={11} weight="fill" />
+                      </span>
+                    );
+                  })}
+                </div>
+                <span className="text-2xs font-semibold">
+                  {earlyBird.seatsLeft === 1 ? 'Last seat!' : `${earlyBird.seatsLeft} of ${earlyBird.totalSeats} left`}
+                </span>
+              </div>
+
+              {earlyBird.advance && (
+                <p className="mt-1.5 text-2xs leading-snug text-white/90">
+                  Pay {earlyBird.advance} to lock it{earlyBird.balance ? ` · ${earlyBird.balance} later` : ''}
+                </p>
+              )}
             </div>
           )}
 
-          {showSeatMap && (
-            /* Phone: every seat shares one row, however many there are.
-               Desktop: fixed-size seats that wrap inside the narrow stub. */
-            <ul
-              className="mt-3 grid gap-0.5 lg:gap-1 lg:flex lg:flex-wrap"
-              style={{ gridTemplateColumns: `repeat(${totalSeats}, minmax(0, 1fr))` }}
-              aria-hidden="true"
-            >
-              {Array.from({ length: totalSeats }, (_, i) => {
-                const taken = i < takenSeats;
-                return (
-                  <li key={i} className="relative flex justify-center">
-                    <Seat
-                      size={22}
-                      weight="fill"
-                      className={`h-auto w-full max-w-[26px] lg:h-[22px] lg:w-[22px] ${taken ? 'text-dark/25' : 'text-primary'}`}
-                    />
-                    {!taken && isAlmostFull && !isFull && (
-                      <span className="absolute inset-0 rounded-full bg-red-400/30 animate-ping" />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          {!earlyBird && seatMap}
         </div>
 
         {/* Phones already have the sticky booking bar, so here the button
@@ -816,6 +867,8 @@ export default function TripCountdownCard({
             )}
           </button>
         </motion.div>
+
+        {earlyBird && seatMap && <div className="-mt-2">{seatMap}</div>}
       </div>
 
     </section>

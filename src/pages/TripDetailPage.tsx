@@ -11,7 +11,7 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { getUpcomingTripBySlug, getUpcomingTripByIdAdmin, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
-import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice, earlyBirdSeatsLabel, earlyBirdRuleNote, formatPrice } from '../utils/utils-index';
+import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice, formatPrice } from '../utils/utils-index';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import { hasPackages } from '../utils/tripOptions';
 
@@ -32,8 +32,9 @@ import TripFaqCancellationSection from './trip-detail/TripFaqCancellationSection
 import TripStickyBookingBar from './trip-detail/TripStickyBookingBar';
 import TripEndBanner from './trip-detail/TripEndBanner';
 import TripBookingModal from './trip-detail/TripBookingModal';
-import EarlyBirdSeatsPrompt, { getEarlyBirdSeatsOffer } from './trip-detail/EarlyBirdSeatsPrompt';
 import TripSpecialOfferPopup from './trip-detail/TripSpecialOfferPopup';
+import TripEarlyBirdPopup from './trip-detail/TripEarlyBirdPopup';
+import { getEarlyBirdSeatsOffer } from '../components/ui/EarlyBirdSeatsPrompt';
 import { useIsDesktop } from './trip-detail/tripDetailUtils';
 import { Compass } from '@phosphor-icons/react';
 
@@ -326,27 +327,8 @@ export default function TripDetailPage() {
   // Package card the visitor tapped (null = opened via a plain Book button).
   const [preselectedPackageId, setPreselectedPackageId] = useState<string | null>(null);
   // Preview is look-only: booking buttons do nothing so no real enquiry can be made.
-  // Seat-limited early bird ("first N travellers"): the first Book click on
-  // such a trip shows a small heads-up banner before the booking form. Shown
-  // once per trip per visit (acknowledged -> straight to the form after).
-  const [earlyBirdPromptOpen, setEarlyBirdPromptOpen] = useState(false);
-  const [earlyBirdAckTripId, setEarlyBirdAckTripId] = useState<string | null>(null);
-  const requestBooking = (packageId: string | null) => {
-    if (isPreview) return;
-    setPreselectedPackageId(packageId);
-    if (trip && earlyBirdAckTripId !== trip.id && getEarlyBirdSeatsOffer(trip)) {
-      setEarlyBirdPromptOpen(true);
-      return;
-    }
-    setBookingOpen(true);
-  };
-  const openBooking = () => requestBooking(null);
-  const choosePackage = (packageId: string) => requestBooking(packageId);
-  const continueFromEarlyBirdPrompt = () => {
-    if (trip) setEarlyBirdAckTripId(trip.id);
-    setEarlyBirdPromptOpen(false);
-    setBookingOpen(true);
-  };
+  const openBooking = () => { if (isPreview) return; setPreselectedPackageId(null); setBookingOpen(true); };
+  const choosePackage = (packageId: string) => { if (isPreview) return; setPreselectedPackageId(packageId); setBookingOpen(true); };
 
   if (loading) {
     return (
@@ -409,6 +391,8 @@ export default function TripDetailPage() {
   const pricedTrip = withBasicPricing(trip);
   const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(pricedTrip.price, pricedTrip.early_bird_price, pricedTrip.early_bird_deadline, pricedTrip.special_offer_price, pricedTrip.special_offer_date, pricedTrip.special_offer_end_date, pricedTrip.early_bird_seats, pricedTrip.early_bird_seats_taken);
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, pricedTrip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
+  // Seat-limited early bird ("first N to pay"), or null for any other trip.
+  const earlyBirdOffer = getEarlyBirdSeatsOffer(trip);
   // Amount still payable before the trip once the advance/reservation
   // amount is paid — powers the "Reserve today with only ₹X" panel below,
   // which replaces the old plain "Seats available" badge when the admin
@@ -462,11 +446,15 @@ export default function TripDetailPage() {
             isAlmostFull={isAlmostFull}
             isFull={isFull}
             remainingSeats={remaining}
-            earlyBird={isEarlyBird && activePrice != null && earlyBirdSeatsLabel(pricedTrip)
+            earlyBird={earlyBirdOffer
               ? {
-                  price: formatPrice(activePrice),
-                  label: earlyBirdSeatsLabel(pricedTrip) as string,
-                  note: earlyBirdRuleNote(pricedTrip, activePrice, trip.advance_amount) ?? undefined,
+                  price: formatPrice(earlyBirdOffer.price),
+                  regularPrice: earlyBirdOffer.regularPrice != null ? formatPrice(earlyBirdOffer.regularPrice) : undefined,
+                  saving: earlyBirdOffer.regularPrice != null ? formatPrice(earlyBirdOffer.regularPrice - earlyBirdOffer.price) : undefined,
+                  totalSeats: earlyBirdOffer.totalSeats,
+                  seatsLeft: earlyBirdOffer.seatsLeft,
+                  advance: trip.advance_amount ? formatPrice(trip.advance_amount) : undefined,
+                  balance: trip.advance_amount ? formatPrice(Math.max(0, earlyBirdOffer.price - trip.advance_amount)) : undefined,
                 }
               : null}
           />
@@ -588,14 +576,6 @@ export default function TripDetailPage() {
         initialPackageId={preselectedPackageId}
       />
 
-      <EarlyBirdSeatsPrompt
-        isOpen={earlyBirdPromptOpen}
-        offer={getEarlyBirdSeatsOffer(trip)}
-        advanceAmount={trip.advance_amount}
-        onContinue={continueFromEarlyBirdPrompt}
-        onClose={() => setEarlyBirdPromptOpen(false)}
-      />
-
       <TripSpecialOfferPopup
         trip={pricedTrip}
         isSpecialOffer={isSpecialOffer}
@@ -603,6 +583,13 @@ export default function TripDetailPage() {
         strikeThroughPrice={strikeThroughPrice}
         isAlmostFull={isAlmostFull}
         remaining={remaining}
+        onBook={openBooking}
+      />
+
+      <TripEarlyBirdPopup
+        trip={trip}
+        remaining={remaining}
+        enabled={!isPreview && !bookingOpen && searchParams.get('book') !== '1'}
         onBook={openBooking}
       />
     </Layout>
