@@ -57,6 +57,9 @@ interface AdminTripFormModalProps {
   modalBodyRef: React.RefObject<HTMLDivElement | null>;
   saving: boolean;
   handleSave: () => void;
+  // Edit only: change the trip's public link to match a renamed title.
+  updateLink: boolean;
+  setUpdateLink: (value: boolean) => void;
   commitGroupBulletDraft: (gi: number, el: HTMLTextAreaElement) => void;
   // Real revenue for editingTrip, summed from actual bookings' total_amount
   // — see useTripFinanceData. Null while that fetch is still loading, and
@@ -116,7 +119,7 @@ function ageSummary(min: number | '', max: number | ''): string {
 export default function AdminTripFormModal({
   modalOpen, closeModal, editingTrip, form, setForm,
   modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef,
-  saving, handleSave, commitGroupBulletDraft, actualRevenue, tripLeaders, onManageLeader,
+  saving, handleSave, updateLink, setUpdateLink, commitGroupBulletDraft, actualRevenue, tripLeaders, onManageLeader,
 }: AdminTripFormModalProps) {
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
 
@@ -163,6 +166,21 @@ export default function AdminTripFormModal({
               <label htmlFor="trip-title" className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
               <input id="trip-title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley Winter Expedition" aria-describedby="trip-title-hint" />
               <p id="trip-title-hint" className="text-xs text-dark-muted mt-1">Shown on the Trip Card and trip page.</p>
+              {editingTrip && slugify(form.title) && slugify(form.title) !== editingTrip.slug && (
+                <label className="mt-2 flex items-start gap-2.5 rounded-lg border border-background-warm bg-background px-3 py-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={updateLink}
+                    onChange={e => setUpdateLink(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                  />
+                  <span className="text-xs text-dark leading-snug">
+                    <span className="font-semibold">Also update the trip link to match the new title</span>
+                    <span className="block text-dark-muted break-all">/trips/{editingTrip.slug} → /trips/{slugify(form.title)}</span>
+                    <span className="block text-dark-muted">The old link keeps working and redirects to the new one.</span>
+                  </span>
+                </label>
+              )}
             </div>
             <div className="md:col-span-2 grid grid-cols-2 gap-x-3 sm:gap-x-4 items-start">
               <div>

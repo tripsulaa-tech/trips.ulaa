@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useSearchParams, useLocation, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import NotFoundState from '../components/ui/NotFoundState';
 import { TripDetailSkeleton } from '../components/ui/Skeletons';
@@ -8,7 +8,7 @@ import type { PagedCarouselHandle } from '../components/ui/PagedCarousel';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { getUpcomingTripBySlug, getUpcomingTripByIdAdmin, getSiteContent } from '../services/api';
+import { getUpcomingTripBySlug, getUpcomingTripByIdAdmin, getUpcomingTripRedirectSlug, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
 import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice, formatPrice } from '../utils/utils-index';
@@ -51,6 +51,7 @@ export default function TripDetailPage() {
   const [previewLayout, setPreviewLayout] = useState<'full' | 'coming_soon' | null>(null);
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [buttonLabels, setButtonLabels] = useState<ButtonLabelsConfig>(DEFAULT_BUTTON_LABELS);
@@ -213,10 +214,25 @@ export default function TripDetailPage() {
       ? (previewId ? getUpcomingTripByIdAdmin(previewId) : null)
       : (slug ? getUpcomingTripBySlug(slug) : null);
     if (!request) return;
+    // Set when this visit was to a trip's OLD link: we send the visitor to
+    // the new one and let that load finish the loading state, so there's no
+    // flash of "not found" in between.
+    let redirecting = false;
     request
-      .then(data => setTrip(data ?? null))
+      .then(async data => {
+        if (!data && !isPreview && slug) {
+          const newSlug = await getUpcomingTripRedirectSlug(slug);
+          if (newSlug && newSlug !== slug) {
+            redirecting = true;
+            navigate(`/trips/${newSlug}${location.search}${location.hash}`, { replace: true });
+            return;
+          }
+        }
+        setTrip(data ?? null);
+      })
       .catch(() => setTrip(null))
-      .finally(() => setLoading(false));
+      .finally(() => { if (!redirecting) setLoading(false); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, previewId, isPreview]);
 
   // Admin-editable "Pack Your Bags" / "Join Waitlist" button text (see

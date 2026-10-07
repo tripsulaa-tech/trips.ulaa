@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 're
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Fire, Seat, User } from '@phosphor-icons/react';
+import Plane3D, { isPlane3DSupported } from './Plane3D';
 
 interface TripCountdownCardProps {
   startDate: string | null | undefined;
@@ -56,14 +57,12 @@ const ordinal = (n: number) => {
 /* ───────────────────────── Plane ───────────────────────── */
 
 /**
- * Top-down airliner in brushed gold, nose pointing right, with a contrail
- * that fades out behind it. Drawn as one half-silhouette mirrored on the
- * centre line so the two wings are always perfectly symmetrical.
+ * Gold airliner, nose pointing right, with a contrail that fades out behind
+ * it. A real 3D model (see Plane3D) that banks gently as it flies; falls back
+ * to the flat SVG silhouette below when WebGL isn't available.
  */
 function PremiumPlane({ size = 40 }: { size?: number }) {
-  const uid = useId().replace(/:/g, '');
-  const half =
-    'M47 24 C45 22.4 41 21.6 34 21.4 L28 21.4 L15.4 3.6 L11.8 3.6 L19.6 21.4 L10 21.3 L5.2 13.8 L2.8 13.8 L5.4 21.6 C3.4 22.2 2.4 23 2 24 Z';
+  const [use3D] = useState(isPlane3DSupported);
   return (
     <span className="relative flex items-center">
       {/* Contrail */}
@@ -71,6 +70,22 @@ function PremiumPlane({ size = 40 }: { size?: number }) {
         aria-hidden="true"
         className="absolute right-[88%] top-1/2 h-[2px] w-12 -translate-y-1/2 rounded-full bg-gradient-to-l from-[#FBEFD3]/80 via-[#E9C77B]/30 to-transparent"
       />
+      {use3D ? <Plane3D size={size} /> : <FlatPlaneSvg size={size} />}
+    </span>
+  );
+}
+
+/**
+ * Flat fallback: top-down airliner in brushed gold. Drawn as one
+ * half-silhouette mirrored on the centre line so the two wings are always
+ * perfectly symmetrical.
+ */
+function FlatPlaneSvg({ size }: { size: number }) {
+  const uid = useId().replace(/:/g, '');
+  const half =
+    'M47 24 C45 22.4 41 21.6 34 21.4 L28 21.4 L15.4 3.6 L11.8 3.6 L19.6 21.4 L10 21.3 L5.2 13.8 L2.8 13.8 L5.4 21.6 C3.4 22.2 2.4 23 2 24 Z';
+  return (
+    <>
       <svg
         width={size}
         height={size}
@@ -94,7 +109,7 @@ function PremiumPlane({ size = 40 }: { size?: number }) {
         <path d="M42 22.9 C43.6 23.2 44.4 23.6 45 24 C44.4 24.4 43.6 24.8 42 25.1 Z" fill="#6B3A12" opacity="0.55" />
         <path d="M8 24 L38 24" stroke="#FFFFFF" strokeOpacity="0.55" strokeWidth="0.8" strokeLinecap="round" />
       </svg>
-    </span>
+    </>
   );
 }
 

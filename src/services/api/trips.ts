@@ -156,6 +156,32 @@ export async function getUpcomingTripBySlug(slug: string): Promise<UpcomingTrip 
   return { ...data, waitlist_reserved: reservedCounts[data.id] || 0, early_bird_seats_taken: earlyTaken[data.id] || 0 } as UpcomingTrip;
 }
 
+/** If a trip's link was changed (see add_trip_slug_rename.sql), returns the
+ *  trip's current slug for an old one, so the public page can redirect.
+ *  Null when there's no redirect (or the migration hasn't been run yet). */
+export async function getUpcomingTripRedirectSlug(oldSlug: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('trip_slug_redirects')
+    .select('upcoming_trips(slug)')
+    .eq('old_slug', oldSlug)
+    .maybeSingle();
+  if (error || !data) return null;
+  const trip = (data as { upcoming_trips: { slug: string } | { slug: string }[] | null }).upcoming_trips;
+  const row = Array.isArray(trip) ? trip[0] : trip;
+  return row?.slug ?? null;
+}
+
+/** Admin-only: changes a trip's public link. The old link keeps working as a
+ *  redirect. Throws if the new slug is taken or the rename function is missing. */
+export async function renameUpcomingTripSlug(id: string, newSlug: string): Promise<string> {
+  const { data, error } = await supabase.rpc('admin_rename_upcoming_trip_slug', {
+    p_trip_id: id,
+    p_new_slug: newSlug,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 /** Admin-only: one trip by id regardless of status (draft included), for the
  *  admin "Preview page" view. The public getUpcomingTripBySlug hides drafts. */
 export async function getUpcomingTripByIdAdmin(id: string): Promise<UpcomingTrip | null> {

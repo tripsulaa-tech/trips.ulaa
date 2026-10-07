@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  createUpcomingTrip, updateUpcomingTrip, getAllTripLeadersAdmin, deleteImageByUrl,
+  createUpcomingTrip, updateUpcomingTrip, renameUpcomingTripSlug, getAllTripLeadersAdmin, deleteImageByUrl,
 } from '../../services/api';
 import { useAlert } from '../../components/ui/useAlert';
 import { useToast } from '../../components/ui/useToast';
@@ -104,6 +104,10 @@ export function useTripFormModal(load: () => void) {
   const modalBodyRef = useRef<HTMLDivElement>(null);
   const [editingTrip, setEditingTrip] = useState<UpcomingTrip | null>(null);
   const [saving, setSaving] = useState(false);
+  // Edit only: when the title no longer matches the trip's link, whether this
+  // save should also change the link (old link keeps redirecting). Ticked by
+  // default so renaming a trip renames its URL too.
+  const [updateLink, setUpdateLink] = useState(true);
   const [form, setForm] = useState<TripForm>(emptyForm);
   // The form as it was when the pop-up opened (blank, or built from the saved trip): what the
   // kept draft is measured against.
@@ -316,6 +320,7 @@ export function useTripFormModal(load: () => void) {
 
   const openEdit = (trip: UpcomingTrip) => {
     setEditingTrip(trip);
+    setUpdateLink(true);
     const editForm = tripToForm(trip);
     setForm(editForm);
     setBaseline(editForm);
@@ -386,8 +391,20 @@ export function useTripFormModal(load: () => void) {
         // nothing left = stored as null (a plain single-price trip).
         trip_options: cleanTripOptions(form.trip_options),
       };
+      let linkProblem = false;
       if (editingTrip) {
         await updateUpcomingTrip(editingTrip.id, data);
+        // The slug is frozen in the database, so changing the link is its own
+        // deliberate step (see add_trip_slug_rename.sql). The trip itself is
+        // already saved by now; a failure here only leaves the old link.
+        const newSlug = slugify(form.title);
+        if (updateLink && newSlug && newSlug !== editingTrip.slug) {
+          try {
+            await renameUpcomingTripSlug(editingTrip.id, newSlug);
+          } catch {
+            linkProblem = true;
+          }
+        }
       } else {
         await createUpcomingTrip(data);
       }
@@ -397,6 +414,12 @@ export function useTripFormModal(load: () => void) {
       // Photos that were uploaded and then replaced before saving are deleted now.
       settleDraft(TRIP_DRAFT_KEY, collectTripFormUrls(form));
       load();
+      if (linkProblem) {
+        await alert({
+          title: 'Trip saved, but its link was not changed',
+          message: 'Another trip may already use that link, or add_trip_slug_rename.sql has not been run in Supabase yet. The trip still uses its old link.',
+        });
+      }
     } catch {
       toast.error("Couldn't save the trip.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
@@ -445,7 +468,7 @@ export function useTripFormModal(load: () => void) {
   return {
     modalOpen, closeModal, openCreate, openEdit,
     modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef,
-    editingTrip, form, setForm, saving, handleSave,
+    editingTrip, form, setForm, saving, handleSave, updateLink, setUpdateLink,
     commitGroupBulletDraft,
     importInputRef, handleImportInputChange,
     handleExportTemplate,

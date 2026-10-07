@@ -509,6 +509,21 @@ button, .btn {
   .premium-gold-border { animation: none; }
 }
 
+/* Early-bird seats strip on the trip card (EarlyBirdSeatsStrip) — the same
+   travelling-border trick as the Premium card (shares --premium-angle), but in
+   the orange/red urgency palette of the seat tiles, over a soft orange fill. */
+.early-bird-border {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#FFF7ED, #FFF7ED) padding-box,
+    conic-gradient(from var(--premium-angle), #F97316, #FDBA74, #EF4444, #FED7AA, #F97316, #FB923C, #F97316) border-box;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.18);
+  animation: premium-border-spin 3s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .early-bird-border { animation: none; }
+}
+
 /* "Most popular" package card on the public trip page (TripPackagesSection) —
    the travelling golden border of the Premium booking picker (shares its
    --premium-angle animation) over an even champagne-gold fill, a gold

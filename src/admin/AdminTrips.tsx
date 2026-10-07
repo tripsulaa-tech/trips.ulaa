@@ -56,6 +56,7 @@ export default function AdminTrips() {
     tripLeaders,
     stashDraftForLeaderDetour, resumeLeaderDraft,
     resumeKeptDraft, heldDraft, restoreHeldDraft, discardHeldDraft,
+    updateLink, setUpdateLink,
   } = useTripFormModal(load);
 
   const openEditFromView = (trip: UpcomingTrip) => {
@@ -162,6 +163,8 @@ export default function AdminTrips() {
         modalBodyRef={modalBodyRef}
         saving={saving}
         handleSave={handleSave}
+        updateLink={updateLink}
+        setUpdateLink={setUpdateLink}
         commitGroupBulletDraft={commitGroupBulletDraft}
         actualRevenue={revenueByTripId(editingTrip?.id)}
         tripLeaders={tripLeaders}

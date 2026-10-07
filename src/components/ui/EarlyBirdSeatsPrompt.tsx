@@ -41,12 +41,12 @@ export function getEarlyBirdSeatsOffer(trip: UpcomingTrip | null | undefined): E
   };
 }
 
-/** Caption for the card strip: "All 5 early-bird seats open · first 5 to pay",
- *  "3 of 5 early-bird seats left · first 5 to pay", or the last-seat variant. */
+/** Caption for the card strip: "Only 5 early-bird seats · first 5 to pay get this price",
+ *  "3 of 5 early-bird seats left · pay to lock yours", or the last-seat variant. */
 export function earlyBirdSeatsCaption(total: number, left: number): string {
   if (left === 1) return 'Last early-bird seat! · first to pay gets it';
-  if (left === total) return `All ${total} early-bird seats open · first ${total} to pay`;
-  return `${left} of ${total} early-bird seats left · first ${total} to pay`;
+  if (left === total) return `Only ${total} early-bird seats · first ${total} to pay get this price`;
+  return `${left} of ${total} early-bird seats left · pay to lock yours`;
 }
 
 /** Compact seat-tile strip for the trip card: same tiles as the banner, so
@@ -55,7 +55,7 @@ export function EarlyBirdSeatsStrip({ total, left }: { total: number; left: numb
   const shown = Math.min(total, 12);
   const shownTaken = Math.min(total - left, shown);
   return (
-    <div className="flex flex-col items-center gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2.5 mb-5">
+    <div className="early-bird-border flex flex-col items-center gap-2 rounded-lg px-3 py-2.5 mb-5">
       <div className="flex flex-wrap justify-center gap-1" aria-hidden="true">
         {Array.from({ length: shown }).map((_, i) => (
           <span
