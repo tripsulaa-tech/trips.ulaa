@@ -5,7 +5,7 @@ import { collectStorageUrls } from '../utils/utils-index';
 import { useSectionTabChrome } from './useSectionTabChrome';
 import { lookupDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
 import { STORAGE_BUCKET } from '../constants/storage';
-import { useAlert } from '../components/ui/useAlert';
+import { useToast } from '../components/ui/useToast';
 import { useConfirm } from '../components/ui/useConfirm';
 
 // Shared by every "single site_content record, edited on its own admin
@@ -50,7 +50,6 @@ interface UseContentEditorPageResult<T> {
   setContent: Dispatch<SetStateAction<T>>;
   loading: boolean;
   saving: boolean;
-  saved: boolean;
 
   activeSection: number;
   /** Registers/clears the section element at `index` for the scroll-spy — pass as `ref={el => setSectionRef(i, el)}` on each section's wrapper. */
@@ -82,13 +81,12 @@ export function useContentEditorPage<T>({
   sectionCount: getSectionCount,
   storageBucket = STORAGE_BUCKET,
 }: UseContentEditorPageOptions<T>): UseContentEditorPageResult<T> {
-  const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
   const [content, setContent] = useState<T>(defaultContent);
   const sectionCount = getSectionCount(content);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   const {
     activeSection, setSectionRef, tabBarRef, tabButtonRefs, showLeftFade, showRightFade,
@@ -153,6 +151,10 @@ export function useContentEditorPage<T>({
   };
 
   const handleSave = async () => {
+    if (!hasUnsavedChanges()) {
+      toast.info('No changes to save.');
+      return;
+    }
     try {
       setSaving(true);
       // Someone may have saved this page since it was opened here; check before overwriting.
@@ -172,10 +174,9 @@ export function useContentEditorPage<T>({
       savedUrlsRef.current = newUrls;
       savedContentRef.current = JSON.stringify(content);
       setDraftBase(stableStringify(content));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      toast.success('Changes saved.');
     } catch {
-      alert('Failed to save. Please try again.');
+      toast.error("Couldn't save your changes.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
       setSaving(false);
     }
@@ -186,7 +187,6 @@ export function useContentEditorPage<T>({
     setContent,
     loading,
     saving,
-    saved,
     activeSection,
     setSectionRef,
     tabBarRef,

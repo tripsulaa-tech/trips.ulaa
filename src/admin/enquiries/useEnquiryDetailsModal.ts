@@ -5,7 +5,7 @@ import { downloadInvoicePdf, invoiceAsFile } from '../../utils/invoicePdf';
 import { sendBookingEmail } from '../../utils/bookingEmail';
 import { whatsAppUrl } from '../../utils/formatPhone';
 import { formatPrice } from '../../utils/utils-index';
-import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 import type { InvoiceAction } from './AdminEnquiryCommon';
 
 /** Owns the desktop "View Details" popup — its target, the per-payment
@@ -23,7 +23,7 @@ import type { InvoiceAction } from './AdminEnquiryCommon';
  *  Extracted from AdminEnquiries.tsx (see that file's history for the
  *  original single-component version). */
 export function useEnquiryDetailsModal() {
-  const alert = useAlert();
+  const toast = useToast();
 
   const [detailsTarget, setDetailsTarget] = useState<Enquiry | null>(null);
   // Per-payment invoices for whichever enquiry is open in the Details
@@ -71,7 +71,7 @@ export function useEnquiryDetailsModal() {
       await downloadInvoicePdf(e, payments);
     } catch (err) {
       console.error(err);
-      alert('Failed to generate invoice.');
+      toast.error('Failed to generate invoice.');
     } finally {
       setInvoiceBusy(null);
     }
@@ -110,7 +110,7 @@ export function useEnquiryDetailsModal() {
       // not a real failure, so don't show an error toast for it.
       if (err instanceof Error && err.name === 'AbortError') return;
       console.error(err);
-      alert('Failed to share invoice.');
+      toast.error('Failed to share invoice.');
     } finally {
       setInvoiceBusy(null);
     }
@@ -125,10 +125,10 @@ export function useEnquiryDetailsModal() {
     try {
       const payments = await getPaymentsForEnquiry(e.id);
       await sendBookingEmail(e, payments);
-      alert('Booking confirmation email sent.');
+      toast.success('Booking confirmation email sent.');
     } catch (err) {
       console.error(err);
-      alert(`Failed to send booking email.${err instanceof Error && err.message ? `\n\n${err.message}` : ''}`);
+      toast.error(`Failed to send booking email.${err instanceof Error && err.message ? `\n\n${err.message}` : ''}`);
     } finally {
       setInvoiceBusy(null);
     }

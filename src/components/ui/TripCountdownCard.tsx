@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, Seat } from '@phosphor-icons/react';
+import { ArrowRight, Fire, Seat } from '@phosphor-icons/react';
 
 interface TripCountdownCardProps {
   startDate: string | null | undefined;
@@ -13,6 +13,9 @@ interface TripCountdownCardProps {
   isAlmostFull: boolean;
   isFull: boolean;
   remainingSeats: number;
+  /** Seat-limited early bird still on: price + "3 of 5 early-bird seats left ·
+   *  first 5 to pay". Omit/null when there is no early bird to show. */
+  earlyBird?: { price: string; label: string; note?: string } | null;
 }
 
 interface RemainingTime {
@@ -295,6 +298,7 @@ export default function TripCountdownCard({
   isAlmostFull,
   isFull,
   remainingSeats,
+  earlyBird,
 }: TripCountdownCardProps) {
   const [remaining, setRemaining] = useState<RemainingTime | null>(null);
   const reduceMotion = useReducedMotion();
@@ -708,6 +712,23 @@ export default function TripCountdownCard({
             <p className="font-semibold text-lg text-dark">{seatHeadline}</p>
           )}
           {seatSub && <p className="mt-0.5 text-sm text-dark-muted">{seatSub}</p>}
+          {earlyBird && !isFull && (
+            <div className="offer-gradient-shift mt-2 rounded-lg px-3 py-2.5 shadow-warm-lg ring-1 ring-inset ring-white/15">
+              <p className="flex items-center gap-1.5 text-sm font-bold text-white">
+                <motion.span
+                  aria-hidden="true"
+                  className="inline-flex origin-bottom text-yellow-300"
+                  animate={reduceMotion ? undefined : { scale: [1, 1.18, 0.95, 1.12, 1], rotate: [0, -6, 5, -4, 0] }}
+                  transition={{ duration: 1.4, ease: 'easeInOut', repeat: Infinity }}
+                >
+                  <Fire size={16} weight="fill" />
+                </motion.span>
+                Early bird {earlyBird.price}
+              </p>
+              <p className="text-xs text-white/90 mt-0.5">{earlyBird.label}</p>
+              {earlyBird.note && <p className="text-2xs text-white/80 mt-1 leading-snug">{earlyBird.note}</p>}
+            </div>
+          )}
 
           {showSeatMap && (
             /* Phone: every seat shares one row, however many there are.

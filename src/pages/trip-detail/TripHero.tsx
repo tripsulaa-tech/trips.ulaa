@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
-import { PLACEHOLDER_IMAGE, formatDateRange, formatAgeRange, getCoverImageStyle } from '../../utils/utils-index';
+import { PLACEHOLDER_IMAGE, formatDateRange, formatAgeRange, getCoverImageStyle, formatDuration } from '../../utils/utils-index';
 import { ArrowLeft, ArrowRight, CaretDown, MapPin, Calendar, Clock, Users, UserCheck, Sparkle } from '@phosphor-icons/react';
 
 interface TripHeroProps {
@@ -137,7 +137,7 @@ export default function TripHero({
     return (
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-x-6 text-white/90 text-xs sm:text-sm">
         <span className="flex items-center gap-2"><Calendar size={16} className={icon} /> {formatDateRange(trip.start_date, trip.end_date)}</span>
-        <span className="flex items-center gap-2"><Clock size={16} className={icon} /> {trip.duration}</span>
+        <span className="flex items-center gap-2"><Clock size={16} className={icon} /> {formatDuration(trip.duration)}</span>
         {isAlmostFull && !isFull ? (
           <span className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full early-bird-badge-gradient-shift text-white font-button font-semibold text-xs sm:text-sm px-2.5 py-1 sm:px-3 sm:py-1 shadow-warm">
             <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-pulse motion-reduce:animate-none" aria-hidden="true" />

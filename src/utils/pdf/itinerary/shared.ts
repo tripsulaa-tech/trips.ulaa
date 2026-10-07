@@ -6,7 +6,7 @@ import {
   Drop as GlassWater, Cookie, Sparkle as Sparkles, FileText, IdentificationCard as IdCard,
   Camera, Stamp, Airplane as Plane, ShieldCheck, CreditCard, Plug as PlugZap, Backpack,
 } from '@phosphor-icons/react';
-import { formatPrice } from '../../utils-index';
+import { formatPrice, formatDuration } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
 import { matchThingsToCarryIconKey, type ThingsToCarryIconKey } from '../../../constants/thingsToCarryIconRules';
 import { fetchAsDataUrl, loadImageEl } from '../../pdfImageLoading';
@@ -152,7 +152,7 @@ export function sanitizeTrip(trip: UpcomingTrip): PdfTrip {
     ...trip,
     title: sanitizeForPdf(trip.title),
     destination: sanitizeForPdf(trip.destination),
-    duration: sanitizeForPdf(trip.duration),
+    duration: sanitizeForPdf(formatDuration(trip.duration)),
     description: sanitizeForPdf(trip.description),
     highlight_cards: (trip.highlight_cards ?? []).map(card => ({
       ...card,

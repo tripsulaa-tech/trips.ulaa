@@ -6,7 +6,7 @@ import type { PdfCtx } from './context';
 import type { AnyIcon, RGB, PdfTrip } from './shared';
 import type { ButtonLabelsConfig } from '../../../types/types-index';
 import { BRAND, MARGIN, CONTENT_W, COLORS, money, heroMoneyRupee, rgbToHex, loadCoverCroppedImage } from './shared';
-import { formatDateRange, formatAgeRange, formatDate, getActivePrice, getStrikeThroughPrice, publicSeatsLeft } from '../../utils-index';
+import { formatDateRange, formatAgeRange, formatDate, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, formatDuration } from '../../utils-index';
 import { withBasicPricing } from '../../tripOptions';
 
 import { RESPONSE_TIME } from '../../../constants/site';
@@ -186,7 +186,7 @@ import { RESPONSE_TIME } from '../../../constants/site';
 
     // Basic (first package) price when the trip has packages.
     const priced = withBasicPricing(trip);
-    const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date);
+    const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date, priced.early_bird_seats, priced.early_bird_seats_taken);
     const strikeThroughPrice = getStrikeThroughPrice(activePrice, priced.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
     const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
     const isFull = remaining === 0;
@@ -275,8 +275,11 @@ import { RESPONSE_TIME } from '../../../constants/site';
       }
 
       // Offer countdown / expiry note, centered (icon + text as one group)
-      if (isEarlyBird && trip.early_bird_deadline) {
-        const label = `Offer ends ${formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}`;
+      const earlyNote = isEarlyBird
+        ? (earlyBirdSeatsLabel(priced) ?? (trip.early_bird_deadline ? `Offer ends ${formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}` : null))
+        : null;
+      if (earlyNote) {
+        const label = earlyNote;
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.4);
         const w = doc.getTextWidth(label);
@@ -373,7 +376,7 @@ import { RESPONSE_TIME } from '../../../constants/site';
 
     const metaItems: { icon: AnyIcon; label: string; value: string }[] = [
       { icon: Calendar, label: 'Dates', value: formatDateRange(trip.start_date, trip.end_date) },
-      { icon: Clock, label: 'Duration', value: trip.duration },
+      { icon: Clock, label: 'Duration', value: formatDuration(trip.duration) },
       { icon: Users, label: 'Group Size', value: `Max ${trip.total_seats}` },
       { icon: UserCheck, label: 'Age Range', value: formatAgeRange(trip.min_age, trip.max_age) },
     ];

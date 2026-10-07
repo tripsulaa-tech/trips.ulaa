@@ -71,6 +71,7 @@ export default function BottomNav() {
       // white background itself extends under the iPhone home-indicator
       // area / Android gesture bar) rather than a transparent margin
       // that made the bar look like it was floating above the edge.
+      data-toast-avoid
       className="fixed bottom-0 inset-x-0 z-40 lg:hidden w-full border-t border-background-warm bg-white shadow-[0_-4px_20px_rgba(168,90,42,0.08)] pb-[env(safe-area-inset-bottom)]"
     >
       {/* Edge-to-edge bar — fills the full width and sits directly on the

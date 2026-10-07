@@ -41,7 +41,7 @@ import {
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
 import DatePicker from '../components/ui/DatePicker';
-import { useAlert } from '../components/ui/useAlert';
+import { useToast } from '../components/ui/useToast';
 import { useConfirm } from '../components/ui/useConfirm';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import {
@@ -85,7 +85,7 @@ const withoutNumber = (d: InvoiceGeneratorData): InvoiceGeneratorData => ({ ...d
 const PREVIEW_DEBOUNCE_MS = TIMING.invoicePreviewDebounceMs;
 
 export default function AdminInvoiceGenerator() {
-  const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
   // Starts from the invoice kept for this tab (if any), otherwise a fresh form.
   const [data, setData] = useState<InvoiceGeneratorData>(() => {
@@ -142,7 +142,7 @@ export default function AdminInvoiceGenerator() {
         setField('invoiceNumber', number);
       } catch (err) {
         console.error('Failed to preview the next invoice number', err);
-        await alert("Couldn't look up the next invoice number. Please try again.");
+        toast.error("Couldn't look up the next invoice number. Please try again.");
       } finally {
         setNumberLoading(false);
       }
@@ -162,7 +162,7 @@ export default function AdminInvoiceGenerator() {
       setField('invoiceNumber', number);
     } catch (err) {
       console.error('Failed to preview the next invoice number', err);
-      await alert("Couldn't look up the next invoice number. Please try again.");
+      toast.error("Couldn't look up the next invoice number. Please try again.");
     } finally {
       setNumberLoading(false);
     }
@@ -197,6 +197,10 @@ export default function AdminInvoiceGenerator() {
 
   const handleSave = async () => {
     if (!data.invoiceNumber) return; // still waiting on the previewed number
+    if (stableStringify(draftValue) === draftBase) {
+      toast.info('No changes to save.');
+      return;
+    }
     setSaving(true);
     try {
       const saved = await saveInvoiceGeneratorInvoice({
@@ -220,10 +224,10 @@ export default function AdminInvoiceGenerator() {
       setField('invoiceNumber', saved.invoice_number);
       // Saved: nothing left to keep for this tab.
       setDraftBase(stableStringify(withoutNumber(data)));
-      await alert({ message: 'Invoice saved.', variant: 'success' });
+      toast.success(`Invoice ${saved.invoice_number} saved.`);
     } catch (err) {
       console.error('Failed to save invoice', err);
-      await alert("Couldn't save this invoice. Please try again.");
+      toast.error("Couldn't save this invoice.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
       setSaving(false);
     }
@@ -260,7 +264,7 @@ export default function AdminInvoiceGenerator() {
       setHistory(prev => prev.filter(h => h.id !== id));
     } catch (err) {
       console.error('Failed to delete saved invoice', err);
-      await alert("Couldn't delete this invoice. Please try again.");
+      toast.error("Couldn't delete this invoice. Please try again.");
     } finally {
       setDeletingId(null);
     }
@@ -301,7 +305,7 @@ export default function AdminInvoiceGenerator() {
       await downloadInvoiceGeneratorPdf(data);
     } catch (err) {
       console.error('Failed to generate invoice PDF', err);
-      await alert("Couldn't generate the PDF. Please try again.");
+      toast.error("Couldn't generate the PDF. Please try again.");
     } finally {
       setDownloading(false);
     }
@@ -313,7 +317,7 @@ export default function AdminInvoiceGenerator() {
       await printInvoiceGeneratorPdf(data);
     } catch (err) {
       console.error('Failed to open invoice PDF for printing', err);
-      await alert("Couldn't open the PDF for printing. Please try again.");
+      toast.error("Couldn't open the PDF for printing. Please try again.");
     } finally {
       setPrinting(false);
     }

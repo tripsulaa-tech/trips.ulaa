@@ -3,7 +3,7 @@
 // via the shared pure helpers rather than taking them as props, so the
 // parent doesn't have to thread jb/food/etc. through.
 import {
-  Users, User, CalendarDot as CalendarClock, XCircle, UserMinus, SignIn as LogIn, Copy, Check, Baby,
+  Users, User, CalendarDot as CalendarClock, XCircle, UserMinus, SignIn as LogIn, Copy, Baby,
   FileText, ShareNetwork as Share2, EnvelopeSimple, Eye,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
@@ -25,7 +25,6 @@ interface AdminEnquiryHeaderCardProps {
   busyAction: boolean;
   busyStatus: boolean;
   busyFollowUp: boolean;
-  bookingIdCopied: boolean;
   onCopyBookingId: () => void;
   onAdvance: () => void;
   onMarkNotInterested: () => void;
@@ -57,7 +56,7 @@ interface AdminEnquiryHeaderCardProps {
 }
 
 export default function AdminEnquiryHeaderCard({
-  enquiry, busyAction, busyStatus, busyFollowUp, bookingIdCopied, onCopyBookingId,
+  enquiry, busyAction, busyStatus, busyFollowUp, onCopyBookingId,
   onAdvance, onMarkNotInterested, onOpenFollowUp, rowActions,
   onDownloadInvoice, onShareInvoice, onEmailBooking, onPreviewEmail, invoiceBusyAction, emailStat,
 }: AdminEnquiryHeaderCardProps) {
@@ -224,7 +223,7 @@ export default function AdminEnquiryHeaderCard({
                 title="Copy Booking ID"
                 className="shrink-0 p-1 rounded text-dark-muted hover:text-primary hover:bg-background-warm transition-colors"
               >
-                {bookingIdCopied ? <Check size={13} className="text-green-600" aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+                <Copy size={13} aria-hidden="true" />
               </button>
             </div>
           </div>

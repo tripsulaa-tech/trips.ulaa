@@ -6,7 +6,7 @@ import {
   LinkSimple as Link2,
 } from '@phosphor-icons/react';
 import { uploadImage, uploadImageFromUrl, deleteImageByUrl } from '../../services/api';
-import { useAlert } from './useAlert';
+import { useToast } from './useToast';
 
 interface ImageUploadFieldProps {
   label: string;
@@ -46,7 +46,7 @@ interface ImageUploadFieldProps {
 }
 
 export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix, maxSizeBytes, hint, aspectRatio, allowUrl }: ImageUploadFieldProps) {
-  const alert = useAlert();
+  const toast = useToast();
   const [uploading, setUploading] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlDraft, setUrlDraft] = useState('');
@@ -68,7 +68,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
       // URLs, which were never uploaded to our bucket in the first place.
       if (previousUrl && previousUrl.includes(`/${bucket}/`)) await deleteImageByUrl(bucket, previousUrl).catch(() => {});
     } catch {
-      alert(`Failed to upload. Make sure the Supabase storage bucket "${bucket}" exists and is public.`);
+      toast.error(`Failed to upload. Make sure the Supabase storage bucket "${bucket}" exists and is public.`);
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -99,7 +99,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
       // image bytes — fall back to using the URL as-is so the admin can
       // still save, just without the storage/perf benefit.
       onChange(trimmed);
-      alert("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead — it may load slower for visitors.");
+      toast.error("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead — it may load slower for visitors.");
     } finally {
       setUploading(false);
     }

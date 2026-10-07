@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { markInvoicePaid } from '../../services/api';
+import { useAlert } from '../../components/ui/useAlert';
 import type { Payment } from '../../types/types-index';
 import { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
 
@@ -13,6 +14,7 @@ import { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
 // files. Mirrors useEnquiryPayment's cross-page-sharing pattern for the
 // same reason.
 export function useMarkInvoicePaid(onSuccess: (updatedPayment: Payment) => void | Promise<void>) {
+  const alert = useAlert();
   const [target, setTarget] = useState<Payment | null>(null);
   const [form, setForm] = useState<MarkPaidForm>(emptyMarkPaidForm);
   const [busyId, setBusyId] = useState<string | null>(null);

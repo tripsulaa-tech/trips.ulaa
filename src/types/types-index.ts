@@ -239,6 +239,14 @@ export interface UpcomingTrip {
   price?: number;
   early_bird_price?: number | null;
   early_bird_deadline?: string | null;
+  // Seat-limited early bird ("first N paid people get early_bird_price").
+  // When set together with early_bird_price the deadline above is ignored
+  // and only seats decide. Null/unset = deadline-based early bird as before.
+  // See add_early_bird_seat_limit.sql.
+  early_bird_seats?: number | null;
+  // Not a DB column — merged in client-side (see getUpcomingTrips) from
+  // get_early_bird_seats_taken(): early-bird seats already paid for.
+  early_bird_seats_taken?: number;
   // Optional "was ₹X" marketing price, shown crossed out next to whichever
   // of price/early_bird_price is currently active. Independent of the
   // early-bird mechanism itself — see getStrikeThroughPrice in utils/index.ts

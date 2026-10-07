@@ -290,7 +290,9 @@ export default function AdminTripFormModal({
                   onChange={early_bird_deadline => setForm(f => ({ ...f, early_bird_deadline }))}
                 />
                 <p className="text-xs text-dark-muted mt-1">
-                  Early-bird price applies until this date.
+                  {form.early_bird_seats !== '' && form.early_bird_seats > 0
+                    ? 'Ignored while Early-Bird Seats is set. Seats decide.'
+                    : 'Early-bird price applies until this date.'}
                 </p>
               </div>
             </div>
@@ -332,7 +334,28 @@ export default function AdminTripFormModal({
                   placeholder="e.g. 39999"
                   aria-describedby="trip-early-bird-price-hint"
                 />
-                <p id="trip-early-bird-price-hint" className="text-xs text-dark-muted mt-1">Used until the Early-Bird Deadline.</p>
+                <p id="trip-early-bird-price-hint" className="text-xs text-dark-muted mt-1">
+                  {form.early_bird_seats !== '' && form.early_bird_seats > 0
+                    ? 'Used while early-bird seats are left.'
+                    : 'Used until the Early-Bird Deadline.'}
+                </p>
+              </div>
+              <div>
+                <label htmlFor="trip-early-bird-seats" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Early-Bird Seats (first N paid)" short="Early-Bird Seats" /></label>
+                <input
+                  id="trip-early-bird-seats"
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  value={form.early_bird_seats}
+                  onChange={e => setForm(f => ({ ...f, early_bird_seats: e.target.value === '' ? '' : +e.target.value }))}
+                  className={inputClass}
+                  placeholder="e.g. 5"
+                  aria-describedby="trip-early-bird-seats-hint"
+                />
+                <p id="trip-early-bird-seats-hint" className="text-xs text-dark-muted mt-1">
+                  Only the first {form.early_bird_seats || 'N'} people who pay get the Early-Bird price; everyone after pays the Regular Price. A seat stays used even if that person cancels. Leave blank to use the deadline instead.
+                </p>
               </div>
               <div>
                 <label htmlFor="trip-advance-amount" className="block text-sm font-medium text-dark mb-1"><ShortLabel full="Advance/Reservation Amount (₹)" short="Advance (₹)" /></label>
@@ -442,7 +465,8 @@ export default function AdminTripFormModal({
               value={form.trip_options}
               regularPrice={Number(form.price) || 0}
               earlyBirdPrice={form.early_bird_price ? Number(form.early_bird_price) : null}
-              earlyBirdOpen={!!form.early_bird_deadline && form.early_bird_deadline >= new Date().toISOString().slice(0, 10)}
+              earlyBirdOpen={(form.early_bird_seats !== '' && form.early_bird_seats > 0) || (!!form.early_bird_deadline && form.early_bird_deadline >= new Date().toISOString().slice(0, 10))}
+              earlyBirdSeatLimited={form.early_bird_seats !== '' && form.early_bird_seats > 0}
               onChange={trip_options => setForm(f => ({ ...f, trip_options }))}
             />
           </TabPanel>

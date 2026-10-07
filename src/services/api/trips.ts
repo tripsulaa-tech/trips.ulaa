@@ -1,6 +1,7 @@
 import { supabase } from '../supabase';
 import type { UpcomingTrip, CompletedTrip, TripFinanceSnapshot } from '../../types/types-index';
-import { getStoragePathFromUrl, deleteImageByUrl } from './shared';
+import { getStoragePathFromUrl, deleteImageByUrl } from './shared';
+
 import { STORAGE_BUCKET } from '../../constants/storage';
 
 // =============================================
@@ -94,6 +95,23 @@ export async function getWaitlistReservedCounts(): Promise<Record<string, number
   return map;
 }
 
+// =============================================
+// PII-free RPC — { trip_id, taken_count } for trips with a seat-limited early
+// bird (upcoming_trips.early_bird_seats): how many early-bird seats are
+// already PAID for. Cancelled/refunded seats still count. Never throws: on
+// failure we report nothing taken (the DB still enforces the real limit when
+// the advance is recorded).
+// =============================================
+export async function getEarlyBirdSeatsTaken(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc('get_early_bird_seats_taken');
+  if (error || !data) return {};
+  const map: Record<string, number> = {};
+  for (const row of data as { trip_id: string; taken_count: number }[]) {
+    map[row.trip_id] = row.taken_count;
+  }
+  return map;
+}
+
 // Every upcoming_trips read embeds its linked trip_leaders row (aliased to
 // `trip_leader`, singular, matching the UpcomingTrip.trip_leader field) via
 // the trip_leader_id FK — see add_trip_leader_id_to_trips.sql. This is how
@@ -104,7 +122,7 @@ const UPCOMING_TRIP_SELECT = '*, trip_leader:trip_leaders(*)';
 
 export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
   const today = new Date().toISOString().slice(0, 10);
-  const [{ data, error }, reservedCounts] = await Promise.all([
+  const [{ data, error }, reservedCounts, earlyTaken] = await Promise.all([
     supabase
       .from('upcoming_trips')
       .select(UPCOMING_TRIP_SELECT)
@@ -117,13 +135,14 @@ export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
       .order('sort_order', { ascending: true, nullsFirst: false })
       .order('start_date', { ascending: true }),
     getWaitlistReservedCounts(),
+    getEarlyBirdSeatsTaken(),
   ]);
   if (error) throw error;
-  return (data || []).map(trip => ({ ...trip, waitlist_reserved: reservedCounts[trip.id] || 0 })) as UpcomingTrip[];
+  return (data || []).map(trip => ({ ...trip, waitlist_reserved: reservedCounts[trip.id] || 0, early_bird_seats_taken: earlyTaken[trip.id] || 0 })) as UpcomingTrip[];
 }
 
 export async function getUpcomingTripBySlug(slug: string): Promise<UpcomingTrip | null> {
-  const [{ data, error }, reservedCounts] = await Promise.all([
+  const [{ data, error }, reservedCounts, earlyTaken] = await Promise.all([
     supabase
       .from('upcoming_trips')
       .select(UPCOMING_TRIP_SELECT)
@@ -131,9 +150,26 @@ export async function getUpcomingTripBySlug(slug: string): Promise<UpcomingTrip 
       .in('status', ['coming_soon', 'published'])
       .single(),
     getWaitlistReservedCounts(),
+    getEarlyBirdSeatsTaken(),
   ]);
   if (error) return null;
-  return { ...data, waitlist_reserved: reservedCounts[data.id] || 0 } as UpcomingTrip;
+  return { ...data, waitlist_reserved: reservedCounts[data.id] || 0, early_bird_seats_taken: earlyTaken[data.id] || 0 } as UpcomingTrip;
+}
+
+/** Admin-only: one trip by id regardless of status (draft included), for the
+ *  admin "Preview page" view. The public getUpcomingTripBySlug hides drafts. */
+export async function getUpcomingTripByIdAdmin(id: string): Promise<UpcomingTrip | null> {
+  const [{ data, error }, reservedCounts, earlyTaken] = await Promise.all([
+    supabase
+      .from('upcoming_trips')
+      .select(UPCOMING_TRIP_SELECT)
+      .eq('id', id)
+      .single(),
+    getWaitlistReservedCounts(),
+    getEarlyBirdSeatsTaken(),
+  ]);
+  if (error || !data) return null;
+  return { ...data, waitlist_reserved: reservedCounts[data.id] || 0, early_bird_seats_taken: earlyTaken[data.id] || 0 } as UpcomingTrip;
 }
 
 export async function getAllUpcomingTripsAdmin(): Promise<UpcomingTrip[]> {
@@ -147,7 +183,8 @@ export async function getAllUpcomingTripsAdmin(): Promise<UpcomingTrip[]> {
     .order('sort_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data || []) as UpcomingTrip[];
+  const earlyTaken = await getEarlyBirdSeatsTaken();
+  return (data || []).map(trip => ({ ...trip, early_bird_seats_taken: earlyTaken[trip.id] || 0 })) as UpcomingTrip[];
 }
 
 export async function createUpcomingTrip(trip: Partial<UpcomingTrip>): Promise<UpcomingTrip> {

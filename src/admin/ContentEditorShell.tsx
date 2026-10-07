@@ -38,7 +38,6 @@ export default function ContentEditorShell({
   bodyClassName = 'p-4 sm:p-6 space-y-6 sm:space-y-8',
   onSave,
   saving,
-  saved,
   onSecondaryAction,
   notice,
   children,
@@ -65,7 +64,6 @@ export default function ContentEditorShell({
   bodyClassName?: string;
   onSave: () => void;
   saving: boolean;
-  saved: boolean;
   onSecondaryAction: () => void;
   /** Optional banner shown above the sections (e.g. the saved-version-changed notice). */
   notice?: ReactNode;
@@ -190,7 +188,7 @@ export default function ContentEditorShell({
           {/* Sticky footer — blended into and pinned to the bottom of the
               card's own scroll area (not the viewport), same pattern as the
               Add Trip modal's footer. */}
-          <AdminEditorFooter onSave={onSave} saving={saving} saved={saved} onSecondaryAction={onSecondaryAction} />
+          <AdminEditorFooter onSave={onSave} saving={saving} onSecondaryAction={onSecondaryAction} />
         </div>
       </div>
     </AdminLayout>

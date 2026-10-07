@@ -23,6 +23,7 @@ import Button from '../../components/ui/Button';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 import {
   getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin, getActivityLog,
   recordPayment, generatePendingInvoice, addAddonCharge,
@@ -66,6 +67,7 @@ export default function AdminEnquiryDetail() {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const alert = useAlert();
+  const toast = useToast();
 
   const [enquiry, setEnquiry] = useState<Enquiry | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,18 +109,14 @@ export default function AdminEnquiryDetail() {
   // invert filter over the same light-mode render as a rough approximation
   // of that auto-invert behavior.
   const [emailPreviewMode, setEmailPreviewMode] = useState<'light' | 'dark'>('light');
-  // Brief "Copied" checkmark swap after tapping the Booking ID's copy icon —
-  // resets itself after 1.5s, no toast/alert needed for something this minor.
-  const [bookingIdCopied, setBookingIdCopied] = useState(false);
   const handleCopyBookingId = async () => {
     if (!enquiry?.booking_id) return;
     try {
       await navigator.clipboard.writeText(enquiry.booking_id);
-      setBookingIdCopied(true);
-      setTimeout(() => setBookingIdCopied(false), 1500);
+      toast.success('Booking ID copied.');
     } catch {
-      // Clipboard API can fail (e.g. insecure context) — nothing useful to
-      // surface for a convenience action, so just no-op.
+      // Clipboard API can fail (e.g. insecure context).
+      toast.error("Couldn't copy the Booking ID.");
     }
   };
   // ---- Record Contact Outcome (the New -> Contacted entry point) --------
@@ -366,7 +364,7 @@ export default function AdminEnquiryDetail() {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to update status.');
+      toast.error('Failed to update status.');
     } finally {
       setBusyStatus(false);
     }
@@ -380,7 +378,7 @@ export default function AdminEnquiryDetail() {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to reopen enquiry.');
+      toast.error('Failed to reopen enquiry.');
     } finally {
       setBusyStatus(false);
     }
@@ -410,7 +408,7 @@ export default function AdminEnquiryDetail() {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to set follow-up date.');
+      toast.error('Failed to set follow-up date.');
     } finally {
       setBusyFollowUp(false);
     }
@@ -423,7 +421,7 @@ export default function AdminEnquiryDetail() {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to clear follow-up date.');
+      toast.error('Failed to clear follow-up date.');
     } finally {
       setBusyFollowUp(false);
     }
@@ -548,7 +546,7 @@ export default function AdminEnquiryDetail() {
       if (isNoShow) setPaymentForm(f => ({ ...f, refund_amount: 0 }));
     } catch (err) {
       console.error(err);
-      alert('Failed to update no-show status.');
+      toast.error('Failed to update no-show status.');
     } finally {
       setTogglingNoShow(false);
     }
@@ -709,7 +707,7 @@ export default function AdminEnquiryDetail() {
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to record contact outcome.');
+      toast.error('Failed to record contact outcome.');
     } finally {
       setSavingContactOutcome(false);
     }
@@ -724,7 +722,7 @@ export default function AdminEnquiryDetail() {
       await downloadInvoicePdf(enquiry, rows);
     } catch (err) {
       console.error(err);
-      alert('Failed to generate invoice.');
+      toast.error('Failed to generate invoice.');
     } finally {
       setInvoiceBusyAction(null);
     }
@@ -757,7 +755,7 @@ export default function AdminEnquiryDetail() {
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
       console.error(err);
-      alert('Failed to share invoice.');
+      toast.error('Failed to share invoice.');
     } finally {
       setInvoiceBusyAction(null);
     }
@@ -785,10 +783,10 @@ export default function AdminEnquiryDetail() {
       await sendBookingEmail(enquiry, rows);
       // Pull in the entry that send just wrote so the badge updates at once.
       getActivityLog(enquiry.id).then(setActivityLog).catch(err => console.error(err));
-      alert('Booking confirmation email sent.');
+      toast.success('Booking confirmation email sent.');
     } catch (err) {
       console.error(err);
-      alert(`Failed to send booking email.${err instanceof Error && err.message ? `\n\n${err.message}` : ''}`);
+      toast.error(`Failed to send booking email.${err instanceof Error && err.message ? `\n\n${err.message}` : ''}`);
     } finally {
       setInvoiceBusyAction(null);
     }
@@ -805,7 +803,7 @@ export default function AdminEnquiryDetail() {
       setEmailPreview(bookingEmailPreview(enquiry, rows));
     } catch (err) {
       console.error(err);
-      alert('Failed to build email preview.');
+      toast.error('Failed to build email preview.');
     }
   };
 
@@ -823,7 +821,7 @@ export default function AdminEnquiryDetail() {
       navigate('/admin/enquiries');
     } catch (err) {
       console.error(err);
-      alert('Failed to delete enquiry.');
+      toast.error('Failed to delete enquiry.');
       setBusyAction(false);
     }
   };
@@ -934,7 +932,6 @@ export default function AdminEnquiryDetail() {
           busyAction={busyAction}
           busyStatus={busyStatus}
           busyFollowUp={busyFollowUp}
-          bookingIdCopied={bookingIdCopied}
           onCopyBookingId={handleCopyBookingId}
           onAdvance={handleAdvance}
           onMarkNotInterested={handleMarkNotInterested}

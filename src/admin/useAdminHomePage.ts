@@ -20,6 +20,7 @@ import type {
 } from '../types/types-index';
 import { STORAGE_BUCKET } from '../constants/storage';
 import { useAlert } from '../components/ui/useAlert';
+import { useToast } from '../components/ui/useToast';
 import { useConfirm } from '../components/ui/useConfirm';
 
 
@@ -54,7 +55,6 @@ export const SECTION_TITLES = [
 interface UseAdminHomePageResult {
   loading: boolean;
   saving: boolean;
-  saved: boolean;
   hasUnsavedChanges: () => boolean;
   handleSave: () => Promise<void>;
   discardChanges: () => void;
@@ -140,6 +140,7 @@ function makeTempId() {
 
 export function useAdminHomePage(): UseAdminHomePageResult {
   const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
   const [heroContent, setHeroContent] = useState<HomeHeroContent>(DEFAULT_HOME_HERO);
   const [whyContent, setWhyContent] = useState<WhyUlaaContent>(DEFAULT_WHY_ULAA);
@@ -153,7 +154,6 @@ export function useAdminHomePage(): UseAdminHomePageResult {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   // Snapshots as of the last successful load/save, for the unsaved-changes
   // guard and for diffing which gallery/testimonial rows actually changed.
@@ -245,6 +245,10 @@ export function useAdminHomePage(): UseAdminHomePageResult {
     snapshot(heroContent, whyContent, founderContent, ctaContent, testimonialsSectionContent, galleryImages, testimonials, bottomNavItems, buttonLabels) !== savedContentRef.current;
 
   const handleSave = async () => {
+    if (!hasUnsavedChanges()) {
+      toast.info('No changes to save.');
+      return;
+    }
     if (!buttonLabels.primaryCta.trim() || !buttonLabels.waitlistCta.trim()) {
       alert('Both button names (in Button Naming) are required.');
       return;
@@ -357,10 +361,9 @@ export function useAdminHomePage(): UseAdminHomePageResult {
         bottomNav: bottomNavItems, buttonLabels,
       };
       setDraftBase(stableStringify(savedStateRef.current));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      toast.success('Home page saved.');
     } catch {
-      alert('Failed to save. Please try again.');
+      toast.error("Couldn't save the home page.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
       setSaving(false);
     }
@@ -392,7 +395,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   } = useSectionTabChrome(loading, SECTION_TITLES.length);
 
   return {
-    loading, saving, saved, hasUnsavedChanges, handleSave, discardChanges,
+    loading, saving, hasUnsavedChanges, handleSave, discardChanges,
     draftOnHold: heldDraft !== null, restoreHeldDraft, discardHeldDraft,
     heroContent, setHeroContent,
     whyContent, setWhyContent,

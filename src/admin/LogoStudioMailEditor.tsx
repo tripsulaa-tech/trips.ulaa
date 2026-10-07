@@ -16,6 +16,7 @@ import {
 } from '../utils/bookingEmailTemplate';
 import { SITE_ORIGIN } from '../constants/site';
 import { useConfirm } from '../components/ui/useConfirm';
+import { useToast } from '../components/ui/useToast';
 import { STORAGE_BUCKET } from '../constants/storage';
 
 // Logo Studio → "Email": the wording of the booking confirmation email that goes to
@@ -88,6 +89,7 @@ type GroupId = string;
 
 export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { onDirtyChange: (dirty: boolean) => void; fit?: boolean }) {
   const confirm = useConfirm();
+  const toast = useToast();
   // One section of the form is shown at a time (so the page stays short); 'style' = colour + logo.
   // Remembered for this browser tab, so coming back to the page lands on the same section.
   const [section, setSection] = useState<GroupId>(() => {
@@ -156,7 +158,6 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
   const [draft, setDraft] = useState<BookingEmailTemplate>({ ...DEFAULT_BOOKING_EMAIL_TEMPLATE });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [fullyPaid, setFullyPaid] = useState(false);
   const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
@@ -206,7 +207,6 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
   })();
 
   const set = useCallback(<K extends keyof BookingEmailTemplate>(key: K, value: BookingEmailTemplate[K]) => {
-    setSaved(false);
     setError('');
     setDraft(d => ({ ...d, [key]: value }));
   }, []);
@@ -243,6 +243,10 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
   };
 
   const handleSave = async () => {
+    if (!dirty) {
+      toast.info('No changes to save.');
+      return;
+    }
     try {
       setSaving(true);
       setError('');
@@ -253,8 +257,7 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
       setBase(clean);
       setDraft(clean);
       clearDraft('logoStudio.mail');
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 3000);
+      toast.success('Booking email saved.');
     } catch {
       setError('Could not save the email wording. Please try again.');
     } finally {
@@ -269,7 +272,6 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
       confirmLabel: 'Reset',
     });
     if (!ok) return;
-    setSaved(false);
     setDraft({ ...DEFAULT_BOOKING_EMAIL_TEMPLATE });
   };
 
@@ -439,7 +441,6 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
       <AdminEditorFooter
         onSave={handleSave}
         saving={saving}
-        saved={saved}
         onSecondaryAction={handleReset}
         secondaryLabel="Reset to Original"
         secondaryLabelMobile="Reset"

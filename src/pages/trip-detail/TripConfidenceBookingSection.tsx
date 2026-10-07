@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import SectionTitle from '../../components/ui/SectionTitle';
 import type { UpcomingTrip, TripConfidenceItem, ButtonLabelsConfig } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, formatAgeRange, specialOfferDaysLeft } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, formatAgeRange, specialOfferDaysLeft, formatDuration, earlyBirdSeatsLabel, earlyBirdRuleNote } from '../../utils/utils-index';
 import { hasPackages } from '../../utils/tripOptions';
 import { getGoogleCalendarUrl, downloadTripIcs } from '../../utils/calendar';
 import {
@@ -155,12 +155,22 @@ export default function TripConfidenceBookingSection({
                         ? 'Offer ends today'
                         : `Offer ends ${formatDate(trip.special_offer_end_date || trip.special_offer_date, { day: 'numeric', month: 'long', year: 'numeric' })}`}
                     </p>
-                  ) : isEarlyBird && trip.early_bird_deadline && (
+                  ) : isEarlyBird && (earlyBirdSeatsLabel(trip) ? (
+                    <>
+                      <p className="flex items-center justify-center gap-1 text-orange-600 text-xs font-medium mt-2">
+                        <Clock size={12} className="shrink-0" />
+                        {earlyBirdSeatsLabel(trip)}
+                      </p>
+                      <p className="text-dark-muted text-2xs mt-1">
+                        {earlyBirdRuleNote(trip, activePrice, trip.advance_amount) ?? 'Pay your advance to confirm your early-bird seat.'}
+                      </p>
+                    </>
+                  ) : trip.early_bird_deadline && (
                     <p className="flex items-center justify-center gap-1 text-orange-600 text-xs font-medium mt-2">
                       <Clock size={12} className="shrink-0" />
                       Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
-                  )}
+                  ))}
                 </>
               ) : (
                 <>
@@ -212,7 +222,7 @@ export default function TripConfidenceBookingSection({
             </div>
             <div className="flex justify-between text-sm">
               <span className="flex items-center gap-2 text-dark-muted"><Clock size={14} className="text-primary shrink-0" /> Duration</span>
-              <span className="text-dark font-medium">{trip.duration}</span>
+              <span className="text-dark font-medium">{formatDuration(trip.duration)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="flex items-center gap-2 text-dark-muted"><Users size={14} className="text-primary shrink-0" /> Group Size</span>

@@ -19,7 +19,7 @@ import {
   getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getEnquiries, getWaitlistEntries,
   syncStartedTripAlbums,
 } from '../services/api';
-import { formatDate as formatDateBase } from '../utils/utils-index';
+import { formatDate as formatDateBase, formatDuration } from '../utils/utils-index';
 import type { UpcomingTrip, Enquiry } from '../types/types-index';
 import bannerImg from '../assets/hero.webp';
 
@@ -75,7 +75,7 @@ function formatDateRange(start?: string, end?: string) {
   // to be a bare "month year" suffix (e.g. "3 - 4 3 Oct 2026" instead of
   // "3 - 4 Oct 2026").
   const monthYear = formatDateBase(start, { day: undefined, month: 'short', year: 'numeric' }, 'en-GB');
-  if (!e || Number.isNaN(e.getTime())) {
+  if (!e || Number.isNaN(e.getTime()) || start === end) {
     return formatDate(start);
   }
   if (sameMonth) {
@@ -406,7 +406,7 @@ export default function AdminDashboard() {
                           <div className="flex items-center justify-between gap-2 mt-0.5">
                             <p className="text-dark-muted text-2xs sm:text-xs truncate">
                               {formatDateRange(trip.start_date, trip.end_date)}
-                              {trip.duration ? ` • ${trip.duration}` : ''}
+                              {trip.duration ? ` • ${formatDuration(trip.duration)}` : ''}
                             </p>
                             <span className="flex-shrink-0 text-2xs sm:text-xs font-semibold text-primary bg-orange-50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md whitespace-nowrap">
                               {seatsLeft} Seats Left

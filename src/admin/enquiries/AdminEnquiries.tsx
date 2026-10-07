@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
   UsersThree,
-  CheckCircle as CheckCircle2,
   Trash as Trash2,
   Users,
   Pencil,
@@ -62,6 +60,7 @@ import AdminEnquiriesDesktopTable from './AdminEnquiriesDesktopTable';
 import AdminEnquiriesMobileCards from './AdminEnquiriesMobileCards';
 import AdminEnquiriesFab from './AdminEnquiriesFab';
 import AdminEnquiryPaymentModal from './AdminEnquiryPaymentModal';
+import { useToast } from '../../components/ui/useToast';
 
 export default function AdminEnquiries() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -197,14 +196,8 @@ export default function AdminEnquiries() {
   // AlertDialog (used inside the hooks above, e.g. useAddEnquiry/
   // useBulkEdit), which is reserved for errors/validation that the admin
   // actually needs to acknowledge.
-  const [toast, setToast] = useState<string | null>(null);
-  const showToast = (message: string) => setToast(message);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  const toast = useToast();
+  const showToast = (message: string) => toast.success(message);
 
   const markPaid = useMarkInvoicePaid(updatedPayment => {
     setDetailsInvoices(prev => prev.map(p => (p.id === updatedPayment.id ? updatedPayment : p)));
@@ -1217,22 +1210,6 @@ export default function AdminEnquiries() {
         onConfirm={handleConfirmCancel}
         cancelling={cancelling}
       />
-
-      {/* Lightweight success toast — bulk-save confirmation only, doesn't
-          block the admin the way the AlertDialog (errors/validation) does */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-dark text-white text-sm font-medium px-4 py-2.5 rounded-md shadow-warm-lg"
-          >
-            <CheckCircle2 size={16} className="text-green-400 shrink-0" />
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <BulkEditModal
         isOpen={bulkEditOpen}

@@ -28,10 +28,13 @@ interface TripPackagesEditorProps {
   regularPrice: number;
   earlyBirdPrice: number | null;
   earlyBirdOpen: boolean;
+  // Early bird is limited by seats (first N paid), not a date: it is then a
+  // trip-level price for every package without its own fixed price.
+  earlyBirdSeatLimited?: boolean;
   onChange: (next: TripOptionsConfig) => void;
 }
 
-export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice, earlyBirdOpen, onChange }: TripPackagesEditorProps) {
+export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice, earlyBirdOpen, earlyBirdSeatLimited = false, onChange }: TripPackagesEditorProps) {
   const { options, packages } = value;
 
   const patchOption = (id: string, patch: Partial<TripOption>) =>
@@ -82,7 +85,9 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
       regular: regularPrice,
       active: earlyBirdPrice != null && earlyBirdOpen ? earlyBirdPrice : regularPrice,
       isEarlyBird: earlyBirdPrice != null && earlyBirdOpen,
-      earlyWindowOpen: earlyBirdOpen,
+      earlyWindowOpen: earlyBirdOpen && !earlyBirdSeatLimited,
+      seatLimited: earlyBirdSeatLimited,
+      seatDiscount: earlyBirdSeatLimited && earlyBirdPrice != null ? Math.max(0, regularPrice - earlyBirdPrice) : 0,
     });
 
   const numOrNull = (v: string) => (v === '' ? null : Math.max(0, +v));

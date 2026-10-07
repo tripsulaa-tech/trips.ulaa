@@ -1,6 +1,6 @@
 import Button from '../../components/ui/Button';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
-import { formatDate, formatPrice, specialOfferDaysLeft } from '../../utils/utils-index';
+import { formatDate, formatPrice, specialOfferDaysLeft, earlyBirdSeatsLabel } from '../../utils/utils-index';
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Clock, Sparkle, Gift } from '@phosphor-icons/react';
@@ -149,7 +149,12 @@ export default function TripStickyBookingBar({
                     <span className="bg-secondary text-white text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                       Early Bird
                     </span>
-                    {trip.early_bird_deadline && (
+                    {earlyBirdSeatsLabel(trip) ? (
+                      <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
+                        <Clock size={9} className="shrink-0" />
+                        {earlyBirdSeatsLabel(trip)}
+                      </span>
+                    ) : trip.early_bird_deadline && (
                       <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
                         <Clock size={9} className="shrink-0" />
                         Ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -194,12 +199,17 @@ export default function TripStickyBookingBar({
                           Early Bird
                         </span>
                       )}
-                      {isEarlyBird && trip.early_bird_deadline && (
+                      {isEarlyBird && (earlyBirdSeatsLabel(trip) ? (
+                        <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
+                          <Clock size={10} className="shrink-0" />
+                          {earlyBirdSeatsLabel(trip)}
+                        </span>
+                      ) : trip.early_bird_deadline && (
                         <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
                           <Clock size={10} className="shrink-0" />
                           Offer ends {formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
-                      )}
+                      ))}
                     </>
                   )}
                 </div>

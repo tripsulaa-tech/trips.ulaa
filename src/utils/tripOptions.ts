@@ -5,7 +5,7 @@
 // they all price a package the same way: active base price + the extra
 // price of every option it ticks.
 import type { TripOption, TripPackage, TripOptionsConfig, UpcomingTrip } from '../types/types-index';
-import { getActivePrice } from './utils-index';
+import { getActivePrice, earlyBirdSeatsLeft } from './utils-index';
 
 export const emptyTripOptions: TripOptionsConfig = { options: [], packages: [] };
 
@@ -48,30 +48,47 @@ export function packageOptionIds(pkg: TripPackage, cfg?: TripOptionsConfig | nul
 // special-offer / regular), `regular` is the plain trip price, `isEarlyBird`
 // says whether `active` is the early-bird price, and `earlyWindowOpen` says
 // whether the trip's early-bird deadline hasn't passed (needed by packages
-// that carry their own early-bird price).
+// that carry their own early-bird price). `seatLimited` says the trip's early
+// bird is by SEATS (first N paid people): then it is a trip-level price that
+// does not depend on the package's early-bird flag, and packages with their
+// own fixed price never get it.
 export interface PackageBase {
   active: number | null | undefined;
   regular: number | null | undefined;
   isEarlyBird: boolean;
   earlyWindowOpen: boolean;
+  seatLimited: boolean;
+  // Seat mode only: ₹ off every package while early-bird seats last
+  // (regular trip price minus early-bird trip price, e.g. 1999 - 1799 = 200).
+  seatDiscount: number;
 }
 
-export const noPackageBase: PackageBase = { active: null, regular: null, isEarlyBird: false, earlyWindowOpen: false };
+export const noPackageBase: PackageBase = { active: null, regular: null, isEarlyBird: false, earlyWindowOpen: false, seatLimited: false, seatDiscount: 0 };
+
+// True when the trip's early bird is limited by seats rather than a date.
+// ₹ the early bird takes off a package in seat mode (0 when not applicable).
+export const seatEarlyDiscount = (trip: Pick<UpcomingTrip, 'price' | 'early_bird_price'>): number =>
+  trip.price != null && trip.early_bird_price != null ? Math.max(0, trip.price - trip.early_bird_price) : 0;
+
+export const isSeatLimitedEarlyBird = (trip: Pick<UpcomingTrip, 'early_bird_seats'>): boolean =>
+  !!trip.early_bird_seats && trip.early_bird_seats > 0;
 
 export function getPackageBase(
-  trip: Pick<UpcomingTrip, 'price' | 'early_bird_price' | 'early_bird_deadline' | 'special_offer_price' | 'special_offer_date' | 'special_offer_end_date'>,
+  trip: Pick<UpcomingTrip, 'price' | 'early_bird_price' | 'early_bird_deadline' | 'special_offer_price' | 'special_offer_date' | 'special_offer_end_date' | 'early_bird_seats' | 'early_bird_seats_taken'>,
 ): PackageBase {
   const { activePrice, isEarlyBird } = getActivePrice(
     trip.price, trip.early_bird_price, trip.early_bird_deadline,
     trip.special_offer_price, trip.special_offer_date, trip.special_offer_end_date,
+    trip.early_bird_seats, trip.early_bird_seats_taken,
   );
+  const seatLimited = earlyBirdSeatsLeft(trip) !== null;
   let earlyWindowOpen = false;
-  if (trip.early_bird_deadline) {
+  if (!seatLimited && trip.early_bird_deadline) {
     const deadline = new Date(trip.early_bird_deadline);
     deadline.setHours(23, 59, 59, 999);
     earlyWindowOpen = new Date() <= deadline;
   }
-  return { active: activePrice, regular: trip.price, isEarlyBird, earlyWindowOpen };
+  return { active: activePrice, regular: trip.price, isEarlyBird, earlyWindowOpen, seatLimited, seatDiscount: seatLimited ? seatEarlyDiscount(trip) : 0 };
 }
 
 // A package with an admin-set price ignores the trip price and its options'
@@ -91,6 +108,10 @@ export function packageQuote(
   base: PackageBase,
 ): { price: number | null; extra: number; isEarlyBird: boolean } {
   if (hasOwnPrice(pkg)) {
+    // Seat-limited early bird: the same ₹ discount comes off any package.
+    if (base.seatLimited && base.isEarlyBird && base.seatDiscount > 0) {
+      return { price: Math.max(0, pkg.price! - base.seatDiscount), extra: 0, isEarlyBird: true };
+    }
     if (base.earlyWindowOpen && pkg.early_bird && pkg.early_bird_price != null && pkg.early_bird_price > 0) {
       return { price: pkg.early_bird_price, extra: 0, isEarlyBird: true };
     }
@@ -98,8 +119,10 @@ export function packageQuote(
   }
   // Derived: early-bird trip price only reaches packages flagged for it.
   const extra = optionsPrice(packageOptionIds(pkg, cfg), cfg);
-  const isEarlyBird = base.isEarlyBird && !!pkg.early_bird;
-  const baseAmount = base.isEarlyBird && !pkg.early_bird ? (base.regular ?? base.active) : base.active;
+  // (Seat-limited early bird is trip-level: it reaches every such package.)
+  const earlyForPkg = !!pkg.early_bird || base.seatLimited;
+  const isEarlyBird = base.isEarlyBird && earlyForPkg;
+  const baseAmount = base.isEarlyBird && !earlyForPkg ? (base.regular ?? base.active) : base.active;
   return { price: baseAmount != null ? baseAmount + extra : null, extra, isEarlyBird };
 }
 
@@ -119,7 +142,10 @@ export function withBasicPricing<T extends UpcomingTrip>(trip: T): T {
     return {
       ...trip,
       price: first.price ?? undefined,
-      early_bird_price: first.early_bird && first.early_bird_price != null && first.early_bird_price > 0 ? first.early_bird_price : null,
+      // Seat mode: the trip's early-bird discount comes off the package price.
+      early_bird_price: isSeatLimitedEarlyBird(trip)
+        ? (seatEarlyDiscount(trip) > 0 ? Math.max(0, (first.price ?? 0) - seatEarlyDiscount(trip)) : null)
+        : first.early_bird && first.early_bird_price != null && first.early_bird_price > 0 ? first.early_bird_price : null,
       special_offer_price: null,
       special_offer_date: null,
       special_offer_end_date: null,
@@ -131,7 +157,7 @@ export function withBasicPricing<T extends UpcomingTrip>(trip: T): T {
   return {
     ...trip,
     price: trip.price != null ? trip.price + extra : trip.price,
-    early_bird_price: first.early_bird && trip.early_bird_price != null ? trip.early_bird_price + extra : null,
+    early_bird_price: (first.early_bird || isSeatLimitedEarlyBird(trip)) && trip.early_bird_price != null ? trip.early_bird_price + extra : null,
     special_offer_price: trip.special_offer_price != null ? trip.special_offer_price + extra : trip.special_offer_price,
   };
 }
@@ -147,10 +173,11 @@ export function packagePriceLabel(q: { price: number | null; extra: number }, fo
 export function packageListPrice(
   pkg: TripPackage | undefined,
   cfg: TripOptionsConfig | null | undefined,
-  trip: Pick<UpcomingTrip, 'price' | 'early_bird_price'>,
+  trip: Pick<UpcomingTrip, 'price' | 'early_bird_price' | 'early_bird_seats'>,
   tier: 'early_bird' | 'normal',
 ): number | undefined {
   if (pkg && cfg && hasOwnPrice(pkg)) {
+    if (tier === 'early_bird' && isSeatLimitedEarlyBird(trip)) return Math.max(0, pkg.price! - seatEarlyDiscount(trip));
     if (tier === 'early_bird' && pkg.early_bird && pkg.early_bird_price != null && pkg.early_bird_price > 0) return pkg.early_bird_price;
     return pkg.price!;
   }

@@ -16,6 +16,7 @@ import {
 import { STORAGE_BUCKET } from '../constants/storage';
 import { useConfirm } from '../components/ui/useConfirm';
 import { useAlert } from '../components/ui/useAlert';
+import { useToast } from '../components/ui/useToast';
 
 // Logo Studio → "Site logos": choose which images the site uses for its header,
 // footer, browser tab, install prompt and admin panel, plus the Travel Cards badge,
@@ -239,6 +240,7 @@ export default function LogoStudioSiteLogos({
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
   const [draft, setDraft] = useState<BrandingContent>({ ...EMPTY_BRANDING });
   const [loading, setLoading] = useState(true);
@@ -310,7 +312,7 @@ export default function LogoStudioSiteLogos({
       sessionUploadsRef.current.add(url);
       setSlot(slot, url);
     } catch {
-      alert(`Failed to upload. Make sure the Supabase storage bucket "${BUCKET}" exists and is public.`);
+      toast.error(`Failed to upload. Make sure the Supabase storage bucket "${BUCKET}" exists and is public.`);
     } finally {
       setBusySlot(null);
     }
@@ -322,7 +324,7 @@ export default function LogoStudioSiteLogos({
     const file = await makeLogoFile(config.studio).catch(() => null);
     setBusySlot(null);
     if (!file) {
-      alert('Could not create the logo image. Please try again.');
+      toast.error('Could not create the logo image. Please try again.');
       return;
     }
     await uploadFor(slot, file);
@@ -340,6 +342,10 @@ export default function LogoStudioSiteLogos({
   };
 
   const handleSave = async () => {
+    if (!hasUnsavedChanges()) {
+      toast.info('No changes to save.');
+      return;
+    }
     try {
       setSaving(true);
       await upsertSiteContent(BRANDING_KEY, draft);
@@ -348,9 +354,10 @@ export default function LogoStudioSiteLogos({
       savedRef.current = { ...draft };
       clearDraft('logoStudio.site');
       setSaved(true);
+      toast.success('Site logos saved.');
       window.setTimeout(() => setSaved(false), 3000);
     } catch {
-      alert('Failed to save the site logos. Please try again.');
+      toast.error("Couldn't save the site logos.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
       setSaving(false);
     }
@@ -422,7 +429,6 @@ export default function LogoStudioSiteLogos({
       <AdminEditorFooter
         onSave={handleSave}
         saving={saving}
-        saved={saved}
         onSecondaryAction={handleDiscard}
         secondaryLabel="Discard Changes"
         secondaryLabelMobile="Discard"

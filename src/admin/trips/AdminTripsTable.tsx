@@ -65,6 +65,12 @@ export default function AdminTripsTable({
   // published trip), and the hover title keeps the longer explanation.
   const rowMenuItems = (trip: UpcomingTrip): ActionMenuItem[] => [
     {
+      label: 'Preview page',
+      icon: Eye,
+      onClick: () => window.open(`/admin/trips/${trip.id}/preview`, '_blank', 'noopener'),
+      title: 'Open this trip\'s full details page exactly as visitors will see it — works for drafts too, nothing is published',
+    },
+    {
       label: 'Check-in',
       icon: LogIn,
       onClick: () => onCheckIn(trip),

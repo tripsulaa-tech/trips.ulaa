@@ -24,7 +24,7 @@ import ButtonNamingSection from './home-sections/ButtonNamingSection';
 export default function AdminHomePage() {
   const confirm = useConfirm();
   const {
-    loading, saving, saved, hasUnsavedChanges, handleSave, discardChanges,
+    loading, saving, hasUnsavedChanges, handleSave, discardChanges,
     draftOnHold, restoreHeldDraft, discardHeldDraft,
     heroContent, setHeroContent,
     whyContent, setWhyContent,
@@ -72,7 +72,6 @@ export default function AdminHomePage() {
       bodyClassName="p-4 sm:p-6 space-y-8 sm:space-y-10"
       onSave={handleSave}
       saving={saving}
-      saved={saved}
       onSecondaryAction={handleDiscard}
       notice={draftOnHold ? <DraftConflictNotice subject="the Home Page" onRestore={restoreHeldDraft} onDiscard={discardHeldDraft} /> : undefined}
     >

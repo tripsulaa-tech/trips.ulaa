@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation, Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import NotFoundState from '../components/ui/NotFoundState';
 import { TripDetailSkeleton } from '../components/ui/Skeletons';
@@ -8,10 +8,10 @@ import type { PagedCarouselHandle } from '../components/ui/PagedCarousel';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { getUpcomingTripBySlug, getSiteContent } from '../services/api';
+import { getUpcomingTripBySlug, getUpcomingTripByIdAdmin, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
-import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice } from '../utils/utils-index';
+import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice, earlyBirdSeatsLabel, earlyBirdRuleNote, formatPrice } from '../utils/utils-index';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import { hasPackages } from '../utils/tripOptions';
 
@@ -38,7 +38,15 @@ import { Compass } from '@phosphor-icons/react';
 
 import { pageTitle } from '../constants/site';
 export default function TripDetailPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, id: previewId } = useParams<{ slug: string; id: string }>();
+  // Admin "Preview page" route (/admin/trips/:id/preview): renders the real
+  // public page for any trip, drafts included, but read-only — no booking,
+  // no live-sync, not indexed.
+  const isPreview = !!previewId;
+  // Preview only: lets the admin flip between the Coming Soon layout and the
+  // full published layout to see how the trip will look either way.
+  // null = follow the trip's real status.
+  const [previewLayout, setPreviewLayout] = useState<'full' | 'coming_soon' | null>(null);
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
@@ -135,7 +143,7 @@ export default function TripDetailPage() {
     title: pageTitle(trip ? trip.title : 'Upcoming Trips'),
     description: trip?.description,
     image: trip?.cover_image,
-    path: `/trips/${slug ?? ''}`,
+    path: isPreview ? `/admin/trips/${previewId}/preview` : `/trips/${slug ?? ''}`,
   });
   const toggleHighlight = (i: number) => {
     setExpandedHighlights(prev => {
@@ -199,12 +207,15 @@ export default function TripDetailPage() {
   const calendarMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!slug) return;
-    getUpcomingTripBySlug(slug)
+    const request = isPreview
+      ? (previewId ? getUpcomingTripByIdAdmin(previewId) : null)
+      : (slug ? getUpcomingTripBySlug(slug) : null);
+    if (!request) return;
+    request
       .then(data => setTrip(data ?? null))
       .catch(() => setTrip(null))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, previewId, isPreview]);
 
   // Admin-editable "Pack Your Bags" / "Join Waitlist" button text (see
   // the Home Page admin's "Button Naming" tab). Starts from the defaults
@@ -251,12 +262,12 @@ export default function TripDetailPage() {
   // UpcomingTripsPage.tsx / UpcomingTripsPreview.tsx) — self-correcting on
   // every event instead of trusting the socket payload's contents.
   useEffect(() => {
-    if (!trip?.id || !slug) return;
+    if (!trip?.id || (!slug && !isPreview)) return;
     const unsubscribe = subscribeToTable(
       'upcoming_trips',
       (payload) => {
         if (payload.eventType === 'UPDATE') {
-          getUpcomingTripBySlug(slug)
+          (isPreview ? getUpcomingTripByIdAdmin(trip.id) : getUpcomingTripBySlug(slug!))
             .then(data => { if (data) setTrip(data); })
             .catch(() => {});
         }
@@ -264,15 +275,15 @@ export default function TripDetailPage() {
       `id=eq.${trip.id}`
     );
     return unsubscribe;
-  }, [trip?.id, slug]);
+  }, [trip?.id, slug, isPreview]);
 
   // Deep-link support for "?book=1" (e.g. the downloaded itinerary PDF's
   // "Pack Your Bags" link) — opens the booking modal automatically once
   // the trip has loaded, instead of requiring the visitor to find the CTA.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- opening the booking modal in response to a "?book=1" deep link, not syncing an external system
-    if (trip && searchParams.get('book') === '1') setBookingOpen(true);
-  }, [trip, searchParams]);
+    if (trip && !isPreview && searchParams.get('book') === '1') setBookingOpen(true);
+  }, [trip, searchParams, isPreview]);
 
   // Highlight the quick-jump tab for whichever section is currently in view.
   useEffect(() => {
@@ -313,8 +324,9 @@ export default function TripDetailPage() {
 
   // Package card the visitor tapped (null = opened via a plain Book button).
   const [preselectedPackageId, setPreselectedPackageId] = useState<string | null>(null);
-  const openBooking = () => { setPreselectedPackageId(null); setBookingOpen(true); };
-  const choosePackage = (packageId: string) => { setPreselectedPackageId(packageId); setBookingOpen(true); };
+  // Preview is look-only: booking buttons do nothing so no real enquiry can be made.
+  const openBooking = () => { if (isPreview) return; setPreselectedPackageId(null); setBookingOpen(true); };
+  const choosePackage = (packageId: string) => { if (isPreview) return; setPreselectedPackageId(packageId); setBookingOpen(true); };
 
   if (loading) {
     return (
@@ -331,15 +343,42 @@ export default function TripDetailPage() {
           icon={<Compass size={28} />}
           title="Trip not found"
           message="This trip may have been removed or the link is out of date. Check out our other upcoming adventures instead."
-          actionLabel="View All Trips"
-          actionTo="/trips"
+          actionLabel={isPreview ? 'Back to Trips admin' : 'View All Trips'}
+          actionTo={isPreview ? '/admin/trips' : '/trips'}
         />
       </Layout>
     );
   }
 
-  if (trip.status === 'coming_soon') {
-    return <TripComingSoon trip={trip} />;
+  const showComingSoon = isPreview && previewLayout
+    ? previewLayout === 'coming_soon'
+    : trip.status === 'coming_soon';
+  const statusLabel = trip.status === 'draft' ? 'Draft (not visible to the public)' : trip.status === 'coming_soon' ? 'Coming Soon' : 'Published';
+  const previewBanner = isPreview ? (
+    <div className="fixed top-0 inset-x-0 z-[100] bg-dark text-white text-xs sm:text-sm font-button font-semibold px-4 py-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 shadow-card">
+      <span>Admin preview — {statusLabel}. Booking is disabled.</span>
+      <span className="inline-flex items-center gap-1" role="group" aria-label="Preview layout">
+        <button
+          type="button"
+          onClick={() => setPreviewLayout('coming_soon')}
+          className={`px-2.5 py-1 rounded-md transition-colors ${showComingSoon ? 'bg-white text-dark' : 'bg-white/15 hover:bg-white/25'}`}
+        >
+          Coming Soon view
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreviewLayout('full')}
+          className={`px-2.5 py-1 rounded-md transition-colors ${!showComingSoon ? 'bg-white text-dark' : 'bg-white/15 hover:bg-white/25'}`}
+        >
+          Published view
+        </button>
+      </span>
+      <Link to="/admin/trips" className="underline underline-offset-2 hover:opacity-80 whitespace-nowrap">Back to admin</Link>
+    </div>
+  ) : null;
+
+  if (showComingSoon) {
+    return <>{previewBanner}<TripComingSoon trip={trip} /></>;
   }
 
   const remaining = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0);
@@ -348,7 +387,7 @@ export default function TripDetailPage() {
   // Headline price = the first package's (Basic) price when the trip has
   // packages; Premium etc. show in "Choose Your Package" and the booking form.
   const pricedTrip = withBasicPricing(trip);
-  const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(pricedTrip.price, pricedTrip.early_bird_price, pricedTrip.early_bird_deadline, pricedTrip.special_offer_price, pricedTrip.special_offer_date, pricedTrip.special_offer_end_date);
+  const { activePrice, isEarlyBird, deadlinePassed, isSpecialOffer } = getActivePrice(pricedTrip.price, pricedTrip.early_bird_price, pricedTrip.early_bird_deadline, pricedTrip.special_offer_price, pricedTrip.special_offer_date, pricedTrip.special_offer_end_date, pricedTrip.early_bird_seats, pricedTrip.early_bird_seats_taken);
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, pricedTrip.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
   // Amount still payable before the trip once the advance/reservation
   // amount is paid — powers the "Reserve today with only ₹X" panel below,
@@ -364,6 +403,7 @@ export default function TripDetailPage() {
 
   return (
     <Layout>
+      {previewBanner}
       <TripHero
         trip={trip}
         buttonLabels={buttonLabels}
@@ -402,6 +442,13 @@ export default function TripDetailPage() {
             isAlmostFull={isAlmostFull}
             isFull={isFull}
             remainingSeats={remaining}
+            earlyBird={isEarlyBird && activePrice != null && earlyBirdSeatsLabel(pricedTrip)
+              ? {
+                  price: formatPrice(activePrice),
+                  label: earlyBirdSeatsLabel(pricedTrip) as string,
+                  note: earlyBirdRuleNote(pricedTrip, activePrice, trip.advance_amount) ?? undefined,
+                }
+              : null}
           />
 
           {(trip.highlight_cards?.length ?? 0) > 0 && (

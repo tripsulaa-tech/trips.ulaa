@@ -5,6 +5,7 @@ import { BULK_NO_CHANGE, emptyBulkForm, validateBulkEditForm } from './AdminEnqu
 import type { BulkEditForm } from './AdminEnquiriesShared';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 
 /** Owns bulk operations across the current selection: opening/editing the
  *  Bulk Edit modal's form, saving whichever fields were actually touched
@@ -29,6 +30,7 @@ export function useBulkEdit(params: {
   const { enquiries, selectedIds, setSelectedIds, setTrips, load, showToast } = params;
   const confirm = useConfirm();
   const alert = useAlert();
+  const toast = useToast();
 
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState<BulkEditForm>(emptyBulkForm);
@@ -142,7 +144,7 @@ export function useBulkEdit(params: {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to delete some of the selected enquiries.');
+      toast.error('Failed to delete some of the selected enquiries.');
     } finally {
       setBulkDeleting(false);
     }

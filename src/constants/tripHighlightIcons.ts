@@ -13,6 +13,7 @@
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { resolvePhosphorIcon } from '../components/icons/LazyPhosphorIcon';
 import LinkedHeartsIcon from '../components/icons/LinkedHeartsIcon';
+import WaterfallIcon from '../components/icons/WaterfallIcon';
 
 // Thin shim so every existing `Ph.IconName` reference below keeps working
 // unchanged. resolvePhosphorIcon returns the already-bundled static binding
@@ -1516,6 +1517,7 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'tent', label: 'Tent', Icon: Ph.Tent as TripHighlightIconType, keywords: ['camping', 'campsite', 'outdoors'] },
   { key: 'tent-tree', label: 'Glamping', Icon: Ph.Campfire as TripHighlightIconType, keywords: ['glamping', 'camp', 'nature camp'] },
   { key: 'mountain', label: 'Mountain', Icon: Ph.Mountains as TripHighlightIconType, keywords: ['mountain', 'mountains', 'trek', 'trekking', 'hill', 'peak'] },
+  { key: 'waterfall', label: 'Waterfall', Icon: WaterfallIcon as unknown as TripHighlightIconType, keywords: ['waterfall', 'waterfalls', 'falls', 'cascade', 'river', 'stream', 'water', 'nature', 'trek', 'trekking', 'scenic'] },
   { key: 'mountain-snow', label: 'Snow Mountain', Icon: Ph.PersonSimpleSki as TripHighlightIconType, keywords: ['mountain', 'snow', 'ski', 'winter peak', 'himalaya'] },
   { key: 'tree-pine', label: 'Pine Forest', Icon: Ph.TreeEvergreen as TripHighlightIconType, keywords: ['forest', 'pine', 'nature', 'mountains'] },
   { key: 'trees', label: 'Forest', Icon: Ph.Tree as TripHighlightIconType, keywords: ['forest', 'jungle', 'greenery', 'nature'] },

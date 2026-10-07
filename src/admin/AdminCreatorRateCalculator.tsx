@@ -32,7 +32,6 @@ import {
   ClipboardText,
   Copy,
   WhatsappLogo,
-  Check,
   NotePencil as TemplateIcon,
   PencilSimple as EditIcon,
   Plus,
@@ -47,7 +46,7 @@ import AdminLayout from './AdminLayout';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import { useAlert } from '../components/ui/useAlert';
+import { useToast } from '../components/ui/useToast';
 import { useConfirm } from '../components/ui/useConfirm';
 import { formatPrice, formatDate, getWhatsAppLink } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
@@ -86,7 +85,7 @@ interface CalculatorInputs {
   followerCount: string; reelViews: string[]; niche: string;
 }
 export default function AdminCreatorRateCalculator() {
-  const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
 
   // Starts from the calculator contents kept for this tab (if any), otherwise a fresh calculator.
@@ -187,13 +186,13 @@ export default function AdminCreatorRateCalculator() {
       const text = await navigator.clipboard.readText();
       const parsed = extractViewNumbers(text);
       if (parsed.length === 0) {
-        await alert("Couldn't find any numbers on your clipboard. Copy the 10 view counts first, then try again.");
+        toast.error("Couldn't find any numbers on your clipboard. Copy the 10 view counts first, then try again.");
         return;
       }
       fillReelViewsFrom(0, parsed);
     } catch (err) {
       console.error(err);
-      await alert("Couldn't read your clipboard — paste directly into a Reel field instead.");
+      toast.error("Couldn't read your clipboard — paste directly into a Reel field instead.");
     }
   };
 
@@ -201,6 +200,10 @@ export default function AdminCreatorRateCalculator() {
   const [saving, setSaving] = useState(false);
   const handleSave = async () => {
     if (!hasInputs) return;
+    if (stableStringify(inputsValue) === inputsBase) {
+      toast.info('No changes to save.');
+      return;
+    }
     setSaving(true);
     try {
       const saved = await saveCreatorRateCalculation({
@@ -222,10 +225,10 @@ export default function AdminCreatorRateCalculator() {
       });
       setHistory(prev => [saved, ...prev]);
       setInputsBase(stableStringify(inputsValue));
-      await alert({ message: 'Calculation saved.', variant: 'success' });
+      toast.success('Calculation saved.');
     } catch (err) {
       console.error(err);
-      await alert("Couldn't save this calculation. Please try again.");
+      toast.error("Couldn't save this calculation.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
       setSaving(false);
     }
@@ -236,7 +239,6 @@ export default function AdminCreatorRateCalculator() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(() => readSessionString(HISTORY_EXPANDED_ID_KEY));
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   // Row header buttons, keyed by calculation id — so that opening a card
   // (see effect below) can scroll its header up into view. Without this,
   // expanding a row near the bottom of a long history list just grows the
@@ -357,7 +359,6 @@ export default function AdminCreatorRateCalculator() {
   const [templateBase, setTemplateBase] = useState<string | null>(null);
   const [heldTemplate, setHeldTemplate] = useState<TemplateDraft | null>(null);
   const [templateSaving, setTemplateSaving] = useState(false);
-  const [templateSaved, setTemplateSaved] = useState(false);
   const templateTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const templateHeaderRef = useRef<HTMLDivElement | null>(null);
   const templateScrollCleanupRef = useRef<(() => void) | null>(null);
@@ -516,6 +517,10 @@ export default function AdminCreatorRateCalculator() {
   }, [templateVariants, previewVariantId, hasInputs, creatorName, niche, followers, result.assets]);
 
   const handleSaveMessageTemplate = async () => {
+    if (templateBase !== null && stableStringify(templateValue) === templateBase) {
+      toast.info('No changes to save.');
+      return;
+    }
     setTemplateSaving(true);
     try {
       // Someone may have saved the template since this page was opened; check before overwriting.
@@ -525,12 +530,11 @@ export default function AdminCreatorRateCalculator() {
       }
       await upsertSiteContent(RATE_MESSAGE_TEMPLATE_KEY, { variants: templateVariants, defaultVariantId } satisfies CreatorRateMessageTemplateContent);
       setTemplateBase(stableStringify(templateValue));
-      setTemplateSaved(true);
       setTemplateEditing(false);
-      window.setTimeout(() => setTemplateSaved(false), 2000);
+      toast.success('Message template saved.');
     } catch (err) {
       console.error(err);
-      await alert("Couldn't save the message template. Please try again.");
+      toast.error("Couldn't save the message template.", { action: { label: 'Try again', onClick: () => { void handleSaveMessageTemplate(); } } });
     } finally {
       setTemplateSaving(false);
     }
@@ -546,7 +550,7 @@ export default function AdminCreatorRateCalculator() {
       if (expandedId === id) setExpandedId(null);
     } catch (err) {
       console.error(err);
-      await alert("Couldn't delete this calculation. Please try again.");
+      toast.error("Couldn't delete this calculation. Please try again.");
     } finally {
       setDeletingId(null);
     }
@@ -565,15 +569,21 @@ export default function AdminCreatorRateCalculator() {
   // these quotes are actually sent out). Both render from this row's
   // chosen variant (default unless overridden above), filled in with this
   // row's own values. ----
-  const handleCopyCalculation = async (h: CreatorRateCalculation) => {
+  // Copies the message; returns whether it worked (an error dialog has
+  // already been shown if not).
+  const copyCalculationText = async (h: CreatorRateCalculation): Promise<boolean> => {
     try {
       await navigator.clipboard.writeText(renderMessageTemplate(variantForRow(h).template, h));
-      setCopiedId(h.id);
-      window.setTimeout(() => setCopiedId(prev => (prev === h.id ? null : prev)), 2000);
+      return true;
     } catch (err) {
       console.error(err);
-      await alert("Couldn't copy to clipboard. Please try again.");
+      toast.error("Couldn't copy to clipboard. Please try again.");
+      return false;
     }
+  };
+
+  const handleCopyCalculation = async (h: CreatorRateCalculation) => {
+    if (await copyCalculationText(h)) toast.success('Message copied.');
   };
 
   const handleShareCalculation = async (h: CreatorRateCalculation) => {
@@ -591,8 +601,7 @@ export default function AdminCreatorRateCalculator() {
       return;
     }
     // No saved phone and no native share sheet — fall back to copying.
-    await handleCopyCalculation(h);
-    await alert('No phone number saved for this creator, so the message was copied instead — paste it into WhatsApp, Instagram DM, or email.');
+    if (await copyCalculationText(h)) toast.info('No phone number saved for this creator, so the message was copied instead — paste it into WhatsApp, Instagram DM, or email.', { duration: 6000 });
   };
 
   return (
@@ -1032,8 +1041,8 @@ export default function AdminCreatorRateCalculator() {
                       <Eye size={15} aria-hidden="true" /> Preview
                     </Button>
                     <Button variant="primary" size="sm" fullWidth onClick={handleSaveMessageTemplate} loading={templateSaving}>
-                      {templateSaved ? <Check size={15} weight="bold" aria-hidden="true" /> : <Save size={15} aria-hidden="true" />}
-                      {templateSaved ? 'Saved' : 'Save'}
+                      <Save size={15} aria-hidden="true" />
+                      Save
                     </Button>
                   </div>
                 </div>
@@ -1208,18 +1217,10 @@ export default function AdminCreatorRateCalculator() {
                                 <button
                                   type="button"
                                   onClick={() => handleCopyCalculation(h)}
-                                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-button font-semibold transition-colors ${
-                                    copiedId === h.id
-                                      ? 'bg-primary/20 border-primary/40 text-primary-dark'
-                                      : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/20'
-                                  }`}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-button font-semibold transition-colors bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
                                 >
-                                  {copiedId === h.id ? (
-                                    <Check size={14} weight="bold" aria-hidden="true" />
-                                  ) : (
-                                    <Copy size={14} weight="bold" aria-hidden="true" />
-                                  )}
-                                  {copiedId === h.id ? 'Copied' : 'Copy'}
+                                  <Copy size={14} weight="bold" aria-hidden="true" />
+                                  Copy
                                 </button>
                                 <button
                                   type="button"

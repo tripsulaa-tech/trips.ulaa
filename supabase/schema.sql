@@ -161,6 +161,9 @@ create table public.upcoming_trips (
   updated_at              timestamptz default now(),
   early_bird_price        numeric(10, 2),
   early_bird_deadline     date,
+  -- Optional seat limit for early_bird_price (first N paid seats). See
+  -- add_early_bird_seat_limit.sql.
+  early_bird_seats        integer,
   meeting_point_map_url   text,
   terms_and_conditions    text,
   trip_type               text,

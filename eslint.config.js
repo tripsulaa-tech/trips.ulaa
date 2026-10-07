@@ -27,6 +27,13 @@ export default defineConfig([
         varsIgnorePattern: '^_',
         ignoreRestSiblings: true,
       }],
+      // One notification system: confirmations go through useToast(), errors that need
+      // acknowledging through useAlert(). Don't build a local toast or call the browser's alert().
+      'no-restricted-globals': ['error', { name: 'alert', message: "Use useToast() for confirmations or useAlert() for errors that need an OK." }],
+      'no-restricted-syntax': ['error', {
+        selector: "VariableDeclarator[id.type='ArrayPattern'][id.elements.0.name='toast']",
+        message: 'Use useToast() from components/ui/useToast instead of a local toast state.',
+      }],
     },
   },
 ])

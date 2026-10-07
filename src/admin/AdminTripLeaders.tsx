@@ -30,7 +30,7 @@ import {
   useDraftKeeper, modalDraftBase, resolveModalDraft, settleDraft, discardDraft, type ModalDraftValue,
 } from '../hooks/useSessionDraft';
 import { STORAGE_BUCKET } from '../constants/storage';
-import { useAlert } from '../components/ui/useAlert';
+import { useToast } from '../components/ui/useToast';
 
 
 interface TripLeaderForm {
@@ -63,7 +63,7 @@ interface ReturnTo { path: string; label: string; tripTitle: string }
 interface LeadersNavState { returnTo?: ReturnTo; editLeaderId?: string; createLeader?: boolean }
 
 export default function AdminTripLeaders() {
-  const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
   const location = useLocation();
   const navigate = useNavigate();
@@ -192,7 +192,7 @@ export default function AdminTripLeaders() {
       load();
       if (returnTo) setSavedPrompt({ leaderId: saved.id, created: !editing, name: form.name });
     } catch {
-      alert('Failed to save.');
+      toast.error("Couldn't save the trip leader.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
       setSaving(false);
     }

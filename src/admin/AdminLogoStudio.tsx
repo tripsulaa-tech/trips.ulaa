@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { DownloadSimple, ArrowCounterClockwise, Warning, Copy, ClipboardText, Check } from '@phosphor-icons/react';
+import { DownloadSimple, ArrowCounterClockwise, Warning, Copy, ClipboardText } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import ColorPicker, { type ColorSwatch } from '../components/ui/ColorPicker';
 import LogoStudioSiteLogos from './LogoStudioSiteLogos';
 import LogoStudioMailEditor from './LogoStudioMailEditor';
-import { useAlert } from '../components/ui/useAlert';
+import { useToast } from '../components/ui/useToast';
 
 // Admin → Logo Studio: pick a ready-made logo, tweak its colours and download it.
 //
@@ -482,7 +482,7 @@ function useSessionState<T>(key: string, initial: T): [T, (v: T | ((prev: T) => 
 }
 
 export default function AdminLogoStudio() {
-  const alert = useAlert();
+  const toast = useToast();
   const [preId, setPreId] = useSessionState<string>('logoStudio.pre', PREDESIGNS[0].id);
   const [colors, setColors] = useSessionState<LogoColors>('logoStudio.colors', { ...PREDESIGNS[0].colors });
   const [margin, setMargin] = useSessionState<MarginId>('logoStudio.margin', 'medium');
@@ -496,7 +496,6 @@ export default function AdminLogoStudio() {
   const [view, setView] = useSessionState<View>('logoStudio.view', DEFAULT_VIEW);
   // Colour last copied with a tile's copy button, ready to paste into any other colour.
   const [copiedColor, setCopiedColor] = useState<string | null>(null);
-  const [justCopied, setJustCopied] = useState<LogoColorKey | null>(null);
 
   const [loaded, setLoaded] = useState<Partial<Record<DesignId, LoadedDesign>>>({});
   const requestedRef = useRef<Set<DesignId>>(new Set());
@@ -619,9 +618,10 @@ export default function AdminLogoStudio() {
   const copyColor = (key: LogoColorKey) => {
     const hex = colors[key];
     setCopiedColor(hex);
-    setJustCopied(key);
-    window.setTimeout(() => setJustCopied(k => (k === key ? null : k)), 1500);
-    void navigator.clipboard?.writeText(hex).catch(() => {});
+    navigator.clipboard?.writeText(hex).then(
+      () => toast.success(`${hex.toUpperCase()} copied.`),
+      () => toast.error("Couldn't copy the colour code."),
+    );
   };
 
   const pasteColor = (key: LogoColorKey) => {
@@ -726,7 +726,7 @@ export default function AdminLogoStudio() {
       canvas.toBlob(
         blob => {
           if (!blob) {
-            alert('Could not create the image. Please try again.');
+            toast.error('Could not create the image. Please try again.');
             return;
           }
           saveBlob(blob, fileName);
@@ -736,7 +736,7 @@ export default function AdminLogoStudio() {
       );
     } catch (err) {
       console.error(err);
-      alert('Could not create the file. Please try again.');
+      toast.error('Could not create the file. Please try again.');
     }
   };
 
@@ -887,11 +887,7 @@ export default function AdminLogoStudio() {
                           title="Copy colour code"
                           className="inline-flex h-5 w-5 items-center justify-center rounded border border-background-warm text-dark hover:bg-background-warm transition-colors"
                         >
-                          {justCopied === f.key ? (
-                            <Check size={11} className="text-primary" aria-hidden="true" />
-                          ) : (
-                            <Copy size={11} aria-hidden="true" />
-                          )}
+                          <Copy size={11} aria-hidden="true" />
                         </button>
                         <button
                           type="button"

@@ -5,7 +5,7 @@ import CancellationPolicyDisplay from '../../components/ui/CancellationPolicyDis
 import TermsBlocks from '../../components/ui/TermsBlocks';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
 import { parseTerms } from '../../utils/parseTerms';
-import { formatDate, formatAgeRange, formatPrice } from '../../utils/utils-index';
+import { formatDate, formatAgeRange, formatPrice, formatDuration } from '../../utils/utils-index';
 import { computeTripFinanceSummary } from '../../utils/tripFinance';
 import TripFinanceBreakdown from './TripFinanceBreakdown';
 import type { TripRevenue } from './useTripFinanceData';
@@ -60,7 +60,7 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
               </div>
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-0.5">Duration</p>
-                <p className="text-dark">{trip.duration}</p>
+                <p className="text-dark">{formatDuration(trip.duration)}</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-0.5">Age Range</p>

@@ -17,6 +17,7 @@ import {
 import { STORAGE_BUCKET } from '../constants/storage';
 import { useConfirm } from '../components/ui/useConfirm';
 import { useAlert } from '../components/ui/useAlert';
+import { useToast } from '../components/ui/useToast';
 
 // Admin → Branding: upload/replace the site's logos and icons. Each slot is
 // stored in the `branding` site_content row (see hooks/useBranding.ts);
@@ -114,6 +115,7 @@ function BrandAssetField({
   onUploaded: (url: string) => void;
 }) {
   const alert = useAlert();
+  const toast = useToast();
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputId = `branding-${config.slot}`;
@@ -141,7 +143,7 @@ function BrandAssetField({
       onUploaded(url);
       onChange(url);
     } catch {
-      alert(`Failed to upload. Make sure the Supabase storage bucket "${BUCKET}" exists and is public.`);
+      toast.error(`Failed to upload. Make sure the Supabase storage bucket "${BUCKET}" exists and is public.`);
     } finally {
       setUploading(false);
     }
@@ -198,12 +200,11 @@ function BrandAssetField({
 }
 
 export default function AdminBranding() {
-  const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
   const [draft, setDraft] = useState<BrandingContent>({ ...EMPTY_BRANDING });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   // What's actually in the database right now, and every file uploaded in
   // this editing session — used on save/discard to delete files that ended
@@ -236,7 +237,6 @@ export default function AdminBranding() {
   const hasUnsavedChanges = () => JSON.stringify(draft) !== JSON.stringify(savedRef.current);
 
   const setSlot = (slot: BrandingSlot, url: string) => {
-    setSaved(false);
     setDraft(d => ({ ...d, [slot]: url }));
   };
 
@@ -252,6 +252,10 @@ export default function AdminBranding() {
   };
 
   const handleSave = async () => {
+    if (!hasUnsavedChanges()) {
+      toast.info('No changes to save.');
+      return;
+    }
     try {
       setSaving(true);
       // Someone may have saved branding since this page was opened; check before overwriting.
@@ -264,10 +268,9 @@ export default function AdminBranding() {
       await cleanupUnused(draft, savedRef.current);
       savedRef.current = { ...draft };
       setDraftBase(stableStringify(draft));
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 3000);
+      toast.success('Branding saved.');
     } catch {
-      alert('Failed to save branding. Please try again.');
+      toast.error("Couldn't save the branding.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
       setSaving(false);
     }
@@ -277,7 +280,6 @@ export default function AdminBranding() {
     if (hasUnsavedChanges() && !(await confirm('Discard your unsaved changes?'))) return;
     await cleanupUnused(savedRef.current, draft);
     setDraft({ ...savedRef.current });
-    setSaved(false);
   };
 
   if (loading) {
@@ -342,7 +344,6 @@ export default function AdminBranding() {
         <AdminEditorFooter
           onSave={handleSave}
           saving={saving}
-          saved={saved}
           onSecondaryAction={handleDiscard}
           secondaryLabel="Discard Changes"
           secondaryLabelMobile="Discard"

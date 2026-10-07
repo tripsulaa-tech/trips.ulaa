@@ -23,7 +23,9 @@ export function formatPrice(amount: number): string {
  *      before. Named occasion sale (e.g. "Diwali Dhamaka"), takes
  *      priority over early-bird since it's the more urgent/intentional
  *      of the two.
- *   2. early_bird — applies up to and including the deadline date.
+ *   2. early_bird — applies up to and including the deadline date. If the
+ *      trip is SEAT-limited (earlyBirdSeats set) the deadline is ignored and
+ *      it applies while paid early-bird seats are still free.
  *   3. regular price — the fallback once neither above is active.
  */
 export function getActivePrice(
@@ -32,8 +34,10 @@ export function getActivePrice(
   earlyBirdDeadline?: string | null,
   specialOfferPrice?: number | null,
   specialOfferDate?: string | null,
-  specialOfferEndDate?: string | null
-): { activePrice?: number; isEarlyBird: boolean; deadlinePassed: boolean; isSpecialOffer: boolean } {
+  specialOfferEndDate?: string | null,
+  earlyBirdSeats?: number | null,
+  earlyBirdSeatsTaken?: number | null
+): { activePrice?: number; isEarlyBird: boolean; deadlinePassed: boolean; isSpecialOffer: boolean; earlyBirdSeatsLeft: number | null } {
   if (specialOfferPrice && specialOfferDate) {
     const todayLocal = new Date();
     const todayStr = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth() + 1).padStart(2, '0')}-${String(todayLocal.getDate()).padStart(2, '0')}`;
@@ -42,19 +46,76 @@ export function getActivePrice(
     // offer, same behaviour as before this field existed.
     const rangeEnd = specialOfferEndDate || specialOfferDate;
     if (todayStr >= specialOfferDate && todayStr <= rangeEnd) {
-      return { activePrice: specialOfferPrice, isEarlyBird: false, deadlinePassed: false, isSpecialOffer: true };
+      return { activePrice: specialOfferPrice, isEarlyBird: false, deadlinePassed: false, isSpecialOffer: true, earlyBirdSeatsLeft: null };
     }
+  }
+  // Seat-limited early bird: the deadline is ignored, only seats decide.
+  // Seats are used by PAID bookings (see add_early_bird_seat_limit.sql).
+  const seatsLeft = earlyBirdSeatsLeft({ early_bird_price: earlyBirdPrice, early_bird_seats: earlyBirdSeats, early_bird_seats_taken: earlyBirdSeatsTaken });
+  if (seatsLeft !== null) {
+    if (seatsLeft > 0) {
+      return { activePrice: earlyBirdPrice as number, isEarlyBird: true, deadlinePassed: false, isSpecialOffer: false, earlyBirdSeatsLeft: seatsLeft };
+    }
+    // All early-bird seats are taken: plain regular price, no early-bird messaging.
+    return { activePrice: price, isEarlyBird: false, deadlinePassed: false, isSpecialOffer: false, earlyBirdSeatsLeft: 0 };
   }
   if (earlyBirdPrice && earlyBirdDeadline) {
     const deadline = new Date(earlyBirdDeadline);
     deadline.setHours(23, 59, 59, 999);
     const isActive = new Date() <= deadline;
     if (isActive) {
-      return { activePrice: earlyBirdPrice, isEarlyBird: true, deadlinePassed: false, isSpecialOffer: false };
+      return { activePrice: earlyBirdPrice, isEarlyBird: true, deadlinePassed: false, isSpecialOffer: false, earlyBirdSeatsLeft: null };
     }
-    return { activePrice: price, isEarlyBird: false, deadlinePassed: true, isSpecialOffer: false };
+    return { activePrice: price, isEarlyBird: false, deadlinePassed: true, isSpecialOffer: false, earlyBirdSeatsLeft: null };
   }
-  return { activePrice: price, isEarlyBird: false, deadlinePassed: false, isSpecialOffer: false };
+  return { activePrice: price, isEarlyBird: false, deadlinePassed: false, isSpecialOffer: false, earlyBirdSeatsLeft: null };
+}
+
+/**
+ * Early-bird seats still free on a seat-limited trip, or null when the trip
+ * is not seat-limited (no seat limit, or no early-bird price to give).
+ * 0 means every early-bird seat is taken.
+ */
+export function earlyBirdSeatsLeft(trip: {
+  early_bird_price?: number | null;
+  early_bird_seats?: number | null;
+  early_bird_seats_taken?: number | null;
+}): number | null {
+  if (!trip.early_bird_price || !trip.early_bird_seats || trip.early_bird_seats <= 0) return null;
+  return Math.max(0, trip.early_bird_seats - (trip.early_bird_seats_taken || 0));
+}
+
+/**
+ * "3 of 5 early-bird seats left · first come, first served" for a seat-limited early bird that still has
+ * seats, otherwise null (not seat-limited, or sold out).
+ */
+export function earlyBirdSeatsLabel(trip: {
+  early_bird_price?: number | null;
+  early_bird_seats?: number | null;
+  early_bird_seats_taken?: number | null;
+}): string | null {
+  const left = earlyBirdSeatsLeft(trip);
+  if (left === null || left <= 0 || !trip.early_bird_seats) return null;
+  return `${left} of ${trip.early_bird_seats} early-bird ${left === 1 ? 'seat' : 'seats'} left · first come, first served`;
+}
+
+/**
+ * Friendly rule for a seat-limited early bird, e.g. "Lock in ₹1,799 — it's only
+ * for the first 5 travellers. Pay your ₹499 advance to confirm your seat."
+ * Null when there are no early-bird seats left to talk about.
+ */
+export function earlyBirdRuleNote(
+  trip: {
+    early_bird_price?: number | null;
+    early_bird_seats?: number | null;
+    early_bird_seats_taken?: number | null;
+  },
+  earlyPrice: number | null | undefined,
+  advance?: number | null,
+): string | null {
+  if (earlyBirdSeatsLabel(trip) === null || earlyPrice == null) return null;
+  const advanceText = advance && advance > 0 ? `your ${formatPrice(advance)} advance` : 'your advance';
+  return `Lock in ${formatPrice(earlyPrice)} — it's only for the first ${trip.early_bird_seats} travellers. Pay ${advanceText} to confirm your seat.`;
 }
 
 /** Format a date string to a readable format */
@@ -116,6 +177,10 @@ export function getStrikeThroughPrice(
 export function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
   const e = new Date(end);
+  // One-day trip: just the single date, not "31 - 31 Oct 2026".
+  if (start === end || (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth() && s.getDate() === e.getDate())) {
+    return s.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
   const sameMonth = s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth();
   if (sameMonth) {
     const startDay = s.toLocaleDateString('en-IN', { day: 'numeric' });
@@ -125,6 +190,13 @@ export function formatDateRange(start: string, end: string): string {
   const startStr = s.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   const endStr = e.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   return `${startStr} – ${endStr}`;
+}
+
+/** Display form of a trip's stored duration string: a one-day trip has no
+ *  nights, so "1 Day / 0 Nights" reads just "1 Day". Other values unchanged. */
+export function formatDuration(duration?: string | null): string {
+  if (!duration) return '';
+  return duration.replace(/\s*[/•·|,-]\s*0\s*nights?\b/i, '').trim();
 }
 
 /**

@@ -6,6 +6,7 @@ import {
 import type { CancellationReason, Enquiry, UpcomingTrip } from '../../types/types-index';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { formatPrice } from '../../utils/utils-index';
 
@@ -39,6 +40,7 @@ export function useEnquiryLifecycle(params: {
 }) {
   const { load, setTrips, setUpdating, setPaymentTarget, setPaymentForm, setDetailsTarget } = params;
   const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
 
   const [cancelTarget, setCancelTarget] = useState<Enquiry | null>(null);
@@ -122,7 +124,7 @@ export function useEnquiryLifecycle(params: {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to update no-show status.');
+      toast.error('Failed to update no-show status.');
     } finally {
       setTogglingNoShow(false);
     }
@@ -148,7 +150,7 @@ export function useEnquiryLifecycle(params: {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to delete enquiry.');
+      toast.error('Failed to delete enquiry.');
     } finally {
       setUpdating(null);
     }

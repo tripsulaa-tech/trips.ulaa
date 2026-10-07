@@ -34,6 +34,10 @@ export interface TripForm {
   price: number | '';
   early_bird_price: number | '';
   early_bird_deadline: string;
+  // Seat-limited early bird: the first N PAID seats get early_bird_price and
+  // the deadline is ignored. '' = not seat-limited (deadline-based, as
+  // before) — see add_early_bird_seat_limit.sql.
+  early_bird_seats: number | '';
   strike_through_price: number | '';
   // Optional advance/reservation amount (₹) shown on the public trip page's
   // booking panel instead of the "Seats available" badge. '' means "not
@@ -103,7 +107,7 @@ export const emptyForm: TripForm = {
   meeting_point: '', meeting_point_map_url: '',
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
   min_age: '', max_age: '', price: '',
-  early_bird_price: '', early_bird_deadline: '', strike_through_price: '', advance_amount: '',
+  early_bird_price: '', early_bird_deadline: '', early_bird_seats: '', strike_through_price: '', advance_amount: '',
   special_offer_name: '', special_offer_price: '', special_offer_date: '', special_offer_end_date: '',
   card_feature_tags: [], trip_type: '',
   cover_image: '', cover_image_crop: null, hero_mobile_image: '', terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
@@ -130,5 +134,7 @@ export const computeDuration = (startDate: string, endDate: string): string => {
   const nights = Math.round((end.getTime() - start.getTime()) / msPerDay);
   if (nights < 0) return '';
   const days = nights + 1;
+  // One-day trip: no nights to mention.
+  if (nights === 0) return '1 Day';
   return `${days} Day${days !== 1 ? 's' : ''} / ${nights} Night${nights !== 1 ? 's' : ''}`;
 };

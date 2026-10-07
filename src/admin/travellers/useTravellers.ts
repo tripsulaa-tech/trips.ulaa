@@ -6,6 +6,7 @@ import { findMergeConflicts } from './travellerMerge';
 import type { TravellerContact } from './travellerContacts';
 import type { TravellerEditForm } from './AdminEditTravellerModal';
 import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity } from '../../utils/formValidation';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
@@ -40,6 +41,7 @@ export function useTravellers() {
   const [repeatOnly, setRepeatOnly] = useState(persisted.repeatOnly ?? false);
   const [page, setPage] = useState(persisted.page ?? 1);
   const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
 
   // Edit Traveller modal — see AdminEditTravellerModal.tsx. A contact isn't
@@ -235,7 +237,7 @@ export function useTravellers() {
       load();
     } catch (err) {
       console.error(err);
-      await alert('Failed to delete traveller.');
+      toast.error('Failed to delete traveller.');
     } finally {
       setDeletingKey(null);
     }

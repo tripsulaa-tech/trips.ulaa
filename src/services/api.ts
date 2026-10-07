@@ -16,6 +16,7 @@ export {
   syncStartedTripAlbums,
   getUpcomingTrips,
   getUpcomingTripBySlug,
+  getUpcomingTripByIdAdmin,
   getAllUpcomingTripsAdmin,
   createUpcomingTrip,
   updateUpcomingTrip,

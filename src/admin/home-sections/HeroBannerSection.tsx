@@ -17,7 +17,7 @@ import { DEFAULT_HOME_HERO } from '../../constants/home-hero';
 import type { HomeHeroContent, HomeHeroSlide } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { STORAGE_BUCKET } from '../../constants/storage';
-import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 
 
 export default function HeroBannerSection({
@@ -29,7 +29,7 @@ export default function HeroBannerSection({
   setContent: React.Dispatch<React.SetStateAction<HomeHeroContent>>;
   sectionRef: (el: HTMLDivElement | null) => void;
 }) {
-  const alert = useAlert();
+  const toast = useToast();
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -56,7 +56,7 @@ export default function HeroBannerSection({
       }
       setContent(c => ({ ...c, slides: [...c.slides, ...newSlides] }));
     } catch {
-      alert('Failed to upload one or more photos. Please try again.');
+      toast.error('Failed to upload one or more photos. Please try again.');
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';

@@ -7,14 +7,14 @@ import {
   CalendarPlus,
   ShareNetwork as Share2,
   Timer,
-  Bird,
+  Fire,
   Sparkle,
   CaretRight,
   Gift,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, getActivePrice, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft, formatDuration } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
 import { hasPackages, withBasicPricing } from '../../utils/tripOptions';
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
@@ -140,7 +140,8 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   // Premium etc. are picked on the trip page / booking form.
   const priced = withBasicPricing(trip);
   const basicPackageName = hasPackages(trip.trip_options) ? trip.trip_options.packages[0].name : null;
-  const { activePrice, isEarlyBird, isSpecialOffer } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date);
+  const { activePrice, isEarlyBird, isSpecialOffer } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date, priced.early_bird_seats, priced.early_bird_seats_taken);
+  const earlySeatsLabel = isEarlyBird ? earlyBirdSeatsLabel(priced) : null;
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, priced.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
   // Save = strikeThroughPrice - activePrice (marketing "was ₹X" price vs
   // what they pay). PLUS OFFER = trip.price - activePrice (actual regular
@@ -176,7 +177,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   const fallbackFeatureTags: TripCardFeatureTag[] = [
     { icon: 'users', label: isFull ? 'Full' : isAlmostFull ? `${remaining} left` : `${trip.total_seats}`, sublabel: 'Travelers' },
     { icon: 'user-check', label: formatAgeRange(trip.min_age, trip.max_age), sublabel: 'Age range' },
-    { icon: 'clock', label: trip.duration, sublabel: 'Duration' },
+    { icon: 'clock', label: formatDuration(trip.duration), sublabel: 'Duration' },
     { icon: 'map-pin', label: String(destinationCount), sublabel: destinationCount === 1 ? 'Place' : 'Places' },
   ];
   const featureTags = trip.card_feature_tags && trip.card_feature_tags.length > 0
@@ -233,8 +234,8 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               {trip.special_offer_name}
             </span>
           ) : isEarlyBird && (
-            <span className="early-bird-badge-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">
-              <Bird size={14} weight="fill" />
+            <span className="offer-gradient-shift inline-flex items-center gap-1.5 text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm-lg ring-1 ring-inset ring-white/15">
+              <Fire size={14} weight="fill" className="text-yellow-300" />
               Early Bird
             </span>
           )}
@@ -296,7 +297,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             <span className="text-background-warm">|</span>
             <div className="flex items-center gap-1.5 whitespace-nowrap">
               <Clock size={13} className="text-primary shrink-0" />
-              <span>{trip.duration}</span>
+              <span>{formatDuration(trip.duration)}</span>
             </div>
           </div>
 
@@ -409,7 +410,14 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 )}
               </p>
             </div>
-          ) : isEarlyBird && trip.early_bird_deadline && (
+          ) : isEarlyBird && (earlySeatsLabel ? (
+            <div className="offer-gradient-shift flex items-center gap-1.5 rounded-lg px-3 py-2 mb-5 shadow-warm-lg ring-1 ring-inset ring-white/15">
+              <Timer size={14} className="text-white shrink-0" />
+              <p className="text-white text-2xs leading-tight font-bold">
+                {earlySeatsLabel}
+              </p>
+            </div>
+          ) : trip.early_bird_deadline && (
             <div className="offer-gradient-shift flex items-center gap-1.5 rounded-lg px-3 py-2 mb-5 shadow-warm-lg ring-1 ring-inset ring-white/15">
               <Timer size={14} className="text-white shrink-0" />
               <p className="text-white text-2xs leading-tight">
@@ -420,7 +428,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 ({formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })})
               </p>
             </div>
-          )}
+          ))}
         </div>
 
         <Link to={`/trips/${trip.slug}`}>

@@ -7,7 +7,7 @@ import {
   LinkSimple as Link2,
 } from '@phosphor-icons/react';
 import { uploadImage, uploadImageFromUrl, deleteImageByUrl } from '../../services/api';
-import { useAlert } from './useAlert';
+import { useToast } from './useToast';
 
 interface MultiImageUploadFieldProps {
   label: string;
@@ -33,7 +33,7 @@ interface MultiImageUploadFieldProps {
 }
 
 export default function MultiImageUploadField({ label, value, onChange, bucket, pathPrefix, hint, children, allowUrl }: MultiImageUploadFieldProps) {
-  const alert = useAlert();
+  const toast = useToast();
   const [uploading, setUploading] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlDraft, setUrlDraft] = useState('');
@@ -52,7 +52,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
       }
       onChange([...value, ...uploaded]);
     } catch {
-      alert(`Failed to upload. Make sure the Supabase storage bucket "${bucket}" exists and is public.`);
+      toast.error(`Failed to upload. Make sure the Supabase storage bucket "${bucket}" exists and is public.`);
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -96,7 +96,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
       // image bytes — fall back to using the URL as-is so the admin can
       // still add it, just without the storage/perf benefit.
       onChange([...value, trimmed]);
-      alert("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead — it may load slower for visitors.");
+      toast.error("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead — it may load slower for visitors.");
     } finally {
       setUploading(false);
     }

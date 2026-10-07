@@ -3,7 +3,7 @@ import { updateEnquiryStatus, setEnquiryFollowUp, setBookingFollowUp, recordCont
 import type { ClosedReason, Enquiry } from '../../types/types-index';
 import type { ContactOutcomeResult } from './AdminContactOutcomeModal';
 import type { BookingFollowUpResult } from './AdminEnquiryFollowUpModal';
-import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 
 /** Owns every small "row status transition" handler that isn't big enough
  *  to warrant its own hook: recording a contact outcome (New/Contacted ->
@@ -28,7 +28,7 @@ export function useEnquiryStatusActions(params: {
   handleMarkCompleted: (enquiry: Enquiry) => void;
 }) {
   const { load, setUpdating, openPayment, handleCheckIn, handleMarkCompleted } = params;
-  const alert = useAlert();
+  const toast = useToast();
 
   // ---- Record Contact Outcome (New -> Contacted, and re-logging the next
   // call while still Contacted) --------------------------------------------
@@ -61,7 +61,7 @@ export function useEnquiryStatusActions(params: {
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to record contact outcome.');
+      toast.error('Failed to record contact outcome.');
     } finally {
       setSavingContactOutcome(false);
     }
@@ -110,7 +110,7 @@ export function useEnquiryStatusActions(params: {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to update status.');
+      toast.error('Failed to update status.');
     } finally {
       setUpdating(null);
     }
@@ -138,7 +138,7 @@ export function useEnquiryStatusActions(params: {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to set follow-up date.');
+      toast.error('Failed to set follow-up date.');
     } finally {
       setUpdating(null);
     }
@@ -150,7 +150,7 @@ export function useEnquiryStatusActions(params: {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to clear follow-up date.');
+      toast.error('Failed to clear follow-up date.');
     } finally {
       setUpdating(null);
     }
@@ -171,7 +171,7 @@ export function useEnquiryStatusActions(params: {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to set booking follow-up.');
+      toast.error('Failed to set booking follow-up.');
     } finally {
       setUpdating(null);
     }
@@ -183,7 +183,7 @@ export function useEnquiryStatusActions(params: {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to clear booking follow-up.');
+      toast.error('Failed to clear booking follow-up.');
     } finally {
       setUpdating(null);
     }
@@ -196,7 +196,7 @@ export function useEnquiryStatusActions(params: {
       load();
     } catch (err) {
       console.error(err);
-      alert('Failed to reopen enquiry.');
+      toast.error('Failed to reopen enquiry.');
     } finally {
       setUpdating(null);
     }

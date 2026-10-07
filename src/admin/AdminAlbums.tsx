@@ -26,6 +26,7 @@ import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '..
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { STORAGE_BUCKET } from '../constants/storage';
 import { useAlert } from '../components/ui/useAlert';
+import { useToast } from '../components/ui/useToast';
 
 interface AlbumForm {
   title: string;
@@ -74,6 +75,7 @@ function findDuplicateAlbum(form: AlbumForm, albums: CompletedTrip[], editingId:
 
 export default function AdminAlbums() {
   const alert = useAlert();
+  const toast = useToast();
   const confirm = useConfirm();
   const [albums, setAlbums] = useState<CompletedTrip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +215,7 @@ export default function AdminAlbums() {
       setModalOpen(false);
       settleDraft(ALBUM_DRAFT_KEY, collectAlbumFormUrls(form));
       load();
-    } catch { alert('Failed to save. Please check your connection and try again.'); }
+    } catch { toast.error("Couldn't save the album. Check your connection.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } }); }
     finally { setSaving(false); }
   };
 

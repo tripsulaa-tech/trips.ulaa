@@ -48,7 +48,6 @@ export default function AdminAbout() {
     setContent,
     loading,
     saving,
-    saved,
     activeSection,
     setSectionRef,
     tabBarRef,
@@ -219,7 +218,6 @@ export default function AdminAbout() {
       bodyClassName="p-4 sm:p-6 space-y-8 sm:space-y-10"
       onSave={handleSave}
       saving={saving}
-      saved={saved}
       onSecondaryAction={resetToDefault}
       notice={draftOnHold ? <DraftConflictNotice subject="the About page" onRestore={restoreHeldDraft} onDiscard={discardHeldDraft} /> : undefined}
     >

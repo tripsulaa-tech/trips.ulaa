@@ -192,6 +192,9 @@ export default function AppRouter() {
             <Route path="/admin/trips" element={
               <ProtectedRoute><AdminTrips /></ProtectedRoute>
             } />
+            <Route path="/admin/trips/:id/preview" element={
+              <ProtectedRoute><TripDetailPage /></ProtectedRoute>
+            } />
             <Route path="/admin/albums" element={
               <ProtectedRoute><AdminAlbums /></ProtectedRoute>
             } />

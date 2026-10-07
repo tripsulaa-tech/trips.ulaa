@@ -3,6 +3,7 @@ import {
   createUpcomingTrip, updateUpcomingTrip, getAllTripLeadersAdmin, deleteImageByUrl,
 } from '../../services/api';
 import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 import type { UpcomingTrip, TripLeader } from '../../types/types-index';
 import { slugify } from '../../utils/utils-index';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
@@ -48,6 +49,7 @@ function tripToForm(trip: UpcomingTrip): TripForm {
     min_age: trip.min_age ?? '', max_age: trip.max_age ?? '',
     price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
     early_bird_deadline: trip.early_bird_deadline || '',
+    early_bird_seats: trip.early_bird_seats ?? '',
     strike_through_price: trip.strike_through_price ?? '',
     advance_amount: trip.advance_amount ?? '',
     special_offer_name: trip.special_offer_name || '',
@@ -91,6 +93,7 @@ const TRIP_DRAFT_KEY = 'trip-form';
  *  Trips table (owned by useTripsData) reflects the change. */
 export function useTripFormModal(load: () => void) {
   const alert = useAlert();
+  const toast = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSearch, setModalSearch] = useState('');
   const [modalSearchNoMatch, setModalSearchNoMatch] = useState(false);
@@ -367,6 +370,7 @@ export function useTripFormModal(load: () => void) {
         price: form.price,
         early_bird_price: form.early_bird_price === '' ? null : form.early_bird_price,
         early_bird_deadline: form.early_bird_deadline || null,
+        early_bird_seats: form.early_bird_seats === '' || form.early_bird_seats <= 0 ? null : Math.floor(form.early_bird_seats),
         strike_through_price: form.strike_through_price === '' ? null : form.strike_through_price,
         advance_amount: form.advance_amount === '' ? null : form.advance_amount,
         special_offer_name: form.special_offer_name === '' ? null : form.special_offer_name,
@@ -394,7 +398,7 @@ export function useTripFormModal(load: () => void) {
       settleDraft(TRIP_DRAFT_KEY, collectTripFormUrls(form));
       load();
     } catch {
-      alert('Failed to save trip.');
+      toast.error("Couldn't save the trip.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
       setSaving(false);
     }

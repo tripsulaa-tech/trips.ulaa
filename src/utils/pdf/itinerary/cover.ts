@@ -3,7 +3,7 @@ import type { PdfTrip } from './shared';
 import { BRAND, PAGE_W, PAGE_H, MARGIN, CONTENT_W, COLORS, money, loadCoverCroppedImage } from './shared';
 import { sanitizeForPdf } from '../../pdfText';
 import { loadContainImage } from '../../pdfImageLoading';
-import { formatDateRange, formatAgeRange, getActivePrice } from '../../utils-index';
+import { formatDateRange, formatAgeRange, getActivePrice, formatDuration } from '../../utils-index';
 import { withBasicPricing } from '../../tripOptions';
 
 /** Renders the "Cover" slide — trip hero photo, title, meta pills, and
@@ -97,10 +97,10 @@ export async function renderCover(ctx: PdfCtx, trip: PdfTrip): Promise<void> {
     // (long destinations/durations, or an early-bird pill, can push it over).
     // Basic (first package) price when the trip has packages.
     const priced = withBasicPricing(trip);
-    const { activePrice, isEarlyBird } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date);
+    const { activePrice, isEarlyBird } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date, priced.early_bird_seats, priced.early_bird_seats_taken);
     const metaParts = [
       formatDateRange(trip.start_date, trip.end_date),
-      trip.duration,
+      formatDuration(trip.duration),
       trip.total_seats ? `${trip.total_seats} Travelers` : '',
       formatAgeRange(trip.min_age, trip.max_age),
       isEarlyBird && activePrice ? `Early Bird ${money(activePrice)}` : '',

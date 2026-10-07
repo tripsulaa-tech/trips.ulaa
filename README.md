@@ -41,6 +41,21 @@ ULAA/
 
 ---
 
+## Notifications (toast vs dialog)
+
+One shared system, mounted once in `src/App.tsx`:
+
+- **`useToast()`** (`src/components/ui/useToast.ts`) for anything that worked or is just FYI: "saved", "copied", "email sent". Non-blocking, bottom-centre, closes itself after 4s (6s for errors), pauses on hover/focus.
+  ```tsx
+  const toast = useToast();
+  toast.success('Invoice saved.');
+  toast.info('Refresh whenever you\'re ready.', { title: 'New version', duration: 0, action: { label: 'Refresh now', onClick: () => location.reload() } });
+  ```
+- **`useAlert()`** (`AlertDialog`) only for errors and validation messages the person must read and acknowledge before carrying on.
+- Change the look, position or timing in `src/components/ui/ToastProvider.tsx` and it updates everywhere. Don't build a local toast or call `alert()`; ESLint flags both.
+
+---
+
 ## Public Pages
 
 - **Home** — Hero section, trust badges (Girls Only / Verified Organizers / Hidden Destinations / Small Groups / Local Experiences), upcoming trips preview, gallery preview, testimonials, "What's Coming" section

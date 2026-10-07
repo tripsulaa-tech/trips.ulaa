@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Users,
   Bell,
@@ -25,6 +24,7 @@ import AdminWaitlistFilterBar from './waitlist/AdminWaitlistFilterBar';
 import AdminWaitlistDesktopTable from './waitlist/AdminWaitlistDesktopTable';
 import AdminWaitlistMobileCards from './waitlist/AdminWaitlistMobileCards';
 import { hasSeatOpen } from './waitlist/waitlistShared';
+import { useToast } from '../components/ui/useToast';
 
 /** The Waitlist admin page — everyone who signed up to be notified when a
  *  sold-out trip frees a seat.
@@ -46,13 +46,8 @@ export default function AdminWaitlist() {
 
   const { ref: tableScrollRef, isDragging, handlers: dragHandlers } = useDragScroll<HTMLDivElement>();
 
-  const [toast, setToast] = useState<string | null>(null);
-  const showToast = (message: string) => setToast(message);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  const toast = useToast();
+  const showToast = (message: string) => toast.success(message);
 
   const addModal = useAddWaitlistModal(allTrips, load, showToast);
 
@@ -191,21 +186,6 @@ export default function AdminWaitlist() {
         allTrips={allTrips}
         onSave={addModal.handleSave}
       />
-
-      {/* Lightweight success toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-dark text-white text-sm font-medium px-4 py-2.5 rounded-md shadow-warm-lg"
-          >
-            <CheckCircle2 size={16} className="text-green-400 shrink-0" aria-hidden="true" />
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </AdminLayout>
   );
 }
