@@ -62,12 +62,14 @@ export default function TripBookingModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta}
-      size="lg"
+      ariaLabel={isFull ? buttonLabels.waitlistCta : buttonLabels.primaryCta}
+      size="xl"
+      flush
     >
       <BookingForm
         tripId={trip.id}
         tripTitle={trip.title}
+        tripDate={trip.start_date}
         terms={trip.terms_and_conditions}
         remainingSeats={remaining}
         minAge={trip.min_age}

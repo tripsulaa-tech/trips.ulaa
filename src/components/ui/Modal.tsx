@@ -43,6 +43,9 @@ interface ModalProps {
    *  children can bleed edge-to-edge (e.g. a full-width hero band). Defaults
    *  to false, so every existing modal is unchanged. */
   flush?: boolean;
+  /** Accessible name for the dialog when no `title` is shown (e.g. a modal
+   *  whose content draws its own heading). Ignored when `title` is set. */
+  ariaLabel?: string;
 }
 
 const sizes = {
@@ -53,7 +56,7 @@ const sizes = {
   '2xl': 'max-w-5xl',
 };
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent, bodyRef, mobileFullScreen = false, compactHeader = false, flush = false }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent, bodyRef, mobileFullScreen = false, compactHeader = false, flush = false, ariaLabel }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -106,6 +109,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
             role="dialog"
             aria-modal="true"
             aria-labelledby={title ? titleId : undefined}
+            aria-label={!title ? ariaLabel : undefined}
             tabIndex={-1}
             initial={{ scale: 0.92, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}

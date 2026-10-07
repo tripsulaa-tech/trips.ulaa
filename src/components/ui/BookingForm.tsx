@@ -8,6 +8,10 @@ import {
   User,
   Users,
   Clock as Clock3,
+  AirplaneTilt,
+  CalendarBlank,
+  Scissors,
+  ArrowRight,
 } from '@phosphor-icons/react';
 import type { BookingFormData, BookingMode, BookingFormDraft, WaitlistFormData, TripOptionsConfig } from '../../types/types-index';
 import { submitEnquiry, submitGroupEnquiry, submitWaitlist, getTripSeatSnapshot } from '../../services/api';
@@ -29,6 +33,7 @@ import { hasPackages, packageOptionIds, seatPackageAssignments, noPackageBase, t
 import KeyboardNavSuggestionDropdown from './KeyboardNavSuggestionDropdown';
 import { handleSuggestionKeyDown } from './suggestionKeyNav';
 import { CONTACT_PHONE_DISPLAY } from '../../constants/site';
+import { formatDate } from '../../utils/utils-index';
 
 // How many rows to show at once in the City / Email-domain suggestion
 // dropdowns — enough to be useful without the list itself needing to
@@ -78,9 +83,30 @@ interface BookingFormProps {
   // page). Wins over a restored draft's package, since it's the most
   // recent thing the visitor chose.
   initialPackageId?: string | null;
+  // Trip start date, shown on the boarding-pass stub. Optional — the date
+  // row and the barcode caption simply drop it when it isn't passed.
+  tripDate?: string | null;
 }
 
-export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge, initialDraft, onDraftChange, tripOptions, packageBase, initialPackageId }: BookingFormProps) {
+// Deterministic pseudo-barcode: the same trip always prints the same bars,
+// so the ticket looks "issued" for that trip rather than random per open.
+function barcodeBars(seed: string): { x: number; w: number }[] {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const bars: { x: number; w: number }[] = [];
+  let x = 0;
+  while (x < 200) {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
+    const w = 1 + (h % 3);
+    const gap = 1 + ((h >>> 5) % 3);
+    if (x + w > 200) break;
+    bars.push({ x, w });
+    x += w + gap;
+  }
+  return bars;
+}
+
+export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge, initialDraft, onDraftChange, tripOptions, packageBase, initialPackageId, tripDate }: BookingFormProps) {
   // Shared id prefix so every label/input pair below has a stable,
   // unique-per-instance id — needed for htmlFor/aria-describedby wiring,
   // and unique in case this form is ever mounted more than once at a time.
@@ -515,7 +541,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         animate={{ opacity: 1, scale: 1 }}
         role="status"
         aria-live="polite"
-        className="text-center py-12"
+        className="text-center py-12 px-6 bg-cream"
       >
         <CheckCircle size={64} className="text-green-500 mx-auto mb-4" aria-hidden="true" />
         <h3 className="font-display text-2xl font-bold text-dark mb-2">
@@ -539,11 +565,11 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   }
 
   const inputClass = `
-    w-full min-w-0 px-3 sm:px-4 py-3 rounded-lg border-2 bg-background
+    w-full min-w-0 px-3 sm:px-4 py-3 rounded-md border-2 bg-white/70
     font-body text-dark placeholder-dark-muted/50
     transition-all duration-200 outline-none
     focus:border-primary focus:bg-white
-    border-background-warm
+    border-[#E6D8BE]
   `;
 
   const errorClass = 'text-red-500 text-xs mt-1';
@@ -594,61 +620,87 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   const emailReg = register('email', { required: 'Email is required', validate: validateEmail });
   const cityReg = register('city', { required: 'City is required', validate: validateCity });
 
+  const tripDateShort = tripDate ? formatDate(tripDate, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+  const bars = barcodeBars(tripId ?? tripTitle ?? 'ulaa');
+  const barcodeCaption = `ULAA${tripDate ? ` · ${formatDate(tripDate, { day: 'numeric', month: 'short', year: undefined }).toUpperCase()}` : ''}`;
+
   return (
     <>
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 md:grid-cols-[17rem_1fr] bg-cream">
       <HoneypotField inputRef={honeypotRef} />
-      {tripTitle && (
-        <div className="bg-background-warm rounded-lg px-4 py-3 mb-2">
-          <p className="text-sm text-dark-muted">
-            Booking for: <span className="font-semibold text-dark">{tripTitle}</span>
-          </p>
-        </div>
-      )}
 
-      {/* Solo vs Group booking — shares a row with Number of People on
-          tablet/desktop when Group is picked; stacks on phones. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 items-start">
-      <div className={bookingMode === 'group' ? '' : 'sm:col-span-2'}>
-        <label id={ids.bookingType} className="block text-sm font-medium text-dark mb-1">Booking Type</label>
-        <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby={ids.bookingType}>
+      {/* ── Ticket stub (left on desktop, top on phones) ── */}
+      <aside className="relative flex flex-col gap-3.5 md:gap-5 p-4 md:p-6 bg-[#F3E3BF] border-b-2 border-dashed border-[#D2B986] md:border-b-0 md:border-r-2">
+        <Scissors
+          size={18}
+          aria-hidden="true"
+          className="absolute z-10 text-dark-muted bg-cream rounded-full p-0.5 -bottom-[11px] left-6 md:bottom-auto md:left-auto md:top-3 md:-right-[11px] md:rotate-0"
+        />
+
+        <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+          <AirplaneTilt size={18} weight="fill" aria-hidden="true" /> Boarding pass
+        </div>
+
+        {tripTitle && (
+          <div>
+            <p className="text-sm text-dark-muted">Booking for</p>
+            <p className="font-display text-lg font-bold leading-snug text-dark">{tripTitle}</p>
+            {tripDateShort && (
+              <p className="flex items-center gap-1.5 text-sm text-dark-muted mt-2">
+                <CalendarBlank size={15} aria-hidden="true" /> {tripDateShort}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="border-t border-dashed border-[#D2B986]" />
+
+        {/* Booking type + food preference: side by side on phones in Solo
+            mode (compact), stacked in the narrow desktop stub. */}
+        <div className={bookingMode === 'solo' ? 'grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-5 items-start' : 'contents'}>
+        {/* Solo vs Group */}
+        <div>
+          <label id={ids.bookingType} className="block text-xs md:text-sm font-medium text-dark mb-1 md:mb-1.5">Booking type</label>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby={ids.bookingType}>
           <button
             type="button"
             onClick={() => setBookingMode('solo')}
             aria-pressed={bookingMode === 'solo'}
-            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
+            className={`flex flex-col items-center justify-center gap-0.5 md:gap-1 px-1 py-2 md:px-2 md:py-3 rounded-md border-2 font-medium text-xs md:text-sm transition-colors ${
               bookingMode === 'solo'
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-background-warm text-dark-muted hover:border-primary/40'
+                ? 'border-primary bg-primary/15 text-primary'
+                : 'border-[#DCC8A0] bg-transparent text-dark-muted hover:border-primary/50'
             }`}
           >
-            <User size={16} aria-hidden="true" /> Solo
+            <User size={20} aria-hidden="true" /> Solo
           </button>
           <button
             type="button"
             onClick={() => setBookingMode('group')}
             aria-pressed={bookingMode === 'group'}
-            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
+            className={`flex flex-col items-center justify-center gap-0.5 md:gap-1 px-1 py-2 md:px-2 md:py-3 rounded-md border-2 font-medium text-xs md:text-sm transition-colors ${
               bookingMode === 'group'
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-background-warm text-dark-muted hover:border-primary/40'
+                ? 'border-primary bg-primary/15 text-primary'
+                : 'border-[#DCC8A0] bg-transparent text-dark-muted hover:border-primary/50'
             }`}
           >
-            <Users size={16} aria-hidden="true" /> Group
+            <Users size={20} aria-hidden="true" /> Group
           </button>
+          </div>
+          {bookingMode === 'solo' && !soloFits && (
+            <p className="flex items-start gap-1.5 text-xs text-dark-muted mt-2">
+              <Clock3 size={13} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
+              Trip is full — you'll join the waitlist.
+            </p>
+          )}
         </div>
-        {bookingMode === 'solo' && !soloFits && (
-          <p className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
-            <Clock3 size={13} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
-            This trip is full right now — submitting will add you to the waitlist instead, and
-            we'll notify you the moment a seat opens up.
-          </p>
-        )}
-      </div>
 
+        {/* Group: people count + veg count share one row on phones (stacked
+            in the narrow desktop stub); Solo: just the food buttons. */}
+        <div className={bookingMode === 'group' ? 'grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-5 items-start' : ''}>
       {bookingMode === 'group' && (
         <div>
-          <label htmlFor={ids.groupSize} className="block text-sm font-medium text-dark mb-1">Number of People *</label>
+          <label htmlFor={ids.groupSize} className="block text-xs font-semibold uppercase tracking-wide text-dark-muted mb-1.5">Number of people *</label>
           <input
             id={ids.groupSize}
             type="number"
@@ -684,26 +736,115 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           />
           {groupFits ? (
             <p id={`${ids.groupSize}-hint`} className="text-xs text-dark-muted mt-1">
-              We'll create one entry per person under this name and contact — {groupSize} {groupSize === 1 ? 'entry' : 'entries'} in total.
+              One entry per person — {groupSize} in total.
             </p>
           ) : (
             <p id={`${ids.groupSize}-hint`} className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
               <Clock3 size={13} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
-              This trip doesn't have enough seats left for a group this size right now — submitting will add your group to the waitlist instead, and we'll notify you the moment enough seats free up together.
+              Not enough seats for this group — you'll join the waitlist.
             </p>
           )}
           {groupSizeError && <p id={`${ids.groupSize}-error`} role="alert" className={errorClass}>{groupSizeError}</p>}
         </div>
       )}
-      </div>
+
+        {/* Food preference */}
+        <div>
+          {bookingMode === 'solo' ? (
+            <>
+              <label id={ids.foodPreference} className="block text-xs md:text-sm font-medium text-dark mb-1 md:mb-1.5">Food preference *</label>
+              <div
+                className="grid grid-cols-2 gap-2"
+                role="group"
+                aria-labelledby={ids.foodPreference}
+                aria-describedby={foodPreferenceError ? `${ids.foodPreference}-error` : undefined}
+              >
+              <button
+                type="button"
+                onClick={() => { setFoodPreference('veg'); setFoodPreferenceError(''); }}
+                aria-pressed={foodPreference === 'veg'}
+                className={`flex flex-col items-center justify-center gap-0.5 md:gap-1 px-1 py-2 md:px-2 md:py-3 rounded-md border-2 font-medium text-xs md:text-sm transition-colors ${
+                  foodPreference === 'veg'
+                    ? 'border-green-600 bg-green-100 text-green-700'
+                    : 'border-[#DCC8A0] bg-transparent text-dark-muted hover:border-green-600/50'
+                }`}
+              >
+                <LeafIcon size={18} /> Veg
+              </button>
+              <button
+                type="button"
+                onClick={() => { setFoodPreference('non_veg'); setFoodPreferenceError(''); }}
+                aria-pressed={foodPreference === 'non_veg'}
+                className={`flex flex-col items-center justify-center gap-0.5 md:gap-1 px-1 py-2 md:px-2 md:py-3 rounded-md border-2 font-medium text-xs md:text-sm transition-colors ${
+                  foodPreference === 'non_veg'
+                    ? 'border-red-600 bg-red-100 text-red-700'
+                    : 'border-[#DCC8A0] bg-transparent text-dark-muted hover:border-red-600/50'
+                }`}
+              >
+                <ChickenLegIcon size={18} /> Non-veg
+              </button>
+              </div>
+              {foodPreferenceError && <p id={`${ids.foodPreference}-error`} role="alert" className={errorClass}>{foodPreferenceError}</p>}
+            </>
+          ) : (
+            <>
+              <label htmlFor={ids.vegCount} className="block text-sm font-medium text-dark mb-1.5">How many prefer Veg? *</label>
+              <input
+                id={ids.vegCount}
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={groupSize}
+                aria-describedby={`${ids.vegCount}-hint`}
+                value={vegCountInput}
+                onChange={e => {
+                  const raw = e.target.value;
+                  // Don't force a number back in the instant it's emptied,
+                  // so the user can clear it and type a replacement digit.
+                  setVegCountInput(raw);
+                  if (raw !== '' && !Number.isNaN(Number(raw))) {
+                    setGroupVegCount(Math.min(Math.max(Math.round(Number(raw)), 0), groupSize));
+                  }
+                }}
+                onBlur={() => {
+                  const parsed = Math.round(Number(vegCountInput));
+                  const clamped = vegCountInput === '' || Number.isNaN(parsed)
+                    ? 0
+                    : Math.min(Math.max(parsed, 0), groupSize);
+                  setGroupVegCount(clamped);
+                  setVegCountInput(String(clamped));
+                }}
+                className={inputClass}
+              />
+              <p id={`${ids.vegCount}-hint`} className="text-xs text-dark-muted mt-1">
+                {Math.min(groupVegCount, groupSize)} Veg · {groupSize - Math.min(groupVegCount, groupSize)} Non-veg out of {groupSize} {groupSize === 1 ? 'person' : 'people'}.
+              </p>
+            </>
+          )}
+        </div>
+        </div>
+        </div>
+
+        {/* Barcode */}
+        <div className="mt-auto pt-2 hidden md:block" aria-hidden="true">
+          <svg viewBox="0 0 200 48" preserveAspectRatio="none" className="w-full h-12 text-dark">
+            {bars.map((b, i) => <rect key={i} x={b.x} y={0} width={b.w} height={48} fill="currentColor" />)}
+          </svg>
+          <p className="text-2xs tracking-[0.2em] text-dark-muted mt-1">{barcodeCaption}</p>
+        </div>
+      </aside>
+
+      {/* ── Main ticket body ── */}
+      <div className="p-5 md:p-6 space-y-4 min-w-0">
+        <h2 className="font-display text-2xl font-bold text-dark pr-10">Pack your bags</h2>
 
       {/* Phones: 2-col grid so short fields (Age, City) pair up; desktop: 6-col
           so Name+Age, City+Phone, Email+Emergency each fill a row. DOM order
           matches the visual order at every breakpoint (tab order stays sane). */}
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-x-3 sm:gap-x-4 gap-y-4">
-        {/* Full Name */}
+        {/* Full name */}
         <div className="col-span-2 sm:col-span-4">
-          <label htmlFor={ids.fullName} className="block text-sm font-medium text-dark mb-1">Full Name *</label>
+          <label htmlFor={ids.fullName} className="block text-sm font-medium text-dark mb-1">Full name *</label>
           <input
             id={ids.fullName}
             {...register('full_name', { required: 'Full name is required', validate: validateFullName })}
@@ -763,7 +904,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
         {/* Phone */}
         <div className="col-span-2 sm:col-span-3">
-          <label htmlFor={ids.phone} className="block text-sm font-medium text-dark mb-1">Phone Number *</label>
+          <label htmlFor={ids.phone} className="block text-sm font-medium text-dark mb-1">Phone number *</label>
           <input
             id={ids.phone}
             type="tel"
@@ -800,7 +941,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
         {/* Emergency Contact */}
         <div className="col-span-2 sm:col-span-3">
-          <label htmlFor={ids.emergencyContact} className="block text-sm font-medium text-dark mb-1">Emergency Contact</label>
+          <label htmlFor={ids.emergencyContact} className="block text-sm font-medium text-dark mb-1">Emergency contact <span className="text-xs font-normal text-dark-muted/70">Optional</span></label>
           <input
             id={ids.emergencyContact}
             type="tel"
@@ -830,85 +971,9 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         />
       )}
 
-      {/* Food Preference */}
-      <div>
-        {bookingMode === 'solo' ? (
-          <>
-            <label id={ids.foodPreference} className="block text-sm font-medium text-dark mb-1">Food Preference *</label>
-            <div
-              className="grid grid-cols-2 gap-2"
-              role="group"
-              aria-labelledby={ids.foodPreference}
-              aria-describedby={foodPreferenceError ? `${ids.foodPreference}-error` : undefined}
-            >
-              <button
-                type="button"
-                onClick={() => { setFoodPreference('veg'); setFoodPreferenceError(''); }}
-                aria-pressed={foodPreference === 'veg'}
-                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
-                  foodPreference === 'veg'
-                    ? 'border-green-600 bg-green-50 text-green-700'
-                    : 'border-background-warm text-dark-muted hover:border-green-600/40'
-                }`}
-              >
-                <LeafIcon size={18} /> Veg
-              </button>
-              <button
-                type="button"
-                onClick={() => { setFoodPreference('non_veg'); setFoodPreferenceError(''); }}
-                aria-pressed={foodPreference === 'non_veg'}
-                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
-                  foodPreference === 'non_veg'
-                    ? 'border-red-600 bg-red-50 text-red-700'
-                    : 'border-background-warm text-dark-muted hover:border-red-600/40'
-                }`}
-              >
-                <ChickenLegIcon size={18} /> Non-veg
-              </button>
-            </div>
-            {foodPreferenceError && <p id={`${ids.foodPreference}-error`} role="alert" className={errorClass}>{foodPreferenceError}</p>}
-          </>
-        ) : (
-          <>
-            <label htmlFor={ids.vegCount} className="block text-sm font-medium text-dark mb-1">Food Preference — how many prefer Veg? *</label>
-            <input
-              id={ids.vegCount}
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={groupSize}
-              aria-describedby={`${ids.vegCount}-hint`}
-              value={vegCountInput}
-              onChange={e => {
-                const raw = e.target.value;
-                // Same fix as Number of People below: don't force a number
-                // back into the field the instant it's emptied, so the
-                // user can actually clear it and type a replacement digit.
-                setVegCountInput(raw);
-                if (raw !== '' && !Number.isNaN(Number(raw))) {
-                  setGroupVegCount(Math.min(Math.max(Math.round(Number(raw)), 0), groupSize));
-                }
-              }}
-              onBlur={() => {
-                const parsed = Math.round(Number(vegCountInput));
-                const clamped = vegCountInput === '' || Number.isNaN(parsed)
-                  ? 0
-                  : Math.min(Math.max(parsed, 0), groupSize);
-                setGroupVegCount(clamped);
-                setVegCountInput(String(clamped));
-              }}
-              className={inputClass}
-            />
-            <p id={`${ids.vegCount}-hint`} className="text-xs text-dark-muted mt-1">
-              {Math.min(groupVegCount, groupSize)} Veg · {groupSize - Math.min(groupVegCount, groupSize)} Non-veg out of {groupSize} {groupSize === 1 ? 'person' : 'people'}.
-            </p>
-          </>
-        )}
-      </div>
-
       {/* Message */}
       <div>
-        <label htmlFor={ids.message} className="block text-sm font-medium text-dark mb-1">Message (Optional)</label>
+        <label htmlFor={ids.message} className="block text-sm font-medium text-dark mb-1">Message <span className="text-xs font-normal text-dark-muted/70">Optional</span></label>
         <textarea
           id={ids.message}
           {...register('message')}
@@ -919,7 +984,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       </div>
 
       {/* Terms & Conditions */}
-      <div className="bg-background-warm rounded-lg p-3">
+      <div className="rounded-md p-1">
         <label className="flex items-start gap-2.5 cursor-pointer">
           <input
             type="checkbox"
@@ -958,7 +1023,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         loading={status === 'loading'}
         className="mt-2"
       >
-        {willWaitlist ? 'Join Waitlist' : 'Submit Enquiry'}
+        {willWaitlist ? 'Join waitlist' : 'Submit enquiry'}
+        <ArrowRight size={18} weight="bold" aria-hidden="true" />
       </Button>
 
       <p className="text-xs text-dark-muted text-center">
@@ -966,6 +1032,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           ? "No payment required. We'll notify you the moment seats free up."
           : "No payment required. We'll contact you to confirm your spot."}
       </p>
+      </div>
     </form>
 
     <Modal isOpen={termsOpen} onClose={() => setTermsOpen(false)} title="Terms & Conditions" size="xl">
