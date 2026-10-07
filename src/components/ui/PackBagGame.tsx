@@ -9,7 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import Modal from './Modal';
-import { WHATSAPP_NUMBER } from '../../constants/site';
+import { WHATSAPP_NUMBER, SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { buildScoreCard } from './packBagScoreCard';
 
@@ -447,7 +447,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
     let cancelled = false;
     const rt = rating(score);
     void buildScoreCard({
-      score, stars: rt.stars, title: rt.title, tripTitle, host: window.location.host,
+      score, stars: rt.stars, title: rt.title, tripTitle, host: SITE_HOST,
       packed, combo: bestCombo, best, isNewBest,
     }).then(blob => {
       if (cancelled || !blob) return;
@@ -540,7 +540,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
   const mult = Math.min(MAX_MULT, 1 + Math.floor(streak / COMBO_STEP));
   const secondsLeft = Math.max(0, Math.ceil(DURATION * (1 - progress)));
   const r = rating(score);
-  const shareUrl = `${window.location.origin}/trips/${tripSlug}`;
+  const shareUrl = `${SITE_ORIGIN}/trips/${tripSlug}`;
   const shareText = `I scored ${score} (${r.title}) in Ulaa's "Pack the bag" game for ${tripTitle}! Think you can beat me? ${shareUrl}`;
 
   const share = async () => {
@@ -550,7 +550,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
     if (!blob) {
       try {
         blob = await buildScoreCard({
-          score, stars: r.stars, title: r.title, tripTitle, host: window.location.host,
+          score, stars: r.stars, title: r.title, tripTitle, host: SITE_HOST,
           packed, combo: bestCombo, best, isNewBest,
         });
       } catch { blob = null; }
