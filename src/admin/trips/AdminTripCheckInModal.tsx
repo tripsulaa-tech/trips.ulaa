@@ -116,7 +116,7 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
       setEmailStats(m => ({ ...m, [e.id]: { count: (m[e.id]?.count ?? 0) + 1, lastSentAt: new Date().toISOString() } }));
     } catch (err) {
       console.error(err);
-      await alert({ title: 'Email', message: 'Failed to send the booking email. Please try again.' });
+      await alert({ title: 'Email', message: `Failed to send the booking email.${err instanceof Error && err.message ? ` (${err.message})` : ''} Please try again.` });
     } finally {
       setEmailBusyId(null);
     }

@@ -788,7 +788,7 @@ export default function AdminEnquiryDetail() {
       alert('Booking confirmation email sent.');
     } catch (err) {
       console.error(err);
-      alert('Failed to send booking email.');
+      alert(`Failed to send booking email.${err instanceof Error && err.message ? `\n\n${err.message}` : ''}`);
     } finally {
       setInvoiceBusyAction(null);
     }

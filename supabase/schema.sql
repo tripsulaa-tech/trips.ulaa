@@ -36,6 +36,39 @@
 
 
 -- ============================================================================
+-- ADMIN ALLOWLIST
+-- ============================================================================
+-- "Admin" means a user listed in public.admins (see is_admin() below), NOT
+-- merely a logged-in Supabase Auth user. Without this, anyone who could sign
+-- up through the public Auth API would pass every `public.is_admin()`
+-- check. After the first admin account is created, add them from the SQL editor:
+--     insert into public.admins (user_id) select id from auth.users where email = 'you@example.com';
+-- Also disable "Allow new users to sign up" in Authentication -> Providers -> Email.
+-- See migration/add_admin_allowlist_and_hardening.sql.
+
+create table public.admins (
+  user_id    uuid primary key references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table public.admins enable row level security;
+-- No policies on purpose: not readable or writable through the API.
+revoke all on table public.admins from anon, authenticated;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.admins where user_id = auth.uid());
+$$;
+
+grant execute on function public.is_admin() to anon, authenticated;
+
+
+-- ============================================================================
 -- TABLES
 -- ============================================================================
 
@@ -785,7 +818,7 @@ returns trigger
 language plpgsql
 as $function$
 begin
-  if auth.role() <> 'authenticated' then
+  if not public.is_admin() then
     new.amount_paid             := 0;
     new.is_paid                 := false;
     new.bypass_capacity_check   := false;
@@ -818,7 +851,7 @@ returns trigger
 language plpgsql
 as $function$
 begin
-  if auth.role() <> 'authenticated' then
+  if not public.is_admin() then
     new.status               := 'waiting';
     new.notified_at          := null;
     new.offer_expiry         := null;
@@ -1150,15 +1183,12 @@ create table public.completed_trip_likes (
 
 alter table public.completed_trip_likes enable row level security;
 
--- No accounts, so there's no user to scope these to — visitor_id itself is
--- the "capability": the public can only insert/delete a row it already
--- knows the id of, which in practice comes from the like RPCs below.
-create policy "Public insert completed trip likes" on public.completed_trip_likes
-  for insert with check (true);
-create policy "Public delete completed trip likes" on public.completed_trip_likes
-  for delete using (true);
+-- Deliberately NO public insert/delete policies: a `using (true)` policy
+-- would let anyone delete every like (or insert fake ones) straight through
+-- the REST API. The public writes only through the SECURITY DEFINER RPCs
+-- like_completed_trip() / unlike_completed_trip() below.
 create policy "Admin read completed trip likes" on public.completed_trip_likes
-  for select using (auth.role() = 'authenticated');
+  for select using (public.is_admin());
 
 -- Recomputes completed_trips.likes_count for one trip from real rows in
 -- completed_trip_likes — mirrors recompute_trip_seats()'s "trust the
@@ -1707,7 +1737,7 @@ security definer
 set search_path to 'public'
 as $function$
 begin
-  if auth.role() is distinct from 'authenticated' then
+  if not public.is_admin() then
     raise exception 'Not authorized';
   end if;
 
@@ -1814,6 +1844,48 @@ create trigger aaa_sanitize_public_waitlist_insert
   before insert on public.waitlist
   for each row execute function public.aaa_sanitize_public_waitlist_insert();
 
+-- Per-contact rate limit on the public inserts (the honeypot / fill-time check
+-- only runs in the browser, so direct API calls skip it). 25 rows per phone or
+-- email per 10 minutes; a group booking inserts one row per traveller, so the
+-- limit is generous. Named "aab_" to run right after the "aaa_" sanitize
+-- trigger. The client maps the RATE_LIMITED marker to a friendly message.
+create or replace function public.aab_rate_limit_public_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+  recent integer;
+begin
+  if public.is_admin() then
+    return new;
+  end if;
+
+  execute format(
+    'select count(*) from public.%I
+      where created_at > now() - interval ''10 minutes''
+        and (lower(email) = lower($1)
+             or regexp_replace(phone, ''\D'', '''', ''g'') = regexp_replace($2, ''\D'', '''', ''g''))',
+    tg_table_name)
+  into recent
+  using new.email, new.phone;
+
+  if recent >= 25 then
+    raise exception 'RATE_LIMITED' using errcode = 'P0001';
+  end if;
+
+  return new;
+end;
+$function$;
+
+create trigger aab_rate_limit_public_enquiry_insert
+  before insert on public.enquiries
+  for each row execute function public.aab_rate_limit_public_insert();
+create trigger aab_rate_limit_public_waitlist_insert
+  before insert on public.waitlist
+  for each row execute function public.aab_rate_limit_public_insert();
+
 create trigger on_trip_seat_freed
   after update on public.upcoming_trips
   for each row execute function public.notify_seat_available();
@@ -1844,8 +1916,8 @@ create event trigger rls_auto_enable_trigger
 -- ============================================================================
 -- RLS is enabled on every table in this schema (confirmed live: all 10
 -- tables have relrowsecurity = true). "Admin" below means
--- auth.role() = 'authenticated', i.e. a logged-in Supabase Auth user
--- (the admin portal login). There is no separate "admin" role/claim.
+-- public.is_admin(): the signed-in user is listed in public.admins (see the
+-- ADMIN ALLOWLIST section near the top). Being logged in is not enough.
 
 alter table public.completed_trips enable row level security;
 alter table public.upcoming_trips enable row level security;
@@ -1864,76 +1936,76 @@ alter table public.site_content enable row level security;
 
 -- completed_trips
 create policy "Admin all completed trips" on public.completed_trips
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 create policy "Public read completed trips" on public.completed_trips
   for select using (is_published = true);
 
 -- upcoming_trips
 create policy "Admin all upcoming trips" on public.upcoming_trips
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 create policy "Public read upcoming trips" on public.upcoming_trips
   for select using (status in ('coming_soon', 'published'));
 
 -- trip_finance_snapshots — admin only, no public policy.
 create policy "Admin all trip finance snapshots" on public.trip_finance_snapshots
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 
 -- enquiries — public can only insert (submit the enquiry form); everything
 -- else (read/update/delete) requires an authenticated admin session.
 create policy "Public insert enquiries" on public.enquiries
   for insert with check (true);
 create policy "Admin read enquiries" on public.enquiries
-  for select using (auth.role() = 'authenticated');
+  for select using (public.is_admin());
 create policy "Admin update enquiries" on public.enquiries
-  for update using (auth.role() = 'authenticated');
+  for update using (public.is_admin());
 create policy "Admin delete enquiries" on public.enquiries
-  for delete using (auth.role() = 'authenticated');
+  for delete using (public.is_admin());
 
 -- payments — admin only, no public access at all (payments are only ever
 -- written by the admin portal, never directly by the public form).
 create policy "Admin all payments" on public.payments
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 
 -- activity_log — admin can read and insert; deliberately no update/delete
 -- policy at all (for anyone, admin included) so a logged row can never be
 -- edited or removed by anyone through the API, only ever appended to.
 create policy "Admin read activity log" on public.activity_log
-  for select using (auth.role() = 'authenticated');
+  for select using (public.is_admin());
 create policy "Admin insert activity log" on public.activity_log
-  for insert with check (auth.role() = 'authenticated');
+  for insert with check (public.is_admin());
 
 -- waitlist — public can only insert (submit the waitlist form); everything
 -- else (read/update/delete) requires an authenticated admin session.
 create policy "Public insert waitlist" on public.waitlist
   for insert with check (true);
 create policy "Admin read waitlist" on public.waitlist
-  for select using (auth.role() = 'authenticated');
+  for select using (public.is_admin());
 create policy "Admin update waitlist" on public.waitlist
-  for update using (auth.role() = 'authenticated');
+  for update using (public.is_admin());
 create policy "Admin delete waitlist" on public.waitlist
-  for delete using (auth.role() = 'authenticated');
+  for delete using (public.is_admin());
 
 -- gallery
 create policy "Admin all gallery" on public.gallery
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 create policy "Public read gallery" on public.gallery
   for select using (true);
 
 -- trip_images
 create policy "Admin all trip images" on public.trip_images
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 create policy "Public read trip images" on public.trip_images
   for select using (true);
 
 -- testimonials
 create policy "Admin all testimonials" on public.testimonials
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 create policy "Public read testimonials" on public.testimonials
   for select using (is_published = true);
 
 -- trip_leaders
 create policy "Admin all trip leaders" on public.trip_leaders
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 create policy "Public read trip leaders" on public.trip_leaders
   for select using (is_published = true);
 
@@ -1942,7 +2014,7 @@ create policy "Public read trip leaders" on public.trip_leaders
 -- DEFINER (which bypasses RLS anyway), but this policy also covers any
 -- direct insert/delete the admin UI does itself.
 create policy "Admin all notifications" on public.notifications
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 
 -- push_subscriptions — each admin can only see/manage their own
 -- subscription rows (admin_id is not a real FK, just RLS-scoped).
@@ -1951,7 +2023,7 @@ create policy "Admin manage own push subscriptions" on public.push_subscriptions
 
 -- site_content
 create policy "Admin all site content" on public.site_content
-  for all using (auth.role() = 'authenticated');
+  for all using (public.is_admin());
 create policy "Public read site content" on public.site_content
   for select using (true);
 
@@ -1960,3 +2032,41 @@ create policy "Public read site content" on public.site_content
 -- the roles the public site actually connects as.
 grant execute on function public.like_completed_trip(uuid, text) to anon, authenticated;
 grant execute on function public.unlike_completed_trip(uuid, text) to anon, authenticated;
+
+-- ----------------------------------------------------------------------------
+-- SECURITY DEFINER functions that must not be callable through /rpc by the
+-- public. Triggers and the pg_cron job still run them (as the function owner).
+-- Matches by name so it is a no-op for functions that only exist after the
+-- later migrations are applied.
+-- ----------------------------------------------------------------------------
+do $$
+declare
+  r record;
+begin
+  for r in
+    select p.oid::regprocedure as sig
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname in (
+         'rename_upcoming_trip_slug',
+         'rename_completed_trip_slug',
+         'next_invoice_number',
+         'next_booking_id',
+         'notify_due_follow_ups'
+       )
+  loop
+    execute format('revoke execute on function %s from public, anon, authenticated', r.sig);
+  end loop;
+
+  for r in
+    select p.oid::regprocedure as sig
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname = 'next_invoice_generator_number'
+  loop
+    execute format('revoke execute on function %s from public, anon', r.sig);
+    execute format('grant execute on function %s to authenticated', r.sig);
+  end loop;
+end $$;

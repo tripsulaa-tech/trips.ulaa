@@ -24,7 +24,7 @@
 // against Vercel's current Middleware docs when you deploy, since this
 // wasn't run against a live deployment.
 
-import { SITE_ORIGIN } from './src/constants/site';
+import { SITE_ORIGIN, SITE_NAME, SITE_DESCRIPTION } from './src/constants/site';
 
 export const config = {
   matcher: ['/trips/:path*', '/completed-trips/:path*'],
@@ -33,12 +33,22 @@ export const config = {
 const CRAWLER_UA =
   /facebookexternalhit|Facebot|WhatsApp|Instagram|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|redditbot|Pinterest|SkypeUriPreview|vkShare|Viber|Applebot|W3C_Validator/i;
 
-const SUPABASE_URL = 'https://wephglgonrmtcmhfbjqe.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_ryp0WUqL5_dg5v6gpo_zqw__Ibz6M5O';
+// Prefer environment variables (set SUPABASE_URL / SUPABASE_ANON_KEY in the
+// Vercel project) so the project reference isn't pinned in source. The
+// literals below are only a fallback so link previews keep working until
+// those are set — the publishable (anon) key is public by design, but it is
+// still better kept in configuration than in the repository.
+const runtimeEnv =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+const SUPABASE_URL =
+  runtimeEnv.SUPABASE_URL ?? runtimeEnv.VITE_SUPABASE_URL ?? 'https://wephglgonrmtcmhfbjqe.supabase.co';
+const SUPABASE_ANON_KEY =
+  runtimeEnv.SUPABASE_ANON_KEY ??
+  runtimeEnv.VITE_SUPABASE_ANON_KEY ??
+  'sb_publishable_ryp0WUqL5_dg5v6gpo_zqw__Ibz6M5O';
 const SITE_URL = SITE_ORIGIN;
 const DEFAULT_IMAGE = `${SITE_URL}/ULAA-logo.png`;
-const DEFAULT_DESCRIPTION =
-  "Girls-only travel community organizing curated trips to India's hidden destinations.";
+const DEFAULT_DESCRIPTION = SITE_DESCRIPTION;
 
 interface TripMeta {
   title: string;
@@ -74,7 +84,7 @@ async function fetchTripMeta(slug: string, table: TripTable): Promise<TripMeta |
     if (!row) return null;
 
     return {
-      title: row.title || row.destination || 'ULAA Trips',
+      title: row.title || row.destination || SITE_NAME,
       description: row.description || DEFAULT_DESCRIPTION,
       cover_image: row.cover_image || null,
     };
@@ -99,44 +109,48 @@ function truncate(text: string, max: number): string {
   return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
 }
 
+// NOTE: every .replace() below uses a function as the replacement. With a plain
+// string, JavaScript interprets "$&", "$`", "$'" and "$1" inside it — and the
+// values here come from the database (trip titles / descriptions), so a "$" in
+// a title could splice pieces of the surrounding HTML into the tags.
 function injectTripMeta(html: string, meta: TripMeta, pageUrl: string): string {
-  const title = escapeAttr(`${meta.title} — ULAA Trips`);
+  const title = escapeAttr(`${meta.title} — ${SITE_NAME}`);
   const description = escapeAttr(truncate(meta.description, 200));
   const image = escapeAttr(meta.cover_image || DEFAULT_IMAGE);
   const url = escapeAttr(pageUrl);
 
   return html
-    .replace(/<title>.*?<\/title>/, `<title>${title}</title>`)
+    .replace(/<title>.*?<\/title>/, () => `<title>${title}</title>`)
     .replace(
       /<meta name="description" content=".*?"\s*\/>/,
-      `<meta name="description" content="${description}" />`
+      () => `<meta name="description" content="${description}" />`
     )
     .replace(
       /<meta property="og:title" content=".*?"\s*\/>/,
-      `<meta property="og:title" content="${title}" />`
+      () => `<meta property="og:title" content="${title}" />`
     )
     .replace(
       /<meta property="og:description" content=".*?"\s*\/>/,
-      `<meta property="og:description" content="${description}" />`
+      () => `<meta property="og:description" content="${description}" />`
     )
-    .replace(/<meta property="og:url" content=".*?"\s*\/>/, `<meta property="og:url" content="${url}" />`)
+    .replace(/<meta property="og:url" content=".*?"\s*\/>/, () => `<meta property="og:url" content="${url}" />`)
     .replace(
       /<meta property="og:image" content=".*?"\s*\/>/,
-      `<meta property="og:image" content="${image}" />`
+      () => `<meta property="og:image" content="${image}" />`
     )
     .replace(
       /<meta name="twitter:title" content=".*?"\s*\/>/,
-      `<meta name="twitter:title" content="${title}" />`
+      () => `<meta name="twitter:title" content="${title}" />`
     )
     .replace(
       /<meta name="twitter:description" content=".*?"\s*\/>/,
-      `<meta name="twitter:description" content="${description}" />`
+      () => `<meta name="twitter:description" content="${description}" />`
     )
     .replace(
       /<meta name="twitter:image" content=".*?"\s*\/>/,
-      `<meta name="twitter:image" content="${image}" />`
+      () => `<meta name="twitter:image" content="${image}" />`
     )
-    .replace(/<link rel="canonical" href=".*?"\s*\/>/, `<link rel="canonical" href="${url}" />`);
+    .replace(/<link rel="canonical" href=".*?"\s*\/>/, () => `<link rel="canonical" href="${url}" />`);
 }
 
 export default async function middleware(request: Request): Promise<Response | undefined> {

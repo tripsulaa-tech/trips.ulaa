@@ -134,6 +134,8 @@ export default function ContactPage() {
       setStatus('error');
       if (err instanceof Error && err.message === 'DUPLICATE_ENQUIRY') {
         setErrorMsg("Looks like you've already sent this exact message — we've got it and will get back to you shortly.");
+      } else if (err instanceof Error && err.message === 'RATE_LIMITED') {
+        setErrorMsg("We've received several messages from these details just now. Please wait a few minutes and try again, or reach us on WhatsApp.");
       } else {
         setErrorMsg('Something went wrong. Please try again.');
       }

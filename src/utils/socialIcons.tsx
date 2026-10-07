@@ -139,11 +139,16 @@ const HREF_BUILDERS: { match: RegExp; build: (value: string) => string }[] = [
  *  ("justjini_", "@justjini_", "jini-varghese-a57777b1"), or (for WhatsApp)
  *  a phone number. If it's already a full URL/mailto/tel link, it's used
  *  as-is; otherwise it's built using the platform-specific rule above, with
- *  the raw value as a last-resort fallback for unrecognized platforms. */
+ *  a plain web address (https:// added) for unrecognized platforms; anything
+ *  else returns '' so it can never become a script link. */
 export function getSocialHref(platform: string, value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return '';
   if (/^(https?:|mailto:|tel:)/i.test(trimmed)) return trimmed;
   const found = HREF_BUILDERS.find(({ match }) => match.test(platform));
-  return found ? found.build(trimmed) : trimmed;
+  if (found) return found.build(trimmed);
+  // Unknown platform: only accept something that is clearly a web address
+  // (e.g. "example.com/me"). Never hand an arbitrary string — such as a
+  // "javascript:" value — straight to an href.
+  return /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(trimmed) ? `https://${trimmed}` : '';
 }

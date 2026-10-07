@@ -432,6 +432,25 @@ export function bookingEmailSample(t: BookingEmailTemplate, fullyPaid: boolean):
   return { subject: bookingEmailFields(enquiry, payments, t).subject, html: buildBookingEmailHtml(enquiry, payments, t) };
 }
 
+/** supabase.functions.invoke() reports any non-2xx reply as a generic
+ *  "Edge Function returned a non-2xx status code" and keeps the real answer in
+ *  `error.context` (the Response). Read it so the admin sees WHY a send
+ *  failed (not signed in as an admin, bad payload, Resend rejected it…). */
+async function describeEmailError(error: { message?: string; context?: unknown }): Promise<string> {
+  const res = error.context;
+  if (res instanceof Response) {
+    try {
+      const body = (await res.clone().json()) as { error?: string; field?: string; detail?: string };
+      const parts = [body.error, body.field && `(${body.field})`, body.detail].filter(Boolean);
+      if (parts.length) return `${res.status}: ${parts.join(' ')}`;
+    } catch {
+      /* body wasn't JSON — fall through */
+    }
+    return `${res.status} ${res.statusText || 'error'}`;
+  }
+  return error.message || 'Unknown error';
+}
+
 /** Sends the booking confirmation for real, via the `send-booking-email`
  *  Supabase Edge Function (which relays it through Resend) — the rich HTML
  *  body (logo, formatted payment card, a real "View Trip Details" button)
@@ -461,7 +480,7 @@ export async function sendBookingEmail(enquiry: Enquiry, payments: Payment[]): P
     },
   });
 
-  if (error) throw error;
+  if (error) throw new Error(await describeEmailError(error));
   if (data?.error) throw new Error(typeof data.error === 'string' ? data.error : 'Failed to send email');
 
   // Only reached when the send succeeded: one timeline entry per email, so the

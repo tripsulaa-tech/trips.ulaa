@@ -1,5 +1,6 @@
 import type { UpcomingTrip } from '../../types/types-index';
 import { ArrowSquareOut as ExternalLink, ArrowRight } from '@phosphor-icons/react';
+import { safeHref } from '../../utils/safeUrl';
 
 interface TripEndBannerProps {
   endBanner: NonNullable<UpcomingTrip['end_banner']>;
@@ -27,9 +28,9 @@ export default function TripEndBanner({ endBanner, onBook }: TripEndBannerProps)
             )}
             {endBanner.cta_label && (
               <div className="flex flex-row flex-wrap items-center gap-3">
-                {endBanner.cta_url ? (
+                {safeHref(endBanner.cta_url) ? (
                   <a
-                    href={endBanner.cta_url}
+                    href={safeHref(endBanner.cta_url)}
                     className="group/btn inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-button font-semibold px-3 py-2 text-sm min-h-[44px] sm:px-8 sm:py-4 sm:text-lg rounded-lg transition-colors"
                   >
                     {endBanner.cta_label} <ExternalLink size={15} />

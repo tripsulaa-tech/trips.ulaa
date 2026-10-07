@@ -13,6 +13,13 @@ export function isAgeNotEligibleError(error: { message?: string }): boolean {
   return !!error.message?.includes('AGE_NOT_ELIGIBLE');
 }
 
+// The aab_rate_limit_public_insert() DB trigger raises a plain 'RATE_LIMITED'
+// marker when one phone number / email submits too many enquiries or waitlist
+// entries in a short window (see add_admin_allowlist_and_hardening.sql).
+export function isRateLimitedError(error: { message?: string }): boolean {
+  return !!error.message?.includes('RATE_LIMITED');
+}
+
 // The enforce_enquiry_capacity_or_waitlist() DB trigger (see
 // add_enquiry_capacity_enforcement.sql) raises a plain 'SEATS_UNAVAILABLE'
 // marker — not a dedicated SQLSTATE — when a plain enquiry insert (or a

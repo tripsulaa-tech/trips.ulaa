@@ -4,6 +4,7 @@ import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 import { getThingsToCarryIcon } from './tripDetailUtils';
 import SectionTitle from '../../components/ui/SectionTitle';
 import { MapPin, NavigationArrow as Navigation, UserCheck } from '@phosphor-icons/react';
+import { safeHref } from '../../utils/safeUrl';
 
 interface TripDetailsSectionProps {
   trip: UpcomingTrip;
@@ -78,7 +79,7 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
             </dl>
           )}
           <a
-            href={trip.meeting_point_map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.meeting_point)}`}
+            href={safeHref(trip.meeting_point_map_url) || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.meeting_point)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary/80 transition-colors"

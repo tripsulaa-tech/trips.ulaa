@@ -13,6 +13,13 @@
 // now independently verifies the caller's token belongs to a real,
 // logged-in Supabase Auth user before doing anything else.
 //
+// Second hardening pass: "logged in" is still not "admin" — anyone able to
+// sign up through the public Auth API would pass that check and could then
+// send phishing email from this domain. The function now also requires the
+// caller to be listed in public.admins (public.is_admin() RPC, see
+// supabase/migration/add_admin_allowlist_and_hardening.sql), and validates the
+// recipient address, subject length and attachment size.
+//
 // One-time setup:
 //   1. Create a Resend account (resend.com) and verify a sending domain —
 //      Resend's free tier (3,000 emails/mo, 100/day) is enough for ULAA's
@@ -95,6 +102,19 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+
+  // Must be an actual admin, not just any signed-in account. The RPC runs
+  // with the caller's own token, so is_admin() sees auth.uid() = the caller.
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data: isAdmin, error: adminError } = await userClient.rpc('is_admin');
+  if (adminError || isAdmin !== true) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
   // --- End auth check ---------------------------------------------------
 
   let payload: SendBookingEmailBody;
@@ -114,6 +134,43 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Basic shape / size limits so even an admin session can't be turned into a
+  // bulk or oversized mail relay by a stolen token.
+  const EMAIL_RE = /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[^\s@<>"',;]+$/;
+  const MAX_SUBJECT_CHARS = 200;
+  const MAX_HTML_CHARS = 500_000;
+  // Invoice PDFs embed the logo and footer banner images and can be several MB.
+  // Resend allows 40 MB per email (after base64 encoding), so cap safely below
+  // that: 28M base64 characters is about a 21 MB file.
+  const MAX_ATTACHMENT_BASE64_CHARS = 28_000_000;
+  let invalidField: string | null = null;
+  if (typeof payload.to !== 'string' || !EMAIL_RE.test(payload.to.trim()) || payload.to.length > 254) {
+    invalidField = 'to';
+  } else if (
+    typeof payload.subject !== 'string' ||
+    payload.subject.length > MAX_SUBJECT_CHARS ||
+    /[\r\n]/.test(payload.subject)
+  ) {
+    invalidField = 'subject';
+  } else if (typeof payload.html !== 'string' || payload.html.length > MAX_HTML_CHARS) {
+    invalidField = 'html';
+  } else if (
+    payload.attachmentBase64 !== undefined &&
+    (typeof payload.attachmentBase64 !== 'string' || payload.attachmentBase64.length > MAX_ATTACHMENT_BASE64_CHARS)
+  ) {
+    invalidField = 'attachmentBase64';
+  }
+  if (invalidField) {
+    const detail =
+      invalidField === 'attachmentBase64' && typeof payload.attachmentBase64 === 'string'
+        ? `attachment is about ${(payload.attachmentBase64.length * 0.75 / 1_000_000).toFixed(1)} MB, limit is about ${(MAX_ATTACHMENT_BASE64_CHARS * 0.75 / 1_000_000).toFixed(0)} MB`
+        : undefined;
+    return new Response(JSON.stringify({ error: 'Invalid email payload', field: invalidField, detail }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   if (!RESEND_API_KEY) {
     return new Response(JSON.stringify({ error: 'RESEND_API_KEY is not configured on the server' }), {
       status: 500,
@@ -123,7 +180,7 @@ Deno.serve(async (req) => {
 
   const resendPayload: Record<string, unknown> = {
     from: RESEND_FROM_EMAIL,
-    to: [payload.to],
+    to: [payload.to.trim()],
     subject: payload.subject,
     html: payload.html,
   };

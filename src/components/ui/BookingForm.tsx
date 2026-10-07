@@ -492,6 +492,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         setErrorMsg("Looks like you've already submitted an enquiry for this trip with these exact details. We'll be in touch shortly — or message us on WhatsApp if you need to change something.");
       } else if (err instanceof Error && err.message === 'DUPLICATE_WAITLIST_ENTRY') {
         setErrorMsg("You're already on the waitlist for this trip with these exact details — we'll reach out the moment enough seats open up.");
+      } else if (err instanceof Error && err.message === 'RATE_LIMITED') {
+        setErrorMsg("We've received a lot of submissions from these contact details in the last few minutes. Please wait about 10 minutes and try again, or message us on WhatsApp.");
       } else if (err instanceof Error && err.message === 'AGE_NOT_ELIGIBLE') {
         setErrorMsg(`This trip is only open to ages ${effectiveMinAge}–${effectiveMaxAge}. Please double-check the age entered, or message us on WhatsApp if you have questions.`);
       } else if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {

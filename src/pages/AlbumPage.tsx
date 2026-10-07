@@ -25,6 +25,7 @@ import { fadeUp } from '../utils/animation';
 import { DEMO_ALBUM } from '../dev/demoData';
 
 import { pageTitle } from '../constants/site';
+import { safeHref } from '../utils/safeUrl';
 export default function AlbumPage() {
   const { slug } = useParams<{ slug: string }>();
   const [album, setAlbum] = useState<CompletedTrip | null>(null);
@@ -185,7 +186,7 @@ export default function AlbumPage() {
 
               <div className="flex flex-wrap items-center gap-2.5 mt-5">
                 <a
-                  href={album.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(album.destination)}`}
+                  href={safeHref(album.map_url) || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(album.destination)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-full bg-primary text-white text-xs sm:text-sm font-button font-semibold px-3.5 py-1.5 hover:bg-primary-dark transition-colors"

@@ -85,7 +85,7 @@ export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderP
           </p>
 
           <div className="flex flex-row flex-wrap items-center gap-3 sm:gap-4 justify-center md:justify-start mt-7">
-            {socialLinks.map((link, i) => (
+            {socialLinks.filter(link => getSocialHref(link.platform, link.url)).map((link, i) => (
               <a
                 key={i}
                 href={getSocialHref(link.platform, link.url)}

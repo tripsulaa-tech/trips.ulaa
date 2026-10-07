@@ -1,6 +1,6 @@
 import { supabase } from '../supabase';
 import type { WaitlistEntry, WaitlistFormData } from '../../types/types-index';
-import { isAgeNotEligibleError, logActivity } from './enquiries';
+import { isAgeNotEligibleError, isRateLimitedError, logActivity } from './enquiries';
 
 // =============================================
 // Waitlist
@@ -15,6 +15,9 @@ export async function submitWaitlist(entry: WaitlistFormData): Promise<void> {
   if (error) {
     if (error.code === '23505') {
       throw new Error('DUPLICATE_WAITLIST_ENTRY');
+    }
+    if (isRateLimitedError(error)) {
+      throw new Error('RATE_LIMITED');
     }
     if (isAgeNotEligibleError(error)) {
       throw new Error('AGE_NOT_ELIGIBLE');
