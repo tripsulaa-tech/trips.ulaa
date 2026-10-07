@@ -12,7 +12,9 @@ import {
   CaretRight,
   Gift,
 } from '@phosphor-icons/react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import type { MouseEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft, formatDuration } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
@@ -20,6 +22,7 @@ import { hasPackages, withBasicPricing } from '../../utils/tripOptions';
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
+import EarlyBirdSeatsPrompt, { getEarlyBirdSeatsOffer } from './EarlyBirdSeatsPrompt';
 
 interface TripCardProps {
   trip: UpcomingTrip;
@@ -87,6 +90,20 @@ function resolveFeatureTagIcon(label: string, iconKey: string): { Icon: TripHigh
 }
 
 export default function TripCard({ trip, index = 0 }: TripCardProps) {
+  const navigate = useNavigate();
+  const [earlyBirdPromptOpen, setEarlyBirdPromptOpen] = useState(false);
+  // Seat-limited early bird ("first N travellers", set per trip by the admin):
+  // clicking the card shows a small heads-up banner first, then continues to
+  // the trip page. Null for every other trip, so those navigate as before.
+  const earlyBirdOffer = trip.status === 'coming_soon' ? null : getEarlyBirdSeatsOffer(trip);
+  const earlyBirdSoldOut = publicSeatsLeft(trip.total_seats, trip.seats_booked, trip.waitlist_reserved || 0) === 0;
+  const handleCardClick = (e: MouseEvent) => {
+    if (!earlyBirdOffer || earlyBirdSoldOut) return;
+    // Let new-tab / new-window clicks behave normally.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    setEarlyBirdPromptOpen(true);
+  };
   // Coming Soon trips (Admin → Upcoming Trips → Add/Edit Trip → Publish
   // tab) intentionally show only the cover image + title on the public
   // site — no price, dates, seats, or booking CTA — while the rest of the
@@ -197,7 +214,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         className={`group bg-white rounded-2xl ${showSpecialOfferPromo ? '' : 'border border-background-warm'} shadow-warm hover:shadow-warm-lg transition-all duration-300 h-full flex flex-col overflow-hidden`}
       >
       {/* Image */}
-      <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden block">
+      <Link to={`/trips/${trip.slug}`} onClick={handleCardClick} className="relative h-56 md:h-64 overflow-hidden block">
         {/*
           The hover-zoom (group-hover:scale-110) lives on this wrapper div
           rather than the <img> itself, because the saved cover_image_crop
@@ -431,7 +448,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           ))}
         </div>
 
-        <Link to={`/trips/${trip.slug}`}>
+        <Link to={`/trips/${trip.slug}`} onClick={handleCardClick}>
           <Button
             variant={isFull ? 'outline' : 'primary'}
             size="sm"
@@ -444,6 +461,14 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
         </Link>
       </div>
       </motion.div>
+      <EarlyBirdSeatsPrompt
+        isOpen={earlyBirdPromptOpen}
+        offer={earlyBirdOffer}
+        tripTitle={trip.title}
+        advanceAmount={trip.advance_amount}
+        onContinue={() => { setEarlyBirdPromptOpen(false); navigate(`/trips/${trip.slug}`); }}
+        onClose={() => setEarlyBirdPromptOpen(false)}
+      />
     </div>
   );
 }

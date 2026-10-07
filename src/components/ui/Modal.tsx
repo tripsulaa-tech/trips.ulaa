@@ -39,6 +39,10 @@ interface ModalProps {
    *  of squeezing into the same row as the close button. Defaults to
    *  false, matching every existing modal's current spacing. */
   compactHeader?: boolean;
+  /** Opt-in: removes the body padding and the reserved scrollbar gutter so
+   *  children can bleed edge-to-edge (e.g. a full-width hero band). Defaults
+   *  to false, so every existing modal is unchanged. */
+  flush?: boolean;
 }
 
 const sizes = {
@@ -49,7 +53,7 @@ const sizes = {
   '2xl': 'max-w-5xl',
 };
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent, bodyRef, mobileFullScreen = false, compactHeader = false }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent, bodyRef, mobileFullScreen = false, compactHeader = false, flush = false }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -147,7 +151,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
                 shrink it to the remaining space in the flex-col modal and
                 actually scroll, instead of growing to fit all the content
                 and getting clipped by the outer overflow-hidden. */}
-            <div ref={bodyRef} className={`app-scroll overflow-y-auto flex-1 min-h-0 ${compactHeader ? 'p-4 sm:p-6' : 'p-6'}`}>
+            <div ref={bodyRef} className={`overflow-y-auto flex-1 min-h-0 ${flush ? '' : `app-scroll ${compactHeader ? 'p-4 sm:p-6' : 'p-6'}`}`}>
               {children}
             </div>
 

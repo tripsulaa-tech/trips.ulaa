@@ -32,6 +32,7 @@ import TripFaqCancellationSection from './trip-detail/TripFaqCancellationSection
 import TripStickyBookingBar from './trip-detail/TripStickyBookingBar';
 import TripEndBanner from './trip-detail/TripEndBanner';
 import TripBookingModal from './trip-detail/TripBookingModal';
+import EarlyBirdSeatsPrompt, { getEarlyBirdSeatsOffer } from './trip-detail/EarlyBirdSeatsPrompt';
 import TripSpecialOfferPopup from './trip-detail/TripSpecialOfferPopup';
 import { useIsDesktop } from './trip-detail/tripDetailUtils';
 import { Compass } from '@phosphor-icons/react';
@@ -325,8 +326,27 @@ export default function TripDetailPage() {
   // Package card the visitor tapped (null = opened via a plain Book button).
   const [preselectedPackageId, setPreselectedPackageId] = useState<string | null>(null);
   // Preview is look-only: booking buttons do nothing so no real enquiry can be made.
-  const openBooking = () => { if (isPreview) return; setPreselectedPackageId(null); setBookingOpen(true); };
-  const choosePackage = (packageId: string) => { if (isPreview) return; setPreselectedPackageId(packageId); setBookingOpen(true); };
+  // Seat-limited early bird ("first N travellers"): the first Book click on
+  // such a trip shows a small heads-up banner before the booking form. Shown
+  // once per trip per visit (acknowledged -> straight to the form after).
+  const [earlyBirdPromptOpen, setEarlyBirdPromptOpen] = useState(false);
+  const [earlyBirdAckTripId, setEarlyBirdAckTripId] = useState<string | null>(null);
+  const requestBooking = (packageId: string | null) => {
+    if (isPreview) return;
+    setPreselectedPackageId(packageId);
+    if (trip && earlyBirdAckTripId !== trip.id && getEarlyBirdSeatsOffer(trip)) {
+      setEarlyBirdPromptOpen(true);
+      return;
+    }
+    setBookingOpen(true);
+  };
+  const openBooking = () => requestBooking(null);
+  const choosePackage = (packageId: string) => requestBooking(packageId);
+  const continueFromEarlyBirdPrompt = () => {
+    if (trip) setEarlyBirdAckTripId(trip.id);
+    setEarlyBirdPromptOpen(false);
+    setBookingOpen(true);
+  };
 
   if (loading) {
     return (
@@ -566,6 +586,14 @@ export default function TripDetailPage() {
         bookingDraft={bookingDraft}
         onDraftChange={setBookingDraft}
         initialPackageId={preselectedPackageId}
+      />
+
+      <EarlyBirdSeatsPrompt
+        isOpen={earlyBirdPromptOpen}
+        offer={getEarlyBirdSeatsOffer(trip)}
+        advanceAmount={trip.advance_amount}
+        onContinue={continueFromEarlyBirdPrompt}
+        onClose={() => setEarlyBirdPromptOpen(false)}
       />
 
       <TripSpecialOfferPopup
