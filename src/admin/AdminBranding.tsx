@@ -15,6 +15,8 @@ import {
   type BrandingSlot,
 } from '../hooks/useBranding';
 import { STORAGE_BUCKET } from '../constants/storage';
+import { useConfirm } from '../components/ui/useConfirm';
+import { useAlert } from '../components/ui/useAlert';
 
 // Admin → Branding: upload/replace the site's logos and icons. Each slot is
 // stored in the `branding` site_content row (see hooks/useBranding.ts);
@@ -111,6 +113,7 @@ function BrandAssetField({
   onChange: (url: string) => void;
   onUploaded: (url: string) => void;
 }) {
+  const alert = useAlert();
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputId = `branding-${config.slot}`;
@@ -195,6 +198,8 @@ function BrandAssetField({
 }
 
 export default function AdminBranding() {
+  const alert = useAlert();
+  const confirm = useConfirm();
   const [draft, setDraft] = useState<BrandingContent>({ ...EMPTY_BRANDING });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -252,7 +257,7 @@ export default function AdminBranding() {
       // Someone may have saved branding since this page was opened; check before overwriting.
       const current = await getSiteContent<unknown>(BRANDING_KEY).then(normalizeBranding).catch(() => null);
       if (current && draftBase !== null && stableStringify(current) !== draftBase) {
-        if (!window.confirm('The saved branding changed after you opened this page. Saving now replaces those newer changes with what is on your screen. Save anyway?')) return;
+        if (!(await confirm('The saved branding changed after you opened this page. Saving now replaces those newer changes with what is on your screen. Save anyway?'))) return;
       }
       await upsertSiteContent(BRANDING_KEY, draft);
       applyBranding(draft);
@@ -269,7 +274,7 @@ export default function AdminBranding() {
   };
 
   const handleDiscard = async () => {
-    if (hasUnsavedChanges() && !window.confirm('Discard your unsaved changes?')) return;
+    if (hasUnsavedChanges() && !(await confirm('Discard your unsaved changes?'))) return;
     await cleanupUnused(savedRef.current, draft);
     setDraft({ ...savedRef.current });
     setSaved(false);

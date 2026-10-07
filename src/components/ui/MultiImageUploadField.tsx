@@ -7,6 +7,7 @@ import {
   LinkSimple as Link2,
 } from '@phosphor-icons/react';
 import { uploadImage, uploadImageFromUrl, deleteImageByUrl } from '../../services/api';
+import { useAlert } from './useAlert';
 
 interface MultiImageUploadFieldProps {
   label: string;
@@ -32,6 +33,7 @@ interface MultiImageUploadFieldProps {
 }
 
 export default function MultiImageUploadField({ label, value, onChange, bucket, pathPrefix, hint, children, allowUrl }: MultiImageUploadFieldProps) {
+  const alert = useAlert();
   const [uploading, setUploading] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlDraft, setUrlDraft] = useState('');

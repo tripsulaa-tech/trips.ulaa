@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowCounterClockwise, Columns, UploadSimple } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, UploadSimple } from '@phosphor-icons/react';
 import AdminEditorFooter from './AdminEditorFooter';
-import Modal from '../components/ui/Modal';
 import { readDraft, writeDraft, clearDraft } from '../hooks/useSessionDraft';
 import ColorPicker, { type ColorSwatch } from '../components/ui/ColorPicker';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
@@ -16,6 +15,7 @@ import {
   type BookingEmailTemplate,
 } from '../utils/bookingEmailTemplate';
 import { SITE_ORIGIN } from '../constants/site';
+import { useConfirm } from '../components/ui/useConfirm';
 import { STORAGE_BUCKET } from '../constants/storage';
 
 // Logo Studio → "Email": the wording of the booking confirmation email that goes to
@@ -87,6 +87,7 @@ const GROUPS: GroupDef[] = [
 type GroupId = string;
 
 export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { onDirtyChange: (dirty: boolean) => void; fit?: boolean }) {
+  const confirm = useConfirm();
   // One section of the form is shown at a time (so the page stays short); 'style' = colour + logo.
   // Remembered for this browser tab, so coming back to the page lands on the same section.
   const [section, setSection] = useState<GroupId>(() => {
@@ -98,9 +99,6 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
     try { window.sessionStorage.setItem('logoStudio.mailSection', id); } catch { /* ignore */ }
     jumpPreview(id, true);
   };
-  // Compare popup: the two iframes scroll together (the one the pointer is over leads).
-  const cmpRefs = useRef<(HTMLIFrameElement | null)[]>([null, null]);
-  const leader = useRef(0);
   // Main preview: choosing a form section scrolls the email to the matching part.
   const previewFrame = useRef<HTMLIFrameElement>(null);
   const sectionRef = useRef<string>(section);
@@ -155,32 +153,14 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
     const max = doc.documentElement.scrollHeight - win.innerHeight;
     win.scrollTo({ top: Math.max(0, (max * idx) / GROUPS.length), behavior });
   };
-  const wireSync = (i: number) => {
-    const win = cmpRefs.current[i]?.contentWindow;
-    if (!win) return;
-    const lead = () => { leader.current = i; };
-    ['pointerdown', 'pointerenter', 'wheel', 'touchstart', 'keydown'].forEach(ev => win.addEventListener(ev, lead, { passive: true }));
-    win.addEventListener('scroll', () => {
-      if (leader.current !== i) return;
-      const other = cmpRefs.current[1 - i]?.contentWindow;
-      if (!other) return;
-      const max = win.document.documentElement.scrollHeight - win.innerHeight;
-      const omax = other.document.documentElement.scrollHeight - other.innerHeight;
-      other.scrollTo(0, max > 0 ? (win.scrollY / max) * omax : 0);
-    });
-  };
   const [draft, setDraft] = useState<BookingEmailTemplate>({ ...DEFAULT_BOOKING_EMAIL_TEMPLATE });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [fullyPaid, setFullyPaid] = useState(false);
-  const [darkPreview, setDarkPreview] = useState(false);
-  // Compare opens a popup with light and dark side by side.
-  const [compare, setCompare] = useState(false);
   const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
   const logoInput = useRef<HTMLInputElement>(null);
-  const logoDarkInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<'' | 'logoUrl' | 'logoDarkUrl'>('');
   // Logos uploaded while editing, so ones that end up unused can be deleted on save.
   const sessionUploads = useRef<Set<string>>(new Set());
@@ -219,16 +199,11 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [draft, fullyPaid]);
 
-  // The preview follows the Light/Dark switch instead of this computer's own setting: the
-  // email's dark-mode rules are forced on or off, and the dark logo is loaded from this site
-  // so it also shows before the site has been deployed.
-  const previewHtmlFor = (dark: boolean) => {
+  // The default logo is loaded from this site so it also shows before the site has been deployed.
+  const previewHtml = (() => {
     const html = preview?.html ?? '';
-    if (!html) return html;
-    return html
-      .replace('@media (prefers-color-scheme: dark)', dark ? '@media all' : '@media not all')
-      .replace(`${SITE_ORIGIN}/ULAA-logo-mail-dark.png`, `${window.location.origin}/ULAA-logo-mail-dark.png`);
-  };
+    return html.replace(`${SITE_ORIGIN}/ULAA-logo.png`, `${window.location.origin}/ULAA-logo.png`);
+  })();
 
   const set = useCallback(<K extends keyof BookingEmailTemplate>(key: K, value: BookingEmailTemplate[K]) => {
     setSaved(false);
@@ -238,7 +213,6 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
 
   const chooseLogo = async (which: 'logoUrl' | 'logoDarkUrl', file: File | undefined) => {
     if (logoInput.current) logoInput.current.value = '';
-    if (logoDarkInput.current) logoDarkInput.current.value = '';
     if (!file) return;
     if (!LOGO_ACCEPT.split(',').includes(file.type)) {
       setError('Please choose a PNG, JPG or WebP image. Email programs cannot show SVG logos.');
@@ -288,8 +262,13 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
     }
   };
 
-  const handleReset = () => {
-    if (!window.confirm('Put every line back to the original wording? (Press Save to keep it.)')) return;
+  const handleReset = async () => {
+    const ok = await confirm({
+      title: 'Reset email wording?',
+      message: 'Put every line back to the original wording? (Press Save to keep it.)',
+      confirmLabel: 'Reset',
+    });
+    if (!ok) return;
     setSaved(false);
     setDraft({ ...DEFAULT_BOOKING_EMAIL_TEMPLATE });
   };
@@ -397,33 +376,22 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
 
               <section className="space-y-1.5" aria-label="Logo">
                 <h2 className="text-xs font-semibold text-dark">Logo</h2>
-                <p className="text-2xs text-dark-muted">Shown at the bottom of the email (PNG, JPG or WebP, up to 2MB). The dark-mode logo should have light lettering on a transparent background; without one, the light logo is used in both modes.</p>
+                <p className="text-2xs text-dark-muted">Shown at the bottom of the email (PNG, JPG or WebP, up to 2MB). Left empty, the Ulaa logo (ULAA-logo.png) is used.</p>
                 <input ref={logoInput} type="file" accept={LOGO_ACCEPT} className="hidden" onChange={e => void chooseLogo('logoUrl', e.target.files?.[0])} />
-                <input ref={logoDarkInput} type="file" accept={LOGO_ACCEPT} className="hidden" onChange={e => void chooseLogo('logoDarkUrl', e.target.files?.[0])} />
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    ['logoUrl', 'Light mode', 'bg-white border-background-warm', draft.logoUrl || '/ULAA-logo.png', logoInput, 'Use Ulaa logo'],
-                    ['logoDarkUrl', 'Dark mode', 'bg-[#2D2118] border-dark', draft.logoDarkUrl || draft.logoUrl || '/ULAA-logo-mail-dark.png', logoDarkInput, 'Use Ulaa dark logo'],
-                  ] as const).map(([key, label, box, src, input, resetLabel]) => (
-                    <div key={key} className="space-y-1.5">
-                      <p className="text-xs font-medium text-dark">{label}</p>
-                      <div className={`flex h-14 items-center justify-center rounded-md border px-2 ${box}`}>
-                        <img src={src} alt={`Email logo, ${label.toLowerCase()}`} style={{ width: Math.min(draft.logoWidth, 110) }} className="max-h-full max-w-full h-auto object-contain" />
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        <button type="button" onClick={() => input.current?.click()} disabled={!!uploading} className="inline-flex items-center gap-1 px-2 min-h-[30px] rounded-md border-2 border-background-warm text-dark text-xs font-medium hover:bg-background-warm transition-colors disabled:opacity-60">
-                          <UploadSimple size={12} aria-hidden="true" />
-                          {uploading === key ? 'Uploading…' : draft[key] ? 'Replace' : 'Upload'}
-                        </button>
-                        {draft[key] && (
-                          <button type="button" onClick={() => set(key, '')} title={resetLabel} className="inline-flex items-center gap-1 px-2 min-h-[30px] rounded-md border-2 border-background-warm text-dark text-xs font-medium hover:bg-background-warm transition-colors">
-                            <ArrowCounterClockwise size={12} aria-hidden="true" />
-                            Default
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex h-14 items-center justify-center rounded-md border border-background-warm bg-white px-2">
+                  <img src={draft.logoUrl || '/ULAA-logo.png'} alt="Email logo" style={{ width: Math.min(draft.logoWidth, 110) }} className="max-h-full max-w-full h-auto object-contain" />
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" onClick={() => logoInput.current?.click()} disabled={!!uploading} className="inline-flex items-center gap-1 px-2 min-h-[30px] rounded-md border-2 border-background-warm text-dark text-xs font-medium hover:bg-background-warm transition-colors disabled:opacity-60">
+                    <UploadSimple size={12} aria-hidden="true" />
+                    {uploading ? 'Uploading…' : draft.logoUrl ? 'Replace' : 'Upload'}
+                  </button>
+                  {draft.logoUrl && (
+                    <button type="button" onClick={() => set('logoUrl', '')} title="Use Ulaa logo" className="inline-flex items-center gap-1 px-2 min-h-[30px] rounded-md border-2 border-background-warm text-dark text-xs font-medium hover:bg-background-warm transition-colors">
+                      <ArrowCounterClockwise size={12} aria-hidden="true" />
+                      Default
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <label htmlFor="mail-logo-width" className="w-20 shrink-0 text-xs font-medium text-dark">Logo width</label>
@@ -454,32 +422,6 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
               </button>
             ))}
           </div>
-          <div role="group" aria-label="Preview appearance" className="flex flex-wrap items-center gap-1.5">
-            {([[false, 'Light mode'], [true, 'Dark mode']] as const).map(([value, label]) => (
-              <button
-                key={label}
-                type="button"
-                aria-pressed={darkPreview === value}
-                onClick={() => setDarkPreview(value)}
-                className={`min-h-[30px] px-2.5 rounded-md border-2 text-xs font-medium transition-colors ${
-                  darkPreview === value ? 'border-primary bg-primary/5 text-primary' : 'border-background-warm text-dark hover:border-primary/50'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-            <button
-              type="button"
-              aria-haspopup="dialog"
-              aria-label="Compare light and dark side by side"
-              title="Compare light and dark side by side"
-              onClick={() => setCompare(true)}
-              className="inline-flex items-center justify-center gap-1.5 min-h-[30px] px-2.5 rounded-md border-2 border-background-warm text-xs font-medium text-dark hover:border-primary/50 transition-colors"
-            >
-              <Columns size={14} aria-hidden="true" />
-              Compare
-            </button>
-          </div>
           <p className="text-2xs text-dark-muted truncate" title={preview?.subject}><span className="font-medium text-dark">Subject:</span> {preview?.subject ?? '…'}</p>
           <iframe
             ref={previewFrame}
@@ -487,32 +429,12 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
             title="Booking confirmation email preview"
             // allow-same-origin (no scripts) lets this page scroll the email to the section being edited.
             sandbox="allow-same-origin"
-            srcDoc={previewHtmlFor(darkPreview)}
+            srcDoc={previewHtml}
             className={`w-full ${frame} flex-1 rounded-md border border-background-warm bg-white`}
           />
-          <p className="text-2xs text-dark-muted">Sample traveller and payments; the real email uses each booking's details.{darkPreview ? ' Dark mode is how apps such as Apple Mail show it; Gmail darkens emails its own way.' : ''}</p>
+          <p className="text-2xs text-dark-muted">Sample traveller and payments; the real email uses each booking's details.</p>
         </section>
       </div>
-
-      <Modal isOpen={compare} onClose={() => setCompare(false)} title="Compare light and dark" size="2xl">
-        <p className="text-xs text-dark-muted truncate mb-2"><span className="font-medium text-dark">Subject:</span> {preview?.subject ?? '…'} · Scroll either side and both move together.</p>
-        <div className="grid sm:grid-cols-2 gap-4">
-          {([[false, 'Light mode'], [true, 'Dark mode']] as const).map(([dark, label], i) => (
-            <figure key={label} className="m-0 space-y-1">
-              <figcaption className="text-xs font-medium text-dark">{label}</figcaption>
-              <iframe
-                ref={el => { cmpRefs.current[i] = el; }}
-                onLoad={() => wireSync(i)}
-                title={`Booking confirmation email preview, ${label.toLowerCase()}`}
-                // allow-same-origin (no scripts) lets this page read the scroll position so both sides can follow each other.
-                sandbox="allow-same-origin"
-                srcDoc={previewHtmlFor(dark)}
-                className="w-full h-[calc(100vh-290px)] min-h-[320px] rounded-md border border-background-warm bg-white"
-              />
-            </figure>
-          ))}
-        </div>
-      </Modal>
 
       <AdminEditorFooter
         onSave={handleSave}

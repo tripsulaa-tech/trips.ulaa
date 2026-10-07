@@ -8,6 +8,7 @@ import TripHighlightIconPicker from '../../components/ui/TripHighlightIconPicker
 import { useConfirm } from '../../components/ui/useConfirm';
 import type { BottomNavItemConfig } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
+import { useAlert } from '../../components/ui/useAlert';
 
 // Simple, dependency-free unique id — good enough for a short admin-edited
 // list that only ever grows one tab at a time via the "Add Tab" button.
@@ -22,6 +23,7 @@ export default function BottomNavSection({
   setItems: React.Dispatch<React.SetStateAction<BottomNavItemConfig[]>>;
   sectionRef: (el: HTMLDivElement | null) => void;
 }) {
+  const alert = useAlert();
   const confirm = useConfirm();
 
   const updateItem = (index: number, patch: Partial<BottomNavItemConfig>) => {

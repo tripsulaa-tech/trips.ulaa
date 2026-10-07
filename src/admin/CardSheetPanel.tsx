@@ -14,7 +14,7 @@ import { formatLength, useLengthUnit } from '../utils/lengthUnits';
 import {
   GUIDE_NOTE, MARKS_GAP_HINT, MIN_GAP_FOR_MARKS_MM, cardCutGuides, cardSheetItemKey, cutGuideOptions, isCutGuides, planCardSheets,
   type CardSheetItem, type CutGuides, type GuideShape,
-} from '../utils/travelCard';
+} from '../utils/travelCardLayout';
 import { MAX_PRINT_SHEETS } from '../constants/limits';
 
 /** Cut guides as SVG lines, for the on-screen sheet previews (mm units). */

@@ -17,6 +17,7 @@ import { DEFAULT_HOME_HERO } from '../../constants/home-hero';
 import type { HomeHeroContent, HomeHeroSlide } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { STORAGE_BUCKET } from '../../constants/storage';
+import { useAlert } from '../../components/ui/useAlert';
 
 
 export default function HeroBannerSection({
@@ -28,6 +29,7 @@ export default function HeroBannerSection({
   setContent: React.Dispatch<React.SetStateAction<HomeHeroContent>>;
   sectionRef: (el: HTMLDivElement | null) => void;
 }) {
+  const alert = useAlert();
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 

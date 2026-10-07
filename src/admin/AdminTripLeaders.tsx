@@ -30,6 +30,7 @@ import {
   useDraftKeeper, modalDraftBase, resolveModalDraft, settleDraft, discardDraft, type ModalDraftValue,
 } from '../hooks/useSessionDraft';
 import { STORAGE_BUCKET } from '../constants/storage';
+import { useAlert } from '../components/ui/useAlert';
 
 
 interface TripLeaderForm {
@@ -62,6 +63,7 @@ interface ReturnTo { path: string; label: string; tripTitle: string }
 interface LeadersNavState { returnTo?: ReturnTo; editLeaderId?: string; createLeader?: boolean }
 
 export default function AdminTripLeaders() {
+  const alert = useAlert();
   const confirm = useConfirm();
   const location = useLocation();
   const navigate = useNavigate();

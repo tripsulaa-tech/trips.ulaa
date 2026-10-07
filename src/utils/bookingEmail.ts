@@ -121,11 +121,17 @@ function escapeHtml(str: string): string {
 // color-scheme meta tags in <head>, which would otherwise make a
 // dark-wordmark logo vanish against an auto-darkened background.
 const LOGO_URL = `${SITE_ORIGIN}/ULAA-logo.png`;
-// Dark-mode variant made for the email sign-off (light lettering on a transparent
-// background, file: public/ULAA-logo-mail-dark.png), shown instead of LOGO_URL in
-// clients that support prefers-color-scheme — see the .logo-dark rule in <style>.
-// The site's footer logo is left as it was.
-const LOGO_FOOTER_URL = `${SITE_ORIGIN}/ULAA-logo-mail-dark.png`;
+
+/** Keeps the email in its light design when the phone is in dark mode. Apple Mail obeys the
+ *  `color-scheme: light only` hints above; Gmail's apps ignore them and recolour any plain
+ *  background, but leave a background *image* alone. So every solid background colour also gets
+ *  a same-colour gradient layer, which stops Gmail from turning the cards dark. */
+function keepLight(html: string): string {
+  return html.replace(
+    /style="([^"]*?)background-color:\s*(#[0-9a-fA-F]{6})\s*;/g,
+    (_m, before: string, hex: string) => `style="${before}background-color: ${hex}; background-image: linear-gradient(${hex}, ${hex});`,
+  );
+}
 
 /** Rich, production-ready HTML email — table-based layout, inline styles,
  *  and a bulletproof VML button for Outlook. One fixed light-mode design
@@ -148,16 +154,11 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[], t: Booking
   };
   const words = (text: string) => templateToHtml(text, vars);
   const lw = t.logoWidth;
-  // Light and dark logos are chosen separately in Logo Studio → Email. A custom light logo
-  // with no dark one is used in both modes; with nothing uploaded, Ulaa's own pair is used.
-  const lightLogo = t.logoUrl || LOGO_URL;
-  const darkLogo = t.logoDarkUrl || (t.logoUrl ? '' : LOGO_FOOTER_URL);
+  // One logo for every mail app: the one chosen in Logo Studio → Email, else public/ULAA-logo.png.
+  const logo = t.logoUrl || LOGO_URL;
   const logoImg = (src: string, cls: string, display: string) =>
     `<img src="${src}" width="${lw}" alt="Ulaa"${cls ? ` class="${cls}"` : ''} style="display: ${display}; width: ${lw}px; max-width: ${lw}px; height: auto;">`;
-  const logoHtml = darkLogo
-    ? `${logoImg(lightLogo, 'logo-light', 'block')}
-                          ${logoImg(darkLogo, 'logo-dark', 'none')}`
-    : logoImg(lightLogo, '', 'block');
+  const logoHtml = logoImg(logo, '', 'block');
   const trip = escapeHtml(f.tripName);
   const bookingIdRow = f.bookingId
     ? `
@@ -214,14 +215,14 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[], t: Booking
   const paymentInfoLabel = words(f.isFullyPaid ? t.paymentLabelFull : t.paymentLabelPartial);
   const paymentInfoText = words(f.isFullyPaid ? t.paymentNoteFull : t.paymentNotePartial);
 
-  return `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="color-scheme" content="light dark">
-<meta name="supported-color-schemes" content="light dark">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
 <!--[if mso]>
 <noscript>
 <xml>
@@ -233,6 +234,7 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[], t: Booking
 <![endif]-->
 <title>${escapeHtml(f.subject)}</title>
 <style>
+  :root { color-scheme: light only; supported-color-schemes: light only; }
   body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
   table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
   img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
@@ -242,30 +244,6 @@ function buildBookingEmailHtml(enquiry: Enquiry, payments: Payment[], t: Booking
     .email-container { width: 100% !important; }
     .mobile-padding { padding-left: 24px !important; padding-right: 24px !important; }
     .trip-title { font-size: 20px !important; }
-  }
-
-  /* Clients that honor prefers-color-scheme (Apple Mail, newer webmail
-     Gmail) swap in the footer-style logo, which reads better once the
-     surrounding card gets dark-mode-inverted. Clients that ignore this
-     (older Gmail Android among them) just keep showing .logo-light,
-     which is why it also sits inside its own white card below — that's
-     the fallback for everyone this media query doesn't reach. */
-  .logo-dark { display: none; }
-  /* Dark mode follows the app's own dark surface (the site footer: warm dark brown
-     #2D2118 with cream text and the orange accents), not a generic black-and-white
-     inversion. Only clients that honour prefers-color-scheme see this. */
-  @media (prefers-color-scheme: dark) {
-    .logo-light { display: none !important; }
-    .logo-dark { display: block !important; }
-    body, center, [style*="background-color: #F2EBE0"] { background-color: #211912 !important; }
-    td[style*="background-color: #FFFFFF"] { background-color: #2D2118 !important; }
-    td[style*="background-color: #FAF7F2"], table[style*="background-color: #FAF7F2"] { background-color: #3A2B20 !important; }
-    td[style*="background-color: #FAF1E4"] { background-color: #3D2C1F !important; }
-    [style*="solid #E8DFD3"], [style*="solid #EEE6D8"], [style*="solid #F0E9DC"] { border-color: #4A3728 !important; }
-    p[style*="color: #2D2118"], h1[style*="color: #2D2118"], td[style*="color: #2D2118"] { color: #F8F4EC !important; }
-    p[style*="color: #4A3728"], p[style*="color: #6B5744"] { color: #DDD2C4 !important; }
-    p[style*="color: #8A7864"], td[style*="color: #8A7864"] { color: #BBAA92 !important; }
-    p[style*="color: ${BRAND_COLOR}"], span[style*="color: ${BRAND_COLOR}"], td[style*="color: ${BRAND_COLOR}"], a[style*="text-decoration: underline"] { color: #E39A4F !important; }
   }
 </style>
 </head>
@@ -387,6 +365,7 @@ ${logoHtml}
 </center>
 </body>
 </html>`;
+  return keepLight(html);
 }
 
 async function fileToBase64(file: File): Promise<string> {

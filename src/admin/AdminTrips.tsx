@@ -11,6 +11,7 @@ import AdminTripFormModal from './trips/AdminTripFormModal';
 import AdminTripViewModal from './trips/AdminTripViewModal';
 import AdminTripCheckInModal from './trips/AdminTripCheckInModal';
 import type { UpcomingTrip } from '../types/types-index';
+import { useAlert } from '../components/ui/useAlert';
 
 /** The Upcoming Trips admin page — everyone who's booking, or might book, a
  *  trip starts here.
@@ -25,6 +26,7 @@ import type { UpcomingTrip } from '../types/types-index';
  *  maintainability; see that file's git history for the original
  *  single-component version. */
 export default function AdminTrips() {
+  const alert = useAlert();
   const { trips, loading, load } = useTripsData();
   const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
   const [checkInTrip, setCheckInTrip] = useState<UpcomingTrip | null>(null);
@@ -100,7 +102,7 @@ export default function AdminTrips() {
   // button also lands on the restored modal, not on a blank trips list.
   const openLeadersFromTrip = (target: { leaderId?: string; create?: boolean }) => {
     if (!stashDraftForLeaderDetour()) {
-      window.alert('Could not keep your unsaved changes while leaving this page. Please save the trip first, then edit the leader.');
+      alert('Could not keep your unsaved changes while leaving this page. Please save the trip first, then edit the leader.');
       return;
     }
     navigate(location.pathname, { replace: true, state: { resumeTripDraft: true } });

@@ -6,6 +6,7 @@ import {
   LinkSimple as Link2,
 } from '@phosphor-icons/react';
 import { uploadImage, uploadImageFromUrl, deleteImageByUrl } from '../../services/api';
+import { useAlert } from './useAlert';
 
 interface ImageUploadFieldProps {
   label: string;
@@ -45,6 +46,7 @@ interface ImageUploadFieldProps {
 }
 
 export default function ImageUploadField({ label, value, onChange, bucket, pathPrefix, required, fileNamePrefix, maxSizeBytes, hint, aspectRatio, allowUrl }: ImageUploadFieldProps) {
+  const alert = useAlert();
   const [uploading, setUploading] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlDraft, setUrlDraft] = useState('');

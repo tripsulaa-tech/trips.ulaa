@@ -13,6 +13,7 @@ import { useConfirm } from '../../components/ui/useConfirm';
 import { makeTempId } from '../useAdminHomePage';
 import type { GalleryImage } from '../../types/types-index';
 import { STORAGE_BUCKET } from '../../constants/storage';
+import { useAlert } from '../../components/ui/useAlert';
 
 
 export default function InstagramMomentsSection({
@@ -24,6 +25,7 @@ export default function InstagramMomentsSection({
   setImages: React.Dispatch<React.SetStateAction<GalleryImage[]>>;
   sectionRef: (el: HTMLDivElement | null) => void;
 }) {
+  const alert = useAlert();
   const confirm = useConfirm();
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);

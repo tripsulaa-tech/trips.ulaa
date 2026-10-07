@@ -5,6 +5,8 @@ import { collectStorageUrls } from '../utils/utils-index';
 import { useSectionTabChrome } from './useSectionTabChrome';
 import { lookupDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
 import { STORAGE_BUCKET } from '../constants/storage';
+import { useAlert } from '../components/ui/useAlert';
+import { useConfirm } from '../components/ui/useConfirm';
 
 // Shared by every "single site_content record, edited on its own admin
 // page" screen (About, Founder, Why Ulaa, ...): load-on-mount with a
@@ -80,6 +82,8 @@ export function useContentEditorPage<T>({
   sectionCount: getSectionCount,
   storageBucket = STORAGE_BUCKET,
 }: UseContentEditorPageOptions<T>): UseContentEditorPageResult<T> {
+  const alert = useAlert();
+  const confirm = useConfirm();
   const [content, setContent] = useState<T>(defaultContent);
   const sectionCount = getSectionCount(content);
   const [loading, setLoading] = useState(true);
@@ -154,7 +158,7 @@ export function useContentEditorPage<T>({
       // Someone may have saved this page since it was opened here; check before overwriting.
       const current = await getSiteContent<unknown>(contentKey).catch(() => undefined);
       if (current !== undefined && draftBase !== null && stableStringify(mergeWithDefaults(current)) !== draftBase) {
-        const overwrite = window.confirm('The saved version of this page changed after you opened it. Saving now replaces those newer changes with what is on your screen. Save anyway?');
+        const overwrite = await confirm('The saved version of this page changed after you opened it. Saving now replaces those newer changes with what is on your screen. Save anyway?');
         if (!overwrite) return;
       }
       await upsertSiteContent(contentKey, content);

@@ -25,6 +25,7 @@ import type { CompletedTrip } from '../types/types-index';
 import { formatDate, slugify, formatBatchLabel, formatBatchShortLabel } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { STORAGE_BUCKET } from '../constants/storage';
+import { useAlert } from '../components/ui/useAlert';
 
 interface AlbumForm {
   title: string;
@@ -72,6 +73,7 @@ function findDuplicateAlbum(form: AlbumForm, albums: CompletedTrip[], editingId:
 }
 
 export default function AdminAlbums() {
+  const alert = useAlert();
   const confirm = useConfirm();
   const [albums, setAlbums] = useState<CompletedTrip[]>([]);
   const [loading, setLoading] = useState(true);

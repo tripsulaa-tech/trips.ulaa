@@ -784,7 +784,7 @@ export default function AdminCreatorRateCalculator() {
       // Someone may have saved the template since this page was opened; check before overwriting.
       const current = await getSiteContent<CreatorRateMessageTemplateContent>(RATE_MESSAGE_TEMPLATE_KEY).then(templateDraftFrom).catch(() => null);
       if (current && templateBase !== null && stableStringify(current) !== templateBase) {
-        if (!window.confirm('The saved message template changed after you opened this page. Saving now replaces those newer changes with what is on your screen. Save anyway?')) return;
+        if (!(await confirm('The saved message template changed after you opened this page. Saving now replaces those newer changes with what is on your screen. Save anyway?'))) return;
       }
       await upsertSiteContent(RATE_MESSAGE_TEMPLATE_KEY, { variants: templateVariants, defaultVariantId } satisfies CreatorRateMessageTemplateContent);
       setTemplateBase(stableStringify(templateValue));

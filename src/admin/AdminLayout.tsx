@@ -38,6 +38,7 @@ import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { sweepAbandonedDraftUploads, discardAllDrafts, hasAnyDraft } from '../hooks/useSessionDraft';
 import type { TripHighlightIconType } from '../constants/tripHighlightIcons';
 import { useBranding } from '../hooks/useBranding';
+import { useConfirm } from '../components/ui/useConfirm';
 
 interface AdminNavItemDef {
   to: string;
@@ -218,7 +219,7 @@ interface SidebarContentProps {
   onNavigate: () => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
-  guardNavigate?: (e: React.MouseEvent) => void;
+  guardNavigate?: (e: React.MouseEvent, proceed?: () => void) => void;
 }
 
 interface DragTarget {
@@ -422,7 +423,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
         <NavLink
           to={to}
           end={label === 'Dashboard'}
-          onClick={e => { guardNavigate?.(e); if (!e.defaultPrevented) onNavigate(); }}
+          onClick={e => { guardNavigate?.(e, onNavigate); if (!e.defaultPrevented) onNavigate(); }}
           title={collapsed ? label : undefined}
           aria-label={collapsed ? label : undefined}
           className={({ isActive }) => `
@@ -560,6 +561,7 @@ const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';
 export default function AdminLayout({ children, title, subtitle, hasUnsavedChanges, fixedHeight = false, scrollRestorationReady = true }: AdminLayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const location = useLocation();
   // Restores scroll position whenever the admin comes back to a page they'd
   // scrolled down on — e.g. drilling into a detail view/modal and going
@@ -658,18 +660,34 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
   // reload, so beforeunload never fires for these; this is the
   // lightweight substitute for a React Router data-router useBlocker
   // (which isn't available under the plain BrowserRouter this app uses).
-  const guardNavigate = (e: React.MouseEvent) => {
+  const guardNavigate = (e: React.MouseEvent, proceed?: () => void) => {
     if (!hasUnsavedChanges || !hasUnsavedChanges()) return;
+    // Ctrl/Cmd/Shift-click opens another tab or window, so this page (and its changes) stays put.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    // The themed dialog answers asynchronously, so stop the link now and follow it once confirmed.
+    e.preventDefault();
+    const href = (e.currentTarget as HTMLElement).closest('a')?.getAttribute('href');
     // Every page that reports unsaved changes also keeps them as a draft for this browser tab,
     // so leaving is safe; what the admin should know is that nothing is on the live site yet.
-    if (!window.confirm('You have unsaved changes. They stay in this browser tab so you can come back to them, but they are not on the live site until you save. Leave this page anyway?')) {
-      e.preventDefault();
-    }
+    void confirm({
+      title: 'Leave this page?',
+      message: 'You have unsaved changes. They stay in this browser tab so you can come back to them, but they are not on the live site until you save. Leave this page anyway?',
+      confirmLabel: 'Leave page',
+    }).then(ok => {
+      if (!ok) return;
+      proceed?.();
+      if (href) navigate(href);
+    });
   };
 
   const handleSignOut = async () => {
-    if ((hasUnsavedChanges?.() || hasAnyDraft()) && !window.confirm('You have unsaved changes. Signing out discards them. Sign out anyway?')) {
-      return;
+    if (hasUnsavedChanges?.() || hasAnyDraft()) {
+      const ok = await confirm({
+        title: 'Sign out?',
+        message: 'You have unsaved changes. Signing out discards them. Sign out anyway?',
+        confirmLabel: 'Sign out',
+      });
+      if (!ok) return;
     }
     // Nothing unsaved should outlive the session: drop every draft this tab holds, and the
     // images uploaded only for them.

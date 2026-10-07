@@ -14,6 +14,8 @@ import {
   type BrandingSlot,
 } from '../hooks/useBranding';
 import { STORAGE_BUCKET } from '../constants/storage';
+import { useConfirm } from '../components/ui/useConfirm';
+import { useAlert } from '../components/ui/useAlert';
 
 // Logo Studio → "Site logos": choose which images the site uses for its header,
 // footer, browser tab, install prompt and admin panel, plus the Travel Cards badge,
@@ -236,6 +238,8 @@ export default function LogoStudioSiteLogos({
   makeLogoFile: (kind: StudioKind) => Promise<File | null>;
   onDirtyChange: (dirty: boolean) => void;
 }) {
+  const alert = useAlert();
+  const confirm = useConfirm();
   const [draft, setDraft] = useState<BrandingContent>({ ...EMPTY_BRANDING });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -353,7 +357,7 @@ export default function LogoStudioSiteLogos({
   };
 
   const handleDiscard = async () => {
-    if (hasUnsavedChanges() && !window.confirm('Discard your unsaved changes?')) return;
+    if (hasUnsavedChanges() && !(await confirm('Discard your unsaved changes?'))) return;
     await cleanupUnused(savedRef.current, { ...EMPTY_BRANDING });
     setDraft({ ...savedRef.current });
     setSaved(false);

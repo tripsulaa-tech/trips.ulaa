@@ -8,10 +8,12 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from '../services/push';
+import { useAlert } from '../components/ui/useAlert';
 
 type Status = 'unsupported' | 'denied' | 'subscribed' | 'not-subscribed' | 'loading';
 
 export default function PushNotificationToggle() {
+  const alert = useAlert();
   const [status, setStatus] = useState<Status>('loading');
   const [busy, setBusy] = useState(false);
 

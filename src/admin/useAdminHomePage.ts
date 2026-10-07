@@ -19,6 +19,8 @@ import type {
   TestimonialsSectionContent, GalleryImage, Testimonial, BottomNavItemConfig, ButtonLabelsConfig,
 } from '../types/types-index';
 import { STORAGE_BUCKET } from '../constants/storage';
+import { useAlert } from '../components/ui/useAlert';
+import { useConfirm } from '../components/ui/useConfirm';
 
 
 // The public homepage's real section order (see src/pages/HomePage.tsx) —
@@ -137,6 +139,8 @@ function makeTempId() {
 }
 
 export function useAdminHomePage(): UseAdminHomePageResult {
+  const alert = useAlert();
+  const confirm = useConfirm();
   const [heroContent, setHeroContent] = useState<HomeHeroContent>(DEFAULT_HOME_HERO);
   const [whyContent, setWhyContent] = useState<WhyUlaaContent>(DEFAULT_WHY_ULAA);
   const [founderContent, setFounderContent] = useState<FounderContent>(DEFAULT_FOUNDER);
@@ -251,7 +255,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
       // Someone may have saved this page since it was opened here; check before overwriting.
       const current = await fetchSavedHomeState().catch(() => null);
       if (current && draftBase !== null && stableStringify(current) !== draftBase) {
-        const overwrite = window.confirm('The saved version of the Home Page changed after you opened it. Saving now replaces those newer changes with what is on your screen. Save anyway?');
+        const overwrite = await confirm('The saved version of the Home Page changed after you opened it. Saving now replaces those newer changes with what is on your screen. Save anyway?');
         if (!overwrite) return;
       }
 

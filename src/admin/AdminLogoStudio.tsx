@@ -4,6 +4,7 @@ import AdminLayout from './AdminLayout';
 import ColorPicker, { type ColorSwatch } from '../components/ui/ColorPicker';
 import LogoStudioSiteLogos from './LogoStudioSiteLogos';
 import LogoStudioMailEditor from './LogoStudioMailEditor';
+import { useAlert } from '../components/ui/useAlert';
 
 // Admin → Logo Studio: pick a ready-made logo, tweak its colours and download it.
 //
@@ -481,6 +482,7 @@ function useSessionState<T>(key: string, initial: T): [T, (v: T | ((prev: T) => 
 }
 
 export default function AdminLogoStudio() {
+  const alert = useAlert();
   const [preId, setPreId] = useSessionState<string>('logoStudio.pre', PREDESIGNS[0].id);
   const [colors, setColors] = useSessionState<LogoColors>('logoStudio.colors', { ...PREDESIGNS[0].colors });
   const [margin, setMargin] = useSessionState<MarginId>('logoStudio.margin', 'medium');

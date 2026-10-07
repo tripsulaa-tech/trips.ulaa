@@ -24,7 +24,7 @@ import { isBooked } from './enquiries/AdminEnquiriesShared';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { formatDate } from '../utils/utils-index';
 import type { Enquiry, TripLeader, UpcomingTrip } from '../types/types-index';
-import { DEFAULT_BACK_CARD_TEXT, GUIDE_NOTE, MARKS_GAP_HINT, MIN_GAP_FOR_MARKS_MM, badgeCutGuides, cutGuideOptions, isCutGuides, layoutBadgeSheet, planBadgeSheets, type BackCardText, type CardSheetItem, type CutGuides, type TravelCardRole } from '../utils/travelCard';
+import { DEFAULT_BACK_CARD_TEXT, GUIDE_NOTE, MARKS_GAP_HINT, MIN_GAP_FOR_MARKS_MM, badgeCutGuides, cutGuideOptions, isCutGuides, layoutBadgeSheet, planBadgeSheets, type BackCardText, type CardSheetItem, type CutGuides, type TravelCardRole } from '../utils/travelCardLayout';
 import { MAX_PRINT_SHEETS } from '../constants/limits';
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
