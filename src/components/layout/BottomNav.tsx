@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
-import {
-  House as Home,
-} from '@phosphor-icons/react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { getSiteContent } from '../../services/api';
 import { subscribeToTable } from '../../services/realtime';
-import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
+import { useNavIconResolver } from '../../hooks/useNavIcons';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
 import type { BottomNavItemConfig } from '../../types/types-index';
 
@@ -18,6 +15,7 @@ export default function BottomNav() {
   // swaps in the admin's saved tabs, if any, once the fetch resolves. See
   // the Home Page admin's "Bottom Nav Bar" tab (src/admin/home-sections/BottomNavSection.tsx) for where these are edited.
   const [navItems, setNavItems] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);
+  const resolveIcon = useNavIconResolver(navItems.map(item => item.icon));
 
   useEffect(() => {
     getSiteContent<BottomNavItemConfig[]>('bottom_nav')
@@ -82,7 +80,7 @@ export default function BottomNav() {
           const isActive = index === safeIndex;
           // Falls back to the Home icon if a saved icon key doesn't resolve
           // (e.g. it was removed from the shared library after being saved).
-          const Icon = getTripHighlightIcon(icon)?.Icon ?? Home;
+          const Icon = resolveIcon(icon);
 
           return (
             <NavLink

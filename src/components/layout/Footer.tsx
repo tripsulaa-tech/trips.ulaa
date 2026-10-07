@@ -11,7 +11,7 @@ import {
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { getSiteContent } from '../../services/api';
-import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
+import { useNavIconResolver } from '../../hooks/useNavIcons';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
 import type { BottomNavItemConfig } from '../../types/types-index';
 import { useBranding } from '../../hooks/useBranding';
@@ -53,6 +53,7 @@ export default function Footer() {
   // icon and label alike — always stay in sync with the site's bottom nav
   // bar instead of drifting out of consistency with it.
   const [navConfig, setNavConfig] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);
+  const resolveIcon = useNavIconResolver(navConfig.map(item => item.icon));
 
   useEffect(() => {
     getSiteContent<BottomNavItemConfig[]>('bottom_nav')
@@ -71,7 +72,7 @@ export default function Footer() {
     .map(item => ({
       label: item.label,
       to: item.to,
-      icon: getTripHighlightIcon(item.icon)?.Icon ?? Home,
+      icon: resolveIcon(item.icon),
     }));
 
   // Desktop "Quick Links" column includes Home in addition to the same tabs.

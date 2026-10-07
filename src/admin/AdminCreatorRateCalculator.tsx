@@ -12,7 +12,7 @@
 // is closed. Both the raw inputs and every derived output are stored
 // together, so a saved row stays an accurate record of what was actually
 // quoted even if the niche benchmarks or multiplier tiers are tuned later.
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calculator,
@@ -52,83 +52,22 @@ import { useConfirm } from '../components/ui/useConfirm';
 import { formatPrice, formatDate, getWhatsAppLink } from '../utils/utils-index';
 import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { getCreatorRateCalculations, saveCreatorRateCalculation, deleteCreatorRateCalculation, getSiteContent, upsertSiteContent } from '../services/api';
-import type { CreatorRateCalculation, CreatorRateAsset } from '../types/types-index';
-import { NICHE_CPV_BENCHMARKS, REEL_COUNT, VIEW_QUALITY_TIERS, RATE_ROUND_TO, RATE_CARD_ITEMS, DEFAULT_CREATOR, PREVIEW_SAMPLE_FOLLOWERS, PREVIEW_SAMPLE_RATES } from '../constants/creatorRate';
+import type { CreatorRateCalculation } from '../types/types-index';
+import { REEL_COUNT, DEFAULT_CREATOR, PREVIEW_SAMPLE_FOLLOWERS } from '../constants/creatorRate';
 import DraftConflictNotice from './DraftConflictNotice';
 import { lookupDraft, readDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
-
-const NICHE_OPTIONS = NICHE_CPV_BENCHMARKS.map(n => ({ value: n.niche, label: n.niche }));
-
-// Height of AdminLayout's sticky top bar (76px mobile / 92px desktop, plus
-// a little breathing room) — used whenever a collapsible section on this
-// page is expanded and scrolled into view, since scrolling its header to
-// the very top of the page would otherwise tuck it directly underneath
-// that sticky bar instead of leaving it visible below it.
-const STICKY_HEADER_SCROLL_OFFSET = 100;
-
-// Saved Calculations card/row expand state — kept in sessionStorage (not
-// localStorage) so leaving this page for another admin screen and coming
-// back mid-visit doesn't lose your place, but the card still honours its
-// "collapsed by default" design on a fresh tab/next day rather than
-// permanently remembering whatever was left open.
-const HISTORY_EXPANDED_KEY = 'cr_history_expanded';
-const HISTORY_EXPANDED_ID_KEY = 'cr_history_expanded_id';
-const TEMPLATE_EXPANDED_KEY = 'cr_template_expanded';
-
-function readSessionFlag(key: string): boolean {
-  try {
-    return sessionStorage.getItem(key) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function readSessionString(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-// Scrolls `el` (offset for the sticky top bar) into place, then keeps
-// re-checking its position for a short window instead of trusting a single
-// snapshot-in-time scroll. Right after a click, this page's layout can
-// still be settling — web fonts swapping in, an in-flight fetch resolving
-// — any of which nudges content up/down a beat after we've already
-// scrolled, leaving the target back off-screen even though the scroll
-// "worked". Re-asserts the corrected position on every frame for ~800ms,
-// stopping early the moment the admin scrolls by hand.
-function scrollElementIntoView(el: HTMLElement, offset: number) {
-  let cancelled = false;
-  const deadline = performance.now() + 800;
-  let firstJump = true;
-
-  const step = () => {
-    if (cancelled) return;
-    const target = el.getBoundingClientRect().top + window.scrollY - offset;
-    if (Math.abs(window.scrollY - target) > 2) {
-      // The first jump animates (smooth) so opening the panel reads as one
-      // motion; any later correction (layout having shifted since) snaps
-      // instantly — a second smooth call would just restart the easing
-      // and fight itself into visible jitter instead of settling.
-      window.scrollTo({ top: target, behavior: firstJump ? 'smooth' : 'auto' });
-      firstJump = false;
-    }
-    if (performance.now() < deadline) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-
-  const stop = () => { cancelled = true; };
-  window.addEventListener('wheel', stop, { passive: true, once: true });
-  window.addEventListener('touchmove', stop, { passive: true, once: true });
-
-  return () => {
-    cancelled = true;
-    window.removeEventListener('wheel', stop);
-    window.removeEventListener('touchmove', stop);
-  };
-}
+import {
+  NICHE_OPTIONS, extractViewNumbers, calculateCreatorRate,
+} from './creatorRate/creatorRateCalc';
+import {
+  RATE_MESSAGE_TEMPLATE_KEY, DEFAULT_MESSAGE_TEMPLATE, DEFAULT_VARIANT_ID, DEFAULT_MESSAGE_TEMPLATE_VARIANTS, PREVIEW_SAMPLE_ASSETS,
+  templateDraftFrom, renderMessageTemplate, renderFormattedPreview,
+  type MessageTemplateVariant, type TemplateDraft, type CreatorRateMessageTemplateContent, type MessageTemplateSource,
+} from './creatorRate/creatorRateMessage';
+import {
+  STICKY_HEADER_SCROLL_OFFSET, HISTORY_EXPANDED_KEY, HISTORY_EXPANDED_ID_KEY, TEMPLATE_EXPANDED_KEY,
+  readSessionFlag, readSessionString, scrollElementIntoView,
+} from './creatorRate/creatorRateSession';
 
 // Default identity fields, so the common case (quoting the same test/house
 // creator) doesn't need retyping every time — still fully editable, and
@@ -146,182 +85,6 @@ interface CalculatorInputs {
   creatorName: string; instagramHandle: string; phone: string; notes: string;
   followerCount: string; reelViews: string[]; niche: string;
 }
-interface TemplateDraft { variants: MessageTemplateVariant[]; defaultVariantId: string }
-
-/** The saved message template as the editor holds it (falling back to the built-in wording). */
-function templateDraftFrom(content: CreatorRateMessageTemplateContent | null): TemplateDraft {
-  if (content?.variants?.length) {
-    return {
-      variants: content.variants,
-      defaultVariantId: content.variants.some(v => v.id === content.defaultVariantId) ? content.defaultVariantId : content.variants[0].id,
-    };
-  }
-  if (content?.template) {
-    // Pre-variants shape — migrate the single saved template into one "Default" variant.
-    return { variants: [{ id: DEFAULT_VARIANT_ID, name: 'Default', template: content.template }], defaultVariantId: DEFAULT_VARIANT_ID };
-  }
-  return { variants: DEFAULT_MESSAGE_TEMPLATE_VARIANTS, defaultVariantId: DEFAULT_VARIANT_ID };
-}
-
-// Pulls every view-count-looking token out of pasted text, so a Reel field
-// can accept a whole column copied from Instagram Insights or a
-// spreadsheet (one value per line, comma/tab separated, etc.) instead of
-// forcing the admin to enter all 10 values one at a time. Handles thousand
-// separators ("12,345") and shorthand suffixes ("12.3k", "1.1M").
-function extractViewNumbers(text: string): number[] {
-  const matches = text.match(/-?\d[\d,]*(?:\.\d+)?\s*[kKmM]?/g) || [];
-  return matches
-    .map(raw => {
-      const cleaned = raw.replace(/,/g, '').trim();
-      const m = cleaned.match(/^(-?\d+(?:\.\d+)?)\s*([kKmM])?$/);
-      if (!m) return null;
-      let value = parseFloat(m[1]);
-      if (Number.isNaN(value)) return null;
-      const suffix = m[2]?.toLowerCase();
-      if (suffix === 'k') value *= 1_000;
-      if (suffix === 'm') value *= 1_000_000;
-      return Math.round(value);
-    })
-    .filter((n): n is number => n !== null);
-}
-
-// Rate Calculator!H8 — tiered View/Follower Ratio → Quality Multiplier,
-// straight from the nested IF in that cell (equivalent to the lookup table
-// on Model Settings!D:E).
-function viewQualityMultiplier(ratio: number): number {
-  const tier = VIEW_QUALITY_TIERS.find(t => t.below === undefined || ratio < t.below);
-  return tier ? tier.multiplier : 1;
-}
-
-// Excel FLOOR(x, 50) / CEILING(x, 50) — round down/up to the nearest ₹50,
-// used throughout the "Final Commercials" section of the sheet.
-function floorTo50(x: number): number {
-  return Math.floor(x / RATE_ROUND_TO) * RATE_ROUND_TO;
-}
-function ceilTo50(x: number): number {
-  return Math.ceil(x / RATE_ROUND_TO) * RATE_ROUND_TO;
-}
-
-// Turns a saved calculation into a ready-to-send message — this is the
-// piece the admin actually hands to the creator (via Copy or WhatsApp
-// Share on each saved row), so it stays plain text/emoji only, no app
-// jargon like "CPV" or "quality multiplier".
-//
-// The wording itself comes from one or more named variants stored in the
-// site_content table (key RATE_MESSAGE_TEMPLATE_KEY — same generic
-// key/value store the rest of the site's editable copy uses, see
-// supabase/schema.sql), edited directly in the "Message Template" box
-// above the saved-calculations list rather than per saved calculation.
-// Saving it there updates that row, so every admin sees the same variants
-// for every calculation (new or old), on any device. Copy/Share on a saved
-// row use whichever variant is marked default unless the admin picks a
-// different one for that send from the row's own variant picker.
-const RATE_MESSAGE_TEMPLATE_KEY = 'creator_rate_message_template';
-
-interface MessageTemplateVariant {
-  id: string;
-  name: string;
-  template: string;
-}
-
-interface CreatorRateMessageTemplateContent {
-  variants: MessageTemplateVariant[];
-  defaultVariantId: string;
-  /** @deprecated pre-variants shape, read for backward compatibility only */
-  template?: string;
-}
-
-const DEFAULT_MESSAGE_TEMPLATE = [
-  "{{greeting}} Here's the commercial rate card for your {{niche}} content ({{followers}} followers):",
-  '',
-  '{{items}}',
-  '',
-  'These are our suggested ranges — happy to discuss and finalise. Let us know your thoughts!',
-  '— Team Ulaa',
-].join('\n');
-
-const DEFAULT_VARIANT_ID = 'default';
-
-const DEFAULT_MESSAGE_TEMPLATE_VARIANTS: MessageTemplateVariant[] = [
-  { id: DEFAULT_VARIANT_ID, name: 'Default', template: DEFAULT_MESSAGE_TEMPLATE },
-];
-
-// Fills a template's {{greeting}} / {{niche}} / {{followers}} / {{items}}
-// tokens in with one calculation's actual values. Only needs this sliver of
-// CreatorRateCalculation, so the live "Preview Template" popup below can
-// feed it the in-progress form state without a full saved-row shape.
-type MessageTemplateSource = Pick<CreatorRateCalculation, 'creator_name' | 'niche' | 'follower_count' | 'final_commercials'>;
-
-// The "Final Commercials" asset names carry a leading count for the admin
-// table above (e.g. "1 Non-Collab Reel", so a future "2 Story" scales
-// cleanly) — but reads oddly in the message sent to the creator, so it's
-// stripped here for the {{items}} output only. The table itself keeps
-// the count untouched.
-function stripLeadingCount(assetName: string): string {
-  return assetName.replace(/^1\s+/, '');
-}
-
-// A real HTML table can't be sent as a WhatsApp message, but padding each
-// row's asset name out to the same width — inside a monospace block, where
-// every character is the same width — lines the Max column up into
-// something that reads as a table once WhatsApp renders the monospace
-// formatting. Used whenever {{items}} sits directly inside a ```…``` block
-// (the "Monospace" toolbar button wraps the current selection in exactly
-// that), so wrapping {{items}} in Monospace is what turns it into a table.
-function formatItemsAsTable(assets: CreatorRateAsset[]): string {
-  const names = assets.map(row => stripLeadingCount(row.asset));
-  const nameWidth = Math.max(...names.map(name => name.length));
-  return assets
-    .map((row, i) => `${names[i].padEnd(nameWidth)}  ${formatPrice(row.max)}`)
-    .join('\n');
-}
-
-function renderMessageTemplate(template: string, h: MessageTemplateSource): string {
-  const greeting = h.creator_name ? `Hi ${h.creator_name.trim().split(/\s+/)[0]}!` : 'Hi!';
-  const itemsToken = '{{items}}';
-  const tokenIndex = template.indexOf(itemsToken);
-  const isTableWrapped =
-    tokenIndex !== -1 &&
-    template.slice(Math.max(0, tokenIndex - 3), tokenIndex) === '```' &&
-    template.slice(tokenIndex + itemsToken.length, tokenIndex + itemsToken.length + 3) === '```';
-  const items = isTableWrapped
-    ? formatItemsAsTable(h.final_commercials)
-    : h.final_commercials.map(row => `- ${stripLeadingCount(row.asset)}: *${formatPrice(row.max)}*`).join('\n');
-  return template
-    .replace('{{greeting}}', greeting)
-    .replace('{{niche}}', h.niche)
-    .replace('{{followers}}', h.follower_count.toLocaleString('en-IN'))
-    .replace(itemsToken, items);
-}
-
-// Renders WhatsApp's own lightweight markup (*bold*, _italic_,
-// ~strikethrough~, ```monospace```) as actual formatting for the Preview
-// popup, so the admin can see how the message will really look once
-// WhatsApp applies that markup on send — the raw asterisks/underscores
-// stay in the underlying template text (and in what Copy puts on the
-// clipboard); this only affects what's displayed inside the popup itself.
-function renderFormattedPreview(text: string): (string | ReactNode)[] {
-  const parts = text.split(/(\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~|```[^`]+```)/g);
-  return parts.map((part, i) => {
-    if (/^\*[^*\n]+\*$/.test(part)) return <strong key={i}>{part.slice(1, -1)}</strong>;
-    if (/^_[^_\n]+_$/.test(part)) return <em key={i}>{part.slice(1, -1)}</em>;
-    if (/^~[^~\n]+~$/.test(part)) return <span key={i} className="line-through">{part.slice(1, -1)}</span>;
-    if (/^```[^`]+```$/.test(part)) return <code key={i} className="font-mono text-[0.85em] bg-background-warm px-1 py-0.5 rounded">{part.slice(3, -3)}</code>;
-    return part;
-  });
-}
-
-// Sample "Final Commercials" used to fill the {{items}} token in the
-// template preview when the calculator above doesn't have a real
-// calculation to preview with yet (no follower count / Reel views entered)
-// — so Preview always has something concrete to show rather than blank
-// placeholders.
-const PREVIEW_SAMPLE_ASSETS: CreatorRateAsset[] = RATE_CARD_ITEMS.map((item, i) => ({
-  asset: item.asset,
-  ...PREVIEW_SAMPLE_RATES[i],
-  pricing_logic: item.logic,
-}));
-
 export default function AdminCreatorRateCalculator() {
   const alert = useAlert();
   const confirm = useConfirm();
@@ -354,36 +117,10 @@ export default function AdminCreatorRateCalculator() {
   const reelInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const followers = Number(followerCount) || 0;
-  const views = reelViews.map(v => Number(v) || 0);
+  const views = useMemo(() => reelViews.map(v => Number(v) || 0), [reelViews]);
   const reelsEntered = views.filter(v => v > 0).length;
 
-  const result = useMemo(() => {
-    // Rate Calculator!H5 — AVERAGE(B6:B15)
-    const avgViews = views.length ? views.reduce((s, v) => s + v, 0) / views.length : 0;
-    // Rate Calculator!H6 — IFERROR(H5/B5, 0)
-    const viewFollowerRatio = followers > 0 ? avgViews / followers : 0;
-    // Rate Calculator!H7 — VLOOKUP(niche, Model Settings!I2:J11, 2, FALSE)
-    const nicheCpv = NICHE_CPV_BENCHMARKS.find(n => n.niche === niche)?.cpv ?? 0;
-    // Rate Calculator!H8
-    const qualityMultiplier = viewQualityMultiplier(viewFollowerRatio);
-    // Rate Calculator!H9 — B5*H7
-    const baseRate = followers * nicheCpv;
-    // Rate Calculator!H10 — MIN(B5, H9*H8)
-    const minReelRate = Math.min(followers, baseRate * qualityMultiplier);
-    // Rate Calculator!H11 — MIN(B5, H9)
-    const maxReelRate = Math.min(followers, baseRate);
-
-    // Rate Calculator!A22:D26 — Final Commercials table
-    const reelRate = { min: minReelRate, max: maxReelRate };
-    const assets: CreatorRateAsset[] = RATE_CARD_ITEMS.map(item => ({
-      asset: item.asset,
-      min: floorTo50(item.minMult * reelRate[item.minFrom]),
-      max: ceilTo50(item.maxMult * reelRate[item.maxFrom]),
-      pricing_logic: item.logic,
-    }));
-
-    return { avgViews, viewFollowerRatio, nicheCpv, qualityMultiplier, baseRate, minReelRate, maxReelRate, assets };
-  }, [followers, views, niche]);
+  const result = useMemo(() => calculateCreatorRate(followers, views, niche), [followers, views, niche]);
 
   const hasInputs = followers > 0 && reelsEntered > 0;
 
