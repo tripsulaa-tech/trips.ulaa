@@ -12,6 +12,8 @@ import {
   CalendarBlank,
   Scissors,
   ArrowRight,
+  Minus,
+  Plus,
 } from '@phosphor-icons/react';
 import type { BookingFormData, BookingMode, BookingFormDraft, WaitlistFormData, TripOptionsConfig } from '../../types/types-index';
 import { submitEnquiry, submitGroupEnquiry, submitWaitlist, getTripSeatSnapshot } from '../../services/api';
@@ -23,12 +25,12 @@ import { validateFullName, validateCity, validateEmail, validatePhone, validateO
 import { MIN_GROUP_SIZE, MAX_GROUP_SIZE } from '../../utils/bookingDraft';
 import { INDIAN_CITIES } from '../../constants/indianCities';
 import { getEmailDomainSuggestions } from '../../constants/emailDomains';
+import ChickenLegIcon from '../icons/ChickenLegIcon';
+import LeafIcon from '../icons/LeafIcon';
 import Button from './Button';
 import Modal from './Modal';
 import TermsBlocks from './TermsBlocks';
 import BookingPackagePicker from './BookingPackagePicker';
-import ChickenLegIcon from '../icons/ChickenLegIcon';
-import LeafIcon from '../icons/LeafIcon';
 import { hasPackages, packageOptionIds, seatPackageAssignments, noPackageBase, type PackageBase } from '../../utils/tripOptions';
 import KeyboardNavSuggestionDropdown from './KeyboardNavSuggestionDropdown';
 import { handleSuggestionKeyDown } from './suggestionKeyNav';
@@ -104,6 +106,49 @@ function barcodeBars(seed: string): { x: number; w: number }[] {
     x += w + gap;
   }
   return bars;
+}
+
+// Compact − [n] + control used in the ticket stub for the group counts.
+// The number is still a real <input type="number"> (typing works, same
+// handlers as before); the buttons just nudge it by one.
+function Stepper({ id, value, min, max, current, onChange, onBlur, onStep, decLabel, incLabel, describedBy, invalid }: {
+  id: string;
+  value: string;
+  min: number;
+  max: number;
+  current: number;
+  onChange: (raw: string) => void;
+  onBlur: () => void;
+  onStep: (delta: number) => void;
+  decLabel: string;
+  incLabel: string;
+  describedBy?: string;
+  invalid?: boolean;
+}) {
+  const btn = 'w-9 md:w-8 h-full shrink-0 flex items-center justify-center text-dark-muted hover:bg-primary/10 disabled:opacity-40 disabled:hover:bg-transparent transition-colors';
+  return (
+    <div className="flex items-stretch h-9 w-full md:w-auto md:min-w-[6.5rem] rounded-md border-2 border-[#D5C29A] bg-white/70 overflow-hidden focus-within:border-primary">
+      <button type="button" onClick={() => onStep(-1)} disabled={current <= min} aria-label={decLabel} className={btn}>
+        <Minus size={14} weight="bold" aria-hidden="true" />
+      </button>
+      <input
+        id={id}
+        type="number"
+        inputMode="numeric"
+        min={min}
+        max={max}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
+        className="min-w-0 flex-1 w-8 text-center bg-transparent outline-none font-semibold text-dark [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
+      <button type="button" onClick={() => onStep(1)} disabled={current >= max} aria-label={incLabel} className={btn}>
+        <Plus size={14} weight="bold" aria-hidden="true" />
+      </button>
+    </div>
+  );
 }
 
 export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge, initialDraft, onDraftChange, tripOptions, packageBase, initialPackageId, tripDate }: BookingFormProps) {
@@ -566,10 +611,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
   const inputClass = `
     w-full min-w-0 px-3 sm:px-4 py-3 rounded-md border-2 bg-white/70
-    font-body text-dark placeholder-dark-muted/50
+    font-body text-dark placeholder-dark-muted/60
     transition-all duration-200 outline-none
     focus:border-primary focus:bg-white
-    border-[#E6D8BE]
+    border-[#D5C29A]
   `;
 
   const errorClass = 'text-red-500 text-xs mt-1';
@@ -632,23 +677,40 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       {/* ── Ticket stub (left on desktop, top on phones) ── */}
       <aside className="relative flex flex-col gap-3.5 md:gap-5 p-4 md:p-6 bg-[#F3E3BF] border-b-2 border-dashed border-[#D2B986] md:border-b-0 md:border-r-2">
         <Scissors
-          size={18}
+          size={22}
           aria-hidden="true"
-          className="absolute z-10 text-dark-muted bg-cream rounded-full p-0.5 -bottom-[11px] left-6 md:bottom-auto md:left-auto md:top-3 md:-right-[11px] md:rotate-0"
+          className="absolute z-10 text-dark-muted bg-cream rounded-full p-0.5 -bottom-[13px] left-6 md:bottom-auto md:left-auto md:top-3 md:-right-[13px] md:rotate-0"
         />
 
-        <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+        <div className="flex items-center gap-2 text-primary font-bold text-xs tracking-[0.2em] uppercase">
           <AirplaneTilt size={18} weight="fill" aria-hidden="true" /> Boarding pass
         </div>
 
         {tripTitle && (
           <div>
-            <p className="text-sm text-dark-muted">Booking for</p>
+            <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1">Booking for</p>
             <p className="font-display text-lg font-bold leading-snug text-dark">{tripTitle}</p>
+          </div>
+        )}
+
+        {(tripDateShort || remainingSeats !== undefined) && (
+          <div className="grid grid-cols-2 gap-3">
             {tripDateShort && (
-              <p className="flex items-center gap-1.5 text-sm text-dark-muted mt-2">
-                <CalendarBlank size={15} aria-hidden="true" /> {tripDateShort}
-              </p>
+              <div>
+                <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1">Date</p>
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-dark">
+                  <CalendarBlank size={15} className="text-primary shrink-0" aria-hidden="true" /> {tripDateShort}
+                </p>
+              </div>
+            )}
+            {remainingSeats !== undefined && (
+              <div>
+                <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1">Seats</p>
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-dark">
+                  <Clock3 size={15} className="text-primary shrink-0" aria-hidden="true" />
+                  {remainingSeats > 0 ? `${remainingSeats} left` : 'Waitlist'}
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -660,32 +722,28 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         <div className={bookingMode === 'solo' ? 'grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-5 items-start' : 'contents'}>
         {/* Solo vs Group */}
         <div>
-          <label id={ids.bookingType} className="block text-xs md:text-sm font-medium text-dark mb-1 md:mb-1.5">Booking type</label>
-          <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby={ids.bookingType}>
-          <button
-            type="button"
-            onClick={() => setBookingMode('solo')}
-            aria-pressed={bookingMode === 'solo'}
-            className={`flex flex-col items-center justify-center gap-0.5 md:gap-1 px-1 py-2 md:px-2 md:py-3 rounded-md border-2 font-medium text-xs md:text-sm transition-colors ${
-              bookingMode === 'solo'
-                ? 'border-primary bg-primary/15 text-primary'
-                : 'border-[#DCC8A0] bg-transparent text-dark-muted hover:border-primary/50'
-            }`}
-          >
-            <User size={20} aria-hidden="true" /> Solo
-          </button>
-          <button
-            type="button"
-            onClick={() => setBookingMode('group')}
-            aria-pressed={bookingMode === 'group'}
-            className={`flex flex-col items-center justify-center gap-0.5 md:gap-1 px-1 py-2 md:px-2 md:py-3 rounded-md border-2 font-medium text-xs md:text-sm transition-colors ${
-              bookingMode === 'group'
-                ? 'border-primary bg-primary/15 text-primary'
-                : 'border-[#DCC8A0] bg-transparent text-dark-muted hover:border-primary/50'
-            }`}
-          >
-            <Users size={20} aria-hidden="true" /> Group
-          </button>
+          <label id={ids.bookingType} className="block text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1.5">Booking type</label>
+          <div className="flex rounded-md border-2 border-[#D2B986] overflow-hidden" role="group" aria-labelledby={ids.bookingType}>
+            <button
+              type="button"
+              onClick={() => setBookingMode('solo')}
+              aria-pressed={bookingMode === 'solo'}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs md:text-sm font-semibold transition-colors ${
+                bookingMode === 'solo' ? 'bg-primary text-white' : 'text-dark-muted hover:bg-primary/10'
+              }`}
+            >
+              <User size={16} aria-hidden="true" /> Solo
+            </button>
+            <button
+              type="button"
+              onClick={() => setBookingMode('group')}
+              aria-pressed={bookingMode === 'group'}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs md:text-sm font-semibold transition-colors border-l-2 border-[#D2B986] ${
+                bookingMode === 'group' ? 'bg-primary text-white' : 'text-dark-muted hover:bg-primary/10'
+              }`}
+            >
+              <Users size={16} aria-hidden="true" /> Group
+            </button>
           </div>
           {bookingMode === 'solo' && !soloFits && (
             <p className="flex items-start gap-1.5 text-xs text-dark-muted mt-2">
@@ -697,49 +755,53 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
         {/* Group: people count + veg count share one row on phones (stacked
             in the narrow desktop stub); Solo: just the food buttons. */}
-        <div className={bookingMode === 'group' ? 'grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-5 items-start' : ''}>
+        <div className={bookingMode === 'group' ? 'grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-3.5 items-start' : ''}>
       {bookingMode === 'group' && (
         <div>
-          <label htmlFor={ids.groupSize} className="block text-xs font-semibold uppercase tracking-wide text-dark-muted mb-1.5">Number of people *</label>
-          <input
-            id={ids.groupSize}
-            type="number"
-            inputMode="numeric"
-            min={MIN_GROUP_SIZE}
-            max={MAX_GROUP_SIZE}
-            aria-invalid={!!groupSizeError}
-            aria-describedby={groupSizeError ? `${ids.groupSize}-error` : `${ids.groupSize}-hint`}
-            value={groupSizeInput}
-            onChange={e => {
-              setGroupSizeError('');
-              const raw = e.target.value;
-              // Let the field be empty or mid-edit (e.g. after backspace)
-              // without immediately forcing it back to a number — only
-              // commit a numeric groupSize once we have real digits.
-              setGroupSizeInput(raw);
-              if (raw !== '' && !Number.isNaN(Number(raw))) {
-                const val = Math.round(Number(raw));
-                setGroupSize(val);
-                setGroupVegCount(prev => Math.min(prev, val));
-              }
-            }}
-            onBlur={() => {
-              const parsed = Math.round(Number(groupSizeInput));
-              const clamped = groupSizeInput === '' || Number.isNaN(parsed)
-                ? MIN_GROUP_SIZE
-                : Math.min(Math.max(parsed, MIN_GROUP_SIZE), MAX_GROUP_SIZE);
-              setGroupSize(clamped);
-              setGroupSizeInput(String(clamped));
-              setGroupVegCount(prev => Math.min(prev, clamped));
-            }}
-            className={inputClass}
-          />
-          {groupFits ? (
-            <p id={`${ids.groupSize}-hint`} className="text-xs text-dark-muted mt-1">
-              One entry per person — {groupSize} in total.
-            </p>
-          ) : (
-            <p id={`${ids.groupSize}-hint`} className="flex items-start gap-1.5 text-xs text-dark-muted mt-1">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5">
+            <label htmlFor={ids.groupSize} className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80">Number of people *</label>
+            <Stepper
+              id={ids.groupSize}
+              value={groupSizeInput}
+              min={MIN_GROUP_SIZE}
+              max={MAX_GROUP_SIZE}
+              current={groupSize}
+              invalid={!!groupSizeError}
+              describedBy={groupSizeError ? `${ids.groupSize}-error` : !groupFits ? `${ids.groupSize}-hint` : undefined}
+              decLabel="Fewer people"
+              incLabel="More people"
+              onChange={raw => {
+                setGroupSizeError('');
+                // Let the field be empty or mid-edit (e.g. after backspace)
+                // without immediately forcing it back to a number — only
+                // commit a numeric groupSize once we have real digits.
+                setGroupSizeInput(raw);
+                if (raw !== '' && !Number.isNaN(Number(raw))) {
+                  const val = Math.round(Number(raw));
+                  setGroupSize(val);
+                  setGroupVegCount(prev => Math.min(prev, val));
+                }
+              }}
+              onBlur={() => {
+                const parsed = Math.round(Number(groupSizeInput));
+                const clamped = groupSizeInput === '' || Number.isNaN(parsed)
+                  ? MIN_GROUP_SIZE
+                  : Math.min(Math.max(parsed, MIN_GROUP_SIZE), MAX_GROUP_SIZE);
+                setGroupSize(clamped);
+                setGroupSizeInput(String(clamped));
+                setGroupVegCount(prev => Math.min(prev, clamped));
+              }}
+              onStep={delta => {
+                setGroupSizeError('');
+                const next = Math.min(Math.max(groupSize + delta, MIN_GROUP_SIZE), MAX_GROUP_SIZE);
+                setGroupSize(next);
+                setGroupSizeInput(String(next));
+                setGroupVegCount(prev => Math.min(prev, next));
+              }}
+            />
+          </div>
+          {!groupFits && (
+            <p id={`${ids.groupSize}-hint`} className="flex items-start gap-1.5 text-xs text-dark-muted mt-1.5">
               <Clock3 size={13} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
               Not enough seats for this group — you'll join the waitlist.
             </p>
@@ -752,72 +814,97 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         <div>
           {bookingMode === 'solo' ? (
             <>
-              <label id={ids.foodPreference} className="block text-xs md:text-sm font-medium text-dark mb-1 md:mb-1.5">Food preference *</label>
+              <label id={ids.foodPreference} className="block text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1.5">Food preference *</label>
               <div
-                className="grid grid-cols-2 gap-2"
+                className="flex gap-2"
                 role="group"
                 aria-labelledby={ids.foodPreference}
                 aria-describedby={foodPreferenceError ? `${ids.foodPreference}-error` : undefined}
               >
-              <button
-                type="button"
-                onClick={() => { setFoodPreference('veg'); setFoodPreferenceError(''); }}
-                aria-pressed={foodPreference === 'veg'}
-                className={`flex flex-col items-center justify-center gap-0.5 md:gap-1 px-1 py-2 md:px-2 md:py-3 rounded-md border-2 font-medium text-xs md:text-sm transition-colors ${
-                  foodPreference === 'veg'
-                    ? 'border-green-600 bg-green-100 text-green-700'
-                    : 'border-[#DCC8A0] bg-transparent text-dark-muted hover:border-green-600/50'
-                }`}
-              >
-                <LeafIcon size={18} /> Veg
-              </button>
-              <button
-                type="button"
-                onClick={() => { setFoodPreference('non_veg'); setFoodPreferenceError(''); }}
-                aria-pressed={foodPreference === 'non_veg'}
-                className={`flex flex-col items-center justify-center gap-0.5 md:gap-1 px-1 py-2 md:px-2 md:py-3 rounded-md border-2 font-medium text-xs md:text-sm transition-colors ${
-                  foodPreference === 'non_veg'
-                    ? 'border-red-600 bg-red-100 text-red-700'
-                    : 'border-[#DCC8A0] bg-transparent text-dark-muted hover:border-red-600/50'
-                }`}
-              >
-                <ChickenLegIcon size={18} /> Non-veg
-              </button>
+                <button
+                  type="button"
+                  onClick={() => { setFoodPreference('veg'); setFoodPreferenceError(''); }}
+                  aria-pressed={foodPreference === 'veg'}
+                  className={`relative flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 px-1 py-2 rounded-md border-2 text-xs md:text-sm whitespace-nowrap transition-colors ${
+                    foodPreference === 'veg'
+                      ? 'border-green-600 bg-[#EBD7A8] text-dark font-bold'
+                      : 'border-green-600/50 text-dark-muted font-medium hover:border-green-600'
+                  }`}
+                >
+                  <span className="w-6 h-6 shrink-0 rounded-full bg-green-600 text-white flex items-center justify-center" aria-hidden="true">
+                    <LeafIcon size={14} />
+                  </span>
+                  Veg
+                  {foodPreference === 'veg' && (
+                    <CheckCircle size={16} weight="fill" className="absolute -top-2 -right-2 text-dark bg-cream rounded-full" aria-hidden="true" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setFoodPreference('non_veg'); setFoodPreferenceError(''); }}
+                  aria-pressed={foodPreference === 'non_veg'}
+                  className={`relative flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 px-1 py-2 rounded-md border-2 text-xs md:text-sm whitespace-nowrap transition-colors ${
+                    foodPreference === 'non_veg'
+                      ? 'border-red-600 bg-[#EBD7A8] text-dark font-bold'
+                      : 'border-red-600/50 text-dark-muted font-medium hover:border-red-600'
+                  }`}
+                >
+                  <span className="w-6 h-6 shrink-0 rounded-full bg-red-600 text-white flex items-center justify-center" aria-hidden="true">
+                    <ChickenLegIcon size={14} />
+                  </span>
+                  Non-veg
+                  {foodPreference === 'non_veg' && (
+                    <CheckCircle size={16} weight="fill" className="absolute -top-2 -right-2 text-dark bg-cream rounded-full" aria-hidden="true" />
+                  )}
+                </button>
               </div>
               {foodPreferenceError && <p id={`${ids.foodPreference}-error`} role="alert" className={errorClass}>{foodPreferenceError}</p>}
             </>
           ) : (
             <>
-              <label htmlFor={ids.vegCount} className="block text-sm font-medium text-dark mb-1.5">How many prefer Veg? *</label>
-              <input
-                id={ids.vegCount}
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={groupSize}
-                aria-describedby={`${ids.vegCount}-hint`}
-                value={vegCountInput}
-                onChange={e => {
-                  const raw = e.target.value;
-                  // Don't force a number back in the instant it's emptied,
-                  // so the user can clear it and type a replacement digit.
-                  setVegCountInput(raw);
-                  if (raw !== '' && !Number.isNaN(Number(raw))) {
-                    setGroupVegCount(Math.min(Math.max(Math.round(Number(raw)), 0), groupSize));
-                  }
-                }}
-                onBlur={() => {
-                  const parsed = Math.round(Number(vegCountInput));
-                  const clamped = vegCountInput === '' || Number.isNaN(parsed)
-                    ? 0
-                    : Math.min(Math.max(parsed, 0), groupSize);
-                  setGroupVegCount(clamped);
-                  setVegCountInput(String(clamped));
-                }}
-                className={inputClass}
-              />
-              <p id={`${ids.vegCount}-hint`} className="text-xs text-dark-muted mt-1">
-                {Math.min(groupVegCount, groupSize)} Veg · {groupSize - Math.min(groupVegCount, groupSize)} Non-veg out of {groupSize} {groupSize === 1 ? 'person' : 'people'}.
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5">
+                <label htmlFor={ids.vegCount} className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80">How many prefer Veg? *</label>
+                <Stepper
+                  id={ids.vegCount}
+                  value={vegCountInput}
+                  min={0}
+                  max={groupSize}
+                  current={groupVegCount}
+                  describedBy={`${ids.vegCount}-hint`}
+                  decLabel="Fewer veg"
+                  incLabel="More veg"
+                  onChange={raw => {
+                    // Don't force a number back in the instant it's emptied,
+                    // so the user can clear it and type a replacement digit.
+                    setVegCountInput(raw);
+                    if (raw !== '' && !Number.isNaN(Number(raw))) {
+                      setGroupVegCount(Math.min(Math.max(Math.round(Number(raw)), 0), groupSize));
+                    }
+                  }}
+                  onBlur={() => {
+                    const parsed = Math.round(Number(vegCountInput));
+                    const clamped = vegCountInput === '' || Number.isNaN(parsed)
+                      ? 0
+                      : Math.min(Math.max(parsed, 0), groupSize);
+                    setGroupVegCount(clamped);
+                    setVegCountInput(String(clamped));
+                  }}
+                  onStep={delta => {
+                    const next = Math.min(Math.max(groupVegCount + delta, 0), groupSize);
+                    setGroupVegCount(next);
+                    setVegCountInput(String(next));
+                  }}
+                />
+              </div>
+              <p id={`${ids.vegCount}-hint`} className="flex items-center gap-3 text-xs text-dark-muted mt-1.5">
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-green-600 text-white flex items-center justify-center" aria-hidden="true"><LeafIcon size={10} /></span>
+                  {Math.min(groupVegCount, groupSize)} Veg
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center" aria-hidden="true"><ChickenLegIcon size={10} /></span>
+                  {groupSize - Math.min(groupVegCount, groupSize)} Non-veg
+                </span>
               </p>
             </>
           )}
@@ -869,17 +956,12 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
               required: 'Age is required',
               validate: value => validateAge(value, effectiveMinAge, effectiveMaxAge),
             })}
-            placeholder="Your age"
+            placeholder={`Age ${effectiveMinAge}–${effectiveMaxAge}`}
             autoComplete="off"
             aria-invalid={!!errors.age}
-            aria-describedby={errors.age ? `${ids.age}-error` : `${ids.age}-hint`}
+            aria-describedby={errors.age ? `${ids.age}-error` : undefined}
             className={inputClass}
           />
-          {!errors.age && (
-            <p id={`${ids.age}-hint`} className="text-xs text-dark-muted mt-1">
-              This trip is open to ages {effectiveMinAge}–{effectiveMaxAge}.
-            </p>
-          )}
           {errors.age && <p id={`${ids.age}-error`} role="alert" className={errorClass}>{errors.age.message}</p>}
         </div>
 
