@@ -9,7 +9,6 @@ import {
   Users,
   Clock as Clock3,
   AirplaneTilt,
-  CalendarBlank,
   Scissors,
   ArrowRight,
   Minus,
@@ -689,29 +688,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         {tripTitle && (
           <div>
             <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1">Booking for</p>
-            <p className="font-display text-lg font-bold leading-snug text-dark">{tripTitle}</p>
-          </div>
-        )}
-
-        {(tripDateShort || remainingSeats !== undefined) && (
-          <div className="grid grid-cols-2 gap-3">
-            {tripDateShort && (
-              <div>
-                <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1">Date</p>
-                <p className="flex items-center gap-1.5 text-sm font-semibold text-dark">
-                  <CalendarBlank size={15} className="text-primary shrink-0" aria-hidden="true" /> {tripDateShort}
-                </p>
-              </div>
-            )}
-            {remainingSeats !== undefined && (
-              <div>
-                <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1">Seats</p>
-                <p className="flex items-center gap-1.5 text-sm font-semibold text-dark">
-                  <Clock3 size={15} className="text-primary shrink-0" aria-hidden="true" />
-                  {remainingSeats > 0 ? `${remainingSeats} left` : 'Waitlist'}
-                </p>
-              </div>
-            )}
+            <p className="font-display text-lg font-bold leading-snug text-dark">
+              {tripTitle}
+              {tripDateShort && <span className="text-sm font-medium text-dark-muted"> · {tripDateShort}</span>}
+            </p>
           </div>
         )}
 
@@ -828,11 +808,16 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
                   className={`relative flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 px-1 py-2 rounded-md border-2 text-xs md:text-sm whitespace-nowrap transition-colors ${
                     foodPreference === 'veg'
                       ? 'border-green-600 bg-[#EBD7A8] text-dark font-bold'
-                      : 'border-green-600/30 text-dark-muted font-medium hover:border-green-600'
+                      : 'border-[#D2B986] text-dark font-medium hover:border-[#B89B5E]'
                   }`}
                 >
-                  <span className="w-6 h-6 shrink-0 rounded-full bg-green-600 text-white flex items-center justify-center" aria-hidden="true">
-                    <LeafIcon size={14} />
+                  <span
+                    className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center transition-colors ${
+                      foodPreference === 'veg' ? 'bg-green-600 text-white' : 'text-dark-muted'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <LeafIcon size={foodPreference === 'veg' ? 14 : 18} />
                   </span>
                   Veg
                   {foodPreference === 'veg' && (
@@ -846,11 +831,16 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
                   className={`relative flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 px-1 py-2 rounded-md border-2 text-xs md:text-sm whitespace-nowrap transition-colors ${
                     foodPreference === 'non_veg'
                       ? 'border-red-600 bg-[#EBD7A8] text-dark font-bold'
-                      : 'border-red-600/30 text-dark-muted font-medium hover:border-red-600'
+                      : 'border-[#D2B986] text-dark font-medium hover:border-[#B89B5E]'
                   }`}
                 >
-                  <span className="w-6 h-6 shrink-0 rounded-full bg-red-600 text-white flex items-center justify-center" aria-hidden="true">
-                    <ChickenLegIcon size={14} />
+                  <span
+                    className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center transition-colors ${
+                      foodPreference === 'non_veg' ? 'bg-red-600 text-white' : 'text-dark-muted'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <ChickenLegIcon size={foodPreference === 'non_veg' ? 14 : 18} />
                   </span>
                   Non-veg
                   {foodPreference === 'non_veg' && (
@@ -896,15 +886,15 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
                   }}
                 />
               </div>
-              <p id={`${ids.vegCount}-hint`} className="flex items-center gap-3 text-xs text-dark-muted mt-1.5">
-                <span className="inline-flex items-center gap-1">
+              <p id={`${ids.vegCount}-hint`} className="flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-1 text-xs text-dark-muted mt-1.5">
+                {Math.min(groupVegCount, groupSize) > 0 && <span className="inline-flex items-center gap-1">
                   <span className="w-4 h-4 rounded-full bg-green-600 text-white flex items-center justify-center" aria-hidden="true"><LeafIcon size={10} /></span>
                   {Math.min(groupVegCount, groupSize)} Veg
-                </span>
-                <span className="inline-flex items-center gap-1">
+                </span>}
+                {groupSize - Math.min(groupVegCount, groupSize) > 0 && <span className="inline-flex items-center gap-1">
                   <span className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center" aria-hidden="true"><ChickenLegIcon size={10} /></span>
                   {groupSize - Math.min(groupVegCount, groupSize)} Non-veg
-                </span>
+                </span>}
               </p>
             </>
           )}
