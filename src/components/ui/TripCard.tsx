@@ -21,6 +21,7 @@ import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
 import { EarlyBirdSeatsStrip, getEarlyBirdSeatsOffer } from './EarlyBirdSeatsPrompt';
+import PackBagGame from './PackBagGame';
 
 interface TripCardProps {
   trip: UpcomingTrip;
@@ -125,10 +126,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           </div>
         </Link>
         <div className="p-5 flex-1 flex flex-col">
-          <h3 className="font-display text-xl font-bold text-dark mb-3 line-clamp-2 flex-1">
+          <h3 className="font-display text-xl font-bold text-dark mb-3 line-clamp-2">
             {trip.title}
           </h3>
-          <Link to={`/trips/${trip.slug}`}>
+          <PackBagGame tripId={trip.id} tripSlug={trip.slug} tripTitle={trip.title} coverImage={trip.cover_image} className="mb-4" />
+          <Link to={`/trips/${trip.slug}`} className="mt-auto">
             <Button variant="outline" size="sm" fullWidth>
               Coming Soon
             </Button>
