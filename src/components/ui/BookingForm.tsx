@@ -719,17 +719,17 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
         {/* Booking type + food preference: side by side on phones in Solo
             mode (compact), stacked in the narrow desktop stub. */}
-        <div className={bookingMode === 'solo' ? 'grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-5 items-start' : 'contents'}>
+        <div className={bookingMode === 'solo' ? 'grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-5 items-stretch' : 'contents'}>
         {/* Solo vs Group */}
-        <div>
+        <div className="flex flex-col">
           <label id={ids.bookingType} className="block text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1.5">Booking type</label>
-          <div className="flex rounded-md border-2 border-[#D2B986] overflow-hidden" role="group" aria-labelledby={ids.bookingType}>
+          <div className="flex flex-1 rounded-md border-2 border-[#D2B986] overflow-hidden" role="group" aria-labelledby={ids.bookingType}>
             <button
               type="button"
               onClick={() => setBookingMode('solo')}
               aria-pressed={bookingMode === 'solo'}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs md:text-sm font-semibold transition-colors ${
-                bookingMode === 'solo' ? 'bg-primary text-white' : 'text-dark-muted hover:bg-primary/10'
+                bookingMode === 'solo' ? 'bg-primary text-white' : 'text-dark hover:bg-primary/10'
               }`}
             >
               <User size={16} aria-hidden="true" /> Solo
@@ -739,7 +739,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
               onClick={() => setBookingMode('group')}
               aria-pressed={bookingMode === 'group'}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs md:text-sm font-semibold transition-colors border-l-2 border-[#D2B986] ${
-                bookingMode === 'group' ? 'bg-primary text-white' : 'text-dark-muted hover:bg-primary/10'
+                bookingMode === 'group' ? 'bg-primary text-white' : 'text-dark hover:bg-primary/10'
               }`}
             >
               <Users size={16} aria-hidden="true" /> Group
@@ -828,7 +828,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
                   className={`relative flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 px-1 py-2 rounded-md border-2 text-xs md:text-sm whitespace-nowrap transition-colors ${
                     foodPreference === 'veg'
                       ? 'border-green-600 bg-[#EBD7A8] text-dark font-bold'
-                      : 'border-green-600/50 text-dark-muted font-medium hover:border-green-600'
+                      : 'border-green-600/30 text-dark-muted font-medium hover:border-green-600'
                   }`}
                 >
                   <span className="w-6 h-6 shrink-0 rounded-full bg-green-600 text-white flex items-center justify-center" aria-hidden="true">
@@ -836,7 +836,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
                   </span>
                   Veg
                   {foodPreference === 'veg' && (
-                    <CheckCircle size={16} weight="fill" className="absolute -top-2 -right-2 text-dark bg-cream rounded-full" aria-hidden="true" />
+                    <CheckCircle size={16} weight="fill" className="absolute -top-1.5 -right-1.5 text-dark bg-cream rounded-full" aria-hidden="true" />
                   )}
                 </button>
                 <button
@@ -846,7 +846,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
                   className={`relative flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-1.5 px-1 py-2 rounded-md border-2 text-xs md:text-sm whitespace-nowrap transition-colors ${
                     foodPreference === 'non_veg'
                       ? 'border-red-600 bg-[#EBD7A8] text-dark font-bold'
-                      : 'border-red-600/50 text-dark-muted font-medium hover:border-red-600'
+                      : 'border-red-600/30 text-dark-muted font-medium hover:border-red-600'
                   }`}
                 >
                   <span className="w-6 h-6 shrink-0 rounded-full bg-red-600 text-white flex items-center justify-center" aria-hidden="true">
@@ -854,7 +854,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
                   </span>
                   Non-veg
                   {foodPreference === 'non_veg' && (
-                    <CheckCircle size={16} weight="fill" className="absolute -top-2 -right-2 text-dark bg-cream rounded-full" aria-hidden="true" />
+                    <CheckCircle size={16} weight="fill" className="absolute -top-1.5 -right-1.5 text-dark bg-cream rounded-full" aria-hidden="true" />
                   )}
                 </button>
               </div>
