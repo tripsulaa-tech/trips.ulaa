@@ -15,8 +15,12 @@
 --   * Authentication -> Providers -> Email: sign-ups ON, "Confirm email" ON.
 --     Confirmation is what proves the person owns the enquiry email; without
 --     it anyone who knows an enquiry email could claim that account.
---   * Authentication -> URL Configuration: add <your-site>/account to
---     Redirect URLs (confirmation links land there).
+--   * Authentication -> URL Configuration: make sure Site URL is
+--     https://www.ulaatrips.com and add it (and http://localhost:5173 for
+--     dev) to Redirect URLs — confirmation links land there.
+--   * Authentication -> SMTP + Email Templates: see
+--     supabase/email-templates/README.md (branded "Confirm signup" email
+--     sent from Ulaa Trips instead of Supabase's default sender).
 --   * Creating an admin from the dashboard ("Add user") now needs the email in
 --     account_signup_exceptions first:
 --       insert into public.account_signup_exceptions (email) values ('you@x.com');

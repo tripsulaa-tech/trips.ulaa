@@ -8,6 +8,8 @@ import {
 import Button from '../ui/Button';
 import { useAuth } from '../../context/useAuth';
 import { useBranding } from '../../hooks/useBranding';
+import AuthModal from '../ui/AuthModal';
+import { useToast } from '../ui/useToast';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -22,7 +24,27 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading, passwordRecovery, authNotice, dismissAuthNotice, signOut } = useAuth();
+  const toast = useToast();
+  // Opens straight away when the page was reached through a broken email link.
+  const [authOpen, setAuthOpen] = useState(() => !!authNotice);
+
+  // Arrived through a password-reset link: the popup is open on its "new password" form.
+  const modalOpen = authOpen || passwordRecovery;
+
+  const accountClass = 'font-body text-sm font-medium text-dark hover:text-primary transition-colors';
+  const handleAccountClick = async () => {
+    if (user) {
+      try {
+        await signOut();
+      } catch {
+        toast.error('Could not sign you out. Please try again.');
+      }
+    } else {
+      setIsOpen(false);
+      setAuthOpen(true);
+    }
+  };
   const { urls: brand } = useBranding();
 
   // Close the mobile menu whenever the route changes. Adjusted during render
@@ -45,6 +67,7 @@ export default function Navbar() {
   };
 
   return (
+    <>
     <motion.header
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
@@ -82,9 +105,9 @@ export default function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-5">
-            <Link to="/account" className="font-body text-sm font-medium text-dark hover:text-primary transition-colors">
-              {user ? 'My Account' : 'Sign in'}
-            </Link>
+            <button type="button" onClick={handleAccountClick} className={`${accountClass} ${loading ? 'invisible' : ''}`}>
+              {user ? 'Sign out' : 'Sign in'}
+            </button>
             <Link to="/trips">
               <Button variant="primary" size="sm">
                 Book Now
@@ -125,15 +148,13 @@ export default function Navbar() {
                   {label}
                 </NavLink>
               ))}
-              <NavLink
-                to="/account"
-                className={({ isActive }) => `
-                  block px-4 py-3.5 min-h-[44px] flex items-center rounded-lg font-body font-medium text-base transition-colors
-                  ${isActive ? 'text-primary bg-background-warm' : 'text-dark hover:bg-background-warm hover:text-primary'}
-                `}
+              <button
+                type="button"
+                onClick={handleAccountClick}
+                className="block w-full text-left px-4 py-3.5 min-h-[44px] flex items-center rounded-lg font-body font-medium text-base transition-colors text-dark hover:bg-background-warm hover:text-primary"
               >
-                {user ? 'My Account' : 'Sign in'}
-              </NavLink>
+                {user ? 'Sign out' : 'Sign in'}
+              </button>
               <div className="pt-2">
                 <Link to="/trips" className="block">
                   <Button variant="primary" size="md" fullWidth>
@@ -146,5 +167,7 @@ export default function Navbar() {
         )}
       </AnimatePresence>
     </motion.header>
+    <AuthModal isOpen={modalOpen} onClose={() => { setAuthOpen(false); dismissAuthNotice(); }} initialMessage={authNotice} />
+    </>
   );
 }
