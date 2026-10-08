@@ -9,7 +9,6 @@ import Button from '../ui/Button';
 import { useAuth } from '../../context/useAuth';
 import { useBranding } from '../../hooks/useBranding';
 import AuthModal from '../ui/AuthModal';
-import { useToast } from '../ui/useToast';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -24,8 +23,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin, loading, passwordRecovery, authNotice, dismissAuthNotice, signOut } = useAuth();
-  const toast = useToast();
+  const { user, isAdmin, loading, passwordRecovery, authNotice, dismissAuthNotice } = useAuth();
   // Opens straight away when the page was reached through a broken email link.
   const [authOpen, setAuthOpen] = useState(() => !!authNotice);
 
@@ -33,17 +31,9 @@ export default function Navbar() {
   const modalOpen = authOpen || passwordRecovery;
 
   const accountClass = 'font-body text-sm font-medium text-dark hover:text-primary transition-colors';
-  const handleAccountClick = async () => {
-    if (user) {
-      try {
-        await signOut();
-      } catch {
-        toast.error('Could not sign you out. Please try again.');
-      }
-    } else {
-      setIsOpen(false);
-      setAuthOpen(true);
-    }
+  const handleSignInClick = () => {
+    setIsOpen(false);
+    setAuthOpen(true);
   };
   const { urls: brand } = useBranding();
 
@@ -105,9 +95,13 @@ export default function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-5">
-            <button type="button" onClick={handleAccountClick} className={`${accountClass} ${loading ? 'invisible' : ''}`}>
-              {user ? 'Sign out' : 'Sign in'}
-            </button>
+            {user ? (
+              <Link to="/account" className={accountClass}>My Account</Link>
+            ) : (
+              <button type="button" onClick={handleSignInClick} className={`${accountClass} ${loading ? 'invisible' : ''}`}>
+                Sign in
+              </button>
+            )}
             <Link to="/trips">
               <Button variant="primary" size="sm">
                 Book Now
@@ -148,13 +142,25 @@ export default function Navbar() {
                   {label}
                 </NavLink>
               ))}
-              <button
-                type="button"
-                onClick={handleAccountClick}
-                className="block w-full text-left px-4 py-3.5 min-h-[44px] flex items-center rounded-lg font-body font-medium text-base transition-colors text-dark hover:bg-background-warm hover:text-primary"
-              >
-                {user ? 'Sign out' : 'Sign in'}
-              </button>
+              {user ? (
+                <NavLink
+                  to="/account"
+                  className={({ isActive }) => `
+                    block px-4 py-3.5 min-h-[44px] flex items-center rounded-lg font-body font-medium text-base transition-colors
+                    ${isActive ? 'text-primary bg-background-warm' : 'text-dark hover:bg-background-warm hover:text-primary'}
+                  `}
+                >
+                  My Account
+                </NavLink>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSignInClick}
+                  className="block w-full text-left px-4 py-3.5 min-h-[44px] flex items-center rounded-lg font-body font-medium text-base transition-colors text-dark hover:bg-background-warm hover:text-primary"
+                >
+                  Sign in
+                </button>
+              )}
               <div className="pt-2">
                 <Link to="/trips" className="block">
                   <Button variant="primary" size="md" fullWidth>
