@@ -141,7 +141,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
   const timersRef = useRef<number[]>([]);
   const cardBlobRef = useRef<Blob | null>(null);
   const previewUrlRef = useRef<string | null>(null);
-  const { ensure, play } = useSynth(mutedRef);
+  const { ensure, play, onPressCapture } = useSynth(mutedRef);
 
   const clearTimers = useCallback(() => {
     timersRef.current.forEach(id => window.clearTimeout(id));
@@ -309,7 +309,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
   const def = LEVELS[level];
   const r = rating(cleared);
   const allCleared = cleared >= LEVELS.length;
-  const shareUrl = `${SITE_ORIGIN}/trips/${tripSlug}`;
+  const shareUrl = tripSlug ? `${SITE_ORIGIN}/trips/${tripSlug}` : `${SITE_ORIGIN}/games`;
   const shareText = playerName
     ? `${playerName} cleared ${cleared}/${LEVELS.length} levels of Ulaa's "Travel match" for ${tripTitle} and scored ${score}! Think you can beat that? ${shareUrl}`
     : `I cleared ${cleared}/${LEVELS.length} levels of Ulaa's "Travel match" for ${tripTitle} and scored ${score}! Think you can beat me? ${shareUrl}`;
@@ -339,7 +339,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
       fallbackLink: getWhatsAppLink('', shareText),
     });
   };
-  const notifyHref = getWhatsAppLink(WHATSAPP_NUMBER, `Hi Ulaa! Please let me know when "${tripTitle}" opens for booking.`);
+  const notifyHref = getWhatsAppLink(WHATSAPP_NUMBER, tripSlug ? `Hi Ulaa! Please let me know when "${tripTitle}" opens for booking.` : 'Hi Ulaa! Please let me know when your next trip opens for booking.');
 
   const flipTransition = { duration: reduce ? 0 : 0.42, ease: 'easeOut' as const };
 
@@ -356,7 +356,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
       />
 
       <Modal isOpen={open} onClose={close} ariaLabel="Travel match game" size="sm" flush>
-        <div className="relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[28rem]">
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[28rem]">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
 
@@ -455,10 +455,11 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
                       <button
                         key={c.uid}
                         type="button"
+                        data-nofx
                         onClick={() => flip(i)}
                         disabled={c.state === 'gone'}
                         aria-label={faceUp ? c.label : `Card ${i + 1}, face down`}
-                        className={`relative aspect-square ${c.state === 'gone' ? 'pointer-events-none' : ''}`}
+                        className={`relative aspect-square active:scale-[0.94] transition-transform duration-100 ${c.state === 'gone' ? 'pointer-events-none' : ''}`}
                         style={{ perspective: 700 }}
                       >
                         <AnimatePresence>

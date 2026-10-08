@@ -2,9 +2,9 @@
 
 export const GOLD_GRAD_TEXT = 'bg-gradient-to-b from-[#FFF6CC] via-[#F0CE7A] to-gold bg-clip-text text-transparent';
 
-export const primaryBtn = 'w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-primary-light to-primary hover:brightness-110 active:scale-[0.98] text-white font-button font-semibold py-3.5 shadow-[0_10px_24px_rgba(168,90,42,0.45)] transition';
-export const ghostBtn = 'w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/15 active:scale-[0.98] border border-white/15 text-cream font-button font-semibold py-3 transition disabled:opacity-60';
-export const iconBtn = 'w-10 h-10 rounded-full bg-white/10 border border-white/15 text-cream/80 hover:text-white hover:bg-white/15 flex items-center justify-center transition-colors';
+export const primaryBtn = 'w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-primary-light to-primary hover:brightness-110 active:scale-[0.96] active:brightness-95 touch-manipulation select-none [-webkit-tap-highlight-color:transparent] text-white font-button font-semibold py-3.5 shadow-[0_10px_24px_rgba(168,90,42,0.45)] transition duration-100 ease-out';
+export const ghostBtn = 'w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/15 active:scale-[0.96] active:brightness-95 touch-manipulation select-none [-webkit-tap-highlight-color:transparent] border border-white/15 text-cream font-button font-semibold py-3 transition disabled:opacity-60';
+export const iconBtn = 'w-10 h-10 rounded-full bg-white/10 border border-white/15 text-cream/80 hover:text-white hover:bg-white/15 active:scale-90 flex items-center justify-center transition duration-100 touch-manipulation';
 export const glass = 'rounded-2xl bg-white/[0.06] border border-white/10';
 export const eyebrow = 'text-[10px] font-bold uppercase tracking-[0.18em] text-cream/50';
 

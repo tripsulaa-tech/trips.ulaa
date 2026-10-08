@@ -7,6 +7,15 @@ import { useNavIconResolver } from '../../hooks/useNavIcons';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
 import type { BottomNavItemConfig } from '../../types/types-index';
 
+// Admin-saved tab sets predate the Games section, so slot it in (before the
+// last two tabs) when it is missing, so the section is always reachable.
+const GAMES_ITEM = DEFAULT_BOTTOM_NAV_ITEMS.find(i => i.id === 'games');
+function withGames(items: BottomNavItemConfig[]): BottomNavItemConfig[] {
+  if (!GAMES_ITEM || items.some(i => i.to === GAMES_ITEM.to) || items.length >= 6) return items;
+  const at = Math.max(0, items.length - 2);
+  return [...items.slice(0, at), GAMES_ITEM, ...items.slice(at)];
+}
+
 export default function BottomNav() {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
@@ -20,7 +29,7 @@ export default function BottomNav() {
   useEffect(() => {
     getSiteContent<BottomNavItemConfig[]>('bottom_nav')
       .then(data => {
-        if (data && data.length > 0) setNavItems(data);
+        if (data && data.length > 0) setNavItems(withGames(data));
       })
       .catch(() => {
         // Fetch failed — keep the defaults already in state.
@@ -41,7 +50,7 @@ export default function BottomNav() {
       () => {
         getSiteContent<BottomNavItemConfig[]>('bottom_nav')
           .then(data => {
-            if (data && data.length > 0) setNavItems(data);
+            if (data && data.length > 0) setNavItems(withGames(data));
           })
           .catch(() => {});
       },

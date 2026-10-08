@@ -8,6 +8,7 @@ export const DEFAULT_BOTTOM_NAV_ITEMS: BottomNavItemConfig[] = [
   { id: 'home', label: 'Home', to: '/', icon: 'home' },
   { id: 'upcoming', label: 'Upcoming', to: '/trips', icon: 'calendar' },
   { id: 'journey', label: 'Journey', to: '/completed-trips', icon: 'mountain-snow' },
+  { id: 'games', label: 'Games', to: '/games', icon: 'game-controller' },
   { id: 'about', label: 'About', to: '/about', icon: 'heart' },
   { id: 'contact', label: 'Contact', to: '/contact', icon: 'headphones' },
 ];

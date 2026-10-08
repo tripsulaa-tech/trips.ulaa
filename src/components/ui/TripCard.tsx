@@ -21,7 +21,6 @@ import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
 import { EarlyBirdSeatsStrip, getEarlyBirdSeatsOffer } from './EarlyBirdSeatsPrompt';
-import TripGames from './TripGames';
 
 interface TripCardProps {
   trip: UpcomingTrip;
@@ -129,7 +128,6 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           <h3 className="font-display text-xl font-bold text-dark mb-3 line-clamp-2">
             {trip.title}
           </h3>
-          <TripGames tripId={trip.id} tripSlug={trip.slug} tripTitle={trip.title} coverImage={trip.cover_image} layout="card" className="mb-4" />
           <Link to={`/trips/${trip.slug}`} className="mt-auto">
             <Button variant="outline" size="sm" fullWidth>
               Coming Soon

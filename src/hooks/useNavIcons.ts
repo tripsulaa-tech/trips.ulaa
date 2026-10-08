@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import {
   Calendar,
+  GameController,
   Headphones,
   Heart,
   House,
@@ -27,6 +28,7 @@ const BUILT_IN_NAV_ICONS: Record<string, PhosphorIcon> = {
   'mountain-snow': PersonSimpleSki,
   heart: Heart,
   headphones: Headphones,
+  'game-controller': GameController,
 };
 
 const normalise = (key: string | null | undefined) => (key ?? '').trim().toLowerCase();

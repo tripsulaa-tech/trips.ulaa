@@ -10,6 +10,7 @@ import { SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
+import { hapticsEnabled } from './haptics';
 import { Confetti, GameTile, TimerRing, BrandMark } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName } from './gameUi';
 import StowawayOnline from './StowawayOnline';
@@ -76,7 +77,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
     try { return localStorage.getItem(MUTE_KEY) === '1'; } catch { return false; }
   });
   const mutedRef = useRef(muted);
-  const { ensure, play } = useSynth(mutedRef);
+  const { ensure, play, onPressCapture } = useSynth(mutedRef);
 
   // ── Session ──
   const [players, setPlayers] = useState<string[]>([]);
@@ -129,7 +130,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
     setMuted(next);
     try { localStorage.setItem(MUTE_KEY, next ? '1' : '0'); } catch { /* not remembered */ }
   };
-  const buzz = (ms: number | number[]) => { try { navigator.vibrate?.(ms); } catch { /* no haptics */ } };
+  const buzz = (ms: number | number[]) => { if (!hapticsEnabled()) return; try { navigator.vibrate?.(ms); } catch { /* no haptics */ } };
 
   // Keep role counts valid when players are added or removed.
   const adjustRoles = (n: number, s: number, l: number) => {
@@ -232,7 +233,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
   // ── Boarding passes: hold to reveal ──
   const [holding, setHolding] = useState(false);
   const [seen, setSeen] = useState(false);
-  const holdStart = () => { setHolding(true); setSeen(true); play('flip'); buzz(20); };
+  const holdStart = () => { setHolding(true); setSeen(true); play('flip'); };
   const holdEnd = () => setHolding(false);
 
   const showTicket = () => { setHolding(false); setSeen(false); setPhase('ticket'); };
@@ -371,7 +372,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
     return () => { cancelled = true; };
   }, [phase, cardOpts]);
 
-  const shareUrl = `${SITE_ORIGIN}/trips/${tripSlug}`;
+  const shareUrl = tripSlug ? `${SITE_ORIGIN}/trips/${tripSlug}` : `${SITE_ORIGIN}/games`;
   const shareText = `${champion ?? 'We'} won our game of Stowaway on Ulaa after ${roundNo} round${roundNo === 1 ? '' : 's'}! Play with your travel gang: ${shareUrl}`;
   const share = async () => {
     if (sharing) return;
@@ -410,7 +411,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
       />
 
       <Modal isOpen={open} onClose={close} ariaLabel="Stowaway group game" size="sm" flush>
-        <div className="relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[30rem]">
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[30rem]">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
 
@@ -640,6 +641,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
 
               <button
                 type="button"
+                data-nofx
                 onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); holdStart(); }}
                 onPointerUp={holdEnd}
                 onPointerCancel={holdEnd}

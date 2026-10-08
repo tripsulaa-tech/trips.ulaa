@@ -13,6 +13,7 @@ const navLinks = [
   { label: 'Home', to: '/' },
   { label: 'Upcoming Trips', to: '/trips' },
   { label: 'Completed Trips', to: '/completed-trips' },
+  { label: 'Games', to: '/games' },
   { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
 ];

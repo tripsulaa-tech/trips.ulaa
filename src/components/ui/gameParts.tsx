@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { Play, User } from '@phosphor-icons/react';
 import { GOLD_GRAD_TEXT, MAX_NAME } from './gameUi';
+import { haptic } from './haptics';
 
 // Counts up to `to` (the final number is what screen readers get).
 export function CountUp({ to, reduce }: { to: number; reduce: boolean }) {
@@ -124,6 +125,9 @@ export function GameTile({ onClick, compact, Icon, title, subtitle, chip, accent
   accent: 'gold' | 'primary';
 }) {
   const reduce = useReducedMotion();
+  const press = () => haptic('tap');
+  const tapAnim = reduce ? undefined : { scale: 0.96 };
+  const hoverAnim = reduce ? undefined : { y: -2 };
   const medallion = accent === 'gold'
     ? 'from-[#F0CE7A] to-gold text-dark shadow-[0_6px_18px_rgba(200,150,42,0.45)]'
     : 'from-secondary to-primary text-white shadow-[0_6px_18px_rgba(168,90,42,0.5)]';
@@ -137,7 +141,7 @@ export function GameTile({ onClick, compact, Icon, title, subtitle, chip, accent
 
   if (compact) {
     return (
-      <button type="button" onClick={onClick} className={`${shell} h-28 p-3 flex flex-col justify-between`}>
+      <motion.button type="button" onClick={onClick} onPointerDown={press} whileTap={tapAnim} whileHover={hoverAnim} className={`${shell} h-28 p-3 flex flex-col justify-between touch-manipulation [-webkit-tap-highlight-color:transparent]`}>
         {glows}
         <motion.span
           className={`relative w-10 h-10 rounded-xl bg-gradient-to-br ${medallion} flex items-center justify-center`}
@@ -151,12 +155,12 @@ export function GameTile({ onClick, compact, Icon, title, subtitle, chip, accent
           <span className="block font-display text-sm font-extrabold leading-tight text-white">{title}</span>
           <span className="block text-[11px] text-cream/60 truncate">{subtitle}</span>
         </span>
-      </button>
+      </motion.button>
     );
   }
 
   return (
-    <button type="button" onClick={onClick} className={`${shell} h-24 px-4 flex items-center gap-3`}>
+    <motion.button type="button" onClick={onClick} onPointerDown={press} whileTap={tapAnim} whileHover={hoverAnim} className={`${shell} h-24 px-4 flex items-center gap-3 touch-manipulation [-webkit-tap-highlight-color:transparent]`}>
       {glows}
       <motion.span
         className={`relative w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br ${medallion} flex items-center justify-center`}
@@ -174,7 +178,7 @@ export function GameTile({ onClick, compact, Icon, title, subtitle, chip, accent
       <span className="relative w-10 h-10 shrink-0 rounded-full bg-gradient-to-b from-primary-light to-primary text-white flex items-center justify-center shadow-[0_6px_16px_rgba(168,90,42,0.5)] group-hover:scale-105 transition-transform" aria-hidden="true">
         <Play size={18} weight="fill" />
       </span>
-    </button>
+    </motion.button>
   );
 }
 

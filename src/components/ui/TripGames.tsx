@@ -2,8 +2,8 @@ import PackBagGame from './PackBagGame';
 import TravelMatchGame from './TravelMatchGame';
 import StowawayGame from './StowawayGame';
 
-// The Coming Soon mini-games. `card` is the compact two-up row on trip cards;
-// `page` is the roomier layout on the trip detail page. The group game
+// The mini-games, shown on the Games page (`page` layout; `card` is a compact
+// two-up variant kept for reuse). The group game
 // (Stowaway) takes a full-width row of its own beneath the two solo games.
 interface TripGamesProps {
   tripId: string;

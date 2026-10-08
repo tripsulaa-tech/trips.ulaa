@@ -151,7 +151,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
   const previewUrlRef = useRef<string | null>(null);
   const stage = useAnimationControls();
   const bag = useAnimationControls();
-  const { ensure, play } = useSynth(mutedRef);
+  const { ensure, play, onPressCapture } = useSynth(mutedRef);
 
   const toggleMute = () => {
     const next = !muted;
@@ -310,9 +310,6 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
   }, []);
 
-  const buzz = (pattern: number | number[]) => {
-    try { navigator.vibrate?.(pattern); } catch { /* unsupported */ }
-  };
 
   const addPop = (x: number, y: number, text: string, good: boolean, id: number) => {
     setPops(p => [...p, { id, x, y, text, good }]);
@@ -344,12 +341,10 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
       slowLeftRef.current = SLOW_SECONDS;
       setSlowActive(true);
       play('power');
-      buzz(15);
       addPop(item.x, item.y, 'Slow-mo!', true, item.id);
       itemsRef.current = itemsRef.current.filter(i => i.id !== item.id);
     } else if (item.kind === 'magnet') {
       play('power');
-      buzz([15, 30, 15]);
       const pulled = itemsRef.current.filter(i => i.id !== item.id && !isPowerUp(i.kind) && i.good);
       pulled.forEach(award);
       addPop(item.x, item.y, pulled.length ? `Magnet! ×${pulled.length}` : 'Magnet!', true, item.id);
@@ -359,7 +354,6 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
     } else if (item.good) {
       award(item);
       play(item.kind === 'golden' ? 'gold' : 'good');
-      buzz(12);
       if (!reduce) void bag.start({ scale: [1, 1.25, 1], transition: { duration: 0.25 } });
       itemsRef.current = itemsRef.current.filter(i => i.id !== item.id);
     } else {
@@ -367,7 +361,6 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
       scoreRef.current = Math.max(0, scoreRef.current + BAD_POINTS);
       addPop(item.x, item.y, `${BAD_POINTS}`, false, item.id);
       play('bad');
-      buzz([30, 40, 30]);
       if (!reduce) void stage.start({ x: [0, -8, 8, -5, 5, 0], transition: { duration: 0.3 } });
       itemsRef.current = itemsRef.current.filter(i => i.id !== item.id);
       flashKind = 'bad';
@@ -387,7 +380,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
   const mult = Math.min(MAX_MULT, 1 + Math.floor(streak / COMBO_STEP));
   const secondsLeft = Math.max(0, Math.ceil(DURATION * (1 - progress)));
   const r = rating(score);
-  const shareUrl = `${SITE_ORIGIN}/trips/${tripSlug}`;
+  const shareUrl = tripSlug ? `${SITE_ORIGIN}/trips/${tripSlug}` : `${SITE_ORIGIN}/games`;
   const shareText = playerName
     ? `${playerName} scored ${score} (${r.title}) in Ulaa's "Pack the bag" game for ${tripTitle}! Think you can beat that? ${shareUrl}`
     : `I scored ${score} (${r.title}) in Ulaa's "Pack the bag" game for ${tripTitle}! Think you can beat me? ${shareUrl}`;
@@ -427,7 +420,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
     } catch { return; }
     window.open(getWhatsAppLink('', shareText), '_blank', 'noopener,noreferrer');
   };
-  const notifyHref = getWhatsAppLink(WHATSAPP_NUMBER, `Hi Ulaa! Please let me know when "${tripTitle}" opens for booking.`);
+  const notifyHref = getWhatsAppLink(WHATSAPP_NUMBER, tripSlug ? `Hi Ulaa! Please let me know when "${tripTitle}" opens for booking.` : 'Hi Ulaa! Please let me know when your next trip opens for booking.');
 
   // Dark, brand-matched game UI (footer brown + terracotta/gold), same
   // language as the shareable score card.
@@ -446,7 +439,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
       />
 
       <Modal isOpen={open} onClose={close} ariaLabel="Pack the bag game" size="sm" flush>
-        <div className="relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[28rem]">
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[28rem]">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
 
@@ -612,15 +605,16 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                     ? 'bg-gradient-to-br from-[#FFF0B8] to-gold text-dark ring-2 ring-[#F0CE7A] shadow-[0_0_22px_rgba(240,206,122,0.8)]'
                     : power
                       ? 'bg-gradient-to-br from-secondary to-primary text-white ring-2 ring-white/50 shadow-[0_0_20px_rgba(217,138,58,0.75)]'
-                      : 'bg-white/[0.13] text-[#F6E7C6] border border-white/20 backdrop-blur-sm shadow-[0_8px_18px_rgba(0,0,0,0.35)]';
+                      : 'bg-white/[0.13] text-[#F6E7C6] border border-white/20 shadow-[0_6px_12px_rgba(0,0,0,0.3)]';
                   return (
                     <button
                       key={i.id}
                       type="button"
+                      data-nofx
                       onPointerDown={e => { e.preventDefault(); tap(i); }}
                       aria-label={i.label}
-                      className="absolute flex flex-col items-center justify-center gap-1 leading-none"
-                      style={{ width: ITEM, height: ITEM, left: `${i.x}%`, top: 0, transform: `translateY(${i.y}px)` }}
+                      className="absolute flex flex-col items-center justify-center gap-1 leading-none will-change-transform"
+                      style={{ width: ITEM, height: ITEM, left: `${i.x}%`, top: 0, transform: `translate3d(0, ${i.y}px, 0)` }}
                     >
                       <span className={`w-12 h-12 rounded-2xl flex items-center justify-center ${tile}`}>
                         <i.Icon size={28} weight={gold ? 'fill' : 'duotone'} aria-hidden="true" />

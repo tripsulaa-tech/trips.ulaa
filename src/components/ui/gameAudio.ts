@@ -1,8 +1,16 @@
 import { useCallback, useRef } from 'react';
+import { haptic, type Haptic } from './haptics';
 
 // ── Sound: tiny Web Audio synth (no files). Created lazily on the first tap
 // of "Start" so browsers allow it; respects the mute toggle. ──
-export type Sfx = 'flip' | 'miss' | 'good' | 'bad' | 'gold' | 'power' | 'tick' | 'go' | 'win' | 'end';
+export type Sfx = 'flip' | 'miss' | 'good' | 'bad' | 'gold' | 'power' | 'tick' | 'go' | 'win' | 'end' | 'click';
+
+// Every sound has a matching haptic, so audio and touch always agree.
+// Haptics fire even when sound is muted (they are their own channel).
+const SFX_HAPTIC: Record<Sfx, Haptic> = {
+  flip: 'select', miss: 'tap', good: 'success', bad: 'error', gold: 'gold', power: 'power',
+  tick: 'tick', go: 'heavy', win: 'win', end: 'end', click: 'tap',
+};
 
 export function useSynth(mutedRef: React.MutableRefObject<boolean>) {
   const ctxRef = useRef<AudioContext | null>(null);
@@ -37,8 +45,10 @@ export function useSynth(mutedRef: React.MutableRefObject<boolean>) {
   }, [mutedRef]);
 
   const play = useCallback((name: Sfx) => {
+    haptic(SFX_HAPTIC[name]);
     if (mutedRef.current) return;
     switch (name) {
+      case 'click': tone(900, 0.035, { type: 'square', gain: 0.025 }); tone(480, 0.05, { type: 'sine', gain: 0.05, delay: 0.01 }); break;
       case 'flip': tone(620, 0.07, { type: 'triangle', gain: 0.07 }); break;
       case 'miss': tone(320, 0.18, { type: 'sine', gain: 0.08, to: 230 }); break;
       case 'good': tone(660, 0.09, { type: 'triangle' }); tone(880, 0.12, { type: 'triangle', delay: 0.07 }); break;
@@ -52,5 +62,15 @@ export function useSynth(mutedRef: React.MutableRefObject<boolean>) {
     }
   }, [tone, mutedRef]);
 
-  return { ensure, play };
+  // Press feedback for any button inside a game: attach to the container's
+  // onPointerDownCapture. Fires on touch-down (not release) so it feels
+  // instant. Elements marked data-nofx handle their own feedback.
+  const onPressCapture = useCallback((e: React.PointerEvent) => {
+    const el = (e.target as HTMLElement | null)?.closest?.('button,[role="switch"],[role="button"]') as HTMLElement | null;
+    if (!el || el.hasAttribute('disabled') || el.closest('[data-nofx]')) return;
+    ensure();
+    play('click');
+  }, [ensure, play]);
+
+  return { ensure, play, onPressCapture };
 }
