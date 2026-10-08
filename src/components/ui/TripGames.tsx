@@ -1,10 +1,12 @@
 import PackBagGame from './PackBagGame';
 import TravelMatchGame from './TravelMatchGame';
 import StowawayGame from './StowawayGame';
+import FindMyTwinGame from './FindMyTwinGame';
 
 // The mini-games, shown on the Games page (`page` layout; `card` is a compact
 // two-up variant kept for reuse). The group game
-// (Stowaway) takes a full-width row of its own beneath the two solo games.
+// (Stowaway) takes a full-width row of its own beneath the solo games.
+// Find My Twin is the other group game (everyone on their own phone).
 interface TripGamesProps {
   tripId: string;
   tripSlug: string;
@@ -18,10 +20,11 @@ export default function TripGames({ tripId, tripSlug, tripTitle, coverImage, lay
   const compact = layout === 'card';
   if (layout === 'thumb') {
     return (
-      <div className={`grid grid-cols-3 gap-3 sm:gap-6 items-start ${className}`}>
+      <div className={`grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-6 sm:gap-6 items-start ${className}`}>
         <PackBagGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} coverImage={coverImage} thumb />
         <TravelMatchGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} thumb />
         <StowawayGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} thumb />
+        <FindMyTwinGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} thumb />
       </div>
     );
   }
@@ -29,6 +32,7 @@ export default function TripGames({ tripId, tripSlug, tripTitle, coverImage, lay
     <div className={`grid gap-2.5 ${compact ? 'grid-cols-2' : 'sm:grid-cols-2 gap-3'} ${className}`}>
       <PackBagGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} coverImage={coverImage} compact={compact} />
       <TravelMatchGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} compact={compact} />
+      <FindMyTwinGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} compact={compact} />
       <StowawayGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} className={compact ? 'col-span-2' : 'sm:col-span-2'} />
     </div>
   );

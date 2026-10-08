@@ -121,6 +121,7 @@ const AboutPage = lazy(() => import('../pages/AboutPage'));
 const ContactPage = lazy(() => import('../pages/ContactPage'));
 const GamesPage = lazy(() => import('../pages/GamesPage'));
 const StowawayJoinPage = lazy(() => import('../pages/StowawayJoinPage'));
+const FindMyTwinJoinPage = lazy(() => import('../pages/FindMyTwinJoinPage'));
 
 // Admin Pages
 const AdminLogin = lazy(() => import('../admin/AdminLogin'));
@@ -186,6 +187,8 @@ export default function AppRouter() {
             <Route path="/games" element={<GamesPage />} />
             <Route path="/play/stowaway" element={<StowawayJoinPage />} />
             <Route path="/play/stowaway/:code" element={<StowawayJoinPage />} />
+            <Route path="/play/twin" element={<FindMyTwinJoinPage />} />
+            <Route path="/play/twin/:code" element={<FindMyTwinJoinPage />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={

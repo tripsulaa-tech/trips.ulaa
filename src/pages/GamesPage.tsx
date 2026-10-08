@@ -13,7 +13,7 @@ export default function GamesPage() {
 
   usePageMeta({
     title: pageTitle('Games'),
-    description: 'Play Ulaa\'s travel games: pack the bag, match the destinations and spot the stowaway with friends.',
+    description: 'Play Ulaa\'s travel games: pack the bag, match the destinations, spot the stowaway and find your travel twin with friends.',
     path: '/games',
   });
 
