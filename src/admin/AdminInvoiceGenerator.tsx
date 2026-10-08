@@ -100,6 +100,7 @@ export default function AdminInvoiceGenerator() {
   useDraftKeeper({ key: INVOICE_DRAFT_KEY, value: draftValue, base: draftBase });
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [downloadingSavedId, setDownloadingSavedId] = useState<string | null>(null);
 
   const total = invoiceGeneratorTotal(data.items);
 
@@ -255,6 +256,33 @@ export default function AdminInvoiceGenerator() {
     });
     await previewInvoiceNumber(record.invoice_number_prefix || DEFAULT_INVOICE_NUMBER_PREFIX);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Downloads a saved invoice exactly as it was saved (its own number and
+  // date), without touching the form.
+  const handleDownloadSaved = async (record: InvoiceGeneratorRecord) => {
+    setDownloadingSavedId(record.id);
+    try {
+      await downloadInvoiceGeneratorPdf({
+        invoiceTitle: record.invoice_title,
+        invoiceSubtitle: record.invoice_subtitle,
+        billingCompanyName: record.billing_company_name,
+        billingAddress: record.billing_address,
+        invoiceNumberPrefix: record.invoice_number_prefix || DEFAULT_INVOICE_NUMBER_PREFIX,
+        invoiceNumber: record.invoice_number,
+        invoiceDateISO: record.invoice_date,
+        items: record.items.length
+          ? record.items.map(it => ({ ...createEmptyLineItem(), ...it }))
+          : [createEmptyLineItem()],
+        bank: { ...record.bank },
+        signatoryName: record.signatory_name,
+      });
+    } catch (err) {
+      console.error('Failed to download saved invoice', err);
+      toast.error("Couldn't generate the PDF. Please try again.");
+    } finally {
+      setDownloadingSavedId(null);
+    }
   };
 
   const handleDeleteSaved = async (id: string) => {
@@ -610,6 +638,15 @@ export default function AdminInvoiceGenerator() {
                             </p>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadSaved(record)}
+                              disabled={downloadingSavedId === record.id}
+                              aria-label="Download saved invoice"
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-md text-primary hover:bg-white disabled:opacity-40 transition-colors"
+                            >
+                              <Download size={14} aria-hidden="true" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleReuse(record)}
