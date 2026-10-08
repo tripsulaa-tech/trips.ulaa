@@ -14,7 +14,7 @@ import { hapticsEnabled } from './haptics';
 import { Confetti, GameTile, TimerRing, BrandMark } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName } from './gameUi';
 import StowawayOnline from './StowawayOnline';
-import { loadOnlineSession } from './stowawayOnline';
+import { loadOnlineSession } from './stowawayRoomApi';
 import { LEVELS, CATEGORY_LABEL } from './stowawayWords';
 import type { Level, Challenge } from './stowawayWords';
 import {

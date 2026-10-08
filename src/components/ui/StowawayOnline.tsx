@@ -24,8 +24,8 @@ import {
 import type { PlayerStats, Role } from './stowawayEngine';
 import {
   online, OnlineError, joinLink, normalizeCode, loadOnlineSession, saveOnlineSession, clearOnlineSession,
-} from './stowawayOnline';
-import type { OnlinePhase } from './stowawayOnline';
+} from './stowawayRoomApi';
+import type { OnlinePhase } from './stowawayRoomApi';
 import { useOnlineRoom } from './useOnlineRoom';
 
 // "Stowaway" online: every player uses their own phone. The rules and secrets
