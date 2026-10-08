@@ -588,26 +588,6 @@ create table public.gallery (
 );
 
 -- ----------------------------------------------------------------------------
--- trip_images
--- ----------------------------------------------------------------------------
--- trip_id is intentionally NOT a foreign key, same reasoning as
--- enquiries.trip_id: it's polymorphic across upcoming_trips/completed_trips,
--- disambiguated by the trip_type column.
-create table public.trip_images (
-  id            uuid not null default uuid_generate_v4(),
-  trip_id       uuid not null,
-  trip_type     text not null,
-  image_url     text not null,
-  alt_text      text,
-  sort_order    integer default 0,
-  is_cover      boolean default false,
-  created_at    timestamptz default now(),
-  constraint trip_images_pkey primary key (id),
-  constraint trip_images_trip_type_check
-    check (trip_type = any (array['upcoming'::text, 'completed'::text, 'gallery'::text]))
-);
-
--- ----------------------------------------------------------------------------
 -- testimonials
 -- ----------------------------------------------------------------------------
 create table public.testimonials (
@@ -1930,7 +1910,6 @@ alter table public.payments enable row level security;
 alter table public.activity_log enable row level security;
 alter table public.waitlist enable row level security;
 alter table public.gallery enable row level security;
-alter table public.trip_images enable row level security;
 alter table public.testimonials enable row level security;
 alter table public.trip_leaders enable row level security;
 alter table public.notifications enable row level security;
@@ -1992,12 +1971,6 @@ create policy "Admin delete waitlist" on public.waitlist
 create policy "Admin all gallery" on public.gallery
   for all using (public.is_admin());
 create policy "Public read gallery" on public.gallery
-  for select using (true);
-
--- trip_images
-create policy "Admin all trip images" on public.trip_images
-  for all using (public.is_admin());
-create policy "Public read trip images" on public.trip_images
   for select using (true);
 
 -- testimonials

@@ -78,6 +78,10 @@ export default defineConfig({
         admin: path.resolve(import.meta.dirname, 'admin.html'),
       },
       output: {
+        minify: {
+          compress: { dropConsole: true, dropDebugger: true },
+          mangle: true,
+        },
         // Split heavy, rarely-changing vendor code out of the main app
         // chunk. This doesn't shrink total bytes shipped, but it lets the
         // browser cache these separately (they change far less often than
@@ -137,16 +141,11 @@ export default defineConfig({
         },
       },
     },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-      mangle: true,
-      format: {
-        comments: false,
-      },
-    },
+    // Vite 8 ships the Rust-based oxc minifier. terser was being invoked once
+    // per output chunk (1,600+ chunks because every Phosphor icon is its own
+    // lazy chunk) and accounted for most of the ~80s build. oxc is equivalent
+    // here: console/debugger calls are still stripped, names still mangled,
+    // comments still removed.
+    minify: 'oxc',
   },
 })

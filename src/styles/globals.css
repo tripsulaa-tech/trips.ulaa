@@ -272,12 +272,6 @@ button, .btn {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.line-clamp-6 {
-  display: -webkit-box;
-  -webkit-line-clamp: 6;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 
 /* Selection color */
 ::selection {
@@ -319,16 +313,6 @@ button, .btn {
 }
 .heart-glow {
   animation: heart-glow 1.8s ease-in-out infinite;
-}
-
-/* "Trip starts in" countdown card — see TripCountdownCard.tsx */
-@keyframes tc-gradient {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-.tc-gradient {
-  background-size: 200% 200%;
-  animation: tc-gradient 6s ease-in-out infinite;
 }
 
 /* Limited-time-offer / early-bird banner on TripCard — a slow left-right
@@ -420,28 +404,6 @@ button, .btn {
   animation: gallery-shimmer 1.4s ease-in-out infinite;
 }
 
-/* Subtle heartbeat pulse on the Seconds tile so the card visibly feels
-   "live" without needing to resync with the actual JS timer tick. */
-@keyframes tc-tick {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.06); }
-}
-.tc-tick {
-  animation: tc-tick 1s ease-in-out infinite;
-}
-
-/* Faint noise texture layered over the premium countdown card so the dark
-   gradient reads as brushed/matte rather than a flat digital fill. */
-.tc-grain::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.9) 0.6px, transparent 0.6px);
-  background-size: 3px 3px;
-}
 /* ── Gallery viewer premium additions ──────────────────────────────────── */
 
 /* Filmstrip scale token — Tailwind 4 doesn't include .scale-108 by default */
