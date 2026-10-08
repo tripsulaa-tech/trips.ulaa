@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Play, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
   UsersThree, Ticket, Airplane, Eye, EyeSlash, Sparkle, Lightning, Crown, Skull, CheckCircle,
-  XCircle, MagicWand, Gift, Question, ArrowRight,
+  XCircle, MagicWand, Gift, Question, ArrowRight, DeviceMobile,
 } from '@phosphor-icons/react';
 import Modal from './Modal';
 import { SITE_HOST, SITE_ORIGIN } from '../../constants/site';
@@ -12,6 +12,8 @@ import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
 import { Confetti, GameTile, TimerRing, BrandMark } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName } from './gameUi';
+import StowawayOnline from './StowawayOnline';
+import { loadOnlineSession } from './stowawayOnline';
 import { LEVELS, CATEGORY_LABEL } from './stowawayWords';
 import type { Level, Challenge } from './stowawayWords';
 import {
@@ -21,7 +23,10 @@ import {
 } from './stowawayEngine';
 import type { Seat, Role, Outcome, PlayerStats, RoundSetup } from './stowawayEngine';
 
-// "Stowaway": a pass-and-play group bluffing game for Coming Soon trips.
+// "Stowaway": a group bluffing game for Coming Soon trips. Two ways to play:
+// pass-and-play on one phone (this file), or online with a room code where
+// everyone uses their own phone (StowawayOnline.tsx, backed by Supabase).
+// The rest of this comment describes the pass-and-play mode.
 // Everyone is on the same trip, but a Stowaway sneaked aboard with the wrong
 // plan. Explorers get one word, Stowaways a similar one, and the Lost Soul
 // none at all. Each stop everyone gives one clue, then the group offboards
@@ -35,7 +40,7 @@ const SPEAK_SECONDS = 15;
 const REVEAL_MS = 1900;
 
 type Phase =
-  | 'idle' | 'setup' | 'pass' | 'ticket' | 'round' | 'vote' | 'offboard' | 'guess' | 'roundEnd' | 'final';
+  | 'idle' | 'online' | 'setup' | 'pass' | 'ticket' | 'round' | 'vote' | 'offboard' | 'guess' | 'roundEnd' | 'final';
 
 const ROLE_LABEL: Record<Role, string> = { explorer: 'Explorer', stowaway: 'Stowaway', lost: 'Lost Soul' };
 const ROLE_TONE: Record<Role, string> = {
@@ -59,6 +64,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
   const [initial] = useState(loadSetup);
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
+  const [savedRoom, setSavedRoom] = useState<string | null>(null);
   const [names, setNames] = useState<string[]>(initial.names);
   const [stowaways, setStowaways] = useState(initial.stowaways);
   const [lost, setLost] = useState(initial.lost);
@@ -394,7 +400,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
   return (
     <div className={className}>
       <GameTile
-        onClick={() => { setOpen(true); setPhase('idle'); }}
+        onClick={() => { setSavedRoom(loadOnlineSession()?.code ?? null); setOpen(true); setPhase('idle'); }}
         compact={compact}
         Icon={UsersThree}
         accent="primary"
@@ -422,7 +428,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
               </motion.div>
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · 3 to 12 players</span>
               <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Stowaway</h2>
-              <p className="text-sm text-cream/60 mt-1 mb-4 px-4">One phone, passed around. Someone sneaked aboard {tripTitle} with the wrong plan. Can you spot them?</p>
+              <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Play on one phone, or online with a room code. Someone sneaked aboard {tripTitle} with the wrong plan. Can you spot them?</p>
 
               <ul className={`${glass} text-left divide-y divide-white/10 mb-4`}>
                 {[
@@ -436,11 +442,22 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
                   </li>
                 ))}
               </ul>
-              <button type="button" onClick={() => { ensure(); setPhase('setup'); }} className={primaryBtn}><Play size={18} weight="fill" /> Set up the game</button>
+              <div className="space-y-2.5">
+                {savedRoom && (
+                  <button type="button" onClick={() => { ensure(); setPhase('online'); }} className={primaryBtn}><Play size={18} weight="fill" /> Rejoin room {savedRoom}</button>
+                )}
+                <button type="button" onClick={() => { ensure(); setPhase('online'); }} className={savedRoom ? ghostBtn : primaryBtn}><DeviceMobile size={18} weight="duotone" /> Play online with friends</button>
+                <button type="button" onClick={() => { ensure(); setPhase('setup'); }} className={ghostBtn}><Play size={18} weight="fill" /> Play on this phone</button>
+              </div>
               <button type="button" onClick={toggleMute} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                 {muted ? <SpeakerSlash size={14} /> : <SpeakerHigh size={14} />} Sound {muted ? 'off' : 'on'}
               </button>
             </div>
+          )}
+
+          {/* ── Online: every player on their own phone ── */}
+          {phase === 'online' && (
+            <StowawayOnline tripTitle={tripTitle} onExit={() => { setSavedRoom(loadOnlineSession()?.code ?? null); setPhase('idle'); }} />
           )}
 
           {/* ── Setup ── */}
