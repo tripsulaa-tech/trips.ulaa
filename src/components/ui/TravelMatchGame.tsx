@@ -92,9 +92,10 @@ interface TravelMatchGameProps {
   tripTitle: string;
   className?: string;
   compact?: boolean;
+  thumb?: boolean;
 }
 
-export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className = '', compact = false }: TravelMatchGameProps) {
+export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className = '', compact = false, thumb = false }: TravelMatchGameProps) {
   const bestKey = `ulaa:travelmatch:${tripId}`;
   const reduce = useReducedMotion();
 
@@ -308,11 +309,13 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
 
   const def = LEVELS[level];
   const r = rating(cleared);
+  const themed = Boolean(tripSlug);
+  const forTrip = themed ? ` for ${tripTitle}` : '';
   const allCleared = cleared >= LEVELS.length;
   const shareUrl = tripSlug ? `${SITE_ORIGIN}/trips/${tripSlug}` : `${SITE_ORIGIN}/games`;
   const shareText = playerName
-    ? `${playerName} cleared ${cleared}/${LEVELS.length} levels of Ulaa's "Travel match" for ${tripTitle} and scored ${score}! Think you can beat that? ${shareUrl}`
-    : `I cleared ${cleared}/${LEVELS.length} levels of Ulaa's "Travel match" for ${tripTitle} and scored ${score}! Think you can beat me? ${shareUrl}`;
+    ? `${playerName} cleared ${cleared}/${LEVELS.length} levels of Ulaa's "Travel match"${forTrip} and scored ${score}! Think you can beat that? ${shareUrl}`
+    : `I cleared ${cleared}/${LEVELS.length} levels of Ulaa's "Travel match"${forTrip} and scored ${score}! Think you can beat me? ${shareUrl}`;
 
   const share = async () => {
     if (sharing) return;
@@ -348,6 +351,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
       <GameTile
         onClick={() => setOpen(true)}
         compact={compact}
+        thumb={thumb}
         Icon={Compass}
         accent="gold"
         title="Travel match"
@@ -355,8 +359,9 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
         chip="New · Memory"
       />
 
-      <Modal isOpen={open} onClose={close} ariaLabel="Travel match game" size="sm" flush>
-        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[28rem]">
+      <Modal isOpen={open} onClose={close} ariaLabel="Travel match game" size="sm" flush fullScreen>
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center">
+          <div className="relative w-full max-w-md">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
 
@@ -374,7 +379,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
               </motion.div>
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Memory challenge</span>
               <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Travel match</h2>
-              <p className="text-sm text-cream/60 mt-1 mb-4 px-6 line-clamp-2">A memory game while {tripTitle} gets ready</p>
+              <p className="text-sm text-cream/60 mt-1 mb-4 px-6 line-clamp-2">{themed ? `A memory game while ${tripTitle} gets ready` : 'Flip, match and vanish every pair'}</p>
 
               <div className="flex items-center justify-center gap-1.5 mb-4" aria-label="Four levels, 16 to 30 cards">
                 {LEVELS.map((l, i) => (
@@ -625,7 +630,8 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
               <button type="button" onClick={begin} className={`${primaryBtn} mb-3`}><ArrowCounterClockwise size={18} weight="bold" /> Play again</button>
               <button type="button" onClick={() => { clearTimers(); setPhase('idle'); }} className={`${ghostBtn} mb-4`}>Back to menu</button>
 
-              <a
+              {themed && (
+                <a
                 href={notifyHref}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -634,8 +640,10 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
                 <WhatsappLogo size={16} weight="fill" aria-hidden="true" />
                 Notify me when this trip opens
               </a>
+              )}
             </div>
           )}
+          </div>
         </div>
       </Modal>
     </div>

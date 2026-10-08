@@ -56,9 +56,10 @@ interface StowawayGameProps {
   tripTitle: string;
   className?: string;
   compact?: boolean;
+  thumb?: boolean;
 }
 
-export default function StowawayGame({ tripSlug, tripTitle, className = '', compact = false }: StowawayGameProps) {
+export default function StowawayGame({ tripSlug, tripTitle, className = '', compact = false, thumb = false }: StowawayGameProps) {
   const reduce = useReducedMotion();
 
   // ── Setup (saved on this device) ──
@@ -403,15 +404,17 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
       <GameTile
         onClick={() => { setSavedRoom(loadOnlineSession()?.code ?? null); setOpen(true); setPhase('idle'); }}
         compact={compact}
+        thumb={thumb}
         Icon={UsersThree}
-        accent="primary"
+        accent="gold"
         title="Stowaway"
         subtitle="Who sneaked aboard?"
         chip="New · Group game"
       />
 
-      <Modal isOpen={open} onClose={close} ariaLabel="Stowaway group game" size="sm" flush>
-        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[30rem]">
+      <Modal isOpen={open} onClose={close} ariaLabel="Stowaway group game" size="sm" flush fullScreen>
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center">
+          <div className="relative w-full max-w-md">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
 
@@ -429,7 +432,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
               </motion.div>
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · 3 to 12 players</span>
               <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Stowaway</h2>
-              <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Play on one phone, or online with a room code. Someone sneaked aboard {tripTitle} with the wrong plan. Can you spot them?</p>
+              <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Play on one phone, or online with a room code. Someone sneaked aboard with the wrong plan. Can you spot them?</p>
 
               <ul className={`${glass} text-left divide-y divide-white/10 mb-4`}>
                 {[
@@ -914,6 +917,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
               <button type="button" onClick={() => setPhase('setup')} className={ghostBtn}>Change players or roles</button>
             </div>
           )}
+          </div>
         </div>
       </Modal>
     </div>

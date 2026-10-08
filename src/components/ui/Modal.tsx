@@ -46,6 +46,9 @@ interface ModalProps {
   /** Accessible name for the dialog when no `title` is shown (e.g. a modal
    *  whose content draws its own heading). Ignored when `title` is set. */
   ariaLabel?: string;
+  /** Opt-in: the panel fills the whole viewport at every screen size (used
+   *  by the games). Content is responsible for its own background. */
+  fullScreen?: boolean;
 }
 
 const sizes = {
@@ -56,7 +59,7 @@ const sizes = {
   '2xl': 'max-w-5xl',
 };
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent, bodyRef, mobileFullScreen = false, compactHeader = false, flush = false, ariaLabel }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, headerContent, bodyRef, mobileFullScreen = false, compactHeader = false, flush = false, ariaLabel, fullScreen = false }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -98,7 +101,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-dark/60 backdrop-blur-sm ${mobileFullScreen ? 'p-0 sm:p-4' : 'p-4'}`}
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-dark/60 backdrop-blur-sm ${fullScreen ? 'p-0 bg-footer' : mobileFullScreen ? 'p-0 sm:p-4' : 'p-4'}`}
           onMouseDown={(e) => { mouseDownOnOverlay.current = e.target === overlayRef.current; }}
           onClick={(e) => {
             if (e.target === overlayRef.current && mouseDownOnOverlay.current) onClose();
@@ -115,8 +118,10 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`relative w-full ${sizes[size]} bg-white shadow-warm-lg overflow-hidden flex flex-col outline-none ${
-              mobileFullScreen
+            className={`relative w-full ${fullScreen ? 'max-w-none' : sizes[size]} bg-white shadow-warm-lg overflow-hidden flex flex-col outline-none ${
+              fullScreen
+                ? 'h-full max-h-none rounded-none'
+                : mobileFullScreen
                 ? 'h-full sm:h-auto max-h-none sm:max-h-[90vh] rounded-none sm:rounded-md'
                 : 'max-h-[90vh] rounded-md'
             }`}
@@ -124,7 +129,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
             {!title && (
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 text-dark-muted hover:text-dark bg-background rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors z-10"
+                className={`absolute right-4 ${fullScreen ? 'top-[max(1rem,env(safe-area-inset-top))] bg-white/10 text-cream hover:bg-white/20 border border-white/15' : 'top-4 bg-background text-dark-muted hover:text-dark'} rounded-full p-3 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors z-10`}
                 aria-label="Close"
               >
                 <X size={20} />

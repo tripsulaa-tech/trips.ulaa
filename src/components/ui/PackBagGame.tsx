@@ -63,7 +63,7 @@ function profileFor(title: string): Profile {
 }
 
 const DURATION = 30;      // seconds
-const AREA_H = 320;       // px, matches h-80 below
+const BASE_H = 320;       // px, reference height that fall speeds are tuned for
 const ITEM = 64;          // px, hit box of a falling item
 const GOOD_POINTS = 10;
 const GOLD_POINTS = 30;
@@ -98,9 +98,10 @@ interface PackBagGameProps {
   coverImage?: string | null;
   className?: string;
   compact?: boolean;
+  thumb?: boolean;
 }
 
-export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, className = '', compact = false }: PackBagGameProps) {
+export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, className = '', compact = false, thumb = false }: PackBagGameProps) {
   const bestKey = `ulaa:packbag:${tripId}`;
   // Memoised: the game loop effect depends on it, and a fresh object each
   // render would restart the loop every frame.
@@ -150,6 +151,9 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
   const cardBlobRef = useRef<Blob | null>(null);
   const previewUrlRef = useRef<string | null>(null);
   const stage = useAnimationControls();
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const areaHRef = useRef(BASE_H);
+  const [areaH, setAreaH] = useState(BASE_H);
   const bag = useAnimationControls();
   const { ensure, play, onPressCapture } = useSynth(mutedRef);
 
@@ -196,6 +200,21 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
     ];
     return () => ids.forEach(clearTimeout);
   }, [phase, play]);
+
+  // The play area fills the screen: measure it so physics match what is drawn.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || (phase !== 'countdown' && phase !== 'playing')) return;
+    const measure = () => {
+      const h = Math.round(el.getBoundingClientRect().height) || BASE_H;
+      areaHRef.current = h;
+      setAreaH(h);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [phase]);
 
   // The first-play tip disappears on its own.
   useEffect(() => {
@@ -257,7 +276,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
         kind,
         x: 3 + Math.random() * 75,
         y: -ITEM,
-        speed: 120 + Math.random() * 60 + elapsed * 3.5,
+        speed: (120 + Math.random() * 60 + elapsed * 3.5) * (areaHRef.current / BASE_H),
       });
     };
     const tick = (now: number) => {
@@ -279,7 +298,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
 
       itemsRef.current = itemsRef.current
         .map(i => ({ ...i, y: i.y + i.speed * dt * mul }))
-        .filter(i => i.y < AREA_H);
+        .filter(i => i.y < areaHRef.current);
       setItems(itemsRef.current);
       raf = requestAnimationFrame(tick);
     };
@@ -380,10 +399,12 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
   const mult = Math.min(MAX_MULT, 1 + Math.floor(streak / COMBO_STEP));
   const secondsLeft = Math.max(0, Math.ceil(DURATION * (1 - progress)));
   const r = rating(score);
+  const themed = Boolean(tripSlug);
+  const forTrip = themed ? ` for ${tripTitle}` : '';
   const shareUrl = tripSlug ? `${SITE_ORIGIN}/trips/${tripSlug}` : `${SITE_ORIGIN}/games`;
   const shareText = playerName
-    ? `${playerName} scored ${score} (${r.title}) in Ulaa's "Pack the bag" game for ${tripTitle}! Think you can beat that? ${shareUrl}`
-    : `I scored ${score} (${r.title}) in Ulaa's "Pack the bag" game for ${tripTitle}! Think you can beat me? ${shareUrl}`;
+    ? `${playerName} scored ${score} (${r.title}) in Ulaa's "Pack the bag" game${forTrip}! Think you can beat that? ${shareUrl}`
+    : `I scored ${score} (${r.title}) in Ulaa's "Pack the bag" game${forTrip}! Think you can beat me? ${shareUrl}`;
 
   const share = async () => {
     if (sharing) return;
@@ -431,6 +452,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
       <GameTile
         onClick={() => setOpen(true)}
         compact={compact}
+        thumb={thumb}
         Icon={Backpack}
         accent="gold"
         title="Pack the bag"
@@ -438,8 +460,9 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
         chip="New · 30 sec"
       />
 
-      <Modal isOpen={open} onClose={close} ariaLabel="Pack the bag game" size="sm" flush>
-        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[28rem]">
+      <Modal isOpen={open} onClose={close} ariaLabel="Pack the bag game" size="sm" flush fullScreen>
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center">
+          <div className="relative w-full max-w-md">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
 
@@ -457,7 +480,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
               </motion.div>
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">30-second challenge</span>
               <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Pack the bag</h2>
-              <p className="text-sm text-cream/60 mt-1 mb-5 px-6 line-clamp-2">Packing for {tripTitle}</p>
+              <p className="text-sm text-cream/60 mt-1 mb-5 px-6 line-clamp-2">{themed ? `Packing for ${tripTitle}` : 'Pack what you would really take on a trip'}</p>
 
               <div className="grid grid-cols-2 gap-2 text-left mb-2">
                 <div className="rounded-2xl bg-emerald-400/[0.08] border border-emerald-300/20 p-3">
@@ -584,8 +607,9 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
 
               {/* Stage */}
               <motion.div
+                ref={stageRef}
                 animate={stage}
-                className="relative h-80 rounded-3xl overflow-hidden select-none touch-none bg-gradient-to-b from-[#3A2A1F] to-[#1B130E] border border-white/10 shadow-[inset_0_0_60px_rgba(0,0,0,0.4)]"
+                className="relative h-[clamp(20rem,calc(100dvh-17rem),44rem)] rounded-3xl overflow-hidden select-none touch-none bg-gradient-to-b from-[#3A2A1F] to-[#1B130E] border border-white/10 shadow-[inset_0_0_60px_rgba(0,0,0,0.4)]"
               >
                 {/* Trip-themed backdrop: the cover photo, darkened */}
                 {coverImage && (
@@ -630,7 +654,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                     key={f.id}
                     className={`absolute pointer-events-none ${f.golden ? 'text-[#F0CE7A]' : 'text-[#F6E7C6]'}`}
                     initial={{ left: `${f.x}%`, top: f.y, scale: 1, opacity: 1 }}
-                    animate={{ left: '44%', top: AREA_H - 64, scale: 0.3, opacity: 0 }}
+                    animate={{ left: '44%', top: areaH - 64, scale: 0.3, opacity: 0 }}
                     transition={{ duration: 0.4, ease: 'easeIn' }}
                     aria-hidden="true"
                   >
@@ -779,7 +803,8 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                 </div>
               </div>
 
-              <a
+              {themed && (
+                <a
                 href={notifyHref}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -788,8 +813,10 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                 <WhatsappLogo size={16} weight="fill" aria-hidden="true" />
                 Notify me when this trip opens
               </a>
+              )}
             </div>
           )}
+          </div>
         </div>
       </Modal>
     </div>

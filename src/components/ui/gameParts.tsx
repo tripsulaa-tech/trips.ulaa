@@ -115,9 +115,11 @@ export function TimerRing({ secondsLeft, progress, lowAt = 5 }: { secondsLeft: n
 
 // Entry tile used on Coming Soon cards and trip pages. `compact` is the
 // small vertical version for the two-up grid on trip cards.
-export function GameTile({ onClick, compact, Icon, title, subtitle, chip, accent }: {
+export function GameTile({ onClick, compact, thumb, Icon, title, subtitle, chip, accent }: {
   onClick: () => void;
   compact?: boolean;
+  /** App-icon style: big icon thumbnail with the name underneath. */
+  thumb?: boolean;
   Icon: PhosphorIcon;
   title: string;
   subtitle: string;
@@ -138,6 +140,29 @@ export function GameTile({ onClick, compact, Icon, title, subtitle, chip, accent
       <span className="absolute -left-10 -bottom-12 w-32 h-32 rounded-full bg-gold/20 blur-2xl pointer-events-none" aria-hidden="true" />
     </>
   );
+
+  if (thumb) {
+    return (
+      <motion.button
+        type="button"
+        onClick={onClick}
+        onPointerDown={press}
+        whileTap={reduce ? undefined : { scale: 0.93 }}
+        whileHover={reduce ? undefined : { y: -4 }}
+        aria-label={`${title}. ${subtitle}`}
+        className="group relative flex flex-col items-center gap-3 w-full touch-manipulation [-webkit-tap-highlight-color:transparent] outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-3xl p-1"
+      >
+        <span className={`relative w-full aspect-square max-w-[9.5rem] rounded-[28%] bg-gradient-to-br ${medallion} flex items-center justify-center overflow-hidden border border-white/25 shadow-[0_14px_30px_rgba(39,30,24,0.28)] group-hover:shadow-[0_18px_38px_rgba(39,30,24,0.38)] transition-shadow`}>
+          <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent pointer-events-none" aria-hidden="true" />
+          <Icon className="relative w-[48%] h-[48%]" weight="duotone" aria-hidden="true" />
+        </span>
+        <span className="block text-center">
+          <span className="block font-display text-base sm:text-lg font-extrabold leading-tight text-dark">{title}</span>
+          <span className="block text-xs text-dark-muted mt-0.5">{subtitle}</span>
+        </span>
+      </motion.button>
+    );
+  }
 
   if (compact) {
     return (
