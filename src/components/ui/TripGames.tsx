@@ -1,8 +1,10 @@
 import PackBagGame from './PackBagGame';
 import TravelMatchGame from './TravelMatchGame';
+import StowawayGame from './StowawayGame';
 
-// The Coming Soon mini-games, side by side. `card` is the compact two-up row
-// on trip cards; `page` is the roomier layout on the trip detail page.
+// The Coming Soon mini-games. `card` is the compact two-up row on trip cards;
+// `page` is the roomier layout on the trip detail page. The group game
+// (Stowaway) takes a full-width row of its own beneath the two solo games.
 interface TripGamesProps {
   tripId: string;
   tripSlug: string;
@@ -18,6 +20,7 @@ export default function TripGames({ tripId, tripSlug, tripTitle, coverImage, lay
     <div className={`grid gap-2.5 ${compact ? 'grid-cols-2' : 'sm:grid-cols-2 gap-3'} ${className}`}>
       <PackBagGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} coverImage={coverImage} compact={compact} />
       <TravelMatchGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} compact={compact} />
+      <StowawayGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} className={compact ? 'col-span-2' : 'sm:col-span-2'} />
     </div>
   );
 }
