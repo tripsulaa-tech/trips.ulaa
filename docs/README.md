@@ -67,7 +67,7 @@ One shared system, mounted once in `src/App.tsx`:
 
 ## Admin Panel (`/admin`)
 
-- **Login** — Supabase Auth email/password
+- **Login** — Supabase Auth email/password. Admins sign in at `/admin`; customers create an account at `/account` using the email from a past enquiry (enforced by `supabase/migration/add_registered_user_accounts.sql`; turn "Confirm email" on in Supabase Auth)
 - **Dashboard** — Overview cards: Upcoming Trips, Completed Albums, Total Enquiries, New Enquiries
 - **Manage Trips** — Add/edit/publish trips
 - **View Enquiries** — Manage booking requests

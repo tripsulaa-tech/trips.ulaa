@@ -22,7 +22,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { urls: brand } = useBranding();
 
   // Close the mobile menu whenever the route changes. Adjusted during render
@@ -35,7 +35,7 @@ export default function Navbar() {
 
   const handleLogoClick = (e: MouseEvent) => {
     // Admin-only: toggle logo between the public home page and the admin dashboard.
-    if (!user) return;
+    if (!isAdmin) return;
     e.preventDefault();
     if (location.pathname === '/') {
       navigate('/admin');
@@ -81,7 +81,10 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div className="hidden lg:block">
+          <div className="hidden lg:flex items-center gap-5">
+            <Link to="/account" className="font-body text-sm font-medium text-dark hover:text-primary transition-colors">
+              {user ? 'My Account' : 'Sign in'}
+            </Link>
             <Link to="/trips">
               <Button variant="primary" size="sm">
                 Book Now
@@ -122,6 +125,15 @@ export default function Navbar() {
                   {label}
                 </NavLink>
               ))}
+              <NavLink
+                to="/account"
+                className={({ isActive }) => `
+                  block px-4 py-3.5 min-h-[44px] flex items-center rounded-lg font-body font-medium text-base transition-colors
+                  ${isActive ? 'text-primary bg-background-warm' : 'text-dark hover:bg-background-warm hover:text-primary'}
+                `}
+              >
+                {user ? 'My Account' : 'Sign in'}
+              </NavLink>
               <div className="pt-2">
                 <Link to="/trips" className="block">
                   <Button variant="primary" size="md" fullWidth>

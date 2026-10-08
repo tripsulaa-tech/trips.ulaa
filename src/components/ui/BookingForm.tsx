@@ -35,6 +35,8 @@ import KeyboardNavSuggestionDropdown from './KeyboardNavSuggestionDropdown';
 import { handleSuggestionKeyDown } from './suggestionKeyNav';
 import { CONTACT_PHONE_DISPLAY } from '../../constants/site';
 import { formatDate } from '../../utils/utils-index';
+import { useAuth } from '../../context/useAuth';
+import { supabase } from '../../services/supabase';
 
 // How many rows to show at once in the City / Email-domain suggestion
 // dropdowns — enough to be useful without the list itself needing to
@@ -335,6 +337,29 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
       terms_accepted: initialDraft?.terms_accepted ?? false,
     },
   });
+
+  // Signed-in customers: fill in the details from their latest enquiry, only
+  // into fields still empty (so a restored draft or typing is never overwritten).
+  const { user, isAdmin } = useAuth();
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId || isAdmin) return;
+    let cancelled = false;
+    supabase.rpc('my_enquiry_profile').then(({ data }) => {
+      const p = Array.isArray(data) ? data[0] : null;
+      if (cancelled || !p) return;
+      const fill = (field: 'full_name' | 'phone' | 'email' | 'city' | 'emergency_contact', value: string | null | undefined) => {
+        if (value && !getValues(field)) setValue(field, value, { shouldValidate: true });
+      };
+      fill('full_name', p.full_name);
+      fill('phone', p.phone);
+      fill('email', p.email);
+      fill('city', p.city);
+      fill('emergency_contact', p.emergency_contact);
+      if (p.age != null && !getValues('age')) setValue('age', String(p.age) as unknown as number, { shouldValidate: true });
+    });
+    return () => { cancelled = true; };
+  }, [userId, isAdmin, getValues, setValue]);
 
   // Bundles the RHF-managed text fields with the non-RHF choices tracked
   // above (bookingMode/groupSize/foodPreference/groupVegCount) and hands
