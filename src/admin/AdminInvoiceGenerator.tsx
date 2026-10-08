@@ -20,10 +20,11 @@
 //
 // The preview on the right isn't a separate hand-built HTML mockup of the
 // invoice (which could quietly drift from what the PDF actually renders):
-// it's the real generated PDF, shown in an <iframe>, rebuilt (debounced)
-// on every change. What the admin sees while typing is exactly what they
+// it's the real generated PDF, painted onto <canvas> pages (so it also works
+// on phones, where browsers can't show a PDF in an <iframe>), rebuilt
+// (debounced) on every change. What the admin sees while typing is exactly what they
 // get when they download.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
@@ -39,6 +40,7 @@ import {
   CaretUp as ChevronUp,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
+import InvoicePdfPreview from './InvoicePdfPreview';
 import Button from '../components/ui/Button';
 import DatePicker from '../components/ui/DatePicker';
 import { useToast } from '../components/ui/useToast';
@@ -48,7 +50,7 @@ import {
   createEmptyLineItem,
   defaultInvoiceGeneratorData,
   downloadInvoiceGeneratorPdf,
-  invoiceGeneratorPdfBlobUrl,
+  invoiceGeneratorPdfBytes,
   invoiceGeneratorTotal,
   printInvoiceGeneratorPdf,
   DEFAULT_INVOICE_NUMBER_PREFIX,
@@ -271,21 +273,16 @@ export default function AdminInvoiceGenerator() {
   };
 
   // ---- Live PDF preview ----
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewBytes, setPreviewBytes] = useState<ArrayBuffer | null>(null);
   const [previewError, setPreviewError] = useState(false);
-  const previewUrlRef = useRef<string | null>(null);
+  const handlePreviewDrawError = useCallback(() => setPreviewError(true), []);
   useEffect(() => {
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
-        const url = await invoiceGeneratorPdfBlobUrl(data);
-        if (cancelled) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-        previewUrlRef.current = url;
-        setPreviewUrl(url);
+        const bytes = await invoiceGeneratorPdfBytes(data);
+        if (cancelled) return;
+        setPreviewBytes(bytes);
         setPreviewError(false);
       } catch (err) {
         console.error('Failed to render invoice preview', err);
@@ -294,10 +291,6 @@ export default function AdminInvoiceGenerator() {
     }, PREVIEW_DEBOUNCE_MS);
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [data]);
-
-  useEffect(() => () => {
-    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-  }, []);
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -656,8 +649,8 @@ export default function AdminInvoiceGenerator() {
                 <div className="w-full h-full flex items-center justify-center text-center text-dark-muted text-xs p-6">
                   Couldn't render the preview. Try Download or Print below — the PDF may still generate correctly.
                 </div>
-              ) : previewUrl ? (
-                <iframe title="Invoice preview" src={previewUrl} className="w-full h-full border-0" />
+              ) : previewBytes ? (
+                <InvoicePdfPreview data={previewBytes} onError={handlePreviewDrawError} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-dark-muted text-xs">Generating preview…</div>
               )}

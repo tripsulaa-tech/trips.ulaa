@@ -160,6 +160,11 @@ function ensureSpace(doc: jsPDF, cursor: { y: number }, needed: number) {
   }
 }
 
+// Baseline of the right-hand name so its cap-tops line up with the top of the
+// "INVOICE" wordmark: wordmark cap-top = 32 - 38*0.662 ≈ 6.8; name cap height
+// = 12*0.718 ≈ 8.6, so baseline ≈ 6.8 + 8.6.
+const TITLE_BASELINE = 15.4;
+
 async function drawHeader(doc: jsPDF, data: InvoiceGeneratorData, cursor: { y: number }) {
   doc.setFont('times', 'bold');
   doc.setFontSize(38);
@@ -177,7 +182,7 @@ async function drawHeader(doc: jsPDF, data: InvoiceGeneratorData, cursor: { y: n
     doc.setFontSize(12);
     doc.setTextColor(...COLORS.darkGreen);
     doc.setCharSpace(1.3);
-    doc.text(title, MARGIN + CONTENT_W, cursor.y + 8, { align: 'right' });
+    doc.text(title, MARGIN + CONTENT_W, cursor.y + TITLE_BASELINE, { align: 'right' });
     doc.setCharSpace(0);
   }
   if (subtitle) {
@@ -185,7 +190,7 @@ async function drawHeader(doc: jsPDF, data: InvoiceGeneratorData, cursor: { y: n
     doc.setFontSize(8);
     doc.setTextColor(...COLORS.gray);
     doc.setCharSpace(2);
-    doc.text(subtitle, MARGIN + CONTENT_W, cursor.y + 22, { align: 'right' });
+    doc.text(subtitle, MARGIN + CONTENT_W, cursor.y + TITLE_BASELINE + 14, { align: 'right' });
     doc.setCharSpace(0);
   }
 
@@ -491,16 +496,27 @@ async function buildInvoiceGeneratorPdfDoc(data: InvoiceGeneratorData): Promise<
 
 /** Filename used for both the download and the "open in new tab" preview. */
 export function invoiceGeneratorFileName(data: InvoiceGeneratorData): string {
-  const base = sanitizeForPdf(data.invoiceTitle) || 'Invoice';
-  const num = sanitizeForPdf(data.invoiceNumber);
-  const slug = base.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'Invoice';
-  return `${slug}${num ? `-${num.replace(/[^a-zA-Z0-9]+/g, '')}` : ''}.pdf`;
+  // INV-[Invoice Date]_[Customer Name].pdf, e.g. INV-20261008_Client-Name.pdf
+  const clean = (v: string, fallback: string) =>
+    sanitizeForPdf(v).replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '') || fallback;
+  const date = data.invoiceDateISO.replace(/\D/g, '') || 'Date'; // YYYYMMDD
+  const customer = clean(data.billingCompanyName, 'Client');
+  return `INV-${date}_${customer}.pdf`;
 }
 
 /** Builds the invoice and triggers a direct browser download. */
 export async function downloadInvoiceGeneratorPdf(data: InvoiceGeneratorData): Promise<void> {
   const doc = await buildInvoiceGeneratorPdfDoc(data);
   doc.save(invoiceGeneratorFileName(data));
+}
+
+/** Builds the invoice and returns the raw PDF bytes — used to paint the
+ *  live preview onto <canvas> elements (see InvoicePdfPreview). Unlike a
+ *  blob: URL in an <iframe>, this works on phones (mobile Chrome/Safari
+ *  can't show PDFs inline) and isn't affected by the site's CSP. */
+export async function invoiceGeneratorPdfBytes(data: InvoiceGeneratorData): Promise<ArrayBuffer> {
+  const doc = await buildInvoiceGeneratorPdfDoc(data);
+  return doc.output('arraybuffer');
 }
 
 /** Builds the invoice and returns a blob: object URL — used to drive the
