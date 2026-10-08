@@ -7,11 +7,9 @@ import ScrollToTopButton from './ScrollToTopButton';
 
 interface LayoutProps {
   children: ReactNode;
-  /** Leaves the footer out (e.g. the signed-in account page). */
-  hideFooter?: boolean;
 }
 
-export default function Layout({ children, hideFooter = false }: LayoutProps) {
+export default function Layout({ children }: LayoutProps) {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -72,14 +70,14 @@ export default function Layout({ children, hideFooter = false }: LayoutProps) {
       >
         {children}
       </motion.main>
-      {!hideFooter && <Footer />}
+      <Footer />
       {/* Reserves space at the very end of the page on mobile so the fixed,
           edge-to-edge BottomNav (its height varies slightly with the
           device's safe-area inset) never overlaps the last line of the
           footer. Colored to match the footer background so this spacer
           reads as part of the footer instead of a visible gap between it
           and the bottom nav bar. */}
-      <div className={`h-28 lg:hidden ${hideFooter ? '' : 'bg-footer'}`} aria-hidden="true" />
+      <div className="h-28 lg:hidden bg-footer" aria-hidden="true" />
       <FloatingWhatsApp />
       <ScrollToTopButton />
     </div>

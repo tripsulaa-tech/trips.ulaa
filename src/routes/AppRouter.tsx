@@ -119,7 +119,6 @@ const CompletedTripsPage = lazy(() => import('../pages/CompletedTripsPage'));
 const AlbumPage = lazy(() => import('../pages/AlbumPage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 const ContactPage = lazy(() => import('../pages/ContactPage'));
-const AccountPage = lazy(() => import('../pages/AccountPage'));
 const GamesPage = lazy(() => import('../pages/GamesPage'));
 const StowawayJoinPage = lazy(() => import('../pages/StowawayJoinPage'));
 const FindMyTwinJoinPage = lazy(() => import('../pages/FindMyTwinJoinPage'));
@@ -154,16 +153,16 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAdmin, loading } = useAuth();
+  const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
-  if (!isAdmin) return <Navigate to="/admin" replace />;
+  if (!user) return <Navigate to="/admin" replace />;
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAdmin, loading } = useAuth();
+  const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
-  if (isAdmin) return <Navigate to="/admin/dashboard" replace />;
+  if (user) return <Navigate to="/admin/dashboard" replace />;
   return <>{children}</>;
 }
 
@@ -185,7 +184,6 @@ export default function AppRouter() {
             <Route path="/completed-trips/:slug" element={<AlbumPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
-            <Route path="/account" element={<AccountPage />} />
             <Route path="/games" element={<GamesPage />} />
             <Route path="/play/stowaway" element={<StowawayJoinPage />} />
             <Route path="/play/stowaway/:code" element={<StowawayJoinPage />} />
