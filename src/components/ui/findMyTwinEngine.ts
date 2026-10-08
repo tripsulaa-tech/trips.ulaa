@@ -9,7 +9,7 @@ import {
   Bed, Tent, Car, Airplane, ListChecks, Compass, Buildings, Tree, Armchair, PersonSimpleHike,
 } from '@phosphor-icons/react';
 
-export interface TwinOption { label: string; Icon: PhosphorIcon }
+interface TwinOption { label: string; Icon: PhosphorIcon }
 export interface TwinQuestion {
   id: string;
   /** Left option is stored as '0', right option as '1'. */
@@ -34,10 +34,9 @@ export const QUESTIONS: TwinQuestion[] = [
 
 export const MAX_ROUNDS = 4;
 export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 24;
 
 /** The conversation starter that unlocks once two twins have found each other. */
-export const PROMPTS: string[] = [
+const PROMPTS: string[] = [
   'What\'s one place you desperately want to visit?',
   'What\'s the most spontaneous trip you have ever taken?',
   'What is the one thing you never leave home without on a trip?',

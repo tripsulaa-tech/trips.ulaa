@@ -9,9 +9,9 @@ import { SITE_ORIGIN } from '../../constants/site';
 import type { Role } from './stowawayEngine';
 
 export type OnlinePhase = 'lobby' | 'deal' | 'clues' | 'vote' | 'offboard' | 'guess' | 'roundEnd' | 'final';
-export type OnlineOutcome = 'explorers' | 'stowaways' | 'lost-steal';
+type OnlineOutcome = 'explorers' | 'stowaways' | 'lost-steal';
 
-export interface OnlineRoom {
+interface OnlineRoom {
   id: string;
   code: string;
   host_id: string | null;
@@ -50,7 +50,7 @@ export interface OnlineRoom {
   } | null;
 }
 
-export interface OnlinePlayer {
+interface OnlinePlayer {
   id: string;
   name: string;
   seat: string | null;

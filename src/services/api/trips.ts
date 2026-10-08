@@ -102,7 +102,7 @@ export async function getWaitlistReservedCounts(): Promise<Record<string, number
 // failure we report nothing taken (the DB still enforces the real limit when
 // the advance is recorded).
 // =============================================
-export async function getEarlyBirdSeatsTaken(): Promise<Record<string, number>> {
+async function getEarlyBirdSeatsTaken(): Promise<Record<string, number>> {
   const { data, error } = await supabase.rpc('get_early_bird_seats_taken');
   if (error || !data) return {};
   const map: Record<string, number> = {};

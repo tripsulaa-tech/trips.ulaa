@@ -113,7 +113,7 @@ export const GUIDE_NOTE = `Cut guides are thin ${GUIDE_LINE_MM} mm grey lines dr
 
 export const A3_WIDTH_MM = 297;
 export const A3_HEIGHT_MM = 420;
-export const SHEET_MARGIN_MM = 10;     // unprinted border most printers need
+const SHEET_MARGIN_MM = 10;     // unprinted border most printers need
 export const MAX_SHEETS = MAX_PRINT_SHEETS;
 
 export interface BadgeSheetSettings {

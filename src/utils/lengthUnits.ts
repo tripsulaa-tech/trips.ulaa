@@ -16,7 +16,7 @@ export const LENGTH_UNIT_OPTIONS: { value: LengthUnit; label: string }[] = [
   { value: 'px', label: 'px' },
 ];
 
-export function isLengthUnit(v: unknown): v is LengthUnit {
+function isLengthUnit(v: unknown): v is LengthUnit {
   return typeof v === 'string' && v in MM_PER_UNIT;
 }
 

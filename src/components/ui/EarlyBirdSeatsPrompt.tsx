@@ -43,7 +43,7 @@ export function getEarlyBirdSeatsOffer(trip: UpcomingTrip | null | undefined): E
 
 /** Caption for the card strip: "Only 5 early-bird seats · first 5 to pay get this price",
  *  "3 of 5 early-bird seats left · pay to lock yours", or the last-seat variant. */
-export function earlyBirdSeatsCaption(total: number, left: number): string {
+function earlyBirdSeatsCaption(total: number, left: number): string {
   if (left === 1) return 'Last early-bird seat! · first to pay gets it';
   if (left === total) return `Only ${total} early-bird seats · first ${total} to pay get this price`;
   return `${left} of ${total} early-bird seats left · pay to lock yours`;

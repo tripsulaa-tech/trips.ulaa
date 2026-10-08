@@ -8,7 +8,7 @@ import { phoneSignature, emailSignature } from '../enquiries/AdminEnquiriesShare
 // name/phone/email. Without this collapse, a family of 4 booked on one
 // trip would show up as 4 separate identical-looking trip lines instead
 // of one "Group of 4" line.
-export type TravellerTripGroup = {
+type TravellerTripGroup = {
   key: string;
   tripId: string | null;
   tripTitle: string;

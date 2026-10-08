@@ -18,14 +18,7 @@ let counter = 0;
 export const newOptionId = (prefix: 'opt' | 'pkg') =>
   `${prefix}_${Date.now().toString(36)}${(counter++).toString(36)}`;
 
-// Whether a trip has anything to choose from on the public page. A trip
-// with only options (no packages) still counts — travelers get plain
-// checkboxes — but a trip with neither behaves exactly as before.
-export function hasTripChoices(cfg?: TripOptionsConfig | null): boolean {
-  return !!cfg && (cfg.packages.length > 0 || cfg.options.length > 0);
-}
-
-export function optionsPrice(optionIds: string[], cfg?: TripOptionsConfig | null): number {
+function optionsPrice(optionIds: string[], cfg?: TripOptionsConfig | null): number {
   if (!cfg) return 0;
   const chosen = new Set(optionIds);
   return cfg.options.reduce((sum, o) => (chosen.has(o.id) ? sum + Math.max(0, o.price || 0) : sum), 0);
@@ -33,7 +26,7 @@ export function optionsPrice(optionIds: string[], cfg?: TripOptionsConfig | null
 
 // Option ids that actually exist on the trip — drops stale ids left in a
 // package after an option was deleted.
-export function validOptionIds(optionIds: string[], cfg?: TripOptionsConfig | null): string[] {
+function validOptionIds(optionIds: string[], cfg?: TripOptionsConfig | null): string[] {
   if (!cfg) return [];
   const known = new Set(cfg.options.map(o => o.id));
   return optionIds.filter(id => known.has(id));
@@ -67,10 +60,10 @@ export const noPackageBase: PackageBase = { active: null, regular: null, isEarly
 
 // True when the trip's early bird is limited by seats rather than a date.
 // ₹ the early bird takes off a package in seat mode (0 when not applicable).
-export const seatEarlyDiscount = (trip: Pick<UpcomingTrip, 'price' | 'early_bird_price'>): number =>
+const seatEarlyDiscount = (trip: Pick<UpcomingTrip, 'price' | 'early_bird_price'>): number =>
   trip.price != null && trip.early_bird_price != null ? Math.max(0, trip.price - trip.early_bird_price) : 0;
 
-export const isSeatLimitedEarlyBird = (trip: Pick<UpcomingTrip, 'early_bird_seats'>): boolean =>
+const isSeatLimitedEarlyBird = (trip: Pick<UpcomingTrip, 'early_bird_seats'>): boolean =>
   !!trip.early_bird_seats && trip.early_bird_seats > 0;
 
 export function getPackageBase(

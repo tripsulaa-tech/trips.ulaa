@@ -75,14 +75,14 @@ export function foldLegacyCosts(finance: TripFinance): TripFinance {
 }
 
 // One resolved organiser expense line.
-export interface ResolvedOrganiserExpense {
+interface ResolvedOrganiserExpense {
   id: string;
   name: string;
   amount: number;
 }
 
 // Organiser expenses are actual amounts — never multiplied by traveler count.
-export function resolveOrganiserExpense(item: TripOrganiserExpense): ResolvedOrganiserExpense {
+function resolveOrganiserExpense(item: TripOrganiserExpense): ResolvedOrganiserExpense {
   return { id: item.id, name: item.name, amount: Math.max(0, item.amount || 0) };
 }
 

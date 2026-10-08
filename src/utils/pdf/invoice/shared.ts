@@ -41,10 +41,6 @@ export const ICON_MAIL = '<path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><re
 export const ICON_PHONE = '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>';
 
 export const ICON_CALENDAR = '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>';
-// Payment-method icons (lucide): Smartphone (UPI), Landmark (bank transfer), Banknote (cash).
-export const ICON_SMARTPHONE = '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>';
-export const ICON_LANDMARK = '<line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/>';
-export const ICON_BANKNOTE = '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>';
 
 // Price-summary-card icons (Total Amount / Amount Paid / Balance Due), same
 // lucide set as above: Wallet, CircleCheckBig, ReceiptIndianRupee — swapped

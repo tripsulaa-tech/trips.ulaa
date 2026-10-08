@@ -11,7 +11,7 @@ import { deviceToken } from './stowawayRoomApi';
 
 export type TwinPhase = 'lobby' | 'hunt' | 'roundEnd' | 'final';
 
-export interface TwinRoom {
+interface TwinRoom {
   id: string;
   code: string;
   host_id: string | null;
@@ -22,7 +22,7 @@ export interface TwinRoom {
   rev: number;
 }
 
-export interface TwinPlayer {
+interface TwinPlayer {
   id: string;
   name: string;
   answered: boolean;

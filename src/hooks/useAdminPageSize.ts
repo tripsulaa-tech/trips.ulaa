@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 /** Rows-per-page choices for the admin tables. */
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
-export const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 const CHANGE_EVENT = 'admin-page-size-change';
 const storageKey = (key: string) => `admin-page-size:${key}`;

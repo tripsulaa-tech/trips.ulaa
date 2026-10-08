@@ -98,7 +98,7 @@ export function readDraft<T>(key: string): T | null {
   return readDraftWithBase<T>(key)?.value ?? null;
 }
 
-export function readDraftWithBase<T>(key: string): { value: T; base: string | null } | null {
+function readDraftWithBase<T>(key: string): { value: T; base: string | null } | null {
   try {
     const raw = window.sessionStorage.getItem(PREFIX + key);
     if (raw === null) return null;

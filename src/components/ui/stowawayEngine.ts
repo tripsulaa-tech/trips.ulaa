@@ -111,7 +111,7 @@ export function dealRound(names: string[], c: RoleCounts, pair: WordPair, challe
 
 export type Side = 'explorers' | 'sneaky';
 
-export function aliveCounts(seats: Seat[]) {
+function aliveCounts(seats: Seat[]) {
   const alive = seats.filter(s => s.alive);
   return {
     explorers: alive.filter(s => s.role === 'explorer').length,
@@ -284,7 +284,7 @@ export interface SavedSetup {
   dares: boolean;
 }
 
-export const DEFAULT_SETUP: SavedSetup = {
+const DEFAULT_SETUP: SavedSetup = {
   names: ['', '', ''],
   stowaways: 1,
   lost: 0,

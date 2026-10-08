@@ -253,7 +253,7 @@ const FLIGHT_MS = 3200;
 
 /** Fired on window when the plane touches the sticky booking button (detail: true)
  *  and when it is reset (detail: false). TripStickyBookingBar listens for it. */
-export const PLANE_LANDED_EVENT = 'ulaa:plane-landed';
+const PLANE_LANDED_EVENT = 'ulaa:plane-landed';
 
 type Pt = { x: number; y: number };
 

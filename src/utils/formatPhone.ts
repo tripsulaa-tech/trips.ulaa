@@ -14,13 +14,13 @@ export function formatPhone(phone: string | null | undefined): string {
 
 /** Country code assumed for numbers saved without one (the whole business is India-based).
  *  Change it here only; every WhatsApp link goes through toWhatsAppNumber below. */
-export const DEFAULT_COUNTRY_CODE = '91';
+const DEFAULT_COUNTRY_CODE = '91';
 
 /** Digits-only number for a wa.me link, which needs the country code:
  *  "87789 11368", "08778911368" and "+91 87789 11368" all become "918778911368".
  *  Numbers that already look international (more than 10 digits after any leading 0) are kept as typed.
  *  Returns '' when there is no usable number. */
-export function toWhatsAppNumber(phone: string | null | undefined): string {
+function toWhatsAppNumber(phone: string | null | undefined): string {
   let digits = (phone || '').replace(/\D/g, '');
   if (!digits) return '';
   if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);

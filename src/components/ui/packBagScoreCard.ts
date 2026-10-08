@@ -26,8 +26,8 @@ export interface ScoreCardOptions {
   ringMax?: number;
 }
 
-export const SCORE_CARD_W = 1080;
-export const SCORE_CARD_H = 1350;
+const SCORE_CARD_W = 1080;
+const SCORE_CARD_H = 1350;
 
 // Brand tokens (mirror globals.css @theme).
 const C = {

@@ -29,7 +29,7 @@ export type BrandingSlot =
 
 export type BrandingContent = Record<BrandingSlot, string>;
 
-export const BRANDING_SLOTS: BrandingSlot[] = [
+const BRANDING_SLOTS: BrandingSlot[] = [
   'header_logo',
   'footer_logo',
   'favicon',

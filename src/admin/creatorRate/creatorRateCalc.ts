@@ -30,17 +30,17 @@ export function extractViewNumbers(text: string): number[] {
 // Rate Calculator!H8 — tiered View/Follower Ratio → Quality Multiplier,
 // straight from the nested IF in that cell (equivalent to the lookup table
 // on Model Settings!D:E).
-export function viewQualityMultiplier(ratio: number): number {
+function viewQualityMultiplier(ratio: number): number {
   const tier = VIEW_QUALITY_TIERS.find(t => t.below === undefined || ratio < t.below);
   return tier ? tier.multiplier : 1;
 }
 
 // Excel FLOOR(x, 50) / CEILING(x, 50) — round down/up to the nearest ₹50,
 // used throughout the "Final Commercials" section of the sheet.
-export function floorTo50(x: number): number {
+function floorTo50(x: number): number {
   return Math.floor(x / RATE_ROUND_TO) * RATE_ROUND_TO;
 }
-export function ceilTo50(x: number): number {
+function ceilTo50(x: number): number {
   return Math.ceil(x / RATE_ROUND_TO) * RATE_ROUND_TO;
 }
 

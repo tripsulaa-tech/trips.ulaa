@@ -1204,7 +1204,7 @@ export type CreatorRateCalculationInput = Omit<CreatorRateCalculation, 'id' | 'c
 /** One saved line item on an Invoice Generator invoice — same shape as
  *  InvoiceGeneratorLineItem in src/utils/invoiceGeneratorPdf.ts, minus the
  *  client-only `id` used as a React list key. */
-export interface InvoiceGeneratorRecordItem {
+interface InvoiceGeneratorRecordItem {
   description: string;
   subDescription: string;
   amount: number;
