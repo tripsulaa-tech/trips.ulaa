@@ -3,16 +3,27 @@
 // a score ring, glass stat tiles and a layered-ridge footer. No assets other
 // than the site logo; every other shape is vector-drawn.
 
+import { cleanName } from './gameUi';
+
 export interface ScoreCardOptions {
+  /** Optional player name, shown as "Played by …" under the rating. */
+  playerName?: string;
   score: number;
   stars: number;
   title: string;
   tripTitle: string;
   host: string;
-  packed: number;
-  combo: number;
+  /** Pack the bag: default stat tiles use these. */
+  packed?: number;
+  combo?: number;
   best: number;
   isNewBest: boolean;
+  /** Other games: override the pill text, the label under the number, the
+   *  three stat tiles, and the score that fills the ring. */
+  eyebrow?: string;
+  unit?: string;
+  tiles?: Array<{ v: string; l: string }>;
+  ringMax?: number;
 }
 
 export const SCORE_CARD_W = 1080;
@@ -159,7 +170,12 @@ export async function buildScoreCard(o: ScoreCardOptions): Promise<Blob | null> 
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
-  const [, logo] = await Promise.all([ensureFonts(), loadImage(`${window.location.origin}/ULAA-logo.png`)]);
+  // The footer logo is the light-on-dark version, so it goes straight on the
+  // card. If it is missing we fall back to the main logo (recoloured or on a
+  // cream badge).
+  const [, footerLogo] = await Promise.all([ensureFonts(), loadImage(`${window.location.origin}/ULAA-logo-Footer.png`)]);
+  const logo = footerLogo ?? await loadImage(`${window.location.origin}/ULAA-logo.png`);
+  const logoOnDark = !!footerLogo;
   const cx = W / 2;
 
   // ── Background ──
@@ -221,9 +237,11 @@ export async function buildScoreCard(o: ScoreCardOptions): Promise<Blob | null> 
   let y = 84;
   if (logo) {
     const ratio = logo.width / logo.height;
-    const lh = Math.min(116, 230 / ratio);
+    const lh = Math.min(logoOnDark ? 104 : 116, (logoOnDark ? 300 : 230) / ratio);
     const lw = lh * ratio;
-    if (logoIsTransparent(logo)) {
+    if (logoOnDark) {
+      ctx.drawImage(logo, cx - lw / 2, y, lw, lh);
+    } else if (logoIsTransparent(logo)) {
       const t = document.createElement('canvas');
       t.width = lw * 2; t.height = lh * 2;
       const tx = t.getContext('2d');
@@ -254,7 +272,7 @@ export async function buildScoreCard(o: ScoreCardOptions): Promise<Blob | null> 
   // ── Eyebrow pill + trip title ──
   ctx.textBaseline = 'alphabetic';
   ctx.font = `700 22px ${FONT}`;
-  const eyebrow = 'PACK THE BAG  ·  30-SEC CHALLENGE';
+  const eyebrow = o.eyebrow ?? 'PACK THE BAG  ·  30-SEC CHALLENGE';
   const ew = (() => { let w = 0; for (const ch of eyebrow) w += ctx.measureText(ch).width + 4; return w - 4; })() + 56;
   ctx.fillStyle = 'rgba(200,150,42,0.14)';
   rr(ctx, cx - ew / 2, y - 30, ew, 48, 24);
@@ -265,7 +283,7 @@ export async function buildScoreCard(o: ScoreCardOptions): Promise<Blob | null> 
   ctx.stroke();
   ctx.fillStyle = C.goldLight;
   spaced(ctx, eyebrow, cx, y + 3, 4);
-  y += 96;
+  y += 90;
 
   ctx.textAlign = 'center';
   ctx.fillStyle = C.cream;
@@ -278,7 +296,7 @@ export async function buildScoreCard(o: ScoreCardOptions): Promise<Blob | null> 
   y += (lines.length - 1) * 64 + air;
 
   // ── Score ring ──
-  const R = 196;
+  const R = 186;
   const ringCy = y + 50 + R + 14;
   // soft disc
   const disc = ctx.createRadialGradient(cx, ringCy - 40, 20, cx, ringCy, R + 30);
@@ -294,7 +312,7 @@ export async function buildScoreCard(o: ScoreCardOptions): Promise<Blob | null> 
   ctx.beginPath(); ctx.arc(cx, ringCy, R, 0, Math.PI * 2); ctx.stroke();
 
   // progress arc with glow
-  const frac = Math.max(0.04, Math.min(1, o.score / RING_MAX));
+  const frac = Math.max(0.04, Math.min(1, o.score / (o.ringMax ?? RING_MAX)));
   const start = -Math.PI / 2;
   const end = start + Math.PI * 2 * frac;
   const arcG = ctx.createLinearGradient(cx - R, ringCy - R, cx + R, ringCy + R);
@@ -326,7 +344,7 @@ export async function buildScoreCard(o: ScoreCardOptions): Promise<Blob | null> 
   ctx.fillText(numStr, cx, ringCy + numSize * 0.26);
   ctx.fillStyle = 'rgba(250,247,242,0.55)';
   ctx.font = `700 24px ${FONT}`;
-  spaced(ctx, 'POINTS', cx, ringCy + numSize * 0.26 + 50, 8);
+  spaced(ctx, o.unit ?? 'POINTS', cx, ringCy + numSize * 0.26 + 50, 8);
 
   // New-best badge on the ring's top-right
   if (o.isNewBest) {
@@ -376,16 +394,39 @@ export async function buildScoreCard(o: ScoreCardOptions): Promise<Blob | null> 
   ctx.fillText(o.title, cx, sy);
 
   // ── Stat tiles ──
-  const tiles: Array<{ v: string; l: string }> = [
-    { v: String(o.packed), l: 'ITEMS PACKED' },
-    { v: `×${o.combo}`, l: 'BEST COMBO' },
+  const tiles: Array<{ v: string; l: string }> = (o.tiles ?? [
+    { v: String(o.packed ?? 0), l: 'ITEMS PACKED' },
+    { v: `×${o.combo ?? 1}`, l: 'BEST COMBO' },
     { v: String(Math.max(o.best, o.score)), l: 'PERSONAL BEST' },
-  ];
+  ]).slice(0, 3);
   const tw = 270;
   const gap = 24;
-  const th = 108;
+  const th = 104;
   const tx0 = cx - (tw * 3 + gap * 2) / 2;
-  const ty = sy + 36;
+  // Player name, when given.
+  let nameGap = 0;
+  const pname = cleanName(o.playerName);
+  if (pname) {
+    const prefix = 'Played by ';
+    ctx.font = `600 28px ${FONT}`;
+    const pw = ctx.measureText(prefix).width;
+    ctx.font = `800 28px ${FONT}`;
+    let shown = pname;
+    while (shown.length > 1 && pw + ctx.measureText(shown).width > 760) shown = shown.slice(0, -1);
+    if (shown !== pname) shown = `${shown}…`;
+    const nw = ctx.measureText(shown).width;
+    const nx = cx - (pw + nw) / 2;
+    ctx.textAlign = 'left';
+    ctx.font = `600 28px ${FONT}`;
+    ctx.fillStyle = 'rgba(250,247,242,0.6)';
+    ctx.fillText(prefix, nx, sy + 50);
+    ctx.font = `800 28px ${FONT}`;
+    ctx.fillStyle = C.goldLight;
+    ctx.fillText(shown, nx + pw, sy + 50);
+    ctx.textAlign = 'center';
+    nameGap = 44;
+  }
+  const ty = sy + 36 + nameGap;
   tiles.forEach((t, i) => {
     const x = tx0 + i * (tw + gap);
     ctx.fillStyle = 'rgba(250,247,242,0.07)';

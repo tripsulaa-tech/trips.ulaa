@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import Button from '../../components/ui/Button';
 import SectionTitle from '../../components/ui/SectionTitle';
-import PackBagGame from '../../components/ui/PackBagGame';
+import TripGames from '../../components/ui/TripGames';
 import type { UpcomingTrip } from '../../types/types-index';
 import { PLACEHOLDER_IMAGE, getCoverImageStyle } from '../../utils/utils-index';
 import { ArrowLeft, ArrowRight, Play } from '@phosphor-icons/react';
@@ -72,8 +72,8 @@ export default function TripComingSoon({ trip }: TripComingSoonProps) {
           trips or explore our completed trips to see the unforgettable experiences our community
           has already shared.
         </p>
-        <div className="max-w-sm mx-auto mb-8 text-left">
-          <PackBagGame tripId={trip.id} tripSlug={trip.slug} tripTitle={trip.title} coverImage={trip.cover_image} />
+        <div className="max-w-xl mx-auto mb-8 text-left">
+          <TripGames tripId={trip.id} tripSlug={trip.slug} tripTitle={trip.title} coverImage={trip.cover_image} layout="page" />
         </div>
         <div className="flex flex-row flex-wrap items-center justify-center gap-3 sm:gap-4">
           <Link to="/trips">

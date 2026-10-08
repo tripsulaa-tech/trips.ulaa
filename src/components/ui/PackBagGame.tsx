@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useAnimationControls, useReducedMotion } from 'framer-motion';
 import {
   Play, Pause, ArrowCounterClockwise, ShareNetwork, WhatsappLogo, Star, Fire, Backpack,
@@ -12,6 +12,9 @@ import Modal from './Modal';
 import { WHATSAPP_NUMBER, SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { buildScoreCard } from './packBagScoreCard';
+import { useSynth } from './gameAudio';
+import { ScoreRing, Confetti, GameTile, TimerRing, NameField, BrandMark } from './gameParts';
+import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, cleanName, loadPlayerName, savePlayerName } from './gameUi';
 
 // "Pack the bag": a 30-second tap game for Coming Soon trips. Things fall;
 // tap what you'd really pack for THIS trip, skip the rest. Chain correct taps
@@ -86,177 +89,18 @@ interface Flying { id: number; Icon: PhosphorIcon; golden: boolean; x: number; y
 
 const isPowerUp = (k: Kind) => k === 'slow' || k === 'magnet';
 
-// ── Sound: tiny Web Audio synth (no files). Created lazily on the first tap
-// of "Start" so browsers allow it; respects the mute toggle. ──
-type Sfx = 'good' | 'bad' | 'gold' | 'power' | 'tick' | 'go' | 'win' | 'end';
-
-function useSynth(mutedRef: React.MutableRefObject<boolean>) {
-  const ctxRef = useRef<AudioContext | null>(null);
-
-  const ensure = useCallback(() => {
-    if (!ctxRef.current) {
-      const AC = window.AudioContext
-        ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AC) return null;
-      ctxRef.current = new AC();
-    }
-    if (ctxRef.current.state === 'suspended') void ctxRef.current.resume();
-    return ctxRef.current;
-  }, []);
-
-  const tone = useCallback((freq: number, dur: number, opts: { type?: OscillatorType; gain?: number; delay?: number; to?: number } = {}) => {
-    const ctx = ctxRef.current;
-    if (!ctx || mutedRef.current) return;
-    const { type = 'sine', gain = 0.12, delay = 0, to } = opts;
-    const t = ctx.currentTime + delay;
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t);
-    if (to) osc.frequency.exponentialRampToValueAtTime(to, t + dur);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(g).connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + dur + 0.02);
-  }, [mutedRef]);
-
-  const play = useCallback((name: Sfx) => {
-    if (mutedRef.current) return;
-    switch (name) {
-      case 'good': tone(660, 0.09, { type: 'triangle' }); tone(880, 0.12, { type: 'triangle', delay: 0.07 }); break;
-      case 'bad': tone(190, 0.22, { type: 'sawtooth', gain: 0.09, to: 110 }); break;
-      case 'gold': [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.16, { type: 'triangle', delay: i * 0.07 })); break;
-      case 'power': tone(440, 0.28, { type: 'sine', to: 1040 }); break;
-      case 'tick': tone(520, 0.1, { type: 'sine' }); break;
-      case 'go': tone(880, 0.3, { type: 'triangle', gain: 0.15 }); break;
-      case 'win': [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.28, { type: 'triangle', delay: i * 0.12 })); break;
-      case 'end': tone(440, 0.2, { type: 'sine' }); tone(330, 0.3, { type: 'sine', delay: 0.18 }); break;
-    }
-  }, [tone, mutedRef]);
-
-  return { ensure, play };
-}
-
 // ── Small presentational pieces ──
-const GOLD_GRAD_TEXT = 'bg-gradient-to-b from-[#FFF6CC] via-[#F0CE7A] to-gold bg-clip-text text-transparent';
 
-// Counts up to `to` (the final number is what screen readers get).
-function CountUp({ to, reduce }: { to: number; reduce: boolean }) {
-  const [v, setV] = useState(0);
-  useEffect(() => {
-    if (reduce) return;
-    let raf = 0;
-    const t0 = performance.now();
-    const step = (now: number) => {
-      const p = Math.min(1, (now - t0) / 900);
-      setV(Math.round(to * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [to, reduce]);
-  return <>{reduce ? to : v}</>;
-}
-
-// Circular countdown used in the HUD.
-function TimerRing({ secondsLeft, progress }: { secondsLeft: number; progress: number }) {
-  const R = 22;
-  const C = 2 * Math.PI * R;
-  const low = secondsLeft <= 5;
-  return (
-    <div className={`relative w-14 h-14 shrink-0 ${low ? 'animate-pulse' : ''}`} role="timer" aria-label={`${secondsLeft} seconds left`}>
-      <svg viewBox="0 0 56 56" className="w-full h-full -rotate-90" aria-hidden="true">
-        <circle cx="28" cy="28" r={R} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
-        <circle
-          cx="28" cy="28" r={R} fill="none" strokeWidth="4" strokeLinecap="round"
-          stroke={low ? '#F87171' : '#E9C25A'}
-          strokeDasharray={C} strokeDashoffset={C * progress}
-        />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center font-display text-lg font-extrabold tabular-nums text-white">{secondsLeft}</span>
-    </div>
-  );
-}
-
-// Big score dial for the result screen; mirrors the shareable card.
-function ScoreRing({ score, reduce }: { score: number; reduce: boolean }) {
-  const gid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
-  const R = 74;
-  const C = 2 * Math.PI * R;
-  const frac = Math.max(0.04, Math.min(1, score / 180));
-  return (
-    <div className="relative w-48 h-48 mx-auto">
-      <span className="absolute inset-4 rounded-full bg-primary/35 blur-2xl" aria-hidden="true" />
-      <svg viewBox="0 0 190 190" className="relative w-full h-full -rotate-90" aria-hidden="true">
-        <defs>
-          <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#D98A3A" />
-            <stop offset="0.5" stopColor="#F0CE7A" />
-            <stop offset="1" stopColor="#C8962A" />
-          </linearGradient>
-        </defs>
-        <circle cx="95" cy="95" r={R} fill="rgba(250,247,242,0.04)" stroke="rgba(250,247,242,0.1)" strokeWidth="13" />
-        <motion.circle
-          cx="95" cy="95" r={R} fill="none" strokeWidth="13" strokeLinecap="round"
-          stroke={`url(#${gid})`} strokeDasharray={C}
-          initial={{ strokeDashoffset: reduce ? C * (1 - frac) : C }}
-          animate={{ strokeDashoffset: C * (1 - frac) }}
-          transition={{ duration: reduce ? 0 : 1.1, ease: 'easeOut' }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center" aria-label={`${score} points`}>
-        <span className={`font-display text-6xl font-extrabold leading-none tabular-nums ${GOLD_GRAD_TEXT}`}><CountUp to={score} reduce={reduce} /></span>
-        <span className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-cream/50">Points</span>
-      </div>
-    </div>
-  );
-}
-
-// ── Confetti (deterministic, render-pure) ──
-const CONFETTI_COLORS = ['#C8962A', '#E9C25A', '#A85A2A', '#D98A3A', '#8A6508', '#4CAF50'];
-const seeded = (i: number, k: number) => {
-  const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
-  return x - Math.floor(x);
-};
-
-function Confetti() {
-  const bits = useMemo(
-    () => Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      x: seeded(i, 1) * 100,
-      delay: seeded(i, 2) * 0.5,
-      dur: 1.6 + seeded(i, 3) * 1.4,
-      rot: (seeded(i, 4) - 0.5) * 720,
-      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-      size: 6 + seeded(i, 5) * 6,
-    })),
-    [],
-  );
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-      {bits.map(b => (
-        <motion.span
-          key={b.id}
-          className="absolute top-0 rounded-sm"
-          style={{ left: `${b.x}%`, width: b.size, height: b.size * 1.6, background: b.color }}
-          initial={{ y: -20, opacity: 1, rotate: 0 }}
-          animate={{ y: 520, opacity: [1, 1, 0], rotate: b.rot }}
-          transition={{ duration: b.dur, delay: b.delay, ease: 'easeIn' }}
-        />
-      ))}
-    </div>
-  );
-}interface PackBagGameProps {
+interface PackBagGameProps {
   tripId: string;
   tripSlug: string;
   tripTitle: string;
   coverImage?: string | null;
   className?: string;
+  compact?: boolean;
 }
 
-export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, className = '' }: PackBagGameProps) {
+export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, className = '', compact = false }: PackBagGameProps) {
   const bestKey = `ulaa:packbag:${tripId}`;
   // Memoised: the game loop effect depends on it, and a fresh object each
   // render would restart the loop every frame.
@@ -287,6 +131,8 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
   });
   const [prevBest, setPrevBest] = useState(0);
   const [isNewBest, setIsNewBest] = useState(false);
+  const [name, setName] = useState(loadPlayerName);
+  const playerName = cleanName(name);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const itemsRef = useRef<Falling[]>([]);
@@ -326,6 +172,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
 
   const begin = useCallback(() => {
     ensure(); // creating/resuming audio must happen inside this click
+    savePlayerName(name);
     reset();
     let seen = false;
     try { seen = localStorage.getItem(SEEN_KEY) === '1'; } catch { /* treat as first play */ }
@@ -335,7 +182,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
     if (!seen) { try { localStorage.setItem(SEEN_KEY, '1'); } catch { /* not remembered */ } }
     setCount(3);
     setPhase('countdown');
-  }, [ensure, reset]);
+  }, [ensure, reset, name]);
 
   // 3 · 2 · 1 · GO, then the real game starts.
   useEffect(() => {
@@ -448,7 +295,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
     const rt = rating(score);
     void buildScoreCard({
       score, stars: rt.stars, title: rt.title, tripTitle, host: SITE_HOST,
-      packed, combo: bestCombo, best, isNewBest,
+      packed, combo: bestCombo, best, isNewBest, playerName,
     }).then(blob => {
       if (cancelled || !blob) return;
       cardBlobRef.current = blob;
@@ -457,7 +304,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
       setPreviewUrl(previewUrlRef.current);
     }).catch(() => { /* share falls back to text */ });
     return () => { cancelled = true; };
-  }, [phase, score, packed, bestCombo, best, isNewBest, tripTitle]);
+  }, [phase, score, packed, bestCombo, best, isNewBest, tripTitle, playerName]);
 
   useEffect(() => () => {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
@@ -541,7 +388,9 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
   const secondsLeft = Math.max(0, Math.ceil(DURATION * (1 - progress)));
   const r = rating(score);
   const shareUrl = `${SITE_ORIGIN}/trips/${tripSlug}`;
-  const shareText = `I scored ${score} (${r.title}) in Ulaa's "Pack the bag" game for ${tripTitle}! Think you can beat me? ${shareUrl}`;
+  const shareText = playerName
+    ? `${playerName} scored ${score} (${r.title}) in Ulaa's "Pack the bag" game for ${tripTitle}! Think you can beat that? ${shareUrl}`
+    : `I scored ${score} (${r.title}) in Ulaa's "Pack the bag" game for ${tripTitle}! Think you can beat me? ${shareUrl}`;
 
   const share = async () => {
     if (sharing) return;
@@ -551,7 +400,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
       try {
         blob = await buildScoreCard({
           score, stars: r.stars, title: r.title, tripTitle, host: SITE_HOST,
-          packed, combo: bestCombo, best, isNewBest,
+          packed, combo: bestCombo, best, isNewBest, playerName,
         });
       } catch { blob = null; }
     }
@@ -582,41 +431,19 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
 
   // Dark, brand-matched game UI (footer brown + terracotta/gold), same
   // language as the shareable score card.
-  const primaryBtn = 'w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-primary-light to-primary hover:brightness-110 active:scale-[0.98] text-white font-button font-semibold py-3.5 shadow-[0_10px_24px_rgba(168,90,42,0.45)] transition';
-  const ghostBtn = 'w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/15 active:scale-[0.98] border border-white/15 text-cream font-button font-semibold py-3 transition disabled:opacity-60';
-  const iconBtn = 'w-10 h-10 rounded-full bg-white/10 border border-white/15 text-cream/80 hover:text-white hover:bg-white/15 flex items-center justify-center transition-colors';
-  const glass = 'rounded-2xl bg-white/[0.06] border border-white/10';
-  const eyebrow = 'text-[10px] font-bold uppercase tracking-[0.18em] text-cream/50';
-  const floatAnim = reduce ? undefined : { y: [0, -5, 0] };
   const comboPips = mult >= MAX_MULT ? COMBO_STEP : streak % COMBO_STEP;
 
   return (
     <div className={className}>
-      {/* Tile on the Coming Soon card */}
-      <button
-        type="button"
+      <GameTile
         onClick={() => setOpen(true)}
-        className="group relative w-full h-24 rounded-2xl overflow-hidden px-4 flex items-center gap-3 text-left text-cream bg-gradient-to-br from-dark to-footer border border-gold/30 shadow-[0_8px_24px_rgba(39,30,24,0.35)] hover:shadow-[0_12px_32px_rgba(39,30,24,0.5)] transition-shadow"
-      >
-        <span className="absolute -right-8 -top-10 w-36 h-36 rounded-full bg-primary/45 blur-2xl pointer-events-none" aria-hidden="true" />
-        <span className="absolute -left-10 -bottom-12 w-32 h-32 rounded-full bg-gold/20 blur-2xl pointer-events-none" aria-hidden="true" />
-        <motion.span
-          className="relative w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_6px_18px_rgba(200,150,42,0.45)]"
-          animate={floatAnim}
-          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-          aria-hidden="true"
-        >
-          <Backpack size={28} weight="duotone" />
-        </motion.span>
-        <span className="relative flex-1 min-w-0">
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] bg-gold/20 text-[#F0CE7A] border border-gold/40 rounded-full px-2 py-0.5 mb-1">New · 30-sec game</span>
-          <span className="block font-display text-lg font-extrabold leading-tight text-white">Pack the bag</span>
-          <span className="block text-xs text-cream/60">{best > 0 ? `Your best: ${best}` : 'Beat the clock. Win bragging rights.'}</span>
-        </span>
-        <span className="relative w-10 h-10 shrink-0 rounded-full bg-gradient-to-b from-primary-light to-primary text-white flex items-center justify-center shadow-[0_6px_16px_rgba(168,90,42,0.5)] group-hover:scale-105 transition-transform" aria-hidden="true">
-          <Play size={18} weight="fill" />
-        </span>
-      </button>
+        compact={compact}
+        Icon={Backpack}
+        accent="gold"
+        title="Pack the bag"
+        subtitle={best > 0 ? `Your best: ${best}` : 'Beat the clock'}
+        chip="New · 30 sec"
+      />
 
       <Modal isOpen={open} onClose={close} ariaLabel="Pack the bag game" size="sm" flush>
         <div className="relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream p-4 pt-5 min-h-[28rem]">
@@ -626,6 +453,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
           {/* ── Start screen ── */}
           {phase === 'idle' && (
             <div className="relative text-center pt-3">
+              <BrandMark />
               <motion.div
                 className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                 animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
@@ -677,6 +505,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                   <Trophy size={16} weight="fill" className="text-[#F0CE7A]" /> Your best <strong className="text-[#F0CE7A]">{best}</strong>. Can you beat it?
                 </p>
               )}
+              <NameField value={name} onChange={setName} onEnter={begin} />
               <button type="button" onClick={begin} className={primaryBtn}><Play size={18} weight="fill" /> Start packing</button>
               <button type="button" onClick={toggleMute} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                 {muted ? <SpeakerSlash size={14} /> : <SpeakerHigh size={14} />} Sound {muted ? 'off' : 'on'}
