@@ -25,9 +25,9 @@ import { PAGE_W, PAGE_H, MARGIN, drawVectorIcon, type RGB } from './pdf/invoice/
 // Flow:
 //   buildInvoiceGeneratorPdfDoc() → assembles and returns the jsPDF doc
 //   downloadInvoiceGeneratorPdf() → builds it and triggers a direct download
-//   invoiceGeneratorPdfBlobUrl()  → builds it and returns an object URL,
-//                                   used to drive the live <iframe> preview
-//                                   and the "Open / Print" action
+//   invoiceGeneratorPdfBytes()    → builds it and returns the raw bytes,
+//                                   used to render the live preview
+//   printInvoiceGeneratorPdf()    → builds it and opens it in a new tab to print
 // =============================================================================
 
 export interface InvoiceGeneratorLineItem {
@@ -495,7 +495,7 @@ async function buildInvoiceGeneratorPdfDoc(data: InvoiceGeneratorData): Promise<
 }
 
 /** Filename used for both the download and the "open in new tab" preview. */
-export function invoiceGeneratorFileName(data: InvoiceGeneratorData): string {
+function invoiceGeneratorFileName(data: InvoiceGeneratorData): string {
   // INV-[Invoice Date]_[Customer Name].pdf, e.g. INV-20261008_Client-Name.pdf
   const clean = (v: string, fallback: string) =>
     sanitizeForPdf(v).replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '') || fallback;
@@ -517,17 +517,6 @@ export async function downloadInvoiceGeneratorPdf(data: InvoiceGeneratorData): P
 export async function invoiceGeneratorPdfBytes(data: InvoiceGeneratorData): Promise<ArrayBuffer> {
   const doc = await buildInvoiceGeneratorPdfDoc(data);
   return doc.output('arraybuffer');
-}
-
-/** Builds the invoice and returns a blob: object URL — used to drive the
- *  live preview `<iframe>` (so the preview the admin sees is the actual
- *  PDF, not a hand-built approximation of it) and the "Open / Print"
- *  action. Callers own the returned URL and should revoke it
- *  (URL.revokeObjectURL) once it's no longer needed/replaced. */
-export async function invoiceGeneratorPdfBlobUrl(data: InvoiceGeneratorData): Promise<string> {
-  const doc = await buildInvoiceGeneratorPdfDoc(data);
-  const blob = doc.output('blob');
-  return URL.createObjectURL(blob);
 }
 
 /** Opens the generated PDF in a new tab so the admin can print it (or save
