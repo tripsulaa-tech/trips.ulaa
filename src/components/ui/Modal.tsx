@@ -77,6 +77,14 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
+  // Lets page-level chrome (e.g. the floating WhatsApp button) hide itself
+  // while a full-screen experience such as a game is open.
+  useEffect(() => {
+    if (!isOpen || !fullScreen) return;
+    document.body.classList.add('fullscreen-modal-open');
+    return () => { document.body.classList.remove('fullscreen-modal-open'); };
+  }, [isOpen, fullScreen]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();

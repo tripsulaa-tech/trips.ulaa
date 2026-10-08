@@ -20,7 +20,7 @@ export default function TripGames({ tripId, tripSlug, tripTitle, coverImage, lay
   const compact = layout === 'card';
   if (layout === 'thumb') {
     return (
-      <div className={`grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-6 sm:gap-6 items-start ${className}`}>
+      <div className={`grid grid-cols-4 gap-x-1.5 gap-y-5 sm:gap-x-3 sm:gap-6 items-start ${className}`}>
         <PackBagGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} coverImage={coverImage} thumb />
         <TravelMatchGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} thumb />
         <StowawayGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} thumb />

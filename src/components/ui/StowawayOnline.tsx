@@ -10,7 +10,7 @@ import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
-import { Confetti, TimerRing, BrandMark } from './gameParts';
+import { Confetti, TimerRing } from './gameParts';
 import {
   GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName,
   loadPlayerName, savePlayerName, MAX_NAME,
@@ -117,7 +117,6 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
 
   return (
     <div className="relative text-center pt-3">
-      <BrandMark />
       <div className="w-16 h-16 mx-auto mb-3 rounded-[22px] bg-gradient-to-br from-secondary to-primary text-white flex items-center justify-center shadow-[0_14px_36px_rgba(168,90,42,0.5)]" aria-hidden="true">
         <DeviceMobile size={36} weight="duotone" />
       </div>

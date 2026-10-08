@@ -115,12 +115,14 @@ export function TimerRing({ secondsLeft, progress, lowAt = 5 }: { secondsLeft: n
 
 // Entry tile used on Coming Soon cards and trip pages. `compact` is the
 // small vertical version for the two-up grid on trip cards.
-export function GameTile({ onClick, compact, thumb, Icon, title, subtitle, chip, accent }: {
+export function GameTile({ onClick, compact, thumb, Icon, iconSrc, title, subtitle, chip, accent }: {
   onClick: () => void;
   compact?: boolean;
   /** App-icon style: big icon thumbnail with the name underneath. */
   thumb?: boolean;
-  Icon: PhosphorIcon;
+  Icon?: PhosphorIcon;
+  /** Custom artwork (image URL) shown instead of `Icon`, on a dark tile. */
+  iconSrc?: string;
   title: string;
   subtitle: string;
   chip: string;
@@ -150,15 +152,17 @@ export function GameTile({ onClick, compact, thumb, Icon, title, subtitle, chip,
         whileTap={reduce ? undefined : { scale: 0.93 }}
         whileHover={reduce ? undefined : { y: -4 }}
         aria-label={`${title}. ${subtitle}`}
-        className="group relative flex flex-col items-center gap-3 w-full touch-manipulation [-webkit-tap-highlight-color:transparent] outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-3xl p-1"
+        className="group relative flex flex-col items-center gap-1.5 sm:gap-3 w-full touch-manipulation [-webkit-tap-highlight-color:transparent] outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-2xl sm:rounded-3xl p-0 sm:p-1"
       >
-        <span className={`relative w-full aspect-square max-w-[9.5rem] rounded-[28%] bg-gradient-to-br ${medallion} flex items-center justify-center overflow-hidden border border-white/25 shadow-[0_14px_30px_rgba(39,30,24,0.28)] group-hover:shadow-[0_18px_38px_rgba(39,30,24,0.38)] transition-shadow`}>
+        <span className={`relative w-full aspect-square max-w-[3.5rem] sm:max-w-[9.5rem] rounded-[26%] bg-gradient-to-br ${medallion} flex items-center justify-center overflow-hidden border border-white/25 shadow-[0_6px_14px_rgba(39,30,24,0.25)] sm:shadow-[0_14px_30px_rgba(39,30,24,0.28)] group-hover:shadow-[0_18px_38px_rgba(39,30,24,0.38)] transition-shadow`}>
           <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent pointer-events-none" aria-hidden="true" />
-          <Icon className="relative w-[48%] h-[48%]" weight="duotone" aria-hidden="true" />
+          {iconSrc
+            ? <img src={iconSrc} alt="" className="relative w-[62%] h-[62%] object-contain" draggable={false} />
+            : Icon && <Icon className="relative w-[54%] h-[54%]" weight="duotone" aria-hidden="true" />}
         </span>
         <span className="block text-center">
-          <span className="block font-display text-base sm:text-lg font-extrabold leading-tight text-dark">{title}</span>
-          <span className="block text-xs text-dark-muted mt-0.5">{subtitle}</span>
+          <span className="block font-display text-[11px] sm:text-lg font-extrabold leading-tight text-dark">{title}</span>
+          <span className="block text-[9px] leading-tight sm:text-xs text-dark-muted mt-0.5">{subtitle}</span>
         </span>
       </motion.button>
     );
@@ -174,7 +178,7 @@ export function GameTile({ onClick, compact, thumb, Icon, title, subtitle, chip,
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
           aria-hidden="true"
         >
-          <Icon size={24} weight="duotone" />
+          {iconSrc ? <img src={iconSrc} alt="" className="w-6 h-6 object-contain" draggable={false} /> : Icon && <Icon size={24} weight="duotone" />}
         </motion.span>
         <span className="relative block min-w-0">
           <span className="block font-display text-sm font-extrabold leading-tight text-white">{title}</span>
@@ -193,7 +197,7 @@ export function GameTile({ onClick, compact, thumb, Icon, title, subtitle, chip,
         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
         aria-hidden="true"
       >
-        <Icon size={28} weight="duotone" />
+        {iconSrc ? <img src={iconSrc} alt="" className="w-7 h-7 object-contain" draggable={false} /> : Icon && <Icon size={28} weight="duotone" />}
       </motion.span>
       <span className="relative flex-1 min-w-0">
         <span className="inline-flex items-center whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.14em] bg-gold/20 text-[#F0CE7A] border border-gold/40 rounded-full px-2 py-0.5 mb-1">{chip}</span>
@@ -205,11 +209,6 @@ export function GameTile({ onClick, compact, thumb, Icon, title, subtitle, chip,
       </span>
     </motion.button>
   );
-}
-
-// Ulaa wordmark (the light footer logo) for the game start screens.
-export function BrandMark() {
-  return <img src="/ULAA-logo-Footer.png" alt="Ulaa" className="h-8 w-auto mx-auto mb-3 object-contain" draggable={false} />;
 }
 
 // Optional name field on the start screen; the name appears on the shared score card.

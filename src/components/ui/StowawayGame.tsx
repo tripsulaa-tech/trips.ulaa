@@ -2,16 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Play, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
-  UsersThree, Ticket, Airplane, Eye, EyeSlash, Sparkle, Lightning, Crown, Skull, CheckCircle,
+  Ticket, Airplane, Eye, EyeSlash, Sparkle, Lightning, Crown, Skull, CheckCircle,
   XCircle, MagicWand, Gift, Question, ArrowRight, DeviceMobile,
 } from '@phosphor-icons/react';
 import Modal from './Modal';
+import stowawayCat from '../../assets/stowaway-cat.png';
 import { SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
 import { hapticsEnabled } from './haptics';
-import { Confetti, GameTile, TimerRing, BrandMark } from './gameParts';
+import { Confetti, GameTile, TimerRing } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName } from './gameUi';
 import StowawayOnline from './StowawayOnline';
 import { loadOnlineSession } from './stowawayRoomApi';
@@ -405,7 +406,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
         onClick={() => { setSavedRoom(loadOnlineSession()?.code ?? null); setOpen(true); setPhase('idle'); }}
         compact={compact}
         thumb={thumb}
-        Icon={UsersThree}
+        iconSrc={stowawayCat}
         accent="gold"
         title="Stowaway"
         subtitle="Who sneaked aboard?"
@@ -414,21 +415,20 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
 
       <Modal isOpen={open} onClose={close} ariaLabel="Stowaway group game" size="sm" flush fullScreen>
         <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center">
-          <div className="relative w-full max-w-md">
+          <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
 
           {/* ── Intro ── */}
           {phase === 'idle' && (
             <div className="relative text-center pt-3">
-              <BrandMark />
               <motion.div
-                className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-secondary to-primary text-white flex items-center justify-center shadow-[0_14px_36px_rgba(168,90,42,0.5)]"
+                className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                 animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 aria-hidden="true"
               >
-                <UsersThree size={46} weight="duotone" />
+                <img src={stowawayCat} alt="" className="w-12 h-12 object-contain" draggable={false} />
               </motion.div>
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · 3 to 12 players</span>
               <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Stowaway</h2>

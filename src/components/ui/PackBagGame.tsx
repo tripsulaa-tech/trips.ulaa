@@ -13,7 +13,7 @@ import { WHATSAPP_NUMBER, SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
-import { ScoreRing, Confetti, GameTile, TimerRing, NameField, BrandMark } from './gameParts';
+import { ScoreRing, Confetti, GameTile, TimerRing, NameField } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, cleanName, loadPlayerName, savePlayerName } from './gameUi';
 
 // "Pack the bag": a 30-second tap game for Coming Soon trips. Things fall;
@@ -462,14 +462,13 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
 
       <Modal isOpen={open} onClose={close} ariaLabel="Pack the bag game" size="sm" flush fullScreen>
         <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center">
-          <div className="relative w-full max-w-md">
+          <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
 
           {/* ── Start screen ── */}
           {phase === 'idle' && (
             <div className="relative text-center pt-3">
-              <BrandMark />
               <motion.div
                 className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                 animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
@@ -609,7 +608,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
               <motion.div
                 ref={stageRef}
                 animate={stage}
-                className="relative h-[clamp(20rem,calc(100dvh-17rem),44rem)] rounded-3xl overflow-hidden select-none touch-none bg-gradient-to-b from-[#3A2A1F] to-[#1B130E] border border-white/10 shadow-[inset_0_0_60px_rgba(0,0,0,0.4)]"
+                className="relative h-[clamp(20rem,calc(100dvh-15rem),64rem)] rounded-3xl overflow-hidden select-none touch-none bg-gradient-to-b from-[#3A2A1F] to-[#1B130E] border border-white/10 shadow-[inset_0_0_60px_rgba(0,0,0,0.4)]"
               >
                 {/* Trip-themed backdrop: the cover photo, darkened */}
                 {coverImage && (

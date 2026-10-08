@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Play, ArrowLeft, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, X,
-  Sparkle, Crown, CheckCircle, Copy, LockSimple, LockSimpleOpen, WifiSlash, Hash, UsersThree, Question,
+  Sparkle, Crown, CheckCircle, Copy, LockSimple, LockSimpleOpen, WifiSlash, Hash, Users, Question,
   ChatCircleDots, MagnifyingGlass, HandWaving, Heart, LockKey,
 } from '@phosphor-icons/react';
 import { SITE_HOST, SITE_ORIGIN } from '../../constants/site';
@@ -10,7 +10,7 @@ import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
-import { Confetti, CountUp, BrandMark } from './gameParts';
+import { Confetti, CountUp } from './gameParts';
 import {
   GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName,
   loadPlayerName, savePlayerName, MAX_NAME,
@@ -104,9 +104,8 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
 
   return (
     <div className="relative text-center pt-3">
-      <BrandMark />
       <div className="w-16 h-16 mx-auto mb-3 rounded-[22px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]" aria-hidden="true">
-        <UsersThree size={36} weight="duotone" />
+        <Users size={36} weight="duotone" />
       </div>
       <h2 className="font-display text-3xl font-extrabold text-white leading-tight">Find My Twin</h2>
 
