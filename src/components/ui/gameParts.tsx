@@ -226,7 +226,7 @@ export function NameField({ value, onChange, onEnter }: { value: string; onChang
           maxLength={MAX_NAME}
           autoComplete="nickname"
           enterKeyHint="go"
-          placeholder="e.g. Priya"
+          placeholder="e.g. Ulaa"
           onChange={e => onChange(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') onEnter(); }}
           className="w-full bg-transparent py-3 text-[15px] font-semibold text-white placeholder:text-cream/30 outline-none"

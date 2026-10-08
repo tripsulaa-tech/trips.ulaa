@@ -3,19 +3,33 @@
 // (supabase/migration/add_find_my_twin.sql) so nobody can peek at another
 // player's answers. The ORDER of QUESTIONS must match that file.
 
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+import {
+  BeachBall, Mountains, Leaf, Coffee, SunHorizon, MoonStars, ShoppingBag, ForkKnife, Camera, VideoCamera,
+  Bed, Tent, Car, Airplane, ListChecks, Compass, Buildings, Tree, Armchair, PersonSimpleHike,
+} from '@phosphor-icons/react';
+
+export interface TwinOption { label: string; Icon: PhosphorIcon }
 export interface TwinQuestion {
   id: string;
   /** Left option is stored as '0', right option as '1'. */
-  left: { label: string; emoji: string };
-  right: { label: string; emoji: string };
+  left: TwinOption;
+  right: TwinOption;
 }
 
+// Ten travel-style this-or-that questions. Keep the order in sync with the
+// weights in supabase/migration/update_find_my_twin_10_questions.sql.
 export const QUESTIONS: TwinQuestion[] = [
-  { id: 'place', left: { label: 'Beach', emoji: '🏖️' }, right: { label: 'Mountain', emoji: '🏔️' } },
-  { id: 'drink', left: { label: 'Tea', emoji: '🍵' }, right: { label: 'Coffee', emoji: '☕' } },
-  { id: 'clock', left: { label: 'Early bird', emoji: '🌅' }, right: { label: 'Night owl', emoji: '🦉' } },
-  { id: 'spend', left: { label: 'Shopping', emoji: '🛍️' }, right: { label: 'Food', emoji: '🍜' } },
-  { id: 'capture', left: { label: 'Photos', emoji: '📸' }, right: { label: 'Videos', emoji: '🎥' } },
+  { id: 'place', left: { label: 'Beach', Icon: BeachBall }, right: { label: 'Mountain', Icon: Mountains } },
+  { id: 'drink', left: { label: 'Tea', Icon: Leaf }, right: { label: 'Coffee', Icon: Coffee } },
+  { id: 'clock', left: { label: 'Early bird', Icon: SunHorizon }, right: { label: 'Night owl', Icon: MoonStars } },
+  { id: 'spend', left: { label: 'Shopping', Icon: ShoppingBag }, right: { label: 'Food', Icon: ForkKnife } },
+  { id: 'capture', left: { label: 'Photos', Icon: Camera }, right: { label: 'Videos', Icon: VideoCamera } },
+  { id: 'stay', left: { label: 'Cosy hotel', Icon: Bed }, right: { label: 'Camping', Icon: Tent } },
+  { id: 'move', left: { label: 'Road trip', Icon: Car }, right: { label: 'Flight', Icon: Airplane } },
+  { id: 'pace', left: { label: 'Planned itinerary', Icon: ListChecks }, right: { label: 'Go with the flow', Icon: Compass } },
+  { id: 'scene', left: { label: 'City lights', Icon: Buildings }, right: { label: 'Countryside', Icon: Tree } },
+  { id: 'vibe', left: { label: 'Slow and relaxed', Icon: Armchair }, right: { label: 'Adventure', Icon: PersonSimpleHike } },
 ];
 
 export const MAX_ROUNDS = 4;

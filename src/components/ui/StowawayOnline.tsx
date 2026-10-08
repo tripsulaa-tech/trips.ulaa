@@ -161,7 +161,7 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
             onKeyDown={e => { if (e.key === 'Enter' && !busy) void enter(view); }}
             maxLength={MAX_NAME}
             autoComplete="given-name"
-            placeholder="e.g. Priya"
+            placeholder="e.g. Ulaa"
             className={`${inputCls} mb-3`}
           />
           {error && <p role="alert" className="text-xs font-semibold text-rose-300 mb-2">{error}</p>}

@@ -24,8 +24,8 @@ import { useTwinRoom } from './useTwinRoom';
 
 // "Find My Twin" online: every player uses their own phone. The matching and
 // the secrets live in Supabase (see add_find_my_twin.sql); this file is only the
-// screens. Everyone answers 5 quick questions, the database secretly scores
-// every pair, then each phone says "You + Kavya, 92% match. Find Kavya!".
+// screens. Everyone answers quick travel questions, the database secretly scores
+// every pair, then each phone says "You + Ulaa, 92% match. Find Ulaa!".
 // Once two twins find each other a conversation prompt unlocks; when every
 // pair has talked, the next round unlocks with a new twin and a new prompt.
 
@@ -111,7 +111,7 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
 
       {view === 'menu' && (
         <>
-          <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Everyone uses their own phone and sits in the same room. Answer 5 quick questions, then go and find your travel twin.</p>
+          <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Everyone uses their own phone and sits in the same room. Answer {QUESTIONS.length} quick travel questions, then go and find your travel twin.</p>
           <div className="space-y-2.5">
             <button type="button" onClick={() => { ensure(); setView('host'); }} className={primaryBtn}><Crown size={18} weight="fill" /> Host a room</button>
             <button type="button" onClick={() => { ensure(); setView('join'); }} className={ghostBtn}><Hash size={18} weight="bold" /> Join with a code</button>
@@ -148,7 +148,7 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
             onKeyDown={e => { if (e.key === 'Enter' && !busy) void enter(view); }}
             maxLength={MAX_NAME}
             autoComplete="given-name"
-            placeholder="e.g. Kavya"
+            placeholder="e.g. Ulaa"
             className={`${inputCls} mb-1`}
           />
           <p className="text-[11px] text-cream/40 mb-3">Use the name your friends know you by. They will be looking for it!</p>
@@ -233,7 +233,7 @@ function PlayerChips({ players, hostId, meId, canKick, onKick }: {
   );
 }
 
-// ───────────────────────────── The 5 questions ─────────────────────────────
+// ───────────────────────────── The questions ─────────────────────────────
 
 function Quiz({ onSubmit, busy, play }: { onSubmit: (answers: string) => void; busy: boolean; play: Audio['play'] }) {
   const reduce = useReducedMotion();
@@ -289,7 +289,7 @@ function Quiz({ onSubmit, busy, play }: { onSubmit: (answers: string) => void; b
                     onClick={() => choose(i as 0 | 1)}
                     className={`touch-manipulation rounded-3xl border px-4 py-5 flex items-center gap-4 text-left transition active:scale-[0.97] ${on ? 'bg-gradient-to-br from-primary-light to-primary border-transparent text-white shadow-[0_10px_26px_rgba(168,90,42,0.5)]' : 'bg-white/[0.06] border-white/10 text-cream hover:bg-white/10'}`}
                   >
-                    <span className="text-4xl leading-none" aria-hidden="true">{o.emoji}</span>
+                    <span className={`w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center border ${on ? 'bg-white/20 border-white/30 text-white' : 'bg-gradient-to-br from-[#F0CE7A] to-gold border-white/25 text-dark shadow-[0_6px_16px_rgba(200,150,42,0.4)]'}`} aria-hidden="true"><o.Icon size={30} weight="duotone" /></span>
                     <span className="font-display text-2xl font-extrabold leading-tight">{o.label}</span>
                   </button>
                 );
@@ -311,7 +311,7 @@ function Quiz({ onSubmit, busy, play }: { onSubmit: (answers: string) => void; b
                 return (
                   <li key={qq.id}>
                     <button type="button" onClick={() => setIdx(i)} className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] border border-white/15 px-3 py-1.5 text-sm font-bold text-white hover:bg-white/15 transition-colors" aria-label={`${o.label}. Change answer`}>
-                      <span aria-hidden="true">{o.emoji}</span> {o.label}
+                      <o.Icon size={16} weight="duotone" className="text-[#F0CE7A]" aria-hidden="true" /> {o.label}
                     </button>
                   </li>
                 );

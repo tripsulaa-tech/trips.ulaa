@@ -64,8 +64,8 @@ const MESSAGES: Record<string, string> = {
   not_in_room: 'You are not in this room any more.',
   wrong_phase: 'That is not possible right now.',
   need_more_players: 'You need at least 2 players.',
-  waiting_for_answers: 'Everyone needs to answer the 5 questions first.',
-  bad_answers: 'Please answer all 5 questions.',
+  waiting_for_answers: 'Everyone needs to answer the questions first.',
+  bad_answers: 'Please answer all the questions.',
   too_many_rooms: 'Lots of games are running right now. Try again in a minute.',
   host_present: 'The host is still here.',
 };

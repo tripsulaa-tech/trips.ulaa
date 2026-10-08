@@ -360,16 +360,17 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
       />
 
       <Modal isOpen={open} onClose={close} ariaLabel="Travel match game" size="sm" flush fullScreen>
-        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center">
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
 
           {/* ── Start screen ── */}
           {phase === 'idle' && (
-            <div className="relative text-center pt-3">
+            <div className="relative text-center pt-3 md:pt-0 md:grid md:grid-cols-[1fr_1.15fr] md:gap-12 lg:gap-16 md:items-center">
+              <div>
               <motion.div
-                className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
+                className="w-20 h-20 md:w-28 md:h-28 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                 animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 aria-hidden="true"
@@ -377,8 +378,10 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
                 <Compass size={46} weight="duotone" />
               </motion.div>
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Memory challenge</span>
-              <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Travel match</h2>
+              <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white leading-tight">Travel match</h2>
               <p className="text-sm text-cream/60 mt-1 mb-4 px-6 line-clamp-2">{themed ? `A memory game while ${tripTitle} gets ready` : 'Flip, match and vanish every pair'}</p>
+              </div>
+              <div className="min-w-0">
 
               <div className="flex items-center justify-center gap-1.5 mb-4" aria-label="Four levels, 16 to 30 cards">
                 {LEVELS.map((l, i) => (
@@ -414,12 +417,13 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
               <button type="button" onClick={toggleMute} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                 {muted ? <SpeakerSlash size={14} /> : <SpeakerHigh size={14} />} Sound {muted ? 'off' : 'on'}
               </button>
+              </div>
             </div>
           )}
 
           {/* ── Playing ── */}
           {phase === 'playing' && (
-            <div className="relative">
+            <div className="relative flex flex-col flex-1">
               {/* HUD (right padding keeps clear of the modal's close button) */}
               <div className="flex items-center gap-3 mb-2.5 pr-12">
                 <div className={`${glass} flex-1 px-3.5 py-2`}>
@@ -451,8 +455,8 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
               </div>
 
               {/* Board */}
-              <div className="relative rounded-3xl bg-black/20 border border-white/10 p-2 shadow-[inset_0_0_40px_rgba(0,0,0,0.35)]">
-                <div className={`grid ${COLS_CLASS[def.cols]} gap-1.5`}>
+              <div className="relative my-auto md:my-0 rounded-3xl bg-black/20 border border-white/10 p-2 shadow-[inset_0_0_40px_rgba(0,0,0,0.35)]">
+                <div className={`grid ${COLS_CLASS[def.cols]} gap-1.5 md:gap-2.5 mx-auto w-full md:max-w-xl`}>
                   {cards.map((c, i) => {
                     const faceUp = c.state !== 'down';
                     return (
