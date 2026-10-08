@@ -24,7 +24,7 @@
 // on phones, where browsers can't show a PDF in an <iframe>), rebuilt
 // (debounced) on every change. What the admin sees while typing is exactly what they
 // get when they download.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
@@ -38,6 +38,10 @@ import {
   ClockCounterClockwise as History,
   CaretDown as ChevronDown,
   CaretUp as ChevronUp,
+  Eye,
+  CopySimple as Reuse,
+  X as Close,
+  Eraser,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import InvoicePdfPreview from './InvoicePdfPreview';
@@ -45,7 +49,6 @@ import Button from '../components/ui/Button';
 import DatePicker from '../components/ui/DatePicker';
 import { useToast } from '../components/ui/useToast';
 import { useConfirm } from '../components/ui/useConfirm';
-import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import {
   createEmptyLineItem,
   defaultInvoiceGeneratorData,
@@ -68,6 +71,9 @@ import type { InvoiceGeneratorRecord } from '../types/types-index';
 import { TIMING } from '../constants/limits';
 
 import { readDraft, stableStringify, useDraftKeeper } from '../hooks/useSessionDraft';
+// Same look as the shared admin input, with slimmer vertical padding for a denser page.
+const inputClass = 'w-full px-3 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors';
+
 const BANK_FIELDS: { key: keyof InvoiceGeneratorBankDetails; label: string; placeholder: string }[] = [
   { key: 'accountNumber', label: 'Account Number', placeholder: 'e.g. 423801505983' },
   { key: 'ifscCode', label: 'IFSC Code', placeholder: 'e.g. ICIC0004238' },
@@ -80,7 +86,57 @@ const BANK_FIELDS: { key: keyof InvoiceGeneratorBankDetails; label: string; plac
 // leaving the page (or refreshing) and coming back finds it as it was left. The invoice number is
 // left out on purpose: it is only a preview that is looked up again every time the page opens.
 const INVOICE_DRAFT_KEY = 'invoice-generator';
+// Set when the admin deliberately clears Bank Details, so reopening the page in this tab doesn't
+// default them back in from the latest saved invoice.
+const BANK_CLEARED_KEY = 'ulaa.invoiceBankCleared';
+const bankClearedFlag = {
+  get: () => { try { return window.sessionStorage.getItem(BANK_CLEARED_KEY) === '1'; } catch { return false; } },
+  set: (on: boolean) => { try { if (on) window.sessionStorage.setItem(BANK_CLEARED_KEY, '1'); else window.sessionStorage.removeItem(BANK_CLEARED_KEY); } catch { /* ignore */ } },
+};
 const withoutNumber = (d: InvoiceGeneratorData): InvoiceGeneratorData => ({ ...d, invoiceNumber: '' });
+
+// Invoice Details (title, subtitle, prefix) and Bank Details (incl. signatory)
+// carried over from a saved invoice; billing address and line items are left as is.
+// Saved bank details may come back from the database as JSON text, and individual fields may be
+// null/blank; normalise to a plain object of strings so spreading it never produces garbage.
+const normaliseBank = (raw: unknown): InvoiceGeneratorBankDetails => {
+  let obj: unknown = raw;
+  if (typeof obj === 'string') {
+    try { obj = JSON.parse(obj); } catch { obj = {}; }
+  }
+  const base = defaultInvoiceGeneratorData().bank;
+  const src = (obj && typeof obj === 'object' ? obj : {}) as Record<string, unknown>;
+  const out = { ...base };
+  (Object.keys(base) as (keyof InvoiceGeneratorBankDetails)[]).forEach(k => {
+    const v = src[k];
+    out[k] = v == null ? '' : String(v);
+  });
+  return out;
+};
+const bankIsEmpty = (b: Partial<InvoiceGeneratorBankDetails> | undefined | null) =>
+  !b || Object.values(b).every(v => !String(v ?? '').trim());
+// Fills only the blank bank fields from the latest saved invoice (never overwrites typed values).
+const fillBankFromLatest = (d: InvoiceGeneratorData, r: InvoiceGeneratorRecord): InvoiceGeneratorData => {
+  const saved = normaliseBank(r.bank);
+  const merged = { ...d.bank };
+  (Object.keys(saved) as (keyof InvoiceGeneratorBankDetails)[]).forEach(k => {
+    if (!String(merged[k] ?? '').trim()) merged[k] = saved[k];
+  });
+  return { ...d, bank: merged };
+};
+const newestFirst = (rows: InvoiceGeneratorRecord[]) =>
+  [...rows].sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')));
+// The first saved invoice (newest at the top of Saved Invoices) that has any bank details filled in.
+const firstWithBank = (rows: InvoiceGeneratorRecord[]) =>
+  newestFirst(rows).find(r => !bankIsEmpty(normaliseBank(r.bank)));
+const applyLatestDefaults = (d: InvoiceGeneratorData, r: InvoiceGeneratorRecord, bankFrom: InvoiceGeneratorRecord = r): InvoiceGeneratorData => ({
+  ...d,
+  invoiceTitle: r.invoice_title || d.invoiceTitle,
+  invoiceSubtitle: r.invoice_subtitle || d.invoiceSubtitle,
+  invoiceNumberPrefix: r.invoice_number_prefix || d.invoiceNumberPrefix,
+  bank: normaliseBank(bankFrom.bank),
+  signatoryName: r.signatory_name || d.signatoryName,
+});
 
 // Debounce for the live preview rebuild — typing a full sentence
 // shouldn't rebuild+re-render a PDF on every keystroke.
@@ -96,8 +152,20 @@ export default function AdminInvoiceGenerator() {
   });
   // What "nothing to keep" looks like: a fresh form (or, after Save, the invoice just saved).
   const [draftBase, setDraftBase] = useState(() => stableStringify(withoutNumber(defaultInvoiceGeneratorData())));
+  const dataRef = useRef(data);
+  dataRef.current = data;
   const draftValue = useMemo(() => withoutNumber(data), [data]);
   useDraftKeeper({ key: INVOICE_DRAFT_KEY, value: draftValue, base: draftBase });
+  // Phones: the preview opens as a bottom sheet from a floating eye button instead of sitting at the bottom of the page.
+  const [sheetOpen, setSheetOpen] = useState(false);
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSheetOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = prevOverflow; window.removeEventListener('keydown', onKey); };
+  }, [sheetOpen]);
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [downloadingSavedId, setDownloadingSavedId] = useState<string | null>(null);
@@ -108,18 +176,45 @@ export default function AdminInvoiceGenerator() {
   const setField = <K extends keyof InvoiceGeneratorData>(key: K, value: InvoiceGeneratorData[K]) => {
     setData(prev => ({ ...prev, [key]: value }));
   };
+  const handleClearBank = () => {
+    bankClearedFlag.set(true);
+    setData(prev => ({ ...prev, bank: { accountNumber: '', ifscCode: '', bankName: '', accountHolderName: '', gpayNumber: '' } }));
+  };
   const setBankField = (key: keyof InvoiceGeneratorBankDetails, value: string) => {
+    bankClearedFlag.set(false);
     setData(prev => ({ ...prev, bank: { ...prev.bank, [key]: value } }));
   };
   const updateItem = (id: string, patch: Partial<InvoiceGeneratorData['items'][number]>) => {
     setData(prev => ({ ...prev, items: prev.items.map(it => (it.id === id ? { ...it, ...patch } : it)) }));
   };
+  // After Add / Remove, scroll to the relevant row: Add jumps to the new item (and focuses its
+  // description); Remove goes back to the item before the removed one (or the next, if it was first).
+  const pendingScroll = useRef<{ id: string; focus: boolean } | null>(null);
   const addItem = () => {
-    setData(prev => ({ ...prev, items: [...prev.items, createEmptyLineItem()] }));
+    const newItem = createEmptyLineItem();
+    pendingScroll.current = { id: newItem.id, focus: true };
+    setData(prev => ({ ...prev, items: [...prev.items, newItem] }));
   };
   const removeItem = (id: string) => {
+    const items = dataRef.current.items;
+    if (items.length <= 1) return;
+    const idx = items.findIndex(it => it.id === id);
+    const target = items[idx - 1] ?? items[idx + 1];
+    if (target) pendingScroll.current = { id: target.id, focus: false };
     setData(prev => ({ ...prev, items: prev.items.length <= 1 ? prev.items : prev.items.filter(it => it.id !== id) }));
   };
+  useEffect(() => {
+    const pending = pendingScroll.current;
+    if (!pending) return;
+    pendingScroll.current = null;
+    const row = document.getElementById(`item-row-${pending.id}`);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (pending.focus) {
+      const input = document.getElementById(`item-desc-${pending.id}`) as HTMLInputElement | null;
+      input?.focus({ preventScroll: true });
+    }
+  }, [data.items]);
 
   // ---- Invoice number — always server-assigned, never typed by the
   // admin. What's shown here before saving is only a *preview* of what the
@@ -173,8 +268,11 @@ export default function AdminInvoiceGenerator() {
   const handleNextInvoiceNumber = () => previewInvoiceNumber(data.invoiceNumberPrefix);
 
   const handleReset = () => {
-    setData(defaultInvoiceGeneratorData());
-    previewInvoiceNumber(DEFAULT_INVOICE_NUMBER_PREFIX);
+    bankClearedFlag.set(false);
+    const latest = newestFirst(history)[0];
+    const fresh = latest ? applyLatestDefaults(defaultInvoiceGeneratorData(), latest, firstWithBank(history) ?? latest) : defaultInvoiceGeneratorData();
+    setData(fresh);
+    previewInvoiceNumber(fresh.invoiceNumberPrefix);
   };
 
   // ---- Save — persists the current invoice (services/api/invoiceGenerator.ts)
@@ -190,6 +288,26 @@ export default function AdminInvoiceGenerator() {
       try {
         const rows = await getInvoiceGeneratorInvoices();
         setHistory(rows);
+        // Latest = most recently saved (newest created_at first).
+        const latest = newestFirst(rows)[0];
+        const bankSource = firstWithBank(rows) ?? latest;
+        // Default-fill Invoice Details and Bank Details from the latest
+        // saved invoice, unless a kept draft / typed data is already there.
+        const cur = dataRef.current;
+        const pristine = !readDraft(INVOICE_DRAFT_KEY)
+          && !cur.billingCompanyName && !cur.billingAddress
+          && cur.items.every(it => !it.description && !it.subDescription && !it.amount)
+          && Object.values(cur.bank).every(v => !v);
+        if (latest && pristine) {
+          const next = applyLatestDefaults(cur, latest, bankSource);
+          setData(next);
+          setDraftBase(stableStringify(withoutNumber(next)));
+          if (next.invoiceNumberPrefix !== cur.invoiceNumberPrefix) previewInvoiceNumber(next.invoiceNumberPrefix);
+        } else if (latest && bankIsEmpty(cur.bank) && !bankClearedFlag.get()) {
+          // A kept draft / partly typed form is open, but its bank details are blank:
+          // still default them from the latest saved invoice (keeps everything else as is).
+          setData(prev => bankIsEmpty(prev.bank) ? fillBankFromLatest(prev, bankSource) : prev);
+        }
       } catch (err) {
         console.error('Failed to load saved invoices', err);
       } finally {
@@ -202,6 +320,32 @@ export default function AdminInvoiceGenerator() {
     if (!data.invoiceNumber) return; // still waiting on the previewed number
     if (stableStringify(draftValue) === draftBase) {
       toast.info('No changes to save.');
+      return;
+    }
+    // Block saving an invoice whose content already exists in Saved Invoices
+    // (invoice number and date are ignored in the comparison).
+    const norm = (v: string) => (v || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const contentKey = (o: {
+      company: string; address: string; title: string; subtitle: string; signatory: string;
+      items: { description: string; subDescription?: string; amount: number }[];
+      bank: unknown;
+    }) => JSON.stringify([
+      norm(o.company), norm(o.address), norm(o.title), norm(o.subtitle), norm(o.signatory),
+      o.items.map(i => [norm(i.description), norm(i.subDescription || ''), Number(i.amount) || 0]),
+      o.bank,
+    ]);
+    const currentKey = contentKey({
+      company: data.billingCompanyName, address: data.billingAddress,
+      title: data.invoiceTitle, subtitle: data.invoiceSubtitle, signatory: data.signatoryName,
+      items: data.items, bank: data.bank,
+    });
+    const duplicate = history.find(r => contentKey({
+      company: r.billing_company_name, address: r.billing_address,
+      title: r.invoice_title, subtitle: r.invoice_subtitle, signatory: r.signatory_name,
+      items: r.items, bank: r.bank,
+    }) === currentKey);
+    if (duplicate) {
+      toast.error(`An identical invoice already exists (${duplicate.invoice_number}).`);
       return;
     }
     setSaving(true);
@@ -240,22 +384,34 @@ export default function AdminInvoiceGenerator() {
   // details, line items…) for a new one. Reserves a fresh invoice number
   // rather than reusing the saved one, since that number was already used.
   const handleReuse = async (record: InvoiceGeneratorRecord) => {
-    setData({
-      invoiceTitle: record.invoice_title,
-      invoiceSubtitle: record.invoice_subtitle,
-      billingCompanyName: record.billing_company_name,
-      billingAddress: record.billing_address,
-      invoiceNumberPrefix: record.invoice_number_prefix || DEFAULT_INVOICE_NUMBER_PREFIX,
+    bankClearedFlag.set(false);
+    const prefix = record.invoice_number_prefix || DEFAULT_INVOICE_NUMBER_PREFIX;
+    // Saved items may be stored as JSON text or lack ids, so normalise them.
+    const rawItems = typeof record.items === 'string' ? JSON.parse(record.items as unknown as string) : record.items;
+    const items = Array.isArray(rawItems) && rawItems.length
+      ? rawItems.map((it: Partial<InvoiceGeneratorRecord['items'][number]>) => ({
+          ...createEmptyLineItem(),
+          description: it.description ?? '',
+          subDescription: it.subDescription ?? '',
+          amount: Number(it.amount) || 0,
+        }))
+      : [createEmptyLineItem()];
+    setData(prev => ({
+      ...prev,
+      invoiceTitle: record.invoice_title ?? '',
+      invoiceSubtitle: record.invoice_subtitle ?? '',
+      billingCompanyName: record.billing_company_name ?? '',
+      billingAddress: record.billing_address ?? '',
+      invoiceNumberPrefix: prefix,
       invoiceNumber: '',
       invoiceDateISO: new Date().toISOString().slice(0, 10),
-      items: record.items.length
-        ? record.items.map(it => ({ ...createEmptyLineItem(), ...it }))
-        : [createEmptyLineItem()],
-      bank: { ...record.bank },
-      signatoryName: record.signatory_name,
-    });
-    await previewInvoiceNumber(record.invoice_number_prefix || DEFAULT_INVOICE_NUMBER_PREFIX);
+      items,
+      bank: normaliseBank(record.bank),
+      signatoryName: record.signatory_name ?? '',
+    }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast.success('Invoice details loaded. Check the form above.');
+    await previewInvoiceNumber(prefix);
   };
 
   // Downloads a saved invoice exactly as it was saved (its own number and
@@ -274,7 +430,7 @@ export default function AdminInvoiceGenerator() {
         items: record.items.length
           ? record.items.map(it => ({ ...createEmptyLineItem(), ...it }))
           : [createEmptyLineItem()],
-        bank: { ...record.bank },
+        bank: normaliseBank(record.bank),
         signatoryName: record.signatory_name,
       });
     } catch (err) {
@@ -344,14 +500,28 @@ export default function AdminInvoiceGenerator() {
     }
   };
 
+  const previewBox = (
+    <div className="rounded-md border border-background-warm bg-background-warm/40 overflow-hidden" style={{ aspectRatio: '595 / 842' }}>
+      {previewError ? (
+        <div className="w-full h-full flex items-center justify-center text-center text-dark-muted text-xs p-6">
+          Couldn't render the preview. Try Download or Print — the PDF may still generate correctly.
+        </div>
+      ) : previewBytes ? (
+        <InvoicePdfPreview data={previewBytes} onError={handlePreviewDrawError} />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-dark-muted text-xs">Generating preview…</div>
+      )}
+    </div>
+  );
+
   return (
     <AdminLayout title="Invoice Generator" subtitle="Fill in the details below to generate a printable invoice PDF">
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4 items-start pb-16 xl:pb-0">
         {/* ---- Form ---- */}
-        <div className="space-y-6 min-w-0">
+        <div className="space-y-3 min-w-0">
           {/* Header details */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">
-            <div className="flex items-center justify-between gap-3 mb-4">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-card p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
               <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2">
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 shrink-0">
                   <FileText size={15} className="text-primary" aria-hidden="true" />
@@ -367,9 +537,9 @@ export default function AdminInvoiceGenerator() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mb-3">
               <div>
-                <label htmlFor="inv-title" className="block text-sm font-medium text-dark mb-1">Invoice Title</label>
+                <label htmlFor="inv-title" className="block text-sm font-medium text-dark mb-0.5">Invoice Title</label>
                 <input
                   id="inv-title"
                   type="text"
@@ -380,7 +550,7 @@ export default function AdminInvoiceGenerator() {
                 />
               </div>
               <div>
-                <label htmlFor="inv-subtitle" className="block text-sm font-medium text-dark mb-1">Invoice Subtitle</label>
+                <label htmlFor="inv-subtitle" className="block text-sm font-medium text-dark mb-0.5">Invoice Subtitle</label>
                 <input
                   id="inv-subtitle"
                   type="text"
@@ -392,16 +562,16 @@ export default function AdminInvoiceGenerator() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <label htmlFor="inv-number-prefix" className="block text-sm font-medium text-dark mb-1">Invoice No.</label>
-                <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              <div className="min-w-0">
+                <label htmlFor="inv-number-prefix" className="block text-sm font-medium text-dark mb-0.5">Invoice No.</label>
+                <div className="flex gap-1.5 sm:gap-2">
                   <input
                     id="inv-number-prefix"
                     type="text"
                     value={data.invoiceNumberPrefix}
                     onChange={e => setField('invoiceNumberPrefix', e.target.value)}
-                    className={`${inputClass} w-16 shrink-0 text-center`}
+                    className={`${inputClass} !w-11 sm:!w-14 shrink-0 !px-1 text-center`}
                     placeholder="JJ"
                     aria-label="Invoice number prefix"
                     title="Invoice number prefix"
@@ -412,7 +582,7 @@ export default function AdminInvoiceGenerator() {
                       (see handleSave); what's shown before that is a live
                       preview of the next one in the series. */}
                   <div
-                    className={`${inputClass} flex-1 min-w-0 flex items-center bg-background-warm/60 text-dark-muted cursor-not-allowed select-text`}
+                    className={`${inputClass} flex-1 min-w-0 flex items-center truncate !px-2 sm:!px-3 bg-background-warm/60 text-dark-muted cursor-not-allowed select-text`}
                     aria-label="Invoice number (auto-generated)"
                     title="Auto-generated — not editable"
                   >
@@ -424,17 +594,18 @@ export default function AdminInvoiceGenerator() {
                     disabled={numberLoading}
                     title="Refresh — check the next number in the series"
                     aria-label="Refresh invoice number preview"
-                    className="shrink-0 inline-flex items-center justify-center w-10 rounded-md border-2 border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
+                    className="shrink-0 inline-flex items-center justify-center w-8 sm:w-9 rounded-md border-2 border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
                   >
                     <NextNumber size={16} aria-hidden="true" className={numberLoading ? 'animate-spin' : undefined} />
                   </button>
                 </div>
-                <p className="text-2xs text-dark-muted mt-1">Auto-generated in series (e.g. JJ001, JJ002). Not editable.</p>
+                <p className="hidden sm:block text-2xs text-dark-muted mt-0.5">Auto-generated in series (e.g. JJ001, JJ002). Not editable.</p>
               </div>
-              <div>
-                <label htmlFor="inv-date" className="block text-sm font-medium text-dark mb-1">Invoice Date</label>
+              <div className="min-w-0">
+                <label htmlFor="inv-date" className="block text-sm font-medium text-dark mb-0.5">Invoice Date</label>
                 <DatePicker
                   id="inv-date"
+                  className="!py-1.5 !px-2.5 sm:!px-3"
                   value={data.invoiceDateISO}
                   onChange={val => setField('invoiceDateISO', val)}
                 />
@@ -443,11 +614,11 @@ export default function AdminInvoiceGenerator() {
           </motion.div>
 
           {/* Billing address */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">
-            <h3 className="font-display text-base sm:text-lg font-bold text-dark mb-4">Billing Address</h3>
-            <div className="space-y-3 sm:space-y-4">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-lg shadow-card p-3 sm:p-4">
+            <h3 className="font-display text-base sm:text-lg font-bold text-dark mb-3">Billing Address</h3>
+            <div className="space-y-2.5">
               <div>
-                <label htmlFor="bill-name" className="block text-sm font-medium text-dark mb-1">Company / Client Name</label>
+                <label htmlFor="bill-name" className="block text-sm font-medium text-dark mb-0.5">Company / Client Name</label>
                 <input
                   id="bill-name"
                   type="text"
@@ -458,32 +629,32 @@ export default function AdminInvoiceGenerator() {
                 />
               </div>
               <div>
-                <label htmlFor="bill-address" className="block text-sm font-medium text-dark mb-1">Address</label>
+                <label htmlFor="bill-address" className="block text-sm font-medium text-dark mb-0.5">Address</label>
                 <textarea
                   id="bill-address"
                   value={data.billingAddress}
                   onChange={e => setField('billingAddress', e.target.value)}
                   className={inputClass}
-                  rows={4}
+                  rows={3}
                   placeholder={'e.g. 739/3, Avinashi Road, Race Course Road\nWARD083, Coimbatore Racecourse,\nC2- Race Course, Coimbatore South,\nCoimbatore- 641018, Tamil Nadu'}
                 />
-                <p className="text-2xs text-dark-muted mt-1">Each new line here becomes its own line on the invoice.</p>
+                <p className="text-2xs text-dark-muted mt-0.5">Each new line here becomes its own line on the invoice.</p>
               </div>
             </div>
           </motion.div>
 
           {/* Line items */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">
-            <div className="flex items-center justify-between gap-3 mb-4">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-card p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
               <h3 className="font-display text-base sm:text-lg font-bold text-dark">Line Items</h3>
-              <Button variant="outline" size="sm" type="button" onClick={addItem}>
-                <Plus size={13} aria-hidden="true" /> Add Item
+              <Button variant="outline" size="sm" type="button" onClick={addItem} aria-label="Add item" title="Add item">
+                <Plus size={16} aria-hidden="true" /> <span>Add Item</span>
               </Button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {data.items.map((item, index) => (
-                <div key={item.id} className="bg-background-warm rounded-lg p-3 sm:p-4">
-                  <div className="flex items-center justify-between gap-2 mb-2">
+                <div key={item.id} id={`item-row-${item.id}`} className="bg-background-warm rounded-lg p-2.5 sm:p-3">
+                  <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="text-2xs font-button font-bold text-dark-muted">Item {index + 1}</span>
                     <button
                       type="button"
@@ -494,9 +665,9 @@ export default function AdminInvoiceGenerator() {
                       <Trash2 size={12} aria-hidden="true" /> Remove
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_140px] gap-2.5">
-                    <div>
-                      <label htmlFor={`item-desc-${item.id}`} className="block text-2xs text-dark-muted mb-1">Description</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_130px] gap-2">
+                    <div className="col-span-2 sm:col-span-1">
+                      <label htmlFor={`item-desc-${item.id}`} className="block text-2xs text-dark-muted mb-0.5">Description</label>
                       <input
                         id={`item-desc-${item.id}`}
                         type="text"
@@ -507,7 +678,7 @@ export default function AdminInvoiceGenerator() {
                       />
                     </div>
                     <div>
-                      <label htmlFor={`item-sub-${item.id}`} className="block text-2xs text-dark-muted mb-1">Sub-description</label>
+                      <label htmlFor={`item-sub-${item.id}`} className="block text-2xs text-dark-muted mb-0.5">Sub-description</label>
                       <input
                         id={`item-sub-${item.id}`}
                         type="text"
@@ -518,7 +689,7 @@ export default function AdminInvoiceGenerator() {
                       />
                     </div>
                     <div>
-                      <label htmlFor={`item-amt-${item.id}`} className="block text-2xs text-dark-muted mb-1">Amount (INR)</label>
+                      <label htmlFor={`item-amt-${item.id}`} className="block text-2xs text-dark-muted mb-0.5">Amount (INR)</label>
                       <input
                         id={`item-amt-${item.id}`}
                         type="number"
@@ -533,19 +704,31 @@ export default function AdminInvoiceGenerator() {
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-background-warm">
+            <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-background-warm">
               <span className="text-sm font-button font-bold text-dark">Total</span>
               <span className="font-display text-lg font-bold text-dark">{formatPrice(total)}</span>
             </div>
           </motion.div>
 
           {/* Bank details */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">
-            <h3 className="font-display text-base sm:text-lg font-bold text-dark mb-4">Bank Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white rounded-lg shadow-card p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h3 className="font-display text-base sm:text-lg font-bold text-dark">Bank Details</h3>
+              <button
+                type="button"
+                onClick={handleClearBank}
+                disabled={bankIsEmpty(data.bank)}
+                title="Clear bank details"
+                aria-label="Clear bank details"
+                className="p-1.5 rounded-md text-dark-muted hover:text-primary hover:bg-background-warm transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <Eraser size={18} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
               {BANK_FIELDS.map(f => (
                 <div key={f.key}>
-                  <label htmlFor={`bank-${f.key}`} className="block text-sm font-medium text-dark mb-1">{f.label}</label>
+                  <label htmlFor={`bank-${f.key}`} className="block text-sm font-medium text-dark mb-0.5">{f.label}</label>
                   <input
                     id={`bank-${f.key}`}
                     type="text"
@@ -560,10 +743,10 @@ export default function AdminInvoiceGenerator() {
           </motion.div>
 
           {/* Signatory */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-lg shadow-card p-4 sm:p-6">
-            <h3 className="font-display text-base sm:text-lg font-bold text-dark mb-4">Signature</h3>
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-lg shadow-card p-3 sm:p-4">
+            <h3 className="font-display text-base sm:text-lg font-bold text-dark mb-3">Signature</h3>
             <div className="max-w-sm">
-              <label htmlFor="signatory" className="block text-sm font-medium text-dark mb-1">Signatory Name</label>
+              <label htmlFor="signatory" className="block text-sm font-medium text-dark mb-0.5">Signatory Name</label>
               <input
                 id="signatory"
                 type="text"
@@ -572,21 +755,21 @@ export default function AdminInvoiceGenerator() {
                 className={inputClass}
                 placeholder="e.g. Jini J Tracy"
               />
-              <p className="text-2xs text-dark-muted mt-1">Printed under the signature line. Defaults to the bank account name if blank.</p>
+              <p className="text-2xs text-dark-muted mt-0.5">Printed under the signature line. Defaults to the bank account name if blank.</p>
             </div>
           </motion.div>
 
           {/* Actions — repeated here (in addition to the sticky preview
               panel's own buttons) so they're reachable without scrolling
               back up on narrower screens where the two columns stack. */}
-          <div className="flex flex-col sm:flex-row gap-3 xl:hidden">
-            <Button variant="primary" size="md" fullWidth onClick={handleDownload} loading={downloading}>
-              <Download size={16} aria-hidden="true" /> Download PDF
+          <div className="grid grid-cols-3 gap-2 xl:hidden">
+            <Button variant="primary" size="sm" fullWidth className="!min-h-[40px] !py-1.5" onClick={handleDownload} loading={downloading}>
+              <Download size={16} aria-hidden="true" /> Download<span className="hidden sm:inline"> PDF</span>
             </Button>
-            <Button variant="outline" size="md" fullWidth onClick={handlePrint} loading={printing}>
+            <Button variant="outline" size="sm" fullWidth className="!min-h-[40px] !py-1.5" onClick={handlePrint} loading={printing}>
               <Printer size={16} aria-hidden="true" /> Print
             </Button>
-            <Button variant="outline" size="md" fullWidth onClick={handleSave} loading={saving} disabled={numberLoading || !data.invoiceNumber}>
+            <Button variant="outline" size="sm" fullWidth className="!min-h-[40px] !py-1.5" onClick={handleSave} loading={saving} disabled={numberLoading || !data.invoiceNumber}>
               <Save size={16} aria-hidden="true" /> Save
             </Button>
           </div>
@@ -599,7 +782,7 @@ export default function AdminInvoiceGenerator() {
             <button
               type="button"
               onClick={() => setHistoryExpanded(v => !v)}
-              className="w-full flex items-center justify-between gap-3 p-4 sm:p-6"
+              className="w-full flex items-center justify-between gap-3 p-3 sm:p-4"
             >
               <h3 className="font-display text-base sm:text-lg font-bold text-dark flex items-center gap-2">
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 shrink-0">
@@ -621,14 +804,14 @@ export default function AdminInvoiceGenerator() {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-2">
+                  <div className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-1.5">
                     {historyLoading ? (
                       <p className="text-xs text-dark-muted py-2">Loading saved invoices…</p>
                     ) : history.length === 0 ? (
                       <p className="text-xs text-dark-muted py-2">No invoices saved yet. Fill in the form and tap Save to keep one for later.</p>
                     ) : (
                       history.map(record => (
-                        <div key={record.id} className="flex items-center justify-between gap-3 bg-background-warm rounded-lg p-3">
+                        <div key={record.id} className="flex items-center justify-between gap-3 bg-background-warm rounded-lg px-3 py-2">
                           <div className="min-w-0">
                             <p className="text-sm font-button font-bold text-dark truncate">
                               {record.invoice_number} — {record.billing_company_name || record.invoice_title || 'Untitled'}
@@ -650,9 +833,12 @@ export default function AdminInvoiceGenerator() {
                             <button
                               type="button"
                               onClick={() => handleReuse(record)}
-                              className="text-2xs font-button font-semibold text-primary hover:underline px-1.5 py-1"
+                              aria-label="Reuse this invoice"
+                              title="Reuse"
+                              className="inline-flex items-center justify-center gap-1 max-sm:w-7 max-sm:h-7 max-sm:rounded-md max-sm:hover:bg-white text-2xs font-button font-semibold text-primary sm:hover:underline sm:px-1.5 sm:py-1"
                             >
-                              Reuse
+                              <Reuse size={14} className="sm:hidden" aria-hidden="true" />
+                              <span className="hidden sm:inline">Reuse</span>
                             </button>
                             <button
                               type="button"
@@ -675,37 +861,82 @@ export default function AdminInvoiceGenerator() {
         </div>
 
         {/* ---- Live preview — the actual generated PDF, not a mockup ---- */}
-        <div className="xl:sticky xl:top-24">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-card p-3 sm:p-4">
-            <div className="flex items-center justify-between gap-2 mb-3 px-1">
+        <div className="hidden xl:block xl:sticky xl:top-20">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-lg shadow-card p-3">
+            <div className="flex items-center justify-between gap-2 mb-2 px-1">
               <p className="text-sm font-button font-bold text-dark">Preview</p>
               <p className="text-2xs text-dark-muted">Updates as you type</p>
             </div>
-            <div className="rounded-md border border-background-warm bg-background-warm/40 overflow-hidden" style={{ aspectRatio: '595 / 842' }}>
-              {previewError ? (
-                <div className="w-full h-full flex items-center justify-center text-center text-dark-muted text-xs p-6">
-                  Couldn't render the preview. Try Download or Print below — the PDF may still generate correctly.
-                </div>
-              ) : previewBytes ? (
-                <InvoicePdfPreview data={previewBytes} onError={handlePreviewDrawError} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-dark-muted text-xs">Generating preview…</div>
-              )}
-            </div>
-            <div className="hidden xl:flex flex-col gap-2 mt-4">
-              <Button variant="primary" size="md" fullWidth onClick={handleDownload} loading={downloading}>
+            {previewBox}
+            <div className="hidden xl:grid grid-cols-2 gap-2 mt-3">
+              <Button variant="primary" size="sm" fullWidth className="!min-h-[40px] !py-1.5 col-span-2" onClick={handleDownload} loading={downloading}>
                 <Download size={16} aria-hidden="true" /> Download PDF
               </Button>
-              <Button variant="outline" size="md" fullWidth onClick={handlePrint} loading={printing}>
+              <Button variant="outline" size="sm" fullWidth className="!min-h-[40px] !py-1.5" onClick={handlePrint} loading={printing}>
                 <Printer size={16} aria-hidden="true" /> Print
               </Button>
-              <Button variant="outline" size="md" fullWidth onClick={handleSave} loading={saving} disabled={numberLoading || !data.invoiceNumber}>
-                <Save size={16} aria-hidden="true" /> Save Invoice
+              <Button variant="outline" size="sm" fullWidth className="!min-h-[40px] !py-1.5" onClick={handleSave} loading={saving} disabled={numberLoading || !data.invoiceNumber}>
+                <Save size={16} aria-hidden="true" /> Save
               </Button>
             </div>
           </motion.div>
         </div>
       </div>
+
+      {/* Phones: a single floating Preview (eye) button. */}
+      <motion.button
+        type="button"
+        onClick={() => setSheetOpen(true)}
+        aria-label="Preview"
+        title="Preview"
+        whileTap={{ scale: 0.92 }}
+        className="xl:hidden fixed right-4 bottom-5 z-30 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-warm-lg"
+      >
+        <Eye size={22} weight="bold" aria-hidden="true" />
+      </motion.button>
+      <AnimatePresence>
+        {sheetOpen && (
+          <div className="xl:hidden fixed inset-0 z-50 flex items-end" role="dialog" aria-modal="true" aria-label="Invoice preview">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-dark/50"
+              onClick={() => setSheetOpen(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'tween', duration: 0.22 }}
+              className="relative w-full max-h-[92dvh] flex flex-col bg-white rounded-t-2xl shadow-warm-lg"
+            >
+              <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2 shrink-0">
+                <div>
+                  <p className="text-sm font-button font-bold text-dark">Preview</p>
+                  <p className="text-2xs text-dark-muted">Updates as you type</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSheetOpen(false)}
+                  aria-label="Close preview"
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-background-warm text-dark"
+                >
+                  <Close size={16} weight="bold" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="overflow-y-auto px-4 pb-2 min-h-0">{previewBox}</div>
+              <div className="grid grid-cols-3 gap-2 px-4 pt-2 pb-4 shrink-0 border-t border-background-warm">
+                <Button variant="primary" size="sm" fullWidth className="!min-h-[40px] !py-1.5" onClick={handleDownload} loading={downloading}>
+                  <Download size={16} aria-hidden="true" /> Download
+                </Button>
+                <Button variant="outline" size="sm" fullWidth className="!min-h-[40px] !py-1.5" onClick={handlePrint} loading={printing}>
+                  <Printer size={16} aria-hidden="true" /> Print
+                </Button>
+                <Button variant="outline" size="sm" fullWidth className="!min-h-[40px] !py-1.5" onClick={handleSave} loading={saving} disabled={numberLoading || !data.invoiceNumber}>
+                  <Save size={16} aria-hidden="true" /> Save
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AdminLayout>
   );
 }

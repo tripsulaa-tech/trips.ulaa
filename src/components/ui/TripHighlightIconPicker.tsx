@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import {
   MagnifyingGlass as Search,
+  Plus,
   CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
 import {
@@ -54,7 +55,9 @@ export default function TripHighlightIconPicker({ value, onChange, hintText, id 
       >
         <span className="flex items-center gap-2 min-w-0">
           <span className="w-6 h-6 rounded-full bg-background-warm flex items-center justify-center flex-shrink-0" aria-hidden="true">
-            {currentMeta ? <currentMeta.Icon size={13} className="text-primary" /> : <span className="text-sm">{value || '—'}</span>}
+            {currentMeta
+              ? <currentMeta.Icon size={13} className="text-primary" />
+              : (value ? <span className="text-sm">{value}</span> : <Plus size={13} className="text-primary" />)}
           </span>
           <span className="truncate text-dark-muted">{currentMeta ? currentMeta.label : (value ? 'Custom' : 'Choose icon')}</span>
         </span>
