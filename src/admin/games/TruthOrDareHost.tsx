@@ -8,6 +8,7 @@ import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { isBooked } from '../enquiries/AdminEnquiriesShared';
 import { formatDateRange } from '../../utils/utils-index';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
+import { createTodShare, updateTodShare } from '../../services/api/todShare';
 
 // Admin -> Games -> "Play Truth or Dare". The game is hosted from here instead
 // of the public Games page:
@@ -24,7 +25,7 @@ const MAX_HOST_PLAYERS = 40;
 // Kept for the browser session so leaving this page and coming back finds the
 // same trip and the same present/absent ticks.
 const STORAGE_KEY = 'ulaa:admin-games:truth-or-dare-host';
-type Persisted = { tripId: string; picked: string[] | null };
+type Persisted = { tripId: string; picked: string[] | null; shareCode: string; shareSig: string };
 
 const todayLocal = (): string => {
   const d = new Date();
@@ -59,6 +60,9 @@ export default function TruthOrDareHost() {
   const [trips, setTrips] = useState<UpcomingTrip[] | null>(null);
   const [tripsError, setTripsError] = useState(false);
   const [persisted] = useState(() => loadPersisted<Persisted>(STORAGE_KEY));
+  // The short link made for this trip, and the roster it was last saved with.
+  const [share, setShare] = useState<{ code: string; sig: string } | null>(() => (persisted.shareCode ? { code: persisted.shareCode, sig: persisted.shareSig ?? '' } : null));
+  const [sharing, setSharing] = useState(false);
   const [tripId, setTripId] = useState(persisted.tripId ?? '');
 
   const [booked, setBooked] = useState<Enquiry[] | null>(null);
@@ -77,6 +81,7 @@ export default function TruthOrDareHost() {
         setTripId(id => {
           if (!id || list.some(t => t.id === id)) return id;
           setPicked(null);
+          setShare(null);
           return '';
         });
       })
@@ -99,14 +104,16 @@ export default function TruthOrDareHost() {
   }, [tripId]);
 
   useEffect(() => {
-    savePersisted<Persisted>(STORAGE_KEY, { tripId, picked: picked ? [...picked] : null });
-  }, [tripId, picked]);
+    savePersisted<Persisted>(STORAGE_KEY, { tripId, picked: picked ? [...picked] : null, shareCode: share?.code ?? '', shareSig: share?.sig ?? '' });
+  }, [tripId, picked, share]);
 
   const pickTrip = (id: string) => {
     setTripId(id);
     setBooked(null);
     setBookedError(false);
     setPicked(null);
+    // A link already sent for another trip must keep its own players.
+    setShare(null);
   };
 
   const loadingPeople = !!tripId && booked === null && !bookedError;
@@ -127,12 +134,44 @@ export default function TruthOrDareHost() {
 
   const trip = trips?.find(t => t.id === tripId);
 
-  // Share: a public pass-and-play link. It carries only the players' display
-  // names (first names, plus a last initial where two share one) in the URL
-  // fragment, which browsers never send to a server. No phones, emails or
-  // booking details. The link follows the present/absent ticks below.
-  const shareUrl = `${window.location.origin}/play/truth-or-dare${names.length >= 2 ? `#p=${encodeURIComponent(JSON.stringify(names))}` : ''}`;
+  // Share: a short public link (/play/truth-or-dare/k7x2). The players (display
+  // names only: first names, plus a last initial where two share one) are saved
+  // in the database under that code; the link itself carries nothing else.
+  // Changing the ticks afterwards keeps the same code via "Update link".
+  const tripTitle = trip?.title ?? '';
+  const rosterSig = JSON.stringify([tripTitle, names]);
+  const canShare = names.length >= 2;
+  const linkStale = !!share && share.sig !== rosterSig;
+  const shareUrl = `${window.location.origin}/play/truth-or-dare${share ? `/${share.code}` : ''}`;
   const shareText = `${trip ? `Game time for ${trip.title}! ` : 'Game time! '}Play Truth or Dare with the group: ${shareUrl}`;
+
+  const makeLink = async () => {
+    if (!canShare || sharing) return;
+    setSharing(true);
+    try {
+      const code = await createTodShare(names, tripTitle);
+      setShare({ code, sig: rosterSig });
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't make the link. Has add_truth_or_dare_share_links.sql been run in Supabase?");
+    } finally {
+      setSharing(false);
+    }
+  };
+  const updateLink = async () => {
+    if (!share || !canShare || sharing) return;
+    setSharing(true);
+    try {
+      const ok = await updateTodShare(share.code, names, tripTitle);
+      if (ok) { setShare({ code: share.code, sig: rosterSig }); toast.success('Link updated. The same link now has these players.'); }
+      else { setShare(null); toast.error('That link had expired, so make a new one.'); }
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't update the link. Please try again.");
+    } finally {
+      setSharing(false);
+    }
+  };
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(shareUrl); toast.success('Link copied.'); }
     catch { toast.error("Couldn't copy. Select the link and copy it by hand."); }
@@ -169,17 +208,34 @@ export default function TruthOrDareHost() {
 
       <div className="bg-white rounded-lg shadow-card p-4 sm:p-6 space-y-3">
         <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-dark"><ShareNetwork size={18} weight="duotone" aria-hidden="true" /> Share with travellers</p>
-        <p className="text-xs text-dark-muted">{names.length >= 2
-            ? `The link opens Truth or Dare with the ${names.length} players ticked below already filled in, so nobody has to type names. Only first names are in the link. Change the ticks and the link updates.`
-            : 'Pick a trip and tick who is present and the link will open with those players filled in. Until then it opens a blank game where people type their own names.'}</p>
-        <input type="text" readOnly value={shareUrl} onFocus={e => e.currentTarget.select()} aria-label="Truth or Dare link" className="w-full rounded-md border-2 border-background-warm bg-background px-3 py-2 text-sm text-dark" />
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => void copyLink()} className="inline-flex items-center gap-1.5 text-sm font-button font-semibold px-3 py-2 rounded-lg border-2 border-background-warm text-dark hover:border-primary/40 min-h-[44px]"><Copy size={16} aria-hidden="true" /> Copy link</button>
-          <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-button font-semibold px-3 py-2 rounded-lg bg-primary text-white hover:opacity-90 min-h-[44px]"><WhatsappLogo size={16} weight="fill" aria-hidden="true" /> WhatsApp</a>
-          {typeof navigator.share === 'function' && (
-            <button type="button" onClick={() => void shareNative()} className="inline-flex items-center gap-1.5 text-sm font-button font-semibold px-3 py-2 rounded-lg border-2 border-background-warm text-dark hover:border-primary/40 min-h-[44px]"><ShareNetwork size={16} aria-hidden="true" /> More…</button>
-          )}
-        </div>
+        <p className="text-xs text-dark-muted">
+          {canShare
+            ? `Makes a short link that opens Truth or Dare with the ${names.length} players ticked below already filled in, so nobody has to type names. Only first names are saved with it.`
+            : 'Pick a trip and tick who is present to make a short link with those players filled in. Without one, the link opens a blank game where people type their own names.'}
+        </p>
+
+        {canShare && !share ? (
+          <button type="button" onClick={() => void makeLink()} disabled={sharing} className="inline-flex items-center gap-1.5 text-sm font-button font-semibold px-3 py-2 rounded-lg bg-primary text-white hover:opacity-90 min-h-[44px] disabled:opacity-50">
+            <ShareNetwork size={16} aria-hidden="true" /> {sharing ? 'Making link…' : 'Make share link'}
+          </button>
+        ) : (
+          <>
+            <input type="text" readOnly value={shareUrl} onFocus={e => e.currentTarget.select()} aria-label="Truth or Dare link" className="w-full rounded-md border-2 border-background-warm bg-background px-3 py-2 text-sm text-dark" />
+            {linkStale && (
+              <div role="status" className="flex flex-wrap items-center gap-2 text-xs text-dark bg-background-warm/60 rounded-md px-3 py-2">
+                <span className="mr-auto">The players changed since this link was made. Update it and the same link opens with the new players.</span>
+                <button type="button" onClick={() => void updateLink()} disabled={sharing} className="font-button font-semibold text-primary hover:underline disabled:opacity-50 min-h-[44px]">{sharing ? 'Updating…' : 'Update link'}</button>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => void copyLink()} className="inline-flex items-center gap-1.5 text-sm font-button font-semibold px-3 py-2 rounded-lg border-2 border-background-warm text-dark hover:border-primary/40 min-h-[44px] disabled:opacity-50"><Copy size={16} aria-hidden="true" /> Copy link</button>
+              <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-button font-semibold px-3 py-2 rounded-lg bg-primary text-white hover:opacity-90 min-h-[44px]"><WhatsappLogo size={16} weight="fill" aria-hidden="true" /> WhatsApp</a>
+              {typeof navigator.share === 'function' && (
+                <button type="button" onClick={() => void shareNative()} className="inline-flex items-center gap-1.5 text-sm font-button font-semibold px-3 py-2 rounded-lg border-2 border-background-warm text-dark hover:border-primary/40 min-h-[44px] disabled:opacity-50"><ShareNetwork size={16} aria-hidden="true" /> More…</button>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {tripId && (
