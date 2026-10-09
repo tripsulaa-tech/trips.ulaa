@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Plus, Trash as Trash2, PencilSimple as Edit2, MagnifyingGlass as Search, ArrowCounterClockwise, ClipboardText } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import TruthOrDareHost from './games/TruthOrDareHost';
+import { loadPersisted, savePersisted } from '../utils/sessionState';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
@@ -567,7 +568,11 @@ const TABS: { id: GameTab; label: string }[] = [
 ];
 
 export default function AdminGames() {
-  const [tab, setTab] = useState<GameTab>('play');
+  const [tab, setTab] = useState<GameTab>(() => {
+    const saved = loadPersisted<{ tab: GameTab }>('ulaa:admin-games:tab').tab;
+    return TABS.some(t => t.id === saved) ? (saved as GameTab) : 'play';
+  });
+  useEffect(() => { savePersisted('ulaa:admin-games:tab', { tab }); }, [tab]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const dirtyRef = useRef<Record<string, boolean>>({});

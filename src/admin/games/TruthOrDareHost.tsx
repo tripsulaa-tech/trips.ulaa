@@ -7,6 +7,7 @@ import { getAllUpcomingTripsAdmin, getEnquiries } from '../../services/api';
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 import { isBooked } from '../enquiries/AdminEnquiriesShared';
 import { formatDateRange } from '../../utils/utils-index';
+import { loadPersisted, savePersisted } from '../../utils/sessionState';
 
 // Admin -> Games -> "Play Truth or Dare". The game is hosted from here instead
 // of the public Games page:
@@ -19,6 +20,11 @@ import { formatDateRange } from '../../utils/utils-index';
 //     starts ticked. Tick or untick anyone, then open the game.
 
 const MAX_HOST_PLAYERS = 40;
+
+// Kept for the browser session so leaving this page and coming back finds the
+// same trip and the same present/absent ticks.
+const STORAGE_KEY = 'ulaa:admin-games:truth-or-dare-host';
+type Persisted = { tripId: string; picked: string[] | null };
 
 const todayLocal = (): string => {
   const d = new Date();
@@ -52,17 +58,28 @@ export default function TruthOrDareHost() {
   const today = useState(todayLocal)[0];
   const [trips, setTrips] = useState<UpcomingTrip[] | null>(null);
   const [tripsError, setTripsError] = useState(false);
-  const [tripId, setTripId] = useState('');
+  const [persisted] = useState(() => loadPersisted<Persisted>(STORAGE_KEY));
+  const [tripId, setTripId] = useState(persisted.tripId ?? '');
 
   const [booked, setBooked] = useState<Enquiry[] | null>(null);
   const [bookedError, setBookedError] = useState(false);
   // null = nobody toggled yet, so the default applies (see header comment).
-  const [picked, setPicked] = useState<Set<string> | null>(null);
+  const [picked, setPicked] = useState<Set<string> | null>(() => (Array.isArray(persisted.picked) ? new Set(persisted.picked) : null));
 
   useEffect(() => {
     let alive = true;
     getAllUpcomingTripsAdmin()
-      .then(all => { if (alive) setTrips(playableTrips(all, today)); })
+      .then(all => {
+        if (!alive) return;
+        const list = playableTrips(all, today);
+        setTrips(list);
+        // The remembered trip may have ended or been removed since.
+        setTripId(id => {
+          if (!id || list.some(t => t.id === id)) return id;
+          setPicked(null);
+          return '';
+        });
+      })
       .catch(err => { console.error(err); if (alive) setTripsError(true); });
     return () => { alive = false; };
   }, [today]);
@@ -80,6 +97,10 @@ export default function TruthOrDareHost() {
       .catch(err => { console.error(err); if (alive) setBookedError(true); });
     return () => { alive = false; };
   }, [tripId]);
+
+  useEffect(() => {
+    savePersisted<Persisted>(STORAGE_KEY, { tripId, picked: picked ? [...picked] : null });
+  }, [tripId, picked]);
 
   const pickTrip = (id: string) => {
     setTripId(id);
