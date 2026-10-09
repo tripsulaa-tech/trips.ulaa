@@ -98,11 +98,42 @@ export default function AdminTravellers() {
         {loading ? (
           <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card">Loading contacts&hellip;</div>
         ) : pageItems.length === 0 ? (
-          <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card">
-            {totalCount === 0
-              ? "No contacts yet — once someone enquires with a phone number, they'll show up here."
-              : 'No contacts match your search.'}
-          </div>
+          totalCount === 0 ? (
+            <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card">
+              No contacts yet — once someone enquires with a phone number, they'll show up here.
+            </div>
+          ) : (
+            <>
+              {/* The desktop search box lives in the table's header bar, and the
+                  table isn't rendered when nothing matches. Keep a search bar
+                  here (desktop; mobile already has its own above) so the search
+                  can always be edited or cleared. The query is also remembered
+                  across reloads, so without this a no-match search got stuck. */}
+              <div className="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
+                <TableHeaderBar
+                  title="Contact Book"
+                  pageSizeKey="travellers"
+                  rangeStart={0}
+                  rangeEnd={0}
+                  total={0}
+                  itemLabel="contacts"
+                  searchValue={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  searchPlaceholder="Search name, phone, email, trip..."
+                />
+              </div>
+              <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card space-y-3">
+                <p>No contacts match your {repeatOnly && !searchQuery.trim() ? 'filter' : 'search'}.</p>
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(''); setRepeatOnly(false); }}
+                  className="text-sm font-button font-semibold text-primary hover:underline"
+                >
+                  Clear search and filters
+                </button>
+              </div>
+            </>
+          )
         ) : (
           <>
             {/* Mobile (below sm): a card per contact. */}

@@ -22,6 +22,10 @@ import { TOD_LEVELS, TOD_DEFAULTS, sanitizeTodContent, type TodKind, type TodLev
 //  - Dares can start a 30-second timer; each player gets 2 skips.
 //  - The end screen hands out awards (Champion, Bravest, Open Book, Chicken).
 // Front-end only: nothing is stored except the shared sound setting.
+//
+// Admin-hosted: this game is no longer on the public Games page. Admin ->
+// Games -> "Play Truth or Dare" picks a trip and passes the booked travellers
+// who are present in as `players`, so the setup screen opens already filled.
 
 const MUTE_KEY = 'ulaa:packbag:muted'; // one sound setting for all the games
 const MIN_PLAYERS = 2;
@@ -44,12 +48,18 @@ interface Stat { points: number; truths: number; dares: number; twists: number; 
 const emptyStat = (): Stat => ({ points: 0, truths: 0, dares: 0, twists: 0, skipped: 0, skipsLeft: SKIPS_PER_PLAYER, streak: 0, turns: 0 });
 
 interface Props {
-  tripId: string;
-  tripSlug: string;
-  tripTitle: string;
+  tripId?: string;
+  tripSlug?: string;
+  tripTitle?: string;
   className?: string;
   compact?: boolean;
   thumb?: boolean;
+  /** Names to pre-fill the setup screen with (e.g. the travellers present on a trip). */
+  players?: string[];
+  /** Upper limit on players; defaults to MAX_PLAYERS. */
+  maxPlayers?: number;
+  /** Open straight on the setup screen (used by the shared /play/truth-or-dare link). */
+  defaultOpen?: boolean;
 }
 
 function shuffled<T>(list: T[]): T[] {
@@ -72,10 +82,24 @@ const HeatDots = ({ level }: { level: TodLevel }) => (
   </span>
 );
 
-export default function TruthOrDareGame({ className = '', compact = false, thumb = false }: Props) {
+const initialNames = (preset?: string[], max = MAX_PLAYERS): string[] => {
+  const list = (preset ?? []).map(cleanName).filter(Boolean).slice(0, max);
+  return list.length ? list : ['', ''];
+};
+
+export default function TruthOrDareGame({ className = '', compact = false, thumb = false, players: presetPlayers, maxPlayers = MAX_PLAYERS, defaultOpen = false }: Props) {
   const reduce = useReducedMotion();
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [names, setNames] = useState<string[]>(['', '']);
+  const [phase, setPhase] = useState<Phase>(defaultOpen ? 'setup' : 'idle');
+  const [names, setNames] = useState<string[]>(() => initialNames(presetPlayers, maxPlayers));
+  const presetKey = (presetPlayers ?? []).join('\u0001');
+  const lastPresetKey = useRef(presetKey);
+  // The roster changed (another trip picked, someone ticked present/absent):
+  // refill the setup list, but never in the middle of a game.
+  useEffect(() => {
+    if (lastPresetKey.current === presetKey) return;
+    lastPresetKey.current = presetKey;
+    setNames(initialNames(presetPlayers, maxPlayers));
+  }, [presetKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [levelChoice, setLevelChoice] = useState<LevelChoice>('heatup');
   const [spinMode, setSpinMode] = useState(true);
 
@@ -260,7 +284,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
   const again = () => { setPhase('setup'); };
 
   const setName = (i: number, v: string) => setNames(n => n.map((x, idx) => (idx === i ? v : x)));
-  const addPlayer = () => { if (names.length < MAX_PLAYERS) { play('click'); setNames(n => [...n, '']); } };
+  const addPlayer = () => { if (names.length < maxPlayers) { play('click'); setNames(n => [...n, '']); } };
   const removePlayer = (i: number) => { if (names.length > MIN_PLAYERS) { play('click'); setNames(n => n.filter((_, idx) => idx !== i)); } };
 
   const awards = useMemo(() => {
@@ -315,7 +339,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
         accent="primary"
         title="Truth or Dare"
         subtitle="Spin, flip, if you dare"
-        chip="New · Group game"
+        chip="Group game"
       />
 
       <Modal isOpen={phase !== 'idle'} onClose={close} ariaLabel="Truth or Dare group game" size="sm" flush fullScreen>
@@ -334,7 +358,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                 >
                   <Sparkle size={46} weight="duotone" />
                 </motion.div>
-                <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · {MIN_PLAYERS} to {MAX_PLAYERS} players</span>
+                <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · {MIN_PLAYERS} to {maxPlayers} players</span>
                 <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Truth or Dare</h2>
                 <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Spin to pick who is next. Flip a mystery card. Earn points, build streaks, and watch the heat rise.</p>
 
@@ -361,7 +385,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                       </li>
                     ))}
                   </ul>
-                  {names.length < MAX_PLAYERS && (
+                  {names.length < maxPlayers && (
                     <button type="button" onClick={addPlayer} className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-[#F0CE7A] hover:text-white transition-colors">
                       <Plus size={14} weight="bold" /> Add player
                     </button>
@@ -423,11 +447,12 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                   {players.map((p, i) => {
                     const a = (i * seg * Math.PI) / 180;
                     const R = 7.1; // rem
+                    const d = Math.min(2.75, ((2 * Math.PI * R) / players.length) * 0.9); // rem; shrinks for big groups
                     return (
                       <span
                         key={p}
-                        className="absolute left-1/2 top-1/2 w-11 h-11 -ml-[1.375rem] -mt-[1.375rem] rounded-full flex items-center justify-center font-display font-extrabold text-dark text-lg shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
-                        style={{ background: HUES[i % HUES.length], transform: `translate(${Math.sin(a) * R}rem, ${-Math.cos(a) * R}rem)` }}
+                        className="absolute left-1/2 top-1/2 rounded-full flex items-center justify-center font-display font-extrabold text-dark shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
+                        style={{ background: HUES[i % HUES.length], width: `${d}rem`, height: `${d}rem`, marginLeft: `${-d / 2}rem`, marginTop: `${-d / 2}rem`, fontSize: `${Math.max(0.6, d * 0.4)}rem`, transform: `translate(${Math.sin(a) * R}rem, ${-Math.cos(a) * R}rem)` }}
                         aria-hidden="true"
                       >
                         {p.charAt(0).toUpperCase()}

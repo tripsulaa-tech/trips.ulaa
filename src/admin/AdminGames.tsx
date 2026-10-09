@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Plus, Trash as Trash2, PencilSimple as Edit2, MagnifyingGlass as Search, ArrowCounterClockwise, ClipboardText } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
+import TruthOrDareHost from './games/TruthOrDareHost';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
@@ -556,16 +557,17 @@ function TwinEditor({ onDirty }: { onDirty: OnDirty }) {
 }
 
 // ─────────────────────────────────── Page ───────────────────────────────────
-type GameTab = 'tod' | 'charades' | 'stowaway' | 'twin';
+type GameTab = 'play' | 'tod' | 'charades' | 'stowaway' | 'twin';
 const TABS: { id: GameTab; label: string }[] = [
-  { id: 'tod', label: 'Truth or Dare' },
+  { id: 'play', label: 'Play Truth or Dare' },
+  { id: 'tod', label: 'Truth or Dare content' },
   { id: 'charades', label: 'Dumb Charades' },
   { id: 'stowaway', label: 'Stowaway' },
   { id: 'twin', label: 'Find My Twin' },
 ];
 
 export default function AdminGames() {
-  const [tab, setTab] = useState<GameTab>('tod');
+  const [tab, setTab] = useState<GameTab>('play');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const dirtyRef = useRef<Record<string, boolean>>({});
@@ -584,7 +586,7 @@ export default function AdminGames() {
   return (
     <AdminLayout
       title="Games"
-      subtitle="Change the questions, dares and word lists the games use"
+      subtitle="Host Truth or Dare for a trip, and change the questions, dares and word lists the games use"
       hasUnsavedChanges={() => Object.values(dirtyRef.current).some(Boolean)}
       scrollRestorationReady={!loading}
     >
@@ -598,7 +600,7 @@ export default function AdminGames() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div role="tablist" aria-label="Game" className="grid grid-cols-2 sm:inline-flex gap-1 bg-white rounded-lg p-1.5 shadow-card">
+          <div role="tablist" aria-label="Game" className="grid grid-cols-2 sm:inline-flex sm:flex-wrap gap-1 bg-white rounded-lg p-1.5 shadow-card">
             {TABS.map(t => (
               <button
                 key={t.id}
@@ -612,7 +614,8 @@ export default function AdminGames() {
               </button>
             ))}
           </div>
-          {/* All four stay mounted so unsaved edits survive switching tabs. */}
+          {/* All five stay mounted so unsaved edits survive switching tabs. */}
+          <div hidden={tab !== 'play'}><TruthOrDareHost /></div>
           <div hidden={tab !== 'tod'}><TruthOrDareEditor onDirty={onDirty} /></div>
           <div hidden={tab !== 'charades'}><CharadesEditor onDirty={onDirty} /></div>
           <div hidden={tab !== 'stowaway'}><StowawayEditor onDirty={onDirty} /></div>
