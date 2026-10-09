@@ -54,8 +54,8 @@ export default function TruthOrDarePlayPage() {
           </motion.span>
           <h1 className="font-display text-4xl font-extrabold text-white">Truth or Dare</h1>
           <p className="mt-3 mb-8 text-cream/70 text-sm">Pass the phone around, spin to pick who is next, and flip a card if you dare.{players ? ` ${players.length} players are ready.` : ''}</p>
-          {/* Opens on the setup screen; closing it leaves this tile to start again. */}
-          <TruthOrDareGame key={hash} defaultOpen players={players} maxPlayers={MAX_SHARED_PLAYERS} />
+          {/* With players in the link it goes straight to the first spin; a blank link opens setup. Closing it leaves this tile to start again. */}
+          <TruthOrDareGame key={hash} defaultOpen autoStart={!!players} players={players} maxPlayers={MAX_SHARED_PLAYERS} />
         </div>
       </section>
     </Layout>
