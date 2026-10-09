@@ -165,3 +165,77 @@ export const DARES: string[] = [
   'Teach everyone one word in your mother tongue.',
   'Describe your dream trip in exactly ten words.',
 ];
+
+// ── Editable content (Admin -> Games -> Stowaway) ──
+// The engine and the online room read WORD_PAIRS / CHALLENGES / DARES directly,
+// so saved edits are applied by replacing the contents of those arrays in place
+// (applyStowawayContent). The built-in lists are captured first so the admin can
+// reset to them.
+
+export interface StowawayPairInput { category: Category; level: Level; a: string; b: string }
+export interface StowawayChallengeInput { id: string; title: string; text: string }
+export interface StowawayContent {
+  pairs: StowawayPairInput[];
+  challenges: StowawayChallengeInput[];
+  dares: string[];
+}
+
+export const STOWAWAY_CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
+export const STOWAWAY_LEVELS = LEVELS.map(l => l.id);
+
+export const STOWAWAY_DEFAULTS: StowawayContent = {
+  pairs: WORD_PAIRS.map(({ category, level, a, b }) => ({ category, level, a, b })),
+  challenges: CHALLENGES.map(c => ({ ...c })),
+  dares: [...DARES],
+};
+
+const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
+
+export function sanitizeStowawayContent(raw: unknown): StowawayContent | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as { pairs?: unknown; challenges?: unknown; dares?: unknown };
+
+  let pairs: StowawayPairInput[] = Array.isArray(r.pairs)
+    ? r.pairs.flatMap((p): StowawayPairInput[] => {
+      const o = (p ?? {}) as Record<string, unknown>;
+      const a = clean(o.a, 40);
+      const b = clean(o.b, 40);
+      const category = o.category as Category;
+      const level = o.level as Level;
+      if (!a || !b || a.toLowerCase() === b.toLowerCase() || !STOWAWAY_CATEGORIES.includes(category) || !STOWAWAY_LEVELS.includes(level)) return [];
+      return [{ category, level, a, b }];
+    })
+    : [];
+  // A round is dealt per level, so every level must keep some pairs.
+  for (const level of STOWAWAY_LEVELS) {
+    if (!pairs.some(p => p.level === level)) pairs = [...pairs, ...STOWAWAY_DEFAULTS.pairs.filter(p => p.level === level)];
+  }
+
+  const used = new Set<string>();
+  const challenges: StowawayChallengeInput[] = Array.isArray(r.challenges)
+    ? r.challenges.flatMap((c): StowawayChallengeInput[] => {
+      const o = (c ?? {}) as Record<string, unknown>;
+      const title = clean(o.title, 40);
+      const text = clean(o.text, 200);
+      if (!title || !text) return [];
+      let id = clean(o.id, 40) || slug(title) || 'challenge';
+      while (used.has(id)) id = `${id}-2`;
+      used.add(id);
+      return [{ id, title, text }];
+    })
+    : [];
+
+  const dares = Array.isArray(r.dares) ? r.dares.map(d => clean(d, 200)).filter(Boolean) : [];
+
+  return {
+    pairs,
+    challenges: challenges.length ? challenges : STOWAWAY_DEFAULTS.challenges,
+    dares: dares.length ? dares : STOWAWAY_DEFAULTS.dares,
+  };
+}
+
+export function applyStowawayContent(c: StowawayContent) {
+  WORD_PAIRS.splice(0, WORD_PAIRS.length, ...c.pairs.map(p => ({ ...p, id: `${slug(p.a)}_${slug(p.b)}` })));
+  CHALLENGES.splice(0, CHALLENGES.length, ...c.challenges);
+  DARES.splice(0, DARES.length, ...c.dares);
+}

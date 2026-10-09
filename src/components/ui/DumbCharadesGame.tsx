@@ -8,8 +8,10 @@ import Modal from './Modal';
 import { useSynth } from './gameAudio';
 import { GameTile, TimerRing, Confetti } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, cleanName } from './gameUi';
+import { useGameContent } from '../../hooks/useGameContent';
 import {
-  CATEGORY_LABELS, categoryOptions, moviesFor, type CharadesCategory, type TamilMovie,
+  CATEGORY_LABELS, CHARADES_DEFAULTS, buildMovies, categoryOptions, moviesFor, sanitizeCharadesContent,
+  type CharadesCategory, type TamilMovie,
 } from './charadesTamilMovies';
 
 // "Dumb Charades": Tamil movies edition. Teams take turns on one phone. The
@@ -94,8 +96,10 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
     try { localStorage.setItem(MUTE_KEY, next ? '1' : '0'); } catch { /* not remembered */ }
   };
 
-  const options = useMemo(() => categoryOptions(category), [category]);
-  const pool = useMemo(() => moviesFor(category, value), [category, value]);
+  const content = useGameContent('charades-tamil', CHARADES_DEFAULTS, sanitizeCharadesContent);
+  const movies = useMemo(() => buildMovies(content.movies), [content]);
+  const options = useMemo(() => categoryOptions(movies, category), [movies, category]);
+  const pool = useMemo(() => moviesFor(movies, category, value), [movies, category, value]);
   const poolOk = pool.length >= MIN_POOL && (category === 'all' || value !== null);
 
   const chosenTeams = useMemo(() => {

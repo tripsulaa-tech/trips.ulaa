@@ -21,6 +21,7 @@ import {
 } from './findMyTwinApi';
 import type { TwinEdge, TwinPhase } from './findMyTwinApi';
 import { useTwinRoom } from './useTwinRoom';
+import { useTwinPromptsSync } from './useGameContentSync';
 
 // "Find My Twin" online: every player uses their own phone. The matching and
 // the secrets live in Supabase (see add_find_my_twin.sql); this file is only the
@@ -51,6 +52,7 @@ interface FindMyTwinOnlineProps {
 // ───────────────────────────── Entry: host or join ─────────────────────────────
 
 export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: FindMyTwinOnlineProps) {
+  useTwinPromptsSync();
   const [muted, setMuted] = useState<boolean>(() => {
     try { return localStorage.getItem(MUTE_KEY) === '1'; } catch { return false; }
   });

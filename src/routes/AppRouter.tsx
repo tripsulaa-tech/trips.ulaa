@@ -141,6 +141,7 @@ const AdminCreatorRateCalculator = lazy(() => import('../admin/AdminCreatorRateC
 const AdminInvoiceGenerator = lazy(() => import('../admin/AdminInvoiceGenerator'));
 const AdminTravelCards = lazy(() => import('../admin/AdminTravelCards'));
 const AdminLogoStudio = lazy(() => import('../admin/AdminLogoStudio'));
+const AdminGames = lazy(() => import('../admin/AdminGames'));
 
 const PageLoader = () => (
   <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
@@ -241,6 +242,9 @@ export default function AppRouter() {
             } />
             <Route path="/admin/travel-cards" element={
               <ProtectedRoute><AdminTravelCards /></ProtectedRoute>
+            } />
+            <Route path="/admin/games" element={
+              <ProtectedRoute><AdminGames /></ProtectedRoute>
             } />
             <Route path="/admin/branding" element={<Navigate to="/admin/logo-studio" replace />} />
             <Route path="/admin/logo-studio" element={

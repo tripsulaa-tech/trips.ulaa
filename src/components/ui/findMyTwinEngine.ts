@@ -45,6 +45,28 @@ const PROMPTS: string[] = [
 
 export const promptFor = (round: number) => PROMPTS[Math.max(0, Math.min(PROMPTS.length - 1, round - 1))];
 
+// ── Editable content (Admin -> Games -> Find My Twin) ──
+// Only these conversation starters are editable. The questions themselves are
+// scored by the database in a fixed order, so they stay as they are.
+export interface TwinPromptsContent { prompts: string[] }
+export const TWIN_PROMPTS_DEFAULTS: TwinPromptsContent = { prompts: [...PROMPTS] };
+export const TWIN_MAX_PROMPTS = MAX_ROUNDS;
+
+export function sanitizeTwinPrompts(raw: unknown): TwinPromptsContent | null {
+  const list = (raw as { prompts?: unknown } | null)?.prompts;
+  if (!Array.isArray(list)) return null;
+  const prompts = list
+    .map(p => (typeof p === 'string' ? p.replace(/\s+/g, ' ').trim().slice(0, 200) : ''))
+    .filter(Boolean)
+    .slice(0, TWIN_MAX_PROMPTS);
+  return prompts.length ? { prompts } : null;
+}
+
+/** Swaps the live prompts in place; `promptFor` reads them on every call. */
+export function applyTwinPrompts(c: TwinPromptsContent) {
+  PROMPTS.splice(0, PROMPTS.length, ...c.prompts);
+}
+
 /** The '01101' string the database stores. */
 export const encodeAnswers = (picks: Array<0 | 1>) => picks.join('');
 

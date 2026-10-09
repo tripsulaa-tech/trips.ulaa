@@ -27,6 +27,7 @@ import {
 } from './stowawayRoomApi';
 import type { OnlinePhase } from './stowawayRoomApi';
 import { useOnlineRoom } from './useOnlineRoom';
+import { useStowawayContentSync } from './useGameContentSync';
 
 // "Stowaway" online: every player uses their own phone. The rules and secrets
 // live in Supabase (see add_stowaway_online.sql); this file is only the screens.
@@ -64,6 +65,7 @@ interface StowawayOnlineProps {
 // ───────────────────────────── Entry: host or join ─────────────────────────────
 
 export default function StowawayOnline({ tripTitle, initialCode, onExit }: StowawayOnlineProps) {
+  useStowawayContentSync();
   const [muted, setMuted] = useState<boolean>(() => {
     try { return localStorage.getItem(MUTE_KEY) === '1'; } catch { return false; }
   });

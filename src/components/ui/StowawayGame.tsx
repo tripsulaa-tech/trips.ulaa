@@ -24,6 +24,7 @@ import {
   computeAwards, emptyStats, loadSetup, saveSetup, uniqueNames, shuffle,
 } from './stowawayEngine';
 import type { Seat, Role, Outcome, PlayerStats, RoundSetup } from './stowawayEngine';
+import { useStowawayContentSync } from './useGameContentSync';
 
 // "Stowaway": a group bluffing game for Coming Soon trips. Two ways to play:
 // pass-and-play on one phone (this file), or online with a room code where
@@ -61,6 +62,7 @@ interface StowawayGameProps {
 }
 
 export default function StowawayGame({ tripSlug, tripTitle, className = '', compact = false, thumb = false }: StowawayGameProps) {
+  useStowawayContentSync();
   const reduce = useReducedMotion();
 
   // ── Setup (saved on this device) ──

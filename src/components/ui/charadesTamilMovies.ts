@@ -3,9 +3,11 @@
 // Multiple names are comma-separated; Comedians (and Heroines for heroine-less
 // films) may be left empty. Spell each person the same way everywhere, because
 // the category pickers are built by matching these strings exactly.
-// Add films freely: categories (decade / hero / heroine / director / comedian)
-// update automatically, and a person only gets their own category entry once
-// they have MIN_PER_CATEGORY films here.
+// These are the built-in films. The admin can replace the whole list in
+// Admin -> Games -> Dumb Charades (see sanitizeMovies); categories (decade /
+// hero / heroine / director / comedian) are rebuilt from whichever list is
+// live, and a person only gets their own category entry once they have
+// MIN_PER_CATEGORY films in it.
 
 const RAW = `
 Parasakthi|1952|Sivaji Ganesan|Pandari Bai|Krishnan-Panju|
@@ -301,36 +303,71 @@ Coolie|2025|Rajinikanth|Shruti Haasan|Lokesh Kanagaraj|
 Madharaasi|2025|Sivakarthikeyan|Rukmini Vasanth|A. R. Murugadoss|
 `;
 
-export interface TamilMovie {
-  id: number;
+export interface MovieInput {
   title: string;
   year: number;
-  decade: string;
   heroes: string[];
   heroines: string[];
   director: string;
   comedians: string[];
 }
 
+export interface TamilMovie extends MovieInput {
+  id: number;
+  decade: string;
+}
+
 const split = (s: string) => s.split(',').map(x => x.trim()).filter(Boolean);
 
-export const TAMIL_MOVIES: TamilMovie[] = RAW.split('\n')
+/** The films that ship with the app, as editable records. */
+export const DEFAULT_MOVIE_INPUTS: MovieInput[] = RAW.split('\n')
   .map(l => l.trim())
   .filter(Boolean)
-  .map((line, id) => {
+  .map(line => {
     const [title, year, heroes, heroines, director, comedians] = line.split('|');
-    const y = Number(year);
     return {
-      id,
       title: title.trim(),
-      year: y,
-      decade: `${Math.floor(y / 10) * 10}s`,
+      year: Number(year),
       heroes: split(heroes ?? ''),
       heroines: split(heroines ?? ''),
       director: (director ?? '').trim(),
       comedians: split(comedians ?? ''),
     };
   });
+
+export const MIN_YEAR = 1930;
+export const MAX_YEAR = 2100;
+
+export function buildMovies(list: MovieInput[]): TamilMovie[] {
+  return list.map((m, id) => ({ ...m, id, decade: `${Math.floor(m.year / 10) * 10}s` }));
+}
+
+export const TAMIL_MOVIES: TamilMovie[] = buildMovies(DEFAULT_MOVIE_INPUTS);
+
+// ── Editable content (Admin -> Games -> Dumb Charades) ──
+export interface CharadesContent { movies: MovieInput[] }
+export const CHARADES_DEFAULTS: CharadesContent = { movies: DEFAULT_MOVIE_INPUTS };
+
+const text = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
+const names = (v: unknown) => (Array.isArray(v) ? v.map(x => text(x, 60)).filter(Boolean).slice(0, 8) : []);
+
+/** Cleans one film; null when it has no title or a believable year. */
+export function cleanMovie(raw: unknown): MovieInput | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const m = raw as Record<string, unknown>;
+  const title = text(m.title, 80);
+  const year = Math.round(Number(m.year));
+  if (!title || !Number.isFinite(year) || year < MIN_YEAR || year > MAX_YEAR) return null;
+  return { title, year, heroes: names(m.heroes), heroines: names(m.heroines), director: text(m.director, 60), comedians: names(m.comedians) };
+}
+
+/** Cleans a saved list. Needs at least a handful of films, otherwise the built-in list stays. */
+export function sanitizeCharadesContent(raw: unknown): CharadesContent | null {
+  const list = (raw as { movies?: unknown } | null)?.movies;
+  if (!Array.isArray(list)) return null;
+  const movies = list.map(cleanMovie).filter((m): m is MovieInput => m !== null);
+  return movies.length >= 5 ? { movies } : null;
+}
 
 export type CharadesCategory = 'all' | 'decade' | 'hero' | 'heroine' | 'director' | 'comedian';
 
@@ -361,10 +398,10 @@ export interface CategoryOption { value: string; count: number }
 
 /** Choices for a category, e.g. every hero with enough films. Decades are
  *  sorted oldest first; people by number of films (then name). */
-export function categoryOptions(cat: CharadesCategory): CategoryOption[] {
+export function categoryOptions(movies: TamilMovie[], cat: CharadesCategory): CategoryOption[] {
   if (cat === 'all') return [];
   const counts = new Map<string, number>();
-  for (const m of TAMIL_MOVIES) {
+  for (const m of movies) {
     for (const v of new Set(valuesOf(m, cat))) counts.set(v, (counts.get(v) ?? 0) + 1);
   }
   const list = [...counts.entries()]
@@ -375,7 +412,7 @@ export function categoryOptions(cat: CharadesCategory): CategoryOption[] {
     : list.sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
 }
 
-export function moviesFor(cat: CharadesCategory, value: string | null): TamilMovie[] {
-  if (cat === 'all' || !value) return TAMIL_MOVIES;
-  return TAMIL_MOVIES.filter(m => valuesOf(m, cat).includes(value));
+export function moviesFor(movies: TamilMovie[], cat: CharadesCategory, value: string | null): TamilMovie[] {
+  if (cat === 'all' || !value) return movies;
+  return movies.filter(m => valuesOf(m, cat).includes(value));
 }
