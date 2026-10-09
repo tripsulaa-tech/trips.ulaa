@@ -15,7 +15,7 @@ import {
   GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName,
   loadPlayerName, savePlayerName, MAX_NAME,
 } from './gameUi';
-import { QUESTIONS, MAX_ROUNDS, MIN_PLAYERS, promptFor, encodeAnswers, matchTitle } from './findMyTwinEngine';
+import { QUESTIONS, getMaxRounds, MIN_PLAYERS, promptFor, encodeAnswers, matchTitle } from './findMyTwinEngine';
 import {
   twin, TwinError, twinJoinLink, normalizeTwinCode, loadTwinSession, saveTwinSession, clearTwinSession,
 } from './findMyTwinApi';
@@ -262,9 +262,9 @@ function Quiz({ onSubmit, busy, play }: { onSubmit: (answers: string) => void; b
   return (
     <div className="text-center">
       <p className={eyebrow}>{reviewing ? 'All done' : `Question ${idx + 1} of ${QUESTIONS.length}`}</p>
-      <div className="flex justify-center gap-1.5 mt-2 mb-4" aria-hidden="true">
+      <div className="flex flex-wrap justify-center gap-1.5 mt-2 mb-4" aria-hidden="true">
         {QUESTIONS.map((_, i) => (
-          <span key={i} className={`h-1.5 rounded-full transition-all ${i < idx ? 'w-6 bg-[#F0CE7A]' : i === idx ? 'w-8 bg-white' : 'w-6 bg-white/15'}`} />
+          <span key={i} className={`h-1.5 rounded-full transition-all ${QUESTIONS.length > 10 ? (i < idx ? 'w-4 bg-[#F0CE7A]' : i === idx ? 'w-6 bg-white' : 'w-4 bg-white/15') : (i < idx ? 'w-6 bg-[#F0CE7A]' : i === idx ? 'w-8 bg-white' : 'w-6 bg-white/15')}`} />
         ))}
       </div>
 
@@ -550,7 +550,8 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const answeredCount = players.filter(p => p.answered).length;
   const allAnswered = players.length >= MIN_PLAYERS && answeredCount === players.length;
   const progress = state.progress;
-  const isLast = room.round_no >= MAX_ROUNDS;
+  const maxRounds = getMaxRounds();
+  const isLast = room.round_no >= maxRounds;
 
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(shareText); setCopied(true); window.setTimeout(() => setCopied(false), 1600); }
@@ -657,7 +658,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
         <div>
           <div className="flex items-end justify-between mb-3">
             <div>
-              <p className={eyebrow}>Round {room.round_no} of {MAX_ROUNDS}</p>
+              <p className={eyebrow}>Round {room.round_no} of {maxRounds}</p>
               <h2 className="font-display text-2xl font-extrabold text-white leading-tight">{edges.length > 0 ? 'Go find your twin' : 'Sit tight'}</h2>
             </div>
             <span className="inline-flex items-center rounded-full bg-white/10 border border-white/15 px-2.5 py-1 text-[11px] font-bold text-cream/80 tabular-nums">

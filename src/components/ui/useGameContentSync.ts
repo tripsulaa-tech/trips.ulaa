@@ -14,5 +14,7 @@ export function useStowawayContentSync() {
 
 export function useTwinPromptsSync() {
   const content = useGameContent('twin-prompts', TWIN_PROMPTS_DEFAULTS, sanitizeTwinPrompts);
+  // Applied during render as well (it is idempotent) so the first screen already shows the edited questions.
+  applyTwinPrompts(content);
   useEffect(() => { applyTwinPrompts(content); }, [content]);
 }

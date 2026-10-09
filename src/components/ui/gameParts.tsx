@@ -115,11 +115,13 @@ export function TimerRing({ secondsLeft, progress, lowAt = 5 }: { secondsLeft: n
 
 // Entry tile used on Coming Soon cards and trip pages. `compact` is the
 // small vertical version for the two-up grid on trip cards.
-export function GameTile({ onClick, compact, thumb, Icon, iconSrc, title, subtitle, chip, accent }: {
+export function GameTile({ onClick, compact, thumb, row, Icon, iconSrc, title, subtitle, chip, accent }: {
   onClick: () => void;
   compact?: boolean;
   /** App-icon style: big icon thumbnail with the name underneath. */
   thumb?: boolean;
+  /** One slim full-width row (icon, name, Play). Used in the admin Games page. */
+  row?: boolean;
   Icon?: PhosphorIcon;
   /** Custom artwork (image URL) shown instead of `Icon`, on a dark tile. */
   iconSrc?: string;
@@ -164,6 +166,22 @@ export function GameTile({ onClick, compact, thumb, Icon, iconSrc, title, subtit
           <span className="block font-display text-[11px] sm:text-lg font-extrabold leading-tight text-dark">{title}</span>
           <span className="block text-[9px] leading-tight sm:text-xs text-dark-muted mt-0.5">{subtitle}</span>
         </span>
+      </motion.button>
+    );
+  }
+
+  if (row) {
+    return (
+      <motion.button type="button" onClick={onClick} onPointerDown={press} whileTap={tapAnim} className={`${shell} p-2.5 flex items-center gap-3 touch-manipulation [-webkit-tap-highlight-color:transparent]`}>
+        {glows}
+        <span className={`relative w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br ${medallion} flex items-center justify-center`} aria-hidden="true">
+          {iconSrc ? <img src={iconSrc} alt="" className="w-6 h-6 object-contain" draggable={false} /> : Icon && <Icon size={24} weight="duotone" />}
+        </span>
+        <span className="relative block min-w-0 flex-1">
+          <span className="block font-display text-[15px] font-extrabold leading-tight text-white">{title}</span>
+          <span className="block text-[11px] text-cream/60 truncate">{subtitle}</span>
+        </span>
+        <span className="relative shrink-0 rounded-full bg-white/10 border border-white/20 px-3.5 py-1.5 text-xs font-bold text-[#F0CE7A]">Play</span>
       </motion.button>
     );
   }

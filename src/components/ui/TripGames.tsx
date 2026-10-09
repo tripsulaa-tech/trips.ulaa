@@ -1,14 +1,10 @@
 import PackBagGame from './PackBagGame';
 import TravelMatchGame from './TravelMatchGame';
-import StowawayGame from './StowawayGame';
-import FindMyTwinGame from './FindMyTwinGame';
-import DumbCharadesGame from './DumbCharadesGame';
 
 // The mini-games, shown on the Games page (`page` layout; `card` is a compact
-// two-up variant kept for reuse). The group game
-// (Stowaway) takes a full-width row of its own beneath the solo games.
-// Find My Twin is the other group game (everyone on their own phone).
-// Truth or Dare is admin-hosted now (Admin -> Games), so it is not listed here.
+// two-up variant kept for reuse).
+// Truth or Dare, Stowaway, Find My Twin and Dumb Charades are admin-hosted now
+// (Admin -> Games), so they are not listed here.
 interface TripGamesProps {
   tripId: string;
   tripSlug: string;
@@ -22,12 +18,9 @@ export default function TripGames({ tripId, tripSlug, tripTitle, coverImage, lay
   const compact = layout === 'card';
   if (layout === 'thumb') {
     return (
-      <div className={`grid grid-cols-3 sm:grid-cols-5 gap-x-1.5 gap-y-5 sm:gap-x-3 sm:gap-6 items-start ${className}`}>
+      <div className={`grid grid-cols-2 gap-x-1.5 gap-y-5 sm:gap-x-3 sm:gap-6 items-start ${className}`}>
         <PackBagGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} coverImage={coverImage} thumb />
         <TravelMatchGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} thumb />
-        <StowawayGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} thumb />
-        <FindMyTwinGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} thumb />
-        <DumbCharadesGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} thumb />
       </div>
     );
   }
@@ -35,9 +28,6 @@ export default function TripGames({ tripId, tripSlug, tripTitle, coverImage, lay
     <div className={`grid gap-2.5 ${compact ? 'grid-cols-2' : 'sm:grid-cols-2 gap-3'} ${className}`}>
       <PackBagGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} coverImage={coverImage} compact={compact} />
       <TravelMatchGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} compact={compact} />
-      <FindMyTwinGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} compact={compact} />
-      <DumbCharadesGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} compact={compact} />
-      <StowawayGame tripId={tripId} tripSlug={tripSlug} tripTitle={tripTitle} className={compact ? 'col-span-2' : 'sm:col-span-2'} />
     </div>
   );
 }

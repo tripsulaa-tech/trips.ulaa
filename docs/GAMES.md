@@ -49,9 +49,20 @@ Follow this when adding or changing a game, so every game looks, sounds and feel
 4. Use `useSynth`, shared buttons and parts. No new colours or fonts.
 5. Check: phone width, full screen, mute, pause, reduced motion, `tsc` and `eslint` clean.
 
+## Admin-hosted games (Truth or Dare, Stowaway, Dumb Charades, Find My Twin)
+These four are not on the public `/games` page. An admin hosts them from Admin -> Games -> Play:
+- Pick a trip once at the top (upcoming or in-progress only). Its booked travellers are listed; if anyone is checked in only they start ticked, otherwise everyone does. Tick or untick. Code: `src/admin/games/useTripRoster.ts` and `TripRoster.tsx`.
+- Under it, each game has a card (`GameCard.tsx`): its tile to play on this phone, and a share link.
+  - Truth or Dare and Stowaway (`RosterGameCard.tsx`, thin wrappers `TruthOrDareHost.tsx` / `StowawayHost.tsx`) are dealt the ticked names. "Make share link" saves first names under a short code; "Update link" keeps the code after the ticks change.
+    - Truth or Dare: `/play/truth-or-dare/:code`, `supabase/migration/add_truth_or_dare_share_links.sql`, page `TruthOrDarePlayPage.tsx`.
+    - Stowaway: `/play/stowaway/game/:code`, `supabase/migration/add_stowaway_share_links.sql` (run it once in the Supabase SQL editor), page `StowawayPlayPage.tsx`, API `services/api/stowawayShare.ts`. Takes 3 to 15 players. Its online mode (room codes, `/play/stowaway/:code`) is still on the tile.
+  - Dumb Charades and Find My Twin (`LinkGameHost.tsx`) need no player list, so they get a plain link: `/play/dumb-charades` (page `DumbCharadesPlayPage.tsx`) and `/play/twin` (join page; room invite links `/play/twin/:code` come from inside the game). No database setup.
+- The other tabs ("Edit ...") change the questions, dares and word lists.
+- Props: `defaultOpen` (open on the setup screen) on Truth or Dare, Stowaway and Dumb Charades; `players` (names to pre-fill) on Truth or Dare and Stowaway.
+
 ## Online group games (Stowaway, Find My Twin)
 These two need Supabase (everyone uses their own phone), so they are the exception to "front-end only".
-- Stowaway: `supabase/migration/add_stowaway_online.sql`, join link `/play/stowaway/:code`.
+- Stowaway (hosted from Admin -> Games, see above): `supabase/migration/add_stowaway_online.sql`, online join link `/play/stowaway/:code`.
 - Find My Twin: `supabase/migration/add_find_my_twin.sql`, join link `/play/twin/:code`. Run the SQL once in the Supabase SQL editor before using the game.
   - Files: `FindMyTwinGame.tsx` (tile + intro), `FindMyTwinOnline.tsx` (all room screens), `findMyTwinApi.ts` (calls), `useTwinRoom.ts` (live sync), `findMyTwinEngine.ts` (questions + prompts), `pages/FindMyTwinJoinPage.tsx`.
   - Flow: everyone answers 5 questions, host reveals, the database pairs people (best match first), each phone shows "You + Name, 92% match, Find Name!", both tap "I found", a conversation prompt unlocks, both tap "We talked", anyone unlocks the next round (new twin, never a repeat). 4 rounds max.

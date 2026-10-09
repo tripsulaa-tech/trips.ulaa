@@ -80,7 +80,7 @@ const MESSAGES: Record<string, string> = {
   room_not_found: 'That room code was not found. Check it and try again.',
   room_locked: 'The host has locked this room.',
   game_started: 'That game has already started. Ask the host to open the next lobby.',
-  room_full: 'This room is full (12 players).',
+  room_full: 'This room is full (15 players).',
   name_required: 'Please type your name.',
   host_only: 'Only the host can do that.',
   not_your_turn: 'It is not your turn.',

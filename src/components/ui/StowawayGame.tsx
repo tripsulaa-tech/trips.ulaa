@@ -53,26 +53,46 @@ const ROLE_TONE: Record<Role, string> = {
 };
 
 interface StowawayGameProps {
-  tripId: string;
-  tripSlug: string;
-  tripTitle: string;
+  tripId?: string;
+  tripSlug?: string;
+  tripTitle?: string;
   className?: string;
   compact?: boolean;
   thumb?: boolean;
+  /** Slim one-line tile (admin Games page). */
+  row?: boolean;
+  /** Names to pre-fill the setup screen with (e.g. the travellers present on a trip). */
+  players?: string[];
+  /** Open straight on the pass-and-play setup screen (used by the shared /play/stowaway/game link). */
+  defaultOpen?: boolean;
 }
 
-export default function StowawayGame({ tripSlug, tripTitle, className = '', compact = false, thumb = false }: StowawayGameProps) {
+/** Preset names, cleaned and capped. Empty when none were given. */
+const presetNames = (preset?: string[]): string[] =>
+  (preset ?? []).map(cleanName).filter(Boolean).slice(0, MAX_PLAYERS);
+
+/** The name rows for the setup screen: the preset list, else the saved one. */
+const rowsFor = (preset: string[] | undefined, saved: string[]): string[] => {
+  const list = presetNames(preset);
+  if (!list.length) return saved;
+  const rows = list.slice();
+  while (rows.length < MIN_PLAYERS) rows.push('');
+  return rows;
+};
+
+export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', className = '', compact = false, thumb = false, row = false, players: presetPlayers, defaultOpen = false }: StowawayGameProps) {
   useStowawayContentSync();
   const reduce = useReducedMotion();
 
   // ── Setup (saved on this device) ──
   const [initial] = useState(loadSetup);
-  const [open, setOpen] = useState(false);
-  const [phase, setPhase] = useState<Phase>('idle');
+  const hasPreset = presetNames(presetPlayers).length > 0;
+  const [open, setOpen] = useState(defaultOpen);
+  const [phase, setPhase] = useState<Phase>(defaultOpen ? 'setup' : 'idle');
   const [savedRoom, setSavedRoom] = useState<string | null>(null);
-  const [names, setNames] = useState<string[]>(initial.names);
-  const [stowaways, setStowaways] = useState(initial.stowaways);
-  const [lost, setLost] = useState(initial.lost);
+  const [names, setNames] = useState<string[]>(() => rowsFor(presetPlayers, initial.names));
+  const [stowaways, setStowaways] = useState(() => (hasPreset ? clampRoles(Math.max(MIN_PLAYERS, presetNames(presetPlayers).length), initial.stowaways, initial.lost).stowaways : initial.stowaways));
+  const [lost, setLost] = useState(() => (hasPreset ? clampRoles(Math.max(MIN_PLAYERS, presetNames(presetPlayers).length), initial.stowaways, initial.lost).lost : initial.lost));
   const [hideCounts, setHideCounts] = useState(initial.hideCounts);
   const [level, setLevel] = useState<Level>(initial.level);
   const [useChallenges, setUseChallenges] = useState(initial.challenges);
@@ -118,10 +138,29 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
   const counts = countsFor(Math.max(playerCount, MIN_PLAYERS), stowaways, lost);
   const valid = playerCount >= MIN_PLAYERS && rolesValid(playerCount, stowaways, lost);
 
-  // Persist setup as it changes.
+  // The roster changed (another trip picked, someone ticked present/absent):
+  // refill the setup list and keep the role counts valid. Only the setup
+  // fields change, so a running game is never disturbed.
+  const presetKey = presetNames(presetPlayers).join('\u0001');
+  const [seenPresetKey, setSeenPresetKey] = useState(presetKey);
+  if (seenPresetKey !== presetKey) {
+    setSeenPresetKey(presetKey);
+    if (presetKey) {
+      const list = presetNames(presetPlayers);
+      setNames(rowsFor(presetPlayers, []));
+      if (list.length >= MIN_PLAYERS) {
+        const r = clampRoles(list.length, stowaways, lost);
+        setStowaways(r.stowaways);
+        setLost(r.lost);
+      }
+    }
+  }
+
+  // Persist setup as it changes. A roster handed in by the host is not
+  // remembered as this device's own list of names.
   useEffect(() => {
-    saveSetup({ names, stowaways, lost, hideCounts, level, challenges: useChallenges, dares: useDares });
-  }, [names, stowaways, lost, hideCounts, level, useChallenges, useDares]);
+    saveSetup({ names: hasPreset ? initial.names : names, stowaways, lost, hideCounts, level, challenges: useChallenges, dares: useDares });
+  }, [names, stowaways, lost, hideCounts, level, useChallenges, useDares, hasPreset, initial.names]);
 
   useEffect(() => () => {
     timersRef.current.forEach(id => window.clearTimeout(id));
@@ -408,6 +447,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
         onClick={() => { setSavedRoom(loadOnlineSession()?.code ?? null); setOpen(true); setPhase('idle'); }}
         compact={compact}
         thumb={thumb}
+        row={row}
         iconSrc={stowawayCat}
         accent="gold"
         title="Stowaway"
@@ -433,7 +473,7 @@ export default function StowawayGame({ tripSlug, tripTitle, className = '', comp
               >
                 <img src={stowawayCat} alt="" className="w-12 h-12 object-contain" draggable={false} />
               </motion.div>
-              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · 3 to 12 players</span>
+              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · {MIN_PLAYERS} to {MAX_PLAYERS} players</span>
               <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white leading-tight">Stowaway</h2>
               <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Play on one phone, or online with a room code. Someone sneaked aboard with the wrong plan. Can you spot them?</p>
               </div>

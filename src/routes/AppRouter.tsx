@@ -122,6 +122,8 @@ const ContactPage = lazy(() => import('../pages/ContactPage'));
 const GamesPage = lazy(() => import('../pages/GamesPage'));
 const TruthOrDarePlayPage = lazy(() => import('../pages/TruthOrDarePlayPage'));
 const StowawayJoinPage = lazy(() => import('../pages/StowawayJoinPage'));
+const StowawayPlayPage = lazy(() => import('../pages/StowawayPlayPage'));
+const DumbCharadesPlayPage = lazy(() => import('../pages/DumbCharadesPlayPage'));
 const FindMyTwinJoinPage = lazy(() => import('../pages/FindMyTwinJoinPage'));
 
 // Admin Pages
@@ -189,8 +191,11 @@ export default function AppRouter() {
             <Route path="/games" element={<GamesPage />} />
             <Route path="/play/truth-or-dare" element={<TruthOrDarePlayPage />} />
             <Route path="/play/truth-or-dare/:code" element={<TruthOrDarePlayPage />} />
+            <Route path="/play/stowaway/game" element={<StowawayPlayPage />} />
+            <Route path="/play/stowaway/game/:code" element={<StowawayPlayPage />} />
             <Route path="/play/stowaway" element={<StowawayJoinPage />} />
             <Route path="/play/stowaway/:code" element={<StowawayJoinPage />} />
+            <Route path="/play/dumb-charades" element={<DumbCharadesPlayPage />} />
             <Route path="/play/twin" element={<FindMyTwinJoinPage />} />
             <Route path="/play/twin/:code" element={<FindMyTwinJoinPage />} />
 

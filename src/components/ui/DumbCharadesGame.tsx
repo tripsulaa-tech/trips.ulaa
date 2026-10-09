@@ -33,12 +33,16 @@ type Phase = 'idle' | 'setup' | 'handoff' | 'acting' | 'turnEnd' | 'final';
 interface Result { movie: TamilMovie; got: boolean }
 
 interface Props {
-  tripId: string;
-  tripSlug: string;
-  tripTitle: string;
+  tripId?: string;
+  tripSlug?: string;
+  tripTitle?: string;
   className?: string;
   compact?: boolean;
   thumb?: boolean;
+  /** Slim one-line tile (admin Games page). */
+  row?: boolean;
+  /** Open straight on the setup screen (used by the shared /play/dumb-charades link). */
+  defaultOpen?: boolean;
 }
 
 function shuffled<T>(list: T[]): T[] {
@@ -62,9 +66,9 @@ const Chip = ({ active, onClick, children }: { active: boolean; onClick: () => v
   </button>
 );
 
-export default function DumbCharadesGame({ className = '', compact = false, thumb = false }: Props) {
+export default function DumbCharadesGame({ className = '', compact = false, thumb = false, row = false, defaultOpen = false }: Props) {
   const reduce = useReducedMotion();
-  const [phase, setPhase] = useState<Phase>('idle');
+  const [phase, setPhase] = useState<Phase>(defaultOpen ? 'setup' : 'idle');
   const [teamNames, setTeamNames] = useState<string[]>(['', '']);
   const [seconds, setSeconds] = useState<number>(90);
   const [rounds, setRounds] = useState<number>(3);
@@ -195,6 +199,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
         onClick={() => setPhase('setup')}
         compact={compact}
         thumb={thumb}
+        row={row}
         Icon={FilmSlate}
         accent="gold"
         title="Dumb Charades"

@@ -54,6 +54,8 @@ interface Props {
   className?: string;
   compact?: boolean;
   thumb?: boolean;
+  /** Slim one-line tile (admin Games page). */
+  row?: boolean;
   /** Names to pre-fill the setup screen with (e.g. the travellers present on a trip). */
   players?: string[];
   /** Upper limit on players; defaults to MAX_PLAYERS. */
@@ -87,7 +89,7 @@ const initialNames = (preset?: string[], max = MAX_PLAYERS): string[] => {
   return list.length ? list : ['', ''];
 };
 
-export default function TruthOrDareGame({ className = '', compact = false, thumb = false, players: presetPlayers, maxPlayers = MAX_PLAYERS, defaultOpen = false }: Props) {
+export default function TruthOrDareGame({ className = '', compact = false, thumb = false, row = false, players: presetPlayers, maxPlayers = MAX_PLAYERS, defaultOpen = false }: Props) {
   const reduce = useReducedMotion();
   const [phase, setPhase] = useState<Phase>(defaultOpen ? 'setup' : 'idle');
   const [names, setNames] = useState<string[]>(() => initialNames(presetPlayers, maxPlayers));
@@ -335,6 +337,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
         onClick={() => setPhase('setup')}
         compact={compact}
         thumb={thumb}
+        row={row}
         Icon={Sparkle}
         accent="primary"
         title="Truth or Dare"

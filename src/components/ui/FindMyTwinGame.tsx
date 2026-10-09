@@ -8,6 +8,7 @@ import { primaryBtn, ghostBtn, glass } from './gameUi';
 import FindMyTwinOnline from './FindMyTwinOnline';
 import { loadTwinSession } from './findMyTwinApi';
 import { QUESTIONS } from './findMyTwinEngine';
+import { useTwinPromptsSync } from './useGameContentSync';
 
 // "Find My Twin": a get-to-know-each-other game for a group in the same place.
 // Everyone answers quick this-or-that questions on their own phone. The
@@ -20,16 +21,19 @@ import { QUESTIONS } from './findMyTwinEngine';
 const MUTE_KEY = 'ulaa:packbag:muted'; // one sound setting for all the games
 
 interface FindMyTwinGameProps {
-  tripId: string;
-  tripSlug: string;
-  tripTitle: string;
+  tripId?: string;
+  tripSlug?: string;
+  tripTitle?: string;
   className?: string;
   compact?: boolean;
   thumb?: boolean;
+  /** Slim one-line tile (admin Games page). */
+  row?: boolean;
 }
 
-export default function FindMyTwinGame({ tripTitle, className = '', compact = false, thumb = false }: FindMyTwinGameProps) {
+export default function FindMyTwinGame({ tripTitle = 'Ulaa', className = '', compact = false, thumb = false, row = false }: FindMyTwinGameProps) {
   const reduce = useReducedMotion();
+  useTwinPromptsSync();
   const [open, setOpen] = useState(false);
   const [online, setOnline] = useState(false);
   const [savedRoom, setSavedRoom] = useState<string | null>(null);
@@ -54,6 +58,7 @@ export default function FindMyTwinGame({ tripTitle, className = '', compact = fa
         onClick={() => { setSavedRoom(loadTwinSession()?.code ?? null); setOnline(false); setOpen(true); }}
         compact={compact}
         thumb={thumb}
+        row={row}
         Icon={Users}
         accent="gold"
         title="Find My Twin"
@@ -86,7 +91,7 @@ export default function FindMyTwinGame({ tripTitle, className = '', compact = fa
 
                 <ul className={`${glass} text-left divide-y divide-white/10 mb-4`}>
                   {[
-                    { I: Heart, c: 'bg-primary/25 text-[#F4B183]', t: <>Pick <strong className="text-white">Beach or Mountain, Tea or Coffee</strong> and {QUESTIONS.length - 2} more.</> },
+                    { I: Heart, c: 'bg-primary/25 text-[#F4B183]', t: <>Pick <strong className="text-white">{QUESTIONS[0].left.label} or {QUESTIONS[0].right.label}, {QUESTIONS[1].left.label} or {QUESTIONS[1].right.label}</strong> and {QUESTIONS.length - 2} more.</> },
                     { I: MagnifyingGlass, c: 'bg-gold/20 text-[#F0CE7A]', t: <>ULAA says <strong className="text-white">"You + Ulaa, 92% match. Find Ulaa!"</strong></> },
                     { I: ChatCircleDots, c: 'bg-secondary/25 text-[#F4B183]', t: <>Meet, answer a question together, and <strong className="text-white">unlock the next round</strong>.</> },
                   ].map((r, i) => (

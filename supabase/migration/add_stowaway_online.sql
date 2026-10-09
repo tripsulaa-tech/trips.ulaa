@@ -144,7 +144,7 @@ end $$;
 
 create or replace function public._sw_roles_valid(n int, s int, l int)
 returns boolean language sql immutable as $$
-  select n between 3 and 12 and s >= 1 and l >= 0
+  select n between 3 and 15 and s >= 1 and l >= 0
      and l <= (case when n >= 10 then 2 else 1 end)
      and (n - s - l) > (s + l);
 $$;
@@ -360,7 +360,7 @@ begin
   if r.locked then raise exception 'room_locked'; end if;
   if r.phase <> 'lobby' then raise exception 'game_started'; end if;
   select count(*) into n from stowaway_players where room_id = r.id;
-  if n >= 12 then raise exception 'room_full'; end if;
+  if n >= 15 then raise exception 'room_full'; end if;
 
   base := v_name;
   while exists (select 1 from stowaway_players where room_id = r.id and lower(name) = lower(v_name)) loop

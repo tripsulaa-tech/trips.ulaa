@@ -8,7 +8,7 @@ import type { Category, Challenge, Level, WordPair } from './stowawayWords';
 export type Role = 'explorer' | 'stowaway' | 'lost';
 
 export const MIN_PLAYERS = 3;
-export const MAX_PLAYERS = 12;
+export const MAX_PLAYERS = 15;
 
 export const POINTS = { explorerWin: 2, stowawaySurvive: 3, lostSteal: 4 } as const;
 
