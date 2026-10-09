@@ -60,8 +60,6 @@ interface Props {
   maxPlayers?: number;
   /** Open straight on the setup screen (used by the shared /play/truth-or-dare link). */
   defaultOpen?: boolean;
-  /** With players preset, skip setup and go straight to the first spin (Heat up, spin the bottle). */
-  autoStart?: boolean;
 }
 
 function shuffled<T>(list: T[]): T[] {
@@ -89,7 +87,7 @@ const initialNames = (preset?: string[], max = MAX_PLAYERS): string[] => {
   return list.length ? list : ['', ''];
 };
 
-export default function TruthOrDareGame({ className = '', compact = false, thumb = false, players: presetPlayers, maxPlayers = MAX_PLAYERS, defaultOpen = false, autoStart = false }: Props) {
+export default function TruthOrDareGame({ className = '', compact = false, thumb = false, players: presetPlayers, maxPlayers = MAX_PLAYERS, defaultOpen = false }: Props) {
   const reduce = useReducedMotion();
   const [phase, setPhase] = useState<Phase>(defaultOpen ? 'setup' : 'idle');
   const [names, setNames] = useState<string[]>(() => initialNames(presetPlayers, maxPlayers));
@@ -184,15 +182,6 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
     setRot(0);
     if (spinMode) { setCurrent(0); setPhase('spin'); } else { setCurrent(0); setPhase('pick'); }
   };
-
-  // Shared link with the admin's players: land straight in the game. "New game"
-  // on the end screen still goes back to setup to change heat or turn order.
-  const autoStarted = useRef(false);
-  useEffect(() => {
-    if (!autoStart || autoStarted.current || !canStart) return;
-    autoStarted.current = true;
-    start();
-  });
 
   // Picks the next player: never the same twice in a row, favouring fewer turns.
   const choosePlayer = (): number => {
