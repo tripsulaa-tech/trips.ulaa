@@ -3,7 +3,9 @@
 // (supabase/migration/add_find_my_twin.sql). This file only calls those
 // functions, listens for live changes and remembers which room this device is
 // sitting in. A phone only ever receives its OWN twin(s): other players'
-// answers and scores never reach the browser.
+// answers and scores never reach the browser. The room and player tables are
+// private (supabase/migration/harden_find_my_twin.sql); live changes come from
+// the tiny public `ftwin_signal` table instead.
 
 import { supabase } from '../../services/supabase';
 import { SITE_ORIGIN } from '../../constants/site';
@@ -69,6 +71,7 @@ const MESSAGES: Record<string, string> = {
   too_many_rooms: 'Lots of games are running right now. Try again in a minute.',
   host_present: 'The host is still here.',
   name_not_listed: 'Please tap your name from the list.',
+  nobody_away: 'Nobody looks away right now.',
 };
 
 export class TwinError extends Error {
@@ -132,7 +135,8 @@ export const twin = {
   done: (code: string, edge: string) => rpc('ftwin_done', { p_code: code, p_token: t(), p_edge: edge }),
   nextRound: (code: string, fromRound: number) =>
     rpc('ftwin_next_round', { p_code: code, p_token: t(), p_from_round: fromRound }),
-  skipPending: (code: string) => rpc('ftwin_skip_pending', { p_code: code, p_token: t() }),
+  /** Skips unfinished pairs that include an away player. `force` skips every unfinished pair. */
+  skipPending: (code: string, force = false) => rpc('ftwin_skip_pending', { p_code: code, p_token: t(), p_force: force }),
   endGame: (code: string) => rpc('ftwin_end_game', { p_code: code, p_token: t() }),
   toLobby: (code: string) => rpc('ftwin_to_lobby', { p_code: code, p_token: t() }),
   setLocked: (code: string, locked: boolean) => rpc('ftwin_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
@@ -141,12 +145,12 @@ export const twin = {
   claimHost: (code: string) => rpc('ftwin_claim_host', { p_code: code, p_token: t() }),
 };
 
-/** Calls `onChange` whenever the room or its players change. Returns an unsubscribe function. */
+/** Calls `onChange` whenever the room or its players change. Returns an unsubscribe function.
+ *  Every game action moves the room's counter in `ftwin_signal`; that is the only thing listened to. */
 export function subscribeTwinRoom(roomId: string, onChange: () => void): () => void {
   const channel = supabase
     .channel(`ftwin:${roomId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'ftwin_rooms', filter: `id=eq.${roomId}` }, onChange)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'ftwin_players', filter: `room_id=eq.${roomId}` }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ftwin_signal', filter: `room_id=eq.${roomId}` }, onChange)
     .subscribe();
   return () => { void supabase.removeChannel(channel); };
 }

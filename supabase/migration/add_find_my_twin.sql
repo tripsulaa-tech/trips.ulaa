@@ -4,6 +4,12 @@
 -- Online rooms for the "Find My Twin" group game (4-letter room code).
 -- Run this ONCE in the Supabase SQL editor. It is safe to run again.
 --
+-- RUN ORDER (each file builds on the one before; the later files change the
+-- 5 questions and public tables described below):
+--   1. add_find_my_twin.sql  2. update_find_my_twin_10_questions.sql
+--   3. make_find_my_twin_editable.sql  4. add_find_my_twin_roster.sql
+--   5. add_find_my_twin_reveal_mode.sql  6. harden_find_my_twin.sql
+--
 -- HOW IT WORKS
 --   1. Everyone joins a room and answers 5 quick this-or-that questions.
 --   2. The host taps "Reveal twins". The database secretly scores every pair

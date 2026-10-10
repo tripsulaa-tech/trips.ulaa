@@ -63,9 +63,9 @@ These four are not on the public `/games` page. An admin hosts them from Admin -
 ## Online group games (Stowaway, Find My Twin)
 These two need Supabase (everyone uses their own phone), so they are the exception to "front-end only".
 - Stowaway (hosted from Admin -> Games, see above): `supabase/migration/add_stowaway_online.sql`, online join link `/play/stowaway/:code`.
-- Find My Twin: `supabase/migration/add_find_my_twin.sql`, join link `/play/twin/:code`. Run the SQL once in the Supabase SQL editor before using the game.
+- Find My Twin: join link `/play/twin/:code`. Run these in the Supabase SQL editor, once each and in this order: `add_find_my_twin.sql`, `update_find_my_twin_10_questions.sql`, `make_find_my_twin_editable.sql`, `add_find_my_twin_roster.sql`, `add_find_my_twin_reveal_mode.sql`, `harden_find_my_twin.sql` (makes the room tables private; live updates use `ftwin_signal`).
   - Files: `FindMyTwinGame.tsx` (tile + intro), `FindMyTwinOnline.tsx` (all room screens), `findMyTwinApi.ts` (calls), `useTwinRoom.ts` (live sync), `findMyTwinEngine.ts` (questions + prompts), `pages/FindMyTwinJoinPage.tsx`.
-  - Flow: everyone answers 5 questions, host reveals, the database pairs people (best match first), each phone shows "You + Name, 92% match, Find Name!", both tap "I found", a conversation prompt unlocks, both tap "We talked", anyone unlocks the next round (new twin, never a repeat). 4 rounds max.
+  - Flow: everyone answers the questions (10 by default, editable in Admin -> Games), host reveals, the database pairs people (best match first), each phone shows "You + Name, 92% match, Find Name!", both tap "I found", a conversation prompt unlocks, both tap "We talked", anyone unlocks the next round (new twin, never a repeat). 4 rounds by default (one per conversation starter).
   - Answers and pairings are private in the database. A phone only gets its own twin(s).
   - The question ORDER in `findMyTwinEngine.ts` must match the weights in `_ft_score` in the SQL.
   - To add a prompt, add a line to `PROMPTS` (round N uses prompt N).

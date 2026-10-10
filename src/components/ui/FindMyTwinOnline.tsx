@@ -638,7 +638,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
       {/* ── Lobby: questions, then waiting ── */}
       {phase === 'lobby' && !meP?.answered && (
-        <Quiz busy={busy} play={play} onSubmit={answers => void act(() => twin.submitAnswers(room.code, answers))} />
+        <Quiz key={QUESTIONS.map(x => `${x.left.label}|${x.right.label}`).join('/')} busy={busy} play={play} onSubmit={answers => void act(() => twin.submitAnswers(room.code, answers))} />
       )}
 
       {phase === 'lobby' && meP?.answered && (
@@ -743,7 +743,13 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           {isHost && progress.done < progress.total && (
             <button
               type="button"
-              onClick={() => { if (window.confirm('Skip the pairs that are still looking for each other?')) void act(() => twin.skipPending(room.code)); }}
+              onClick={() => void act(async () => {
+                try { await twin.skipPending(room.code); }
+                catch (e) {
+                  if (!(e instanceof TwinError && e.code === 'nobody_away')) throw e;
+                  if (window.confirm('Nobody looks offline. Skip every pair that is still looking for each other?')) await twin.skipPending(room.code, true);
+                }
+              })}
               className="mt-4 w-full text-xs font-semibold text-cream/50 hover:text-cream transition-colors"
             >
               Someone missing? Skip unfinished pairs
