@@ -153,7 +153,7 @@ export default function AdminTripsTable({
             <input
               ref={importInputRef}
               type="file"
-              accept="application/json,.json"
+              accept="application/json,.json,application/zip,.zip"
               className="hidden"
               onChange={onImportInputChange}
             />

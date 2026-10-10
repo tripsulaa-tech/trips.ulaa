@@ -48,7 +48,7 @@ export default function AdminTrips() {
 
   const {
     modalOpen, closeModal, openCreate, openEdit,
-    modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef,
+    modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef, handleModalSearchEnter,
     editingTrip, form, setForm, saving, handleSave,
     commitGroupBulletDraft,
     importInputRef, handleImportInputChange,
@@ -160,6 +160,7 @@ export default function AdminTrips() {
         modalSearch={modalSearch}
         setModalSearch={setModalSearch}
         modalSearchNoMatch={modalSearchNoMatch}
+        onModalSearchEnter={handleModalSearchEnter}
         modalBodyRef={modalBodyRef}
         saving={saving}
         handleSave={handleSave}

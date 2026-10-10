@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   createUpcomingTrip, updateUpcomingTrip, renameUpcomingTripSlug, getAllTripLeadersAdmin, deleteImageByUrl,
+  uploadImage, uploadImageFromUrl, COVER_IMAGE_TARGET_SIZE_BYTES,
 } from '../../services/api';
 import { useAlert } from '../../components/ui/useAlert';
 import { useToast } from '../../components/ui/useToast';
@@ -12,7 +13,8 @@ import { emptyTripFinance, foldLegacyCosts } from '../../utils/tripFinance';
 import { emptyTripOptions, cleanTripOptions } from '../../utils/tripOptions';
 import { emptyEndBanner, emptyForm, computeDuration, type TripForm } from './tripFormTypes';
 import { handleExportTemplate, parseImportedTripForm } from './tripTemplateIO';
-import { scrollToTextMatch } from '../../utils/scroll';
+import { readZip, mimeForName } from './zipReader';
+import { scrollToTextMatch, findRankedMatches, scrollToMatchElement } from '../../utils/scroll';
 import {
   useDraftKeeper, modalDraftBase, resolveModalDraft, settleDraft, discardDraft, type ModalDraftValue,
 } from '../../hooks/useSessionDraft';
@@ -104,6 +106,8 @@ export function useTripFormModal(load: () => void) {
   const modalBodyRef = useRef<HTMLDivElement>(null);
   const [editingTrip, setEditingTrip] = useState<UpcomingTrip | null>(null);
   const [saving, setSaving] = useState(false);
+  // Set while an imported template's photos are still being found / downloaded.
+  const [photosImporting, setPhotosImporting] = useState(false);
   // Edit only: when the title no longer matches the trip's link, whether this
   // save should also change the link (old link keeps redirecting). Ticked by
   // default so renaming a trip renames its URL too.
@@ -226,11 +230,28 @@ export function useTripFormModal(load: () => void) {
       setModalSearchNoMatch(false);
       return;
     }
-    const found = scrollToTextMatch(container, query, 'label, h4', {
-      getStickyOffset: c => c.querySelector<HTMLElement>('[data-sticky-toolbar]')?.getBoundingClientRect().height ?? 0,
-    });
-    setModalSearchNoMatch(!found);
+    jumpToSearchMatch(0);
   };
+
+  // Jumps to the Nth best match for the current query (0 = best). Typing
+  // always goes to the best match; pressing Enter in the search box steps to
+  // the next one and wraps around.
+  const searchMatchIndexRef = useRef(0);
+  const jumpToSearchMatch = (index: number) => {
+    const query = modalSearch.trim();
+    const container = modalBodyRef.current;
+    if (!query || !container) return;
+    const matches = findRankedMatches(container, query);
+    if (matches.length === 0) {
+      setModalSearchNoMatch(true);
+      return;
+    }
+    setModalSearchNoMatch(false);
+    const i = ((index % matches.length) + matches.length) % matches.length;
+    searchMatchIndexRef.current = i;
+    scrollToMatchElement(container, matches[i], c => c.querySelector<HTMLElement>('[data-sticky-toolbar]')?.getBoundingClientRect().height ?? 0);
+  };
+  const handleModalSearchEnter = () => jumpToSearchMatch(searchMatchIndexRef.current + 1);
 
   // Runs the field search automatically as the admin types, so there's no
   // separate "Search" button to click — a short debounce avoids jumping/
@@ -359,10 +380,30 @@ export function useTripFormModal(load: () => void) {
       });
       return;
     }
+    if (photosImporting) {
+      await alert({
+        title: 'Photos are still being imported',
+        message: 'The photos from the imported template are still being found and saved. This takes a minute or two. Please wait for the "Imported … photos" message, then save, so the trip is not saved with unfinished photos.',
+      });
+      return;
+    }
+    // Safety net: never save a leftover "search: …" entry or a bare file name as if it were a photo link.
+    const looksUnresolved = (u: string) => /^search:/i.test(u) || (u !== '' && !/^(https?:|data:|blob:)/i.test(u));
+    const strip = (l: string[] | undefined) => (l ?? []).filter(u => !looksUnresolved(u));
+    const cleaned: TripForm = {
+      ...form,
+      cover_image: looksUnresolved(form.cover_image) ? '' : form.cover_image,
+      hero_mobile_image: looksUnresolved(form.hero_mobile_image) ? '' : form.hero_mobile_image,
+      gallery_items: form.gallery_items.map(g => ({ ...g, photo: looksUnresolved(g.photo) ? '' : g.photo })),
+      fashion_photos: strip(form.fashion_photos),
+      accommodation_photos: strip(form.accommodation_photos),
+      itinerary: form.itinerary.map(d => ({ ...d, images: strip(d.images) })),
+      end_banner: { ...form.end_banner, image: looksUnresolved(form.end_banner.image) ? '' : form.end_banner.image },
+    };
     try {
       setSaving(true);
       const data = {
-        ...form,
+        ...cleaned,
         // The slug is a public URL and a storage-folder path (see the
         // `trips/{slug}/...` pathPrefixes throughout this form), so it must
         // stay stable once a trip exists — recomputing it from the title on
@@ -420,8 +461,10 @@ export function useTripFormModal(load: () => void) {
           message: 'Another trip may already use that link, or add_trip_slug_rename.sql has not been run in Supabase yet. The trip still uses its old link.',
         });
       }
-    } catch {
-      toast.error("Couldn't save the trip.", { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
+    } catch (e) {
+      console.error('Trip save failed:', e);
+      const reason = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : '';
+      toast.error(`Couldn't save the trip.${reason ? ` Reason: ${reason}` : ''}`, { action: { label: 'Try again', onClick: () => { void handleSave(); } } });
     } finally {
       setSaving(false);
     }
@@ -438,12 +481,139 @@ export function useTripFormModal(load: () => void) {
     el.value = '';
   };
 
-  // Reads a filled-in export template (produced by handleExportTemplate,
-  // optionally filled in) and populates the Add Trip form so the admin only
-  // has to review/adjust and upload photos before saving.
+  // An imported template can name a photo for EVERY image spot (desktop cover, mobile hero, gallery,
+  // fashion, each itinerary day, accommodation, end banner). Each one is either a direct image link
+  // or the file name of a photo inside the .zip that was imported. In the background every photo is
+  // downloaded / unpacked and saved to our storage exactly like a manual upload (compressed, longest
+  // side capped), then swapped into the form. Anything that can't be loaded is cleared (a bare file
+  // name would only show a broken picture) and reported once at the end. The two cover photos are
+  // also checked against the recommended shape so a wrong-sized photo is flagged right away.
+  const processImportedImages = async (imported: TripForm, zipFiles: Map<string, () => Promise<Blob>> | null) => {
+    const measure = (url: string) => new Promise<{ w: number; h: number } | null>(resolve => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+    const slug = slugify(imported.title) || 'new-trip';
+    const isLink = (v: string) => /^https?:\/\//i.test(v);
+    const baseName = (v: string) => (v.split(/[\\/]/).pop() ?? v).split('?')[0].toLowerCase();
+
+    // Every image spot: where it lives (for the upload path) and how big to keep it.
+    type Spot = { source: string; folder: string; label: string; big: boolean; kind?: 'desktop' | 'mobile' };
+    const spots: Spot[] = [];
+    const add = (source: string | undefined, folder: string, label: string, big = false, kind?: 'desktop' | 'mobile') => {
+      if (source && !isStorageUrl(source)) spots.push({ source, folder, label, big, kind });
+    };
+    add(imported.cover_image, 'trip-covers', 'Desktop cover image', true, 'desktop');
+    add(imported.hero_mobile_image, 'trip-covers/hero-mobile', 'Mobile hero image', true, 'mobile');
+    imported.gallery_items.forEach((g, i) => add(g.photo, `trips/${slug}/gallery`, `Gallery photo ${i + 1}`));
+    imported.fashion_photos.forEach((u, i) => add(u, `trips/${slug}/fashion`, `Fashion photo ${i + 1}`));
+    imported.itinerary.forEach(d => (d.images ?? []).forEach((u, i) => add(u, `trips/${slug}/itinerary/day-${d.day}`, `Day ${d.day} photo ${i + 1}`)));
+    imported.accommodation_photos.forEach((u, i) => add(u, `trips/${slug}/accommodation`, `Accommodation photo ${i + 1}`));
+    add(imported.end_banner?.image, 'trip-end-banners', 'End banner image', false);
+    if (spots.length === 0) return;
+    setPhotosImporting(true);
+    const total = spots.length;
+    let finished = 0;
+    toast.info(`Finding and saving ${total} photos. This takes a minute or two. Please wait for the "Imported … photos" message before saving.`, { duration: 12000 });
+
+    // Swap one source string for its hosted URL (or '' to drop it) everywhere it appears.
+    const swap = (from: string, to: string) => setForm(f => {
+      const sub = (u: string) => (u === from ? to : u);
+      const subList = (l: string[]) => (to ? l.map(sub) : l.filter(u => u !== from));
+      return {
+        ...f,
+        cover_image: sub(f.cover_image),
+        hero_mobile_image: sub(f.hero_mobile_image),
+        gallery_items: f.gallery_items.map(g => ({ ...g, photo: sub(g.photo) })),
+        fashion_photos: subList(f.fashion_photos),
+        accommodation_photos: subList(f.accommodation_photos),
+        itinerary: f.itinerary.map(d => ({ ...d, images: subList(d.images ?? []) })),
+        end_banner: { ...f.end_banner, image: sub(f.end_banner.image) },
+      };
+    });
+
+    const notes: string[] = [];
+    const hosted = new Map<string, string>(); // source -> our storage URL (a photo used twice uploads once)
+    let counter = 0;
+
+    const processSpot = async (spot: Spot) => {
+      let finalUrl = hosted.get(spot.source) ?? '';
+      if (!finalUrl) {
+        const target = spot.big ? COVER_IMAGE_TARGET_SIZE_BYTES : undefined;
+        const path = `${spot.folder}/${Date.now()}-${counter++}-${slug}-import`;
+        try {
+          if (isLink(spot.source)) {
+            try {
+              finalUrl = await uploadImageFromUrl(STORAGE_BUCKET, spot.source, path, target);
+            } catch {
+              // Source site blocks reading the file (CORS): keep it linked so the photo still shows.
+              finalUrl = spot.source;
+              notes.push(`${spot.label}: the source site blocks saving it to our storage, so it is linked directly. Use Replace for best results.`);
+            }
+          } else {
+            const getBlob = zipFiles?.get(baseName(spot.source));
+            if (!getBlob) throw new Error('not in zip');
+            const blob = await getBlob();
+            const name = spot.source.split(/[\\/]/).pop() ?? 'image';
+            finalUrl = await uploadImage(STORAGE_BUCKET, new File([blob], name, { type: blob.type || mimeForName(name) }), `${path}-${name}`, target);
+          }
+        } catch {
+          swap(spot.source, '');
+          notes.push(zipFiles
+            ? `${spot.label}: "${spot.source}" was not found in the zip or could not be read.`
+            : `${spot.label}: "${spot.source}" is a file name, but no zip was imported. Import a .zip with the photos inside, or upload it in the app.`);
+          return;
+        }
+        hosted.set(spot.source, finalUrl);
+      }
+      if (finalUrl !== spot.source) swap(spot.source, finalUrl);
+
+      if (spot.kind) {
+        const size = await measure(finalUrl);
+        if (!size) notes.push(`${spot.label}: it didn't load as an image. Please replace it.`);
+        else if (spot.kind === 'desktop' && (size.w < 1600 || size.w / size.h < 1.3)) notes.push(`${spot.label} is ${size.w}×${size.h}. Use a landscape photo at least 1600px wide (ideally 2400×1029).`);
+        else if (spot.kind === 'mobile' && (size.h <= size.w || size.w < 1080)) notes.push(`${spot.label} is ${size.w}×${size.h}. Use a portrait 9:16 photo, at least 1080×1920.`);
+      }
+    };
+
+    // A few at a time: quick, without hammering storage.
+    const queue = [...spots];
+    try {
+      await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => {
+        while (queue.length) {
+          const spot = queue.shift()!;
+          try { await processSpot(spot); } catch { swap(spot.source, ''); notes.push(`${spot.label}: could not be imported. Add it in the app.`); }
+          finished++;
+          if (finished % 10 === 0 && finished < total) toast.info(`${finished} of ${total} photos done…`, { duration: 4000 });
+        }
+      }));
+    } finally {
+      setPhotosImporting(false);
+    }
+
+    if (notes.length) toast.warning(notes.join(' '), { duration: 30000 });
+    else toast.success(`Imported ${hosted.size} photo${hosted.size === 1 ? '' : 's'}.`);
+  };
+
+  // Reads a filled-in export template and populates the Add Trip form. Accepts either the plain
+  // .json, or a .zip holding that .json plus the photos it refers to by file name.
   const handleImportFile = async (file: File) => {
     try {
-      const raw = JSON.parse(await file.text());
+      let raw: unknown;
+      let zipFiles: Map<string, () => Promise<Blob>> | null = null;
+      if (/\.zip$/i.test(file.name) || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') {
+        const entries = await readZip(file);
+        const jsons = entries.filter(e => /\.json$/i.test(e.name));
+        // Prefer the shortest path (the template at the top of the zip) if there are several.
+        const jsonEntry = jsons.sort((a, b) => a.name.length - b.name.length)[0];
+        if (!jsonEntry) throw new Error('No .json file inside the zip');
+        raw = JSON.parse(await (await jsonEntry.getBlob()).text());
+        zipFiles = new Map(entries.filter(e => e !== jsonEntry).map(e => [(e.name.split('/').pop() ?? e.name).toLowerCase(), e.getBlob]));
+      } else {
+        raw = JSON.parse(await file.text());
+      }
       const imported = parseImportedTripForm(raw);
       setEditingTrip(null);
       setForm(imported);
@@ -451,10 +621,12 @@ export function useTripFormModal(load: () => void) {
       setBaseline(emptyForm);
       initialModalUrlsRef.current = collectTripFormUrls(imported);
       setModalOpen(true);
+      // Runs in the background so the form opens straight away.
+      void processImportedImages(imported, zipFiles);
     } catch {
       await alert({
         title: 'Import failed',
-        message: 'That file could not be read as a valid trip template. Make sure it is the JSON file produced by Export Template (optionally filled in) and try again.',
+        message: 'That file could not be read. Use the JSON file from Export Template (optionally filled in), or a .zip containing that JSON plus the photos it names, and try again.',
       });
     }
   };
@@ -467,8 +639,8 @@ export function useTripFormModal(load: () => void) {
 
   return {
     modalOpen, closeModal, openCreate, openEdit,
-    modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef,
-    editingTrip, form, setForm, saving, handleSave, updateLink, setUpdateLink,
+    modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef, handleModalSearchEnter,
+    editingTrip, form, setForm, saving, photosImporting, handleSave, updateLink, setUpdateLink,
     commitGroupBulletDraft,
     importInputRef, handleImportInputChange,
     handleExportTemplate,

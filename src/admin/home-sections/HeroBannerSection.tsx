@@ -12,6 +12,7 @@ import {
   DeviceMobile,
 } from '@phosphor-icons/react';
 import ImageUploadField from '../../components/ui/ImageUploadField';
+import { useReorder, moveItem, ReorderGrip } from '../../components/ui/Reorder';
 import { uploadImage, deleteImageByUrl } from '../../services/api';
 import { DEFAULT_HOME_HERO } from '../../constants/home-hero';
 import type { HomeHeroContent, HomeHeroSlide } from '../../types/types-index';
@@ -85,6 +86,9 @@ export default function HeroBannerSection({
       return { ...c, slides: arr };
     });
   };
+
+  // Drag a slide's grip (desktop) to reorder; the arrows below still work on touch.
+  const slideDrag = useReorder((from, to) => setContent(c => ({ ...c, slides: moveItem(c.slides, from, to) })));
 
   return (
     <div ref={sectionRef} data-section={1} className="scroll-mt-4 space-y-8">
@@ -166,15 +170,17 @@ export default function HeroBannerSection({
             {content.slides.map((slide, i) => (
               <div
                 key={slide.id}
+                {...slideDrag.itemProps(i)}
                 className={`rounded-xl border-2 overflow-hidden transition-colors ${
                   slide.active ? 'border-background-warm bg-white' : 'border-background-warm bg-background-warm/50 opacity-70'
-                }`}
+                } ${slideDrag.itemClass(i)}`}
               >
                 {/* Header bar: number + status on the left, reorder/visibility/delete actions on the right.
                     Kept on its own full-width row (not squeezed next to the thumbnail) so it never wraps
                     awkwardly on narrow phone screens. */}
                 <div className="flex items-center justify-between gap-2 px-3 py-2 bg-background-warm/40 border-b border-background-warm">
                   <div className="flex items-center gap-2 min-w-0">
+                    <ReorderGrip drag={slideDrag} index={i} count={content.slides.length} className="-ml-1" />
                     <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-2xs font-bold flex-shrink-0">
                       {i + 1}
                     </span>

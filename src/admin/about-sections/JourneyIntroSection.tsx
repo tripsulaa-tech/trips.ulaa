@@ -1,7 +1,6 @@
 import {
   Plus,
   Trash as Trash2,
-  DotsSixVertical as GripVertical,
   Sparkle,
   TextAa,
   TextAlignLeft,
@@ -19,6 +18,7 @@ import {
   itemCardHeaderClass,
   itemNumberBadgeClass,
 } from './shared';
+import { useReorder, moveItem, ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
 
 export default function JourneyIntroSection({
   content,
@@ -45,6 +45,9 @@ export default function JourneyIntroSection({
   removeWTUItem: (i: number) => void;
   sectionRef: (el: HTMLDivElement | null) => void;
 }) {
+  // Drag an item's grip (desktop) or use its arrows to change the order on the About page.
+  const hyeDrag = useReorder((from, to) => setHYE('items', moveItem(content.have_you_ever.items, from, to)));
+  const wtuDrag = useReorder((from, to) => setWTU('items', moveItem(content.welcome_to_ulaa.items, from, to)));
   return (
     <div ref={sectionRef} data-section={3} className="scroll-mt-4 space-y-4">
       <div className="pb-3 border-b border-background-warm">
@@ -141,13 +144,14 @@ export default function JourneyIntroSection({
             Pick an icon for each item, or leave it unset to use the default rotation.
           </p>
           {content.have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => (
-            <div key={i} className={itemCardClass}>
+            <div key={i} {...hyeDrag.itemProps(i)} className={`${itemCardClass} transition-all ${hyeDrag.itemClass(i)}`}>
               <div className={itemCardHeaderClass}>
-                <GripVertical size={14} className="text-dark-muted flex-shrink-0" aria-hidden="true" />
+                <ReorderGrip drag={hyeDrag} index={i} count={content.have_you_ever.items.length} />
                 <span className={itemNumberBadgeClass}>{i + 1}</span>
                 <span className="text-sm font-semibold text-dark truncate flex-1 min-w-0">
                   {item.text || `Item ${i + 1}`}
                 </span>
+                <ReorderArrows drag={hyeDrag} index={i} count={content.have_you_ever.items.length} />
                 <button
                   type="button"
                   onClick={() => removeHYEItem(i)}
@@ -212,13 +216,14 @@ export default function JourneyIntroSection({
             Pick an icon for each item, or leave it unset to use the default rotation.
           </p>
           {content.welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => (
-            <div key={i} className={itemCardClass}>
+            <div key={i} {...wtuDrag.itemProps(i)} className={`${itemCardClass} transition-all ${wtuDrag.itemClass(i)}`}>
               <div className={itemCardHeaderClass}>
-                <GripVertical size={14} className="text-dark-muted flex-shrink-0" aria-hidden="true" />
+                <ReorderGrip drag={wtuDrag} index={i} count={content.welcome_to_ulaa.items.length} />
                 <span className={itemNumberBadgeClass}>{i + 1}</span>
                 <span className="text-sm font-semibold text-dark truncate flex-1 min-w-0">
                   {item.title || `Item ${i + 1}`}
                 </span>
+                <ReorderArrows drag={wtuDrag} index={i} count={content.welcome_to_ulaa.items.length} />
                 <button
                   type="button"
                   onClick={() => removeWTUItem(i)}

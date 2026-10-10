@@ -5,6 +5,9 @@ import {
   ImageSquare as ImagePlus,
   CircleNotch as Loader2,
   LinkSimple as Link2,
+  CaretLeft,
+  CaretRight,
+  DotsSixVertical,
 } from '@phosphor-icons/react';
 import { uploadImage, uploadImageFromUrl, deleteImageByUrl } from '../../services/api';
 import { useToast } from './useToast';
@@ -60,6 +63,28 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
   };
 
   const [removingUrl, setRemovingUrl] = useState<string | null>(null);
+
+  // ---- Reordering ---------------------------------------------------------
+  // The saved order IS the array order, so whatever order the admin leaves
+  // the photos in here is the order visitors see them everywhere this field
+  // is used (itinerary days, gallery, accommodation, fashion, albums...).
+  // Desktop: drag a tile onto another. Touch screens (no HTML5 drag): the
+  // left/right arrows on each tile.
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  const moveImage = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= value.length || to >= value.length) return;
+    const next = [...value];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+  };
+
+  const endDrag = () => {
+    setDragIndex(null);
+    setOverIndex(null);
+  };
 
   const removeAt = async (index: number) => {
     const url = value[index];
@@ -177,18 +202,73 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
       {value.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
           {value.map((url, index) => (
-            <div key={`${url}-${index}`} className="relative aspect-square rounded-lg overflow-hidden border-2 border-background-warm group">
-              <img src={url} alt="" className="w-full h-full object-cover" />
+            <div
+              key={`${url}-${index}`}
+              draggable={value.length > 1}
+              onDragStart={e => {
+                setDragIndex(index);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', String(index));
+              }}
+              onDragOver={e => {
+                if (dragIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (overIndex !== index) setOverIndex(index);
+              }}
+              onDrop={e => {
+                e.preventDefault();
+                if (dragIndex !== null) moveImage(dragIndex, index);
+                endDrag();
+              }}
+              onDragEnd={endDrag}
+              className={`relative aspect-square rounded-lg overflow-hidden border-2 group transition-all ${
+                value.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''
+              } ${dragIndex === index ? 'opacity-40 border-primary' : overIndex === index && dragIndex !== null ? 'border-primary ring-2 ring-primary/40 scale-[1.03]' : 'border-background-warm'}`}
+            >
+              <img src={url} alt="" draggable={false} className="w-full h-full object-cover" />
+
+              {/* Position badge — 1 is the first photo visitors see */}
+              <span className="absolute top-1.5 left-1.5 min-w-[22px] h-[22px] px-1 rounded-md bg-dark/70 text-white text-xs font-semibold flex items-center justify-center pointer-events-none">
+                {index + 1}
+              </span>
+
               <button
                 type="button"
                 onClick={() => removeAt(index)}
                 disabled={removingUrl === url}
-                className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-dark/70 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-100 disabled:cursor-wait"
+                className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-dark/70 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-100 disabled:cursor-wait"
                 title="Remove image"
                 aria-label={`Remove ${label ? `${label} ` : ''}photo ${index + 1}`}
               >
                 {removingUrl === url ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <X size={14} aria-hidden="true" />}
               </button>
+
+              {value.length > 1 && (
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 p-1.5 bg-gradient-to-t from-dark/70 to-transparent max-sm:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => moveImage(index, index - 1)}
+                    disabled={index === 0}
+                    className="p-1 rounded-md bg-dark/70 text-white hover:bg-primary transition-colors disabled:opacity-30 disabled:hover:bg-dark/70 disabled:cursor-not-allowed"
+                    title="Move earlier"
+                    aria-label={`Move photo ${index + 1} earlier`}
+                  >
+                    <CaretLeft size={14} aria-hidden="true" />
+                  </button>
+                  <DotsSixVertical size={16} className="text-white/90 hidden sm:block pointer-events-none" aria-hidden="true" />
+                  <button
+                    type="button"
+                    onClick={() => moveImage(index, index + 1)}
+                    disabled={index === value.length - 1}
+                    className="p-1 rounded-md bg-dark/70 text-white hover:bg-primary transition-colors disabled:opacity-30 disabled:hover:bg-dark/70 disabled:cursor-not-allowed"
+                    title="Move later"
+                    aria-label={`Move photo ${index + 1} later`}
+                  >
+                    <CaretRight size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -197,6 +277,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
       <p className="text-xs text-dark-muted mt-2 flex items-center gap-1">
         <Upload size={12} aria-hidden="true" />
         {value.length} photo{value.length === 1 ? '' : 's'} · select multiple files at once
+        {value.length > 1 && ' · drag to reorder (or use the arrows)'}
       </p>
     </div>
   );

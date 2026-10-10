@@ -4,6 +4,7 @@ import {
 } from '@phosphor-icons/react';
 import type { FAQ } from '../../types/types-index';
 import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
+import { useReorder, moveItem, ReorderGrip, ReorderArrows } from './Reorder';
 
 interface FAQEditorProps {
   value: FAQ[];
@@ -18,6 +19,9 @@ export default function FAQEditor({ value, onChange }: FAQEditorProps) {
   };
 
   const removeFAQ = (index: number) => onChange(value.filter((_, i) => i !== index));
+
+  // Drag the grip (desktop) or use the arrows to change the order shown on the trip page.
+  const drag = useReorder((from, to) => onChange(moveItem(value, from, to)));
 
   return (
     <div>
@@ -38,12 +42,18 @@ export default function FAQEditor({ value, onChange }: FAQEditorProps) {
       ) : (
         <div className="space-y-3">
           {value.map((faq, index) => (
-            <div key={index} className="bg-background-warm rounded-lg p-3 space-y-2">
+            <div key={index} {...drag.itemProps(index)} className={`bg-background-warm rounded-lg p-3 space-y-2 border border-transparent transition-all ${drag.itemClass(index)}`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-button font-bold text-dark-muted">Q{index + 1}</span>
-                <button type="button" onClick={() => removeFAQ(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove">
-                  <X size={14} />
-                </button>
+                <span className="flex items-center gap-1 text-xs font-button font-bold text-dark-muted">
+                  <ReorderGrip drag={drag} index={index} count={value.length} className="-ml-1" />
+                  Q{index + 1}
+                </span>
+                <div className="flex items-center gap-0.5">
+                  <ReorderArrows vertical drag={drag} index={index} count={value.length} />
+                  <button type="button" onClick={() => removeFAQ(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove">
+                    <X size={14} />
+                  </button>
+                </div>
               </div>
               <input
                 value={faq.question}

@@ -82,7 +82,7 @@ export default function TripItinerarySection({
                   )}
                 </AnimatePresence>
                 {(day.images?.length ?? 0) > 0 && (
-                  <ItineraryDayPhotos images={day.images || []} className="h-40 mt-1" />
+                  <ItineraryDayPhotos images={day.images || []} className="aspect-[4/3] sm:aspect-[16/10] sm:max-h-80 mt-1" />
                 )}
               </div>
             </motion.div>

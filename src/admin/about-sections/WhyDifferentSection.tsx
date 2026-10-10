@@ -13,6 +13,7 @@ import {
   itemNumberBadgeClass,
 } from './shared';
 import { STORAGE_BUCKET } from '../../constants/storage';
+import { useReorder, moveItem, ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
 
 // Soft limits matching the card's real-world footprint on the public page
 // (aspect-[4/3] tile, heading text-sm sm:text-base, description text-xs) —
@@ -35,6 +36,8 @@ export default function WhyDifferentSection({
   removeWhyCard: (i: number) => void;
   sectionRef: (el: HTMLDivElement | null) => void;
 }) {
+  // Drag a card's grip (desktop) or use its arrows to change the order on the About page.
+  const drag = useReorder((from, to) => setWHY('cards', moveItem(content.cards, from, to)));
   return (
     <div ref={sectionRef} data-section={4} className="scroll-mt-4 space-y-4">
       <div className="pb-3 border-b border-background-warm">
@@ -118,12 +121,14 @@ export default function WhyDifferentSection({
             const descriptionOverLimit = card.description.length > DESCRIPTION_SOFT_LIMIT;
 
             return (
-              <div key={i} className={itemCardClass}>
+              <div key={i} {...drag.itemProps(i)} className={`${itemCardClass} transition-all ${drag.itemClass(i)}`}>
                 <div className={itemCardHeaderClass}>
+                  <ReorderGrip drag={drag} index={i} count={content.cards.length} />
                   <span className={itemNumberBadgeClass}>{i + 1}</span>
                   <h4 className="font-display text-sm font-bold text-dark truncate flex-1 min-w-0">
                     {card.heading || `Card ${i + 1}`}
                   </h4>
+                  <ReorderArrows drag={drag} index={i} count={content.cards.length} />
                   <button
                     type="button"
                     onClick={() => removeWhyCard(i)}

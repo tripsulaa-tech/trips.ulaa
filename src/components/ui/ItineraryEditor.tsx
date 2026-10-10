@@ -10,6 +10,7 @@ import MultiImageUploadField from './MultiImageUploadField';
 import TripHighlightIconPicker from './TripHighlightIconPicker';
 import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { STORAGE_BUCKET } from '../../constants/storage';
+import { useReorder, moveItem, ReorderGrip } from './Reorder';
 
 interface ItineraryEditorProps {
   value: ItineraryDay[];
@@ -22,7 +23,46 @@ interface ItineraryEditorProps {
 
 // Minimum number of photos we ask admins to add per day. Not hard-enforced
 // (a day can still be saved with fewer/no photos), just nudges the UI.
-const MIN_RECOMMENDED_PHOTOS = 3;
+const MIN_RECOMMENDED_PHOTOS = 4;
+
+// A day's bullet points, reorderable (grip on desktop, arrows on touch) —
+// its own component so each day gets its own drag state.
+function DayBullets({ bullets, onChange }: { bullets: string[]; onChange: (next: string[]) => void }) {
+  const drag = useReorder((from, to) => onChange(moveItem(bullets, from, to)));
+  return (
+    <ul className="space-y-2">
+      {bullets.map((bullet, bi) => (
+        <li
+          key={bi}
+          {...drag.itemProps(bi)}
+          className={`flex items-center gap-2 bg-background-warm rounded-lg px-3 py-2 border border-transparent transition-all ${drag.itemClass(bi)}`}
+        >
+          <ReorderGrip drag={drag} index={bi} count={bullets.length} className="-ml-1" />
+          <span className="flex-1 text-sm text-dark">{bullet}</span>
+          {bullets.length > 1 && (
+            <>
+              <button type="button" onClick={() => drag.move(bi, bi - 1)} disabled={bi === 0} className="p-0.5 rounded hover:bg-white disabled:opacity-30 text-dark-muted transition-colors shrink-0" title="Move up" aria-label={`Move bullet ${bi + 1} up`}>
+                <ChevronUp size={13} aria-hidden="true" />
+              </button>
+              <button type="button" onClick={() => drag.move(bi, bi + 1)} disabled={bi === bullets.length - 1} className="p-0.5 rounded hover:bg-white disabled:opacity-30 text-dark-muted transition-colors shrink-0" title="Move down" aria-label={`Move bullet ${bi + 1} down`}>
+                <ChevronDown size={13} aria-hidden="true" />
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => onChange(bullets.filter((_, i) => i !== bi))}
+            className="text-dark-muted hover:text-red-600 transition-colors shrink-0"
+            title="Remove"
+            aria-label={`Remove bullet: ${bullet}`}
+          >
+            <X size={15} aria-hidden="true" />
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function ItineraryEditor({ value, onChange, tripSlug }: ItineraryEditorProps) {
   const renumber = (days: ItineraryDay[]) => days.map((d, i) => ({ ...d, day: i + 1 }));
@@ -47,6 +87,9 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
     onChange(renumber(copy));
   };
 
+  // Drag a day's grip onto another day to reorder; days renumber automatically.
+  const dayDrag = useReorder((from, to) => onChange(renumber(moveItem(value, from, to))));
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -66,9 +109,12 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
       ) : (
         <div className="space-y-3">
           {value.map((day, index) => (
-            <div key={index} className="border border-background-warm rounded-lg p-4 space-y-2">
+            <div key={index} {...dayDrag.itemProps(index)} className={`border border-background-warm rounded-lg p-4 space-y-2 transition-all ${dayDrag.itemClass(index)}`}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-semibold text-dark-muted uppercase tracking-wide">Day {day.day}</span>
+                <span className="flex items-center gap-1 text-xs font-semibold text-dark-muted uppercase tracking-wide">
+                  <ReorderGrip drag={dayDrag} index={index} count={value.length} className="-ml-1" />
+                  Day {day.day}
+                </span>
                 <div className="flex items-center gap-1">
                   <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="p-1 rounded-md hover:bg-background-warm disabled:opacity-30 text-dark-muted transition-colors" title="Move up" aria-label={`Move Day ${day.day} up`}>
                     <ChevronUp size={14} aria-hidden="true" />
@@ -133,22 +179,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
               {(day.bullets?.length || 0) > 0 && (
                 <div>
                   <label className="block text-xs font-medium text-dark mb-1">Bullet Points</label>
-                  <ul className="space-y-2">
-                    {(day.bullets || []).map((bullet, bi) => (
-                      <li key={bi} className="flex items-center gap-2 bg-background-warm rounded-lg px-3 py-2">
-                        <span className="flex-1 text-sm text-dark">{bullet}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateDay(index, { bullets: (day.bullets || []).filter((_, i) => i !== bi) })}
-                          className="text-dark-muted hover:text-red-600 transition-colors shrink-0"
-                          title="Remove"
-                          aria-label={`Remove bullet: ${bullet}`}
-                        >
-                          <X size={15} aria-hidden="true" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                  <DayBullets bullets={day.bullets || []} onChange={next => updateDay(index, { bullets: next })} />
                 </div>
               )}
 

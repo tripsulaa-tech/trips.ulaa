@@ -13,6 +13,7 @@ import {
   itemCardHeaderClass,
   itemNumberBadgeClass,
 } from './shared';
+import { useReorder, moveItem, ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
 
 // Soft limits matching the step's footprint on the public page (heading
 // text-base, description text-sm capped to a ~200px column).
@@ -34,6 +35,8 @@ export default function JourneySection({
   removeStep: (i: number) => void;
   sectionRef: (el: HTMLDivElement | null) => void;
 }) {
+  // Drag a step's grip (desktop) or use its arrows to change the timeline order.
+  const drag = useReorder((from, to) => setJourney('steps', moveItem(content.steps, from, to)));
   return (
     <div ref={sectionRef} data-section={8} className="scroll-mt-4 space-y-4">
       <div className="pb-3 border-b border-background-warm">
@@ -117,12 +120,14 @@ export default function JourneySection({
             const descriptionOverLimit = step.description.length > DESCRIPTION_SOFT_LIMIT;
 
             return (
-              <div key={i} className={itemCardClass}>
+              <div key={i} {...drag.itemProps(i)} className={`${itemCardClass} transition-all ${drag.itemClass(i)}`}>
                 <div className={itemCardHeaderClass}>
+                  <ReorderGrip drag={drag} index={i} count={content.steps.length} />
                   <span className={itemNumberBadgeClass}>{i + 1}</span>
                   <h4 className="font-display text-sm font-bold text-dark truncate flex-1 min-w-0">
                     {step.heading || `Step ${i + 1}`}
                   </h4>
+                  <ReorderArrows drag={drag} index={i} count={content.steps.length} />
                   <button
                     type="button"
                     onClick={() => removeStep(i)}

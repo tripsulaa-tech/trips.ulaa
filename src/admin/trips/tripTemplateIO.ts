@@ -5,7 +5,7 @@ import { emptyTripFinance } from '../../utils/tripFinance';
 import { emptyTripOptions, newOptionId } from '../../utils/tripOptions';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
-import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
+import { getTripHighlightIcon, searchTripHighlightIcons, TRIP_HIGHLIGHT_ICONS } from '../../constants/tripHighlightIcons';
 
 // ── Export Template ──────────────────────────────────────────────────────
 // Builds and downloads a blank, annotated JSON template mirroring the
@@ -24,14 +24,94 @@ import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 export const handleExportTemplate = () => {
   const template = {
     _instructions:
-      'This is a blank template of the Ulaa "Add/Edit Trip" admin form. Keys follow the form\'s tabs ' +
-      'from top to bottom. Fill in every field with trip details (use the provided trip photos/notes ' +
-      'as source material). Keep the JSON structure and key names exactly as-is — only replace the ' +
-      'placeholder values. Leave a field as an empty string "" if there is truly nothing to fill in. ' +
-      'Fields marked "(leave blank — uploaded manually)" are image uploads and cannot be filled from ' +
-      'this template; leave those as empty strings, the admin will upload the actual photos in the app ' +
-      'after importing. The "trip_finance" block is INTERNAL (never shown on the public site) — fill it ' +
-      'only if cost details are provided, otherwise leave its values blank.',
+      'READ THIS FIRST — this file is a blank template of the Ulaa "Add/Edit Trip" admin form. ' +
+      'DO NOT fill it in straight away and DO NOT invent details. When a user gives you this file, your FIRST job is to ' +
+      'INTERVIEW them: greet them briefly, then ask the questions in "_interview.rounds" below, one round at a time ' +
+      '(each round = one tab of the form), as short numbered questions in plain language. Wait for their answers before moving ' +
+      'to the next round. If they already pasted notes, a brochure or an itinerary, pull the answers out of it first and only ' +
+      'ask for what is missing (confirm anything you inferred). Let them say "skip" for any optional question. ' +
+      'Once every round is done, show a short summary and ask "Anything to change?". Only then output the finished JSON ' +
+      '(see "_interview.when_done"). ' +
+      'Rules for the finished JSON: keep the structure and key names exactly as-is and only replace the placeholder values; ' +
+      'numbers as numbers (no "₹" or commas); dates as YYYY-MM-DD; icon fields use icon-library keys, never emoji; ' +
+      'leave a value as an empty string "" if the user skipped it; remove nothing and add no new keys. ' +
+      'IMAGES: do NOT put any image links, file names, "search:" text or web photos anywhere in this file, and do not ask the user for photos. ' +
+      'Every image field (cover_image, hero_mobile_image, gallery_items[].photo, fashion_photos, itinerary[].images, accommodation_photos, ' +
+      'end_banner.image) must stay "" (or an empty list). The admin uploads all photos themselves in the app after importing, so photos are never copied from websites. ' +
+      'Only the text next to photos (gallery captions, section intros) is filled in. The "trip_finance" block is INTERNAL (never shown on the public site) — ' +
+      'fill it only if the user gives cost details, otherwise leave its values blank.',
+
+    _allowed_icon_keys:
+      'ICON RULE: every "icon" value must be EXACTLY one of these keys (Phosphor icon names in kebab-case). Never use Lucide or other library names such as "refresh-cw", "message-circle" or "smartphone". Pick the closest one: ' +
+      TRIP_HIGHLIGHT_ICONS.slice(0, 102).map(i => i.key).join(', ') +
+      '. Other Phosphor keys also work (e.g. "arrows-clockwise", "chat-circle", "device-mobile", "first-aid-kit", "clipboard-text").',
+
+    _interview: {
+      how_to_run:
+        'Ask one round at a time, max ~5 numbered questions per message. Suggest sensible options or a draft when it helps ' +
+        '(e.g. offer to write the overview, highlight cards, FAQs or things-to-carry for them to approve) but never save a guess ' +
+        'as fact without the user confirming it.',
+      rounds: [
+        { tab: 'Basic Info', ask: [
+          'What is the trip title?',
+          'Where is it going (destination)?',
+          'Start date and end date?',
+          'Any age limits (minimum / maximum), or no limit?',
+          'Shall I write a 2-4 sentence overview from your notes for you to approve?',
+        ] },
+        { tab: 'Pricing & Availability', ask: [
+          'How many total seats? Is it a domestic or an international trip?',
+          'Regular price per person (INR)? Any old "strikeout" price to show crossed out?',
+          'Early-bird offer? (price, plus either a deadline date OR "first N paid people")',
+          'Advance / reservation amount per person, or should the card show seats left instead?',
+          'Any flash offer? (name, offer price, start date, end date)',
+          'Up to 4 short tags for the trip card (e.g. "Girls-Only")? Any packages / add-ons (e.g. Basic vs Premium, Water Activities +₹1,200)? If none, it is a single-price trip.',
+        ] },
+        { tab: 'Finances & Profit (INTERNAL, optional)', ask: [
+          'Do you want to enter costs now? If not, say "skip".',
+          'Cost lines: name, and whether it is a fixed amount, per traveler, or per selected headcount — plus the amount.',
+          'On-ground agency name and amount (fixed or per traveler)?',
+          'Child fare details (fare charged, vendor amount, entry ticket cost, kit cost)?',
+          'Organiser name and their expenses? Any internal notes?',
+        ] },
+        { tab: 'Media', ask: [
+          'Photos are uploaded by you in the app after importing (the Media tab), so I will not ask for any. Desktop cover: landscape, at least 1600px wide (ideally 2400×1029). Mobile hero: portrait 9:16, at least 1080×1920.',
+          'For the "Places You\'ll Definitely Post" section: a one-line intro, and the place name / caption you want for each photo spot?',
+          'For the "Fashion Aesthetics" section: a one-line intro (what to wear / outfit vibes)?',
+        ] },
+        { tab: 'Overview & Itinerary', ask: [
+          'Want 6 "Why You\'ll Love This Trip" highlight cards? I will draft a heading + one line each for you to approve.',
+          'For each day: a short title, and what happens from morning to night?',
+          'Any bullet-point activities per day (e.g. "Sunset at the beach")?',
+          'Remind the user: add at least 4 photos per day in the app after importing.',
+        ] },
+        { tab: 'Inclusions & Prep', ask: [
+          'What is included? Group it under headings such as stay, food, transport, experiences (aim for at least 4 groups, each with bullet points).',
+          'What is NOT included?',
+          'What should travelers carry? (I can suggest a list for you to edit.)',
+          '"Travel with Confidence": a one-line intro and at least 6 reassurance points (support, safety, verified stays…).',
+        ] },
+        { tab: 'Accommodation', ask: [
+          'Describe the stay: type of property, room sharing, amenities, location.',
+          'Remind the user: upload the real photos of the stay (at least 6 look best) in the app after importing.',
+        ] },
+        { tab: 'Meeting Point', ask: [
+          'Meeting point name and full address?',
+          'Google Maps link?',
+          'Reporting time, and the terminal / gate / landmark?',
+          'Any extra logistics (pickup details, what to carry at the point)?',
+        ] },
+        { tab: 'End Banner, FAQs & Cancellation', ask: [
+          'End banner: heading, one or two lines, and the button label / link (blank link = opens the booking form)?',
+          'FAQs: shall I suggest 5-8 common ones for you to edit?',
+          'Cancellation: how many days before departure is the balance due? What refund applies in each window (days-before-departure ranges)? How many working days does a refund take (fastest and slowest)? Or keep the app defaults?',
+        ] },
+      ],
+      when_done:
+        'Summarise everything, ask for corrections, then reply with ONE complete JSON document (a downloadable .json file named ' +
+        '"ulaa-trip-<trip-slug>.json" if you can, otherwise a single code block) containing every key from this template. ' +
+        'Tell the user to open Admin → Trips → Import, choose that file, review the form, upload all photos in the app, and Save.',
+    },
 
     // ── Tab: Basic Info ─────────────────────────────────────────────
     title: '<Trip Title, e.g. "Spiti Valley Winter Expedition">',
@@ -115,8 +195,9 @@ export const handleExportTemplate = () => {
     },
 
     // ── Tab: Media ──────────────────────────────────────────────────
-    cover_image: '(leave blank — uploaded manually)',
-    hero_mobile_image: '(leave blank — uploaded manually)',
+    // Photos are uploaded manually in the app after importing. Keep every image field blank.
+    cover_image: '(leave blank — uploaded manually. Desktop cover: landscape, min 1600px wide, ideally 2400×1029)',
+    hero_mobile_image: '(leave blank — uploaded manually. Mobile hero: portrait 9:16, min 1080×1920)',
     // Note: included_items, not_included_items, and gallery_images are
     // deliberately left out of this template. They're legacy fallback
     // fields (see UpcomingTrip in types-index.ts) with no editor in the
@@ -128,7 +209,7 @@ export const handleExportTemplate = () => {
       { photo: '(leave blank — uploaded manually)', description: '<Caption / Place Name for this photo>' },
     ],
     fashion_description: '<Short intro paragraph shown below the "Fashion Aesthetics" heading, or "">',
-    fashion_photos: ['(leave blank — uploaded manually, or paste at least 6 source photo URLs — this gallery looks sparse with fewer than 6)'],
+    fashion_photos: ['(leave blank — uploaded manually; 6 or more photos look best)'],
 
     // ── Tab: Overview & Itinerary ───────────────────────────────────
     highlight_cards: [
@@ -139,7 +220,7 @@ export const handleExportTemplate = () => {
         day: 1,
         title: '<Short title for this day, e.g. "Arrival & Local Exploration">',
         description: '<What happens this day>',
-        images: ['(leave blank — uploaded manually)'],
+        images: ['(leave blank — uploaded manually; at least 4 per day look best)'],
         icon: '<Optional icon-library key for this day\'s theme, e.g. "palmtree", "coffee", "paw-print", "mountain" — leave "" to just show the day number>',
         bullets: ['<Optional bulleted sub-item for this day, e.g. "Guided trek to the viewpoint">'],
       },
@@ -164,7 +245,7 @@ export const handleExportTemplate = () => {
 
     // ── Tab: Accommodation ──────────────────────────────────────────
     accommodation_description: '<Section Description for the "Stay. Relax. Repeat." section — describe the accommodation>',
-    accommodation_photos: ['(leave blank — uploaded manually, or paste at least 6 source photo URLs — this gallery looks sparse with fewer than 6)'],
+    accommodation_photos: ['(leave blank — uploaded manually; 6 or more look best)'],
 
     // ── Tab: Meeting Point ──────────────────────────────────────────
     meeting_point: '<Location Name, e.g. "Delhi Airport Terminal 3">',
@@ -286,11 +367,29 @@ const LEGACY_EMOJI_TO_ICON_KEY: Record<string, string> = {
   '💧': 'glass-water', '🥤': 'glass-water', '🎒': 'backpack',
 };
 
+// Icon names from other libraries (mostly Lucide, which ChatGPT tends to guess) and their Phosphor
+// equivalents in our library, e.g. Lucide's "refresh-cw" is Phosphor's "arrows-clockwise".
+const ICON_KEY_ALIASES: Record<string, string> = {
+  'refresh-cw': 'arrows-clockwise', 'refresh-ccw': 'arrows-counter-clockwise', 'rotate-cw': 'arrow-clockwise',
+  'rotate-ccw': 'arrow-counter-clockwise', 'repeat-2': 'repeat', 'message-circle': 'chat-circle',
+  'message-square': 'chat-circle', 'briefcase-medical': 'first-aid-kit', 'smartphone': 'device-mobile',
+  'clipboard-check': 'clipboard-text', 'bed': 'hotel', 'bed-double': 'hotel', 'map-pin': 'map-pinned',
+  'life-buoy': 'life-buoy', 'sunglasses': 'glasses', 'sparkle': 'sparkles', 'mountains': 'mountain',
+  'hand-heart': 'heart-handshake', 'check-circle-2': 'check-circle', 'info-circle': 'info',
+  'alert-triangle': 'warning', 'bus': 'car', 'suitcase': 'backpack', 'luggage': 'backpack',
+};
+
 const asIconKey = (v: unknown): string => {
   const s = asStr(v);
   if (!s) return s;
   if (getTripHighlightIcon(s)) return s; // already a valid key
-  return LEGACY_EMOJI_TO_ICON_KEY[s] ?? s; // map known legacy emoji, else pass through unchanged
+  if (LEGACY_EMOJI_TO_ICON_KEY[s]) return LEGACY_EMOJI_TO_ICON_KEY[s]; // known legacy emoji
+  const k = s.trim().toLowerCase();
+  if (ICON_KEY_ALIASES[k] && getTripHighlightIcon(ICON_KEY_ALIASES[k])) return ICON_KEY_ALIASES[k];
+  // An unknown icon NAME (letters and dashes) would show as plain text like "refresh-cw", so use the
+  // closest keyword match in our library, or none. Anything else (an emoji) passes through unchanged.
+  if (/^[a-z0-9-]+$/.test(k)) return searchTripHighlightIcons(k.replace(/-/g, ' '))[0]?.key ?? '';
+  return s;
 };
 
 
@@ -424,11 +523,9 @@ export function parseImportedTripForm(raw: unknown): TripForm {
       special_offer_date: asStr(r.special_offer_date),
       special_offer_end_date: asStr(r.special_offer_end_date),
       trip_type: r.trip_type === 'domestic' || r.trip_type === 'international' ? r.trip_type : '',
-      // Imported the same way itinerary images always were: real URLs
-      // (e.g. Wikimedia/Unsplash links an admin filled in) come through
-      // as-is; leftover template placeholders like "(leave blank —
-      // uploaded manually)" still resolve to '' via isPlaceholder/asStr,
-      // so an untouched export template still opens with blank fields.
+      // Image fields hold a link or a zip file name as-is here; the import hook then
+      // downloads / unpacks and re-hosts each one (processImportedImages). Leftover template
+      // placeholders still resolve to '' via isPlaceholder/asStr.
       cover_image: asStr(r.cover_image),
       cover_image_crop: null,
       hero_mobile_image: asStr(r.hero_mobile_image),

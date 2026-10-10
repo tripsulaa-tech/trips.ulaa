@@ -3,6 +3,7 @@ import type { TripOptionsConfig, TripOption, TripPackage } from '../../types/typ
 import { formatPrice } from '../../utils/utils-index';
 import { hasOwnPrice, newOptionId, packageQuote, noPackageBase } from '../../utils/tripOptions';
 import { inputClass } from './useTripFormModal';
+import { useReorder, moveItem, ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
 
 // Admin editor for a trip's public packages (Basic / Premium / ...).
 //
@@ -52,6 +53,9 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
   const removePackage = (id: string) => onChange({ ...value, packages: packages.filter(p => p.id !== id) });
   const addPackage = () =>
     onChange({ ...value, packages: [...packages, { id: newOptionId('pkg'), name: '', description: '', option_ids: [] }] });
+  // Drag a package's grip (desktop) or use its arrows to change the order travelers see.
+  // The first package is the default one travelers land on.
+  const packageDrag = useReorder((from, to) => onChange({ ...value, packages: moveItem(packages, from, to) }));
   const toggleOptionInPackage = (pkg: TripPackage, optionId: string) =>
     patchPackage(pkg.id, {
       option_ids: pkg.option_ids.includes(optionId)
@@ -209,9 +213,10 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
           const q = quoteFor(p);
           const ebDisabled = !p.early_bird || !hasOwnPrice(p);
           return (
-            <div key={p.id} className={`rounded-md border-2 bg-white p-4 space-y-4 shadow-sm ${p.highlight ? 'border-primary/40' : 'border-background-warm'}`}>
+            <div key={p.id} {...packageDrag.itemProps(index)} className={`rounded-md border-2 bg-white p-4 space-y-4 shadow-sm transition-all ${p.highlight ? 'border-primary/40' : 'border-background-warm'} ${packageDrag.itemClass(index)}`}>
               {/* Card header: position badge, popular badge, actions */}
               <div className="flex flex-wrap items-center gap-2">
+                <ReorderGrip drag={packageDrag} index={index} count={packages.length} className="-ml-1" />
                 {/* Two tabs: where this package sits (Default) and the popularity flag */}
                 {index === 0 ? (
                   <span className="inline-flex items-center gap-1 rounded-md bg-primary text-white text-xs font-semibold px-3 py-1.5" title="Travelers land on this package first">
@@ -241,6 +246,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
                   <Star size={12} weight={p.highlight ? 'fill' : 'regular'} aria-hidden="true" /> Most popular
                 </button>
                 <div className="flex-1" />
+                <ReorderArrows drag={packageDrag} index={index} count={packages.length} />
                 <button type="button" onClick={() => removePackage(p.id)} className={iconBtn} aria-label={`Remove package ${p.name || ''}`}>
                   <Trash2 size={16} aria-hidden="true" />
                 </button>

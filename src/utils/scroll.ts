@@ -99,3 +99,87 @@ export function scrollToTextMatch(
 
   return true;
 }
+
+/** Lowercases and strips punctuation so "Why You'll Love" matches "why youll love". */
+const normalizeSearchText = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+
+interface RankedMatch {
+  el: HTMLElement;
+  /** Lower is better. Tier (what kind of text matched) * 10 + strength (how well). */
+  score: number;
+  order: number;
+}
+
+/**
+ * Finds everything in `container` that matches `query`, best match first:
+ *   1. section headings and field labels   (e.g. "Pricing", "Meeting point")
+ *   2. hint text and button text           (e.g. "Add Card", "Intro text under…")
+ *   3. placeholders                        (e.g. "Search by …")
+ *   4. text already typed into a field     (e.g. a day title, a highlight)
+ * Within a tier an exact match beats "starts with", which beats "contains";
+ * ties keep page order. This is what makes typing "itinerary" land on the
+ * Itinerary section instead of the first label that merely mentions it.
+ */
+export function findRankedMatches(container: HTMLElement | null, query: string): HTMLElement[] {
+  const q = normalizeSearchText(query);
+  if (!q || !container) return [];
+  const results: RankedMatch[] = [];
+  const seen = new Set<HTMLElement>();
+  const add = (el: HTMLElement, text: string, tier: number, order: number) => {
+    if (seen.has(el)) return;
+    const t = normalizeSearchText(text);
+    if (!t.includes(q)) return;
+    // Skip anything that isn't actually laid out (hidden / collapsed).
+    if (el.getClientRects().length === 0) return;
+    const strength = t === q ? 0 : t.startsWith(q) ? 1 : t.split(' ').some(w => w.startsWith(q)) ? 2 : 3;
+    seen.add(el);
+    results.push({ el, score: tier * 10 + strength, order });
+  };
+  let order = 0;
+  container.querySelectorAll<HTMLElement>('label, h2, h3, h4, h5, legend').forEach(el => add(el, el.textContent || '', 0, order++));
+  container.querySelectorAll<HTMLElement>('p, button, summary').forEach(el => add(el, el.textContent || '', 1, order++));
+  container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea').forEach(el => {
+    if (el.type === 'checkbox' || el.type === 'radio' || el.type === 'file' || el.type === 'hidden') return;
+    add(el, el.placeholder || '', 2, order++);
+  });
+  container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea').forEach(el => {
+    if (el.type === 'number' || el.type === 'checkbox' || el.type === 'radio' || el.type === 'file' || el.type === 'hidden') return;
+    add(el, el.value || '', 3, order++);
+  });
+  return results.sort((a, b) => a.score - b.score || a.order - b.order).map(r => r.el);
+}
+
+/**
+ * Scrolls `container` so `match` sits in the middle of the room left below any
+ * sticky bar, and flashes it. For a label it also flashes the field it
+ * belongs to, so it's obvious which box you've been taken to. Focus is left
+ * alone on purpose, so the admin can keep typing in the search box.
+ */
+export function scrollToMatchElement(
+  container: HTMLElement,
+  match: HTMLElement,
+  getStickyOffset?: (container: HTMLElement) => number,
+) {
+  const containerRect = container.getBoundingClientRect();
+  const matchRect = match.getBoundingClientRect();
+  const offset = getStickyOffset?.(container) ?? 0;
+  const visibleHeight = container.clientHeight - offset;
+  const top = container.scrollTop + (matchRect.top - containerRect.top) - (offset + visibleHeight / 2 - matchRect.height / 2);
+  container.scrollTo({ top, behavior: 'smooth' });
+
+  const targets: HTMLElement[] = [match];
+  if (match instanceof HTMLLabelElement && match.htmlFor) {
+    const field = container.querySelector<HTMLElement>(`#${CSS.escape(match.htmlFor)}`);
+    if (field) targets.push(field);
+  }
+  targets.forEach(el => {
+    const prevBg = el.style.backgroundColor;
+    const prevTransition = el.style.transition;
+    el.style.transition = 'background-color 0.3s ease';
+    el.style.backgroundColor = '#FDE9D9';
+    setTimeout(() => {
+      el.style.backgroundColor = prevBg;
+      el.style.transition = prevTransition;
+    }, 1500);
+  });
+}
