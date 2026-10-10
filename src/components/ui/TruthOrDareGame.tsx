@@ -5,6 +5,7 @@ import {
   ChatCircleDots, Lightning, Flag, Fire, Timer, Trophy, ArrowUp, Question, Shuffle, ListNumbers,
 } from '@phosphor-icons/react';
 import Modal from './Modal';
+import todBottle from '../../assets/truth-or-dare-bottle.svg';
 import { useSynth } from './gameAudio';
 import { GameTile, TimerRing, Confetti } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, cleanName } from './gameUi';
@@ -338,8 +339,8 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
         compact={compact}
         thumb={thumb}
         row={row}
-        Icon={Sparkle}
-        accent="primary"
+        iconSrc={todBottle}
+        accent="gold"
         title="Truth or Dare"
         subtitle="Spin, flip, if you dare"
         chip="Group game"
@@ -354,12 +355,12 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
             {phase === 'setup' && (
               <div className="relative text-center pt-3 md:pt-0">
                 <motion.div
-                  className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-secondary to-primary text-white flex items-center justify-center shadow-[0_14px_36px_rgba(168,90,42,0.5)]"
+                  className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                   animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                   aria-hidden="true"
                 >
-                  <Sparkle size={46} weight="duotone" />
+                  <img src={todBottle} alt="" className="w-12 h-12 object-contain" draggable={false} />
                 </motion.div>
                 <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · {MIN_PLAYERS} to {maxPlayers} players</span>
                 <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Truth or Dare</h2>

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Sparkle } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
+import todBottle from '../assets/truth-or-dare-bottle.svg';
 import TruthOrDareGame from '../components/ui/TruthOrDareGame';
 import { cleanName } from '../components/ui/gameUi';
 import { getTodShare } from '../services/api/todShare';
@@ -67,12 +67,12 @@ export default function TruthOrDarePlayPage() {
         <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-[28rem] h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
         <div className="relative max-w-md mx-auto px-4 sm:px-6 pt-36 pb-16 sm:pt-44 text-center">
           <motion.span
-            className="w-16 h-16 mx-auto mb-4 rounded-[22px] bg-gradient-to-br from-secondary to-primary text-white flex items-center justify-center shadow-[0_14px_36px_rgba(168,90,42,0.5)]"
+            className="w-16 h-16 mx-auto mb-4 rounded-[22px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
             animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
             aria-hidden="true"
           >
-            <Sparkle size={36} weight="duotone" />
+            <img src={todBottle} alt="" className="w-9 h-9 object-contain" draggable={false} />
           </motion.span>
           <h1 className="font-display text-4xl font-extrabold text-white">Truth or Dare</h1>
           <p className="mt-3 mb-8 text-cream/70 text-sm">Pass the phone around, spin to pick who is next, and flip a card if you dare.{players ? ` ${players.length} players are ready.` : ''}</p>

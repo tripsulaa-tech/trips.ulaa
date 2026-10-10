@@ -31,6 +31,11 @@ const TONE: Record<NonNullable<GameCardProps['status']>['tone'], { chip: string;
   idle: { chip: 'bg-background-warm/70 text-dark-muted', dot: 'bg-dark-muted/50' },
 };
 
+/** Shown in place of a game's tile while it can't start yet (no trip picked, too few players). */
+export const EmptyGame = ({ children }: { children: ReactNode }) => (
+  <p className="rounded-2xl border border-dashed border-background-warm bg-background-warm/30 px-4 py-5 text-center text-sm text-dark-muted">{children}</p>
+);
+
 export default function GameCard({ game, url, shareText = '', shareTitle, action, status, note, footer }: GameCardProps) {
   const toast = useToast();
   const copyLink = async () => {
@@ -56,7 +61,7 @@ export default function GameCard({ game, url, shareText = '', shareTitle, action
         </p>
       )}
       {hasShare && (
-        <div className="mt-auto border-t border-background-warm pt-3 space-y-2">
+        <div className="border-t border-background-warm pt-3 space-y-2">
           <div className="flex items-center gap-2">
             {action && <span className="flex-1 flex [&>button]:flex-1">{action}</span>}
             {url && (

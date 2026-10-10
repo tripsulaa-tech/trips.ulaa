@@ -78,9 +78,29 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  // A room made for a trip group has a list of names: players tap theirs instead of typing.
+  // Refreshed every few seconds so names that others just took grey out.
+  const [list, setList] = useState<{ names: string[]; taken: string[] } | null>(null);
+  const joiningCode = view === 'join' ? normalizeTwinCode(joinCode) : '';
+  useEffect(() => {
+    if (joiningCode.length !== 4) return;
+    let alive = true;
+    const load = () => {
+      twin.roster(joiningCode)
+        .then(r => { if (alive) setList(r.exists && r.names && r.names.length > 0 ? { names: r.names, taken: r.taken ?? [] } : null); })
+        .catch(() => { /* keep what we have; typing a name still works for open rooms */ });
+    };
+    load();
+    const id = window.setInterval(load, 5000);
+    return () => { alive = false; window.clearInterval(id); };
+  }, [joiningCode]);
+  const picking = view === 'join' && joiningCode.length === 4 && list !== null;
+  const takenSet = new Set((list?.taken ?? []).map(n => n.toLowerCase()));
+  const picked = picking ? (list?.names ?? []).find(n => n.toLowerCase() === cleanName(name).toLowerCase()) ?? '' : '';
+
   const enter = async (kind: 'host' | 'join') => {
     const clean = cleanName(name);
-    if (!clean) { setError('Please type your name.'); return; }
+    if (!clean) { setError(picking ? 'Please tap your name.' : 'Please type your name.'); return; }
     if (kind === 'join' && normalizeTwinCode(joinCode).length !== 4) { setError('Room codes have 4 letters or numbers.'); return; }
     ensure();
     setBusy(true);
@@ -142,20 +162,49 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
               />
             </>
           )}
-          <label className={`${eyebrow} block mb-1.5`} htmlFor="twin-name">Your name</label>
-          <input
-            id="twin-name"
-            value={name}
-            onChange={e => setName(e.target.value.slice(0, MAX_NAME))}
-            onKeyDown={e => { if (e.key === 'Enter' && !busy) void enter(view); }}
-            maxLength={MAX_NAME}
-            autoComplete="given-name"
-            placeholder="e.g. Ulaa"
-            className={`${inputCls} mb-1`}
-          />
-          <p className="text-[11px] text-cream/40 mb-3">Use the name your friends know you by. They will be looking for it!</p>
+          {picking && list ? (
+            <>
+              <p className={`${eyebrow} mb-1.5`} id="twin-pick-label">Tap your name</p>
+              <div role="radiogroup" aria-labelledby="twin-pick-label" className="grid grid-cols-2 gap-2 mb-1 max-h-[46dvh] overflow-y-auto pr-0.5">
+                {list.names.map(n => {
+                  const taken = takenSet.has(n.toLowerCase()) && n !== picked;
+                  const on = n === picked;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      disabled={taken}
+                      onClick={() => { setName(n); setError(''); }}
+                      className={`min-h-[44px] rounded-xl border px-2.5 py-2 text-sm font-semibold text-left leading-tight transition-colors ${on ? 'bg-[#F0CE7A] border-[#F0CE7A] text-dark' : taken ? 'bg-white/[0.03] border-white/10 text-cream/30 line-through cursor-not-allowed' : 'bg-white/[0.07] border-white/15 text-white hover:border-[#F0CE7A]/60'}`}
+                    >
+                      <span className="block truncate">{n}</span>
+                      {taken && <span className="block text-[10px] font-bold uppercase tracking-wider no-underline">Joined</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-cream/40 mb-3">Not here? Ask the host. Names greyed out have already joined.</p>
+            </>
+          ) : (
+            <>
+            <label className={`${eyebrow} block mb-1.5`} htmlFor="twin-name">Your name</label>
+            <input
+              id="twin-name"
+              value={name}
+              onChange={e => setName(e.target.value.slice(0, MAX_NAME))}
+              onKeyDown={e => { if (e.key === 'Enter' && !busy) void enter(view); }}
+              maxLength={MAX_NAME}
+              autoComplete="given-name"
+              placeholder="e.g. Ulaa"
+              className={`${inputCls} mb-1`}
+            />
+            <p className="text-[11px] text-cream/40 mb-3">Use the name your friends know you by. They will be looking for it!</p>
+            </>
+          )}
           {error && <p role="alert" className="text-xs font-semibold text-rose-300 mb-2">{error}</p>}
-          <button type="button" disabled={busy} onClick={() => void enter(view)} className={`${primaryBtn} disabled:opacity-60`}>
+          <button type="button" disabled={busy || (picking && !picked)} onClick={() => void enter(view)} className={`${primaryBtn} disabled:opacity-60`}>
             {busy ? 'Connecting…' : view === 'host' ? <><Crown size={18} weight="fill" /> Create room</> : <><Play size={18} weight="fill" /> Join the game</>}
           </button>
           <button type="button" onClick={() => { setView('menu'); setError(''); }} className="mt-3 w-full text-xs font-semibold text-cream/50 hover:text-cream transition-colors">Back</button>

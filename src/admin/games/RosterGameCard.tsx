@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { ShareNetwork } from '@phosphor-icons/react';
 import { useToast } from '../../components/ui/useToast';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
-import GameCard, { primaryBtn } from './GameCard';
+import GameCard, { EmptyGame, primaryBtn } from './GameCard';
 import type { TripRoster } from './useTripRoster';
 
 // A game under Admin -> Games -> Play that is dealt the ticked travellers
@@ -79,9 +79,7 @@ export default function RosterGameCard({ roster, id, title, path, minPlayers, ma
   };
 
   const needTrip = !tripId;
-  const empty = (text: string) => (
-    <p className="rounded-2xl border border-dashed border-background-warm bg-background-warm/30 px-4 py-5 text-center text-sm text-dark-muted">{text}</p>
-  );
+  const empty = (text: string) => <EmptyGame>{text}</EmptyGame>;
   const game = needTrip
     ? empty(`Pick a trip to play ${title}.`)
     : canShare

@@ -68,6 +68,7 @@ const MESSAGES: Record<string, string> = {
   bad_answers: 'Please answer all the questions.',
   too_many_rooms: 'Lots of games are running right now. Try again in a minute.',
   host_present: 'The host is still here.',
+  name_not_listed: 'Please tap your name from the list.',
 };
 
 export class TwinError extends Error {
@@ -113,8 +114,13 @@ export function twinJoinLink(code: string): string {
 const t = () => deviceToken();
 
 export const twin = {
-  create: (name: string, tripTitle: string) =>
-    rpc<{ code: string; player_id: string }>('ftwin_create_room', { p_name: name, p_token: t(), p_trip_title: tripTitle }),
+  /** `revealOnly`: skip the find-them-in-person hunt and show every twin straight away.
+   *  `roster`: the names this room's players must pick from (leave out to let anyone type any name). */
+  create: (name: string, tripTitle: string, roster?: string[], revealOnly?: boolean) =>
+    rpc<{ code: string; player_id: string }>('ftwin_create_room', { p_name: name, p_token: t(), p_trip_title: tripTitle, p_roster: roster && roster.length > 0 ? roster : null, p_reveal_only: !!revealOnly }),
+  /** The names a room allows, and which are already taken. `names` is empty for a room anyone can join. */
+  roster: (code: string) =>
+    rpc<{ exists: boolean; locked?: boolean; phase?: TwinPhase; names?: string[]; taken?: string[] }>('ftwin_roster', { p_code: code }),
   join: (code: string, name: string) =>
     rpc<{ code: string; player_id: string }>('ftwin_join', { p_code: code, p_name: name, p_token: t() }),
   state: (code: string) => rpc<TwinState>('ftwin_state', { p_code: code, p_token: t() }),

@@ -6,10 +6,10 @@ import AdminLayout from './AdminLayout';
 import TruthOrDareHost from './games/TruthOrDareHost';
 import StowawayHost from './games/StowawayHost';
 import LinkGameHost from './games/LinkGameHost';
+import TwinRoomHost from './games/TwinRoomHost';
 import TripRosterPanel from './games/TripRoster';
 import { useTripRoster } from './games/useTripRoster';
 import DumbCharadesGame from '../components/ui/DumbCharadesGame';
-import FindMyTwinGame from '../components/ui/FindMyTwinGame';
 import { loadPersisted, savePersisted } from '../utils/sessionState';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -1136,14 +1136,11 @@ export default function AdminGames() {
                     game={<DumbCharadesGame row />}
                     path="/play/dumb-charades"
                     title="Dumb Charades"
+                    tripId={roster.tripId}
+                    tripTitle={roster.trip?.title}
                     note="Teams act out Tamil movies on one phone."
                   />
-                  <LinkGameHost
-                    game={<FindMyTwinGame tripTitle={roster.trip?.title} row />}
-                    path="/play/twin"
-                    title="Find My Twin"
-                    note="Everyone uses their own phone. Host a room in the game, then share its invite link from there."
-                  />
+                  <TwinRoomHost roster={roster} />
                 </div>
               </section>
             </div>
