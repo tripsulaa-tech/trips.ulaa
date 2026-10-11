@@ -154,6 +154,15 @@ html {
   -webkit-tap-highlight-color: transparent;
   overflow-x: clip;
   width: 100%;
+  /* App-like behaviour: no double-tap zoom, no text auto-inflation. */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* iOS Safari zooms the page when a focused field has font-size < 16px. */
+input, select, textarea {
+  font-size: max(16px, 1em);
 }
 
 button, a {

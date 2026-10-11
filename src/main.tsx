@@ -33,3 +33,11 @@ if ('serviceWorker' in navigator) {
     })
   })
 }
+
+
+// Block browser pinch-zoom so the site behaves like an installed app.
+// iOS Safari ignores user-scalable=no, so cancel its gesture events too.
+// (The gallery viewer does its own pinch-zoom via touch events, unaffected.)
+;['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+  document.addEventListener(type, (e) => e.preventDefault(), { passive: false })
+})
