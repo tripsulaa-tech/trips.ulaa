@@ -6,9 +6,7 @@ import type { OnlineState } from './stowawayRoomApi';
 //  * fetches the state (room, players, and ONLY this player's own secret),
 //  * refetches the moment Supabase Realtime says something changed,
 //  * polls every few seconds as a safety net (this is also the "I'm still here"
-//    signal) and again when the phone wakes up or comes back online,
-//  * remembers the gap between the server clock and this phone's clock, so the
-//    speaking timer is the same on every screen.
+//    signal) and again when the phone wakes up or comes back online.
 
 const POLL_MS = 6000;
 
@@ -18,7 +16,6 @@ export function useOnlineRoom(code: string | null) {
   const [state, setState] = useState<OnlineState | null>(null);
   const [problem, setProblem] = useState<RoomProblem>(null);
   const [offline, setOffline] = useState(false);
-  const offsetRef = useRef(0);
   const seqRef = useRef(0);
   const debounceRef = useRef<number | null>(null);
 
@@ -28,7 +25,6 @@ export function useOnlineRoom(code: string | null) {
     try {
       const s = await online.state(code);
       if (seq < seqRef.current - 3) return; // a much newer answer already arrived
-      offsetRef.current = Date.parse(s.now) - Date.now();
       setState(s);
       setOffline(false);
       setProblem(null);
@@ -40,8 +36,6 @@ export function useOnlineRoom(code: string | null) {
       }
     }
   }, [code]);
-
-  const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 
   // First load, polling, wake-up and reconnect.
   useEffect(() => {
@@ -79,5 +73,5 @@ export function useOnlineRoom(code: string | null) {
     };
   }, [roomId, refresh]);
 
-  return { state, problem, offline, refresh, serverNow };
+  return { state, problem, offline, refresh };
 }

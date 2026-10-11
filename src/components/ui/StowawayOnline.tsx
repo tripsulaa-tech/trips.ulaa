@@ -570,7 +570,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             ))}
           </ul>
           {isHost
-            ? <button type="button" disabled={busy} onClick={() => void act(() => online.beginClues(room.code))} className={`${players.every(p => p.ready) ? primaryBtn : ghostBtn} mt-4`}>
+            ? <button type="button" disabled={busy} onClick={() => void act(() => online.beginVote(room.code))} className={`${players.every(p => p.ready) ? primaryBtn : ghostBtn} mt-4`}>
                 {players.every(p => p.ready) ? 'Everyone has boarded. Start the vote' : `Start anyway (${players.filter(p => p.ready).length} of ${n} ready)`} <ArrowRight size={16} weight="bold" />
               </button>
             : <div className="mt-3">{waiting(players.every(p => p.ready) ? `Waiting for ${hostName} to start…` : 'Waiting for everyone to get ready…')}</div>}

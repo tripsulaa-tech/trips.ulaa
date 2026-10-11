@@ -74,7 +74,7 @@ def play_round(code, ps, policy='random', check_counts=True):
         me = state(code, p)['me']
         if me['role'] != roles[p.id]['role'] or me['word'] != roles[p.id]['word']: problems.append('a player was shown the wrong role/word')
     for p in ps: rpc('stowaway_ready', code, p.tok)
-    rpc('stowaway_begin_clues', code, host.tok)
+    rpc('stowaway_begin_vote', code, host.tok)
     for _ in range(400):
         room = state(code, host)['room']; ph = room['phase']
         if ph == 'vote':
@@ -181,7 +181,7 @@ code, ps = new_room(6, 1, 1); host = ps[0]
 rpc('stowaway_start_round', code, host.tok, None, False)
 roles = roles_of(code); lost = next(p for p in ps if roles[p.id]['role'] == 'lost')
 for p in ps: rpc('stowaway_ready', code, p.tok)
-rpc('stowaway_begin_clues', code, host.tok)
+rpc('stowaway_begin_vote', code, host.tok)
 for v in [p for p in ps if p.id != lost.id]: rpc('stowaway_cast_vote', code, v.tok, lost.id)
 rpc('stowaway_cast_vote', code, lost.tok, next(p for p in ps if p.id != lost.id).id)
 su("update stowaway_rooms set offboard_at = now() - interval '10 seconds' where code = %s", (code,)); rpc('stowaway_after_reveal', code, host.tok)
@@ -199,7 +199,7 @@ check('judging the guess ends the round', state(code, host)['room']['phase'] == 
 # ── 6. Host controls, joining, ties ──
 code, ps = new_room(3, 1, 0); host = ps[0]
 rpc('stowaway_start_round', code, host.tok, None, False); [rpc('stowaway_ready', code, p.tok) for p in ps]
-rpc('stowaway_begin_clues', code, host.tok)
+rpc('stowaway_begin_vote', code, host.tok)
 for i, p in enumerate(ps): rpc('stowaway_cast_vote', code, p.tok, ps[(i + 1) % 3].id)
 room = state(code, host)['room']
 check('a tied vote asks everyone to vote again', room['phase'] == 'vote' and room['last_result']['tie'] is True)
@@ -207,7 +207,7 @@ check('a tie clears the "voted" flags', not any(p['voted'] for p in state(code, 
 
 code, ps = new_room(5, 1, 0); host = ps[0]
 rpc('stowaway_start_round', code, host.tok, None, False); [rpc('stowaway_ready', code, p.tok) for p in ps]
-rpc('stowaway_begin_clues', code, host.tok)
+rpc('stowaway_begin_vote', code, host.tok)
 try: rpc('stowaway_resolve_now', code, host.tok); early = True
 except Err as e: early = e.code != 'no_votes_yet'
 check('"reveal now" needs at least one vote', not early)
@@ -256,7 +256,7 @@ rpc('stowaway_start_round', code, ps[0].tok, None, True)
 check('"new game" resets scores and round number', all(p['points'] == 0 for p in state(code, ps[0])['players']) and state(code, ps[0])['room']['round_no'] == 1); clear()
 
 code, ps = new_room(4, 1, 0); rpc('stowaway_start_round', code, ps[0].tok, None, False); [rpc('stowaway_ready', code, p.tok) for p in ps]
-rpc('stowaway_begin_clues', code, ps[0].tok); room = state(code, ps[0])['room']
+rpc('stowaway_begin_vote', code, ps[0].tok); room = state(code, ps[0])['room']
 check('after the deal the game goes straight to the vote', room['phase'] == 'vote', room['phase'])
 check('the room no longer carries the old challenge, speaking-order and timer columns', not {'challenges', 'turn_order', 'turn_pos', 'timer_started_at', 'challenge_id'} & room.keys(), sorted(room)); clear()
 

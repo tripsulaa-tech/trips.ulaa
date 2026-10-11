@@ -168,7 +168,7 @@ export const online = {
   startRound: (code: string, dare: string | null, reset = false) =>
     rpc('stowaway_start_round', { p_code: code, p_token: t(), p_dare: dare, p_reset: reset }),
   ready: (code: string) => rpc('stowaway_ready', { p_code: code, p_token: t() }),
-  beginClues: (code: string) => rpc('stowaway_begin_clues', { p_code: code, p_token: t() }),
+  beginVote: (code: string) => rpc('stowaway_begin_vote', { p_code: code, p_token: t() }),
   vote: (code: string, target: string) => rpc('stowaway_cast_vote', { p_code: code, p_token: t(), p_target: target }),
   resolveNow: (code: string) => rpc('stowaway_resolve_now', { p_code: code, p_token: t() }),
   afterReveal: (code: string) => rpc('stowaway_after_reveal', { p_code: code, p_token: t() }),
