@@ -21,7 +21,7 @@ import { isPremiumPackage } from '../../utils/tripOptions';
 import {
   PACKAGE_CONFIG,
   foodBadge, foodPreferenceKey, SOURCE_CONFIG,
-  journeyBadge, nextManualAction,
+  listStatusBadge, nextManualAction,
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
 } from './AdminEnquiryCommon';
@@ -95,6 +95,7 @@ function PaymentSummaryLine({ e }: { e: Enquiry }) {
         paymentStatus(e).color.includes('green') ? 'text-green-700'
           : paymentStatus(e).color.includes('amber') ? 'text-amber-700'
           : paymentStatus(e).color.includes('red') ? 'text-red-700'
+          : paymentStatus(e).color.includes('orange') ? 'text-orange-700'
           : 'text-dark-muted'
       }`}>
         {paymentStatus(e).label}
@@ -189,7 +190,7 @@ export default function AdminEnquiriesDesktopTable({
           <tbody className="divide-y divide-background-warm">
             {paginatedEnquiries.map((e, pageIdx) => {
               const idx = (enquiriesSafePage - 1) * pageSize + pageIdx;
-              const jb = journeyBadge(e);
+              const jb = listStatusBadge(e);
               const nma = nextManualAction(e);
               const seat = seatStatus(e);
               const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
@@ -320,9 +321,9 @@ export default function AdminEnquiriesDesktopTable({
                         )}
                       </button>
                     )}
-                    {refundStatus(e) && (
-                      <p className={`text-2xs font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e)!.color}`}>
-                        {refundStatus(e)!.label}
+                    {refundStatus(e, true) && (
+                      <p className={`text-2xs font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e, true)!.color}`}>
+                        {refundStatus(e, true)!.label}
                       </p>
                     )}
                   </td>

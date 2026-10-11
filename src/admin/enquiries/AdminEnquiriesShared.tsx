@@ -176,7 +176,15 @@ export const BULK_FOOD_OPTIONS = [
 // case (computeJourneyStage only stays on 'contacted' when total_amount is
 // still unset — see src/services/api.ts), so it gets its own red, harder-to-
 // miss label instead.
+// A cancelled no-show that had paid something: the money is kept (no refund
+// per policy), so it's "Forfeited" rather than a partial payment with a
+// balance still due.
+export function isForfeited(e: Enquiry): boolean {
+  return !!e.cancelled_at && !!e.is_no_show && (e.amount_paid || 0) > 0;
+}
+
 export function paymentStatus(e: Enquiry): { label: string; color: string } {
+  if (isForfeited(e)) return { label: 'Forfeited', color: 'bg-orange-100 text-orange-700' };
   if (!e.total_amount) {
     if (e.journey_stage === 'contacted') return { label: 'Needs Pricing', color: 'bg-red-100 text-red-700' };
     return { label: 'Not set', color: 'bg-slate-100 text-dark-muted' };
@@ -187,7 +195,7 @@ export function paymentStatus(e: Enquiry): { label: string; color: string } {
 }
 
 export function paymentBalance(e: Enquiry): number | null {
-  if (!e.total_amount) return null;
+  if (!e.total_amount || isForfeited(e)) return null;
   return Math.max(0, e.total_amount - (e.amount_paid || 0));
 }
 
@@ -251,7 +259,9 @@ export function seatStatus(e: Enquiry): { label: string; title: string; color: s
   }
   if (e.cancelled_at) {
     return e.is_no_show
-      ? { label: 'No Show', title: 'No-show — seat released, forfeits refund per policy', color: 'bg-orange-100 text-orange-700', icon: XCircle }
+      // "Released", not "No Show" — the Status column already says No Show,
+      // so repeating it here told the admin nothing new about the seat.
+      ? { label: 'Released', title: 'No-show — seat released, forfeits refund per policy', color: 'bg-orange-100 text-orange-700', icon: XCircle }
       : { label: 'Cancelled', title: 'Cancelled — seat released', color: 'bg-red-100 text-red-700', icon: XCircle };
   }
   return { label: 'Not booked', title: 'No payment recorded yet, so no seat is held', color: 'bg-background-warm text-dark-muted', icon: Circle };
@@ -268,8 +278,13 @@ export function isGroupEntry(e: Enquiry): boolean {
 // refund_amount against amount_paid independently, so partial refunds
 // (processed in installments) show correctly as "pending" until they
 // fully catch up.
-export function refundStatus(e: Enquiry): { label: string; color: string } | null {
+export function refundStatus(e: Enquiry, short = false): { label: string; color: string } | null {
   if (!e.cancelled_at || e.amount_paid <= 0) return null;
+  // No-shows forfeit what they paid (no refund per policy), so nothing is
+  // "pending" — showing a refund due here was misleading.
+  // `short` is for the narrow table cell, where the amount is already in
+  // the payment line right above it.
+  if (e.is_no_show) return { label: short ? 'No refund' : `No refund — ${formatPrice(e.amount_paid)} forfeited`, color: 'bg-orange-100 text-orange-700' };
   const refunded = e.refund_amount || 0;
   if (refunded >= e.amount_paid) return { label: 'Refunded', color: 'bg-green-100 text-green-700' };
   if (refunded > 0) return { label: `Refund pending — ${formatPrice(e.amount_paid - refunded)} left`, color: 'bg-amber-100 text-amber-700' };

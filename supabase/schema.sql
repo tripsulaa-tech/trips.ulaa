@@ -600,6 +600,12 @@ create table public.testimonials (
   is_published  boolean default true,
   sort_order    integer default 0,
   created_at    timestamptz default now(),
+  -- Internal link to the trip / booked traveller the review is from (set by
+  -- the admin's trip -> traveller picker). trip_id is polymorphic across
+  -- upcoming_trips/completed_trips so it is not a FK; enquiry_id is.
+  -- See add_testimonial_trip_traveller_link.sql.
+  trip_id       uuid,
+  enquiry_id    uuid references public.enquiries (id) on delete set null,
   constraint testimonials_pkey primary key (id),
   constraint testimonials_rating_check check (rating >= 1 and rating <= 5)
 );

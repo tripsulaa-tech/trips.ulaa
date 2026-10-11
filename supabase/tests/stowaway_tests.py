@@ -56,7 +56,7 @@ def new_room(n, stow=1, lost=0, level='medium', hide=False):
     ps = [P(f'P{i}') for i in range(n)]
     r = rpc('stowaway_create_room', ps[0].name, ps[0].tok, 'Test'); code = r['code']; ps[0].id = r['player_id']
     for p in ps[1:]: p.id = rpc('stowaway_join', code, p.name, p.tok)['player_id']
-    rpc('stowaway_set_settings', code, ps[0].tok, stow, lost, level, hide, False, False)
+    rpc('stowaway_set_settings', code, ps[0].tok, stow, lost, level, hide, False)
     return code, ps
 
 def roles_of(code):
@@ -65,7 +65,7 @@ def roles_of(code):
 
 def play_round(code, ps, policy='random', check_counts=True):
     host, byid, problems = ps[0], {p.id: p for p in ps}, []
-    rpc('stowaway_start_round', code, host.tok, None, None, False)
+    rpc('stowaway_start_round', code, host.tok, None, False)
     roles = roles_of(code); cnt = collections.Counter(r['role'] for r in roles.values())
     c = state(code, host)['counts']
     if check_counts and c and (c['explorers'], c['stowaways'], c['lost']) != (cnt['explorer'], cnt['stowaway'], cnt['lost']):
@@ -77,11 +77,7 @@ def play_round(code, ps, policy='random', check_counts=True):
     rpc('stowaway_begin_clues', code, host.tok)
     for _ in range(400):
         room = state(code, host)['room']; ph = room['phase']
-        if ph == 'clues':
-            while state(code, host)['room']['phase'] == 'clues':
-                cur = state(code, host)['room']; sp = byid[cur['turn_order'][cur['turn_pos']]]
-                rpc('stowaway_next_speaker', code, sp.tok, cur['turn_pos'])
-        elif ph == 'vote':
+        if ph == 'vote':
             roles = roles_of(code); alive = [p for p in ps if roles[p.id]['alive']]
             for v in alive:
                 pl = {x['id']: x for x in state(code, host)['players']}
@@ -156,7 +152,7 @@ total = su("select count(*) c from stowaway_word_pairs where level='hard'")[0]['
 for i in range(2 * total + 5):
     before = su("select used_pairs, last_category from stowaway_room_private rp join stowaway_rooms r on r.id = rp.room_id where r.code = %s", (code,))[0]
     unused = [] if i == 0 else su("select category from stowaway_word_pairs where level='hard' and not (id = any(%s))", (before['used_pairs'],))
-    rpc('stowaway_start_round', code, ps[0].tok, None, None, i == 0)
+    rpc('stowaway_start_round', code, ps[0].tok, None, i == 0)
     row = su("select used_pairs, category from stowaway_room_private rp join stowaway_rooms r on r.id = rp.room_id where r.code = %s", (code,))[0]
     cur = row['used_pairs'][-1]
     if cur in seen and len(set(seen)) < total and len(row['used_pairs']) > 1: errs.append('pair repeated before the bag was used up')
@@ -172,7 +168,7 @@ for t in ['stowaway_player_private', 'stowaway_room_private', 'stowaway_votes', 
     except psycopg2.Error: pass
 check('the public key cannot read any game table directly', not leaks, leaks)
 code, ps = new_room(4, 1, 0); host_only = []
-for fn, args in [('stowaway_start_round', (None, None, False)), ('stowaway_set_locked', (True,)), ('stowaway_kick', (ps[0].id,)), ('stowaway_resolve_now', ()), ('stowaway_end_game', ())]:
+for fn, args in [('stowaway_start_round', (None, False)), ('stowaway_set_locked', (True,)), ('stowaway_kick', (ps[0].id,)), ('stowaway_resolve_now', ()), ('stowaway_end_game', ())]:
     try: rpc(fn, code, ps[1].tok, *args); host_only.append(fn)
     except Err: pass
 check('players cannot use host-only actions', not host_only, host_only)
@@ -182,10 +178,10 @@ check('a stranger cannot read a room', not stranger); clear()
 
 # ── 5. The Lost Soul cannot cheat ──
 code, ps = new_room(6, 1, 1); host = ps[0]
-rpc('stowaway_start_round', code, host.tok, None, None, False)
+rpc('stowaway_start_round', code, host.tok, None, False)
 roles = roles_of(code); lost = next(p for p in ps if roles[p.id]['role'] == 'lost')
 for p in ps: rpc('stowaway_ready', code, p.tok)
-rpc('stowaway_begin_clues', code, host.tok); rpc('stowaway_skip_to_vote', code, host.tok)
+rpc('stowaway_begin_clues', code, host.tok)
 for v in [p for p in ps if p.id != lost.id]: rpc('stowaway_cast_vote', code, v.tok, lost.id)
 rpc('stowaway_cast_vote', code, lost.tok, next(p for p in ps if p.id != lost.id).id)
 su("update stowaway_rooms set offboard_at = now() - interval '10 seconds' where code = %s", (code,)); rpc('stowaway_after_reveal', code, host.tok)
@@ -202,16 +198,16 @@ check('judging the guess ends the round', state(code, host)['room']['phase'] == 
 
 # ── 6. Host controls, joining, ties ──
 code, ps = new_room(3, 1, 0); host = ps[0]
-rpc('stowaway_start_round', code, host.tok, None, None, False); [rpc('stowaway_ready', code, p.tok) for p in ps]
-rpc('stowaway_begin_clues', code, host.tok); rpc('stowaway_skip_to_vote', code, host.tok)
+rpc('stowaway_start_round', code, host.tok, None, False); [rpc('stowaway_ready', code, p.tok) for p in ps]
+rpc('stowaway_begin_clues', code, host.tok)
 for i, p in enumerate(ps): rpc('stowaway_cast_vote', code, p.tok, ps[(i + 1) % 3].id)
 room = state(code, host)['room']
 check('a tied vote asks everyone to vote again', room['phase'] == 'vote' and room['last_result']['tie'] is True)
 check('a tie clears the "voted" flags', not any(p['voted'] for p in state(code, host)['players'])); clear()
 
 code, ps = new_room(5, 1, 0); host = ps[0]
-rpc('stowaway_start_round', code, host.tok, None, None, False); [rpc('stowaway_ready', code, p.tok) for p in ps]
-rpc('stowaway_begin_clues', code, host.tok); rpc('stowaway_skip_to_vote', code, host.tok)
+rpc('stowaway_start_round', code, host.tok, None, False); [rpc('stowaway_ready', code, p.tok) for p in ps]
+rpc('stowaway_begin_clues', code, host.tok)
 try: rpc('stowaway_resolve_now', code, host.tok); early = True
 except Err as e: early = e.code != 'no_votes_yet'
 check('"reveal now" needs at least one vote', not early)
@@ -229,7 +225,7 @@ rpc('stowaway_set_locked', code, ps[0].tok, True)
 try: rpc('stowaway_join', code, 'Late', str(uuid.uuid4())); locked = False
 except Err as e: locked = e.code == 'room_locked'
 check('a locked room refuses new players', locked)
-rpc('stowaway_set_locked', code, ps[0].tok, False); rpc('stowaway_start_round', code, ps[0].tok, None, None, False)
+rpc('stowaway_set_locked', code, ps[0].tok, False); rpc('stowaway_start_round', code, ps[0].tok, None, False)
 check('a player who reconnects keeps their seat', rpc('stowaway_join', code, 'x', ps[1].tok)['player_id'] == ps[1].id)
 try: rpc('stowaway_join', code, 'New', str(uuid.uuid4())); started = False
 except Err as e: started = e.code == 'game_started'
@@ -256,23 +252,20 @@ code, ps = new_room(5, 1, 0); st, _ = play_round(code, ps, 'smart', False)
 pts = {p['id']: p['points'] for p in st['players']}; rpc('stowaway_to_lobby', code, ps[0].tok); st2 = state(code, ps[0])
 check('back to the lobby keeps scores and hides old roles', {p['id']: p['points'] for p in st2['players']} == pts and st2['me']['role'] is None)
 st3, pr = play_round(code, ps, 'smart', False); check('a second game in the same room runs', st3['room']['phase'] == 'roundEnd' and not pr, pr)
-rpc('stowaway_start_round', code, ps[0].tok, None, None, True)
+rpc('stowaway_start_round', code, ps[0].tok, None, True)
 check('"new game" resets scores and round number', all(p['points'] == 0 for p in state(code, ps[0])['players']) and state(code, ps[0])['room']['round_no'] == 1); clear()
 
-code, ps = new_room(4, 1, 0); rpc('stowaway_start_round', code, ps[0].tok, None, None, False); rpc('stowaway_begin_clues', code, ps[0].tok)
-room = state(code, ps[0])['room']; spk = next(p for p in ps if p.id == room['turn_order'][room['turn_pos']]); oth = next(p for p in ps[1:] if p.id != spk.id)
-try: rpc('stowaway_next_speaker', code, oth.tok, 0); steal = True
-except Err as e: steal = e.code != 'not_your_turn'
-check('only the speaker (or host) can pass the turn', not steal)
-rpc('stowaway_next_speaker', code, spk.tok, 0); rpc('stowaway_next_speaker', code, spk.tok, 0)
-check('a double tap does not skip a speaker', state(code, ps[0])['room']['turn_pos'] == 1); clear()
+code, ps = new_room(4, 1, 0); rpc('stowaway_start_round', code, ps[0].tok, None, False); [rpc('stowaway_ready', code, p.tok) for p in ps]
+rpc('stowaway_begin_clues', code, ps[0].tok); room = state(code, ps[0])['room']
+check('after the deal the game goes straight to the vote', room['phase'] == 'vote', room['phase'])
+check('the room no longer carries the old challenge, speaking-order and timer columns', not {'challenges', 'turn_order', 'turn_pos', 'timer_started_at', 'challenge_id'} & room.keys(), sorted(room)); clear()
 
 # ── 7. Live updates ──
 def rev(code): return su("select s.rev from stowaway_signal s join stowaway_rooms r on r.id = s.room_id where r.code = %s", (code,))[0]['rev']
 code, ps = new_room(5, 1, 0); r0 = rev(code); state(code, ps[1])
 check('a heartbeat does not trigger refreshes', rev(code) == r0)
 rpc('stowaway_join', code, 'Zed', str(uuid.uuid4())); r1 = rev(code)
-rpc('stowaway_start_round', code, ps[0].tok, None, None, False); r2 = rev(code)
+rpc('stowaway_start_round', code, ps[0].tok, None, False); r2 = rev(code)
 check('each action moves the live-update counter exactly once', (r1, r2) == (r0 + 1, r1 + 1), (r0, r1, r2))
 cur = API.cursor(); cur.execute('select * from public.stowaway_signal'); cols = [d[0] for d in cur.description]
 check('the public live-update table exposes only room id + counter', cols == ['room_id', 'rev'], cols); clear()

@@ -17,6 +17,22 @@ import type { ActivityLogEntry } from '../../../types/types-index';
 // block the real action (recording a payment, checking someone in, ...) it
 // was describing. The trade-off is an occasional gap in the timeline rather
 // than a blocked booking — the right side to fail open on.
+// "Trip: <title> · Departed 14 Mar 2026" — shown on cancel / no-show entries so
+// the timeline says which trip it was and when it left, since the entry's own
+// timestamp is only when the admin pressed the button (which can be long
+// after the trip). Returns null when neither is known.
+export function tripContext(e: { trip_title?: string | null; departure_date?: string | null }): string | null {
+  const parts: string[] = [];
+  if (e.trip_title) parts.push(`Trip: ${e.trip_title}`);
+  if (e.departure_date) {
+    const d = new Date(e.departure_date);
+    if (!Number.isNaN(d.getTime())) {
+      parts.push(`Departed ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}`);
+    }
+  }
+  return parts.length ? parts.join(' · ') : null;
+}
+
 export async function logActivity(enquiryId: string, action: string, details?: string | null): Promise<void> {
   const { error } = await supabase
     .from('activity_log')

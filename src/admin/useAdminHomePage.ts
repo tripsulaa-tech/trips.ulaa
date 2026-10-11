@@ -329,6 +329,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
         const patch = {
           name: t.name, photo: t.photo, review: t.review, rating: t.rating,
           destination: t.destination, is_published: t.is_published, sort_order: i,
+          trip_id: t.trip_id ?? null, enquiry_id: t.enquiry_id ?? null,
         };
         if (t.id.startsWith('new-')) {
           const created = await createTestimonial(patch);
@@ -337,7 +338,8 @@ export function useAdminHomePage(): UseAdminHomePageResult {
           const orig = originalTestimonialById.get(t.id);
           const changed = !orig || orig.name !== t.name || orig.photo !== t.photo || orig.review !== t.review
             || orig.rating !== t.rating || orig.destination !== t.destination
-            || orig.is_published !== t.is_published || orig.sort_order !== i;
+            || orig.is_published !== t.is_published || orig.sort_order !== i
+            || (orig.trip_id ?? null) !== (t.trip_id ?? null) || (orig.enquiry_id ?? null) !== (t.enquiry_id ?? null);
           if (changed) {
             const updated = await updateTestimonial(t.id, patch);
             resolvedTestimonials.push(updated);

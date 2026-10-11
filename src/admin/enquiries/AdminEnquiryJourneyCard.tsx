@@ -12,6 +12,7 @@ import { CheckCircle as CheckCircle2, Clock, CurrencyInr as IndianRupee, FileTex
 import Button from '../../components/ui/Button';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
+import { isForfeited } from './AdminEnquiriesShared';
 import { BookingLifecycleStepper } from './AdminEnquiryLifecycle';
 import PaymentFormFields from './PaymentFormFields';
 import type { PaymentErrors } from './PaymentFormFields';
@@ -47,7 +48,10 @@ export default function AdminEnquiryJourneyCard({
   if (enquiry.booking_id) {
     const totalAmount = enquiry.total_amount || 0;
     const paidAmount = enquiry.amount_paid || 0;
-    const pendingAmount = Math.max(0, totalAmount - paidAmount);
+    // A cancelled booking owes nothing more; a no-show's payment is kept
+    // (no refund per policy), so show it as forfeited instead of "balance due".
+    const forfeited = isForfeited(enquiry);
+    const pendingAmount = enquiry.cancelled_at ? 0 : Math.max(0, totalAmount - paidAmount);
     const paidPercent = totalAmount > 0 ? Math.round(Math.min(1, paidAmount / totalAmount) * 100) : 0;
     // Discount is already netted into total_amount, and — per this actual
     // booking's numbers (₹47,999 total = ₹39,999 trip + ₹8,000 add-on,
@@ -64,6 +68,9 @@ export default function AdminEnquiryJourneyCard({
     const discountAmount = enquiry.discount_amount || 0;
     const addonsAmount = payments.reduce((sum, p) => sum + (p.payment_type === 'addon' ? p.amount : 0), 0);
     const tripAmount = Math.max(0, totalAmount - addonsAmount + discountAmount);
+    // A cancelled booking can't be completed (markEnquiryCompleted refuses it).
+    const canComplete = !!enquiry.booking_status && enquiry.booking_status !== 'cancelled'
+      && enquiry.booking_status !== 'completed' && !enquiry.cancelled_at;
     // Complete Trip only earns primary/solid emphasis once the balance
     // is actually clear — otherwise it's visually competing with (and
     // outranking) Add Payment for an enquiry that isn't done being paid
@@ -95,14 +102,20 @@ export default function AdminEnquiryJourneyCard({
               </p>
               <p className="text-dark-muted text-xs mt-1">Total amount, payments received and balance details.</p>
             </div>
-            <div className="min-w-[140px] flex-1 sm:flex-none sm:w-44">
-              <p className="text-right text-sm font-button font-bold text-dark mb-1.5">
-                {paidPercent}% <span className="text-primary">Paid</span>
-              </p>
-              <div className="h-2 rounded-full bg-dark/10 overflow-hidden">
-                <div className="h-full rounded-full bg-green-500 transition-[width] duration-500" style={{ width: `${paidPercent}%` }} />
+            {forfeited ? (
+              <span className="inline-flex items-center text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-orange-100 text-orange-700">
+                No refund — {formatPrice(paidAmount)} forfeited
+              </span>
+            ) : (
+              <div className="min-w-[140px] flex-1 sm:flex-none sm:w-44">
+                <p className="text-right text-sm font-button font-bold text-dark mb-1.5">
+                  {paidPercent}% <span className="text-primary">Paid</span>
+                </p>
+                <div className="h-2 rounded-full bg-dark/10 overflow-hidden">
+                  <div className="h-full rounded-full bg-green-500 transition-[width] duration-500" style={{ width: `${paidPercent}%` }} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {(discountAmount > 0 || addonsAmount > 0) && (
@@ -161,8 +174,8 @@ export default function AdminEnquiryJourneyCard({
                 <CheckCircle2 size={17} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-dark-muted text-2xs">Paid Amount</p>
-                <p className="text-green-700 text-sm font-bold">{formatPrice(paidAmount)}</p>
+                <p className="text-dark-muted text-2xs">{forfeited ? 'Paid (forfeited)' : 'Paid Amount'}</p>
+                <p className={`${forfeited ? 'text-orange-700' : 'text-green-700'} text-sm font-bold`}>{formatPrice(paidAmount)}</p>
               </div>
             </div>
             {/* Only shown while something is still owed — at ₹0 it was just a
@@ -181,7 +194,10 @@ export default function AdminEnquiryJourneyCard({
             )}
           </div>
 
-          <div className={`grid gap-2 ${enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Nothing to add on a forfeited no-show: no refund is allowed and
+              it can't be completed. */}
+          {!forfeited && (
+          <div className={`grid gap-2 ${canComplete ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <Button
               variant={pendingAmount > 0 ? 'primary' : 'outline'}
               size="sm"
@@ -190,7 +206,7 @@ export default function AdminEnquiryJourneyCard({
             >
               <IndianRupee size={13} aria-hidden="true" /> {pendingAmount > 0 ? 'Add Payment' : 'Add Charge'}
             </Button>
-            {enquiry.booking_status && enquiry.booking_status !== 'cancelled' && enquiry.booking_status !== 'completed' && (
+            {canComplete && (
               <Button
                 variant={pendingAmount > 0 ? 'outline' : 'primary'}
                 size="sm"
@@ -203,6 +219,7 @@ export default function AdminEnquiryJourneyCard({
               </Button>
             )}
           </div>
+          )}
         </div>
       </>
     );

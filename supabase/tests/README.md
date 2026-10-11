@@ -23,6 +23,8 @@ for f in tests/stub_supabase.sql \
          migration/add_stowaway_online.sql \
          migration/add_stowaway_share_links.sql \
          migration/fix_stowaway_logic_and_privacy.sql \
+         migration/remove_stowaway_clue_round.sql \
+         migration/drop_stowaway_clue_and_challenge_leftovers.sql \
          migration/add_find_my_twin.sql \
          migration/update_find_my_twin_10_questions.sql \
          migration/make_find_my_twin_editable.sql \

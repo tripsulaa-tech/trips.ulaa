@@ -5,9 +5,10 @@ import type { Testimonial } from '../../types/types-index';
 // Testimonials
 // =============================================
 export async function getTestimonials(): Promise<Testimonial[]> {
+  // Explicit columns: the public site never needs the internal trip/traveller link.
   const { data, error } = await supabase
     .from('testimonials')
-    .select('*')
+    .select('id, name, photo, review, rating, destination, is_published, sort_order, created_at')
     .eq('is_published', true)
     .order('sort_order', { ascending: true });
   if (error) throw error;

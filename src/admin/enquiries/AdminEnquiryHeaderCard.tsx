@@ -93,7 +93,7 @@ export default function AdminEnquiryHeaderCard({
                 this), and only called out when Cancelled — "Active" is
                 the unremarkable default and would just add noise next to
                 a Journey badge that already implies it. */}
-            {isCancelled(enquiry) && (
+            {isCancelled(enquiry) && !enquiry.is_no_show && (
               <span title="Booking State" className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${bookingStateBadge(enquiry).color}`}>
                 <XCircle size={12} className="shrink-0" aria-hidden="true" /> {bookingStateBadge(enquiry).label}
               </span>
@@ -162,12 +162,13 @@ export default function AdminEnquiryHeaderCard({
                 {(() => {
                   const cancelled = isCancelled(enquiry);
                   const finished = !cancelled && (enquiry.booking_status === 'completed' || enquiry.journey_stage === 'completed');
-                  const tone = cancelled ? 'text-red-600' : finished ? 'text-dark-muted' : 'text-green-600';
-                  const dot = cancelled ? 'bg-red-600' : finished ? 'bg-dark-muted' : 'bg-green-600';
+                  const noShow = cancelled && enquiry.is_no_show;
+                  const tone = noShow ? 'text-orange-700' : cancelled ? 'text-red-600' : finished ? 'text-dark-muted' : 'text-green-600';
+                  const dot = noShow ? 'bg-orange-600' : cancelled ? 'bg-red-600' : finished ? 'bg-dark-muted' : 'bg-green-600';
                   return (
                     <p className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold ${tone}`}>
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} aria-hidden="true" />
-                      {cancelled ? 'Cancelled' : finished ? 'Trip Completed' : 'Active Enquiry'}
+                      {noShow ? 'Cancelled · No Show' : cancelled ? 'Cancelled' : finished ? 'Trip Completed' : 'Active Enquiry'}
                     </p>
                   );
                 })()}

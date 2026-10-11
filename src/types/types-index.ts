@@ -741,6 +741,11 @@ export interface Testimonial {
   review: string;
   rating: number;
   destination?: string;
+  // Which trip / booked traveller this review is from. Set when the admin
+  // picks them in the Add Testimonial popup; null for older or manually
+  // typed testimonials. See add_testimonial_trip_traveller_link.sql.
+  trip_id?: string | null;
+  enquiry_id?: string | null;
   is_published: boolean;
   sort_order: number;
   created_at: string;

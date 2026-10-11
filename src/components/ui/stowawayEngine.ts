@@ -2,8 +2,8 @@
 // points and awards). No React here, so it stays easy to reason about.
 // Only the word bag, player names and settings are saved on the device.
 
-import { CHALLENGES, DARES, WORD_PAIRS } from './stowawayWords';
-import type { Category, Challenge, Level, WordPair } from './stowawayWords';
+import { DARES, WORD_PAIRS } from './stowawayWords';
+import type { Category, Level, WordPair } from './stowawayWords';
 
 export type Role = 'explorer' | 'stowaway' | 'lost';
 
@@ -81,11 +81,9 @@ export interface RoundSetup {
   explorerWord: string;
   stowawayWord: string;
   pair: WordPair;
-  challenge: Challenge;
-  startIdx: number;         // index into seats of the first speaker
 }
 
-export function dealRound(names: string[], c: RoleCounts, pair: WordPair, challenge: Challenge): RoundSetup {
+export function dealRound(names: string[], c: RoleCounts, pair: WordPair): RoundSetup {
   // Random word sides: the app decides which word the Explorers get.
   const flip = Math.random() < 0.5;
   const explorerWord = flip ? pair.a : pair.b;
@@ -104,7 +102,7 @@ export function dealRound(names: string[], c: RoleCounts, pair: WordPair, challe
     seat: seatNos[i],
     alive: true,
   }));
-  return { seats, explorerWord, stowawayWord, pair, challenge, startIdx: Math.floor(Math.random() * seats.length) };
+  return { seats, explorerWord, stowawayWord, pair };
 }
 
 // ── Winning ──
@@ -128,17 +126,6 @@ export function checkWinner(seats: Seat[]): Side | null {
   if (sneaky === 0) return 'explorers';
   if (sneaky >= a.explorers) return 'sneaky';
   return null;
-}
-
-/** Speaking order for a stop: alive players, starting from `from` (an index into all seats). */
-export function speakingOrder(seats: Seat[], from: number): number[] {
-  const n = seats.length;
-  const out: number[] = [];
-  for (let k = 0; k < n; k++) {
-    const i = (from + k) % n;
-    if (seats[i].alive) out.push(i);
-  }
-  return out;
 }
 
 // ── Scoring ──
@@ -203,7 +190,6 @@ export function computeAwards(names: string[], stats: Record<string, PlayerStats
 
 const BAG_KEY = (level: Level) => `ulaa:stowaway:bag:${level}`;
 const LAST_CAT_KEY = 'ulaa:stowaway:lastcat';
-const CHALLENGE_KEY = 'ulaa:stowaway:challenges';
 const DARE_KEY = 'ulaa:stowaway:dares';
 
 function readList(key: string): string[] {
@@ -259,10 +245,6 @@ export function drawPair(level: Level, opts: { tripTitle?: string } = {}): WordP
   return pair;
 }
 
-export function drawChallenge(): Challenge {
-  return drawFrom(CHALLENGES, CHALLENGE_KEY);
-}
-
 export function drawDare(): string {
   const items = DARES.map((text, i) => ({ id: String(i), text }));
   return drawFrom(items, DARE_KEY).text;
@@ -277,7 +259,6 @@ export interface SavedSetup {
   lost: number;
   hideCounts: boolean;
   level: Level;
-  challenges: boolean;
   dares: boolean;
 }
 
@@ -287,7 +268,6 @@ const DEFAULT_SETUP: SavedSetup = {
   lost: 0,
   hideCounts: false,
   level: 'medium',
-  challenges: true,
   dares: false,
 };
 
@@ -306,7 +286,6 @@ export function loadSetup(): SavedSetup {
     return {
       names, level, stowaways: r.stowaways, lost: r.lost,
       hideCounts: !!v.hideCounts,
-      challenges: v.challenges !== false,
       dares: !!v.dares,
     };
   } catch { return DEFAULT_SETUP; }

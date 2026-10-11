@@ -10,7 +10,7 @@ import { supabase } from '../../services/supabase';
 import { SITE_ORIGIN } from '../../constants/site';
 import type { Role } from './stowawayEngine';
 
-export type OnlinePhase = 'lobby' | 'deal' | 'clues' | 'vote' | 'offboard' | 'guess' | 'roundEnd' | 'final';
+export type OnlinePhase = 'lobby' | 'deal' | 'vote' | 'offboard' | 'guess' | 'roundEnd' | 'final';
 type OnlineOutcome = 'explorers' | 'stowaways' | 'lost-steal';
 
 interface OnlineRoom {
@@ -21,15 +21,10 @@ interface OnlineRoom {
   phase: OnlinePhase;
   locked: boolean;
   level: 'easy' | 'medium' | 'hard';
-  challenges: boolean;
   dares: boolean;
   hide_counts: boolean;
   round_no: number;
   stop_no: number;
-  turn_order: string[];
-  turn_pos: number;
-  timer_started_at: string | null;
-  challenge_id: string | null;
   dare: string | null;
   out_player: string | null;
   offboard_at: string | null;
@@ -85,7 +80,6 @@ const MESSAGES: Record<string, string> = {
   room_full: 'This room is full (15 players).',
   name_required: 'Please type your name.',
   host_only: 'Only the host can do that.',
-  not_your_turn: 'It is not your turn.',
   not_in_room: 'You are not in this room any more.',
   wrong_phase: 'That is not possible right now.',
   need_more_players: 'You need at least 3 players.',
@@ -163,22 +157,18 @@ export const online = {
     rpc<{ code: string; player_id: string }>('stowaway_join', { p_code: code, p_name: name, p_token: t() }),
   state: (code: string) => rpc<OnlineState>('stowaway_state', { p_code: code, p_token: t() }),
   claimHost: (code: string) => rpc('stowaway_claim_host', { p_code: code, p_token: t() }),
-  setSettings: (code: string, s: { stowaways: number; lost: number; level: string; hideCounts: boolean; challenges: boolean; dares: boolean }) =>
+  setSettings: (code: string, s: { stowaways: number; lost: number; level: string; hideCounts: boolean; dares: boolean }) =>
     rpc('stowaway_set_settings', {
       p_code: code, p_token: t(), p_stowaways: s.stowaways, p_lost: s.lost, p_level: s.level,
-      p_hide_counts: s.hideCounts, p_challenges: s.challenges, p_dares: s.dares,
+      p_hide_counts: s.hideCounts, p_dares: s.dares,
     }),
   setLocked: (code: string, locked: boolean) => rpc('stowaway_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
   kick: (code: string, player: string) => rpc('stowaway_kick', { p_code: code, p_token: t(), p_player: player }),
   leave: (code: string) => rpc('stowaway_leave', { p_code: code, p_token: t() }),
-  startRound: (code: string, challenge: string | null, dare: string | null, reset = false) =>
-    rpc('stowaway_start_round', { p_code: code, p_token: t(), p_challenge: challenge, p_dare: dare, p_reset: reset }),
+  startRound: (code: string, dare: string | null, reset = false) =>
+    rpc('stowaway_start_round', { p_code: code, p_token: t(), p_dare: dare, p_reset: reset }),
   ready: (code: string) => rpc('stowaway_ready', { p_code: code, p_token: t() }),
   beginClues: (code: string) => rpc('stowaway_begin_clues', { p_code: code, p_token: t() }),
-  timer: (code: string, running: boolean) => rpc('stowaway_timer', { p_code: code, p_token: t(), p_running: running }),
-  nextSpeaker: (code: string, fromPos: number) =>
-    rpc('stowaway_next_speaker', { p_code: code, p_token: t(), p_from_pos: fromPos }),
-  skipToVote: (code: string) => rpc('stowaway_skip_to_vote', { p_code: code, p_token: t() }),
   vote: (code: string, target: string) => rpc('stowaway_cast_vote', { p_code: code, p_token: t(), p_target: target }),
   resolveNow: (code: string) => rpc('stowaway_resolve_now', { p_code: code, p_token: t() }),
   afterReveal: (code: string) => rpc('stowaway_after_reveal', { p_code: code, p_token: t() }),

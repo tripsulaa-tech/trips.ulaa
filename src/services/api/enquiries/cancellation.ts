@@ -2,7 +2,7 @@ import { supabase } from '../../supabase';
 import { formatPrice } from '../../../utils/utils-index';
 import type { Enquiry, CancellationReason } from '../../../types/types-index';
 import { computeBookingStatus, refreshJourneyStage } from './shared';
-import { logActivity } from './activity';
+import { logActivity, tripContext } from './activity';
 
 // =============================================
 // Enquiries — cancellation / refunds
@@ -95,7 +95,13 @@ export async function cancelEnquiry(
   await logActivity(
     enquiry.id,
     'Cancelled',
-    [reason?.replace(/_/g, ' ') || null, notes?.trim() || null].filter(Boolean).join(' · ') || null
+    [
+      isNoShow ? 'No-show' : null,
+      reason?.replace(/_/g, ' ') || null,
+      notes?.trim() || null,
+      // Which trip was cancelled/missed, so the timeline reads on its own.
+      tripContext(enquiry),
+    ].filter(Boolean).join(' · ') || null
   );
   return updated;
 }

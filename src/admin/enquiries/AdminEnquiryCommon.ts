@@ -441,6 +441,18 @@ export function journeyBadge(e: Enquiry) {
   return JOURNEY_STAGE_CONFIG[e.journey_stage] || JOURNEY_STAGE_CONFIG.new_enquiry;
 }
 
+// Status badge for the Enquiries list (table + mobile cards). A cancelled
+// no-show reads "No Show" instead of the stage it had reached (e.g. "Advance
+// Paid"), which would suggest it's still live. The detail page keeps using
+// journeyBadge() because it shows Journey, Cancelled and No Show as three
+// separate badges.
+export function listStatusBadge(e: Enquiry) {
+  if (e.cancelled_at && e.is_no_show) {
+    return { label: 'No Show', color: 'bg-orange-100 text-orange-700', icon: XCircle };
+  }
+  return journeyBadge(e);
+}
+
 // True when this enquiry was closed out before ever becoming a paying
 // booking — i.e. an admin followed up and the person just wasn't
 // interested, as opposed to `status: 'closed'` on a booking that actually
@@ -479,6 +491,7 @@ export function canMarkNotInterested(e: Enquiry): boolean {
 // set in, and refreshJourneyStage() clears any existing reminder the
 // moment that happens.
 export function canSetFollowUp(e: Enquiry): boolean {
+  if (e.cancelled_at) return false;
   return e.journey_stage === 'contacted' || e.journey_stage === 'advance_pending' || e.journey_stage === 'advance_paid';
 }
 

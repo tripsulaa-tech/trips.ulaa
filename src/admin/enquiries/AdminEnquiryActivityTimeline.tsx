@@ -4,7 +4,7 @@
 // activity_log's RLS: no UPDATE/DELETE policy exists at all).
 import type { ReactNode } from 'react';
 import {
-  ClockCounterClockwise as History, XCircle, Clock,
+  ClockCounterClockwise as History, XCircle, UserMinus, Clock,
   Globe, Phone, Camera, MapPin, Percent, CurrencyInr as IndianRupee,
 } from '@phosphor-icons/react';
 import { WhatsAppIcon } from '../../components/icons/WhatsAppIcon';
@@ -86,7 +86,12 @@ function timelineMeta(entry: ActivityLogEntry): { render: (size: number) => Reac
       ? { render: phosphorGlyphRegular(Percent), classes: 'bg-red-50 text-red-600' }
       : { render: phosphorGlyphRegular(Percent), classes: 'bg-green-50 text-green-600' };
   }
-  if (action.includes('cancel') || action.includes('no show') || action.includes('removed')) {
+  // No-show entries (and the cancel that records one) get their own orange
+  // node so they read differently from an ordinary cancellation.
+  if (action.includes('no show') || (action.includes('cancel') && details.includes('no-show'))) {
+    return { render: phosphorGlyph(UserMinus), classes: 'bg-orange-50 text-orange-600' };
+  }
+  if (action.includes('cancel') || action.includes('removed')) {
     return { render: phosphorGlyph(XCircle), classes: 'bg-red-50 text-red-600' };
   }
   if (details.includes('pending')) {

@@ -631,7 +631,7 @@ function CharadesEditor({ onDirty }: { onDirty: OnDirty }) {
 }
 
 // ─────────────────────────────────── Stowaway ───────────────────────────────────
-type StowView = 'pairs' | 'challenges' | 'dares';
+type StowView = 'pairs' | 'dares';
 
 function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
   const ed = useGameEditor<StowawayContent>('stowaway', 'stowaway', STOWAWAY_DEFAULTS, sanitizeStowawayContent, onDirty);
@@ -658,12 +658,9 @@ function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
     if (pairs.some(p => !p.a || !p.b)) return { error: 'Every word pair needs two words.' };
     if (pairs.some(p => p.a.toLowerCase() === p.b.toLowerCase())) return { error: 'The two words in a pair must be different.' };
     for (const l of LEVELS) if (!pairs.some(p => p.level === l.id)) return { error: `Keep at least one ${l.label} pair.` };
-    const challenges = d.challenges.filter(c => c.title.trim() || c.text.trim());
-    if (challenges.some(c => !c.title.trim() || !c.text.trim())) return { error: 'Every challenge needs a title and text.' };
-    if (!challenges.length) return { error: 'Keep at least one clue challenge.' };
     const dares = trimList(d.dares);
     if (!dares.length) return { error: 'Keep at least one dare.' };
-    return { value: { pairs, challenges: challenges.map(c => ({ ...c, title: c.title.trim(), text: c.text.trim() })), dares } };
+    return { value: { pairs, dares } };
   };
 
   const sel = 'px-2 py-2 rounded-md border-2 border-background-warm bg-background text-sm text-dark focus:border-primary outline-none';
@@ -671,10 +668,9 @@ function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
   return (
     <div className="space-y-4">
       <Card>
-        <Hint>Explorers get one word of a pair and the Stowaway gets the other. Easy pairs are quite different, Hard pairs are nearly identical. Clue challenges twist how each player gives their clue; dares are for the losing side.</Hint>
+        <Hint>Explorers get one word of a pair and the Stowaway gets the other. Easy pairs are quite different, Hard pairs are nearly identical. Dares are for the losing side.</Hint>
         <Segmented<StowView> label="Stowaway content" value={view} onChange={setView} options={[
           { id: 'pairs', label: 'Word pairs', count: draft.pairs.length },
-          { id: 'challenges', label: 'Clue challenges', count: draft.challenges.length },
           { id: 'dares', label: 'Dares', count: draft.dares.length },
         ]} />
 
@@ -715,21 +711,6 @@ function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
             </ul>
             <p className="text-xs text-dark-muted sm:hidden">Open this page on a larger screen to change a pair's category or level.</p>
             {rows.length > shown && <div className="text-center"><Button variant="ghost" size="sm" onClick={() => setShown(s => s + PAGE)}>Show more ({rows.length - shown} left)</Button></div>}
-          </div>
-        )}
-
-        {view === 'challenges' && (
-          <div className="space-y-3">
-            <ListToolbar count={draft.challenges.length} noun="challenge" plural="challenges" addLabel="Add a challenge" onAdd={() => setDraft(d => ({ ...d, challenges: [{ id: '', title: '', text: '' }, ...d.challenges] }))} />
-            {draft.challenges.map((c, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <div className="grid sm:grid-cols-[12rem_minmax(0,1fr)] gap-2 flex-1 min-w-0">
-                  <input aria-label={`Challenge ${i + 1} title`} value={c.title} maxLength={40} placeholder="Title" onChange={e => setDraft(d => ({ ...d, challenges: d.challenges.map((x, idx) => (idx === i ? { ...x, title: e.target.value } : x)) }))} className={inputClass} />
-                  <textarea aria-label={`Challenge ${i + 1} text`} rows={2} value={c.text} maxLength={200} placeholder="What the player has to do with their clue…" onChange={e => setDraft(d => ({ ...d, challenges: d.challenges.map((x, idx) => (idx === i ? { ...x, text: e.target.value } : x)) }))} className={`${inputClass} resize-y`} />
-                </div>
-                <button type="button" aria-label={`Delete challenge ${i + 1}`} onClick={() => setDraft(d => ({ ...d, challenges: d.challenges.filter((_, idx) => idx !== i) }))} className="shrink-0 w-10 h-10 rounded-md text-dark-muted hover:text-red-600 hover:bg-red-50 flex items-center justify-center"><Trash2 size={18} aria-hidden="true" /></button>
-              </div>
-            ))}
           </div>
         )}
 
@@ -1027,7 +1008,7 @@ const TABS: { id: GameTab; label: string }[] = [
 type EditGame = 'tod' | 'stowaway' | 'charades' | 'twin';
 const EDIT_GAMES: { id: EditGame; label: string; blurb: string; Icon: PhosphorIcon }[] = [
   { id: 'tod', label: 'Truth or Dare', blurb: 'Truths, dares, twists', Icon: Sparkle },
-  { id: 'stowaway', label: 'Stowaway', blurb: 'Word pairs, challenges', Icon: Boat },
+  { id: 'stowaway', label: 'Stowaway', blurb: 'Word pairs, dares', Icon: Boat },
   { id: 'charades', label: 'Dumb Charades', blurb: 'Tamil film list', Icon: FilmSlate },
   { id: 'twin', label: 'Find My Twin', blurb: 'Questions and rounds', Icon: UsersThree },
 ];

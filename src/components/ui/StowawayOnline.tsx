@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Play, ArrowRight, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
-  Ticket, Airplane, Eye, EyeSlash, Sparkle, Lightning, Crown, Skull, CheckCircle, XCircle, MagicWand,
+  Ticket, Airplane, Eye, EyeSlash, Crown, Skull, CheckCircle, XCircle, MagicWand,
   Gift, Question, Copy, LockSimple, LockSimpleOpen, WifiSlash, DeviceMobile, Hash, UsersThree,
 } from '@phosphor-icons/react';
 import { SITE_HOST } from '../../constants/site';
@@ -10,16 +10,16 @@ import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
-import { Confetti, TimerRing } from './gameParts';
+import { Confetti } from './gameParts';
 import {
   GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName,
   loadPlayerName, savePlayerName, MAX_NAME,
 } from './gameUi';
-import { LEVELS, CATEGORY_LABEL, CHALLENGES } from './stowawayWords';
+import { LEVELS, CATEGORY_LABEL } from './stowawayWords';
 import type { Category, Level } from './stowawayWords';
 import {
   MIN_PLAYERS, MAX_PLAYERS, POINTS, maxLost, rolesValid, recommendedRoles, clampRoles, computeAwards,
-  drawChallenge, drawDare,
+  drawDare,
 } from './stowawayEngine';
 import type { PlayerStats, Role } from './stowawayEngine';
 import {
@@ -31,11 +31,10 @@ import { useStowawayContentSync } from './useGameContentSync';
 
 // "Stowaway" online: every player uses their own phone. The rules and secrets
 // live in Supabase (see add_stowaway_online.sql); this file is only the screens.
-// Clues are spoken aloud (in person or on a call). The phone handles the secret
-// word, the shared timer, private voting and the scores.
+// The group talks it out aloud (in person or on a call). The phone handles the
+// secret word, private voting and the scores.
 
 const MUTE_KEY = 'ulaa:packbag:muted'; // one sound setting for all the games
-const SPEAK_SECONDS = 15;
 
 const ROLE_LABEL: Record<Role, string> = { explorer: 'Explorer', stowaway: 'Stowaway', lost: 'Lost Soul' };
 const ROLE_TONE: Record<Role, string> = {
@@ -126,7 +125,7 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
 
       {view === 'menu' && (
         <>
-          <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Everyone uses their own phone. Clues are spoken aloud, in person or on a call. Your word stays private on your screen.</p>
+          <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Everyone uses their own phone. Talk it out aloud, in person or on a call. Your word stays private on your screen.</p>
           <div className="space-y-2.5">
             <button type="button" onClick={() => { ensure(); setView('host'); }} className={primaryBtn}><Crown size={18} weight="fill" /> Host a room</button>
             <button type="button" onClick={() => { ensure(); setView('join'); }} className={ghostBtn}><Hash size={18} weight="bold" /> Join with a code</button>
@@ -264,7 +263,7 @@ function Toggle({ on, onChange, title, desc, disabled }: {
 function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onLeft: () => void; onExit: () => void }) {
   const reduce = useReducedMotion();
   const { play, ensure, muted, toggleMute } = audio;
-  const { state, problem, offline, refresh, serverNow } = useOnlineRoom(code);
+  const { state, problem, offline, refresh } = useOnlineRoom(code);
 
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -274,7 +273,6 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const [guessDraft, setGuessDraft] = useState('');
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [nowMs, setNowMs] = useState(0);
   const noticeTimer = useRef<number | null>(null);
 
   const room = state?.room ?? null;
@@ -311,32 +309,13 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     const was = prevPhase.current;
     prevPhase.current = phase;
     if (!was || was === phase) return;
-    if (phase === 'clues') play('go');
-    else if (phase === 'vote') play('flip');
+    if (phase === 'vote') play('flip');
     else if (phase === 'offboard') play('power');
     else if (phase === 'guess') play('bad');
     else if (phase === 'roundEnd') play(outcome === 'explorers' ? 'win' : 'gold');
     else if (phase === 'final') play('win');
     try { navigator.vibrate?.(phase === 'offboard' ? [30, 40, 30] : 20); } catch { /* no haptics */ }
   }, [phase, outcome, play]);
-
-  // ── Shared speaking timer (server time, so every screen agrees) ──
-  const startedAt = room?.timer_started_at ? Date.parse(room.timer_started_at) : null;
-  useEffect(() => {
-    if (!startedAt) return;
-    const tick = () => setNowMs(serverNow());
-    tick();
-    const id = window.setInterval(tick, 250);
-    return () => window.clearInterval(id);
-  }, [startedAt, serverNow]);
-  const secondsLeft = startedAt && nowMs > 0
-    ? Math.max(0, Math.min(SPEAK_SECONDS, Math.ceil(SPEAK_SECONDS - (nowMs - startedAt) / 1000)))
-    : SPEAK_SECONDS;
-  useEffect(() => {
-    if (!startedAt) return;
-    if (secondsLeft > 0 && secondsLeft <= 5) play('tick');
-    if (secondsLeft === 0) { play('miss'); try { navigator.vibrate?.(120); } catch { /* no haptics */ } }
-  }, [secondsLeft, startedAt, play]);
 
   // ── After the offboard reveal, any phone nudges the game on (first one wins) ──
   useEffect(() => {
@@ -399,10 +378,10 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const validRoles = n >= MIN_PLAYERS && rolesValid(n, eff.stowaways, eff.lost);
   const explorers = n - eff.stowaways - eff.lost;
 
-  const saveSettings = (patch: Partial<{ stowaways: number; lost: number; level: Level; hideCounts: boolean; challenges: boolean; dares: boolean }>) =>
+  const saveSettings = (patch: Partial<{ stowaways: number; lost: number; level: Level; hideCounts: boolean; dares: boolean }>) =>
     act(() => online.setSettings(room.code, {
       stowaways: eff.stowaways, lost: eff.lost, level: room.level, hideCounts: room.hide_counts,
-      challenges: room.challenges, dares: room.dares, ...patch,
+      dares: room.dares, ...patch,
     }));
 
   const copyLink = async () => {
@@ -410,18 +389,10 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     catch { flash('Could not copy. Share the code instead.'); }
   };
 
-  const nextRoundArgs = (): [string | null, string | null] => [
-    room.challenges ? drawChallenge().id : null,
-    room.dares ? drawDare() : null,
-  ];
+  const nextDare = (): string | null => (room.dares ? drawDare() : null);
 
   const roleName = (r?: Role | null) => (r ? ROLE_LABEL[r] : '');
-  const speakerId = room.turn_order[room.turn_pos];
-  const speaker = speakerId ? byId.get(speakerId) : undefined;
-  const isMyTurn = !!speakerId && speakerId === me.id;
-  const canControl = isMyTurn || isHost;
   const alivePlayers = players.filter(p => p.alive);
-  const challenge = room.challenge_id ? CHALLENGES.find(c => c.id === room.challenge_id) : undefined;
   const countLine = room.hide_counts || !state.counts
     ? `${alivePlayers.length} travellers aboard. Roles are secret.`
     : `${state.counts.explorers} Explorers, ${state.counts.stowaways} Stowaway${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Lost Soul${state.counts.lost === 1 ? '' : 's'}` : ''}`;
@@ -552,11 +523,10 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
               <div className={`${glass} divide-y divide-white/10 mb-4`}>
                 <Toggle on={room.hide_counts} onChange={v => void saveSettings({ hideCounts: v })} disabled={busy} title="Hide the counts" desc="Only you can see the role split. Nobody else knows if a Lost Soul exists." />
-                <Toggle on={room.challenges} onChange={v => void saveSettings({ challenges: v })} disabled={busy} title="Clue challenge cards" desc="A twist on how everyone gives a clue each round." />
                 <Toggle on={room.dares} onChange={v => void saveSettings({ dares: v })} disabled={busy} title="Trip dares" desc="The losing side gets a silly dare." />
               </div>
 
-              <button type="button" disabled={busy || !validRoles} onClick={() => { const [c, d] = nextRoundArgs(); void act(() => online.startRound(room.code, c, d, false)); }} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>
+              <button type="button" disabled={busy || !validRoles} onClick={() => { void act(() => online.startRound(room.code, nextDare(), false)); }} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>
                 <Play size={18} weight="fill" /> Deal boarding passes
               </button>
             </>
@@ -601,56 +571,24 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           </ul>
           {isHost
             ? <button type="button" disabled={busy} onClick={() => void act(() => online.beginClues(room.code))} className={`${players.every(p => p.ready) ? primaryBtn : ghostBtn} mt-4`}>
-                {players.every(p => p.ready) ? 'Everyone has boarded. Start' : `Start anyway (${players.filter(p => p.ready).length} of ${n} ready)`} <ArrowRight size={16} weight="bold" />
+                {players.every(p => p.ready) ? 'Everyone has boarded. Start the vote' : `Start anyway (${players.filter(p => p.ready).length} of ${n} ready)`} <ArrowRight size={16} weight="bold" />
               </button>
             : <div className="mt-3">{waiting(players.every(p => p.ready) ? `Waiting for ${hostName} to start…` : 'Waiting for everyone to get ready…')}</div>}
         </div>
       )}
 
-      {/* ── Clues ── */}
-      {phase === 'clues' && (
+      {/* ── Vote ── */}
+      {phase === 'vote' && (
         <div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className={`${glass} flex-1 px-3.5 py-2`}>
-              <p className={eyebrow}>Round {room.round_no} · Stop {room.stop_no}</p>
-              <p className="text-xs text-cream/70 leading-snug mt-0.5">{countLine}</p>
-            </div>
-            <TimerRing secondsLeft={secondsLeft} progress={startedAt ? 1 - secondsLeft / SPEAK_SECONDS : 0} lowAt={5} />
+          <div className="mb-3">
+            <p className={eyebrow}>Round {room.round_no} · Stop {room.stop_no}</p>
+            <h2 className="font-display text-2xl font-extrabold text-white leading-tight">Who goes offboard?</h2>
+            <p className="text-xs text-cream/60">Talk it out. Votes are private and revealed together.</p>
+            <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
           </div>
 
-          {room.challenges && challenge && (
-            <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3">
-              <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><Sparkle size={11} weight="fill" /> Clue challenge</p>
-              <p className="font-display text-base font-extrabold text-white leading-tight">{challenge.title}</p>
-              <p className="text-xs text-cream/70">{challenge.text}</p>
-            </div>
-          )}
-
-          <motion.div key={`${room.stop_no}-${room.turn_pos}`} initial={reduce ? false : { scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={`${glass} text-center py-5 mb-3 ${isMyTurn ? '!border-[#F0CE7A]/60 !bg-gold/10' : ''}`}>
-            <p className={eyebrow}>{isMyTurn ? 'Your turn' : room.turn_pos === 0 ? 'Starts the round' : 'Now speaking'}</p>
-            <p className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>{isMyTurn ? 'You' : speaker?.name ?? '...'}</p>
-            <p className="text-xs text-cream/50 mt-1">{isMyTurn ? 'Say one clue out loud. Do not say your word.' : 'One clue. Listen closely.'}</p>
-          </motion.div>
-
-          <ol className="flex flex-wrap gap-1.5 mb-4" aria-label="Speaking order">
-            {room.turn_order.map((id, k) => (
-              <li key={id} className={`rounded-full px-2.5 py-1 text-[11px] font-bold border ${k === room.turn_pos ? 'bg-gold/25 border-gold/60 text-[#F0CE7A]' : k < room.turn_pos ? 'bg-white/[0.04] border-white/10 text-cream/35 line-through' : 'bg-white/[0.07] border-white/15 text-cream/70'}`}>{byId.get(id)?.name ?? '...'}</li>
-            ))}
-          </ol>
-
-          {canControl ? (
-            <div className="flex gap-2">
-              {!startedAt
-                ? <button type="button" disabled={busy} onClick={() => void act(() => online.timer(room.code, true))} className={`${ghostBtn} !w-auto px-5`}><Lightning size={16} weight="fill" /> Timer</button>
-                : <button type="button" disabled={busy} onClick={() => void act(() => online.timer(room.code, false))} className={`${ghostBtn} !w-auto px-5`}>Reset</button>}
-              <button type="button" disabled={busy} onClick={() => void act(() => online.nextSpeaker(room.code, room.turn_pos))} className={primaryBtn}>
-                {isMyTurn ? 'I gave my clue' : 'Next speaker'} <ArrowRight size={16} weight="bold" />
-              </button>
-            </div>
-          ) : waiting(`${speaker?.name ?? 'Someone'} is speaking…`)}
-
           {meP?.alive && me.role !== null && (
-            <div className="mt-3">
+            <div className="mb-3">
               <HoldButton holding={holding} onChange={v => { setHolding(v); if (v) play('flip'); }} label="Hold to peek at my word" className="!py-2.5 !text-sm" />
               <AnimatePresence>
                 {holding && (
@@ -661,21 +599,6 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               </AnimatePresence>
             </div>
           )}
-          {!meP?.alive && waiting('You are offboard. Keep watching.')}
-          {isHost && room.turn_pos + 1 < room.turn_order.length && (
-            <button type="button" disabled={busy} onClick={() => void act(() => online.skipToVote(room.code))} className="mt-3 w-full text-xs font-semibold text-cream/50 hover:text-cream transition-colors">Skip to the vote</button>
-          )}
-        </div>
-      )}
-
-      {/* ── Vote ── */}
-      {phase === 'vote' && (
-        <div>
-          <div className="mb-3">
-            <p className={eyebrow}>Round {room.round_no} · Stop {room.stop_no}</p>
-            <h2 className="font-display text-2xl font-extrabold text-white leading-tight">Who goes offboard?</h2>
-            <p className="text-xs text-cream/60">Votes are private. Everyone's votes are revealed together.</p>
-          </div>
 
           {room.last_result?.tie && (
             <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3">
@@ -836,7 +759,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
           {isHost ? (
             <>
-              <button type="button" disabled={busy} onClick={() => { const [c, d] = nextRoundArgs(); void act(() => online.startRound(room.code, c, d, false)); }} className={`${primaryBtn} mb-2.5`}><Play size={18} weight="fill" /> Play next round</button>
+              <button type="button" disabled={busy} onClick={() => { void act(() => online.startRound(room.code, nextDare(), false)); }} className={`${primaryBtn} mb-2.5`}><Play size={18} weight="fill" /> Play next round</button>
               <button type="button" disabled={busy} onClick={() => void act(() => online.endGame(room.code))} className={ghostBtn}><Trophy size={16} weight="fill" /> End game and see awards</button>
               <button type="button" disabled={busy} onClick={() => void act(() => online.toLobby(room.code))} className="mt-3 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">Change players or roles</button>
             </>
@@ -907,7 +830,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
           {isHost ? (
             <>
-              <button type="button" disabled={busy} onClick={() => { const [c, d] = nextRoundArgs(); void act(() => online.startRound(room.code, c, d, true)); }} className={`${primaryBtn} mb-2.5`}><ArrowCounterClockwise size={18} weight="bold" /> Play again, same group</button>
+              <button type="button" disabled={busy} onClick={() => { void act(() => online.startRound(room.code, nextDare(), true)); }} className={`${primaryBtn} mb-2.5`}><ArrowCounterClockwise size={18} weight="bold" /> Play again, same group</button>
               <button type="button" disabled={busy} onClick={() => void act(() => online.toLobby(room.code))} className={ghostBtn}><UsersThree size={16} weight="bold" /> Back to the lobby</button>
             </>
           ) : waiting(`Waiting for ${hostName} to pick what is next…`)}

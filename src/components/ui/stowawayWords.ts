@@ -1,4 +1,4 @@
-// Stowaway: word pairs, clue challenges and dares.
+// Stowaway: word pairs and dares.
 // Explorers get one word of a pair, Stowaways get the other. Which side is
 // which is decided at random every round (see stowawayEngine.ts), so the
 // "first word" is never a giveaway. Every word appears in exactly one pair.
@@ -128,26 +128,6 @@ export const WORD_PAIRS: WordPair[] = (Object.keys(RAW) as Category[]).flatMap(c
   ),
 );
 
-// ── Clue challenge cards: a twist on how each player gives her clue ──
-export interface Challenge { id: string; title: string; text: string }
-
-export const CHALLENGES: Challenge[] = [
-  { id: 'one-word', title: 'One word only', text: 'Give your clue in a single word.' },
-  { id: 'feeling', title: 'Describe a feeling', text: 'Clue it by how it makes you feel, not what it is.' },
-  { id: 'whisper', title: 'Whisper it', text: 'Whisper your clue. Everyone leans in.' },
-  { id: 'no-repeat', title: 'No repeating', text: 'You cannot reuse an idea someone already said.' },
-  { id: 'emoji', title: 'Emoji only', text: 'Use up to three emojis (say them out loud).' },
-  { id: 'smell-sound', title: 'Smell or sound', text: 'Clue it with a smell or a sound it brings to mind.' },
-  { id: 'colour', title: 'Name a colour', text: 'Your clue must be a colour or a shade.' },
-  { id: 'memory', title: 'Trip memory', text: 'Clue it with a real memory from a trip. Keep it to one sentence.' },
-  { id: 'opposite', title: 'The opposite', text: 'Say something it is NOT like.' },
-  { id: 'rhyme', title: 'Make it rhyme', text: 'Your clue has to rhyme with something.' },
-  { id: 'sentence-three', title: 'Three words', text: 'Exactly three words. No more, no less.' },
-  { id: 'price', title: 'Rupees and paise', text: 'Clue it by how much it would cost.' },
-  { id: 'act', title: 'Act it out', text: 'No talking. Act your clue in five seconds.' },
-  { id: 'weather', title: 'Weather report', text: 'Describe it as a weather forecast.' },
-];
-
 // ── Trip dares for the losing side (optional) ──
 export const DARES: string[] = [
   'Plan the next stop of the trip.',
@@ -167,16 +147,14 @@ export const DARES: string[] = [
 ];
 
 // ── Editable content (Admin -> Games -> Stowaway) ──
-// The engine and the online room read WORD_PAIRS / CHALLENGES / DARES directly,
+// The engine and the online room read WORD_PAIRS / DARES directly,
 // so saved edits are applied by replacing the contents of those arrays in place
 // (applyStowawayContent). The built-in lists are captured first so the admin can
 // reset to them.
 
 export interface StowawayPairInput { category: Category; level: Level; a: string; b: string }
-export interface StowawayChallengeInput { id: string; title: string; text: string }
 export interface StowawayContent {
   pairs: StowawayPairInput[];
-  challenges: StowawayChallengeInput[];
   dares: string[];
 }
 
@@ -185,7 +163,6 @@ export const STOWAWAY_LEVELS = LEVELS.map(l => l.id);
 
 export const STOWAWAY_DEFAULTS: StowawayContent = {
   pairs: WORD_PAIRS.map(({ category, level, a, b }) => ({ category, level, a, b })),
-  challenges: CHALLENGES.map(c => ({ ...c })),
   dares: [...DARES],
 };
 
@@ -193,7 +170,7 @@ const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\
 
 export function sanitizeStowawayContent(raw: unknown): StowawayContent | null {
   if (!raw || typeof raw !== 'object') return null;
-  const r = raw as { pairs?: unknown; challenges?: unknown; dares?: unknown };
+  const r = raw as { pairs?: unknown; dares?: unknown };
 
   let pairs: StowawayPairInput[] = Array.isArray(r.pairs)
     ? r.pairs.flatMap((p): StowawayPairInput[] => {
@@ -211,31 +188,15 @@ export function sanitizeStowawayContent(raw: unknown): StowawayContent | null {
     if (!pairs.some(p => p.level === level)) pairs = [...pairs, ...STOWAWAY_DEFAULTS.pairs.filter(p => p.level === level)];
   }
 
-  const used = new Set<string>();
-  const challenges: StowawayChallengeInput[] = Array.isArray(r.challenges)
-    ? r.challenges.flatMap((c): StowawayChallengeInput[] => {
-      const o = (c ?? {}) as Record<string, unknown>;
-      const title = clean(o.title, 40);
-      const text = clean(o.text, 200);
-      if (!title || !text) return [];
-      let id = clean(o.id, 40) || slug(title) || 'challenge';
-      while (used.has(id)) id = `${id}-2`;
-      used.add(id);
-      return [{ id, title, text }];
-    })
-    : [];
-
   const dares = Array.isArray(r.dares) ? r.dares.map(d => clean(d, 200)).filter(Boolean) : [];
 
   return {
     pairs,
-    challenges: challenges.length ? challenges : STOWAWAY_DEFAULTS.challenges,
     dares: dares.length ? dares : STOWAWAY_DEFAULTS.dares,
   };
 }
 
 export function applyStowawayContent(c: StowawayContent) {
   WORD_PAIRS.splice(0, WORD_PAIRS.length, ...c.pairs.map(p => ({ ...p, id: `${slug(p.a)}_${slug(p.b)}` })));
-  CHALLENGES.splice(0, CHALLENGES.length, ...c.challenges);
   DARES.splice(0, DARES.length, ...c.dares);
 }

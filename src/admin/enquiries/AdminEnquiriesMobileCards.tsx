@@ -34,7 +34,7 @@ import { isPremiumPackage } from '../../utils/tripOptions';
 import {
   PACKAGE_CONFIG,
   SOURCE_CONFIG,
-  journeyBadge, nextManualAction,
+  listStatusBadge, nextManualAction,
   closedReasonLabel, canSetFollowUp, followUpStatus,
   canSetBookingFollowUp, bookingFollowUpStatus,
 } from './AdminEnquiryCommon';
@@ -114,7 +114,7 @@ export default function AdminEnquiriesMobileCards({
       {/* Mobile: tap a card to expand full details */}
       <div className="sm:hidden space-y-3">
         {paginatedEnquiries.map((e, idx) => {
-          const jb = journeyBadge(e);
+          const jb = listStatusBadge(e);
           const nma = nextManualAction(e);
           const srcCfg = SOURCE_CONFIG[e.source] || SOURCE_CONFIG.other;
           const isOpen = expandedId === e.id;

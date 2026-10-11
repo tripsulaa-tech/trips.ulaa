@@ -19,6 +19,7 @@ import Button from '../../components/ui/Button';
 import type { Enquiry, Payment } from '../../types/types-index';
 import { formatDate, formatPrice } from '../../utils/utils-index';
 import { INVOICE_TYPE_LABEL } from './AdminEnquiryCommon';
+import { isForfeited } from './AdminEnquiriesShared';
 
 interface AdminEnquiryInvoicesCardProps {
   enquiry: Enquiry;
@@ -39,12 +40,14 @@ interface AdminEnquiryInvoicesCardProps {
 
 // Small badge — identical markup used in both the table and the mobile
 // cards, so status pills can't visually drift between the two layouts.
-function StatusPill({ isPending }: { isPending: boolean }) {
+function StatusPill({ isPending, forfeited = false }: { isPending: boolean; forfeited?: boolean }) {
+  // A paid invoice on a no-show booking is money the business keeps.
+  const orange = forfeited && !isPending;
   return (
     <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 ${
-      isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+      isPending ? 'bg-amber-100 text-amber-700' : orange ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
     }`}>
-      <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : 'Paid'}
+      <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : orange ? 'Paid · Forfeited' : 'Paid'}
     </span>
   );
 }
@@ -115,7 +118,7 @@ export default function AdminEnquiryInvoicesCard({
                         </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <StatusPill isPending={isPending} />
+                        <StatusPill isPending={isPending} forfeited={isForfeited(enquiry)} />
                       </td>
                       <td className="px-5 py-3 text-right">
                         {isPending && (
@@ -152,7 +155,7 @@ export default function AdminEnquiryInvoicesCard({
                 <div key={inv.id} className="px-4 py-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-dark-muted text-2xs font-mono truncate">{inv.invoice_number || '—'}</p>
-                    <StatusPill isPending={isPending} />
+                    <StatusPill isPending={isPending} forfeited={isForfeited(enquiry)} />
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-dark text-sm font-semibold truncate">

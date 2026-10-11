@@ -1,7 +1,7 @@
 import { supabase } from '../../supabase';
 import type { Enquiry, ContactOutcome, BookingFollowUpType } from '../../../types/types-index';
 import { isAgeNotEligibleError, refreshJourneyStage } from './shared';
-import { logActivity } from './activity';
+import { logActivity, tripContext } from './activity';
 import { formatPrice } from '../../../utils/utils-index';
 
 // =============================================
@@ -459,6 +459,10 @@ export async function setEnquiryNoShow(enquiry: Enquiry, isNoShow: boolean): Pro
     .single();
   if (error) throw error;
 
-  await logActivity(enquiry.id, isNoShow ? 'Marked No Show' : 'No Show undone');
+  await logActivity(
+    enquiry.id,
+    isNoShow ? 'Marked No Show' : 'No Show undone',
+    tripContext(enquiry),
+  );
   return data;
 }

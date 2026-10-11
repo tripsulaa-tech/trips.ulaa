@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -15,10 +15,11 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import ImageUploadField from '../../components/ui/ImageUploadField';
-import { deleteImageByUrl } from '../../services/api';
+import { deleteImageByUrl, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getEnquiries } from '../../services/api';
 import { useConfirm } from '../../components/ui/useConfirm';
-import type { Testimonial, TestimonialsSectionContent } from '../../types/types-index';
-import { slugify } from '../../utils/utils-index';
+import type { Enquiry, Testimonial, TestimonialsSectionContent } from '../../types/types-index';
+import { slugify, formatDate } from '../../utils/utils-index';
+import { isBooked } from '../enquiries/AdminEnquiriesShared';
 import { makeTempId } from '../useAdminHomePage';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { usePhotoDiscardOnClose } from '../usePhotoDiscardOnClose';
@@ -36,6 +37,14 @@ interface TestimonialForm {
 const emptyForm: TestimonialForm = {
   name: '', photo: '', review: '', rating: 5, destination: '', is_published: true,
 };
+
+// A trip that can be picked when adding a testimonial (upcoming or completed).
+interface TripChoice {
+  id: string;
+  title: string;
+  destination: string;
+  date: string;
+}
 
 
 export default function TestimonialsSection({
@@ -56,6 +65,14 @@ export default function TestimonialsSection({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<TestimonialForm>(emptyForm);
 
+  // "Add" flow: pick a trip -> pick a traveller on it -> write the review.
+  // Trips and booked travellers are loaded when the Add popup opens.
+  const [tripId, setTripId] = useState('');
+  const [enquiryId, setEnquiryId] = useState('');
+  const [manualEntry, setManualEntry] = useState(false);
+  const [pickerData, setPickerData] = useState<{ trips: TripChoice[]; enquiries: Enquiry[] } | null>(null);
+  const [pickerError, setPickerError] = useState(false);
+
   const setSectionField = (key: keyof TestimonialsSectionContent, value: string) => {
     setSectionText(s => ({ ...s, [key]: value }));
   };
@@ -65,9 +82,66 @@ export default function TestimonialsSection({
   const openCreate = () => {
     setEditingId(null);
     setForm({ ...emptyForm, is_published: true });
+    setTripId('');
+    setEnquiryId('');
+    setManualEntry(false);
     photoDiscard.track('');
     setModalOpen(true);
   };
+
+  // Fetch trips + enquiries the first time the Add popup opens (re-fetched
+  // after an error so a retry works). Only booked, non-cancelled travellers
+  // are offered, same isBooked() test the Enquiries and Check-in pages use.
+  const needsPickerData = modalOpen && !editingId && !manualEntry && !pickerData && !pickerError;
+  useEffect(() => {
+    if (!needsPickerData) return;
+    let cancelled = false;
+    Promise.all([getAllUpcomingTripsAdmin(), getAllCompletedTripsAdmin(), getEnquiries()])
+      .then(([upcoming, completed, enquiries]) => {
+        if (cancelled) return;
+        const trips: TripChoice[] = [
+          ...upcoming.map(t => ({ id: t.id, title: t.title, destination: t.destination, date: t.start_date })),
+          ...completed.map(t => ({ id: t.id, title: t.title, destination: t.destination, date: t.trip_date })),
+        ];
+        const withTravellers = new Set(enquiries.filter(isBooked).map(e => e.trip_id));
+        setPickerData({
+          trips: trips.filter(t => withTravellers.has(t.id)).sort((a, b) => b.date.localeCompare(a.date)),
+          enquiries,
+        });
+      })
+      .catch(err => {
+        console.error(err);
+        if (!cancelled) setPickerError(true);
+      });
+    return () => { cancelled = true; };
+  }, [needsPickerData]);
+
+  const selectedTrip = pickerData?.trips.find(t => t.id === tripId);
+  const travellers = useMemo(
+    () => (pickerData?.enquiries ?? [])
+      .filter(e => e.trip_id === tripId && isBooked(e))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name)),
+    [pickerData, tripId],
+  );
+
+  const pickTrip = (id: string) => {
+    setTripId(id);
+    setEnquiryId('');
+    const trip = pickerData?.trips.find(t => t.id === id);
+    setForm(f => ({ ...f, name: '', destination: trip?.destination ?? '' }));
+  };
+
+  const pickTraveller = (id: string) => {
+    setEnquiryId(id);
+    const person = travellers.find(e => e.id === id);
+    if (person) setForm(f => ({ ...f, name: person.full_name, destination: selectedTrip?.destination ?? f.destination }));
+  };
+
+  const alreadyAdded = (name: string, destination: string) =>
+    items.some(i => i.name.trim().toLowerCase() === name.trim().toLowerCase()
+      && (i.destination || '').trim().toLowerCase() === destination.trim().toLowerCase());
+
+  const canSave = form.name.trim() !== '' && form.review.trim() !== '';
 
   const openEdit = (t: Testimonial) => {
     setEditingId(t.id);
@@ -88,12 +162,15 @@ export default function TestimonialsSection({
   // DB call happens when the page's Save button is clicked (see
   // useAdminHomePage.handleSave).
   const handleFormSave = () => {
+    if (!canSave) return;
     if (editingId) {
       setItems(prev => prev.map(t => (t.id === editingId ? { ...t, ...form } : t)));
     } else {
       setItems(prev => [...prev, {
         id: makeTempId(),
         ...form,
+        trip_id: manualEntry ? null : (tripId || null),
+        enquiry_id: manualEntry ? null : (enquiryId || null),
         sort_order: prev.length,
         created_at: new Date().toISOString(),
       }]);
@@ -315,16 +392,73 @@ export default function TestimonialsSection({
 
       <Modal isOpen={modalOpen} onClose={closeModal} title={editingId ? 'Edit Testimonial' : 'Add Testimonial'} size="lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {editingId || manualEntry ? (
+            <>
+              <div>
+                <label htmlFor="test-name" className="block text-sm font-medium text-dark mb-1">Name *</label>
+                <input id="test-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} placeholder="e.g. Priya Sharma" />
+              </div>
+              <div>
+                <label htmlFor="test-destination" className="block text-sm font-medium text-dark mb-1">Destination</label>
+                <input id="test-destination" value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley" />
+              </div>
+              {manualEntry && !editingId && (
+                <div className="md:col-span-2 -mt-2">
+                  <button type="button" onClick={() => setManualEntry(false)} className="text-xs font-button font-semibold text-primary hover:underline">
+                    ← Pick from trip travellers instead
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div>
+                <label htmlFor="test-trip" className="block text-sm font-medium text-dark mb-1">1. Trip *</label>
+                {pickerError ? (
+                  <p className="text-xs text-primary">
+                    Could not load trips.{' '}
+                    <button type="button" onClick={() => setPickerError(false)} className="font-semibold underline">Try again</button>
+                  </p>
+                ) : !pickerData ? (
+                  <p className="text-xs text-dark-muted py-2">Loading trips…</p>
+                ) : pickerData.trips.length === 0 ? (
+                  <p className="text-xs text-dark-muted py-2">No trips with booked travellers yet.</p>
+                ) : (
+                  <Select
+                    inputId="test-trip"
+                    value={tripId}
+                    onChange={pickTrip}
+                    placeholder="Choose a trip"
+                    options={pickerData.trips.map(t => ({
+                      value: t.id,
+                      label: `${t.title} · ${formatDate(t.date, { day: 'numeric', month: 'short', year: 'numeric' })}`,
+                    }))}
+                  />
+                )}
+              </div>
+              <div>
+                <label htmlFor="test-traveller" className="block text-sm font-medium text-dark mb-1">2. Traveller *</label>
+                <Select
+                  inputId="test-traveller"
+                  value={enquiryId}
+                  onChange={pickTraveller}
+                  disabled={!tripId}
+                  placeholder={tripId ? 'Choose a traveller' : 'Pick a trip first'}
+                  options={travellers.map(e => ({
+                    value: e.id,
+                    label: alreadyAdded(e.full_name, selectedTrip?.destination ?? '') ? `${e.full_name} (already added)` : e.full_name,
+                  }))}
+                />
+              </div>
+              <div className="md:col-span-2 -mt-2">
+                <button type="button" onClick={() => { setManualEntry(true); setTripId(''); setEnquiryId(''); setForm(f => ({ ...f, name: '', destination: '' })); }} className="text-xs font-button font-semibold text-dark-muted hover:text-primary hover:underline">
+                  Reviewer not in the list? Type the name manually
+                </button>
+              </div>
+            </>
+          )}
           <div>
-            <label htmlFor="test-name" className="block text-sm font-medium text-dark mb-1">Name *</label>
-            <input id="test-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} placeholder="e.g. Priya Sharma" />
-          </div>
-          <div>
-            <label htmlFor="test-destination" className="block text-sm font-medium text-dark mb-1">Destination</label>
-            <input id="test-destination" value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley" />
-          </div>
-          <div>
-            <label htmlFor="test-rating" className="block text-sm font-medium text-dark mb-1">Rating</label>
+            <label htmlFor="test-rating" className="block text-sm font-medium text-dark mb-1">{editingId || manualEntry ? 'Rating' : '3. Rating'}</label>
             <Select
               inputId="test-rating"
               value={form.rating}
@@ -344,8 +478,15 @@ export default function TestimonialsSection({
             />
           </div>
           <div className="md:col-span-2">
-            <label htmlFor="test-review" className="block text-sm font-medium text-dark mb-1">Review *</label>
-            <textarea id="test-review" value={form.review} onChange={e => setForm(f => ({ ...f, review: e.target.value }))} rows={4} className={`${inputClass} resize-none`} />
+            <label htmlFor="test-review" className="block text-sm font-medium text-dark mb-1">{editingId || manualEntry ? 'Review *' : '4. Review *'}</label>
+            <textarea
+              id="test-review"
+              value={form.review}
+              onChange={e => setForm(f => ({ ...f, review: e.target.value }))}
+              rows={5}
+              className={`${inputClass} resize-none`}
+              placeholder="Her words, in her voice. Mention what she loved: the people, the place, feeling safe, a moment she still talks about."
+            />
           </div>
           <div className="md:col-span-2 flex items-center gap-3">
             <input type="checkbox" id="tpub" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
@@ -354,7 +495,7 @@ export default function TestimonialsSection({
         </div>
         <div className="flex gap-3 mt-6">
           <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeModal}>Cancel</Button>
-          <Button variant="primary" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleFormSave}>
+          <Button variant="primary" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={handleFormSave} disabled={!canSave}>
             {editingId ? 'Save Changes' : 'Add Testimonial'}
           </Button>
         </div>

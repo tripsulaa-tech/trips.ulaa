@@ -94,6 +94,13 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
     ? CONFIRMED_STEP_INDEX * stepPercent + paymentRatio * stepPercent
     : activeIndex * stepPercent;
   const displayPercent = Math.round(barPercent);
+  // A cancelled booking isn't "in progress" any more: the step it reached
+  // reads "Stopped here" and later steps "Not reached". A no-show is tinted
+  // orange (money kept) and a plain cancellation grey/red.
+  const isNoShow = isCancelled && !!enquiry.is_no_show;
+  const barGradient = isNoShow
+    ? 'from-orange-600 to-orange-400'
+    : isCancelled ? 'from-dark-muted to-dark-muted/60' : 'from-primary-dark to-primary-light';
 
   // Fully Paid is the *current* stage until the trip is completed, which
   // used to read "In Progress" even with a ₹0 balance — confusing, since the
@@ -113,8 +120,10 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
         <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/5 blur-2xl" aria-hidden="true" />
       </div>
       {isCancelled && (
-        <div className="relative flex items-center gap-1.5 mb-3 bg-red-50 text-red-700 rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold">
-          <XCircle size={12} className="shrink-0" aria-hidden="true" /> Cancelled — progress below is where it stood before cancellation
+        <div className={`relative flex items-center gap-1.5 mb-3 rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold ${isNoShow ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>
+          <XCircle size={12} className="shrink-0" aria-hidden="true" /> {isNoShow
+            ? 'No Show — did not report on the trip day. Seat released, no refund.'
+            : 'Cancelled — progress below is where it stood before cancellation'}
         </div>
       )}
 
@@ -122,12 +131,12 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
       <div className="relative mx-2 sm:mx-3">
         <div className="h-2 rounded-full bg-dark/10 overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-primary-dark to-primary-light transition-[width] duration-500"
+            className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-[width] duration-500`}
             style={{ width: `${barPercent}%` }}
           />
         </div>
         <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-primary shadow-[0_2px_8px_rgba(0,0,0,0.2)] transition-[left] duration-500"
+          className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 ${isNoShow ? 'border-orange-600' : isCancelled ? 'border-dark-muted' : 'border-primary'} shadow-[0_2px_8px_rgba(0,0,0,0.2)] transition-[left] duration-500`}
           style={{ left: `${barPercent}%` }}
           aria-hidden="true"
         />
@@ -136,9 +145,9 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
           style={{ left: `${barPercent}%` }}
           aria-hidden="true"
         >
-          <div className="relative bg-gradient-to-br from-primary-dark to-primary text-white text-xs font-button font-bold px-2.5 py-1 rounded-lg shadow-md whitespace-nowrap">
+          <div className={`relative text-white text-xs font-button font-bold px-2.5 py-1 rounded-lg shadow-md whitespace-nowrap ${isNoShow ? 'bg-orange-600' : isCancelled ? 'bg-dark-muted' : 'bg-gradient-to-br from-primary-dark to-primary'}`}>
             {displayPercent}%
-            <div className="absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 bg-primary rotate-45" />
+            <div className={`absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 rotate-45 ${isNoShow ? 'bg-orange-600' : isCancelled ? 'bg-dark-muted' : 'bg-primary'}`} />
           </div>
         </div>
       </div>
@@ -159,18 +168,22 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
               <span className="w-px h-3 border-l border-dashed border-dark/25" aria-hidden="true" />
               <span
                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full inline-flex items-center justify-center shrink-0 transition-all ${
-                  isDone || isActive
+                  isActive && isCancelled
+                    ? (isNoShow ? 'bg-orange-600 text-white' : 'bg-dark-muted text-white')
+                    : isDone || isActive
                     ? 'bg-gradient-to-br from-primary-dark to-primary text-white shadow-[0_3px_10px_-2px_rgba(168,90,42,0.5)]'
                     : 'bg-dark/5 text-dark-muted'
                 }`}
               >
-                <Icon size={15} weight={isDone || isActive ? 'bold' : 'regular'} aria-hidden="true" />
+                {isActive && isCancelled
+                  ? <XCircle size={15} weight="bold" aria-hidden="true" />
+                  : <Icon size={15} weight={isDone || isActive ? 'bold' : 'regular'} aria-hidden="true" />}
               </span>
-              <span className={`text-2xs sm:text-2xs font-button font-bold uppercase tracking-wide text-center leading-tight ${isDone ? 'text-dark' : isActive || isNext ? 'text-primary' : 'text-dark-muted/60'}`}>
+              <span className={`text-2xs sm:text-2xs font-button font-bold uppercase tracking-wide text-center leading-tight ${isDone ? 'text-dark' : isActive && isCancelled ? (isNoShow ? 'text-orange-700' : 'text-dark-muted') : isActive || isNext ? 'text-primary' : 'text-dark-muted/60'}`}>
                 {step.label}
               </span>
               <span className="text-dark-muted text-2xs sm:text-2xs whitespace-nowrap">
-                {isDone ? 'Done' : isActive ? 'In Progress' : isNext ? 'Next' : 'Pending'}
+                {isDone ? 'Done' : isActive && isCancelled ? (isNoShow ? 'No Show' : 'Stopped here') : isActive ? 'In Progress' : isCancelled ? 'Not reached' : isNext ? 'Next' : 'Pending'}
               </span>
             </div>
           );
