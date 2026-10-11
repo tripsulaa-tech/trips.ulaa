@@ -9,6 +9,7 @@
 --   1. add_find_my_twin.sql  2. update_find_my_twin_10_questions.sql
 --   3. make_find_my_twin_editable.sql  4. add_find_my_twin_roster.sql
 --   5. add_find_my_twin_reveal_mode.sql  6. harden_find_my_twin.sql
+--   7. fix_find_my_twin_phase_checks.sql
 --
 -- HOW IT WORKS
 --   1. Everyone joins a room and answers 5 quick this-or-that questions.
