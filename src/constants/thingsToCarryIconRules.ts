@@ -13,7 +13,7 @@ export type ThingsToCarryIconKey =
   | 'jacket' | 'shoe' | 'sunglasses' | 'cap' | 'glove' | 'earphone'
   | 'adapter' | 'powerBank' | 'medicine' | 'sunscreen' | 'moisturizer'
   | 'waterBottle' | 'snack' | 'wipe' | 'tissue' | 'photo' | 'visa'
-  | 'flight' | 'insurance' | 'card' | 'idProof';
+  | 'flight' | 'insurance' | 'card' | 'passport' | 'documentCopies' | 'idProof';
 
 const THINGS_TO_CARRY_ICON_RULES: [RegExp, ThingsToCarryIconKey][] = [
   [/jacket|sweater|hoodie|fleece|thermal/i, 'jacket'],
@@ -22,7 +22,7 @@ const THINGS_TO_CARRY_ICON_RULES: [RegExp, ThingsToCarryIconKey][] = [
   [/cap|hat/i, 'cap'],
   [/glove|mitten/i, 'glove'],
   [/earphone|headphone|earbud/i, 'earphone'],
-  [/adapter|\bplug\b|converter/i, 'adapter'],
+  [/adapter|adaptor|\bplug\b|converter/i, 'adapter'],
   [/power ?bank|charger|battery/i, 'powerBank'],
   [/medicine|medication|pill|first aid/i, 'medicine'],
   [/sunscreen|spf/i, 'sunscreen'],
@@ -30,15 +30,18 @@ const THINGS_TO_CARRY_ICON_RULES: [RegExp, ThingsToCarryIconKey][] = [
   [/water ?bottle|bottle/i, 'waterBottle'],
   [/snack|food/i, 'snack'],
   [/wipe|sanitiz|towel/i, 'wipe'],
-  [/tissue|paper/i, 'tissue'],
-  // Photo/photograph checked before the passport/id-proof rule below, since
-  // "Passport-size photographs" would otherwise match on "passport".
+  // Photo/photograph is checked first (also before the passport/id-proof rule), so
+  // "Passport-size photographs" and "2 copies of photographs" both land here.
   [/passport.{0,10}photo|photograph/i, 'photo'],
+  // Copies of documents (checked before tissue/paper so "paper copies" lands here).
+  [/\bcop(y|ies)\b|photocop|xerox|print ?out/i, 'documentCopies'],
+  [/tissue|paper/i, 'tissue'],
   [/\beta\b|visa|travel authoriz|entry permit/i, 'visa'],
   [/flight|air ticket|boarding pass|\bticket/i, 'flight'],
   [/insurance/i, 'insurance'],
   [/debit card|credit card|currency|rupee|\bcash\b/i, 'card'],
-  [/id proof|passport|aadhar|adhar|govern|voter|licen|document/i, 'idProof'],
+  [/passport/i, 'passport'],
+  [/id proof|aadhar|adhar|govern|voter|licen|document/i, 'idProof'],
 ];
 
 /** Looks up the icon key for a Things to Carry item's free text, or 'default' if nothing matches. */

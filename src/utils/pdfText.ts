@@ -12,6 +12,10 @@ export function sanitizeForPdf(text: string | null | undefined): string {
   if (!text) return '';
   return String(text)
     .replace(/\u20B9/g, 'Rs. ')
+    // Arrows aren't in the core PDF font either: jsPDF draws a garbled glyph and
+    // spaces out the whole line (e.g. "Haputale → Ella" came out as "Haputale !' Ella").
+    .replace(/\s*[\u2192\u2794\u279C\u279D\u279E\u27F6\u21D2\u21E2]\s*/g, ' to ')
+    .replace(/\s*[\u2190\u27F5\u21D0]\s*/g, ' from ')
     .replace(/\p{Extended_Pictographic}/gu, '')
     .replace(/[\u{1F3FB}-\u{1F3FF}]/gu, '')
     .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')

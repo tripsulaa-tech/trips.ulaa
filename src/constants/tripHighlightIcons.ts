@@ -15,6 +15,10 @@ import { resolvePhosphorIcon } from '../components/icons/LazyPhosphorIcon';
 import LinkedHeartsIcon from '../components/icons/LinkedHeartsIcon';
 import WaterfallIcon from '../components/icons/WaterfallIcon';
 import WaterBottleIcon from '../components/icons/WaterBottleIcon';
+import UniversalAdapterIcon from '../components/icons/UniversalAdapterIcon';
+import PassportIcon from '../components/icons/PassportIcon';
+import PassportPhotoIcon from '../components/icons/PassportPhotoIcon';
+import DocumentCopiesIcon from '../components/icons/DocumentCopiesIcon';
 
 // Thin shim so every existing `Ph.IconName` reference below keeps working
 // unchanged. resolvePhosphorIcon returns the already-bundled static binding
@@ -1592,15 +1596,16 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'glasses', label: 'Sunglasses', Icon: Ph.Sunglasses as TripHighlightIconType, keywords: ['sunglasses', 'sunglass', 'goggles', 'goggle', 'shades'] },
   { key: 'battery-charging', label: 'Power Bank', Icon: Ph.BatteryCharging as TripHighlightIconType, keywords: ['power bank', 'powerbank', 'charger', 'battery', 'charging'] },
   { key: 'pill', label: 'Personal Medicines', Icon: Ph.Pill as TripHighlightIconType, keywords: ['personal medicines', 'medicines', 'medicine', 'medication', 'pills', 'first aid'] },
-  { key: 'id-card', label: 'Government ID Proof', Icon: Ph.IdentificationCard as TripHighlightIconType, keywords: ['government id proof', 'id proof', 'id card', 'passport', 'aadhar', 'adhar', 'voter id', 'license', 'documents'] },
+  { key: 'passport', label: 'Passport', Icon: PassportIcon as unknown as TripHighlightIconType, keywords: ['passport', 'passport copy', 'valid passport', 'travel passport'] },
+  { key: 'id-card', label: 'Government ID Proof', Icon: Ph.IdentificationCard as TripHighlightIconType, keywords: ['government id proof', 'id proof', 'id card', 'aadhar', 'adhar', 'voter id', 'license', 'documents'] },
   { key: 'glass-water', label: 'Water Bottle', Icon: WaterBottleIcon as unknown as TripHighlightIconType, keywords: ['water bottle', 'bottle', 'water', 'hydration', 'flask'] },
   { key: 'stamp-visa-approval', label: 'ETA / Visa Approval', Icon: Ph.Stamp as TripHighlightIconType, keywords: ['eta approval', 'eta', 'visa', 'visa approval', 'travel authorization', 'entry permit', 'immigration approval'] },
   { key: 'ticket-flight', label: 'Flight Tickets', Icon: Ph.Airplane as TripHighlightIconType, keywords: ['flight tickets', 'flight ticket', 'air ticket', 'air tickets', 'boarding pass', 'plane ticket', 'itinerary'] },
   { key: 'shield-travel-insurance', label: 'Travel Insurance', Icon: Ph.ShieldCheck as TripHighlightIconType, keywords: ['travel insurance', 'insurance', 'insurance copy', 'medical insurance', 'policy copy'] },
-  { key: 'camera-passport-photo', label: 'Passport-size Photo', Icon: Ph.Camera as TripHighlightIconType, keywords: ['passport photo', 'passport size photo', 'passport-size photograph', 'photograph', 'photographs', 'photo id', 'passport pic'] },
-  { key: 'file-travel-documents', label: 'Document Copies', Icon: Ph.FileText as TripHighlightIconType, keywords: ['document copies', 'travel documents', 'copies of documents', 'digital copy', 'physical copy', 'important documents'] },
+  { key: 'camera-passport-photo', label: 'Passport-size Photo', Icon: PassportPhotoIcon as unknown as TripHighlightIconType, keywords: ['passport photo', 'passport size photo', 'passport-size photograph', 'photograph', 'photographs', 'photo id', 'passport pic'] },
+  { key: 'file-travel-documents', label: 'Document Copies', Icon: DocumentCopiesIcon as unknown as TripHighlightIconType, keywords: ['copies', 'copy', 'photocopy', 'document copies', 'travel documents', 'copies of documents', 'digital copy', 'physical copy', 'important documents'] },
   { key: 'credit-card-currency', label: 'Cards & Currency', Icon: Ph.CreditCard as TripHighlightIconType, keywords: ['debit card', 'credit card', 'cards', 'cash', 'currency', 'local currency', 'rupees', 'small expenses'] },
-  { key: 'plug-travel-adapter', label: 'Travel Adapter', Icon: Ph.Plug as TripHighlightIconType, keywords: ['travel adapter', 'universal adapter', 'plug adapter', 'power adapter', 'converter'] },
+  { key: 'plug-travel-adapter', label: 'Universal Adapter', Icon: UniversalAdapterIcon as unknown as TripHighlightIconType, keywords: ['universal adapter', 'universal adaptor', 'travel adapter', 'travel adaptor', 'plug adapter', 'plug adaptor', 'power adapter', 'power adaptor', 'adapter', 'adaptor', 'converter', 'plug'] },
   // Moods & questions (mainly for "Have You Ever…" style prompts)
   { key: 'x', label: 'Cancelled', Icon: Ph.X as TripHighlightIconType, keywords: ['cancelled', 'cancel', 'no', 'plans fell through', 'let down'] },
   { key: 'help-circle', label: 'Unsure', Icon: Ph.Question as TripHighlightIconType, keywords: ['unsure', 'question', 'confused', 'worried', 'uncertain', 'doubt'] },

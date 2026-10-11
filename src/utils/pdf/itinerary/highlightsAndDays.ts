@@ -62,7 +62,9 @@ export async function renderHighlightsAndDays(ctx: PdfCtx, trip: PdfTrip): Promi
 
   const HIGHLIGHT_CARD_H = 110;
   const HIGHLIGHT_ROW_GAP = 16;
-  const HIGHLIGHT_PER_ROW = 3;
+  // 3 across by default; a trip with 7-8 cards goes 4 across so the cards and the days strip
+  // still share one slide instead of spilling onto an almost-empty second one.
+  let HIGHLIGHT_PER_ROW = 3;
 
   /** Draws up to `cards.length` highlight cards as a wrapping 3-across grid
    *  and returns the y position immediately below the grid. */
@@ -165,15 +167,21 @@ export async function renderHighlightsAndDays(ctx: PdfCtx, trip: PdfTrip): Promi
     const days = trip.itinerary;
     if (cards.length === 0 && days.length === 0) return;
 
-    const cardRows = cards.length ? Math.ceil(cards.length / HIGHLIGHT_PER_ROW) : 0;
-    const cardsBlockH = cards.length ? 34 + cardRows * HIGHLIGHT_CARD_H + Math.max(0, cardRows - 1) * HIGHLIGHT_ROW_GAP : 0;
     const dayPerRow = Math.min(days.length, DAY_PER_ROW);
     const dayRows = dayPerRow ? Math.ceil(days.length / dayPerRow) : 0;
     const daysBlockH = days.length ? 40 + dayRows * DAY_ROW_PITCH : 0;
     const gapBetween = cards.length && days.length ? 28 : 0;
     const availH = CONTENT_BOTTOM - MARGIN;
+    const blockHeights = (perRow: number) => {
+      const rows = cards.length ? Math.ceil(cards.length / perRow) : 0;
+      return cards.length ? 34 + rows * HIGHLIGHT_CARD_H + Math.max(0, rows - 1) * HIGHLIGHT_ROW_GAP : 0;
+    };
+    // Smallest cards-per-row (3, then 4) that lets everything share one slide.
+    const fitting = [3, 4].find(perRow => blockHeights(perRow) + gapBetween + daysBlockH <= availH);
+    HIGHLIGHT_PER_ROW = fitting ?? 3;
+    const cardsBlockH = blockHeights(HIGHLIGHT_PER_ROW);
 
-    if (cardsBlockH + gapBetween + daysBlockH <= availH) {
+    if (fitting !== undefined && cardsBlockH + gapBetween + daysBlockH <= availH) {
       newSlide();
       let y = MARGIN;
       if (cards.length) {

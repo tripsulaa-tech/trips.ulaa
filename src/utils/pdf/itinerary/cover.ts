@@ -29,6 +29,9 @@ export async function renderCover(ctx: PdfCtx, trip: PdfTrip): Promise<void> {
         } catch {
           heroDrawn = false;
         }
+      } else {
+        // Usually the photo's host blocks reading it (CORS) or the link is a web page, not an image.
+        console.warn('Itinerary PDF: cover image could not be loaded:', trip.cover_image);
       }
     }
     if (!heroDrawn) {

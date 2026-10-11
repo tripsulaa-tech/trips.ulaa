@@ -15,10 +15,12 @@ import { ONE_DAY_STAY_TEXT, isOneDayTrip } from '../../utils-index';
   const { newSlide, slideHeader, drawParagraph, drawSquarePhotoWall } = ctx;
 
     const allPhotos = trip.accommodation_photos ?? [];
-    // One-day trips still get this slide (no photos needed) so the PDF says
-    // accommodation isn't included, matching the trip page.
+    // No photos means this slide would be nearly empty (just a heading and one
+    // line of text), so skip it. For a one-day trip the "accommodation is not
+    // included" message is shown on the What's Included & Not Included slide
+    // instead (see renderInclusions), so the PDF still says it.
     const oneDay = isOneDayTrip(trip);
-    if (allPhotos.length === 0 && !oneDay) return;
+    if (allPhotos.length === 0) return;
 
     newSlide();
     slideHeader(null, 'Stay. Relax. Repeat.');

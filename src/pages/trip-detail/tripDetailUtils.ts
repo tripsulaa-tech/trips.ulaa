@@ -19,11 +19,13 @@ import {
   Stamp,
   Airplane as Plane,
   CreditCard,
-  Camera,
-  Plug as PlugZap,
 } from '@phosphor-icons/react';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import WaterBottleIcon from '../../components/icons/WaterBottleIcon';
+import UniversalAdapterIcon from '../../components/icons/UniversalAdapterIcon';
+import PassportIcon from '../../components/icons/PassportIcon';
+import PassportPhotoIcon from '../../components/icons/PassportPhotoIcon';
+import DocumentCopiesIcon from '../../components/icons/DocumentCopiesIcon';
 import { matchThingsToCarryIconKey, type ThingsToCarryIconKey } from '../../constants/thingsToCarryIconRules';
 
 // Tracks whether the viewport is at/above the `sm` breakpoint (640px) so
@@ -73,7 +75,7 @@ const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', TripHighli
   cap: HatGlasses,
   glove: Hand,
   earphone: Headphones,
-  adapter: PlugZap,
+  adapter: UniversalAdapterIcon as unknown as TripHighlightIconType,
   powerBank: BatteryCharging,
   medicine: Pill,
   sunscreen: SprayCan,
@@ -82,11 +84,13 @@ const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', TripHighli
   snack: Cookie,
   wipe: Sparkles,
   tissue: FileText,
-  photo: Camera,
+  photo: PassportPhotoIcon as unknown as TripHighlightIconType,
   visa: Stamp,
   flight: Plane,
   insurance: ShieldCheck,
   card: CreditCard,
+  passport: PassportIcon as unknown as TripHighlightIconType,
+  documentCopies: DocumentCopiesIcon as unknown as TripHighlightIconType,
   idProof: IdCard,
   default: Backpack,
 };

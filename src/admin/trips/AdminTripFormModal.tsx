@@ -34,6 +34,7 @@ import FAQEditor from '../../components/ui/FAQEditor';
 import CancellationPolicyEditor from '../../components/ui/CancellationPolicyEditor';
 import TermsEditor from '../../components/ui/TermsEditor';
 import DatePicker from '../../components/ui/DatePicker';
+import InlineEditText from '../../components/ui/InlineEditText';
 import TripHighlightIconPicker from '../../components/ui/TripHighlightIconPicker';
 import MeetingPointMapPicker from '../../components/ui/MeetingPointMapPicker';
 import { COVER_IMAGE_TARGET_SIZE_BYTES } from '../../services/api';
@@ -794,7 +795,11 @@ export default function AdminTripFormModal({
                       <ul className="space-y-2 mt-2">
                         {group.bullets.map((bullet, bi) => (
                           <li key={bi} className="flex items-center gap-2 bg-background-warm rounded-lg px-3 py-2">
-                            <span className="flex-1 text-sm text-dark">{bullet}</span>
+                            <InlineEditText
+                              value={bullet}
+                              ariaLabel={`Edit bullet ${bi + 1} of Group ${gi + 1}`}
+                              onSave={text => setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, bullets: g.bullets.map((b, i) => i === bi ? text : b) } : g) }))}
+                            />
                             <button
                               type="button"
                               onClick={() => setForm(f => ({ ...f, included_groups: f.included_groups.map((g, idx) => idx === gi ? { ...g, bullets: g.bullets.filter((_, i) => i !== bi) } : g) }))}

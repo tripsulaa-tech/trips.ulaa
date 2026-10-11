@@ -4,11 +4,12 @@ import type { RGB, PdfListItem, PdfTrip } from './shared';
 import type { TripIncludedGroup } from '../../../types/types-index';
 import { MARGIN, CONTENT_W, CONTENT_BOTTOM, COLORS, CONFIDENCE_PALETTE } from './shared';
 import { getTripHighlightIcon } from '../../../constants/tripHighlightIcons';
+import { ONE_DAY_STAY_TEXT, isOneDayTrip } from '../../utils-index';
 
 /** Renders "What's Included" / "What's Not Included". Extracted from
  *  tripItineraryPdf.ts. */
 export async function renderInclusions(ctx: PdfCtx, trip: PdfTrip): Promise<void> {
-  const { doc, setFill, setText, newSlide, clampLines, slideHeader, drawLucideIcon, drawBulletList } = ctx;
+  const { doc, setFill, setText, newSlide, clampLines, slideHeader, drawLucideIcon, drawBulletList, drawParagraph } = ctx;
 
   // =========================================================================
   // SLIDE — What's Included / What's Not Included, matching the live trip
@@ -23,6 +24,17 @@ export async function renderInclusions(ctx: PdfCtx, trip: PdfTrip): Promise<void
   // it, on the same slide when both fit — otherwise each section paginates
   // onto its own slide(s) independently.
   // =========================================================================
+  // A one-day trip with no stay photos has no Accommodation slide (see accommodation.ts), so
+  // its "Stay. Relax. Repeat." heading + sentence is shown here instead, at the top of this
+  // slide, above "What's Included" (admin's own accommodation text if set, else the default).
+  const noStaySlide = isOneDayTrip(trip) && (trip.accommodation_photos ?? []).length === 0;
+  const notIncludedItems: string[] = trip.not_included;
+  const stayText: string | null = noStaySlide
+    ? (trip.accommodation_description?.trim() || ONE_DAY_STAY_TEXT)
+    : null;
+  const STAY_LINE_H = 14;
+  const STAY_MAX_LINES = 3;
+
   const SECTION_TITLE_H = 26;
   const SECTION_GAP = 18;
 
@@ -31,6 +43,27 @@ export async function renderInclusions(ctx: PdfCtx, trip: PdfTrip): Promise<void
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.text(title, MARGIN, y + 11);
+  }
+
+  function measureStayBlockH(): number {
+    if (!stayText) return 0;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const lines = Math.min(STAY_MAX_LINES, doc.splitTextToSize(stayText, CONTENT_W).length);
+    return SECTION_TITLE_H + lines * STAY_LINE_H + SECTION_GAP;
+  }
+
+  /** Draws the "Stay. Relax. Repeat." heading + sentence at `y`; returns the y where the next section starts. */
+  function drawStayBlock(y: number): number {
+    if (!stayText) return y;
+    drawSectionHeading('Stay. Relax. Repeat.', y);
+    const bottom = drawParagraph(stayText, MARGIN, y + SECTION_TITLE_H + 8, CONTENT_W, {
+      size: 10,
+      color: COLORS.darkMuted,
+      lineHeight: STAY_LINE_H,
+      maxLines: STAY_MAX_LINES,
+    });
+    return bottom - 8 + SECTION_GAP;
   }
 
   // ---- "What's Included" — grouped cards (heading + bullets, no icon) ----
@@ -144,7 +177,7 @@ export async function renderInclusions(ctx: PdfCtx, trip: PdfTrip): Promise<void
   /** Returns the y position immediately below the last group placed, so the
    *  caller can pack "What's Not Included" onto the same trailing page
    *  instead of always starting a fresh one. */
-  async function drawGroupsMasonryPaginated(groups: TripIncludedGroup[], top: number): Promise<number> {
+  async function drawGroupsMasonryPaginated(groups: TripIncludedGroup[], top: number, firstPageTop: number = top, onFirstPage?: () => void): Promise<number> {
     const cardW = groupCardW();
     let remaining = groups;
     let indexCursor = 0;
@@ -153,13 +186,15 @@ export async function renderInclusions(ctx: PdfCtx, trip: PdfTrip): Promise<void
     while (remaining.length > 0) {
       newSlide();
       slideHeader(null, pageNum === 0 ? "What's Included" : "What's Included (continued)");
-      const { positions, placed, bottom } = packGroupsMasonry(remaining, cardW, top, CONTENT_BOTTOM, indexCursor);
+      if (pageNum === 0) onFirstPage?.();
+      const pageTop = pageNum === 0 ? firstPageTop : top;
+      const { positions, placed, bottom } = packGroupsMasonry(remaining, cardW, pageTop, CONTENT_BOTTOM, indexCursor);
       if (placed === 0) {
         // A single group taller than a whole page — place it alone rather
         // than looping forever; it'll simply run past the page bottom.
         const h = measureGroupCardH(remaining[0], cardW);
-        await drawGroupCard(remaining[0], MARGIN, top, cardW, h, indexCursor);
-        lastBottom = top + h;
+        await drawGroupCard(remaining[0], MARGIN, pageTop, cardW, h, indexCursor);
+        lastBottom = pageTop + h;
         remaining = remaining.slice(1);
         indexCursor += 1;
       } else {
@@ -298,22 +333,24 @@ export async function renderInclusions(ctx: PdfCtx, trip: PdfTrip): Promise<void
     const hasGroups = trip.included_groups.length > 0;
     const hasFlatIncluded = !hasGroups && trip.included.length > 0;
     const hasIncluded = hasGroups || hasFlatIncluded;
-    const hasNotIncluded = trip.not_included.length > 0;
-    if (!hasIncluded && !hasNotIncluded) return;
+    const hasNotIncluded = notIncludedItems.length > 0;
+    if (!hasIncluded && !hasNotIncluded && !stayText) return;
 
-    const top = 92;
+    const baseTop = 92;
+    const stayH = measureStayBlockH();
+    const top = baseTop + stayH;
     const availH = CONTENT_BOTTOM - top;
     const includedH = hasIncluded
       ? SECTION_TITLE_H + (hasGroups ? groupGridH(trip.included_groups) : flatGridH(trip.included.length))
       : 0;
-    const notIncludedH = hasNotIncluded ? SECTION_TITLE_H + measureChipRowH(trip.not_included) : 0;
+    const notIncludedH = hasNotIncluded ? SECTION_TITLE_H + measureChipRowH(notIncludedItems) : 0;
     const gapBetween = hasIncluded && hasNotIncluded ? SECTION_GAP : 0;
 
     // Both sections fit stacked on one slide — the common case.
     if (includedH + gapBetween + notIncludedH <= availH) {
       newSlide();
       slideHeader(null, "What's Included & Not Included");
-      let y = top;
+      let y = drawStayBlock(baseTop);
       if (hasIncluded) {
         drawSectionHeading("What's Included", y);
         y += SECTION_TITLE_H;
@@ -323,7 +360,7 @@ export async function renderInclusions(ctx: PdfCtx, trip: PdfTrip): Promise<void
       if (hasNotIncluded) {
         drawSectionHeading("What's Not Included", y);
         y += SECTION_TITLE_H;
-        await drawChipRow(trip.not_included, y);
+        await drawChipRow(notIncludedItems, y);
       }
       return;
     }
@@ -339,19 +376,25 @@ export async function renderInclusions(ctx: PdfCtx, trip: PdfTrip): Promise<void
       // — see drawGroupsMasonryPaginated / packGroupsMasonry above. Each
       // card keeps its own natural height and flows into whichever column
       // has room, rather than being force-paired into equal-height rows.
-      lastBottom = await drawGroupsMasonryPaginated(trip.included_groups, top);
+      lastBottom = await drawGroupsMasonryPaginated(trip.included_groups, baseTop, top, () => { drawStayBlock(baseTop); });
     } else if (hasFlatIncluded) {
-      const rowsPerPage = Math.max(1, Math.floor((availH - SECTION_TITLE_H) / (FLAT_CARD_H + FLAT_ROW_GAP)));
-      const perPage = rowsPerPage * FLAT_PER_ROW;
-      for (let i = 0; i < trip.included.length; i += perPage) {
+      const rowsFor = (h: number) => Math.max(1, Math.floor((h - SECTION_TITLE_H) / (FLAT_CARD_H + FLAT_ROW_GAP)));
+      let i = 0;
+      let first = true;
+      while (i < trip.included.length) {
         newSlide();
-        slideHeader(null, i === 0 ? "What's Included" : "What's Included (continued)");
-        lastBottom = await drawFlatGrid(trip.included.slice(i, i + perPage), top, i);
+        slideHeader(null, first ? "What's Included" : "What's Included (continued)");
+        if (first) drawStayBlock(baseTop);
+        const pageTop = first ? top : baseTop;
+        const perPage = rowsFor(CONTENT_BOTTOM - pageTop) * FLAT_PER_ROW;
+        lastBottom = await drawFlatGrid(trip.included.slice(i, i + perPage), pageTop, i);
+        i += perPage;
+        first = false;
       }
     }
 
     if (hasNotIncluded) {
-      const chipsH = SECTION_TITLE_H + measureChipRowH(trip.not_included);
+      const chipsH = SECTION_TITLE_H + measureChipRowH(notIncludedItems);
       // Reuse the leftover space at the bottom of the included list's last
       // page when it fits, instead of unconditionally starting a fresh
       // slide just for the not-included chips.
@@ -359,11 +402,11 @@ export async function renderInclusions(ctx: PdfCtx, trip: PdfTrip): Promise<void
         let y = lastBottom + SECTION_GAP;
         drawSectionHeading("What's Not Included", y);
         y += SECTION_TITLE_H;
-        await drawChipRow(trip.not_included, y);
+        await drawChipRow(notIncludedItems, y);
       } else {
         newSlide();
         slideHeader(null, "What's Not Included");
-        await drawChipRow(trip.not_included, top);
+        await drawChipRow(notIncludedItems, baseTop);
       }
     }
   }

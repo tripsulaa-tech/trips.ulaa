@@ -4,13 +4,17 @@ import {
   ShirtFolded as Shirt, Footprints, Eyeglasses as Glasses, Beanie as HatGlasses, Hand,
   Headphones, BatteryCharging, Pill, SprayBottle as SprayCan, Drop as Droplet,
   Cookie, Sparkle as Sparkles, FileText, IdentificationCard as IdCard,
-  Camera, Stamp, Airplane as Plane, ShieldCheck, CreditCard, Plug as PlugZap, Backpack,
+  Stamp, Airplane as Plane, ShieldCheck, CreditCard, Backpack,
 } from '@phosphor-icons/react';
 import { formatPrice, formatDuration } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
 import { matchThingsToCarryIconKey, type ThingsToCarryIconKey } from '../../../constants/thingsToCarryIconRules';
 import { fetchAsDataUrl, loadImageEl } from '../../pdfImageLoading';
 import WaterBottleIcon from '../../../components/icons/WaterBottleIcon';
+import UniversalAdapterIcon from '../../../components/icons/UniversalAdapterIcon';
+import PassportIcon from '../../../components/icons/PassportIcon';
+import PassportPhotoIcon from '../../../components/icons/PassportPhotoIcon';
+import DocumentCopiesIcon from '../../../components/icons/DocumentCopiesIcon';
 import { BRAND_BASE, COLORS_BASE, type RGB } from '../shared';
 import { BRAND_TAGLINE } from '../../../constants/site';
 export { tierLabel } from '../../../constants/cancellationPolicy';
@@ -47,7 +51,7 @@ const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', AnyIcon> =
   cap: HatGlasses,
   glove: Hand,
   earphone: Headphones,
-  adapter: PlugZap,
+  adapter: UniversalAdapterIcon as unknown as AnyIcon,
   powerBank: BatteryCharging,
   medicine: Pill,
   sunscreen: SprayCan,
@@ -56,11 +60,13 @@ const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', AnyIcon> =
   snack: Cookie,
   wipe: Sparkles,
   tissue: FileText,
-  photo: Camera,
+  photo: PassportPhotoIcon as unknown as AnyIcon,
   visa: Stamp,
   flight: Plane,
   insurance: ShieldCheck,
   card: CreditCard,
+  passport: PassportIcon as unknown as AnyIcon,
+  documentCopies: DocumentCopiesIcon as unknown as AnyIcon,
   idProof: IdCard,
   default: Backpack,
 };
