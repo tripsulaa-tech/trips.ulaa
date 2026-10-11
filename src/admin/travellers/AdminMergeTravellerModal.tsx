@@ -5,7 +5,7 @@
 // kept, and they then collapse into a single contact on their own. All
 // trips, payments and invoices stay exactly where they are.
 import { useMemo, useState } from 'react';
-import { MagnifyingGlass, Warning, ArrowsMerge } from '@phosphor-icons/react';
+import { MagnifyingGlass, Warning, ArrowsMerge, X } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { formatPhone } from '../../utils/formatPhone';
@@ -121,12 +121,23 @@ export default function AdminMergeTravellerModal({
               <MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted" aria-hidden="true" />
               <input
                 id="merge-search"
-                type="search"
+                type="text"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search name, phone, email, trip..."
-                className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
+                className="w-full pl-9 pr-9 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none"
               />
+
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => { setQuery(''); document.getElementById('merge-search')?.focus(); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
             <p className="text-2xs text-dark-muted mt-1.5">
               {query.trim() ? 'Matching contacts' : 'Possible matches (same email, first name or last 4 digits) — or search above'}

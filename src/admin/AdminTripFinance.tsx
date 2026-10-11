@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CaretDown, MagnifyingGlass, PencilSimple } from '@phosphor-icons/react';
+import { CaretDown, MagnifyingGlass, PencilSimple, X } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import DraftConflictNotice from './DraftConflictNotice';
 import TripFinanceBreakdown from './trips/TripFinanceBreakdown';
@@ -194,6 +194,8 @@ export default function AdminTripFinance() {
   const [modalSearch, setModalSearch] = useState('');
   const [modalSearchNoMatch, setModalSearchNoMatch] = useState(false);
   const modalBodyRef = useRef<HTMLDivElement>(null);
+  // Scroll position just before the first search jump, so clearing the search can go back to it.
+  const searchOriginScrollRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -249,6 +251,7 @@ export default function AdminTripFinance() {
   };
 
   const closeEdit = () => {
+    searchOriginScrollRef.current = null;
     setEditingId(null);
     discardDraft(FINANCE_DRAFT_KEY);
   };
@@ -327,8 +330,14 @@ export default function AdminTripFinance() {
       const container = modalBodyRef.current;
       if (!query || !container) {
         setModalSearchNoMatch(false);
+        // Search cleared: return to where the admin was before searching.
+        if (!query && container && searchOriginScrollRef.current !== null) {
+          container.scrollTo({ top: searchOriginScrollRef.current });
+        }
+        searchOriginScrollRef.current = null;
         return;
       }
+      if (searchOriginScrollRef.current === null) searchOriginScrollRef.current = container.scrollTop;
       setModalSearchNoMatch(!(scrollToTextMatch(container, query, 'label, h4, h5') || scrollToInputValue(container, query)));
     }, modalSearch.trim() ? 350 : 0);
     return () => window.clearTimeout(timeout);
@@ -424,8 +433,18 @@ export default function AdminTripFinance() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search trips"
-              className={`${inputClass} pl-9`}
+              className={`${inputClass} pl-9 pr-9`}
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(''); document.getElementById('trip-finance-search')?.focus(); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -531,8 +550,19 @@ export default function AdminTripFinance() {
               value={modalSearch}
               onChange={e => setModalSearch(e.target.value)}
               placeholder="Search fields..."
-              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+              className="w-full pl-9 pr-9 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
             />
+
+            {modalSearch && (
+              <button
+                type="button"
+                onClick={() => { setModalSearch(''); document.getElementById('finance-field-search')?.focus(); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         }
         footer={

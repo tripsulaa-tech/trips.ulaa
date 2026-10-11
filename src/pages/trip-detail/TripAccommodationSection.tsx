@@ -3,14 +3,19 @@ import PagedCarousel, { type PagedCarouselHandle } from '../../components/ui/Pag
 import { useResponsiveItemsPerView } from '../../components/ui/useResponsiveItemsPerView';
 import SectionTitle from '../../components/ui/SectionTitle';
 import { ArrowRight } from '@phosphor-icons/react';
+import { ONE_DAY_STAY_TEXT } from '../../utils/utils-index';
 
 interface TripAccommodationSectionProps {
   description?: string | null;
   photos?: string[] | null;
   carouselRef: RefObject<PagedCarouselHandle | null>;
+  // One-day trip: with no description of its own, the section says that
+  // accommodation isn't included instead of being hidden.
+  isOneDay?: boolean;
 }
 
-export default function TripAccommodationSection({ description, photos, carouselRef }: TripAccommodationSectionProps) {
+export default function TripAccommodationSection({ description, photos, carouselRef, isOneDay = false }: TripAccommodationSectionProps) {
+  const text = description || (isOneDay ? ONE_DAY_STAY_TEXT : null);
   const accommodationPerView = useResponsiveItemsPerView({ base: 1, sm: 2, lg: 3 });
   const hasPhotos = (photos?.length ?? 0) > 0;
   const INITIAL_COUNT = 3;
@@ -19,8 +24,8 @@ export default function TripAccommodationSection({ description, photos, carousel
   return (
     <section id="accommodation" className="scroll-mt-44">
       <SectionTitle variant="plain" align="left" label="Where you'll stay" title="Stay. Relax. Repeat." titleClassName="mb-2" />
-      {description && (
-        <p className="text-dark-muted leading-relaxed text-sm sm:text-base mb-4 sm:mb-6">{description}</p>
+      {text && (
+        <p className="text-dark-muted leading-relaxed text-sm sm:text-base mb-4 sm:mb-6">{text}</p>
       )}
       {hasPhotos && (
         <>

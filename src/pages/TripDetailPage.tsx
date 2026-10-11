@@ -11,7 +11,7 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { getUpcomingTripBySlug, getUpcomingTripByIdAdmin, getUpcomingTripRedirectSlug, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
-import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice, formatPrice } from '../utils/utils-index';
+import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice, formatPrice, isOneDayTrip } from '../utils/utils-index';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import { hasPackages } from '../utils/tripOptions';
 
@@ -494,8 +494,9 @@ export default function TripDetailPage() {
             />
           )}
 
-          {(trip.accommodation_description || (trip.accommodation_photos?.length ?? 0) > 0) && (
+          {(isOneDayTrip(trip) || trip.accommodation_description || (trip.accommodation_photos?.length ?? 0) > 0) && (
             <TripAccommodationSection
+              isOneDay={isOneDayTrip(trip)}
               description={trip.accommodation_description}
               photos={trip.accommodation_photos}
               carouselRef={accommodationCarouselRef}

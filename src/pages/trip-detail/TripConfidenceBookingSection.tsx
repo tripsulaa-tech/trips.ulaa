@@ -265,13 +265,13 @@ export default function TripConfidenceBookingSection({
             )}
           </Button>
 
-          <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-2 mt-3">
+          <div className="flex items-center justify-center flex-nowrap gap-x-2 sm:gap-x-3 mt-3">
             <div ref={calendarMenuRef} className="relative">
               <button
                 onClick={() => setCalendarMenuOpen(o => !o)}
-                className="flex items-center gap-1.5 whitespace-nowrap text-sm text-dark-muted hover:text-primary transition-colors"
+                className="flex items-center gap-1 sm:gap-1.5 whitespace-nowrap text-xs sm:text-sm text-dark-muted hover:text-primary transition-colors"
               >
-                <CalendarPlus size={14} /> Add to calendar
+                <CalendarPlus size={14} className="shrink-0" /> Add to calendar
               </button>
 
               {calendarMenuOpen && (
@@ -296,27 +296,27 @@ export default function TripConfidenceBookingSection({
               )}
             </div>
 
-            <span className="text-background-warm">|</span>
+            <span className="text-background-warm shrink-0">|</span>
 
             <button
               onClick={() => navigator.share?.({ title: trip.title, url: window.location.href })}
-              className="flex items-center gap-1.5 whitespace-nowrap text-sm text-dark-muted hover:text-primary transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 whitespace-nowrap text-xs sm:text-sm text-dark-muted hover:text-primary transition-colors"
             >
-              <Share2 size={14} /> Share this trip
+              <Share2 size={14} className="shrink-0" /> Share<span className="hidden sm:inline">&nbsp;this trip</span>
             </button>
 
             {!trip.hide_pdf_download && (
               <>
-                <span className="text-background-warm">|</span>
+                <span className="text-background-warm shrink-0">|</span>
 
-                <PdfDownloadMenu trip={trip} variant="text" />
+                <PdfDownloadMenu trip={trip} variant="text" className="max-sm:!text-xs max-sm:!gap-1" />
               </>
             )}
           </div>
 
           <div className="flex items-start justify-center gap-1.5 text-xs text-dark-muted mt-4">
             <BadgeCheck size={14} className="text-green-600 shrink-0 mt-0.5" />
-            <span className="text-left max-w-[15.5rem]">
+            <span className="text-left">
               No payment required to enquire. We'll contact you {RESPONSE_TIME}.
             </span>
           </div>

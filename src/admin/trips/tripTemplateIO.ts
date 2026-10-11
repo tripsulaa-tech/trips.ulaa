@@ -156,6 +156,7 @@ export const handleExportTemplate = () => {
           option_ids: ['<id of an option above that this package includes — leave the list empty for the base trip only>'],
           highlight: false,
           early_bird: false,
+          early_bird_only: false, // true only on a seat-limited "Early Bird" package that should show Sold out once the early-bird seats are gone
           price: '<Package price per person in INR, or "" to derive it from the trip price + options>',
           early_bird_price: '<Package early-bird price in INR (only used when early_bird is true and price is set), or "">',
         },
@@ -244,7 +245,7 @@ export const handleExportTemplate = () => {
     ],
 
     // ── Tab: Accommodation ──────────────────────────────────────────
-    accommodation_description: '<Section Description for the "Stay. Relax. Repeat." section — describe the accommodation>',
+    accommodation_description: '<Section Description for the "Stay. Relax. Repeat." section — describe the accommodation. For a ONE-DAY trip leave this as \"\": the site and PDF then show \"This is a one-day experience, so accommodation is not included.\">',
     accommodation_photos: ['(leave blank — uploaded manually; 6 or more look best)'],
 
     // ── Tab: Meeting Point ──────────────────────────────────────────
@@ -426,6 +427,7 @@ function parseTripOptions(raw: unknown): { config: TripOptionsConfig; idMap: Rec
         option_ids: Array.from(new Set(optionIds)),
         highlight: p?.highlight === true,
         early_bird: p?.early_bird === true,
+        early_bird_only: p?.early_bird_only === true,
         price: asNumOrNull(p?.price),
         early_bird_price: asNumOrNull(p?.early_bird_price),
       };

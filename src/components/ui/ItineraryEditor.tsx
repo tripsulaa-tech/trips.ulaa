@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import type { ItineraryDay } from '../../types/types-index';
 import MultiImageUploadField from './MultiImageUploadField';
+import InlineEditText from './InlineEditText';
 import TripHighlightIconPicker from './TripHighlightIconPicker';
 import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { STORAGE_BUCKET } from '../../constants/storage';
@@ -25,6 +26,12 @@ interface ItineraryEditorProps {
 // (a day can still be saved with fewer/no photos), just nudges the UI.
 const MIN_RECOMMENDED_PHOTOS = 4;
 
+// Shown under each day's photo uploader. Photos are shown as a center-cropped
+// collage (4:3 card on mobile, 16:10 on desktop), so landscape 4:3 loses the
+// least and the subject should sit near the middle.
+const ITINERARY_PHOTO_HINT =
+  'Best size: landscape 4:3, about 1600 × 1200 px (min 1200 × 900). Photos are center-cropped, so keep the main subject in the middle and avoid text near the edges. 4 photos per day looks best.';
+
 // A day's bullet points, reorderable (grip on desktop, arrows on touch) —
 // its own component so each day gets its own drag state.
 function DayBullets({ bullets, onChange }: { bullets: string[]; onChange: (next: string[]) => void }) {
@@ -38,7 +45,11 @@ function DayBullets({ bullets, onChange }: { bullets: string[]; onChange: (next:
           className={`flex items-center gap-2 bg-background-warm rounded-lg px-3 py-2 border border-transparent transition-all ${drag.itemClass(bi)}`}
         >
           <ReorderGrip drag={drag} index={bi} count={bullets.length} className="-ml-1" />
-          <span className="flex-1 text-sm text-dark">{bullet}</span>
+          <InlineEditText
+            value={bullet}
+            onSave={text => onChange(bullets.map((b, i) => (i === bi ? text : b)))}
+            ariaLabel={`Edit bullet ${bi + 1}`}
+          />
           {bullets.length > 1 && (
             <>
               <button type="button" onClick={() => drag.move(bi, bi - 1)} disabled={bi === 0} className="p-0.5 rounded hover:bg-white disabled:opacity-30 text-dark-muted transition-colors shrink-0" title="Move up" aria-label={`Move bullet ${bi + 1} up`}>
@@ -190,6 +201,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                   onChange={urls => updateDay(index, { images: urls })}
                   bucket={STORAGE_BUCKET}
                   pathPrefix={`trips/${tripSlug || 'new-trip'}/itinerary/day-${day.day}`}
+                  hint={ITINERARY_PHOTO_HINT}
                   allowUrl
                 />
                 {(day.images?.length || 0) < MIN_RECOMMENDED_PHOTOS && (

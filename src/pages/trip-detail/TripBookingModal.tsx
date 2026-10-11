@@ -3,7 +3,7 @@ import BookingForm from '../../components/ui/BookingForm';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { isBookingDraftDirty } from '../../utils/bookingDraft';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../../types/types-index';
-import { getPackageBase } from '../../utils/tripOptions';
+import { getPackageBase, bookablePackages } from '../../utils/tripOptions';
 
 // How long the success message stays up before the booking modal closes itself.
 const SUCCESS_CLOSE_DELAY_MS = 3000;
@@ -76,7 +76,9 @@ export default function TripBookingModal({
         maxAge={trip.max_age}
         initialDraft={bookingDraft}
         onDraftChange={onDraftChange}
-        tripOptions={trip.trip_options}
+        // Sold-out early-bird packages aren't offered in the booking form, so
+        // the default selection lands on the first package still open.
+        tripOptions={bookablePackages(trip.trip_options, getPackageBase(trip))}
         packageBase={getPackageBase(trip)}
         initialPackageId={initialPackageId}
         onSuccess={() => setTimeout(onClose, SUCCESS_CLOSE_DELAY_MS)}

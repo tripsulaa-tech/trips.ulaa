@@ -38,7 +38,7 @@ import TripHighlightIconPicker from '../../components/ui/TripHighlightIconPicker
 import MeetingPointMapPicker from '../../components/ui/MeetingPointMapPicker';
 import { COVER_IMAGE_TARGET_SIZE_BYTES } from '../../services/api';
 import type { UpcomingTrip, TripLeader } from '../../types/types-index';
-import { slugify } from '../../utils/utils-index';
+import { slugify, isOneDayTrip, ONE_DAY_STAY_TEXT } from '../../utils/utils-index';
 import type { TripRevenue } from './useTripFinanceData';
 import { computeDuration, type TripForm } from './tripFormTypes';
 import { inputClass } from './useTripFormModal';
@@ -50,6 +50,9 @@ interface AdminTripFormModalProps {
   modalOpen: boolean;
   closeModal: () => void;
   editingTrip: UpcomingTrip | null;
+  /** All trips — lets Edit mode switch to another trip without closing. */
+  trips: UpcomingTrip[];
+  onSwitchTrip: (trip: UpcomingTrip) => void;
   form: TripForm;
   setForm: React.Dispatch<React.SetStateAction<TripForm>>;
   modalSearch: string;
@@ -120,7 +123,7 @@ function ageSummary(min: number | '', max: number | ''): string {
 }
 
 export default function AdminTripFormModal({
-  modalOpen, closeModal, editingTrip, form, setForm,
+  modalOpen, closeModal, editingTrip, trips, onSwitchTrip, form, setForm,
   modalSearch, setModalSearch, modalSearchNoMatch, onModalSearchEnter, modalBodyRef,
   saving, handleSave, updateLink, setUpdateLink, commitGroupBulletDraft, actualRevenue, tripLeaders, onManageLeader,
 }: AdminTripFormModalProps) {
@@ -150,6 +153,17 @@ export default function AdminTripFormModal({
         mobileFullScreen
         compactHeader
         headerContent={
+          <div className="flex w-full flex-col sm:flex-row sm:justify-end gap-2">
+          {editingTrip && trips.length > 1 && (
+            <Select
+              inputId="trip-switcher"
+              size="sm"
+              className="w-full sm:w-56"
+              value={editingTrip.id}
+              onChange={id => { const t = trips.find(x => x.id === id); if (t) onSwitchTrip(t); }}
+              options={trips.map(t => ({ value: t.id, label: t.title }))}
+            />
+          )}
           <div className="relative w-full sm:max-w-xs">
             <label htmlFor="trip-field-search" className="sr-only">Search fields</label>
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
@@ -165,8 +179,19 @@ export default function AdminTripFormModal({
                 }
               }}
               placeholder="Search fields..."
-              className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+              className="w-full pl-9 pr-9 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
             />
+            {modalSearch && (
+              <button
+                type="button"
+                onClick={() => { setModalSearch(''); document.getElementById('trip-field-search')?.focus(); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
           </div>
         }
         footer={
@@ -182,7 +207,7 @@ export default function AdminTripFormModal({
           <p role="status" className="text-xs text-red-500 -mt-2 mb-3">No matching field found for "{modalSearch}".</p>
         )}
         <div>
-          <Tabs scrollContainerRef={modalBodyRef}>
+          <Tabs key={editingTrip?.id ?? 'new'} scrollContainerRef={modalBodyRef}>
           <TabPanel label="Basic Info" icon={<IdentificationCard size={15} />}>
             <div className="md:col-span-2">
               <label htmlFor="trip-title" className="block text-sm font-medium text-dark mb-1">Trip Title *</label>
@@ -875,10 +900,10 @@ export default function AdminTripFormModal({
                 onChange={e => setForm(f => ({ ...f, accommodation_description: e.target.value }))}
                 rows={4}
                 className={`${inputClass} resize-none`}
-                placeholder="Describe the accommodation experience for this trip..."
+                placeholder={isOneDayTrip(form) ? ONE_DAY_STAY_TEXT : 'Describe the accommodation experience for this trip...'}
                 aria-describedby="trip-accommodation-description-hint"
               />
-              <p id="trip-accommodation-description-hint" className="text-xs text-dark-muted mt-1">Intro text for the accommodation section.</p>
+              <p id="trip-accommodation-description-hint" className="text-xs text-dark-muted mt-1">{isOneDayTrip(form) ? `One-day trip: leave this blank and visitors (and the PDF) see "${ONE_DAY_STAY_TEXT}"` : 'Intro text for the accommodation section.'}</p>
             </div>
             <div className="md:col-span-2">
               <MultiImageUploadField

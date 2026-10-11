@@ -34,7 +34,7 @@ function keepHyphenatedWordsTogether(text: string) {
 // The trip title split over two lines. A "-" only marks the line break when
 // it stands apart from its words ("Sri Lanka - Island Escape"); a hyphen
 // inside a word ("Girls-Only") is just part of that word. With no manual
-// break, the last word drops onto its own line so it isn't stranded.
+// break, the title wraps balanced and its last two words stay together.
 function TitleLines({ title }: { title: string }) {
   const hyphenIdx = title.search(/\s-|-\s/);
   const hyphenPos = hyphenIdx === -1 ? -1 : title.indexOf('-', hyphenIdx);
@@ -45,14 +45,13 @@ function TitleLines({ title }: { title: string }) {
     firstLine = title.slice(0, hyphenPos + 1);
     secondLine = title.slice(hyphenPos + 1).trim();
   } else {
+    // No manual break: let the browser wrap (balanced, see the h1), but glue the
+    // last two words together so the ending never splits ("Orchard Odyssey").
     const words = title.trim().split(/\s+/);
-    if (words.length > 1) {
-      secondLine = words[words.length - 1];
-      firstLine = words.slice(0, -1).join(' ');
-    } else {
-      firstLine = title;
-      secondLine = '';
-    }
+    firstLine = words.length > 2
+      ? `${words.slice(0, -2).join(' ')} ${words[words.length - 2]}\u00A0${words[words.length - 1]}`
+      : words.join(' ');
+    secondLine = '';
   }
 
   if (!secondLine) return <>{keepHyphenatedWordsTogether(firstLine)}</>;
@@ -103,7 +102,7 @@ export default function TripHero({
   );
 
   const heading = (
-    <h1 className={trip.banner_has_text ? 'sr-only' : 'font-display text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-3 sm:mb-4 leading-tight'}>
+    <h1 className={trip.banner_has_text ? 'sr-only' : 'font-display text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-3 sm:mb-4 leading-tight'} style={{ textWrap: 'balance' }}>
       <TitleLines title={trip.title} />
     </h1>
   );

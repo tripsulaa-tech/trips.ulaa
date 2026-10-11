@@ -1,8 +1,8 @@
 import SectionTitle from '../../components/ui/SectionTitle';
 import Button from '../../components/ui/Button';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
-import { formatPrice } from '../../utils/utils-index';
-import { getPackageBase, hasOwnPrice, includedOptions, packageQuote, packagePriceLabel } from '../../utils/tripOptions';
+import { formatPrice, earlyBirdSeatsLabel } from '../../utils/utils-index';
+import { getPackageBase, hasOwnPrice, includedOptions, isPackageSoldOut, packageListPrice, packageQuote, packagePriceLabel } from '../../utils/tripOptions';
 import { CheckCircle, Star } from '@phosphor-icons/react';
 
 interface TripPackagesSectionProps {
@@ -22,9 +22,12 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
 
   // The cheapest/entry package (listed first, e.g. Basic) is what the
   // highlighted one is compared against: "Just ₹500 more than Basic".
-  const entry = cfg.packages[0];
+  // (A sold-out early-bird package can't be the entry: skip to the first open one.)
+  const entry = cfg.packages.find(p => !isPackageSoldOut(p, base)) ?? cfg.packages[0];
   const entryPrice = packageQuote(entry, cfg, base).price;
-  const hasHighlight = cfg.packages.some(p => p.highlight);
+  // "Most popular" on an early-bird-only package lasts only while its seats do.
+  const hasHighlight = cfg.packages.some(p => p.highlight && !isPackageSoldOut(p, base));
+  const seatsLabel = earlyBirdSeatsLabel(trip);
 
   return (
     <section id="packages" className="scroll-mt-44">
@@ -42,14 +45,26 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
           // Premium); the others always show the regular trip price.
           const quote = packageQuote(pkg, cfg, base);
           const earlyBird = quote.isEarlyBird;
-          const popular = !!pkg.highlight;
+          const soldOut = isPackageSoldOut(pkg, base);
+          const popular = !!pkg.highlight && !soldOut;
+          // While the seats last, the early-bird-only card says how many are left.
+          const showSeats = !!pkg.early_bird_only && !soldOut && !!seatsLabel;
+          // Sold out: show what the early-bird price WAS (struck through) instead of
+          // the regular price, which would just look like the Normal package.
+          const wasPrice = soldOut ? packageListPrice(pkg, cfg, trip, 'early_bird') : undefined;
           const gap = popular && pkg.id !== entry.id && quote.price != null && entryPrice != null ? quote.price - entryPrice : 0;
           const tick = popular ? 'text-gold-dark' : 'text-primary';
           return (
             <div
               key={pkg.id}
-              className={`relative flex flex-col rounded-lg p-6 ${popular ? 'popular-gold-card' : 'bg-background-warm border-2 border-transparent'}`}
+              aria-disabled={soldOut || undefined}
+              className={`relative flex flex-col rounded-lg p-6 ${popular ? 'popular-gold-card' : 'bg-background-warm border-2 border-transparent'} ${soldOut ? 'opacity-60 grayscale select-none' : ''}`}
             >
+              {soldOut && (
+                <span className="absolute -top-3 left-6 inline-flex items-center gap-1 bg-dark text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  Sold out
+                </span>
+              )}
               {popular && (
                 <span className="absolute -top-3 left-6 inline-flex items-center gap-1 popular-gold-badge text-xs font-semibold px-3 py-1 rounded-full">
                   <Star size={12} weight="fill" aria-hidden="true" /> Most popular
@@ -58,9 +73,15 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
               <h3 className="font-display text-xl font-bold text-dark">{pkg.name}</h3>
               {pkg.description && <p className="text-sm text-dark-muted mt-1">{pkg.description}</p>}
               <p className="mt-3 font-display text-3xl font-bold text-primary">
-                <span className={popular ? 'premium-gold-text' : undefined}>{packagePriceLabel(quote, formatPrice)}</span>
+                {soldOut && wasPrice != null ? (
+                  <span className="line-through decoration-2">{formatPrice(wasPrice)}</span>
+                ) : (
+                  <span className={popular ? 'premium-gold-text' : undefined}>{packagePriceLabel(quote, formatPrice)}</span>
+                )}
                 <span className="text-sm font-normal text-dark-muted"> / person</span>
               </p>
+              {soldOut && <p className="text-xs font-semibold mt-1 text-dark-muted">All early-bird seats are taken</p>}
+              {showSeats && <p className="text-xs font-semibold mt-1 text-gold-deep">{seatsLabel}</p>}
               {gap > 0 && (
                 <p className="text-xs font-semibold text-gold-deep mt-1">
                   Just {formatPrice(gap)} more than {entry.name}
@@ -84,13 +105,14 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
               </ul>
               <Button
                 onClick={() => onChoose(pkg.id)}
+                disabled={soldOut}
                 fullWidth
                 // With a highlighted package, the others step back to an
                 // outline button so the recommended choice stands out.
                 variant={hasHighlight && !popular ? 'outline' : 'primary'}
                 className={`mt-5 ${popular ? 'popular-gold-btn' : ''}`}
               >
-                {buttonLabels.primaryCta}
+                {soldOut ? 'Sold out' : buttonLabels.primaryCta}
               </Button>
             </div>
           );

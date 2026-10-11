@@ -59,7 +59,7 @@ export default function TripPricingSummary({ pricing: p, totalSeats, optionCount
           <p className="text-xs font-medium text-dark-muted">Packages</p>
           {packages.map(pkg => {
             const regular = packageListPrice(pkg, cfg, priceBase, 'normal');
-            const early = pkg.early_bird ? packageListPrice(pkg, cfg, priceBase, 'early_bird') : undefined;
+            const early = pkg.early_bird || pkg.early_bird_only ? packageListPrice(pkg, cfg, priceBase, 'early_bird') : undefined;
             const opts = includedOptions(pkg, cfg);
             return (
               <div key={pkg.id} className="flex justify-between gap-3">

@@ -26,15 +26,18 @@ export default function TripItinerarySection({
         className="px-2"
         titleClassName="mb-6 sm:mb-10"
       />
-      <p className="text-center text-dark-muted text-sm -mt-4 mb-6">
-        Tap a day's icon to see the details
-      </p>
+      {itinerary.some(d => (d.bullets?.length ?? 0) > 0) && (
+        <p className="text-center text-dark-muted text-sm -mt-4 mb-6">
+          Tap a day's icon to see the highlights
+        </p>
+      )}
       <div className={`grid gap-x-6 gap-y-9 sm:gap-y-12 pt-6 ${getItineraryGridClass(itinerary.length)}`}>
         {itinerary.map((day, i) => {
           const meta = getTripHighlightIcon(day.icon);
           const palette = getTripHighlightPalette(i);
           const isDayOpen = expandedItineraryDays.has(i);
-          const hasDetails = Boolean(day.description) || (day.bullets?.length ?? 0) > 0;
+          // The description is always visible; only the bullet points expand.
+          const hasDetails = (day.bullets?.length ?? 0) > 0;
           return (
             <motion.div
               key={day.day}
@@ -49,7 +52,7 @@ export default function TripItinerarySection({
                 type="button"
                 onClick={() => hasDetails && toggleItineraryDay(i)}
                 aria-expanded={isDayOpen}
-                aria-label={`${day.title} — tap for details`}
+                aria-label={hasDetails ? `${day.title} — tap for highlights` : day.title}
                 className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-md ring-4 ring-white font-button font-bold text-sm text-white focus:outline-none focus-visible:ring-primary/50 ${hasDetails ? 'cursor-pointer' : 'cursor-default'} ${hasDetails && !isDayOpen ? 'itinerary-icon-glow' : ''}`}
                 style={{ backgroundColor: palette.fg }}
               >
@@ -57,6 +60,9 @@ export default function TripItinerarySection({
               </button>
               <div className="w-full bg-white border border-background-warm rounded-lg pt-8 pb-4 px-4 shadow-card hover:shadow-card-hover transition-shadow flex flex-col gap-2 text-center">
                 <h3 className="font-display font-bold text-dark text-base">{day.title}</h3>
+                {day.description && (
+                  <p className="text-dark-muted text-sm leading-relaxed text-left">{day.description}</p>
+                )}
                 <AnimatePresence initial={false}>
                   {isDayOpen && hasDetails && (
                     <motion.div
@@ -67,17 +73,14 @@ export default function TripItinerarySection({
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <p className="text-dark-muted text-sm leading-relaxed text-left">{day.description}</p>
-                      {(day.bullets?.length ?? 0) > 0 && (
-                        <ul className="text-left space-y-1 mt-2">
-                          {day.bullets!.map((bullet, bi) => (
-                            <li key={bi} className="flex items-start gap-2 text-dark-muted text-sm leading-relaxed">
-                              <span className="mt-1.5 w-1 h-1 rounded-full bg-primary shrink-0" />
-                              <span>{bullet}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                      <ul className="text-left space-y-1">
+                        {day.bullets!.map((bullet, bi) => (
+                          <li key={bi} className="flex items-start gap-2 text-dark-muted text-sm leading-relaxed">
+                            <span className="mt-1.5 w-1 h-1 rounded-full bg-primary shrink-0" />
+                            <span>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </motion.div>
                   )}
                 </AnimatePresence>

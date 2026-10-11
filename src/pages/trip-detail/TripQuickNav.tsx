@@ -3,6 +3,7 @@ import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import { STICKY_FILTER_TOP_CLASS } from '../../components/ui/BrowseShell';
 import type { UpcomingTrip } from '../../types/types-index';
 import { addToCalendar } from '../../utils/calendar';
+import { isOneDayTrip } from '../../utils/utils-index';
 import { ShareNetwork as Share2, CalendarPlus } from '@phosphor-icons/react';
 
 interface TripQuickNavProps {
@@ -63,7 +64,7 @@ export default function TripQuickNav({
           {trip.itinerary.length > 0 && (
             <NavTab id="itinerary" label="Itinerary" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
-          {(trip.accommodation_description || (trip.accommodation_photos?.length ?? 0) > 0) && (
+          {(isOneDayTrip(trip) || trip.accommodation_description || (trip.accommodation_photos?.length ?? 0) > 0) && (
             <NavTab id="accommodation" label="Stay" activeSection={activeSection} registerNavLink={registerNavLink} />
           )}
           <NavTab id="inclusions" label="Inclusions" activeSection={activeSection} registerNavLink={registerNavLink} />

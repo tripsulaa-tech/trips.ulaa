@@ -84,13 +84,22 @@ export function useSectionTabChrome(loading: boolean, sectionCount: number): Use
     return bar ? bar.getBoundingClientRect().height : 0;
   };
 
+  // Scroll position just before the first search jump, so clearing the search can go back to it.
+  const searchOriginScrollRef = useRef<number | null>(null);
+
   const handlePageSearch = () => {
     const query = pageSearch.trim();
     const container = scrollBodyRef.current;
     if (!query || !container) {
       setPageSearchNoMatch(false);
+      // Search cleared: return to where the admin was before searching.
+      if (!query && container && searchOriginScrollRef.current !== null) {
+        container.scrollTo({ top: searchOriginScrollRef.current });
+      }
+      searchOriginScrollRef.current = null;
       return;
     }
+    if (searchOriginScrollRef.current === null) searchOriginScrollRef.current = container.scrollTop;
     // See scrollToTextMatch (shared with useTripFormModal's own
     // handleModalSearch) for why the scroll is scoped to `container`
     // directly rather than calling the match's own scrollIntoView().

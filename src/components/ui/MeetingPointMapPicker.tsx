@@ -13,6 +13,7 @@ import {
   MagnifyingGlass as Search,
   MapPin,
   Spinner,
+  X,
 } from '@phosphor-icons/react';
 import Modal from './Modal';
 import Button from './Button';
@@ -252,6 +253,16 @@ export default function MeetingPointMapPicker({ isOpen, onClose, onSelect, initi
             className="w-full pl-9 pr-9 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
             aria-label="Search for a meeting point"
           />
+          {query && !searching && (
+            <button
+              type="button"
+              onClick={() => handleQueryChange('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+              aria-label="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
           {searching && (
             <Spinner size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted animate-spin" aria-hidden="true" />
           )}

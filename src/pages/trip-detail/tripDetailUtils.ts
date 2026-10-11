@@ -10,7 +10,6 @@ import {
   Pill,
   Drop as SprayCan,
   Drop as Droplet,
-  Drop as GlassWater,
   Cookie,
   Sparkle as Sparkles,
   FileText,
@@ -24,6 +23,7 @@ import {
   Plug as PlugZap,
 } from '@phosphor-icons/react';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
+import WaterBottleIcon from '../../components/icons/WaterBottleIcon';
 import { matchThingsToCarryIconKey, type ThingsToCarryIconKey } from '../../constants/thingsToCarryIconRules';
 
 // Tracks whether the viewport is at/above the `sm` breakpoint (640px) so
@@ -78,7 +78,7 @@ const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', TripHighli
   medicine: Pill,
   sunscreen: SprayCan,
   moisturizer: Droplet,
-  waterBottle: GlassWater,
+  waterBottle: WaterBottleIcon as unknown as TripHighlightIconType,
   snack: Cookie,
   wipe: Sparkles,
   tissue: FileText,

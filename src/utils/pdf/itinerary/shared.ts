@@ -3,13 +3,14 @@ import { getTripHighlightIcon, type TripHighlightIconType } from '../../../const
 import {
   ShirtFolded as Shirt, Footprints, Eyeglasses as Glasses, Beanie as HatGlasses, Hand,
   Headphones, BatteryCharging, Pill, SprayBottle as SprayCan, Drop as Droplet,
-  Drop as GlassWater, Cookie, Sparkle as Sparkles, FileText, IdentificationCard as IdCard,
+  Cookie, Sparkle as Sparkles, FileText, IdentificationCard as IdCard,
   Camera, Stamp, Airplane as Plane, ShieldCheck, CreditCard, Plug as PlugZap, Backpack,
 } from '@phosphor-icons/react';
 import { formatPrice, formatDuration } from '../../utils-index';
 import { sanitizeForPdf } from '../../pdfText';
 import { matchThingsToCarryIconKey, type ThingsToCarryIconKey } from '../../../constants/thingsToCarryIconRules';
 import { fetchAsDataUrl, loadImageEl } from '../../pdfImageLoading';
+import WaterBottleIcon from '../../../components/icons/WaterBottleIcon';
 import { BRAND_BASE, COLORS_BASE, type RGB } from '../shared';
 import { BRAND_TAGLINE } from '../../../constants/site';
 export { tierLabel } from '../../../constants/cancellationPolicy';
@@ -51,7 +52,7 @@ const THINGS_TO_CARRY_ICONS: Record<ThingsToCarryIconKey | 'default', AnyIcon> =
   medicine: Pill,
   sunscreen: SprayCan,
   moisturizer: Droplet,
-  waterBottle: GlassWater,
+  waterBottle: WaterBottleIcon as unknown as AnyIcon,
   snack: Cookie,
   wipe: Sparkles,
   tissue: FileText,

@@ -14,6 +14,7 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { resolvePhosphorIcon } from '../components/icons/LazyPhosphorIcon';
 import LinkedHeartsIcon from '../components/icons/LinkedHeartsIcon';
 import WaterfallIcon from '../components/icons/WaterfallIcon';
+import WaterBottleIcon from '../components/icons/WaterBottleIcon';
 
 // Thin shim so every existing `Ph.IconName` reference below keeps working
 // unchanged. resolvePhosphorIcon returns the already-bundled static binding
@@ -1592,7 +1593,7 @@ export const TRIP_HIGHLIGHT_ICONS: TripHighlightIconMeta[] = [
   { key: 'battery-charging', label: 'Power Bank', Icon: Ph.BatteryCharging as TripHighlightIconType, keywords: ['power bank', 'powerbank', 'charger', 'battery', 'charging'] },
   { key: 'pill', label: 'Personal Medicines', Icon: Ph.Pill as TripHighlightIconType, keywords: ['personal medicines', 'medicines', 'medicine', 'medication', 'pills', 'first aid'] },
   { key: 'id-card', label: 'Government ID Proof', Icon: Ph.IdentificationCard as TripHighlightIconType, keywords: ['government id proof', 'id proof', 'id card', 'passport', 'aadhar', 'adhar', 'voter id', 'license', 'documents'] },
-  { key: 'glass-water', label: 'Water Bottle', Icon: Ph.Drop as TripHighlightIconType, keywords: ['water bottle', 'bottle', 'water', 'hydration', 'flask'] },
+  { key: 'glass-water', label: 'Water Bottle', Icon: WaterBottleIcon as unknown as TripHighlightIconType, keywords: ['water bottle', 'bottle', 'water', 'hydration', 'flask'] },
   { key: 'stamp-visa-approval', label: 'ETA / Visa Approval', Icon: Ph.Stamp as TripHighlightIconType, keywords: ['eta approval', 'eta', 'visa', 'visa approval', 'travel authorization', 'entry permit', 'immigration approval'] },
   { key: 'ticket-flight', label: 'Flight Tickets', Icon: Ph.Airplane as TripHighlightIconType, keywords: ['flight tickets', 'flight ticket', 'air ticket', 'air tickets', 'boarding pass', 'plane ticket', 'itinerary'] },
   { key: 'shield-travel-insurance', label: 'Travel Insurance', Icon: Ph.ShieldCheck as TripHighlightIconType, keywords: ['travel insurance', 'insurance', 'insurance copy', 'medical insurance', 'policy copy'] },

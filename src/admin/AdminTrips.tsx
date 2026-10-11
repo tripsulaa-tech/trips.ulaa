@@ -47,7 +47,7 @@ export default function AdminTrips() {
   } = useTripActions(trips, load);
 
   const {
-    modalOpen, closeModal, openCreate, openEdit,
+    modalOpen, closeModal, openCreate, openEdit, switchTrip,
     modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef, handleModalSearchEnter,
     editingTrip, form, setForm, saving, handleSave,
     commitGroupBulletDraft,
@@ -155,6 +155,8 @@ export default function AdminTrips() {
         modalOpen={modalOpen}
         closeModal={closeModal}
         editingTrip={editingTrip}
+        trips={trips}
+        onSwitchTrip={switchTrip}
         form={form}
         setForm={setForm}
         modalSearch={modalSearch}

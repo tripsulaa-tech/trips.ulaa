@@ -5,7 +5,7 @@ import CancellationPolicyDisplay from '../../components/ui/CancellationPolicyDis
 import TermsBlocks from '../../components/ui/TermsBlocks';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
 import { parseTerms } from '../../utils/parseTerms';
-import { formatDate, formatAgeRange, formatPrice, formatDuration } from '../../utils/utils-index';
+import { formatDate, formatAgeRange, formatPrice, formatDuration, isOneDayTrip, ONE_DAY_STAY_TEXT } from '../../utils/utils-index';
 import { computeTripFinanceSummary } from '../../utils/tripFinance';
 import TripFinanceBreakdown from './TripFinanceBreakdown';
 import type { TripRevenue } from './useTripFinanceData';
@@ -252,11 +252,11 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
               </div>
             )}
 
-            {trip.accommodation_description || (trip.accommodation_photos?.length ?? 0) > 0 ? (
+            {isOneDayTrip(trip) || trip.accommodation_description || (trip.accommodation_photos?.length ?? 0) > 0 ? (
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-1">Accommodation</p>
-                {trip.accommodation_description && (
-                  <p className="text-sm text-dark whitespace-pre-line mb-1.5">{trip.accommodation_description}</p>
+                {(trip.accommodation_description || isOneDayTrip(trip)) && (
+                  <p className="text-sm text-dark whitespace-pre-line mb-1.5">{trip.accommodation_description || ONE_DAY_STAY_TEXT}</p>
                 )}
                 {(trip.accommodation_photos?.length ?? 0) > 0 && (
                   <div className="grid grid-cols-4 gap-2">

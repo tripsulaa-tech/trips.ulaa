@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import InlineEditText from './InlineEditText';
 import {
   Plus,
   X,
@@ -48,6 +49,10 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
     addItem();
   };
 
+  const updateAt = (index: number, text: string) => {
+    onChange(value.map((v, i) => (i === index ? text : v)));
+  };
+
   const removeAt = (index: number) => {
     onChange(value.filter((_, i) => i !== index));
   };
@@ -61,7 +66,11 @@ export default function TagListEditor({ label, value, onChange, placeholder, hel
         <ul className="space-y-2 mb-3">
           {value.map((item, index) => (
             <li key={index} className="flex items-center gap-2 bg-background-warm rounded-lg px-3 py-2">
-              <span className="flex-1 text-sm text-dark">{item}</span>
+              <InlineEditText
+                value={item}
+                onSave={text => updateAt(index, text)}
+                ariaLabel={`Edit item ${index + 1}`}
+              />
               <button
                 type="button"
                 onClick={() => removeAt(index)}

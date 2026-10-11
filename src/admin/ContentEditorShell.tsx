@@ -1,5 +1,5 @@
 import type { ReactNode, RefObject } from 'react';
-import { MagnifyingGlass as Search, CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { MagnifyingGlass as Search, X, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import AdminEditorFooter from './AdminEditorFooter';
 import Select from '../components/ui/Select';
@@ -99,8 +99,19 @@ export default function ContentEditorShell({
                 value={pageSearch}
                 onChange={e => setPageSearch(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
+                className="w-full pl-9 pr-9 py-2 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
               />
+
+              {pageSearch && (
+                <button
+                  type="button"
+                  onClick={() => { setPageSearch(''); document.getElementById(searchId)?.focus(); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
             {/* Tab bar — jumps to a section rather than hiding the others
                 (everything stays in one continuous scroll below), same

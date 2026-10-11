@@ -16,7 +16,7 @@ import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft, formatDuration } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
-import { hasPackages, withBasicPricing } from '../../utils/tripOptions';
+import { getPackageBase, hasPackages, isPackageSoldOut, withBasicPricing } from '../../utils/tripOptions';
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
@@ -144,7 +144,13 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   // Trips with packages show the first package's (Basic) price on the card;
   // Premium etc. are picked on the trip page / booking form.
   const priced = withBasicPricing(trip);
-  const basicPackageName = hasPackages(trip.trip_options) ? trip.trip_options.packages[0].name : null;
+  // Badge names the package the price belongs to: the first one still open
+  // (same pick as withBasicPricing), so a sold-out Early Bird doesn't keep its
+  // name next to Normal's price.
+  const pkgBase = getPackageBase(trip);
+  const basicPackageName = hasPackages(trip.trip_options)
+    ? (trip.trip_options.packages.find(p => !isPackageSoldOut(p, pkgBase)) ?? trip.trip_options.packages[0]).name
+    : null;
   const { activePrice, isEarlyBird, isSpecialOffer } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date, priced.early_bird_seats, priced.early_bird_seats_taken);
   const earlySeatsLabel = isEarlyBird ? earlyBirdSeatsLabel(priced) : null;
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, priced.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);

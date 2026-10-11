@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import {
   MagnifyingGlass as Search,
   Plus,
+  X,
   CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
 import {
@@ -74,8 +75,19 @@ export default function TripHighlightIconPicker({ value, onChange, hintText, id 
               onChange={e => setQuery(e.target.value)}
               placeholder="Search icons…"
               aria-label="Search icons"
-              className="w-full pl-8 pr-2 py-1.5 text-sm border border-background-warm rounded-md focus:outline-none focus:border-primary/50"
+              className="w-full pl-8 pr-7 py-1.5 text-sm border border-background-warm rounded-md focus:outline-none focus:border-primary/50"
             />
+
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           {!query && (

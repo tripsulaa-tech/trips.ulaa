@@ -181,6 +181,14 @@ export interface TripPackage {
   // early-bird window is open. Only used when `early_bird` is on and
   // `price` is set; blank = no early-bird discount on this package.
   early_bird_price?: number | null;
+  // Seat-limited early bird only: this package exists ONLY for the early-bird
+  // seats (e.g. "Early Bird", first 5 people). While seats last it is priced
+  // early-bird and can carry "Most popular"; once every seat is taken it stays
+  // visible but greyed out as "Sold out" and can't be booked. When any package
+  // has this on, the seat discount reaches ONLY such packages (so a separate
+  // "Normal" package keeps its regular price). No package with it = old
+  // behaviour: the seat discount comes off every package.
+  early_bird_only?: boolean;
 }
 
 export interface TripOptionsConfig {

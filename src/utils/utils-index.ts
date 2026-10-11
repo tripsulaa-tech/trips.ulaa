@@ -199,6 +199,18 @@ export function formatDuration(duration?: string | null): string {
   return duration.replace(/\s*[/•·|,-]\s*0\s*nights?\b/i, '').trim();
 }
 
+/** Default text for the "Stay. Relax. Repeat." section of a one-day trip
+ *  (no overnight stay), used on the trip page and the itinerary PDF unless the
+ *  admin writes their own accommodation description. */
+export const ONE_DAY_STAY_TEXT = 'This is a one-day experience, so accommodation is not included.';
+
+/** True for a one-day trip: start and end date are the same day, or (when
+ *  dates are missing) the duration reads just "1 Day" / "1 Day / 0 Nights". */
+export function isOneDayTrip(trip: { start_date?: string | null; end_date?: string | null; duration?: string | null }): boolean {
+  if (trip.start_date && trip.end_date) return trip.start_date.slice(0, 10) === trip.end_date.slice(0, 10);
+  return /^1\s*day$/i.test(formatDuration(trip.duration));
+}
+
 /**
  * Renders a trip's optional age eligibility for display. Either side may
  * be unset (no restriction on that side) — only called once at least one

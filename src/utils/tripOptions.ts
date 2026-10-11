@@ -54,6 +54,9 @@ export interface PackageBase {
   // Seat mode only: ₹ off every package while early-bird seats last
   // (regular trip price minus early-bird trip price, e.g. 1999 - 1799 = 200).
   seatDiscount: number;
+  // Seat mode only: early-bird seats still free (0 = all taken). Undefined /
+  // null when the trip isn't seat-limited.
+  seatsLeft?: number | null;
 }
 
 export const noPackageBase: PackageBase = { active: null, regular: null, isEarlyBird: false, earlyWindowOpen: false, seatLimited: false, seatDiscount: 0 };
@@ -81,7 +84,35 @@ export function getPackageBase(
     deadline.setHours(23, 59, 59, 999);
     earlyWindowOpen = new Date() <= deadline;
   }
-  return { active: activePrice, regular: trip.price, isEarlyBird, earlyWindowOpen, seatLimited, seatDiscount: seatLimited ? seatEarlyDiscount(trip) : 0 };
+  return {
+    active: activePrice, regular: trip.price, isEarlyBird, earlyWindowOpen, seatLimited,
+    seatDiscount: seatLimited ? seatEarlyDiscount(trip) : 0,
+    seatsLeft: earlyBirdSeatsLeft(trip),
+  };
+}
+
+// In seat mode, does the trip's early-bird discount reach this package?
+// Once any package is marked "early-bird seats only", the discount reaches
+// ONLY those packages (a separate Normal package keeps its regular price).
+// With none marked it reaches every package, as it always did.
+export function seatEarlyApplies(pkg: TripPackage, cfg?: TripOptionsConfig | null): boolean {
+  if (!cfg || !cfg.packages.some(p => p.early_bird_only)) return true;
+  return !!pkg.early_bird_only;
+}
+
+// An early-bird-only package whose seats have all been taken: still shown
+// (greyed out, "Sold out") but not bookable and no longer "Most popular".
+export function isPackageSoldOut(pkg: TripPackage, base: Pick<PackageBase, 'seatLimited' | 'seatsLeft'>): boolean {
+  return !!pkg.early_bird_only && base.seatLimited && base.seatsLeft === 0;
+}
+
+// The package config the BOOKING form should offer: sold-out packages are
+// dropped so the default selection (and group split) never lands on them.
+// Returns the config unchanged if that would leave nothing to book.
+export function bookablePackages(cfg: TripOptionsConfig | null | undefined, base: PackageBase): TripOptionsConfig | null | undefined {
+  if (!cfg) return cfg;
+  const open = cfg.packages.filter(p => !isPackageSoldOut(p, base));
+  return open.length === 0 || open.length === cfg.packages.length ? cfg : { ...cfg, packages: open };
 }
 
 // A package with an admin-set price ignores the trip price and its options'
@@ -102,7 +133,7 @@ export function packageQuote(
 ): { price: number | null; extra: number; isEarlyBird: boolean } {
   if (hasOwnPrice(pkg)) {
     // Seat-limited early bird: the same ₹ discount comes off any package.
-    if (base.seatLimited && base.isEarlyBird && base.seatDiscount > 0) {
+    if (base.seatLimited && base.isEarlyBird && base.seatDiscount > 0 && seatEarlyApplies(pkg, cfg)) {
       return { price: Math.max(0, pkg.price! - base.seatDiscount), extra: 0, isEarlyBird: true };
     }
     if (base.earlyWindowOpen && pkg.early_bird && pkg.early_bird_price != null && pkg.early_bird_price > 0) {
@@ -112,8 +143,9 @@ export function packageQuote(
   }
   // Derived: early-bird trip price only reaches packages flagged for it.
   const extra = optionsPrice(packageOptionIds(pkg, cfg), cfg);
-  // (Seat-limited early bird is trip-level: it reaches every such package.)
-  const earlyForPkg = !!pkg.early_bird || base.seatLimited;
+  // (Seat-limited early bird is trip-level: it reaches every package unless
+  // some are marked "early-bird seats only" — then only those.)
+  const earlyForPkg = base.seatLimited ? seatEarlyApplies(pkg, cfg) : !!pkg.early_bird;
   const isEarlyBird = base.isEarlyBird && earlyForPkg;
   const baseAmount = base.isEarlyBird && !earlyForPkg ? (base.regular ?? base.active) : base.active;
   return { price: baseAmount != null ? baseAmount + extra : null, extra, isEarlyBird };
@@ -128,7 +160,10 @@ export function packageQuote(
 export function withBasicPricing<T extends UpcomingTrip>(trip: T): T {
   const cfg = trip.trip_options;
   if (!hasPackages(cfg)) return trip;
-  const first = cfg.packages[0];
+  // Headline = the first package travelers can still book (an early-bird-only
+  // package that sold out is skipped).
+  const base = getPackageBase(trip);
+  const first = cfg.packages.find(p => !isPackageSoldOut(p, base)) ?? cfg.packages[0];
   if (hasOwnPrice(first)) {
     // Admin typed the package's price: it replaces the trip's prices, and
     // trip-level special-offer pricing no longer applies to it.
@@ -137,7 +172,7 @@ export function withBasicPricing<T extends UpcomingTrip>(trip: T): T {
       price: first.price ?? undefined,
       // Seat mode: the trip's early-bird discount comes off the package price.
       early_bird_price: isSeatLimitedEarlyBird(trip)
-        ? (seatEarlyDiscount(trip) > 0 ? Math.max(0, (first.price ?? 0) - seatEarlyDiscount(trip)) : null)
+        ? (seatEarlyDiscount(trip) > 0 && seatEarlyApplies(first, cfg) ? Math.max(0, (first.price ?? 0) - seatEarlyDiscount(trip)) : null)
         : first.early_bird && first.early_bird_price != null && first.early_bird_price > 0 ? first.early_bird_price : null,
       special_offer_price: null,
       special_offer_date: null,
@@ -150,7 +185,7 @@ export function withBasicPricing<T extends UpcomingTrip>(trip: T): T {
   return {
     ...trip,
     price: trip.price != null ? trip.price + extra : trip.price,
-    early_bird_price: (first.early_bird || isSeatLimitedEarlyBird(trip)) && trip.early_bird_price != null ? trip.early_bird_price + extra : null,
+    early_bird_price: (isSeatLimitedEarlyBird(trip) ? seatEarlyApplies(first, cfg) : !!first.early_bird) && trip.early_bird_price != null ? trip.early_bird_price + extra : null,
     special_offer_price: trip.special_offer_price != null ? trip.special_offer_price + extra : trip.special_offer_price,
   };
 }
@@ -170,7 +205,7 @@ export function packageListPrice(
   tier: 'early_bird' | 'normal',
 ): number | undefined {
   if (pkg && cfg && hasOwnPrice(pkg)) {
-    if (tier === 'early_bird' && isSeatLimitedEarlyBird(trip)) return Math.max(0, pkg.price! - seatEarlyDiscount(trip));
+    if (tier === 'early_bird' && isSeatLimitedEarlyBird(trip) && seatEarlyApplies(pkg, cfg)) return Math.max(0, pkg.price! - seatEarlyDiscount(trip));
     if (tier === 'early_bird' && pkg.early_bird && pkg.early_bird_price != null && pkg.early_bird_price > 0) return pkg.early_bird_price;
     return pkg.price!;
   }
@@ -199,6 +234,7 @@ export function cleanTripOptions(cfg: TripOptionsConfig): TripOptionsConfig | nu
       description: (p.description || '').trim(),
       option_ids: (p.option_ids || []).filter(id => known.has(id)),
       early_bird: !!p.early_bird,
+      early_bird_only: !!p.early_bird_only,
       price: p.price != null && p.price > 0 ? p.price : null,
       early_bird_price: p.early_bird && p.early_bird_price != null && p.early_bird_price > 0 ? p.early_bird_price : null,
     }))

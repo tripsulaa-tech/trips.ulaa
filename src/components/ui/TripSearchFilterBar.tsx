@@ -1,5 +1,6 @@
 import {
   MagnifyingGlass as Search,
+  X,
   Funnel as Filter,
 } from '@phosphor-icons/react';
 import { MONTHS } from '../../hooks/useMonthFilteredTrips';
@@ -92,8 +93,19 @@ export function TripSearchFilterBar({
             placeholder="Search destination or trip..."
             value={search}
             onChange={e => onSearchChange(e.target.value)}
-            className="w-full pl-12 pr-4 py-2 rounded-md border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
+            className="w-full pl-12 pr-10 py-2 rounded-md border-2 border-background-warm bg-background focus:border-primary focus:outline-none font-body text-dark"
           />
+
+          {search && (
+            <button
+              type="button"
+              onClick={() => { onSearchChange(''); document.getElementById('trip-search')?.focus(); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
+              aria-label="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
         {/* Month filter - desktop */}
         <div className="hidden md:flex gap-2 flex-wrap" role="group" aria-label="Filter by month">

@@ -5,6 +5,7 @@ import {
 } from '../../services/api';
 import { useAlert } from '../../components/ui/useAlert';
 import { useToast } from '../../components/ui/useToast';
+import { useConfirm } from '../../components/ui/useConfirm';
 import type { UpcomingTrip, TripLeader } from '../../types/types-index';
 import { slugify } from '../../utils/utils-index';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
@@ -95,6 +96,7 @@ const TRIP_DRAFT_KEY = 'trip-form';
  *  Trips table (owned by useTripsData) reflects the change. */
 export function useTripFormModal(load: () => void) {
   const alert = useAlert();
+  const confirm = useConfirm();
   const toast = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSearch, setModalSearch] = useState('');
@@ -154,7 +156,7 @@ export function useTripFormModal(load: () => void) {
   // Closes the edit/create modal. Any image URLs that were uploaded during
   // this session but aren't in the initial snapshot are orphans (the admin
   // navigated away without saving) — delete them best-effort before closing.
-  const closeModal = () => {
+  const deleteOrphanUploads = () => {
     const currentUrls = collectTripFormUrls(form);
     const initial = initialModalUrlsRef.current;
     for (const url of currentUrls) {
@@ -163,6 +165,11 @@ export function useTripFormModal(load: () => void) {
       }
     }
     initialModalUrlsRef.current = new Set();
+  };
+
+  const closeModal = () => {
+    deleteOrphanUploads();
+    searchOriginScrollRef.current = null;
     setModalOpen(false);
     discardDraft(TRIP_DRAFT_KEY);
   };
@@ -223,11 +230,19 @@ export function useTripFormModal(load: () => void) {
   // own handlePageSearch) for why scrolling is scoped to it directly rather
   // than calling the match's own scrollIntoView(). The sticky bar it's kept
   // clear of here is Tabs' own `data-sticky-toolbar` marker.
+  // Scroll position of the modal body just before the first search jump, so clearing the search
+  // can return to it.
+  const searchOriginScrollRef = useRef<number | null>(null);
   const handleModalSearch = () => {
     const query = modalSearch.trim();
     const container = modalBodyRef.current;
     if (!query || !container) {
       setModalSearchNoMatch(false);
+      // Search cleared: go back to where the admin was before searching.
+      if (!query && container && searchOriginScrollRef.current !== null) {
+        container.scrollTo({ top: searchOriginScrollRef.current });
+      }
+      searchOriginScrollRef.current = null;
       return;
     }
     jumpToSearchMatch(0);
@@ -247,6 +262,7 @@ export function useTripFormModal(load: () => void) {
       return;
     }
     setModalSearchNoMatch(false);
+    if (searchOriginScrollRef.current === null) searchOriginScrollRef.current = container.scrollTop;
     const i = ((index % matches.length) + matches.length) % matches.length;
     searchMatchIndexRef.current = i;
     scrollToMatchElement(container, matches[i], c => c.querySelector<HTMLElement>('[data-sticky-toolbar]')?.getBoundingClientRect().height ?? 0);
@@ -263,7 +279,7 @@ export function useTripFormModal(load: () => void) {
     const timeout = setTimeout(() => handleModalSearch(), modalSearch.trim() ? 350 : 0);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalSearch, modalOpen]);
+  }, [modalSearch, modalOpen, editingTrip?.id]);
 
   // ---- Trip Leader detour -------------------------------------------------
   // The Trip Leader tab can send the admin to Admin → Trip Leaders to edit
@@ -349,6 +365,30 @@ export function useTripFormModal(load: () => void) {
     setModalSearch('');
     setModalSearchNoMatch(false);
     setModalOpen(true);
+  };
+
+  // Edit only: switch the open pop-up to another trip without closing it.
+  // Unsaved edits to the current trip are discarded (after a confirm).
+  const switchTrip = async (trip: UpcomingTrip) => {
+    if (!editingTrip || trip.id === editingTrip.id) return;
+    if (baseline && JSON.stringify(form) !== JSON.stringify(baseline)) {
+      const ok = await confirm({
+        title: 'Discard unsaved changes?',
+        message: `Your changes to "${form.title || editingTrip.title}" have not been saved. Switch trips and discard them?`,
+        confirmLabel: 'Discard & switch',
+        variant: 'default',
+      });
+      if (!ok) return;
+    }
+    deleteOrphanUploads();
+    discardDraft(TRIP_DRAFT_KEY);
+    const keptSearch = modalSearch;
+    openEdit(trip);
+    // Keep whatever was typed in the field search; the effect below re-runs it on the new trip.
+    setModalSearch(keptSearch);
+    searchMatchIndexRef.current = 0;
+    searchOriginScrollRef.current = null;
+    modalBodyRef.current?.scrollTo({ top: 0 });
   };
 
   const handleSave = async () => {
@@ -638,7 +678,7 @@ export function useTripFormModal(load: () => void) {
   };
 
   return {
-    modalOpen, closeModal, openCreate, openEdit,
+    modalOpen, closeModal, openCreate, openEdit, switchTrip,
     modalSearch, setModalSearch, modalSearchNoMatch, modalBodyRef, handleModalSearchEnter,
     editingTrip, form, setForm, saving, photosImporting, handleSave, updateLink, setUpdateLink,
     commitGroupBulletDraft,

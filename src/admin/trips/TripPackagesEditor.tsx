@@ -295,6 +295,15 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
                   </div>
                 </div>
                 <div className="col-span-12 sm:col-span-4 flex flex-wrap gap-2 sm:justify-end">
+                  {earlyBirdSeatLimited && (
+                    <label
+                      className={pill(!!p.early_bird_only)}
+                      title="Only for the early-bird seats: shows Most popular and seats left while they last, then greys out as Sold out. Packages without this keep the regular price."
+                    >
+                      <input type="checkbox" className="w-4 h-4 accent-primary" checked={!!p.early_bird_only} onChange={e => patchPackage(p.id, { early_bird_only: e.target.checked, ...(e.target.checked ? { early_bird: true } : {}) })} />
+                      Early-bird seats only
+                    </label>
+                  )}
                   <label className={pill(!!p.early_bird)}>
                     <input type="checkbox" className="w-4 h-4 accent-primary" checked={!!p.early_bird} onChange={e => patchPackage(p.id, { early_bird: e.target.checked })} />
                     Early-bird price applies
@@ -346,7 +355,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
         <div className="flex gap-2 rounded-md bg-background-warm px-3 py-2.5 text-xs text-dark-muted">
           <Info size={14} className="shrink-0 mt-0.5 text-dark-muted" aria-hidden="true" />
           <p>
-            Set a price per package, or leave blank to use trip price + options. Tick "Early-bird price applies" to use early-bird pricing until the deadline. Option costs go under Finances &amp; Profit → Other Trip Costs.
+            Set a price per package, or leave blank to use trip price + options. Tick "Early-bird price applies" to use early-bird pricing until the deadline. When the trip's early bird is limited by seats, tick "Early-bird seats only" on your Early Bird package: it then shows "Most popular" and the seats left while they last and turns into a greyed-out "Sold out" card afterwards, while your Normal package always stays at the regular price. Option costs go under Finances &amp; Profit → Other Trip Costs.
           </p>
         </div>
       )}
