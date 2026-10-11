@@ -70,7 +70,7 @@ export default function TestimonialsSection({
   const [tripId, setTripId] = useState('');
   const [enquiryId, setEnquiryId] = useState('');
   const [manualEntry, setManualEntry] = useState(false);
-  const [pickerData, setPickerData] = useState<{ trips: TripChoice[]; enquiries: Enquiry[] } | null>(null);
+  const [pickerData, setPickerData] = useState<{ trips: TripChoice[]; allTrips: TripChoice[]; enquiries: Enquiry[] } | null>(null);
   const [pickerError, setPickerError] = useState(false);
 
   const setSectionField = (key: keyof TestimonialsSectionContent, value: string) => {
@@ -89,10 +89,10 @@ export default function TestimonialsSection({
     setModalOpen(true);
   };
 
-  // Fetch trips + enquiries the first time the Add popup opens (re-fetched
+  // Fetch trips + enquiries the first time the Add or Edit popup opens (re-fetched
   // after an error so a retry works). Only booked, non-cancelled travellers
   // are offered, same isBooked() test the Enquiries and Check-in pages use.
-  const needsPickerData = modalOpen && !editingId && !manualEntry && !pickerData && !pickerError;
+  const needsPickerData = modalOpen && !manualEntry && !pickerData && !pickerError;
   useEffect(() => {
     if (!needsPickerData) return;
     let cancelled = false;
@@ -106,6 +106,7 @@ export default function TestimonialsSection({
         const withTravellers = new Set(enquiries.filter(isBooked).map(e => e.trip_id));
         setPickerData({
           trips: trips.filter(t => withTravellers.has(t.id)).sort((a, b) => b.date.localeCompare(a.date)),
+          allTrips: trips,
           enquiries,
         });
       })
@@ -123,6 +124,31 @@ export default function TestimonialsSection({
       .sort((a, b) => a.full_name.localeCompare(b.full_name)),
     [pickerData, tripId],
   );
+
+  const tripLabel = (t: TripChoice) =>
+    `${t.title} · ${formatDate(t.date, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+  // Edit popup: the same trips as Add, plus the testimonial's current trip even if
+  // it no longer has booked travellers, plus a way to leave it unlinked.
+  const editTripOptions = useMemo(() => {
+    if (!pickerData) return [];
+    const list = [...pickerData.trips];
+    if (tripId && !list.some(t => t.id === tripId)) {
+      const linked = pickerData.allTrips.find(t => t.id === tripId);
+      if (linked) list.unshift(linked);
+    }
+    return [
+      { value: '', label: 'Not linked to a trip' },
+      ...list.map(t => ({ value: t.id, label: tripLabel(t) })),
+    ];
+  }, [pickerData, tripId]);
+
+  // Changing the trip on an existing testimonial: the old traveller link belonged to
+  // the old trip, so it is cleared. Name and destination are left as typed.
+  const changeEditTrip = (id: string) => {
+    setTripId(id);
+    setEnquiryId('');
+  };
 
   const pickTrip = (id: string) => {
     setTripId(id);
@@ -149,6 +175,9 @@ export default function TestimonialsSection({
       name: t.name, photo: t.photo || '', review: t.review, rating: t.rating,
       destination: t.destination || '', is_published: t.is_published,
     });
+    setTripId(t.trip_id ?? '');
+    setEnquiryId(t.enquiry_id ?? '');
+    setManualEntry(false);
     photoDiscard.track(t.photo || '');
     setModalOpen(true);
   };
@@ -164,7 +193,9 @@ export default function TestimonialsSection({
   const handleFormSave = () => {
     if (!canSave) return;
     if (editingId) {
-      setItems(prev => prev.map(t => (t.id === editingId ? { ...t, ...form } : t)));
+      setItems(prev => prev.map(t => (t.id === editingId
+        ? { ...t, ...form, trip_id: tripId || null, enquiry_id: enquiryId || null }
+        : t)));
     } else {
       setItems(prev => [...prev, {
         id: makeTempId(),
@@ -402,6 +433,27 @@ export default function TestimonialsSection({
                 <label htmlFor="test-destination" className="block text-sm font-medium text-dark mb-1">Destination</label>
                 <input id="test-destination" value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputClass} placeholder="e.g. Spiti Valley" />
               </div>
+              {editingId && (
+                <div className="md:col-span-2">
+                  <label htmlFor="test-edit-trip" className="block text-sm font-medium text-dark mb-1">Trip</label>
+                  {pickerError ? (
+                    <p className="text-xs text-primary">
+                      Could not load trips.{' '}
+                      <button type="button" onClick={() => setPickerError(false)} className="font-semibold underline">Try again</button>
+                    </p>
+                  ) : !pickerData ? (
+                    <p className="text-xs text-dark-muted py-2">Loading trips…</p>
+                  ) : (
+                    <Select
+                      inputId="test-edit-trip"
+                      value={tripId}
+                      onChange={changeEditTrip}
+                      placeholder="Not linked to a trip"
+                      options={editTripOptions}
+                    />
+                  )}
+                </div>
+              )}
               {manualEntry && !editingId && (
                 <div className="md:col-span-2 -mt-2">
                   <button type="button" onClick={() => setManualEntry(false)} className="text-xs font-button font-semibold text-primary hover:underline">
@@ -429,10 +481,7 @@ export default function TestimonialsSection({
                     value={tripId}
                     onChange={pickTrip}
                     placeholder="Choose a trip"
-                    options={pickerData.trips.map(t => ({
-                      value: t.id,
-                      label: `${t.title} · ${formatDate(t.date, { day: 'numeric', month: 'short', year: 'numeric' })}`,
-                    }))}
+                    options={pickerData.trips.map(t => ({ value: t.id, label: tripLabel(t) }))}
                   />
                 )}
               </div>

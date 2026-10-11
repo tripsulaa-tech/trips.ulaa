@@ -11,7 +11,7 @@ export default function StowawayHost({ roster }: { roster: TripRoster }) {
     <RosterGameCard
       roster={roster}
       id="stowaway"
-      title="Stowaway"
+      title="Yaaru Fake?"
       path="/play/stowaway/game"
       minPlayers={3}
       maxPlayers={15}

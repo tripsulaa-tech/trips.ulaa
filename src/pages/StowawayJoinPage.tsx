@@ -12,13 +12,13 @@ export default function StowawayJoinPage() {
   const navigate = useNavigate();
 
   usePageMeta({
-    title: pageTitle('Join a Stowaway game'),
-    description: 'Join your friends in Stowaway, the group bluffing game. Each player uses their own phone.',
+    title: pageTitle('Join a Yaaru Fake? game'),
+    description: 'Join your friends in Yaaru Fake?, the group bluffing game. Each player uses their own phone.',
     path: '/play/stowaway',
   });
 
   return (
-    <FullScreenGame ariaLabel="Stowaway group game" onClose={() => navigate('/trips')}>
+    <FullScreenGame ariaLabel="Yaaru Fake? group game" onClose={() => navigate('/trips')}>
       <StowawayOnline tripTitle="Ulaa" initialCode={code} onExit={() => navigate('/trips')} />
     </FullScreenGame>
   );

@@ -668,8 +668,8 @@ function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
   return (
     <div className="space-y-4">
       <Card>
-        <Hint>Explorers get one word of a pair and the Stowaway gets the other. Easy pairs are quite different, Hard pairs are nearly identical. Dares are for the losing side.</Hint>
-        <Segmented<StowView> label="Stowaway content" value={view} onChange={setView} options={[
+        <Hint>Travellers get one word of a pair and the Pickpocket gets the other. Easy pairs are quite different, Hard pairs are nearly identical. Dares are for the losing side.</Hint>
+        <Segmented<StowView> label="Yaaru Fake? content" value={view} onChange={setView} options={[
           { id: 'pairs', label: 'Word pairs', count: draft.pairs.length },
           { id: 'dares', label: 'Dares', count: draft.dares.length },
         ]} />
@@ -1008,7 +1008,7 @@ const TABS: { id: GameTab; label: string }[] = [
 type EditGame = 'tod' | 'stowaway' | 'charades' | 'twin';
 const EDIT_GAMES: { id: EditGame; label: string; blurb: string; Icon: PhosphorIcon }[] = [
   { id: 'tod', label: 'Truth or Dare', blurb: 'Truths, dares, twists', Icon: Sparkle },
-  { id: 'stowaway', label: 'Stowaway', blurb: 'Word pairs, dares', Icon: Boat },
+  { id: 'stowaway', label: 'Yaaru Fake?', blurb: 'Word pairs, dares', Icon: Boat },
   { id: 'charades', label: 'Dumb Charades', blurb: 'Tamil film list', Icon: FilmSlate },
   { id: 'twin', label: 'Find My Twin', blurb: 'Questions and rounds', Icon: UsersThree },
 ];

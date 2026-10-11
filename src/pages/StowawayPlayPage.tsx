@@ -38,8 +38,8 @@ export default function StowawayPlayPage() {
   const tripTitle = (code && shared?.code === code && shared.tripTitle) || 'Ulaa';
 
   usePageMeta({
-    title: pageTitle('Stowaway'),
-    description: 'Play Stowaway with your Ulaa trip group: talk it out, vote someone offboard, spot the stowaway.',
+    title: pageTitle('Yaaru Fake?'),
+    description: 'Play Yaaru Fake? with your Ulaa trip group: talk it out, vote someone offboard, spot the Pickpocket.',
     path: '/play/stowaway/game',
   });
 
@@ -56,8 +56,8 @@ export default function StowawayPlayPage() {
           >
             <img src={stowawayCat} alt="" className="w-9 h-9 object-contain" draggable={false} />
           </motion.span>
-          <h1 className="font-display text-4xl font-extrabold text-white">Stowaway</h1>
-          <p className="mt-3 mb-8 text-cream/70 text-sm">Pass the phone around, talk it out and find who sneaked aboard.{players ? ` ${players.length} players are ready.` : ''}</p>
+          <h1 className="font-display text-4xl font-extrabold text-white">Yaaru Fake?</h1>
+          <p className="mt-3 mb-8 text-cream/70 text-sm">Pass the phone around, talk it out and find the fake.{players ? ` ${players.length} players are ready.` : ''}</p>
           {loading ? (
             <p role="status" className="text-sm text-cream/70">Getting your game ready…</p>
           ) : (

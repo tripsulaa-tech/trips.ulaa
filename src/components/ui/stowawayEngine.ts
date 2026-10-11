@@ -4,6 +4,8 @@
 
 import { DARES, WORD_PAIRS } from './stowawayWords';
 import type { Category, Level, WordPair } from './stowawayWords';
+import { assignSpecials } from './stowawaySpecials';
+import type { SoloSpecialId, SpecialId } from './stowawaySpecials';
 
 export type Role = 'explorer' | 'stowaway' | 'lost';
 
@@ -12,10 +14,10 @@ export const MAX_PLAYERS = 15;
 
 export const POINTS = { explorerWin: 2, stowawaySurvive: 3, lostSteal: 4 } as const;
 
-export function shuffle<T>(arr: readonly T[]): T[] {
+export function shuffle<T>(arr: readonly T[], rng: () => number = Math.random): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
@@ -64,6 +66,15 @@ export interface Seat {
   word: string | null;   // null for the Lost Soul
   seat: string;          // ticket seat number, e.g. 14C
   alive: boolean;
+  special?: SpecialId;       // optional special role on top of the core role
+  dipAs?: SoloSpecialId;     // Lucky Dip only: the ability it turned into
+  partner?: string;          // Rivals / Buddies only: the other player
+  outStop?: number;          // stop at which they were voted out (unset while aboard)
+  outOrder?: number;         // 1 = first voted out this round, 2 = next, ...
+  ticketUsed?: boolean;      // Return Ticket already used this round
+  paybackDone?: boolean;     // Payback already taken this round
+  riderHit?: boolean;        // Backseat Rider guessed right
+  paybackHit?: boolean;      // Payback took down someone from the other side
 }
 
 function seatNumbers(n: number): string[] {
@@ -83,7 +94,10 @@ export interface RoundSetup {
   pair: WordPair;
 }
 
-export function dealRound(names: string[], c: RoleCounts, pair: WordPair): RoundSetup {
+export interface SpecialsOptions { enabled: readonly SpecialId[]; count?: number }
+
+/** `specials` is optional: leave it out and the deal is exactly as before. */
+export function dealRound(names: string[], c: RoleCounts, pair: WordPair, specials?: SpecialsOptions): RoundSetup {
   // Random word sides: the app decides which word the Explorers get.
   const flip = Math.random() < 0.5;
   const explorerWord = flip ? pair.a : pair.b;
@@ -95,12 +109,14 @@ export function dealRound(names: string[], c: RoleCounts, pair: WordPair): Round
   ]);
   const order = shuffle(names);
   const seatNos = seatNumbers(order.length);
+  const extra = specials ? assignSpecials(order, specials.enabled, specials.count) : null;
   const seats: Seat[] = order.map((name, i) => ({
     name,
     role: roles[i],
     word: roles[i] === 'explorer' ? explorerWord : roles[i] === 'stowaway' ? stowawayWord : null,
     seat: seatNos[i],
     alive: true,
+    ...(extra?.get(name) ?? {}),
   }));
   return { seats, explorerWord, stowawayWord, pair };
 }
@@ -171,9 +187,9 @@ function top(names: string[], stats: Record<string, PlayerStats>, pick: (s: Play
 
 export function computeAwards(names: string[], stats: Record<string, PlayerStats>): Award[] {
   const defs: Array<[string, string, string, (s: PlayerStats) => number]> = [
-    ['bluffer', 'Best Bluffer', 'Stayed aboard the longest as a Stowaway', s => s.survivedAsStowaway],
+    ['bluffer', 'Best Bluffer', 'Survived the most rounds as a Pickpocket', s => s.survivedAsStowaway],
     ['detective', 'Sharpest Detective', 'Most correct votes', s => s.correctVotes],
-    ['assassin', 'Silent Assassin', 'Stole a win as the Lost Soul', s => s.lostWins],
+    ['assassin', 'Silent Assassin', 'Stole a win as the Stranger', s => s.lostWins],
     ['lost', 'Lost in Translation', 'Most wrong votes', s => s.wrongVotes],
   ];
   const out: Award[] = [];
@@ -260,6 +276,7 @@ export interface SavedSetup {
   hideCounts: boolean;
   level: Level;
   dares: boolean;
+  specials: boolean;
 }
 
 const DEFAULT_SETUP: SavedSetup = {
@@ -269,6 +286,7 @@ const DEFAULT_SETUP: SavedSetup = {
   hideCounts: false,
   level: 'medium',
   dares: false,
+  specials: false,
 };
 
 export function loadSetup(): SavedSetup {
@@ -287,6 +305,7 @@ export function loadSetup(): SavedSetup {
       names, level, stowaways: r.stowaways, lost: r.lost,
       hideCounts: !!v.hideCounts,
       dares: !!v.dares,
+      specials: !!v.specials,
     };
   } catch { return DEFAULT_SETUP; }
 }

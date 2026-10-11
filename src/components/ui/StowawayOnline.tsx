@@ -36,7 +36,7 @@ import { useStowawayContentSync } from './useGameContentSync';
 
 const MUTE_KEY = 'ulaa:packbag:muted'; // one sound setting for all the games
 
-const ROLE_LABEL: Record<Role, string> = { explorer: 'Explorer', stowaway: 'Stowaway', lost: 'Lost Soul' };
+const ROLE_LABEL: Record<Role, string> = { explorer: 'Traveller', stowaway: 'Pickpocket', lost: 'Stranger' };
 const ROLE_TONE: Record<Role, string> = {
   explorer: 'from-emerald-300 to-emerald-500 text-emerald-950',
   stowaway: 'from-[#F0CE7A] to-gold text-dark',
@@ -370,7 +370,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
   // ── Derived for rendering ──
   const link = joinLink(room.code);
-  const shareText = `Join my Stowaway game on Ulaa! Room code ${room.code}. Tap to join: ${link}`;
+  const shareText = `Join my Yaaru Fake? game on Ulaa! Room code ${room.code}. Tap to join: ${link}`;
   const n = players.length;
   const sRaw = state.counts?.stowaways ?? 1;
   const lRaw = state.counts?.lost ?? 0;
@@ -395,7 +395,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const alivePlayers = players.filter(p => p.alive);
   const countLine = room.hide_counts || !state.counts
     ? `${alivePlayers.length} travellers aboard. Roles are secret.`
-    : `${state.counts.explorers} Explorers, ${state.counts.stowaways} Stowaway${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Lost Soul${state.counts.lost === 1 ? '' : 's'}` : ''}`;
+    : `${state.counts.explorers} Travellers, ${state.counts.stowaways} Pickpocket${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Stranger${state.counts.lost === 1 ? '' : 's'}` : ''}`;
 
   const voteKey = `${room.round_no}-${room.stop_no}-${room.last_result?.tie ? 't' : 'n'}`;
   const pickId = pick?.key === voteKey ? pick.id : null;
@@ -484,7 +484,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-emerald-400/20 text-emerald-300 flex items-center justify-center"><Eye size={16} weight="duotone" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">Explorers</p>
+                    <p className="text-sm font-bold text-white leading-tight">Travellers</p>
                     <p className="text-[11px] text-cream/50">Same word. Always the majority.</p>
                   </div>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-8 text-center">{n >= MIN_PLAYERS ? explorers : '-'}</span>
@@ -492,22 +492,22 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-gold/20 text-[#F0CE7A] flex items-center justify-center"><Ticket size={16} weight="duotone" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">Stowaways</p>
+                    <p className="text-sm font-bold text-white leading-tight">Pickpockets</p>
                     <p className="text-[11px] text-cream/50">A similar but different word.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Stowaways" disabled={busy || n < MIN_PLAYERS || eff.stowaways <= 1} onClick={() => void saveSettings({ stowaways: eff.stowaways - 1 })}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={busy || n < MIN_PLAYERS || eff.stowaways <= 1} onClick={() => void saveSettings({ stowaways: eff.stowaways - 1 })}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{eff.stowaways}</span>
-                  <button type="button" className={stepBtn} aria-label="More Stowaways" disabled={busy || n < MIN_PLAYERS || !rolesValid(n, eff.stowaways + 1, eff.lost)} onClick={() => void saveSettings({ stowaways: eff.stowaways + 1 })}><Plus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="More Pickpockets" disabled={busy || n < MIN_PLAYERS || !rolesValid(n, eff.stowaways + 1, eff.lost)} onClick={() => void saveSettings({ stowaways: eff.stowaways + 1 })}><Plus size={14} weight="bold" /></button>
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-rose-400/20 text-rose-300 flex items-center justify-center"><Question size={16} weight="duotone" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">Lost Soul</p>
+                    <p className="text-sm font-bold text-white leading-tight">Stranger</p>
                     <p className="text-[11px] text-cream/50">No word at all. Blends in.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Lost Souls" disabled={busy || n < MIN_PLAYERS || eff.lost <= 0} onClick={() => void saveSettings({ lost: eff.lost - 1 })}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={busy || n < MIN_PLAYERS || eff.lost <= 0} onClick={() => void saveSettings({ lost: eff.lost - 1 })}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{eff.lost}</span>
-                  <button type="button" className={stepBtn} aria-label="More Lost Souls" disabled={busy || n < MIN_PLAYERS || eff.lost >= maxLost(n) || !rolesValid(n, eff.stowaways, eff.lost + 1)} onClick={() => void saveSettings({ lost: eff.lost + 1 })}><Plus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="More Strangers" disabled={busy || n < MIN_PLAYERS || eff.lost >= maxLost(n) || !rolesValid(n, eff.stowaways, eff.lost + 1)} onClick={() => void saveSettings({ lost: eff.lost + 1 })}><Plus size={14} weight="bold" /></button>
                 </div>
               </div>
               {n < MIN_PLAYERS && <p className="text-xs text-[#F0CE7A] mb-2">Waiting for at least {MIN_PLAYERS} travellers.</p>}
@@ -522,7 +522,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               <p className="text-[11px] text-cream/50 mb-4">{LEVELS.find(l => l.id === room.level)?.hint}.</p>
 
               <div className={`${glass} divide-y divide-white/10 mb-4`}>
-                <Toggle on={room.hide_counts} onChange={v => void saveSettings({ hideCounts: v })} disabled={busy} title="Hide the counts" desc="Only you can see the role split. Nobody else knows if a Lost Soul exists." />
+                <Toggle on={room.hide_counts} onChange={v => void saveSettings({ hideCounts: v })} disabled={busy} title="Hide the counts" desc="Only you can see the role split. Nobody else knows if a Stranger exists." />
                 <Toggle on={room.dares} onChange={v => void saveSettings({ dares: v })} disabled={busy} title="Trip dares" desc="The losing side gets a silly dare." />
               </div>
 
@@ -533,7 +533,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           ) : (
             <div className={`${glass} px-3 py-3 mb-3 text-sm text-cream/70`}>
               <p className="font-bold text-white mb-1">Game settings</p>
-              <p>{LEVELS.find(l => l.id === room.level)?.label} words{room.hide_counts ? ', hidden role counts' : state.counts ? `, ${state.counts.explorers} Explorers, ${state.counts.stowaways} Stowaway${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Lost Soul` : ''}` : ''}.</p>
+              <p>{LEVELS.find(l => l.id === room.level)?.label} words{room.hide_counts ? ', hidden role counts' : state.counts ? `, ${state.counts.explorers} Travellers, ${state.counts.stowaways} Pickpocket${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Stranger` : ''}` : ''}.</p>
               {room.locked && <p className="text-xs text-cream/50 mt-1"><LockSimple size={12} weight="fill" className="inline -mt-0.5" /> The host locked the room.</p>}
             </div>
           )}
@@ -680,7 +680,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <Question size={46} weight="bold" />
           </motion.div>
           <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">Last chance</span>
-          <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{iAmOut ? 'You were the Lost Soul' : `${out.name} was the Lost Soul`}</h2>
+          <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{iAmOut ? 'You were the Stranger' : `${out.name} was the Stranger`}</h2>
 
           {iAmOut ? (
             room.guess_text ? (
@@ -691,7 +691,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               </>
             ) : (
               <>
-                <p className="text-sm text-cream/65 mt-2 mb-4 px-4">Guess the Explorers' word. One shot.</p>
+                <p className="text-sm text-cream/65 mt-2 mb-4 px-4">Guess the Travellers' word. One shot.</p>
                 <input value={guessDraft} onChange={e => setGuessDraft(e.target.value.slice(0, 40))} onKeyDown={e => { if (e.key === 'Enter' && guessDraft.trim() && !busy) void act(() => online.submitGuess(room.code, guessDraft)); }} maxLength={40} placeholder="Type your guess" aria-label="Your guess" className={`${inputCls} text-center mb-3`} />
                 <button type="button" disabled={!guessDraft.trim() || busy} onClick={() => void act(() => online.submitGuess(room.code, guessDraft))} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>Send my guess</button>
               </>
@@ -700,7 +700,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <>
               <p className="text-sm text-cream/65 mt-2 px-4">{out.name} guessed</p>
               <p className={`font-display text-3xl font-extrabold ${GOLD_GRAD_TEXT}`}>{room.guess_text}</p>
-              {room.guess_match && <p className="text-xs font-bold text-emerald-300 mt-1">That is an exact match with the Explorers' word.</p>}
+              {room.guess_match && <p className="text-xs font-bold text-emerald-300 mt-1">That is an exact match with the Travellers' word.</p>}
               <p className="text-xs text-cream/45 my-3 px-4">Close enough counts. Spelling does not matter.</p>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" disabled={busy} onClick={() => void act(() => online.judgeGuess(room.code, false))} className={`${ghostBtn} !py-4`}><XCircle size={20} weight="fill" className="text-rose-300" /> Wrong</button>
@@ -717,19 +717,19 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           {!reduce && <Confetti />}
           <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Round {room.round_no} over</span>
           <h2 className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>
-            {summary.outcome === 'explorers' ? 'Explorers win!' : summary.outcome === 'stowaways' ? 'The Stowaways got away!' : 'The Lost Soul stole it!'}
+            {summary.outcome === 'explorers' ? 'Travellers win!' : summary.outcome === 'stowaways' ? 'The Pickpockets got away!' : 'The Stranger stole it!'}
           </h2>
           <p className="text-sm text-cream/60 mt-1 mb-3">
-            {summary.outcome === 'explorers' ? 'Every sneaky traveller was offboarded.' : summary.outcome === 'stowaways' ? 'They blended in until the end.' : 'One lucky guess flipped the whole round.'}
+            {summary.outcome === 'explorers' ? 'Every Pickpocket and Stranger was caught.' : summary.outcome === 'stowaways' ? 'They blended in until the end.' : 'One lucky guess flipped the whole round.'}
           </p>
 
           <div className="grid grid-cols-2 gap-2 mb-3">
             <div className={`${glass} py-2.5`}>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Explorers had</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Travellers had</p>
               <p className="font-display text-lg font-extrabold text-white leading-tight px-2">{summary.explorer_word}</p>
             </div>
             <div className={`${glass} py-2.5`}>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Stowaways had</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Pickpockets had</p>
               <p className="font-display text-lg font-extrabold text-[#F0CE7A] leading-tight px-2">{summary.stowaway_word}</p>
             </div>
           </div>
@@ -750,12 +750,12 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
           {room.dare && (
             <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-3 mb-3 text-left">
-              <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><Gift size={11} weight="fill" /> Trip dare for the {summary.outcome === 'explorers' ? 'Stowaways' : 'Explorers'}</p>
+              <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><Gift size={11} weight="fill" /> Trip dare for the {summary.outcome === 'explorers' ? 'Pickpockets' : 'Travellers'}</p>
               <p className="text-sm font-bold text-white mt-0.5">{room.dare}</p>
             </div>
           )}
 
-          <p className="text-[11px] text-cream/45 mb-3">Points: Explorers +{POINTS.explorerWin}, a surviving Stowaway +{POINTS.stowawaySurvive}, a Lost Soul steal +{POINTS.lostSteal}.</p>
+          <p className="text-[11px] text-cream/45 mb-3">Points: Travellers +{POINTS.explorerWin}, a surviving Pickpocket +{POINTS.stowawaySurvive}, a Stranger steal +{POINTS.lostSteal}.</p>
 
           {isHost ? (
             <>
@@ -809,9 +809,9 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               try {
                 blob = await buildScoreCard({
                   score: top?.points ?? 0, stars: Math.min(3, room.round_no),
-                  title: top ? `${short(top.name, 14)} takes the trip` : 'Stowaway',
+                  title: top ? `${short(top.name, 14)} takes the trip` : 'Yaaru Fake?',
                   tripTitle: room.trip_title, host: SITE_HOST, best: top?.points ?? 0, isNewBest: false,
-                  eyebrow: 'STOWAWAY  ·  GROUP GAME', unit: 'TOP SCORE', ringMax: Math.max(12, room.round_no * 4),
+                  eyebrow: 'YAARU FAKE?  ·  GROUP GAME', unit: 'TOP SCORE', ringMax: Math.max(12, room.round_no * 4),
                   playerName: top?.name,
                   tiles: [
                     { v: String(room.round_no), l: 'ROUNDS' },
@@ -820,8 +820,8 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                   ],
                 });
               } catch { blob = null; }
-              const text = `${top?.name ?? 'We'} won our game of Stowaway on Ulaa after ${room.round_no} round${room.round_no === 1 ? '' : 's'}! Play with your travel gang: ${link}`;
-              await shareCardImage(blob, { filename: 'ulaa-stowaway.png', title: 'Stowaway', text, fallbackLink: getWhatsAppLink('', text) });
+              const text = `${top?.name ?? 'We'} won our game of Yaaru Fake? on Ulaa after ${room.round_no} round${room.round_no === 1 ? '' : 's'}! Play with your travel gang: ${link}`;
+              await shareCardImage(blob, { filename: 'ulaa-yaaru-fake.png', title: 'Yaaru Fake?', text, fallbackLink: getWhatsAppLink('', text) });
               setSharing(false);
             })();
           }}>
